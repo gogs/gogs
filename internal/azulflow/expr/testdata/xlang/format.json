@@ -1,0 +1,207 @@
+{
+  "format": [
+    {
+      "expr": "format(null)",
+      "result": { "kind": "String", "value": "" }
+    },
+    {
+      "expr": "format(null, 'some arg')",
+      "result": { "kind": "String", "value": "" }
+    },
+    {
+      "expr": "format('')",
+      "result": { "kind": "String", "value": "" }
+    },
+    {
+      "expr": "format('', 'some arg')",
+      "result": { "kind": "String", "value": "" }
+    },
+    {
+      "expr": "format('123{0}456', 'abc')",
+      "result": { "kind": "String", "value": "123abc456" }
+    },
+    {
+      "expr": "format('123{0}456{0}789', 'abc')",
+      "result": { "kind": "String", "value": "123abc456abc789" }
+    },
+    {
+      "expr": "format('123{0}456{1}789', 'abc', 'def')",
+      "result": { "kind": "String", "value": "123abc456def789" }
+    },
+    {
+      "expr": "format('{0}123', 'abc')",
+      "result": { "kind": "String", "value": "abc123" }
+    },
+    {
+      "expr": "format('123{0}', 'abc')",
+      "result": { "kind": "String", "value": "123abc" }
+    },
+    {
+      "expr": "format('123{0}{1}456', 'abc', 'def')",
+      "result": { "kind": "String", "value": "123abcdef456" }
+    },
+    {
+      "expr": "format('{{0}}', 'abc')",
+      "result": { "kind": "String", "value": "{0}" }
+    },
+    {
+      "expr": "format('{{{{0}}}}', 'abc')",
+      "result": { "kind": "String", "value": "{{0}}" }
+    },
+    {
+      "expr": "format('}}', 'abc')",
+      "result": { "kind": "String", "value": "}" }
+    },
+    {
+      "expr": "format('{{', 'abc')",
+      "result": { "kind": "String", "value": "{" }
+    },
+    {
+      "expr": "format('}}{{', 'abc')",
+      "result": { "kind": "String", "value": "}{" }
+    },
+    {
+      "expr": "format('}}{{}}', 'abc')",
+      "result": { "kind": "String", "value": "}{}" }
+    },
+    {
+      "expr": "format('{0}', Infinity)",
+      "result": { "kind": "String", "value": "Infinity" }
+    },
+    {
+      "expr": "format('{0}', -Infinity)",
+      "result": { "kind": "String", "value": "-Infinity" }
+    },
+    {
+      "expr": "format('{0}', NaN)",
+      "result": { "kind": "String", "value": "NaN" }
+    },
+    {
+      "expr": "format('{0}', -0)",
+      "result": { "kind": "String", "value": "0" }
+    },
+    {
+      "expr": "format('{0}', -0.0)",
+      "result": { "kind": "String", "value": "0" }
+    },
+    {
+      "expr": "format('{0')",
+      "err": {
+        "kind": "evaluation",
+        "value": "The following format string is invalid: {0"
+      }
+    },
+    {
+      "expr": "format('{0', '')",
+      "err": {
+        "kind": "evaluation",
+        "value": "The following format string is invalid: {0"
+      }
+    },
+    {
+      "expr": "format('{0}}', '')",
+      "err": {
+        "kind": "evaluation",
+        "value": "The following format string is invalid: {0}}"
+      }
+    },
+    {
+      "expr": "format('{0}}}}', '')",
+      "err": {
+        "kind": "evaluation",
+        "value": "The following format string is invalid: {0}}}}"
+      }
+    },
+    {
+      "expr": "format('0}')",
+      "err": {
+        "kind": "evaluation",
+        "value": "The following format string is invalid: 0}"
+      }
+    },
+    {
+      "expr": "format('0}', '')",
+      "err": {
+        "kind": "evaluation",
+        "value": "The following format string is invalid: 0}"
+      }
+    },
+    {
+      "expr": "format('{{0}')",
+      "err": {
+        "kind": "evaluation",
+        "value": "The following format string is invalid: {{0}"
+      }
+    },
+    {
+      "expr": "format('{{0}', '')",
+      "err": {
+        "kind": "evaluation",
+        "value": "The following format string is invalid: {{0}"
+      }
+    },
+    {
+      "expr": "format('{{{{0}')",
+      "err": {
+        "kind": "evaluation",
+        "value": "The following format string is invalid: {{{{0}"
+      }
+    },
+    {
+      "expr": "format('{{{{0}', '')",
+      "err": {
+        "kind": "evaluation",
+        "value": "The following format string is invalid: {{{{0}"
+      }
+    },
+    {
+      "expr": "format('}0{')",
+      "err": {
+        "kind": "evaluation",
+        "value": "The following format string is invalid: }0{"
+      }
+    },
+    {
+      "expr": "format('}0{', '')",
+      "err": {
+        "kind": "evaluation",
+        "value": "The following format string is invalid: }0{"
+      }
+    },
+    {
+      "expr": "format('}{0}')",
+      "err": {
+        "kind": "evaluation",
+        "value": "The following format string is invalid: }{0}"
+      }
+    },
+    {
+      "expr": "format('}{0}', '')",
+      "err": {
+        "kind": "evaluation",
+        "value": "The following format string is invalid: }{0}"
+      }
+    },
+    {
+      "expr": "format('{0}{', '')",
+      "err": {
+        "kind": "evaluation",
+        "value": "The following format string is invalid: {0}{"
+      }
+    },
+    {
+      "expr": "format('{0}')",
+      "err": {
+        "kind": "evaluation",
+        "value": "The following format string references more arguments than were supplied: {0}"
+      }
+    },
+    {
+      "expr": "format('{0}{1}', 'abc')",
+      "err": {
+        "kind": "evaluation",
+        "value": "The following format string references more arguments than were supplied: {0}{1}"
+      }
+    }
+  ]
+}

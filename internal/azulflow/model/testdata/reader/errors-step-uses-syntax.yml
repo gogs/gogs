@@ -1,0 +1,31 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # Valid
+      - uses: docker://alpine:3.8
+      - uses: actions/aws/ec2@main
+      - uses: ./.github/actions/my-action
+
+      # Invalid
+      - uses: $$docker://alpine:3.8
+      - uses: ...docker://alpine:3.8
+      - uses: badrepo@invalid
+      - uses: docker://
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-step-uses-syntax.yml (Line: 12, Col: 15): Expected format {org}/{repo}[/path]@ref. Actual '$$docker://alpine:3.8'"
+    },
+    {
+      "Message": ".github/workflows/errors-step-uses-syntax.yml (Line: 13, Col: 15): Expected format {org}/{repo}[/path]@ref. Actual '...docker://alpine:3.8'"
+    },
+    {
+      "Message": ".github/workflows/errors-step-uses-syntax.yml (Line: 14, Col: 15): Expected format {org}/{repo}[/path]@ref. Actual 'badrepo@invalid'"
+    }
+  ]
+}

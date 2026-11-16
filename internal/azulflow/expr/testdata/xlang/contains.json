@@ -1,0 +1,122 @@
+{
+  "string": [
+    {
+      "expr": "contains('abcdef', 'cde')",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "contains('abCdEf', 'cDe')",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "contains('abcdef', '')",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "contains('1234', 23)",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "contains('true', true)",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "contains('false', false)",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "contains('asdf', null)",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "contains('true', false)",
+      "result": { "kind": "Boolean", "value": false }
+    }
+  ],
+
+  "array": [
+    {
+      "expr": "contains(test, 'hello')",
+      "result": { "kind": "Boolean", "value": true },
+      "contexts": { "test": ["hello"] }
+    },
+    {
+      "expr": "contains(test, 'world')",
+      "result": { "kind": "Boolean", "value": true },
+      "contexts": { "test": ["hello", "world"] }
+    },
+    {
+      "expr": "contains(test, 'asdf')",
+      "result": { "kind": "Boolean", "value": false },
+      "contexts": { "test": ["hello"] }
+    },
+    {
+      "expr": "contains(test, 123)",
+      "result": { "kind": "Boolean", "value": true },
+      "contexts": { "test": [123.0] }
+    },
+    {
+      "expr": "contains(test, 123)",
+      "result": { "kind": "Boolean", "value": true },
+      "contexts": { "test": [123.0] }
+    },
+    {
+      "expr": "contains(test, null)",
+      "result": { "kind": "Boolean", "value": true },
+      "contexts": { "test": [""] }
+    },
+    {
+      "expr": "contains(test, false)",
+      "result": { "kind": "Boolean", "value": true },
+      "contexts": { "test": [""] }
+    },
+    {
+      "expr": "contains(test, false)",
+      "result": { "kind": "Boolean", "value": true },
+      "contexts": { "test": [0] }
+    }
+  ],
+
+  "filtered_array": [
+    {
+      "expr": "contains(test.*, 'hello')",
+      "result": { "kind": "Boolean", "value": true },
+      "contexts": { "test": ["hello"] }
+    },
+    {
+      "expr": "contains(test.*, 'world')",
+      "result": { "kind": "Boolean", "value": true },
+      "contexts": { "test": ["hello", "world"] }
+    },
+    {
+      "expr": "contains(test.*, 'asdf')",
+      "result": { "kind": "Boolean", "value": false },
+      "contexts": { "test": ["hello"] }
+    },
+    {
+      "expr": "contains(test.*, 123)",
+      "result": { "kind": "Boolean", "value": true },
+      "contexts": { "test": [123.0] }
+    },
+    {
+      "expr": "contains(test.*, 123)",
+      "result": { "kind": "Boolean", "value": true },
+      "contexts": { "test": [123.0] }
+    },
+    {
+      "expr": "contains(test.*, null)",
+      "result": { "kind": "Boolean", "value": true },
+      "contexts": { "test": [""] }
+    },
+    {
+      "expr": "contains(test.*, false)",
+      "result": { "kind": "Boolean", "value": true },
+      "contexts": { "test": [""] }
+    },
+    {
+      "expr": "contains(test.*, false)",
+      "result": { "kind": "Boolean", "value": true },
+      "contexts": { "test": [0] }
+    }
+  ]
+}

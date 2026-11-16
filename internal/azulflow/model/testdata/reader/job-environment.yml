@@ -1,0 +1,173 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build:
+    environment: prod
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+  build2:
+    environment: ''
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+  build3:
+    environment:
+      name: myenv
+      url: http://localhost
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+  build4:
+    environment: ${{ inputs.env }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+  build5:
+    environment:
+      name: ${{ inputs.env }}
+      url: http://localhost
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "environment": "prod",
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build2",
+      "name": "build2",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "environment": "",
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build3",
+      "name": "build3",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "environment": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "name",
+            "Value": "myenv"
+          },
+          {
+            "Key": "url",
+            "Value": "http://localhost"
+          }
+        ]
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build4",
+      "name": "build4",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "environment": {
+        "type": 3,
+        "expr": "inputs.env"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build5",
+      "name": "build5",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "environment": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "name",
+            "Value": {
+              "type": 3,
+              "expr": "inputs.env"
+            }
+          },
+          {
+            "Key": "url",
+            "Value": "http://localhost"
+          }
+        ]
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    }
+  ]
+}

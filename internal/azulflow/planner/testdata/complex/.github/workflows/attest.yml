@@ -1,0 +1,13 @@
+on:
+  workflow_call:
+    outputs:
+      attestation:
+        value: ${{ jobs.attest.outputs.id }}
+jobs:
+  attest:
+    runs-on: ubuntu-latest
+    outputs:
+      id: ${{ steps.a.outputs.id }}
+    steps:
+      - id: a
+        run: ./attest

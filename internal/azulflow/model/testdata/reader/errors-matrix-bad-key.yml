@@ -1,0 +1,19 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  bad-strategy-key:
+    strategy:
+      bad-key:
+        os: [10]
+    runs-on: macos-latest
+    steps:
+     - run: echo hi
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-matrix-bad-key.yml (Line: 5, Col: 7): Unexpected value 'bad-key'"
+    }
+  ]
+}

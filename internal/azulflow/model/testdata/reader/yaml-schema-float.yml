@@ -1,0 +1,187 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Values are based on YAML 1.2 core schema - https://yaml.org/spec/1.2.0/#id2604037
+        vector-1:
+          # Float, implicit type
+          - .5
+          - 0.5
+          - -.5
+          - +.5
+          - -0.5
+          - +0.5
+          - -2.0
+          - +2.0
+          - 0.0
+          - -0.0
+          - +0.0
+          - 123456.789
+          - +123456.789
+          - -123456.789
+          - 0.84551240822557006
+          - 1.2e2
+          - 1.2E2
+          - 1.2e+2
+          - 1.2E+2
+          - 1.2e-2
+          - 1.2E-2
+          - +1.2e2
+          - +1.2E2
+          - +1.2e+2
+          - +1.2E+2
+          - +1.2e-2
+          - +1.2E-2
+          - -1.2e2
+          - -1.2E2
+          - -1.2e+2
+          - -1.2E+2
+          - -1.2e-2
+          - -1.2E-2
+          - .inf
+          - .Inf
+          - .INF
+          - +.inf
+          - +.Inf
+          - +.INF
+          - -.inf
+          - -.Inf
+          - -.INF
+          - .nan
+          - .NaN
+          - .NAN
+
+          # Float, explicit type
+          - !!float 1
+          - !!float 2
+          - !!float -1
+          - !!float +1
+          - !!float 0
+          - !!float -0
+          - !!float +0
+          - !!float .Inf
+          - !!float .NaN
+          - !<tag:yaml.org,2002:float> 1
+          - !<tag:yaml.org,2002:float> 2
+          - !<tag:yaml.org,2002:float> -1
+          - !<tag:yaml.org,2002:float> +1
+          - !<tag:yaml.org,2002:float> 0
+          - !<tag:yaml.org,2002:float> -0
+          - !<tag:yaml.org,2002:float> +0
+          - !<tag:yaml.org,2002:float> .Inf
+          - !<tag:yaml.org,2002:float> .NaN
+    steps:
+      - run: echo hi
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "strategy": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "matrix",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "vector-1",
+                  "Value": {
+                    "type": 1,
+                    "seq": [
+                      0.5,
+                      0.5,
+                      -0.5,
+                      0.5,
+                      -0.5,
+                      0.5,
+                      -2,
+                      2,
+                      0,
+                      0,
+                      0,
+                      123456.789,
+                      123456.789,
+                      -123456.789,
+                      0.8455124082255701,
+                      120,
+                      120,
+                      120,
+                      120,
+                      0.012,
+                      0.012,
+                      120,
+                      120,
+                      120,
+                      120,
+                      0.012,
+                      0.012,
+                      -120,
+                      -120,
+                      -120,
+                      -120,
+                      -0.012,
+                      -0.012,
+                      "Infinity",
+                      "Infinity",
+                      "Infinity",
+                      "Infinity",
+                      "Infinity",
+                      "Infinity",
+                      "-Infinity",
+                      "-Infinity",
+                      "-Infinity",
+                      "NaN",
+                      "NaN",
+                      "NaN",
+                      1,
+                      2,
+                      -1,
+                      1,
+                      0,
+                      0,
+                      0,
+                      "Infinity",
+                      "NaN",
+                      1,
+                      2,
+                      -1,
+                      1,
+                      0,
+                      0,
+                      0,
+                      "Infinity",
+                      "NaN"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    }
+  ]
+}

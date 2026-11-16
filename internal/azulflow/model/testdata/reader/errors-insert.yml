@@ -1,0 +1,25 @@
+include-source: false # Drop file/line/col from output
+skip:
+  - TypeScript
+---
+on: push
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    env:
+      bad_insert1: "This is a bad ${{ insert }}"
+      bad_insert2: "${{ insert }} are bad at the beginning"
+      ${{ insert }}: ${{ github.ref }}
+    steps:
+      - run: echo hi
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-insert.yml (Line: 6, Col: 20): The directive 'insert' is not allowed in this context. Directives are not supported for expressions that are embedded within a string. Directives are only supported when the entire value is an expression."
+    },
+    {
+      "Message": ".github/workflows/errors-insert.yml (Line: 7, Col: 20): The directive 'insert' is not allowed in this context. Directives are not supported for expressions that are embedded within a string. Directives are only supported when the entire value is an expression."
+    }
+  ]
+}

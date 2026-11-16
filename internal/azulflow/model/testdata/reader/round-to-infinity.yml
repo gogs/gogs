@@ -1,0 +1,240 @@
+include-source: false # Drop file/line/col from output
+skip:
+ - TypeScript
+---
+on: push
+jobs:
+  positive-infinity-numeric:
+    runs-on: ubuntu-latest
+    timeout-minutes: +999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999
+    steps:
+      - run: echo hi
+  negative-infinity-numeric:
+    runs-on: ubuntu-latest
+    timeout-minutes: -999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999
+    steps:
+      - run: echo hi
+  positive-infinity-decimal:
+    runs-on: ubuntu-latest
+    timeout-minutes: +999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999.12
+    steps:
+      - run: echo hi
+  NaN:
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ NaN }}
+    steps:
+      - run: echo hi
+  integer-regular:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - run: echo hi
+  positive-infinity-verbose-serialzation:
+    runs-on: 
+      - ubuntu-latest
+    steps:
+      - run: echo hi
+        timeout-minutes: 999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999
+  negative-infinity-numeric-verbose-serialzation:
+    runs-on: 
+      - ubuntu-latest
+    steps:
+      - run: echo hi
+        timeout-minutes: -999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999
+  integer-verbose-serialzation:
+    runs-on: 
+      - ubuntu-latest
+    steps:
+      - run: echo hi
+        timeout-minutes: 100 
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "positive-infinity-numeric",
+      "name": "positive-infinity-numeric",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "timeout-minutes": "Infinity",
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "negative-infinity-numeric",
+      "name": "negative-infinity-numeric",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "timeout-minutes": "-Infinity",
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "positive-infinity-decimal",
+      "name": "positive-infinity-decimal",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "timeout-minutes": "Infinity",
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "NaN",
+      "name": "NaN",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "timeout-minutes": {
+        "type": 3,
+        "expr": "NaN"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "integer-regular",
+      "name": "integer-regular",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "timeout-minutes": 10,
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "positive-infinity-verbose-serialzation",
+      "name": "positive-infinity-verbose-serialzation",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": {
+        "type": 1,
+        "seq": [
+          "ubuntu-latest"
+        ]
+      },
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "timeout-minutes": "Infinity",
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "negative-infinity-numeric-verbose-serialzation",
+      "name": "negative-infinity-numeric-verbose-serialzation",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": {
+        "type": 1,
+        "seq": [
+          "ubuntu-latest"
+        ]
+      },
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "timeout-minutes": "-Infinity",
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "integer-verbose-serialzation",
+      "name": "integer-verbose-serialzation",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": {
+        "type": 1,
+        "seq": [
+          "ubuntu-latest"
+        ]
+      },
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "timeout-minutes": 100,
+          "run": "echo hi"
+        }
+      ]
+    }
+  ]
+}

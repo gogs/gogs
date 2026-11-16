@@ -1,0 +1,15 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    uses: ./.github/workflows/foo.yml
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-job-runs-on-and-uses.yml (Line: 5, Col: 5): Unexpected value 'uses'"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+include-source: false # Drop file/line/col from output
+---
+on:
+  push:
+    branches:
+      - main
+  workflow_call:
+    outputs:
+      output1:
+        description: foo
+jobs:
+  my-job:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-on-workflow_call-output.yml (Line: 8, Col: 9): Required property is missing: value"
+    }
+  ]
+}

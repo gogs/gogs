@@ -1,0 +1,283 @@
+include-source: false # Drop file/line/col from output
+---
+on: push 
+jobs:
+  matrix-basic:
+    strategy:
+      matrix:
+        version: [10, 12, 14]
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - run: echo hi
+  matrix-nested-sequences:
+    strategy:
+      matrix:
+        version: [[[[10]],2],12,14]
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - run: echo hi
+  matrix-with-infinity:
+    strategy:
+      matrix:
+        version: [1, 999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999]
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - run: echo hi
+  nested-matrix:
+    strategy:
+      matrix: { vector1: [ {foo: {bar: baz} } ] }
+    runs-on: linux
+    steps:
+      - run: echo hi
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "matrix-basic",
+      "name": "matrix-basic",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "strategy": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "matrix",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "version",
+                  "Value": {
+                    "type": 1,
+                    "seq": [
+                      10,
+                      12,
+                      14
+                    ]
+                  }
+                },
+                {
+                  "Key": "os",
+                  "Value": {
+                    "type": 1,
+                    "seq": [
+                      "ubuntu-latest",
+                      "windows-latest"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "runs-on": {
+        "type": 3,
+        "expr": "matrix.os"
+      },
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "matrix-nested-sequences",
+      "name": "matrix-nested-sequences",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "strategy": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "matrix",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "version",
+                  "Value": {
+                    "type": 1,
+                    "seq": [
+                      {
+                        "type": 1,
+                        "seq": [
+                          {
+                            "type": 1,
+                            "seq": [
+                              {
+                                "type": 1,
+                                "seq": [
+                                  10
+                                ]
+                              }
+                            ]
+                          },
+                          2
+                        ]
+                      },
+                      12,
+                      14
+                    ]
+                  }
+                },
+                {
+                  "Key": "os",
+                  "Value": {
+                    "type": 1,
+                    "seq": [
+                      "ubuntu-latest",
+                      "windows-latest"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "runs-on": {
+        "type": 3,
+        "expr": "matrix.os"
+      },
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "matrix-with-infinity",
+      "name": "matrix-with-infinity",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "strategy": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "matrix",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "version",
+                  "Value": {
+                    "type": 1,
+                    "seq": [
+                      1,
+                      "Infinity"
+                    ]
+                  }
+                },
+                {
+                  "Key": "os",
+                  "Value": {
+                    "type": 1,
+                    "seq": [
+                      "ubuntu-latest",
+                      "windows-latest"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "runs-on": {
+        "type": 3,
+        "expr": "matrix.os"
+      },
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "nested-matrix",
+      "name": "nested-matrix",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "strategy": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "matrix",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "vector1",
+                  "Value": {
+                    "type": 1,
+                    "seq": [
+                      {
+                        "type": 2,
+                        "map": [
+                          {
+                            "Key": "foo",
+                            "Value": {
+                              "type": 2,
+                              "map": [
+                                {
+                                  "Key": "bar",
+                                  "Value": "baz"
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "runs-on": "linux",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,204 @@
+include-source: false # Drop file/line/col from output
+skip:
+  - Go
+max-nested-reusable-workflows-depth: 2
+---
+on: push
+jobs:
+  a:
+    uses: contoso/templates/.github/workflows/deploy-level-1a.yml@v1
+  b:
+    uses: contoso/templates/.github/workflows/deploy-level-1b.yml@v1
+  c:
+    uses: contoso/templates/.github/workflows/deploy-level-1c.yml@v1
+---
+contoso/templates/.github/workflows/deploy-level-1a.yml@v1
+---
+on: workflow_call
+jobs:
+  deploy-level-1a:
+    uses: contoso/templates/.github/workflows/deploy-level-2a.yml@v1
+---
+contoso/templates/.github/workflows/deploy-level-2a.yml@v1
+---
+on: workflow_call
+jobs:
+  deploy-level-2a:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+---
+contoso/templates/.github/workflows/deploy-level-1b.yml@v1
+---
+on: workflow_call
+jobs:
+  deploy-level-1b:
+    uses: contoso/templates/.github/workflows/deploy-level-2b.yml@v1
+---
+contoso/templates/.github/workflows/deploy-level-2b.yml@v1
+---
+on: workflow_call
+jobs:
+  deploy-level-2b:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+---
+contoso/templates/.github/workflows/deploy-level-1c.yml@v1
+---
+on: workflow_call
+jobs:
+  deploy-level-1c:
+    uses: contoso/templates/.github/workflows/deploy-level-2c.yml@v1
+---
+contoso/templates/.github/workflows/deploy-level-2c.yml@v1
+---
+on: workflow_call
+jobs:
+  deploy-level-2c:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+---
+{
+  "jobs": [
+    {
+      "type": "reusableWorkflowJob",
+      "id": "a",
+      "name": "a",
+      "needs": [],
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "ref": "contoso/templates/.github/workflows/deploy-level-1a.yml@v1",
+      "jobs": [
+        {
+          "type": "reusableWorkflowJob",
+          "id": "deploy-level-1a",
+          "name": "deploy-level-1a",
+          "needs": [],
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "ref": "contoso/templates/.github/workflows/deploy-level-2a.yml@v1",
+          "jobs": [
+            {
+              "type": "job",
+              "id": "deploy-level-2a",
+              "name": "deploy-level-2a",
+              "if": {
+                "type": 3,
+                "expr": "success()"
+              },
+              "runs-on": "ubuntu-latest",
+              "steps": [
+                {
+                  "id": "__run",
+                  "if": {
+                    "type": 3,
+                    "expr": "success()"
+                  },
+                  "run": "echo hi"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "reusableWorkflowJob",
+      "id": "b",
+      "name": "b",
+      "needs": [],
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "ref": "contoso/templates/.github/workflows/deploy-level-1b.yml@v1",
+      "jobs": [
+        {
+          "type": "reusableWorkflowJob",
+          "id": "deploy-level-1b",
+          "name": "deploy-level-1b",
+          "needs": [],
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "ref": "contoso/templates/.github/workflows/deploy-level-2b.yml@v1",
+          "jobs": [
+            {
+              "type": "job",
+              "id": "deploy-level-2b",
+              "name": "deploy-level-2b",
+              "if": {
+                "type": 3,
+                "expr": "success()"
+              },
+              "runs-on": "ubuntu-latest",
+              "steps": [
+                {
+                  "id": "__run",
+                  "if": {
+                    "type": 3,
+                    "expr": "success()"
+                  },
+                  "run": "echo hi"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "reusableWorkflowJob",
+      "id": "c",
+      "name": "c",
+      "needs": [],
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "ref": "contoso/templates/.github/workflows/deploy-level-1c.yml@v1",
+      "jobs": [
+        {
+          "type": "reusableWorkflowJob",
+          "id": "deploy-level-1c",
+          "name": "deploy-level-1c",
+          "needs": [],
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "ref": "contoso/templates/.github/workflows/deploy-level-2c.yml@v1",
+          "jobs": [
+            {
+              "type": "job",
+              "id": "deploy-level-2c",
+              "name": "deploy-level-2c",
+              "if": {
+                "type": 3,
+                "expr": "success()"
+              },
+              "runs-on": "ubuntu-latest",
+              "steps": [
+                {
+                  "id": "__run",
+                  "if": {
+                    "type": 3,
+                    "expr": "success()"
+                  },
+                  "run": "echo hi"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,211 @@
+include-source: false # Drop file/line/col from output
+skip:
+  - Go
+---
+on: push
+jobs:
+  build:
+    strategy:
+      matrix:
+        node-version: [4, 6, 8, 10]
+        npm-version: [1, 2, 3]
+        include:
+          - node-version: 4
+            npm: 2
+        exclude:
+          - node-version: 4
+            npm-version: 2
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+  build2:
+    strategy:
+      matrix:
+        sha:
+          - ${{ github.event.after }}
+          - ${{ github.event.before }}
+        include:
+          - sha: ${{ github.event.after }}
+            is-after: true
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo ${{ matrix.sha }}
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "strategy": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "matrix",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "node-version",
+                  "Value": {
+                    "type": 1,
+                    "seq": [
+                      4,
+                      6,
+                      8,
+                      10
+                    ]
+                  }
+                },
+                {
+                  "Key": "npm-version",
+                  "Value": {
+                    "type": 1,
+                    "seq": [
+                      1,
+                      2,
+                      3
+                    ]
+                  }
+                },
+                {
+                  "Key": "include",
+                  "Value": {
+                    "type": 1,
+                    "seq": [
+                      {
+                        "type": 2,
+                        "map": [
+                          {
+                            "Key": "node-version",
+                            "Value": 4
+                          },
+                          {
+                            "Key": "npm",
+                            "Value": 2
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "Key": "exclude",
+                  "Value": {
+                    "type": 1,
+                    "seq": [
+                      {
+                        "type": 2,
+                        "map": [
+                          {
+                            "Key": "node-version",
+                            "Value": 4
+                          },
+                          {
+                            "Key": "npm-version",
+                            "Value": 2
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build2",
+      "name": "build2",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "strategy": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "matrix",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "sha",
+                  "Value": {
+                    "type": 1,
+                    "seq": [
+                      {
+                        "type": 3,
+                        "expr": "github.event.after"
+                      },
+                      {
+                        "type": 3,
+                        "expr": "github.event.before"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "Key": "include",
+                  "Value": {
+                    "type": 1,
+                    "seq": [
+                      {
+                        "type": 2,
+                        "map": [
+                          {
+                            "Key": "sha",
+                            "Value": {
+                              "type": 3,
+                              "expr": "github.event.after"
+                            }
+                          },
+                          {
+                            "Key": "is-after",
+                            "Value": true
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": {
+            "type": 3,
+            "expr": "format('echo {0}', matrix.sha)"
+          }
+        }
+      ]
+    }
+  ]
+}

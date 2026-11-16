@@ -1,0 +1,143 @@
+{
+  "basics": [
+    {
+      "expr": "startsWith('abcdef', 'abc')",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "startsWith('abcdef', 'bc')",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "startsWith('abcdef', '')",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "startsWith('1234', 12)",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "startsWith('true', true)",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "startsWith('false', false)",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "startsWith('asdf', null)",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "startsWith('1234', 23)",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "startsWith('true', false)",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "startsWith('true', false, true)",
+      "err": {
+        "kind": "parsing",
+        "value": "Too many parameters supplied: "
+      }
+    },
+    {
+      "expr": "startsWith('true')",
+      "err": {
+        "kind": "parsing",
+        "value": "Too few parameters supplied: "
+      }
+    }
+  ],
+
+  "case-insensitive-a-thru-z": [
+    {
+      "expr": "startsWith('ABCDEFGHIJKLMNOPQRSTUVWXYZ_asdf', 'abcdefghijklmnopqrstuvwxyz')",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "startsWith('abcdefghijklmnopqrstuvwxyz_asdf', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ')",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "case-insensitive-ς-(final-lowercase-sigma)-Σ-(capital-sigma)-σ-(non-final-sigma)": [
+    {
+      "expr": "startsWith('ς_asdf', 'Σ')",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "startsWith('ς_asdf', 'σ')",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "startsWith('Σ_asdf', 'ς')",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "startsWith('Σ_asdf', 'σ')",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "startsWith('σ_asdf', 'ς')",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "startsWith('σ_asdf', 'Σ')",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "case-insensitive-ü-Ü": [
+    {
+      "expr": "startsWith('ü_asdf', 'Ü')",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "startsWith('Ü_asdf', 'ü')",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "case-insensitive-ç-Ç": [
+    {
+      "expr": "startsWith('ç_asdf', 'Ç')",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "startsWith('Ç_asdf', 'ç')",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "case-sensitive-i-İ": [
+    {
+      "expr": "startsWith('i_asdf', 'İ')",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "startsWith('İ_asdf', 'i')",
+      "result": { "kind": "Boolean", "value": false }
+    }
+  ],
+
+  "case-sensitive-ı-I": [
+    {
+      "expr": "startsWith('ı_asdf', 'I')",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "startsWith('I_asdf', 'ı')",
+      "result": { "kind": "Boolean", "value": false }
+    }
+  ],
+
+  "cyrillic-letters": [
+    {
+      "expr": "startsWith('АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЬЭЮЯ_asdf', 'абвгдежзийклмнопрстуфхцчшщьэюя')",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ]
+}

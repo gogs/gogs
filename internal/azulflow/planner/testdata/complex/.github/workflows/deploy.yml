@@ -1,0 +1,28 @@
+on:
+  workflow_call:
+    inputs:
+      env:
+        type: string
+        required: true
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    steps:
+      - run: ./plan ${{ inputs.env }}
+  apply:
+    needs: plan
+    environment: ${{ inputs.env }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: ./apply
+  smoke:
+    needs: apply
+    runs-on: ubuntu-latest
+    steps:
+      - run: ./smoke
+  rollback:
+    needs: smoke
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - run: ./rollback

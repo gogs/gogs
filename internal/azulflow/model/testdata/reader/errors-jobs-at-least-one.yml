@@ -1,0 +1,12 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs: {}
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-jobs-at-least-one.yml (Line: 2, Col: 7): The workflow must contain at least one job with no dependencies."
+    }
+  ]
+}

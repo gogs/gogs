@@ -1,0 +1,191 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build:
+    if: github.repository == 'octo-org/octo-repo-prod'
+    runs-on: ubuntu-latest
+    env:
+      super_secret: ${{ secrets.SuperSecret }}
+    steps:
+      - run: echo hi
+      - if: always()
+        run: echo hi
+      - if: 123
+        run: echo hi
+      - if: 0 || 1
+        run: echo hi
+      - if: 123 || failure()
+        run: echo hi
+      - if: ${{ 0 || 1 }}
+        run: echo hi
+      - if: ${{ 123 || failure() }}
+        run: echo hi
+      - if: ${{ github.ref == 'refs/heads/main' }} # github context
+        run: echo hi
+      - if: ${{ vars.foo == 'bar' }}               # vars context
+        run: echo hi
+      - if: ${{ vars.foo || success() }}           # should not prepend "success()"
+        run: echo hi
+      - if: ${{ true || 'success()' }}             # should prepend "success()"
+        run: echo hi
+      - if: ${{ env.super_secret != '' }}
+        run: echo 'This step will only run if the secret has a value set.'
+      - if: ${{ env.super_secret == '' }}
+        run: echo 'This step will only run if the secret does not have a value set.'
+      - name: My first step
+        uses: octo-org/action-name@main
+      - name: My backup step
+        if: ${{  needs.build.outputs.run-js-tests && success() }}
+        uses: actions/heroku@1.0.0
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success() && (github.repository == 'octo-org/octo-repo-prod')"
+      },
+      "env": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "super_secret",
+            "Value": {
+              "type": 3,
+              "expr": "secrets.SuperSecret"
+            }
+          }
+        ]
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        },
+        {
+          "id": "__run_2",
+          "if": {
+            "type": 3,
+            "expr": "always()"
+          },
+          "run": "echo hi"
+        },
+        {
+          "id": "__run_3",
+          "if": {
+            "type": 3,
+            "expr": "success() && (123)"
+          },
+          "run": "echo hi"
+        },
+        {
+          "id": "__run_4",
+          "if": {
+            "type": 3,
+            "expr": "success() && (0 || 1)"
+          },
+          "run": "echo hi"
+        },
+        {
+          "id": "__run_5",
+          "if": {
+            "type": 3,
+            "expr": "123 || failure()"
+          },
+          "run": "echo hi"
+        },
+        {
+          "id": "__run_6",
+          "if": {
+            "type": 3,
+            "expr": "success() && (0 || 1)"
+          },
+          "run": "echo hi"
+        },
+        {
+          "id": "__run_7",
+          "if": {
+            "type": 3,
+            "expr": "123 || failure()"
+          },
+          "run": "echo hi"
+        },
+        {
+          "id": "__run_8",
+          "if": {
+            "type": 3,
+            "expr": "success() && (github.ref == 'refs/heads/main')"
+          },
+          "run": "echo hi"
+        },
+        {
+          "id": "__run_9",
+          "if": {
+            "type": 3,
+            "expr": "success() && (vars.foo == 'bar')"
+          },
+          "run": "echo hi"
+        },
+        {
+          "id": "__run_10",
+          "if": {
+            "type": 3,
+            "expr": "vars.foo || success()"
+          },
+          "run": "echo hi"
+        },
+        {
+          "id": "__run_11",
+          "if": {
+            "type": 3,
+            "expr": "success() && (true || 'success()')"
+          },
+          "run": "echo hi"
+        },
+        {
+          "id": "__run_12",
+          "if": {
+            "type": 3,
+            "expr": "success() && (env.super_secret != '')"
+          },
+          "run": "echo 'This step will only run if the secret has a value set.'"
+        },
+        {
+          "id": "__run_13",
+          "if": {
+            "type": 3,
+            "expr": "success() && (env.super_secret == '')"
+          },
+          "run": "echo 'This step will only run if the secret does not have a value set.'"
+        },
+        {
+          "id": "__octo-org_action-name",
+          "name": "My first step",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "uses": "octo-org/action-name@main"
+        },
+        {
+          "id": "__actions_heroku",
+          "name": "My backup step",
+          "if": {
+            "type": 3,
+            "expr": "needs.build.outputs.run-js-tests && success()"
+          },
+          "uses": "actions/heroku@1.0.0"
+        }
+      ]
+    }
+  ]
+}

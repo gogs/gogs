@@ -1,0 +1,22 @@
+These workflow files are copied unchanged from public repositories, to test
+the planner on real workflows.
+
+cpython/.github/workflows: python/cpython at
+18f3a718e1f884cde4a07392403af79147158425, under the Python Software
+Foundation License Version 2 (https://github.com/python/cpython/blob/main/LICENSE).
+
+rust/.github/workflows: rust-lang/rust at
+5f4effd579500175af844241eb179e756190f1e7, under the MIT license or the Apache
+License 2.0 (https://github.com/rust-lang/rust/blob/main/COPYRIGHT).
+
+home-assistant/.github/workflows: home-assistant/core at
+0fc2cd50ca147c23a466b0b7b614884f59f2d853, under the Apache License 2.0
+(https://github.com/home-assistant/core/blob/dev/LICENSE.md).
+
+next.js/.github/workflows: vercel/next.js at
+c71d522ee9fed36a31b5e03c9d69bafee3ef5929, under the MIT license
+(https://github.com/vercel/next.js/blob/canary/license.md).
+
+uv/.github/workflows: astral-sh/uv at
+d5c3f174417418c24ec3c276e01b0f62b961b13c, under the MIT license or the Apache
+License 2.0 (https://github.com/astral-sh/uv/blob/main/LICENSE-MIT).

@@ -1,0 +1,378 @@
+{
+  "bool": [
+    {
+      "expr": "false < true",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "false < false",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "true < false",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "true < true",
+      "result": { "kind": "Boolean", "value": false }
+    }
+  ],
+
+  "number": [
+    {
+      "expr": "1 < 2",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "1 < 1",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "2 < 1",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "1.001 < 1.002",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "string": [
+    {
+      "expr": "'abc' < 'def'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'b' < 'a'",
+      "result": { "kind": "Boolean", "value": false }
+    }
+  ],
+
+  "array": [
+    {
+      "expr": "test < test",
+      "contexts": { "test": [] },
+      "result": { "kind": "Boolean", "value": false }
+    }
+  ],
+
+  "object": [
+    {
+      "expr": "test < test",
+      "contexts": { "test": {} },
+      "result": { "kind": "Boolean", "value": false }
+    }
+  ],
+
+  "coerce_bool_number": [
+    {
+      "expr": "false < 0",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "false < 1",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "true < 1",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "true < 2",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "false < NaN",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "true < NaN",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "false < Infinity",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "true < Infinity",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "false < -Infinity",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "true < -Infinity",
+      "result": { "kind": "Boolean", "value": false }
+    }
+  ],
+
+  "coerce_bool_string": [
+    {
+      "expr": "false < '0'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "false < '1'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "true < '1'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "true < '2'",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "coerce_bool_null": [
+    {
+      "expr": "false < null",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "true < null",
+      "result": { "kind": "Boolean", "value": false }
+    }
+  ],
+
+  "coerce_bool_object": [
+    {
+      "expr": "false < test",
+      "contexts": { "test": {} },
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "true < test",
+      "contexts": { "test": {} },
+      "result": { "kind": "Boolean", "value": false }
+    }
+  ],
+
+  "coerce_bool_array": [
+    {
+      "expr": "false < test",
+      "contexts": { "test": [] },
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "true < test",
+      "contexts": { "test": [] },
+      "result": { "kind": "Boolean", "value": false }
+    }
+  ],
+
+  "coerce_number_bool": [
+    {
+      "expr": "-1 < false",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "0 < false",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "0 < true",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "1 < true",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "NaN < false",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "NaN < true",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "Infinity < false",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "Infinity < true",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "-Infinity < false",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "-Infinity < true",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "coerce_number_string": [
+    {
+      "expr": "0 < ' 0 '",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "0 < ' 1 '",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "1 < ' 1 '",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "1 < ' 2 '",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "coerce_number_null": [
+    {
+      "expr": "-1 < null",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "0 < null",
+      "result": { "kind": "Boolean", "value": false }
+    }
+  ],
+
+  "coerce_number_object": [
+    {
+      "expr": "0 < test",
+      "contexts": { "test": {} },
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "-1 < test",
+      "contexts": { "test": {} },
+      "result": { "kind": "Boolean", "value": false }
+    }
+  ],
+
+  "coerce_number_array": [
+    {
+      "expr": "0 < test",
+      "contexts": { "test": [] },
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "-1 < test",
+      "contexts": { "test": [] },
+      "result": { "kind": "Boolean", "value": false }
+    }
+  ],
+
+  "coerce_string_bool": [
+    {
+      "expr": "'0' < false",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'-1' < false",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'1' < true",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'0' < true",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "coerce_string_number": [
+    {
+      "expr": "' 0 ' < 1",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "' 0 ' < 0",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "' 1 ' < 2",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "' 1 ' < 1",
+      "result": { "kind": "Boolean", "value": false }
+    }
+  ],
+
+  "coerce_string_null": [
+    {
+      "expr": "'' < null",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'-1' < null",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "coerce_string_object": [
+    {
+      "expr": "'' < test",
+      "contexts": { "test": {} },
+      "result": { "kind": "Boolean", "value": false }
+    }
+  ],
+
+  "coerce_string_array": [
+    {
+      "expr": "'' < test",
+      "contexts": { "test": [] },
+      "result": { "kind": "Boolean", "value": false }
+    }
+  ],
+
+  "coerce_null_bool": [
+    {
+      "expr": "null < false",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "null < true",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "coerce_null_number": [
+    {
+      "expr": "null < 0",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "null < 1",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "coerce_null_string": [
+    {
+      "expr": "null < ' 0 '",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "null < ' 1 '",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "coerce_null_object": [
+    {
+      "expr": "null < test",
+      "contexts": { "test": {} },
+      "result": { "kind": "Boolean", "value": false }
+    }
+  ],
+
+  "coerce_null_array": [
+    {
+      "expr": "null < test",
+      "contexts": { "test": [] },
+      "result": { "kind": "Boolean", "value": false }
+    }
+  ]
+}

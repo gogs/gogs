@@ -1,0 +1,21 @@
+include-source: false # Drop file/line/col from output
+---
+name: Mixed String Expr ${{ format('hello {0}', 'world') }}
+on: 
+  ${{ format('expression-mapping-key {0}', 'as-key') }}:
+jobs:
+  ${{ format('hello {0}', 'world') }}
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-expression-not-allowed.yml (Line: 1, Col: 7): A template expression is not allowed in this context"
+    },
+    {
+      "Message": ".github/workflows/errors-expression-not-allowed.yml (Line: 3, Col: 3): A template expression is not allowed in this context"
+    },
+    {
+      "Message": ".github/workflows/errors-expression-not-allowed.yml (Line: 5, Col: 3): A template expression is not allowed in this context"
+    }
+  ]
+}

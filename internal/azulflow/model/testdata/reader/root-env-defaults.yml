@@ -1,0 +1,80 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+env:
+  SERVER: production
+defaults:
+  run:
+    shell: bash
+    working-directory: scripts
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: echo hi
+        continue-on-error: true
+---
+{
+  "env": {
+    "type": 2,
+    "map": [
+      {
+        "Key": "SERVER",
+        "Value": "production"
+      }
+    ]
+  },
+  "defaults": {
+    "type": 2,
+    "map": [
+      {
+        "Key": "run",
+        "Value": {
+          "type": 2,
+          "map": [
+            {
+              "Key": "shell",
+              "Value": "bash"
+            },
+            {
+              "Key": "working-directory",
+              "Value": "scripts"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__actions_checkout",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "uses": "actions/checkout@v3"
+        },
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "continue-on-error": true,
+          "run": "echo hi"
+        }
+      ]
+    }
+  ]
+}

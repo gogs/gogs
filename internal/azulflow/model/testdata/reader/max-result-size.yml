@@ -1,0 +1,52 @@
+include-source: false # Drop file/line/col from output
+max-result-size: 1128
+---
+on: push
+jobs:
+  job1:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo Deploying 1...
+      - run: echo Deploying 2...
+      - run: echo Deploying 3...
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "job1",
+      "name": "job1",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo Deploying 1..."
+        },
+        {
+          "id": "__run_2",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo Deploying 2..."
+        },
+        {
+          "id": "__run_3",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo Deploying 3..."
+        }
+      ]
+    }
+  ]
+}

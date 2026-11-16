@@ -1,0 +1,28 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build1:
+    runs-on: linux
+    container:
+      options: someoption
+    steps:
+      - run: echo hi
+  build2:
+    runs-on: linux
+    services:
+      nginx:
+        options: someoption
+    steps:
+      - run: echo hi
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/job-container-missing-image.yml (Line: 6, Col: 7): Container image cannot be empty"
+    },
+    {
+      "Message": ".github/workflows/job-container-missing-image.yml (Line: 13, Col: 9): Container image cannot be empty"
+    }
+  ]
+}

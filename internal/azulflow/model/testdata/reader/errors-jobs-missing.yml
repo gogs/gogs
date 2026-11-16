@@ -1,0 +1,11 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-jobs-missing.yml (Line: 1, Col: 1): Required property is missing: jobs"
+    }
+  ]
+}

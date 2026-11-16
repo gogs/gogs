@@ -1,0 +1,4 @@
+go test fuzz v1
+string("jobs:\n  A0000:\n    runs-on: 0\n  A:\n    needs: d2\n    runs-on: 0\n  d2:\n   runs-on: 0")
+string("0")
+uint64(11)

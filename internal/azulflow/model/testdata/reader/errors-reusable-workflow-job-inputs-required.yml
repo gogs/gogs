@@ -1,0 +1,30 @@
+include-source: false # Drop file/line/col from output
+skip:
+  - Go
+---
+on: push
+jobs:
+  deploy:
+    uses: contoso/templates/.github/workflows/deploy.yml@v1
+---
+contoso/templates/.github/workflows/deploy.yml@v1
+---
+on:
+  workflow_call:
+    inputs:
+      foo:
+        required: true
+        type: string
+jobs:
+  job1:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-reusable-workflow-job-inputs-required.yml (Line: 4, Col: 11): Input foo is required, but not provided while calling."
+    }
+  ]
+}

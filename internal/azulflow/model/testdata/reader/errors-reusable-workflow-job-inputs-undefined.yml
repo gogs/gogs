@@ -1,0 +1,27 @@
+include-source: false # Drop file/line/col from output
+skip:
+  - Go
+---
+on: push
+jobs:
+  deploy:
+    uses: contoso/templates/.github/workflows/deploy.yml@v1
+    with:
+      foo: bar
+---
+contoso/templates/.github/workflows/deploy.yml@v1
+---
+on: workflow_call
+jobs:
+  job1:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-reusable-workflow-job-inputs-undefined.yml (Line: 6, Col: 12): Invalid input, foo is not defined in the referenced workflow."
+    }
+  ]
+}

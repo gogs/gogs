@@ -1,0 +1,61 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build:
+    runs-on: linux
+    defaults:
+      run:
+        shell: cmd
+        working-directory: ${{github.test}}
+    steps:
+      - run: echo hi
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "defaults": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "run",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "shell",
+                  "Value": "cmd"
+                },
+                {
+                  "Key": "working-directory",
+                  "Value": {
+                    "type": 3,
+                    "expr": "github.test"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "runs-on": "linux",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+on:
+  workflow_call:
+    inputs:
+      service:
+        type: string
+        required: true
+    outputs:
+      shards:
+        value: ${{ jobs.scan.outputs.shards }}
+      ticket:
+        value: ${{ jobs.sign.outputs.ticket }}
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - run: make ${{ inputs.service }}
+  image:
+    needs: compile
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+    runs-on: ubuntu-latest
+    outputs:
+      digest: ${{ steps.push.outputs.digest }}
+    steps:
+      - id: push
+        run: ./push ${{ matrix.arch }}
+  sign:
+    needs: image
+    uses: ./.github/workflows/sign.yml
+    with:
+      digest: ${{ needs.image.outputs.digest }}
+  scan:
+    needs: [image, sign]
+    runs-on: ubuntu-latest
+    outputs:
+      shards: ${{ steps.s.outputs.shards }}
+    steps:
+      - id: s
+        run: ./scan ${{ needs.sign.outputs.ticket }}

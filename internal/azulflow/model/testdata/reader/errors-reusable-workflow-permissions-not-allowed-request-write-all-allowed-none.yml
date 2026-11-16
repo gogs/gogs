@@ -1,0 +1,30 @@
+include-source: false # Drop file/line/col from output
+skip:
+  - Go
+permissions-policy: LimitedRead
+# Note, the workflow names are intentionally short so the error message doesn't get truncated too much
+---
+on: push
+jobs:
+  deploy:
+    permissions: {}
+    uses: a/b/.github/workflows/c.yml@v1
+---
+a/b/.github/workflows/c.yml@v1
+---
+on:  workflow_call
+jobs:
+  deploy:
+    name: Deploy 1
+    permissions: write-all
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-reusable-workflow-permissions-not-allowed-request-write-all-allowed-none.yml (Line: 3, Col: 3): Error calling workflow 'a/b/.github/workflows/c.yml@v1'. The nested job 'Deploy 1' is requesting 'actions: write, checks: write, contents: write, deployments: write, discussions: write, issues: write, packages: write, pages: write, pull-requests: write, repository-projects: write, statuses: write, security-events: write, id-token: write', but is only allowed 'actions: none, ch[...]"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "or": [
+    {
+      "expr": "true || true || true",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    { "expr": "true || true", "result": { "kind": "Boolean", "value": true } },
+    {
+      "expr": "true || true || false",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    { "expr": "true || false", "result": { "kind": "Boolean", "value": true } },
+    { "expr": "false || true", "result": { "kind": "Boolean", "value": true } },
+    {
+      "expr": "false || false",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "0 || 0 || 2 || 3",
+      "result": { "kind": "Number", "value": 2.0 }
+    },
+    { "expr": "false || 0", "result": { "kind": "Number", "value": 0.0 } },
+    {
+      "expr": "false || '' || 'a' || 'b'",
+      "result": { "kind": "String", "value": "a" }
+    },
+    { "expr": "false || ''", "result": { "kind": "String", "value": "" } },
+    { "expr": "null || true", "result": { "kind": "Boolean", "value": true } },
+    { "expr": "false || null", "result": { "kind": "Null", "value": null } }
+  ]
+}

@@ -1,0 +1,77 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+env:
+  UNDERSCORED_INT_AS_STRING: 12_345
+  UNDERSCORED_FLOAT_AS_STRING: 23_456.789_321
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        vector-1:
+          - 12_345
+          - 23_456.789_321
+    steps:
+      - run: echo hi
+---
+{
+  "env": {
+    "type": 2,
+    "map": [
+      {
+        "Key": "UNDERSCORED_INT_AS_STRING",
+        "Value": "12_345"
+      },
+      {
+        "Key": "UNDERSCORED_FLOAT_AS_STRING",
+        "Value": "23_456.789_321"
+      }
+    ]
+  },
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "strategy": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "matrix",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "vector-1",
+                  "Value": {
+                    "type": 1,
+                    "seq": [
+                      "12_345",
+                      "23_456.789_321"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    }
+  ]
+}

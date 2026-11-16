@@ -1,0 +1,18 @@
+include-source: false # Drop file/line/col from output
+skip:
+- TypeScript
+---
+on: push
+jobs:
+  bad-anchor-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - run: &echo hi
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-anchor-tag.yml: Anchors are not currently supported. Remove the anchor 'echo'"
+    }
+  ]
+}

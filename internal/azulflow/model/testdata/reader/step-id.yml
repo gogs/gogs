@@ -1,0 +1,44 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  job1:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+        id: action-step-id
+      - run: echo 1
+        id: run-step-id
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "job1",
+      "name": "job1",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "action-step-id",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "uses": "actions/checkout@v1"
+        },
+        {
+          "id": "run-step-id",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo 1"
+        }
+      ]
+    }
+  ]
+}

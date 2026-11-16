@@ -1,0 +1,53 @@
+skip:
+  - C#
+  - Go
+---
+on:
+  repository_dispatch:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: echo hi
+        continue-on-error: true
+---
+{
+  "events": {
+    "repository_dispatch": {},
+    "workflow_dispatch": {}
+  },
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__actions_checkout",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "uses": "actions/checkout@v3"
+        },
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "continue-on-error": true,
+          "run": "echo hi"
+        }
+      ]
+    }
+  ]
+}

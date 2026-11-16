@@ -1,0 +1,52 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+---
+{
+  "concurrency": {
+    "type": 2,
+    "map": [
+      {
+        "Key": "group",
+        "Value": {
+          "type": 3,
+          "expr": "format('ci-{0}', github.ref)"
+        }
+      },
+      {
+        "Key": "cancel-in-progress",
+        "Value": true
+      }
+    ]
+  },
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    }
+  ]
+}

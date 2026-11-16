@@ -1,0 +1,293 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+permissions:
+  checks: read
+jobs:
+  # Defaults workflow-level permissions
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+
+  # Explicit job-level permissions
+  build2:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    steps:
+      - run: echo hi
+  build3:
+    runs-on: ubuntu-latest
+    permissions: read-all
+    steps:
+      - run: echo hi
+  build4:
+    runs-on: ubuntu-latest
+    permissions: write-all
+    steps:
+      - run: echo hi
+  build5:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      checks: read
+      contents: read
+      deployments: read
+      issues: read
+      discussions: read
+      packages: read
+      pages: read
+      pull-requests: read
+      security-events: read
+      statuses: read
+      repository-projects: read
+    steps:
+      - run: echo hi
+  build6:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      checks: write
+      contents: write
+      deployments: write
+      issues: write
+      discussions: write
+      packages: write
+      pages: write
+      pull-requests: write
+      security-events: write
+      statuses: write
+      repository-projects: write
+    steps:
+      - run: echo hi
+  build7:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: none
+      checks: none
+      contents: none
+      deployments: none
+      issues: none
+      discussions: none
+      packages: none
+      pages: none
+      pull-requests: none
+      security-events: none
+      statuses: none
+      repository-projects: none
+    steps:
+      - run: echo hi
+---
+{
+  "permissions": {
+    "checks": "read"
+  },
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "permissions": {
+        "checks": "read"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build2",
+      "name": "build2",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "permissions": {
+        "actions": "read"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build3",
+      "name": "build3",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "permissions": {
+        "actions": "read",
+        "checks": "read",
+        "contents": "read",
+        "deployments": "read",
+        "discussions": "read",
+        "id-token": "read",
+        "issues": "read",
+        "packages": "read",
+        "pages": "read",
+        "pull-requests": "read",
+        "repository-projects": "read",
+        "security-events": "read",
+        "statuses": "read"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build4",
+      "name": "build4",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "permissions": {
+        "actions": "write",
+        "checks": "write",
+        "contents": "write",
+        "deployments": "write",
+        "discussions": "write",
+        "id-token": "write",
+        "issues": "write",
+        "packages": "write",
+        "pages": "write",
+        "pull-requests": "write",
+        "repository-projects": "write",
+        "security-events": "write",
+        "statuses": "write"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build5",
+      "name": "build5",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "permissions": {
+        "actions": "read",
+        "checks": "read",
+        "contents": "read",
+        "deployments": "read",
+        "discussions": "read",
+        "issues": "read",
+        "packages": "read",
+        "pages": "read",
+        "pull-requests": "read",
+        "repository-projects": "read",
+        "security-events": "read",
+        "statuses": "read"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build6",
+      "name": "build6",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "permissions": {
+        "actions": "write",
+        "checks": "write",
+        "contents": "write",
+        "deployments": "write",
+        "discussions": "write",
+        "issues": "write",
+        "packages": "write",
+        "pages": "write",
+        "pull-requests": "write",
+        "repository-projects": "write",
+        "security-events": "write",
+        "statuses": "write"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build7",
+      "name": "build7",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "permissions": {},
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    }
+  ]
+}

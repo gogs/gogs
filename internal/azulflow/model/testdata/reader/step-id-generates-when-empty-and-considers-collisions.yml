@@ -1,0 +1,96 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  my-job:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+      - uses: docker://alpine:latest
+      - run: echo hello
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v3
+      - uses: docker://alpine:latest
+      - run: echo hello
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "my-job",
+      "name": "my-job",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__actions_checkout",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "uses": "actions/checkout@v2"
+        },
+        {
+          "id": "__actions_setup-node",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "uses": "actions/setup-node@v2"
+        },
+        {
+          "id": "__alpine_latest",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "uses": "docker://alpine:latest"
+        },
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hello"
+        },
+        {
+          "id": "__actions_checkout_2",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "uses": "actions/checkout@v2"
+        },
+        {
+          "id": "__actions_setup-node_2",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "uses": "actions/setup-node@v3"
+        },
+        {
+          "id": "__alpine_latest_2",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "uses": "docker://alpine:latest"
+        },
+        {
+          "id": "__run_2",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hello"
+        }
+      ]
+    }
+  ]
+}

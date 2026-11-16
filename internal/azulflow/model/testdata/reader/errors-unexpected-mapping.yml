@@ -1,0 +1,16 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      not: a-sequence
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-unexpected-mapping.yml (Line: 6, Col: 7): A mapping was not expected"
+    }
+  ]
+}

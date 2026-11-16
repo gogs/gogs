@@ -1,0 +1,17 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps: 
+      - null : '  '
+        run: echo {{ 😀 }}
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-invalid-mapping-key.yml (Line: 6, Col: 9): Unexpected value ''"
+    }
+  ]
+}

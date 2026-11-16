@@ -1,0 +1,68 @@
+include-source: false # Drop file/line/col from output
+skip:
+  - Go
+permissions-policy: LimitedRead
+---
+on: push
+jobs:
+  # Inherit from default permissions policy
+  build:
+    uses: contoso/templates/.github/workflows/build.yml@v1
+---
+contoso/templates/.github/workflows/build.yml@v1
+---
+permissions:
+  contents: read
+  packages: read
+on: workflow_call
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 1
+---
+{
+  "jobs": [
+    {
+      "type": "reusableWorkflowJob",
+      "id": "build",
+      "name": "build",
+      "needs": [],
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "ref": "contoso/templates/.github/workflows/build.yml@v1",
+      "permissions": {
+        "contents": "read",
+        "packages": "read"
+      },
+      "jobs": [
+        {
+          "type": "job",
+          "id": "deploy",
+          "name": "deploy",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "permissions": {
+            "contents": "read",
+            "packages": "read"
+          },
+          "runs-on": "ubuntu-latest",
+          "steps": [
+            {
+              "id": "__run",
+              "if": {
+                "type": 3,
+                "expr": "success()"
+              },
+              "run": "echo 1"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

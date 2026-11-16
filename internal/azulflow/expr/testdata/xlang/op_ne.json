@@ -1,0 +1,597 @@
+{
+  "boolean": [
+    {
+      "expr": "true != true",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "false != false",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "true != true",
+      "result": { "kind": "Boolean", "value": false }
+    }
+  ],
+
+  "number": [
+    {
+      "expr": "0 != -0",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "2 != 2",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "120 != 1.2e2",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "1 != 2",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "1.001 != 1.002",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "NaN != NaN",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "0 != NaN",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "1 != NaN",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "Infinity != Infinity",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "-Infinity != Infinity",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "0 != Infinity",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "1 != Infinity",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "string": [
+    {
+      "expr": "'a' != 'a'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'a' != 'b'",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "null": [
+    { "expr": "null != null", "result": { "kind": "Boolean", "value": false } }
+  ],
+
+  "object": [
+    {
+      "expr": "object1 != object1",
+      "contexts": { "object1": {} },
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "object1 != object2",
+      "contexts": { "object1": {}, "object2": {} },
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "array": [
+    {
+      "expr": "array1 != array1",
+      "contexts": { "array1": [] },
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "array1 != array2",
+      "contexts": { "array1": [], "array2": [] },
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "coerce_bool_number": [
+    {
+      "expr": "false != 0",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "false != 1",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "true != 1",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "false != NaN",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "true != 2",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "coerce_bool_string": [
+    {
+      "expr": "false != ''",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "false != ' '",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "false != ' 0.0 '",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "false != ' 1.0 '",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "true != ' 1.0 '",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "true != ' 1 '",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "false != '-1'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "true != '2'",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "coerce_bool_null": [
+    {
+      "expr": "false != null",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "true != null",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "coerce_bool_object-array": [
+    {
+      "expr": "false != test",
+      "contexts": { "test": {} },
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "false != test",
+      "contexts": { "test": [] },
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "true != test",
+      "contexts": { "test": {} },
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "true != test",
+      "contexts": { "test": [] },
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "coerce_number_bool": [
+    {
+      "expr": "0 != false",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "1 != false",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "1 != true",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "2 != true",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "NaN != false",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "coerce_number_string": [
+    {
+      "expr": "0 != ' -0.0 '",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "0 != ''",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "0 != '  '",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "120 != ' +1.2e2 '",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "120.0 != ' 1.2E2 '",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "120 != ' 1.2e+2 '",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "-120 != ' -1.2E+2 '",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "0.012 != ' 1.2e-2 '",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "0.012 != ' 1.2E-2 '",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "255.0 != ' 0xff '",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "8.0 != ' 0o10 '",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "Infinity != ' Infinity '",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "-Infinity != ' -Infinity '",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "NaN != 'NaN'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "1 != '0'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "1 != '1'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "1 != 'a'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "0 != 'a'",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "coerce_number_null": [
+    {
+      "expr": "0 != null",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "1 != null",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "coerce_number_object-array": [
+    {
+      "expr": "0 != test",
+      "contexts": { "test": {} },
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "1 != test",
+      "contexts": { "test": {} },
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "0 != test",
+      "contexts": { "test": [] },
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "1 != test",
+      "contexts": { "test": [] },
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "coerce_string_bool": [
+    {
+      "expr": "'' != false",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'  ' != false",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "' 0.0 ' != false",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "' 1.0 ' != false",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "' 1.0 ' != true",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "' 1 ' != true",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'-1' != true",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'2' != true",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "coerce_string_number": [
+    {
+      "expr": "' -0.0 ' != 0",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'' != 0",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'  ' != 0",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "' +1.2e2 ' != 120",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "' 1.2E2 ' != 120.0",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "' 1.2e+2 ' != 120",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "' -1.2E+2 ' != -120",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "' 1.2e-2 ' != 0.012",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "' 1.2E-2 ' != 0.012",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "' 0xff ' != 255.0",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "' 0o10 ' != 8.0",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "' Infinity ' != Infinity",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "' -Infinity ' != -Infinity",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'NaN' != NaN",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'0' != 1",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'1' != 1",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'a' != 1",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'a' != 0",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "coerce_string_null": [
+    {
+      "expr": "'' != null",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'   ' != null",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'0' != null",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "'1' != null",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'false' != null",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'null' != null",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "coerce_string_object": [
+    {
+      "expr": "'' != test",
+      "contexts": { "test": {} },
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'false' != test",
+      "contexts": { "test": {} },
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'0' != test",
+      "contexts": { "test": {} },
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'1' != test",
+      "contexts": { "test": {} },
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'null' != test",
+      "contexts": { "test": {} },
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'Object' != test",
+      "contexts": { "test": {} },
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "coerce_string_array": [
+    {
+      "expr": "'' != test",
+      "contexts": { "test": [] },
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'false' != test",
+      "contexts": { "test": [] },
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'0'  != test",
+      "contexts": { "test": [] },
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'0'  != test",
+      "contexts": { "test": [] },
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'null' != test",
+      "contexts": { "test": [] },
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "'Array' != test",
+      "contexts": { "test": [] },
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "coerce_null_bool": [
+    {
+      "expr": "null != false",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "null != true",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "coerce_null_number": [
+    {
+      "expr": "null != 0",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "null != 1",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "coerce_null_string": [
+    {
+      "expr": "null != ''",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "null != '   '",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "null != '0'",
+      "result": { "kind": "Boolean", "value": false }
+    },
+    {
+      "expr": "null != '1'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "null != 'false'",
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "null != 'null'",
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ],
+
+  "coerce_null_object-array": [
+    {
+      "expr": "null != test",
+      "contexts": { "test": {} },
+      "result": { "kind": "Boolean", "value": true }
+    },
+    {
+      "expr": "null != test",
+      "contexts": { "test": [] },
+      "result": { "kind": "Boolean", "value": true }
+    }
+  ]
+}

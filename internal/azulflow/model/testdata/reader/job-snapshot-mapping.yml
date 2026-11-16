@@ -1,0 +1,58 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+    snapshot: 
+      image-name: custom-image
+      version: 1.*
+      if: ${{ github.event_name == 'something' }}
+
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ],
+      "snapshot": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "image-name",
+            "Value": "custom-image"
+          },
+          {
+            "Key": "version",
+            "Value": "1.*"
+          },
+          {
+            "Key": "if",
+            "Value": {
+              "type": 3,
+              "expr": "github.event_name == 'something'"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

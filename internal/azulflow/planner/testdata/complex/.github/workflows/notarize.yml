@@ -1,0 +1,13 @@
+on:
+  workflow_call:
+    outputs:
+      ticket:
+        value: ${{ jobs.staple.outputs.attestation }}
+jobs:
+  submit:
+    runs-on: macos-latest
+    steps:
+      - run: ./submit
+  staple:
+    needs: submit
+    uses: ./.github/workflows/attest.yml

@@ -1,0 +1,67 @@
+{
+  "basics": [
+    { "expr": "fromJSON('null')",                "result": { "kind": "Null",     "value": null } },
+    { "expr": "fromJSON('true')",                "result": { "kind": "Boolean",  "value": true } },
+    { "expr": "fromJSON('false')",               "result": { "kind": "Boolean",  "value": false } },
+    { "expr": "fromJSON('0')",                   "result": { "kind": "Number",   "value": 0 } },
+    { "expr": "fromJSON('-0')",                  "result": { "kind": "Number",   "value": -0 } },
+    { "expr": "fromJSON('123456789')",           "result": { "kind": "Number",   "value": 123456789 } },
+    { "expr": "fromJSON('-123456789')",          "result": { "kind": "Number",   "value": -123456789 } },
+    { "expr": "fromJSON('1234.5')",              "result": { "kind": "Number",   "value": 1234.5 } },
+    { "expr": "fromJSON('-1234.5')",             "result": { "kind": "Number",   "value": -1234.5 } },
+    { "expr": "fromJSON('\"\"')",                "result": { "kind": "String",   "value": "" } },
+    { "expr": "fromJSON('\"abc\"')",             "result": { "kind": "String",   "value": "abc" } },
+    { "expr": "fromJSON('\"abc''def\"')",        "result": { "kind": "String",   "value": "abc'def" } },
+    { "expr": "fromJSON('\"abc\\\\\\\"def\"')",  "result": { "kind": "String",   "value": "abc\\\"def" } }
+  ],
+  "array": [
+    { "expr": "fromJSON('[]')",         "result": { "kind": "Array",  "value": [] } },
+    { "expr": "fromJSON('[1, 2, 3]')",  "result": { "kind": "Array",  "value": [1, 2, 3] } },
+    {
+      "expr": "fromJSON('[[1, 2, 3], [\"abc\",\"def\",\"ghi\"], [true, false, null, [], {}]]')",
+      "result": {
+        "kind": "Array",
+        "value": [[1, 2, 3], ["abc", "def", "ghi"], [true, false, null, [], {}]]
+      }
+    }
+  ],
+  "object": [
+    { "expr": "fromJSON('{}')",  "result": { "kind": "Object",  "value": {} } },
+    {
+      "expr": "fromJSON('{\"one\": \"value one\", \"two\": \"value two\", \"three\": \"value three\"}')", 
+      "result": { 
+        "kind": "Object",
+        "value": {
+          "one": "value one",
+          "two": "value two",
+          "three": "value three"
+        }
+      }
+    },
+    {
+      "expr": "fromJSON('{\"nested-one\": {\"one\": 1,\"two\": 2,\"three\": 3},\"nested-two\": {\"string one\": \"value one\",\"string two\": \"value two\",\"string three\": \"value three\"},\"nested-three\": {\"true\": true,\"false\": false,\"null\": null,\"array\": [],\"object\": {}}\n}')", 
+      "result": {
+        "kind": "Object",
+        "value": {
+          "nested-one": {
+            "one": 1,
+            "two": 2,
+            "three": 3
+          },
+          "nested-two": {
+            "string one": "value one",
+            "string two": "value two",
+            "string three": "value three"
+          },
+          "nested-three": {
+            "true": true,
+            "false": false,
+            "null": null,
+            "array": [],
+            "object": {}
+          }
+        }
+      }
+    }
+  ]
+}

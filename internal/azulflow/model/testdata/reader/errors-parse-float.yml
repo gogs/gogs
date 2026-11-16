@@ -1,0 +1,18 @@
+include-source: false # Drop file/line/col from output
+skip:
+- TypeScript
+---
+on: push
+jobs:
+  parse-float-error:
+    runs-on: !!float test
+    steps:
+      - uses: actions/checkout@v2
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-parse-float.yml: The value 'test' on line 4 and column 14 is invalid for the type 'tag:yaml.org,2002:float'"
+    }
+  ]
+}

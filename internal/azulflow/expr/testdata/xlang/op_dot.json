@@ -1,0 +1,202 @@
+{
+  "property-basics": [
+    {
+      "expr": "foo.bar",
+      "contexts": {
+        "foo": {
+          "bar": "baz"
+        }
+      },
+      "result": { "kind": "String", "value": "baz" }
+    },
+    {
+      "expr": "foo.Bar",
+      "contexts": {
+        "foo": {
+          "Bar": "baz"
+        }
+      },
+      "result": { "kind": "String", "value": "baz" }
+    },
+    {
+      "expr": "foo.b",
+      "contexts": {
+        "foo": {
+          "b": "baz"
+        }
+      },
+      "result": { "kind": "String", "value": "baz" }
+    },
+    {
+      "expr": "foo._",
+      "contexts": {
+        "foo": {
+          "_": "baz"
+        }
+      },
+      "result": { "kind": "String", "value": "baz" }
+    },
+    {
+      "expr": "foo._bar",
+      "contexts": {
+        "foo": {
+          "_bar": "baz"
+        }
+      },
+      "result": { "kind": "String", "value": "baz" }
+    },
+    {
+      "expr": "foo.b_ar",
+      "contexts": {
+        "foo": {
+          "b_ar": "baz"
+        }
+      },
+      "result": { "kind": "String", "value": "baz" }
+    },
+    {
+      "expr": "foo.b-ar",
+      "contexts": {
+        "foo": {
+          "b-ar": "baz"
+        }
+      },
+      "result": { "kind": "String", "value": "baz" }
+    },
+    {
+      "expr": "fromJson('{\"one\": \"one val\"}').one",
+      "result": { "kind": "String", "value": "one val" }
+    },
+    {
+      "expr": "(fromJson('{\"one\": \"one val\"}')).one",
+      "result": { "kind": "String", "value": "one val" }
+    },
+    {
+      "expr": "foo[*]",
+      "contexts": {
+        "foo": {
+          "one": "one val",
+          "two": "two val"
+        }
+      },
+      "result": { "kind": "Array", "value": ["one val", "two val"] }
+    }
+  ],
+  "property-case-insensitive": [
+    {
+      "expr": "foo.bar",
+      "contexts": {
+        "foo": {
+          "BAR": "baz"
+        }
+      },
+      "result": { "kind": "String", "value": "baz" }
+    },
+    {
+      "expr": "foo.BAR",
+      "contexts": {
+        "foo": {
+          "bar": "baz"
+        }
+      },
+      "result": { "kind": "String", "value": "baz" }
+    }
+  ],
+  "property-matches-const": [
+    {
+      "expr": "foo.true",
+      "contexts": {
+        "foo": {
+          "true": "it's true"
+        }
+      },
+      "result": { "kind": "String", "value": "it's true" }
+    },
+    {
+      "expr": "foo.false",
+      "contexts": {
+        "foo": {
+          "false": "it's false"
+        }
+      },
+      "result": { "kind": "String", "value": "it's false" }
+    },
+    {
+      "expr": "foo.Infinity",
+      "contexts": {
+        "foo": {
+          "Infinity": "it's Infinity"
+        }
+      },
+      "result": { "kind": "String", "value": "it's Infinity" }
+    },
+    {
+      "expr": "foo.NaN",
+      "contexts": {
+        "foo": {
+          "NaN": "it's NaN"
+        }
+      },
+      "result": { "kind": "String", "value": "it's NaN" }
+    },
+    {
+      "expr": "foo.null",
+      "contexts": {
+        "foo": {
+          "null": "it's null"
+        }
+      },
+      "result": { "kind": "String", "value": "it's null" }
+    },
+    {
+      "expr": "foo.format",
+      "contexts": {
+        "foo": {
+          "format": "it's format"
+        }
+      },
+      "result": { "kind": "String", "value": "it's format" }
+    }
+  ],
+  "property-errors": [
+    {
+      "expr": "foo.b@r",
+      "contexts": {
+        "foo": {
+          "b@r": "baz"
+        }
+      },
+      "err": {
+        "kind": "lexing",
+        "value": "Unexpected symbol: 'b@r'. Located at position 5 within expression: foo.b@r"
+      }
+    },
+    {
+      "expr": "foo.1",
+      "contexts": {
+        "foo": {}
+      },
+      "err": {
+        "kind": "parsing",
+        "value": "Unexpected symbol: '1'. Located at position 5 within expression: foo.1"
+      }
+    },
+    {
+      "expr": "fromjson('').1",
+      "err": {
+        "kind": "parsing",
+        "value": "Unexpected symbol: '1'. Located at position 14 within expression: fromjson('').1"
+      }
+    },
+    {
+      "expr": "foo[1].2",
+      "contexts": {
+        "foo": {}
+      },
+      "err": {
+        "kind": "parsing",
+        "value": "Unexpected symbol: '2'. Located at position 8 within expression: foo[1].2"
+      }
+    }
+  ]
+}

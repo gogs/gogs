@@ -1,0 +1,28 @@
+include-source: false # Drop file/line/col from output
+skip:
+  - Go
+permissions-policy: LimitedRead
+---
+on: push
+jobs:
+  deploy:
+    uses: contoso/templates/.github/workflows/deploy.yml@v1
+---
+contoso/templates/.github/workflows/deploy.yml@v1
+---
+on:  workflow_call
+jobs:
+  deploy:
+    permissions:
+      actions: write
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-reusable-workflow-permissions-not-allowed-job-level-from-caller-default.yml (Line: 3, Col: 3): Error calling workflow 'contoso/templates/.github/workflows/deploy.yml@v1'. The nested job 'deploy' is requesting 'actions: write', but is only allowed 'actions: none'."
+    }
+  ]
+}

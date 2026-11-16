@@ -1,0 +1,113 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Values are based on YAML 1.2 core schema - https://yaml.org/spec/1.2.0/#id2604037
+        vector-1:
+          # Integer, implicit type
+          - 1
+          - 2
+          - -1
+          - +1
+          - 0
+          - -0
+          - +0
+          - 0000
+          - -0000
+          - 0xff
+          - 0xFF
+          - 0o10
+          - 0755
+          - 00755
+          - +00755
+          - -00755
+
+          # Integer, explicit type
+          - !!int 1
+          - !!int -1
+          - !!int +1
+          - !!int 0xff
+          - !!int 0o10
+          - !<tag:yaml.org,2002:int> 1
+          - !<tag:yaml.org,2002:int> -1
+          - !<tag:yaml.org,2002:int> +1
+          - !<tag:yaml.org,2002:int> 0xff
+          - !<tag:yaml.org,2002:int> 0o10
+    steps:
+      - run: echo hi
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "strategy": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "matrix",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "vector-1",
+                  "Value": {
+                    "type": 1,
+                    "seq": [
+                      1,
+                      2,
+                      -1,
+                      1,
+                      0,
+                      0,
+                      0,
+                      0,
+                      0,
+                      255,
+                      255,
+                      8,
+                      755,
+                      755,
+                      755,
+                      -755,
+                      1,
+                      -1,
+                      1,
+                      255,
+                      8,
+                      1,
+                      -1,
+                      1,
+                      255,
+                      8
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    }
+  ]
+}

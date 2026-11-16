@@ -1,0 +1,79 @@
+include-source: false # Drop file/line/col from output
+skip:
+  - TypeScript
+---
+name: Update awesome list
+
+on: 
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */12 * * *'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Awesome generator
+        uses: simonecorsi/mawesome@v2
+        with:
+          api-token: ${{ secrets.API_TOKEN }} # <--- there is a unicode whitespace character here, VSCode will highlight it, the web UI does not
+          compact-by-topic: 'true'
+          github-name: ${{ github.repository_owner }}
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__actions_checkout",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "uses": "actions/checkout@v3"
+        },
+        {
+          "id": "__simonecorsi_mawesome",
+          "name": "Awesome generator",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "uses": "simonecorsi/mawesome@v2",
+          "with": {
+            "type": 2,
+            "map": [
+              {
+                "Key": "api-token",
+                "Value": {
+                  "type": 3,
+                  "expr": "secrets.API_TOKEN"
+                }
+              },
+              {
+                "Key": "compact-by-topic",
+                "Value": "true"
+              },
+              {
+                "Key": "github-name",
+                "Value": {
+                  "type": 3,
+                  "expr": "github.repository_owner"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

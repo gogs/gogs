@@ -1,0 +1,54 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  test_matrix:
+    strategy:
+      matrix:
+        complex:
+          - key-1:
+              nested-1:
+                nested-nested-1:
+                  - key-2:
+                      nested-2:
+                        nested-nested-2:
+                          - key-3:
+                              nested-3:
+                                nested-nested-3:
+                                  - key-4:
+                                      nested-4:
+                                        nested-nested-4:
+                                          - key-5:
+                                              nested-5:
+                                                nested-nested-5:
+                                                  - key-6:
+                                                      nested-6:
+                                                        nested-nested-6:
+                                                          - key-7:
+                                                              nested-7:
+                                                                nested-nested-7:
+                                                                  - key-8:
+                                                                      nested-8:
+                                                                        nested-nested-8:
+                                                                          - key-9:
+                                                                              nested-9:
+                                                                                nested-nested-9:
+                                                                                  - key-10:
+                                                                                      nested-10:
+                                                                                        nested-nested-10:
+                                                                                          - key-11:
+                                                                                              nested-11:
+                                                                                                nested-nested-11:
+                                                                                                  - key-12:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: echo Building...
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-matrix-max-depth.yml: Maximum object depth exceeded"
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: github/checkout@v2.5
+      with:
+        dot: .
+        single-quoted-number: '8'
+        double-quoted-number: "9"
+        hex-number: 0xCB2431
+        hex-string: "0xCB2431"
+        # binary-number: 0b10100111001 // Binary numbers are not supported by C# at the moment
+        # binary-string: "0b1111"
+        octal-number: 0o1234567
+        octal-string: "0o1234567"
+        python-version: >-
+          3.10
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__github_checkout",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "uses": "github/checkout@v2.5",
+          "with": {
+            "type": 2,
+            "map": [
+              {
+                "Key": "dot",
+                "Value": "."
+              },
+              {
+                "Key": "single-quoted-number",
+                "Value": "8"
+              },
+              {
+                "Key": "double-quoted-number",
+                "Value": "9"
+              },
+              {
+                "Key": "hex-number",
+                "Value": "13313073"
+              },
+              {
+                "Key": "hex-string",
+                "Value": "0xCB2431"
+              },
+              {
+                "Key": "octal-number",
+                "Value": "342391"
+              },
+              {
+                "Key": "octal-string",
+                "Value": "0o1234567"
+              },
+              {
+                "Key": "python-version",
+                "Value": "3.10"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

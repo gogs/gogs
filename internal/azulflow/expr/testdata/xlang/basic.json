@@ -1,0 +1,64 @@
+{
+  "empty_expression": [{
+    "expr": "",
+    "result": {
+      "kind": "Null",
+      "value": null
+    }
+  }],
+  "equal_simple": [{
+    "expr": "1 == 2",
+    "result": {
+      "kind": "Boolean",
+      "value": false
+    }
+  }],
+  "context_simple_access": [{
+    "expr": "simple",
+    "result": {
+      "kind": "String",
+      "value": "foo"
+    },
+    "contexts": {
+      "simple": "foo"
+    }
+  }],
+  "context_case-insensitive": [{
+    "expr": "SIMple.TEst",
+    "result": {
+      "kind": "Number",
+      "value": 123.0
+    },
+    "contexts": {
+      "simPLE": {
+        "teST": 123
+      }
+    }
+  }],
+  "context access with wildcard": [{
+    "expr": "toJson(input.*.foo)",
+    "result": {
+      "kind": "String",
+      "value": "[\n  32,\n  42,\n  -10,\n  0,\n  2,\n  17\n]"
+    },
+    "contexts": {
+      "input": {
+        "test": { "foo": 32 },
+        "test2": { "foo": 42 },
+        "test3": { "foo": -10 },
+        "test4": { "foo": 0 },
+        "test5": { "foo": 2 },
+        "test6": { "foo": 17 }
+      }
+    }
+  }],
+  "unknown context": [
+    {
+      "expr": "nosuchcontext.foo",
+      "err": {
+        "kind": "parsing",
+        "value": "Unrecognized named-value: 'nosuchcontext'. Located at position 1 within expression: nosuchcontext.foo"
+      }
+    }
+  ]
+}

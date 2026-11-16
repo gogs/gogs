@@ -1,0 +1,330 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest  # string
+    steps:
+      - run: echo hi
+  build2:
+    runs-on:                # sequence
+      - label 1
+      - label 2
+    steps:
+      - run: echo hi
+  build3:
+    runs-on:                # mapping
+      group: my group
+      labels:
+        - label 1
+        - label 2
+    steps:
+      - run: echo hi
+  build4:
+    runs-on:                # mapping, org prefix
+      group: org/my group
+      labels:
+        - label 1
+        - label 2
+    steps:
+      - run: echo hi
+  build5:
+    runs-on:                # mapping, organization prefix
+      group: organization/my group
+      labels:
+        - label 1
+        - label 2
+    steps:
+      - run: echo hi
+  build6:
+    runs-on:                # mapping, ent prefix
+      group: ent/my group
+      labels:
+        - label 1
+        - label 2
+    steps:
+      - run: echo hi
+  build7:
+    runs-on:                # mapping, enterprise prefix
+      group: enterprise/my group
+      labels:
+        - label 1
+        - label 2
+    steps:
+      - run: echo hi
+  build8:
+    runs-on: [ inf, -inf, +inf, infinity, NaN, nan, -infinity ] # flow sequence, inf and nan keywords
+    steps:
+      - run: echo hi
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build2",
+      "name": "build2",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": {
+        "type": 1,
+        "seq": [
+          "label 1",
+          "label 2"
+        ]
+      },
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build3",
+      "name": "build3",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "group",
+            "Value": "my group"
+          },
+          {
+            "Key": "labels",
+            "Value": {
+              "type": 1,
+              "seq": [
+                "label 1",
+                "label 2"
+              ]
+            }
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build4",
+      "name": "build4",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "group",
+            "Value": "org/my group"
+          },
+          {
+            "Key": "labels",
+            "Value": {
+              "type": 1,
+              "seq": [
+                "label 1",
+                "label 2"
+              ]
+            }
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build5",
+      "name": "build5",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "group",
+            "Value": "organization/my group"
+          },
+          {
+            "Key": "labels",
+            "Value": {
+              "type": 1,
+              "seq": [
+                "label 1",
+                "label 2"
+              ]
+            }
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build6",
+      "name": "build6",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "group",
+            "Value": "ent/my group"
+          },
+          {
+            "Key": "labels",
+            "Value": {
+              "type": 1,
+              "seq": [
+                "label 1",
+                "label 2"
+              ]
+            }
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build7",
+      "name": "build7",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "group",
+            "Value": "enterprise/my group"
+          },
+          {
+            "Key": "labels",
+            "Value": {
+              "type": 1,
+              "seq": [
+                "label 1",
+                "label 2"
+              ]
+            }
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build8",
+      "name": "build8",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": {
+        "type": 1,
+        "seq": [
+          "inf",
+          "-inf",
+          "+inf",
+          "infinity",
+          "NaN",
+          "nan",
+          "-infinity"
+        ]
+      },
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    }
+  ]
+}

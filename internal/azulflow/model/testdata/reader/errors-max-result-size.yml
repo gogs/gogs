@@ -1,0 +1,19 @@
+include-source: false # Drop file/line/col from output
+max-result-size: 1141
+---
+on: push
+jobs:
+  job1:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo Deploying 1...
+      - run: echo Deploying 2...
+      - run: echo Deploying 3...
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-max-result-size.yml: Maximum object size exceeded"
+    }
+  ]
+}

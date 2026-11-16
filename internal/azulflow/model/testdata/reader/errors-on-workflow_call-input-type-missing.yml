@@ -1,0 +1,27 @@
+include-source: false # Drop file/line/col from output
+---
+on:
+  push:
+    branches:
+      - main
+  workflow_call:
+    inputs:
+      app_name:
+        required: true
+        type: Datetime
+    secrets:
+      shh:
+        required: true
+jobs:
+  my-job:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-on-workflow_call-input-type-missing.yml (Line: 9, Col: 15): Unexpected value 'Datetime'"
+    }
+  ]
+}

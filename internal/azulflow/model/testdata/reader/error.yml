@@ -1,0 +1,20 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # Purposeful typo in run
+      - runn: echo hi
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/error.yml (Line: 7, Col: 9): Unexpected value 'runn'"
+    },
+    {
+      "Message": ".github/workflows/error.yml (Line: 7, Col: 9): There's not enough info to determine what you meant. Add one of these properties: parallel, run, shell, uses, with, working-directory"
+    }
+  ]
+}

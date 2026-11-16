@@ -1,0 +1,165 @@
+include-source: false # Drop file/line/col from output
+skip:
+  - Go
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - run: echo hi
+  build2:
+    runs-on: ubuntu-latest
+    continue-on-error: false
+    steps:
+      - run: echo hi
+  buil3:
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ startsWith(github.ref, 'refs/heads/experimental/') }}
+    steps:
+      - run: echo hi
+  build4:
+    strategy:
+      matrix:
+        include:
+          - cfg: experimental
+          - cfg: normal
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.cfg == 'experimental' }}
+    steps:
+      - run: echo hi
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "continue-on-error": true,
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build2",
+      "name": "build2",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "continue-on-error": false,
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "buil3",
+      "name": "buil3",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "continue-on-error": {
+        "type": 3,
+        "expr": "startsWith(github.ref, 'refs/heads/experimental/')"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build4",
+      "name": "build4",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "strategy": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "matrix",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "include",
+                  "Value": {
+                    "type": 1,
+                    "seq": [
+                      {
+                        "type": 2,
+                        "map": [
+                          {
+                            "Key": "cfg",
+                            "Value": "experimental"
+                          }
+                        ]
+                      },
+                      {
+                        "type": 2,
+                        "map": [
+                          {
+                            "Key": "cfg",
+                            "Value": "normal"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "continue-on-error": {
+        "type": 3,
+        "expr": "matrix.cfg == 'experimental'"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    }
+  ]
+}

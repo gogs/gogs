@@ -1,0 +1,61 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: github/issue-labeler@v2.5
+      with:
+      # Values are from YAML 1.2 core schema - https://yaml.org/spec/1.2.0/#id2560726
+      # Tags are not explicitly set to !!timestamp, so these are parsed as strings.
+        canonical: 2001-12-15T02:59:43.1Z
+        iso8601: 2001-12-14t21:59:43.10-05:00
+        spaced: 2001-12-14 21:59:43.10 -5
+        date: 2002-12-14
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__github_issue-labeler",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "uses": "github/issue-labeler@v2.5",
+          "with": {
+            "type": 2,
+            "map": [
+              {
+                "Key": "canonical",
+                "Value": "2001-12-15T02:59:43.1Z"
+              },
+              {
+                "Key": "iso8601",
+                "Value": "2001-12-14t21:59:43.10-05:00"
+              },
+              {
+                "Key": "spaced",
+                "Value": "2001-12-14 21:59:43.10 -5"
+              },
+              {
+                "Key": "date",
+                "Value": "2002-12-14"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,178 @@
+include-source: true # Preserve file/line/col in serialized output
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      max-parallel: 1
+      matrix:
+        cfg:
+          - null              # null
+          - true              # bool
+          - 1                 # number
+          - abc               # string
+          - ${{ github.sha }} # expression
+    steps:
+      - run: echo hi
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": {
+        "type": 0,
+        "file": 1,
+        "line": 3,
+        "col": 3,
+        "lit": "build"
+      },
+      "name": {
+        "type": 0,
+        "file": 1,
+        "line": 3,
+        "col": 3,
+        "lit": "build"
+      },
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "strategy": {
+        "type": 2,
+        "file": 1,
+        "line": 6,
+        "col": 7,
+        "map": [
+          {
+            "Key": {
+              "type": 0,
+              "file": 1,
+              "line": 6,
+              "col": 7,
+              "lit": "fail-fast"
+            },
+            "Value": {
+              "type": 5,
+              "file": 1,
+              "line": 6,
+              "col": 18,
+              "bool": true
+            }
+          },
+          {
+            "Key": {
+              "type": 0,
+              "file": 1,
+              "line": 7,
+              "col": 7,
+              "lit": "max-parallel"
+            },
+            "Value": {
+              "type": 6,
+              "file": 1,
+              "line": 7,
+              "col": 21,
+              "num": 1
+            }
+          },
+          {
+            "Key": {
+              "type": 0,
+              "file": 1,
+              "line": 8,
+              "col": 7,
+              "lit": "matrix"
+            },
+            "Value": {
+              "type": 2,
+              "file": 1,
+              "line": 9,
+              "col": 9,
+              "map": [
+                {
+                  "Key": {
+                    "type": 0,
+                    "file": 1,
+                    "line": 9,
+                    "col": 9,
+                    "lit": "cfg"
+                  },
+                  "Value": {
+                    "type": 1,
+                    "file": 1,
+                    "line": 10,
+                    "col": 11,
+                    "seq": [
+                      {
+                        "type": 7,
+                        "file": 1,
+                        "line": 10,
+                        "col": 13
+                      },
+                      {
+                        "type": 5,
+                        "file": 1,
+                        "line": 11,
+                        "col": 13,
+                        "bool": true
+                      },
+                      {
+                        "type": 6,
+                        "file": 1,
+                        "line": 12,
+                        "col": 13,
+                        "num": 1
+                      },
+                      {
+                        "type": 0,
+                        "file": 1,
+                        "line": 13,
+                        "col": 13,
+                        "lit": "abc"
+                      },
+                      {
+                        "type": 3,
+                        "file": 1,
+                        "line": 14,
+                        "col": 13,
+                        "expr": "github.sha"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "runs-on": {
+        "type": 0,
+        "file": 1,
+        "line": 4,
+        "col": 14,
+        "lit": "ubuntu-latest"
+      },
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": {
+            "type": 0,
+            "file": 1,
+            "line": 16,
+            "col": 14,
+            "lit": "echo hi"
+          }
+        }
+      ]
+    }
+  ],
+  "file-table": [
+    ".github/workflows/preserves-source-info-basic.yml"
+  ]
+}

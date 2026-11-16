@@ -1,0 +1,58 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+defaults:
+  run:
+    shell: cmd
+    working-directory: foo
+jobs:
+  one:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+---
+{
+  "defaults": {
+    "type": 2,
+    "map": [
+      {
+        "Key": "run",
+        "Value": {
+          "type": 2,
+          "map": [
+            {
+              "Key": "shell",
+              "Value": "cmd"
+            },
+            {
+              "Key": "working-directory",
+              "Value": "foo"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "jobs": [
+    {
+      "type": "job",
+      "id": "one",
+      "name": "one",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    }
+  ]
+}

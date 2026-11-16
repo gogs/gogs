@@ -1,0 +1,66 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+env:
+  root-env: root env value
+jobs:
+  one:
+    runs-on: windows-2019
+    env:
+      job-env: job env value
+    steps:
+      - run: echo 1
+        env:
+          step-env: step env value
+---
+{
+  "env": {
+    "type": 2,
+    "map": [
+      {
+        "Key": "root-env",
+        "Value": "root env value"
+      }
+    ]
+  },
+  "jobs": [
+    {
+      "type": "job",
+      "id": "one",
+      "name": "one",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "env": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "job-env",
+            "Value": "job env value"
+          }
+        ]
+      },
+      "runs-on": "windows-2019",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "env": {
+            "type": 2,
+            "map": [
+              {
+                "Key": "step-env",
+                "Value": "step env value"
+              }
+            ]
+          },
+          "run": "echo 1"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  build:              # missing runs-on
+    steps:
+      - run: echo hi
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-job-runs-on-missing.yml (Line: 4, Col: 5): Required property is missing: runs-on"
+    }
+  ]
+}

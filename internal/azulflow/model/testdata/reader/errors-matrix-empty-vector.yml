@@ -1,0 +1,20 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  empty-vector:
+    strategy:
+      matrix:
+        os: []
+        version: [10,12]
+    runs-on: macos-latest
+    steps:
+      - run: echo hi
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-matrix-empty-vector.yml (Line: 6, Col: 13): Matrix vector 'os' does not contain any values"
+    }
+  ]
+}

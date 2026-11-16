@@ -1,0 +1,73 @@
+include-source: false
+experimental-features:
+  allowBackgroundSteps: true
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - id: server
+        run: npm start
+        background: true
+      - id: checkout
+        uses: actions/checkout@v4
+        background: true
+      - wait:
+          - server
+          - checkout
+      - wait-all:
+      - cancel: server
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "server",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "npm start",
+          "background": true
+        },
+        {
+          "id": "checkout",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "uses": "actions/checkout@v4",
+          "background": true
+        },
+        {
+          "id": "__wait",
+          "name": "Wait",
+          "wait": [
+            "server",
+            "checkout"
+          ]
+        },
+        {
+          "id": "__wait-all",
+          "name": "Wait for all",
+          "wait-all": true
+        },
+        {
+          "id": "__cancel",
+          "name": "Cancel",
+          "cancel": "server"
+        }
+      ]
+    }
+  ]
+}

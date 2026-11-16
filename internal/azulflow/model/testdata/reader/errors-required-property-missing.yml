@@ -1,0 +1,36 @@
+include-source: false # Drop file/line/col from output
+---
+on: 
+  workflow_call: # missing 'type'
+    inputs:
+      username:
+        description: 'A username passed from the caller workflow'
+        default: 'john-doe'
+jobs:
+  build:
+    runs-on: self-hosted
+    concurrency:  # missing 'group'
+      cancel-in-progress: true
+    steps:
+     - run: echo Hi
+  build2:
+    runs-on: self-hosted
+    environment: # missing 'name'
+      url: https://github.com
+    steps:
+     - run: echo Hi
+
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-required-property-missing.yml (Line: 5, Col: 9): Required property is missing: type"
+    },
+    {
+      "Message": ".github/workflows/errors-required-property-missing.yml (Line: 11, Col: 7): Required property is missing: group"
+    },
+    {
+      "Message": ".github/workflows/errors-required-property-missing.yml (Line: 17, Col: 7): Required property is missing: name"
+    }
+  ]
+}

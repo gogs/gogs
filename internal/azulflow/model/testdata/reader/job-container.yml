@@ -1,0 +1,199 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+  # Short form
+  build:
+    runs-on: linux
+    container: ubuntu:16.04
+    steps:
+      - run: echo hi
+  # Long form
+  build2:
+    runs-on: linux
+    container:
+      image: node:14.16
+      env:
+        NODE_ENV: development
+      ports:
+        - 80
+      volumes:
+        - my_docker_volume:/volume_mount
+      options: --cpus 1
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.github_token }}
+    steps:
+      - run: echo hi
+  # With credential
+  build3:
+    runs-on: linux
+    container:
+      image: private:latest
+      credentials:
+        username: ${{ env.FROM_ENV }}
+        password: ${{ secrets.FROM_SECRETS }}
+    steps:
+      - run: echo hi
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "linux",
+      "container": "ubuntu:16.04",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build2",
+      "name": "build2",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "linux",
+      "container": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "image",
+            "Value": "node:14.16"
+          },
+          {
+            "Key": "env",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "NODE_ENV",
+                  "Value": "development"
+                }
+              ]
+            }
+          },
+          {
+            "Key": "ports",
+            "Value": {
+              "type": 1,
+              "seq": [
+                "80"
+              ]
+            }
+          },
+          {
+            "Key": "volumes",
+            "Value": {
+              "type": 1,
+              "seq": [
+                "my_docker_volume:/volume_mount"
+              ]
+            }
+          },
+          {
+            "Key": "options",
+            "Value": "--cpus 1"
+          },
+          {
+            "Key": "credentials",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "username",
+                  "Value": {
+                    "type": 3,
+                    "expr": "github.actor"
+                  }
+                },
+                {
+                  "Key": "password",
+                  "Value": {
+                    "type": 3,
+                    "expr": "secrets.github_token"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "job",
+      "id": "build3",
+      "name": "build3",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "linux",
+      "container": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "image",
+            "Value": "private:latest"
+          },
+          {
+            "Key": "credentials",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "username",
+                  "Value": {
+                    "type": 3,
+                    "expr": "env.FROM_ENV"
+                  }
+                },
+                {
+                  "Key": "password",
+                  "Value": {
+                    "type": 3,
+                    "expr": "secrets.FROM_SECRETS"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    }
+  ]
+}

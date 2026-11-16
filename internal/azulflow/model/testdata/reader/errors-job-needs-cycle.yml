@@ -1,0 +1,34 @@
+include-source: false # Drop file/line/col from output
+---
+on: push
+jobs:
+
+  one:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hello
+
+  two:
+    needs:
+      - one
+      - three
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hello
+
+  three:
+    needs: two
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hello
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-job-needs-cycle.yml (Line: 12, Col: 9): Job 'two' depends on job 'three' which creates a cycle in the dependency graph."
+    },
+    {
+      "Message": ".github/workflows/errors-job-needs-cycle.yml (Line: 18, Col: 12): Job 'three' depends on job 'two' which creates a cycle in the dependency graph."
+    }
+  ]
+}

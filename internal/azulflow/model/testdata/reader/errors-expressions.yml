@@ -1,0 +1,79 @@
+include-source: false # Drop file/line/col from output
+skip:
+ - TypeScript
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    concurrency: ${{ secrets.foo #no closing brace
+    steps:
+      - run: echo hi
+  build2:
+    runs-on: ubuntu-latest
+    concurrency: ${{ secrets.foo  }} 
+    steps:
+      - run: echo hi
+  build3:
+    runs-on: ubuntu-latest
+    concurrency: ${{ }} #empty expression
+    steps:
+      - run: echo hi
+  build4:
+    if: ${{ env == 5 }} #env not defined
+    runs-on: linux
+    steps:
+      - run: echo hi
+  build5:
+    if: ${{ "0xFZ" }} 
+    runs-on: linux
+    steps:
+      - run: echo hi
+  build6:
+    if: ${{ withJson() }} #not real function
+    runs-on: linux
+    steps:
+      - run: echo hi
+  build7:
+    if: ${{ foo" }} #missing starting quotation
+    runs-on: linux
+    steps:
+      - run: echo hi
+  build8:
+    runs-on: linux
+    cancel-timeout-minutes: ${{ "0x" }} #Not a number
+    steps:
+      - run: echo hi
+  
+---
+{
+  "errors": [
+    {
+      "Message": ".github/workflows/errors-expressions.yml (Line: 5, Col: 18): The expression is not closed. An unescaped ${{ sequence was found, but the closing }} sequence was not found."
+    },
+    {
+      "Message": ".github/workflows/errors-expressions.yml (Line: 10, Col: 18): Unrecognized named-value: 'secrets'. Located at position 1 within expression: secrets.foo"
+    },
+    {
+      "Message": ".github/workflows/errors-expressions.yml (Line: 15, Col: 18): An expression was expected"
+    },
+    {
+      "Message": ".github/workflows/errors-expressions.yml (Line: 19, Col: 9): Unrecognized named-value: 'env'. Located at position 1 within expression: env == 5"
+    },
+    {
+      "Message": ".github/workflows/errors-expressions.yml (Line: 24, Col: 9): Unexpected symbol: '\"0xFZ\"'. Located at position 1 within expression: \"0xFZ\""
+    },
+    {
+      "Message": ".github/workflows/errors-expressions.yml (Line: 29, Col: 9): Unrecognized function: 'withJson'. Located at position 1 within expression: withJson()"
+    },
+    {
+      "Message": ".github/workflows/errors-expressions.yml (Line: 34, Col: 9): Unexpected symbol: 'foo\"'. Located at position 1 within expression: foo\""
+    },
+    {
+      "Message": ".github/workflows/errors-expressions.yml (Line: 40, Col: 29): Unexpected symbol: '\"0x\"'. Located at position 1 within expression: \"0x\""
+    },
+    {
+      "Message": ".github/workflows/errors-expressions.yml (Line: 40, Col: 29): Unexpected value '${{ \"0x\" }}'"
+    }
+  ]
+}

@@ -1,0 +1,277 @@
+include-source: false # Drop file/line/col from output
+skip:
+  - Go
+---
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+  deploy-1:
+    needs: build
+    uses: contoso/templates/.github/workflows/deploy.yml@v1
+    with:
+      app_name: my app
+    secrets:              # mapping
+      shh: ${{ secrets.my_secret }}
+  deploy-2:
+    needs: build
+    uses: contoso/templates/.github/workflows/deploy.yml@v1
+    with:
+      app_name: my app
+    secrets: inherit      # inherit
+---
+contoso/templates/.github/workflows/deploy.yml@v1
+---
+on:
+  workflow_call:
+    inputs:
+      app_name:
+        required: true
+        type: string
+    secrets:
+      shh:                # required
+        required: true
+      shh2:               # null
+jobs:
+  job1:
+    runs-on: ubuntu-latest
+    outputs:
+      output1: ${{ steps.step1.outputs.test }}
+    steps:
+      - run: echo \""::set-output name=test::hello\""
+---
+{
+  "jobs": [
+    {
+      "type": "job",
+      "id": "build",
+      "name": "build",
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "id": "__run",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "run": "echo hi"
+        }
+      ]
+    },
+    {
+      "type": "reusableWorkflowJob",
+      "id": "deploy-1",
+      "name": "deploy-1",
+      "needs": [
+        "build"
+      ],
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "ref": "contoso/templates/.github/workflows/deploy.yml@v1",
+      "input-definitions": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "app_name",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "required",
+                  "Value": true
+                },
+                {
+                  "Key": "type",
+                  "Value": "string"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input-values": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "app_name",
+            "Value": "my app"
+          }
+        ]
+      },
+      "secret-definitions": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "shh",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "required",
+                  "Value": true
+                }
+              ]
+            }
+          },
+          {
+            "Key": "shh2",
+            "Value": null
+          }
+        ]
+      },
+      "secret-values": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "shh",
+            "Value": {
+              "type": 3,
+              "expr": "secrets.my_secret"
+            }
+          }
+        ]
+      },
+      "jobs": [
+        {
+          "type": "job",
+          "id": "job1",
+          "name": "job1",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "runs-on": "ubuntu-latest",
+          "outputs": {
+            "type": 2,
+            "map": [
+              {
+                "Key": "output1",
+                "Value": {
+                  "type": 3,
+                  "expr": "steps.step1.outputs.test"
+                }
+              }
+            ]
+          },
+          "steps": [
+            {
+              "id": "__run",
+              "if": {
+                "type": 3,
+                "expr": "success()"
+              },
+              "run": "echo \\\"\"::set-output name=test::hello\\\"\""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "reusableWorkflowJob",
+      "id": "deploy-2",
+      "name": "deploy-2",
+      "needs": [
+        "build"
+      ],
+      "if": {
+        "type": 3,
+        "expr": "success()"
+      },
+      "ref": "contoso/templates/.github/workflows/deploy.yml@v1",
+      "input-definitions": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "app_name",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "required",
+                  "Value": true
+                },
+                {
+                  "Key": "type",
+                  "Value": "string"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input-values": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "app_name",
+            "Value": "my app"
+          }
+        ]
+      },
+      "secret-definitions": {
+        "type": 2,
+        "map": [
+          {
+            "Key": "shh",
+            "Value": {
+              "type": 2,
+              "map": [
+                {
+                  "Key": "required",
+                  "Value": true
+                }
+              ]
+            }
+          },
+          {
+            "Key": "shh2",
+            "Value": null
+          }
+        ]
+      },
+      "inherit-secrets": true,
+      "jobs": [
+        {
+          "type": "job",
+          "id": "job1",
+          "name": "job1",
+          "if": {
+            "type": 3,
+            "expr": "success()"
+          },
+          "runs-on": "ubuntu-latest",
+          "outputs": {
+            "type": 2,
+            "map": [
+              {
+                "Key": "output1",
+                "Value": {
+                  "type": 3,
+                  "expr": "steps.step1.outputs.test"
+                }
+              }
+            ]
+          },
+          "steps": [
+            {
+              "id": "__run",
+              "if": {
+                "type": 3,
+                "expr": "success()"
+              },
+              "run": "echo \\\"\"::set-output name=test::hello\\\"\""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
