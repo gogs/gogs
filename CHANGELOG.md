@@ -16,6 +16,12 @@ All notable changes to Gogs are documented in this file.
 
 - Git clone via the built-in SSH server hangs. [#8132](https://github.com/gogs/gogs/issues/8132)
 
+## 0.14.5
+
+### Fixed
+
+- _Security:_ A user with read access could push to a repository over HTTP by changing the letter case of the Git service in the URL, e.g., `git-RECEIVE-pack`. [#8633](https://github.com/gogs/gogs/pull/8633) - [GHSA-r7jg-q9g4-h8j5](https://github.com/gogs/gogs/security/advisories/GHSA-r7jg-q9g4-h8j5)
+
 ## 0.14.0
 
 ### Added
