@@ -242,6 +242,7 @@ func renderMarkdown(body []byte, urlPrefix string, metas map[string]string) ([]b
 	opts.SpecialLinks = func(text []byte) []dariomark.SpecialLink {
 		return findSpecialLinks(text, urlPrefix, metas)
 	}
+	opts.Emoji = emoji
 	if sanitizer.ready.Load() {
 		opts.Sanitizer = markdownSanitizer
 	}

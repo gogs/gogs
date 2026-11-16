@@ -3,6 +3,7 @@ package dariomark
 import (
 	"bytes"
 	"io"
+	"slices"
 	"strings"
 
 	"golang.org/x/net/html"
@@ -13,26 +14,38 @@ import (
 // HTML that follows it is tokenized.
 //
 // Text outside links, code, preformatted text and raw text elements gets
-// special links, images are wrapped in links to themselves, and end tags are
-// renamed to close the innermost open element. If the tokenizer fails other
-// than at the end of the input, the input is returned unchanged.
+// special links, and text outside code and preformatted text gets emoji.
+// Images are wrapped in links to themselves, and end tags are renamed to
+// close the innermost open element. If the tokenizer fails other than at the
+// end of the input, the input is returned unchanged.
 func (r *renderer) postProcess(b []byte) []byte {
 	var out bytes.Buffer
 	out.Grow(len(b) + len(b)/8)
 	var startTags []string
 	rawText := false
+	emoji := emojiText{names: r.opts.Emoji}
+	// inText reports whether the last tokens are text, possibly followed by
+	// end tags without a start tag. HTML parsers ignore those end tags, so
+	// the text around them is one text node.
+	inText := false
 	z := html.NewTokenizer(bytes.NewReader(b))
 	for z.Next() != html.ErrorToken {
 		t := z.Token()
 		inRawText := rawText
 		rawText = false
+		continuesText := inText
+		inText = false
 		switch t.Type {
 		case html.TextToken:
 			if inRawText {
 				out.WriteString(t.String())
 				break
 			}
-			out.Write(r.specialLinks([]byte(t.String())))
+			if !continuesText {
+				emoji.startNode()
+			}
+			r.specialLinks(&out, []byte(t.String()), &emoji)
+			inText = true
 		case html.StartTagToken:
 			rawText = isRawTextElement(t.Data)
 			if t.Data == "img" {
@@ -44,16 +57,32 @@ func (r *renderer) postProcess(b []byte) []byte {
 			out.WriteString(t.String())
 			if t.Data == "a" || t.Data == "code" || t.Data == "pre" {
 				// Copy the element verbatim, up to the end tag with its name
-				// that closes as many elements as were opened.
+				// that closes as many elements as were opened. Text in links
+				// gets emoji.
 				depth := 1
+				code := 0
+				if t.Data != "a" {
+					code = 1
+				}
 				for z.Next() != html.ErrorToken {
 					inner := z.Token()
+					if inner.Type == html.TextToken && code == 0 {
+						emoji.startNode()
+						emoji.write(&out, []byte(inner.String()))
+						continue
+					}
 					out.WriteString(inner.String())
 					if inner.Type == html.StartTagToken && !isNoEndTag(inner.Data) {
 						depth++
+						if inner.Data == "code" || inner.Data == "pre" {
+							code++
+						}
 					}
 					if inner.Type == html.EndTagToken {
 						depth--
+						if inner.Data == "code" || inner.Data == "pre" {
+							code--
+						}
 						if depth <= 0 && inner.Data == t.Data {
 							break
 						}
@@ -70,6 +99,7 @@ func (r *renderer) postProcess(b []byte) []byte {
 			rawText = isRawTextElement(t.Data)
 			out.WriteString(t.String())
 		case html.EndTagToken:
+			inText = continuesText && !slices.Contains(startTags, t.Data)
 			if len(startTags) == 0 {
 				out.WriteString(t.String())
 				break
@@ -109,13 +139,28 @@ func isRawTextElement(name string) bool {
 	return false
 }
 
-func (r *renderer) specialLinks(text []byte) []byte {
-	if f := r.opts.SpecialLinks; f != nil {
-		if links := f(text); len(links) > 0 {
-			return AppendSpecialLinks(nil, text, links)
-		}
+// specialLinks writes text, the escaped text of a text node, to out with
+// special references rendered as links, and emoji shortcodes replaced by e.
+// The links split the text into text nodes.
+func (r *renderer) specialLinks(out *bytes.Buffer, text []byte, e *emojiText) {
+	f := r.opts.SpecialLinks
+	if f == nil {
+		e.write(out, text)
+		return
 	}
-	return text
+	links := f(text)
+	if len(links) == 0 {
+		e.write(out, text)
+		return
+	}
+	last := 0
+	for _, l := range links {
+		e.write(out, text[last:l.Start])
+		e.startNode()
+		out.Write(appendSpecialLink(out.AvailableBuffer(), l))
+		last = l.End
+	}
+	e.write(out, text[last:])
 }
 
 // imageLink writes an image wrapped in a link to its source and reports

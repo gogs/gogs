@@ -10,6 +10,7 @@ Dariomark was written from scratch, from the specifications, for the Markdown th
 - **GitHub's rendering where it departs from the specifications**, e.g., in trailing punctuation after autolinks, nested strong emphasis and task list markers.
 - **GitHub Flavored Markdown**: tables, strikethrough, task lists and extended autolinks, e.g., bare `www.` links and email addresses.
 - **GitHub extensions**: footnotes and alerts (`> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]` and `> [!CAUTION]`).
+- **Emoji shortcodes**: with a table of names, e.g., GitHub's, shortcodes like `:tada:` render as 🎉 wherever GitHub replaces them, e.g., not in code or in `10:30:45 :tada:`.
 - **Heading anchors**: headings get stable ids made the way GitHub makes them, e.g., `user-content-getting-started`, with `-1`, `-2` and so on for repeated headings.
 - **Table of contents data**: `Result.Headings` lists every heading with its level, text and id.
 - **Editable task lists**: task list items carry their source lines, e.g., `<li class="task-list-item" data-source-lines="5-7">`, so a client can toggle or reorder items, e.g., by drag and drop, by editing those lines of the source.

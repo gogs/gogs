@@ -87,6 +87,10 @@ type Options struct {
 	// pieces as it would the whole text: references other than URLs do not
 	// contain spaces, and the start of the text counts as a space.
 	SpecialLinks func(text []byte) []SpecialLink
+	// Emoji maps the names of emoji shortcodes to their text, e.g., "tada" to
+	// "🎉", for replacing shortcodes like ":tada:" in text with PostProcess.
+	// Names are at most 64 bytes long.
+	Emoji map[string]string
 	// Sanitizer, if not nil, enables sanitizing documents without raw HTML
 	// with PostProcess.
 	Sanitizer *Sanitizer
@@ -111,20 +115,24 @@ func AppendSpecialLinks(dst, text []byte, links []SpecialLink) []byte {
 	last := 0
 	for _, l := range links {
 		dst = append(dst, text[last:l.Start]...)
-		dst = append(dst, `<a href="`...)
-		dst = append(dst, l.Href...)
-		dst = append(dst, `">`...)
-		if l.Code {
-			dst = append(dst, "<code>"...)
-		}
-		dst = append(dst, l.Text...)
-		if l.Code {
-			dst = append(dst, "</code>"...)
-		}
-		dst = append(dst, "</a>"...)
+		dst = appendSpecialLink(dst, l)
 		last = l.End
 	}
 	return append(dst, text[last:]...)
+}
+
+func appendSpecialLink(dst []byte, l SpecialLink) []byte {
+	dst = append(dst, `<a href="`...)
+	dst = append(dst, l.Href...)
+	dst = append(dst, `">`...)
+	if l.Code {
+		dst = append(dst, "<code>"...)
+	}
+	dst = append(dst, l.Text...)
+	if l.Code {
+		dst = append(dst, "</code>"...)
+	}
+	return append(dst, "</a>"...)
 }
 
 // Result is the output of Render.
@@ -159,8 +167,10 @@ var parserPool = sync.Pool{New: func() any { return new(parser) }}
 //
 // With Options.PostProcess, the output is post-processed: special references
 // in text become links, standalone images are wrapped in links to themselves,
-// and links, code and preformatted text are left alone. Documents without raw
-// HTML are sanitized while rendering when Options.Sanitizer is set, and
+// and links, code and preformatted text are left alone. With Options.Emoji,
+// emoji shortcodes become emoji as on GitHub, in text and links but not in
+// code or preformatted text, see emojiText. Documents without raw HTML are
+// sanitized while rendering when Options.Sanitizer is set, and
 // Result.Sanitized is true. Other documents must be sanitized by the caller.
 func Render(src []byte, opts *Options) Result {
 	if len(src) > maxSourceSize {
