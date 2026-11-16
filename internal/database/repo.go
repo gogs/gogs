@@ -1695,7 +1695,6 @@ func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 		&Collaboration{RepoID: repoID},
 		&PullRequest{BaseRepoID: repoID},
 		&ProtectBranch{RepoID: repoID},
-		&ProtectBranchWhitelist{RepoID: repoID},
 		&Webhook{RepoID: repoID},
 		&HookTask{RepoID: repoID},
 		&LFSObject{RepoID: repoID},

@@ -312,7 +312,7 @@ func canMergeInto(repoCtx *repoContext, branch string) (bool, error) {
 	if !protectBranch.Protected || !protectBranch.EnableAllowlist {
 		return true, nil
 	}
-	return database.IsUserInProtectBranchAllowlist(repoCtx.Repo.ID, repoCtx.Viewer.ID(), branch), nil
+	return protectBranch.IsUserInAllowlist(repoCtx.Viewer.ID())
 }
 
 // postRepoPullMerge merges the pull request into its base branch.

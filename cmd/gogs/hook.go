@@ -112,7 +112,11 @@ func runHookPreReceive(ctx context.Context, cmd *cli.Command) error {
 		// Check if user is in allowlist when enabled
 		userID, _ := strconv.ParseInt(os.Getenv(database.EnvAuthUserID), 10, 64)
 		if protectBranch.EnableAllowlist {
-			if !database.IsUserInProtectBranchAllowlist(repoID, userID, branchName) {
+			inAllowlist, err := protectBranch.IsUserInAllowlist(userID)
+			if err != nil {
+				fail(logger, "Internal error", "IsUserInAllowlist [repo_id: %d, branch: %s, user_id: %d]: %v", repoID, branchName, userID, err)
+			}
+			if !inAllowlist {
 				fail(logger, fmt.Sprintf("Branch '%s' is protected and you are not in the push allowlist", branchName), "")
 			}
 
