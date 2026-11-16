@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 // The same icons as the diff file tree (DiffFileTree), so a file looks the
 // same in the code browser and in diffs.
-const ICON_SET = "standard";
+const ICON_SET = "complete";
 const resolver = createFileTreeIconResolver({ set: ICON_SET, colored: true });
 
 // The tree colors its icons inside its shadow DOM with light-dark(), which
