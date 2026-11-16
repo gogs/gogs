@@ -1091,10 +1091,16 @@ export interface RepoCompareData {
   markdownExtensions: string[];
 }
 
-// fetchRepoMarkdownFile renders the Markdown file at the path in the commit
-// the way the file view does.
-export async function fetchRepoMarkdownFile(owner: string, name: string, sha: string, path: string) {
-  return (await fetchJSON<{ html: string }>(repoURL(owner, name, `/markdown/${sha}/${refPath(path)}`))).html;
+// repoMarkdownFileQuery renders the Markdown file at the path in the commit
+// the way the file view does. Without a commit, the file is empty, e.g., the
+// old side of an added file.
+export function repoMarkdownFileQuery(owner: string, name: string, sha: string | undefined, path: string) {
+  return queryOptions({
+    queryKey: ["repo", owner, name, "markdown", sha, path] as const,
+    queryFn: async () =>
+      sha ? (await fetchJSON<{ html: string }>(repoURL(owner, name, `/markdown/${sha}/${refPath(path)}`))).html : "",
+    staleTime: Infinity,
+  });
 }
 
 // fetchRepoCommits lists the commits of the ref at the start of the path,

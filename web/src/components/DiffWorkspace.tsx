@@ -5,6 +5,7 @@ import {
   parsePatchFiles,
 } from "@pierre/diffs";
 import { CodeView, type CodeViewAnnotationArgs, type CodeViewHandle, type CodeViewItem } from "@pierre/diffs/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
   Check,
@@ -16,6 +17,7 @@ import {
   FileCode2,
   FileText,
   FolderTree,
+  LoaderCircle,
   Search,
   UnfoldVertical,
   X,
@@ -32,6 +34,7 @@ import { ResizableSidebar } from "@/components/ResizableSidebar";
 import { RichDiff } from "@/components/RichDiff";
 import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { repoMarkdownFileQuery } from "@/lib/queries/repo";
 import { resolveTheme, useTheme } from "@/lib/theme-context";
 import { subUrl } from "@/lib/url";
 import type { RepoCommitSearch } from "@/pages/repo/Commit.search";
@@ -267,6 +270,10 @@ export function DiffWorkspace({
   // in the URL would bloat it and would not be portably shareable.
   const [collapsedById, setCollapsedById] = useState<Record<string, boolean>>({});
   const [richById, setRichById] = useState<Record<string, boolean>>({});
+  // loadingRichId is the item whose rich diff is being rendered before it
+  // shows, so the source diff stays in place meanwhile.
+  const [loadingRichId, setLoadingRichId] = useState<string>();
+  const queryClient = useQueryClient();
   const [copiedPathById, setCopiedPathById] = useState<Record<string, boolean>>({});
   // Key by metadata identity so a replacement patch starts with expansion
   // actions available, even when it reuses the same file IDs.
@@ -585,6 +592,45 @@ export function DiffWorkspace({
     }
   }, []);
 
+  // The versions a rich diff compares. An added file has no old version, and
+  // a deleted file no new one.
+  const richQueriesOf = useCallback(
+    (fileDiff: FileDiffMetadata) => [
+      repoMarkdownFileQuery(
+        owner,
+        repo,
+        fileDiff.type === "new" ? undefined : oldRef,
+        fileDiff.prevName ?? fileDiff.name,
+      ),
+      repoMarkdownFileQuery(owner, repo, fileDiff.type === "deleted" ? undefined : newRef, fileDiff.name),
+    ],
+    [owner, repo, oldRef, newRef],
+  );
+
+  const prefetchRich = useCallback(
+    (fileDiff: FileDiffMetadata) =>
+      Promise.all(richQueriesOf(fileDiff).map((query) => queryClient.prefetchQuery(query))),
+    [queryClient, richQueriesOf],
+  );
+
+  // Switching to a rich diff waits for it to render, so the file never shows
+  // a short loading state between two tall views.
+  const toggleRich = useCallback(
+    (item: CodeViewItem<undefined>) => {
+      if (item.type !== "diff") return;
+      if (richById[item.id]) {
+        setRichById((prev) => ({ ...prev, [item.id]: false }));
+        return;
+      }
+      setLoadingRichId(item.id);
+      void prefetchRich(item.fileDiff).then(() => {
+        setLoadingRichId((id) => (id === item.id ? undefined : id));
+        setRichById((prev) => ({ ...prev, [item.id]: true }));
+      });
+    },
+    [prefetchRich, richById],
+  );
+
   // Pierre slot: `header-filename-suffix`, immediately after the filename.
   const renderHeaderFilenameSuffix = useCallback(
     (item: CodeViewItem<undefined>) => {
@@ -593,7 +639,8 @@ export function DiffWorkspace({
       const justCopied = copiedPathById[item.id] === true;
       const rich = richById[item.id] === true;
       const richLabel = rich ? t("repo.diff.show_source_diff") : t("repo.diff.show_rich_diff");
-      const RichIcon = rich ? FileCode2 : FileText;
+      const richLoading = loadingRichId === item.id;
+      const RichIcon = richLoading ? LoaderCircle : rich ? FileCode2 : FileText;
       // New, deleted, and pure-rename files have no collapsed context.
       const canExpand =
         !rich &&
@@ -635,16 +682,19 @@ export function DiffWorkspace({
                   type="button"
                   aria-label={richLabel}
                   aria-pressed={rich}
+                  aria-busy={richLoading || undefined}
+                  onPointerEnter={() => void prefetchRich(item.fileDiff)}
+                  onFocus={() => void prefetchRich(item.fileDiff)}
                   onPointerDown={(e) => e.stopPropagation()}
                   onMouseDown={(e) => e.stopPropagation()}
                   onClick={(e) => {
                     e.stopPropagation();
-                    setRichById((prev) => ({ ...prev, [item.id]: !rich }));
+                    toggleRich(item);
                   }}
                   className={buttonClass}
                   data-no-collapse-on-click
                 >
-                  <RichIcon className="size-3.5" aria-hidden />
+                  <RichIcon className={richLoading ? "size-3.5 motion-safe:animate-spin" : "size-3.5"} aria-hidden />
                 </button>
               </TooltipTrigger>
               <TooltipContent>{richLabel}</TooltipContent>
@@ -674,7 +724,18 @@ export function DiffWorkspace({
         </span>
       );
     },
-    [copiedPathById, copyFilePath, expandAllLinesFor, fullyExpandedDiffs, isMarkdown, richById, t],
+    [
+      copiedPathById,
+      copyFilePath,
+      expandAllLinesFor,
+      fullyExpandedDiffs,
+      isMarkdown,
+      loadingRichId,
+      prefetchRich,
+      richById,
+      t,
+      toggleRich,
+    ],
   );
 
   const renderHeaderMetadata = useCallback(
@@ -717,18 +778,10 @@ export function DiffWorkspace({
   const renderAnnotation = useCallback(
     (...[, fileDiff]: CodeViewAnnotationArgs<undefined>) => {
       if (!("hunks" in fileDiff)) return null;
-      return (
-        <RichDiff
-          owner={owner}
-          repo={repo}
-          oldRef={fileDiff.type === "new" ? undefined : oldRef}
-          oldPath={fileDiff.prevName ?? fileDiff.name}
-          newRef={fileDiff.type === "deleted" ? undefined : newRef}
-          newPath={fileDiff.name}
-        />
-      );
+      const [before, after] = richQueriesOf(fileDiff);
+      return <RichDiff queries={[before, after]} />;
     },
-    [owner, repo, oldRef, newRef],
+    [richQueriesOf],
   );
 
   return (

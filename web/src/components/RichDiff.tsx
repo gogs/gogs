@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Markdown } from "@/components/Markdown";
-import { fetchRepoMarkdownFile } from "@/lib/queries/repo";
+import type { repoMarkdownFileQuery } from "@/lib/queries/repo";
 
 // maxDiffCells caps the block comparison, which takes the product of the block
 // counts of both versions. Larger files show every block as changed.
@@ -119,32 +119,17 @@ function diffBlocks(oldHTML: string, newHTML: string): string {
   return out.join("");
 }
 
-// RichDiff shows how a Markdown file renders before and after a change, with
-// the removed and the added blocks marked. Without oldRef or newRef, that
-// side is empty, e.g., for an added or a deleted file.
+// RichDiff shows how a Markdown file renders before and after a change, from
+// the queries that render each version, with the removed and the added
+// blocks marked.
 export function RichDiff({
-  owner,
-  repo,
-  oldRef,
-  oldPath,
-  newRef,
-  newPath,
+  queries,
 }: {
-  owner: string;
-  repo: string;
-  oldRef: string | undefined;
-  oldPath: string;
-  newRef: string | undefined;
-  newPath: string;
+  queries: [ReturnType<typeof repoMarkdownFileQuery>, ReturnType<typeof repoMarkdownFileQuery>];
 }) {
   const { t } = useTranslation();
-  const render = (ref: string | undefined, path: string) => ({
-    queryKey: ["markdown-file", owner, repo, ref, path],
-    queryFn: () => (ref ? fetchRepoMarkdownFile(owner, repo, ref, path) : ""),
-    staleTime: Infinity,
-  });
-  const before = useQuery(render(oldRef, oldPath));
-  const after = useQuery(render(newRef, newPath));
+  const before = useQuery(queries[0]);
+  const after = useQuery(queries[1]);
   const html = useMemo(
     () => (before.data !== undefined && after.data !== undefined ? diffBlocks(before.data, after.data) : undefined),
     [before.data, after.data],
