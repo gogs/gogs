@@ -3,7 +3,6 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Markdown } from "@/components/Markdown";
-import { LoaderResponseError } from "@/lib/loader-error";
 import { fetchRepoMarkdownFile } from "@/lib/queries/repo";
 
 // maxDiffCells caps the block comparison, which takes the product of the block
@@ -157,11 +156,7 @@ export function RichDiff({
       {html !== undefined ? (
         <Markdown html={html} className="rich-diff" />
       ) : error ? (
-        <p className="text-sm text-(--color-destructive)">
-          {error instanceof LoaderResponseError && error.status === 413
-            ? t("repo.diff.rich_diff_too_large")
-            : error.message}
-        </p>
+        <p className="text-sm text-(--color-destructive)">{error.message}</p>
       ) : (
         <p className="text-sm text-(--color-muted-foreground)">{t("repo.release.loading")}</p>
       )}

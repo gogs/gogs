@@ -204,9 +204,6 @@ func getRepoMarkdownFile(c flamego.Context, repoCtx *repoContext) (statusCode in
 		log.Error("getRepoMarkdownFile: get blob %s:%s of repo %d: %v", sha, treePath, repo.ID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get blob")
 	}
-	if blob.Size(ctx) >= conf.UI.MaxDisplayFileSize {
-		return http.StatusRequestEntityTooLarge, nil, errors.New("file is too large to render")
-	}
 	p, err := blob.Bytes(ctx)
 	if err != nil {
 		log.Error("getRepoMarkdownFile: read blob %s:%s of repo %d: %v", sha, treePath, repo.ID, err)
