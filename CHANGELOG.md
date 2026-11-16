@@ -155,6 +155,9 @@ All notable changes to Gogs are documented in this file.
 - When SSH keys are checked with `ssh-keygen`, adding a key it cannot read no longer shows paths of temporary files on the server, and a failure to run the check is reported as a server error instead of an invalid key. [#8641](https://github.com/gogs/gogs/pull/8641)
 - Adding an SSH or deploy key while SSH is disabled now says that SSH is disabled, instead of saying that the key is invalid. [#8641](https://github.com/gogs/gogs/pull/8641)
 - Markdown no longer links parts of UUIDs and other hex strings that are not commits, e.g., `deadbeef`, to commits that do not exist. [#8640](https://github.com/gogs/gogs/pull/8640)
+- Listing repositories through the API no longer fails when one is a fork of a fork, and neither does listing the forks of a fork. Forked repositories in the API and in webhook payloads now include one level of parent. [#8626](https://github.com/gogs/gogs/pull/8626)
+- Creating, commenting on, or closing an issue in a fork no longer fails with a server error. [#8626](https://github.com/gogs/gogs/pull/8626)
+- The API no longer shows the parent of a fork to those who cannot read it, e.g., after the owner of the fork is removed as a collaborator of a private base repository, and the parent shows the permissions of the user on it instead of always read access. Webhook payloads no longer show a private parent. Listing the forks of a repository through the API no longer includes private forks the user cannot read. [#8626](https://github.com/gogs/gogs/pull/8626)
 
 ### Removed
 
