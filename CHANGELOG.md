@@ -136,6 +136,7 @@ All notable changes to Gogs are documented in this file.
 - The pagination links of the API repository search and issue list keep the query of the request, e.g., the search keyword and page size, instead of leading to pages of another list. The links of a page past the last one lead back to the last page, and a very large page number, e.g., `page=99999999999999999999`, returns an empty page instead of the first one. Pages of both lists no longer repeat or skip items. [#8587](https://github.com/gogs/gogs/pull/8587)
 - After adding several email addresses, every confirmation link now works, not only the first one opened. Confirmation links sent before upgrading no longer work. [#8645](https://github.com/gogs/gogs/pull/8645)
 - Images inside links in Markdown, e.g., README badges with a relative path, and images written in raw HTML as `<img ... />` with a relative path now load instead of showing as broken. [#8642](https://github.com/gogs/gogs/pull/8642)
+- Pushing to a wiki without pages creates the wiki instead of failing with "repository not found". [#8635](https://github.com/gogs/gogs/pull/8635)
 
 ### Removed
 
