@@ -1053,6 +1053,8 @@ export interface RepoCommitListItem {
   subjectHTML: string;
   isMerge: boolean;
   author: RepoCommitAuthor;
+  // coAuthors are the people the "Co-authored-by" trailers name.
+  coAuthors?: RepoCommitAuthor[];
 }
 
 export interface RepoCommitsData {
@@ -1137,6 +1139,24 @@ export interface RepoSrcData {
   pullRequest?: { repoLink: string; baseBranch: string; head: string };
   branches: string[];
   tags: string[];
+}
+
+export interface RepoPathsData {
+  ref: string;
+  commitID: string;
+  paths: string[];
+  // truncated is set when the tree has more files than paths lists.
+  truncated: boolean;
+}
+
+// repoPathsQuery lists the paths of every file of the commit, for jumping to
+// a file.
+export function repoPathsQuery(owner: string, name: string, commitID: string) {
+  return queryOptions({
+    queryKey: ["repo", owner, name, "paths", commitID] as const,
+    queryFn: () => fetchJSON<RepoPathsData>(repoURL(owner, name, `/paths/${commitID}`)),
+    staleTime: Infinity,
+  });
 }
 
 // fetchRepoSrc describes the directory or the file at the path after the ref

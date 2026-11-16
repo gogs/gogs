@@ -265,6 +265,12 @@ func getRepoSrc(c flamego.Context, repoCtx *repoContext) (statusCode int, resp *
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get commits info")
 	}
 	metas := repo.ComposeMetas()
+	dirCount := 0
+	for _, e := range entries {
+		if e.IsTree() {
+			dirCount++
+		}
+	}
 	resp.Entries = make([]repoTreeEntry, 0, len(infos))
 	for _, info := range infos {
 		item := repoTreeEntry{Name: info.Entry.Name(), Type: "file"}
@@ -275,6 +281,13 @@ func getRepoSrc(c flamego.Context, repoCtx *repoContext) (statusCode int, resp *
 			item.SubmoduleCommit = info.Submodule.Commit
 		case info.Entry.IsTree():
 			item.Type = "dir"
+			if dirCount <= flattenDirsMax {
+				item.Name, err = flattenDir(ctx, tree, item.Name)
+				if err != nil {
+					log.Error("getRepoSrc: flatten %q of %q in repo %d: %v", item.Name, treePath, repo.ID, err)
+					return http.StatusInternalServerError, nil, errors.Wrap(err, "flatten directory")
+				}
+			}
 		case info.Entry.IsSymlink():
 			item.Type = "symlink"
 		}
@@ -312,6 +325,33 @@ func getRepoSrc(c flamego.Context, repoCtx *repoContext) (statusCode int, resp *
 		break
 	}
 	return http.StatusOK, resp, nil
+}
+
+// flattenDirsMax bounds how many directories of a directory are flattened,
+// since each level needs a tree read.
+const flattenDirsMax = 100
+
+// flattenDir follows the directory at the name in the tree while it holds
+// only one directory, and returns the path to the last one, e.g., "cmd/gogs",
+// so the code browser shows such a chain as one row like GitHub.
+func flattenDir(ctx context.Context, tree *git.Tree, name string) (string, error) {
+	sub, err := tree.Subtree(ctx, name)
+	if err != nil {
+		return "", errors.Wrap(err, "get subtree")
+	}
+	for {
+		entries, err := sub.Entries(ctx)
+		if err != nil {
+			return "", errors.Wrap(err, "list entries")
+		}
+		if len(entries) != 1 || !entries[0].IsTree() {
+			return name, nil
+		}
+		name += "/" + entries[0].Name()
+		if sub, err = sub.Subtree(ctx, entries[0].Name()); err != nil {
+			return "", errors.Wrap(err, "get subtree")
+		}
+	}
 }
 
 // describeRepoFile reads the file of the entry to show it. Relative links in
@@ -449,4 +489,54 @@ func pullRequestTarget(ctx context.Context, repoCtx *repoContext, branch string)
 		return &repoPullRequestTarget{RepoLink: base.Link(), BaseBranch: base.DefaultBranch, Head: repoCtx.Owner.Name + ":" + branch}
 	}
 	return &repoPullRequestTarget{RepoLink: repo.Link(), BaseBranch: repo.DefaultBranch, Head: viewer.Name + ":" + branch}
+}
+
+// repoPathsMax bounds how many paths a file list has, which is for jumping to
+// a file in the browser.
+const repoPathsMax = 50000
+
+type repoPathsResponse struct {
+	Ref      string   `json:"ref"`
+	CommitID string   `json:"commitID"`
+	Paths    []string `json:"paths"`
+	// Truncated is set when the tree has more files than Paths lists.
+	Truncated bool `json:"truncated"`
+}
+
+// getRepoPaths lists the paths of every file of the ref in the route, or of
+// the default branch without one.
+func getRepoPaths(c flamego.Context, repoCtx *repoContext) (statusCode int, resp *repoPathsResponse, err error) {
+	ctx := c.Request().Context()
+	repo := repoCtx.Repo
+	gitRepo, err := openRepoGit(repoCtx)
+	if err != nil {
+		log.Error("getRepoPaths: open repository %d: %v", repo.ID, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
+	}
+	ref, err := resolveRepoRef(ctx, repo, gitRepo, c.Param("path"))
+	if err != nil {
+		log.Error("getRepoPaths: resolve ref %q in repo %d: %v", c.Param("path"), repo.ID, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "resolve ref")
+	} else if ref == nil || ref.Path != "" {
+		return http.StatusNotFound, nil, errors.New("ref does not exist")
+	}
+
+	paths, err := gitRepo.TreePaths(ctx, ref.Commit.ID.String())
+	if err != nil {
+		log.Error("getRepoPaths: list paths of %q in repo %d: %v", ref.Name, repo.ID, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "list paths")
+	}
+	resp = &repoPathsResponse{
+		Ref:      ref.Name,
+		CommitID: ref.Commit.ID.String(),
+		Paths:    paths,
+	}
+	if resp.Paths == nil {
+		resp.Paths = []string{}
+	}
+	if len(resp.Paths) > repoPathsMax {
+		resp.Paths = resp.Paths[:repoPathsMax]
+		resp.Truncated = true
+	}
+	return http.StatusOK, resp, nil
 }

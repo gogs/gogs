@@ -5,6 +5,7 @@ import { type FormEvent, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { CommitAuthors } from "@/components/CommitAuthors";
 import { RefPicker } from "@/components/RefPicker";
 import { RepoHeader } from "@/components/RepoHeader";
 import { Button } from "@/components/ui/button";
@@ -249,14 +250,7 @@ function CommitRow({
           dangerouslySetInnerHTML={{ __html: commit.subjectHTML }}
         />
         <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-(--color-muted-foreground)">
-          <img src={author.avatarURL} alt="" className="size-5 shrink-0 rounded-full" />
-          {author.profileURL ? (
-            <a href={author.profileURL} className="font-semibold text-(--color-foreground) hover:underline">
-              {author.name}
-            </a>
-          ) : (
-            <span className="font-semibold text-(--color-foreground)">{author.name}</span>
-          )}
+          <CommitAuthors author={author} coAuthors={commit.coAuthors} className="text-(--color-foreground)" />
           <span>
             {before}
             <Tooltip>

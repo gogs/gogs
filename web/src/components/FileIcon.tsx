@@ -101,3 +101,21 @@ export function FileIcon({ name, className }: { name: string; className?: string
     </svg>
   );
 }
+
+// FolderIcon is a filled folder in the blue of the file icons, like GitHub's.
+export function FolderIcon({ className }: { className?: string }) {
+  const [light, dark] = PALETTE.blue;
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      aria-hidden
+      className={cn("size-4 shrink-0 text-(--file-icon-light) dark:text-(--file-icon-dark)", className)}
+      style={{ "--file-icon-light": light, "--file-icon-dark": dark } as React.CSSProperties}
+    >
+      <path
+        fill="currentColor"
+        d="M1.75 1A1.75 1.75 0 0 0 0 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0 0 16 13.25v-8.5A1.75 1.75 0 0 0 14.25 3H7.5a.25.25 0 0 1-.2-.1l-.9-1.2C6.07 1.26 5.55 1 5 1H1.75Z"
+      />
+    </svg>
+  );
+}

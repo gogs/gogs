@@ -83,3 +83,20 @@ func TestRepository_LsTree(t *testing.T) {
 	}
 	assert.Equal(t, specialNames, names)
 }
+
+func TestRepository_TreePaths(t *testing.T) {
+	ctx := context.Background()
+	paths, err := testrepo.TreePaths(ctx, "master")
+	require.NoError(t, err)
+
+	// Files of nested trees are listed by their full paths, and the
+	// submodule "gogs/docs-api" is left out.
+	assert.Len(t, paths, 21)
+	assert.Equal(t, ".DS_Store", paths[0])
+	assert.Contains(t, paths, "src/main/java/com/github/App.java")
+	assert.Contains(t, paths, "symlink.run.sh")
+	assert.NotContains(t, paths, "gogs/docs-api")
+
+	_, err = testrepo.TreePaths(ctx, "404")
+	assert.Error(t, err)
+}

@@ -128,6 +128,31 @@ type repoCommitListItem struct {
 	SubjectHTML string              `json:"subjectHTML"`
 	IsMerge     bool                `json:"isMerge"`
 	Author      repoCommitSignature `json:"author"`
+	// CoAuthors are the people the "Co-authored-by" trailers of the message
+	// name, other than the author.
+	CoAuthors []repoCommitSignature `json:"coAuthors,omitempty"`
+}
+
+var coAuthorTrailer = regexp.MustCompile(`(?im)^co-authored-by:[ \t]*([^<\r\n]*?)[ \t]*<([^>\r\n]+)>[ \t\r]*$`)
+
+// coAuthorsOf returns the people the "Co-authored-by" trailers of the commit
+// message name, once per email and without the author.
+func coAuthorsOf(message string, author *git.Signature) []*git.Signature {
+	seen := map[string]bool{strings.ToLower(author.Email): true}
+	var coAuthors []*git.Signature
+	for _, m := range coAuthorTrailer.FindAllStringSubmatch(message, -1) {
+		email := strings.TrimSpace(m[2])
+		if seen[strings.ToLower(email)] {
+			continue
+		}
+		seen[strings.ToLower(email)] = true
+		name := m[1]
+		if name == "" {
+			name = email
+		}
+		coAuthors = append(coAuthors, &git.Signature{Name: name, Email: email, When: author.When})
+	}
+	return coAuthors
 }
 
 func toCommitListItems(ctx context.Context, repo *database.Repository, commits []*git.Commit) []repoCommitListItem {
@@ -135,12 +160,16 @@ func toCommitListItems(ctx context.Context, repo *database.Repository, commits [
 	metas := repo.ComposeMetas()
 	items := make([]repoCommitListItem, 0, len(commits))
 	for _, commit := range commits {
-		items = append(items, repoCommitListItem{
+		item := repoCommitListItem{
 			SHA:         commit.ID.String(),
 			SubjectHTML: template.RenderCommitMessage(false, commit.Message, repo.Link(), metas),
 			IsMerge:     commit.ParentsCount() > 1,
 			Author:      authors.signature(commit.Author),
-		})
+		}
+		for _, s := range coAuthorsOf(commit.Message, commit.Author) {
+			item.CoAuthors = append(item.CoAuthors, authors.signature(s))
+		}
+		items = append(items, item)
 	}
 	return items
 }
