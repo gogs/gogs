@@ -63,7 +63,7 @@ func (r *Repository) AddCollaborator(u *User) error {
 
 func (r *Repository) getCollaborations(tx *gorm.DB) ([]*Collaboration, error) {
 	collaborations := make([]*Collaboration, 0)
-	return collaborations, tx.Where("repo_id = ?", r.ID).Find(&collaborations).Error
+	return collaborations, tx.Where("repo_id = ?", r.ID).Order("id").Find(&collaborations).Error
 }
 
 // Collaborator represents a user with collaboration details.
