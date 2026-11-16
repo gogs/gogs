@@ -19,7 +19,7 @@ func NewProvider(cfg *Config) auth.Provider {
 }
 
 func (p *Provider) Authenticate(login, password string) (*auth.ExternalAccount, error) {
-	fullname, email, website, location, err := p.config.doAuth(login, password)
+	githubLogin, fullname, email, website, location, err := p.config.doAuth(login, password)
 	if err != nil {
 		if strings.Contains(err.Error(), "401") {
 			return nil, auth.ErrBadCredentials{Args: map[string]any{"login": login}}
@@ -27,8 +27,8 @@ func (p *Provider) Authenticate(login, password string) (*auth.ExternalAccount, 
 		return nil, err
 	}
 	return &auth.ExternalAccount{
-		Login:    login,
-		Name:     login,
+		Login:    githubLogin,
+		Name:     githubLogin,
 		FullName: fullname,
 		Email:    email,
 		Location: location,

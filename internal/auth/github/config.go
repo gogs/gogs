@@ -8,6 +8,8 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/google/go-github/github"
+
+	"gogs.io/gogs/internal/auth"
 )
 
 // Config contains configuration for GitHub authentication.
@@ -19,9 +21,10 @@ type Config struct {
 	SkipVerify  bool
 }
 
-func (c *Config) doAuth(login, password string) (fullname, email, location, website string, err error) {
+func (c *Config) doAuth(login, password string) (githubLogin, fullname, email, location, website string, err error) {
+	login = strings.TrimSpace(login)
 	tp := github.BasicAuthTransport{
-		Username: strings.TrimSpace(login),
+		Username: login,
 		Password: strings.TrimSpace(password),
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: c.SkipVerify},
@@ -29,12 +32,19 @@ func (c *Config) doAuth(login, password string) (fullname, email, location, webs
 	}
 	client, err := github.NewEnterpriseClient(c.APIEndpoint, c.APIEndpoint, tp.Client())
 	if err != nil {
-		return "", "", "", "", errors.Wrap(err, "create new client")
+		return "", "", "", "", "", errors.Wrap(err, "create new client")
 	}
 	user, _, err := client.Users.Get(context.Background(), "")
 	if err != nil {
-		return "", "", "", "", errors.Wrap(err, "get user info")
+		return "", "", "", "", "", errors.Wrap(err, "get user info")
 	}
+
+	// GitHub ignores the Basic auth username when the password is a personal access
+	// token, so the account that owns the token must be the one being signed in.
+	if user.Login == nil || !strings.EqualFold(*user.Login, login) {
+		return "", "", "", "", "", auth.ErrBadCredentials{Args: map[string]any{"login": login}}
+	}
+	githubLogin = *user.Login
 
 	if user.Name != nil {
 		fullname = *user.Name
@@ -50,5 +60,5 @@ func (c *Config) doAuth(login, password string) (fullname, email, location, webs
 	if user.HTMLURL != nil {
 		website = strings.ToLower(*user.HTMLURL)
 	}
-	return fullname, email, location, website, nil
+	return githubLogin, fullname, email, location, website, nil
 }
