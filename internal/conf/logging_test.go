@@ -20,6 +20,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"unknwon.dev/ini/v2"
+	"unknwon.dev/x/logx"
 )
 
 func Test_initLogConf(t *testing.T) {
@@ -367,6 +368,26 @@ func Test_newLogger(t *testing.T) {
 		assert.Contains(t, console.String(), "visible everywhere userID=1")
 		assert.Contains(t, file.String(), "hidden from console")
 		assert.Contains(t, file.String(), "visible everywhere userID=1")
+	})
+
+	t.Run("text shows the component as a prefix and JSON as a field", func(t *testing.T) {
+		var text, jsonBuf bytes.Buffer
+		logger := newLogger(
+			newCharmHandler(&text, slog.LevelInfo, false),
+			newCharmHandler(&jsonBuf, slog.LevelInfo, true),
+		).Scoped("database").With("userID", 1).Scoped("gorm")
+
+		logger.Info("Query failed", "rows", 0)
+
+		assert.Contains(t, text.String(), "[database.gorm] Query failed userID=1 rows=0")
+		assert.NotContains(t, text.String(), logx.ComponentKey)
+
+		var record map[string]any
+		require.NoError(t, json.Unmarshal(jsonBuf.Bytes(), &record))
+		assert.Equal(t, "Query failed", record["msg"])
+		assert.Equal(t, "database.gorm", record[logx.ComponentKey])
+		assert.EqualValues(t, 1, record["userID"])
+		assert.EqualValues(t, 0, record["rows"])
 	})
 
 	t.Run("production writes JSON", func(t *testing.T) {

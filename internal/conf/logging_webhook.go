@@ -191,7 +191,7 @@ type webhookHandler struct {
 	attrs []slog.Attr
 }
 
-func newWebhookHandler(level slog.Level, poster webhookPoster, bufferLen int64) *webhookHandler {
+func newWebhookHandler(level slog.Level, poster webhookPoster, bufferLen int64) slog.Handler {
 	queue := make(chan webhookMessage, bufferLen)
 	go func() {
 		for m := range queue {
@@ -204,7 +204,7 @@ func newWebhookHandler(level slog.Level, poster webhookPoster, bufferLen int64) 
 			}
 		}
 	}()
-	return &webhookHandler{level: level, queue: queue}
+	return withComponentPrefix(&webhookHandler{level: level, queue: queue}, false)
 }
 
 func (h *webhookHandler) Enabled(_ context.Context, level slog.Level) bool {

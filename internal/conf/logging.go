@@ -228,17 +228,22 @@ func (h fatalLevelHandler) WithGroup(name string) slog.Handler {
 
 // newConsoleHandler returns a handler for a terminal. Process managers like moon
 // are not a TTY, so TTY_FORCE opts back in to colors.
-func newConsoleHandler(w io.Writer, level slog.Level, prod bool) *charmlog.Logger {
-	handler := newCharmHandler(w, level, prod)
+func newConsoleHandler(w io.Writer, level slog.Level, prod bool) slog.Handler {
+	handler := newCharmLogger(w, level, prod)
 	if os.Getenv("TTY_FORCE") != "" {
 		handler.SetColorProfile(colorprofile.Detect(w, append(os.Environ(), "CLICOLOR_FORCE=1")))
 	}
-	return handler
+	return withComponentPrefix(handler, prod)
 }
 
-// newCharmHandler follows setupLogging in pgrok and git-lfs-server. Production
+// newCharmHandler returns a handler that writes text, or JSON in production.
+func newCharmHandler(w io.Writer, level slog.Level, prod bool) slog.Handler {
+	return withComponentPrefix(newCharmLogger(w, level, prod), prod)
+}
+
+// newCharmLogger follows setupLogging in pgrok and git-lfs-server. Production
 // output is JSON.
-func newCharmHandler(w io.Writer, level slog.Level, prod bool) *charmlog.Logger {
+func newCharmLogger(w io.Writer, level slog.Level, prod bool) *charmlog.Logger {
 	opts := charmlog.Options{
 		TimeFormat:      time.DateTime,
 		Level:           charmlog.Level(level),
@@ -301,4 +306,57 @@ func InitHookLogging(filename string) (*logx.Logger, error) {
 // os.Stderr.
 func NewConsoleLogger(w io.Writer) *logx.Logger {
 	return newLogger(newConsoleHandler(w, slog.LevelDebug, false))
+}
+
+// withComponentPrefix shows the component of logx.Logger.Scoped as a "[gorm] "
+// message prefix in text output, which people read. JSON output, which log
+// explorers read, keeps it as a field to filter on.
+func withComponentPrefix(h slog.Handler, json bool) slog.Handler {
+	if json {
+		return h
+	}
+	return &componentPrefixHandler{Handler: h}
+}
+
+type componentPrefixHandler struct {
+	slog.Handler
+	prefix string
+}
+
+func (h *componentPrefixHandler) Handle(ctx context.Context, r slog.Record) error {
+	r.Message = h.prefix + r.Message
+	return h.Handler.Handle(ctx, r)
+}
+
+func (h *componentPrefixHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	clone := *h
+	if prefix, ok := componentPrefix(attrs); ok {
+		clone.prefix = prefix
+		attrs = slices.DeleteFunc(slices.Clone(attrs), isComponentAttr)
+	}
+	if len(attrs) > 0 {
+		clone.Handler = h.Handler.WithAttrs(attrs)
+	}
+	return &clone
+}
+
+func (h *componentPrefixHandler) WithGroup(name string) slog.Handler {
+	clone := *h
+	clone.Handler = h.Handler.WithGroup(name)
+	return &clone
+}
+
+// componentPrefix returns the message prefix for the component in attrs.
+// logx.Logger.Scoped adds the component once, before any other attribute or
+// group, so it never has to be found inside a group.
+func componentPrefix(attrs []slog.Attr) (string, bool) {
+	i := slices.IndexFunc(attrs, isComponentAttr)
+	if i < 0 {
+		return "", false
+	}
+	return "[" + attrs[i].Value.String() + "] ", true
+}
+
+func isComponentAttr(a slog.Attr) bool {
+	return a.Key == logx.ComponentKey
 }
