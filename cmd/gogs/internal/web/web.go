@@ -479,6 +479,9 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 
 			m.Group("/branches", func() {
 				m.Get("", func(c *context.Context) { c.ServeWeb() })
+				m.Get("/yours", func(c *context.Context) { c.ServeWeb() })
+				m.Get("/active", func(c *context.Context) { c.ServeWeb() })
+				m.Get("/stale", func(c *context.Context) { c.ServeWeb() })
 				m.Get("/all", func(c *context.Context) { c.ServeWeb() })
 				m.Post("/delete/*", reqSignIn, reqRepoWriter, repo.DeleteBranchPost)
 			}, repo.MustBeNotEmpty, func(c *context.Context) {

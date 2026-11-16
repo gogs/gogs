@@ -17,6 +17,7 @@ All notable changes to Gogs are documented in this file.
 - Repositories with SHA-256 object IDs, chosen when creating a repository or with `object_format` in the API. [#8496](https://github.com/gogs/gogs/pull/8496)
 - Issue templates, issue forms and pull request templates in the same formats as on GitHub, read from the repository root, `.gogs` or `.github`, e.g., `.github/ISSUE_TEMPLATE/bug.yml` and `.github/pull_request_template.md`. Opening an issue offers a template chooser when the repository has templates. [#8588](https://github.com/gogs/gogs/pull/8588)
 - Passkeys. Users add them on the security settings page and then sign in without a password or a two-factor passcode. The sign-in page asks for a passkey first, and offers to try again or to sign in with a password after three failed attempts, a timeout, or a cancelled prompt. [#8512](https://github.com/gogs/gogs/pull/8512)
+- The repository branches page has Overview, Yours, Active, Stale and All tabs, and a field to search branches by name. Yours lists the branches whose last commit uses one of your activated email addresses. The overview shows up to 5 branches per group with a link to the rest, and the other tabs show 20 branches a page. [#8590](https://github.com/gogs/gogs/pull/8590)
 
 ### Changed
 

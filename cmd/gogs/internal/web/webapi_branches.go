@@ -25,9 +25,28 @@ type repoBranch struct {
 	CommitterName string    `json:"committerName"`
 }
 
+// repoBranchSection is a group of the branches overview, e.g., the active
+// branches.
+type repoBranchSection struct {
+	// Kind is one of "default", "yours", "active" and "stale".
+	Kind     string       `json:"kind"`
+	Branches []repoBranch `json:"branches"`
+	// HasMore is true when the section shows only the first of its branches,
+	// and the view of the same name lists the rest.
+	HasMore bool `json:"hasMore"`
+}
+
 type repoBranchesResponse struct {
-	DefaultBranch string       `json:"defaultBranch"`
-	Branches      []repoBranch `json:"branches"`
+	DefaultBranch string `json:"defaultBranch"`
+	View          string `json:"view"`
+	// Sections are the groups of the overview, leaving out the empty ones. They
+	// are empty for the other views.
+	Sections []repoBranchSection `json:"sections"`
+	// Branches, Page and HasNext are the page of the views other than the
+	// overview. Branches is empty for the overview.
+	Branches []repoBranch `json:"branches"`
+	Page     int          `json:"page"`
+	HasNext  bool         `json:"hasNext"`
 	// ViewerCanWrite offers pull requests from the branches, when the
 	// repository allows them.
 	ViewerCanWrite bool `json:"viewerCanWrite"`
@@ -35,6 +54,75 @@ type repoBranchesResponse struct {
 	// ViewerCanChangeDefault links the settings that change the default
 	// branch, which mirrors do not have.
 	ViewerCanChangeDefault bool `json:"viewerCanChangeDefault"`
+}
+
+const (
+	branchesPageSize = 20
+	// branchesSectionSize is how many branches each overview section shows.
+	branchesSectionSize = 5
+
+	branchActiveAge = 30 * 24 * time.Hour
+	branchStaleAge  = 90 * 24 * time.Hour
+)
+
+// branchesFilter selects the branches of a view of the branches page.
+type branchesFilter struct {
+	DefaultBranch string
+	// Query matches branch names by case-insensitive substring.
+	Query string
+	Now   time.Time
+	// ViewerEmails are the activated email addresses of the viewer, in lower
+	// case. A branch is the viewer's when its last commit was committed with
+	// one of them.
+	ViewerEmails map[string]bool
+}
+
+// matches reports whether the branch belongs to the view, which is one of
+// "default", "yours", "active", "stale" and "all". Only "all" and "default"
+// include the default branch.
+func (f branchesFilter) matches(view string, b *git.Branch) bool {
+	if f.Query != "" && !strings.Contains(strings.ToLower(b.Name), strings.ToLower(f.Query)) {
+		return false
+	}
+	switch view {
+	case "all":
+		return true
+	case "default":
+		return b.Name == f.DefaultBranch
+	}
+	if b.Name == f.DefaultBranch {
+		return false
+	}
+	switch view {
+	case "yours":
+		return f.ViewerEmails[strings.ToLower(b.Committer.Email)]
+	case "active":
+		return f.Now.Sub(b.Committer.When) < branchActiveAge
+	case "stale":
+		return f.Now.Sub(b.Committer.When) > branchStaleAge
+	}
+	return false
+}
+
+// selectBranches returns the branches of the view from the given ones, skipping
+// the first offset of them and stopping at limit. hasMore reports whether more
+// of them follow.
+func (f branchesFilter) selectBranches(branches []*git.Branch, view string, offset, limit int) (selected []*git.Branch, hasMore bool) {
+	selected = []*git.Branch{}
+	for _, b := range branches {
+		if !f.matches(view, b) {
+			continue
+		}
+		if offset > 0 {
+			offset--
+			continue
+		}
+		if len(selected) == limit {
+			return selected, true
+		}
+		selected = append(selected, b)
+	}
+	return selected, false
 }
 
 // protectedBranchNames returns the names of the protected branches of the
@@ -51,15 +139,27 @@ func protectedBranchNames(repoID int64) (map[string]bool, error) {
 	return names, nil
 }
 
+// getRepoBranches lists the branches of a view of the branches page, which is
+// given by the "view" query parameter: "overview" (the default), "yours",
+// "active", "stale" or "all". Every view but the overview is paged. Signed-out
+// viewers have no branches of their own, so "yours" is empty for them.
 func getRepoBranches(c flamego.Context, repoCtx *repoContext) (statusCode int, resp *repoBranchesResponse, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
+	view := c.Query("view")
+	if view == "" {
+		view = "overview"
+	}
+	if !slices.Contains([]string{"overview", "yours", "active", "stale", "all"}, view) {
+		return http.StatusBadRequest, nil, errors.Newf("unknown view %q", view)
+	}
+
 	gitRepo, err := openRepoGit(repoCtx)
 	if err != nil {
 		log.Error("getRepoBranches: open repository %d: %v", repo.ID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
 	}
-	names, err := gitRepo.Branches(ctx)
+	branches, err := gitRepo.BranchesByCommitterDate(ctx)
 	if err != nil {
 		log.Error("getRepoBranches: list branches of repo %d: %v", repo.ID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list branches")
@@ -70,26 +170,67 @@ func getRepoBranches(c flamego.Context, repoCtx *repoContext) (statusCode int, r
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list protected branches")
 	}
 
+	filter := branchesFilter{
+		DefaultBranch: repo.DefaultBranch,
+		Query:         strings.TrimSpace(c.Query("query")),
+		Now:           time.Now(),
+		ViewerEmails:  map[string]bool{},
+	}
+	if repoCtx.Viewer.Authenticated() && (view == "overview" || view == "yours") {
+		emails, err := database.Handle.Users().ListEmails(ctx, repoCtx.Viewer.ID())
+		if err != nil {
+			log.Error("getRepoBranches: list emails of user %d: %v", repoCtx.Viewer.ID(), err)
+			return http.StatusInternalServerError, nil, errors.Wrap(err, "list emails")
+		}
+		for _, email := range emails {
+			if email.IsActivated {
+				filter.ViewerEmails[strings.ToLower(email.Email)] = true
+			}
+		}
+	}
+
+	toResponse := func(branches []*git.Branch) []repoBranch {
+		list := make([]repoBranch, 0, len(branches))
+		for _, b := range branches {
+			list = append(list, repoBranch{
+				Name:          b.Name,
+				IsProtected:   protected[b.Name],
+				CommitID:      b.CommitID,
+				CommittedAt:   b.Committer.When,
+				CommitterName: b.Committer.Name,
+			})
+		}
+		return list
+	}
+
 	resp = &repoBranchesResponse{
 		DefaultBranch:          repo.DefaultBranch,
-		Branches:               make([]repoBranch, 0, len(names)),
+		View:                   view,
+		Sections:               []repoBranchSection{},
+		Branches:               []repoBranch{},
+		Page:                   1,
 		ViewerCanWrite:         repoCtx.Viewer.CanWrite(),
 		AllowsPulls:            repo.AllowsPulls(),
 		ViewerCanChangeDefault: repoCtx.Viewer.CanAdminister() && !repo.IsMirror,
 	}
-	for _, name := range names {
-		commit, err := gitRepo.BranchCommit(ctx, name)
-		if err != nil {
-			log.Error("getRepoBranches: get commit of branch %q in repo %d: %v", name, repo.ID, err)
-			return http.StatusInternalServerError, nil, errors.Wrap(err, "get branch commit")
+	if view != "overview" {
+		page := pageParam(c)
+		selected, hasNext := filter.selectBranches(branches, view, (page-1)*branchesPageSize, branchesPageSize)
+		resp.Branches = toResponse(selected)
+		resp.Page = page
+		resp.HasNext = hasNext
+		return http.StatusOK, resp, nil
+	}
+
+	kinds := []string{"default", "active", "stale"}
+	if repoCtx.Viewer.Authenticated() {
+		kinds = []string{"default", "yours", "active", "stale"}
+	}
+	for _, kind := range kinds {
+		selected, hasMore := filter.selectBranches(branches, kind, 0, branchesSectionSize)
+		if len(selected) > 0 {
+			resp.Sections = append(resp.Sections, repoBranchSection{Kind: kind, Branches: toResponse(selected), HasMore: hasMore})
 		}
-		resp.Branches = append(resp.Branches, repoBranch{
-			Name:          name,
-			IsProtected:   protected[name],
-			CommitID:      commit.ID.String(),
-			CommittedAt:   commit.Committer.When,
-			CommitterName: commit.Committer.Name,
-		})
 	}
 	return http.StatusOK, resp, nil
 }
