@@ -10,7 +10,7 @@ All notable changes to Gogs are documented in this file.
 - Headings in rendered Markdown have stable ids like GitHub's, e.g., `user-content-getting-started`, so links to sections also work in API output and outside the web interface. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Markdown renders `<kbd>` keys as keycaps, like GitHub, e.g., `<kbd>Ctrl</kbd>+<kbd>C</kbd>`. [#8598](https://github.com/gogs/gogs/pull/8598)
 - Markdown renders emoji shortcodes as emoji, e.g., `:tada:` as 🎉, and Markdown editors suggest them as you type, e.g., `:ta` lists 🎉 tada. [#8600](https://github.com/gogs/gogs/pull/8600) [#8601](https://github.com/gogs/gogs/pull/8601)
-- Markdown editors suggest people to mention and issues or pull requests to reference as you type, e.g., `@al` lists `@alice` and `#12` or `#login` lists the matching issues. [#8610](https://github.com/gogs/gogs/pull/8610)
+- The editors of issues, comments, releases, milestones and wiki pages suggest people to mention and issues or pull requests to reference as you type, e.g., `@al` lists `@alice` and `#12` or `#login` lists the matching issues. [#8610](https://github.com/gogs/gogs/pull/8610)
 - Task list items in Markdown show their checkbox in place of the list bullet, as on GitHub. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Git protocol v2 for clones and fetches over HTTP and SSH. With your own OpenSSH server, add `AcceptEnv GIT_PROTOCOL` to `sshd_config` to enable it over SSH. [#8485](https://github.com/gogs/gogs/pull/8485)
 - Tracing of HTTP requests and Git operations, exported over OTLP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. [#8487](https://github.com/gogs/gogs/pull/8487)
