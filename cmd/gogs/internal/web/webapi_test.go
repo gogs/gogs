@@ -4,11 +4,13 @@ import (
 	stdctx "context"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/macaron.v1"
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
@@ -225,5 +227,100 @@ func TestRequireAdmin(t *testing.T) {
 		handler.ServeHTTP(resp, req)
 		assert.Equal(t, http.StatusForbidden, resp.Code, r.method+" "+r.path)
 		assert.JSONEq(t, `{"error":"admin required"}`, resp.Body.String(), r.method+" "+r.path)
+	}
+}
+
+func TestCrossOriginProtection(t *testing.T) {
+	beforeURL := conf.Server.URL
+	t.Cleanup(func() { conf.Server.URL = beforeURL })
+	conf.Server.URL = &url.URL{Scheme: "https", Host: "git.example.com"}
+
+	crossOrigin, err := newCrossOriginProtection()
+	require.NoError(t, err)
+	m := macaron.New()
+	m.Use(crossOrigin)
+	m.Any("/*", func(w http.ResponseWriter) { w.WriteHeader(http.StatusNoContent) })
+
+	tests := []struct {
+		name     string
+		method   string
+		path     string
+		header   map[string]string
+		wantCode int
+	}{
+		{
+			name:     "same-origin JSON request",
+			method:   http.MethodPost,
+			path:     "/api/web/alice/repo/settings/collaborators",
+			header:   map[string]string{"Sec-Fetch-Site": "same-origin"},
+			wantCode: http.StatusNoContent,
+		},
+		{
+			name:     "form posted from another site",
+			method:   http.MethodPost,
+			path:     "/api/web/alice/repo/settings/collaborators",
+			header:   map[string]string{"Sec-Fetch-Site": "cross-site", "Content-Type": "text/plain"},
+			wantCode: http.StatusForbidden,
+		},
+		{
+			name:     "form posted from a sibling subdomain",
+			method:   http.MethodPost,
+			path:     "/api/web/user/settings/ssh-keys",
+			header:   map[string]string{"Sec-Fetch-Site": "same-site"},
+			wantCode: http.StatusForbidden,
+		},
+		{
+			name:     "legacy form post from another site",
+			method:   http.MethodPost,
+			path:     "/alice/repo/action/watch",
+			header:   map[string]string{"Sec-Fetch-Site": "cross-site"},
+			wantCode: http.StatusForbidden,
+		},
+		{
+			name:     "older browser posting from another origin",
+			method:   http.MethodPost,
+			path:     "/api/web/admin/auths",
+			header:   map[string]string{"Origin": "https://evil.example.com"},
+			wantCode: http.StatusForbidden,
+		},
+		{
+			name:     "older browser behind a proxy that rewrites Host",
+			method:   http.MethodPost,
+			path:     "/api/web/admin/auths",
+			header:   map[string]string{"Origin": "https://git.example.com"},
+			wantCode: http.StatusNoContent,
+		},
+		{
+			name:     "cross-site page load",
+			method:   http.MethodGet,
+			path:     "/alice/repo",
+			header:   map[string]string{"Sec-Fetch-Site": "cross-site"},
+			wantCode: http.StatusNoContent,
+		},
+		{
+			name:     "API v1 called from an allowed origin",
+			method:   http.MethodPost,
+			path:     "/api/v1/user/repos",
+			header:   map[string]string{"Sec-Fetch-Site": "cross-site"},
+			wantCode: http.StatusNoContent,
+		},
+		{
+			name:     "client that is not a browser",
+			method:   http.MethodPost,
+			path:     "/api/web/user/sign-in",
+			wantCode: http.StatusNoContent,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(tc.method, tc.path, nil)
+			req.Host = "127.0.0.1:3000"
+			for k, v := range tc.header {
+				req.Header.Set(k, v)
+			}
+			resp := httptest.NewRecorder()
+			m.ServeHTTP(resp, req)
+			assert.Equal(t, tc.wantCode, resp.Code)
+		})
 	}
 }
