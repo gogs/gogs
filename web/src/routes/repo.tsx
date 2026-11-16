@@ -49,6 +49,7 @@ import { subUrl } from "@/lib/url";
 import { WebhookEdit, WebhookNew, Webhooks } from "@/pages/Webhooks";
 import { RepoBranches } from "@/pages/repo/Branches";
 import { RepoCode } from "@/pages/repo/Code";
+import { type RepoCodeSearch, validateRepoCodeSearch } from "@/pages/repo/Code.search";
 import { RepoCommit, type RepoCommitPage } from "@/pages/repo/Commit";
 import { type RepoCommitSearch, validateRepoCommitSearch } from "@/pages/repo/Commit.search";
 import { RepoCommits } from "@/pages/repo/Commits";
@@ -749,20 +750,46 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     },
   });
 
-  function RepoCodePage({ owner, repo, data }: { owner: string; repo: string; data: RepoSrcData }) {
-    return <RepoCode key={`${owner}/${repo}@${data.ref}/${data.path}`} owner={owner} name={repo} data={data} />;
+  function RepoCodePage({
+    owner,
+    repo,
+    data,
+    search,
+  }: {
+    owner: string;
+    repo: string;
+    data: RepoSrcData;
+    search: RepoCodeSearch;
+  }) {
+    return (
+      <RepoCode
+        key={`${owner}/${repo}@${data.ref}/${data.path}`}
+        owner={owner}
+        name={repo}
+        data={data}
+        overviewTab={search.tab}
+      />
+    );
   }
 
   const repoHomeRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/$owner/$repo",
+    validateSearch: validateRepoCodeSearch,
     loader: ({ params, context }) =>
       loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
         fetchRepoSrc(params.owner, params.repo, ""),
       ),
     component: function Home() {
       const { owner, repo } = repoHomeRoute.useParams();
-      return <RepoCodePage owner={owner} repo={repo} data={repoHomeRoute.useLoaderData()} />;
+      return (
+        <RepoCodePage
+          owner={owner}
+          repo={repo}
+          data={repoHomeRoute.useLoaderData()}
+          search={repoHomeRoute.useSearch()}
+        />
+      );
     },
   });
 
@@ -771,7 +798,8 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     path: "/$owner/$repo/src/$",
     // plain shows the source of a file that is otherwise rendered, e.g.,
     // Markdown, like GitHub's "?plain=1".
-    validateSearch: (search: Record<string, unknown>): { plain?: true } => ({
+    validateSearch: (search: Record<string, unknown>): RepoCodeSearch & { plain?: true } => ({
+      ...validateRepoCodeSearch(search),
       plain: search.plain === 1 || search.plain === "1" || search.plain === true ? true : undefined,
     }),
     loader: ({ params, context }) =>
@@ -780,7 +808,9 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
       ),
     component: function Src() {
       const { owner, repo } = repoSrcRoute.useParams();
-      return <RepoCodePage owner={owner} repo={repo} data={repoSrcRoute.useLoaderData()} />;
+      return (
+        <RepoCodePage owner={owner} repo={repo} data={repoSrcRoute.useLoaderData()} search={repoSrcRoute.useSearch()} />
+      );
     },
   });
 

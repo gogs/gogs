@@ -1111,6 +1111,18 @@ export interface RepoFile {
   tabWidth?: number;
 }
 
+export type RepoOverviewKind = "readme" | "code_of_conduct" | "contributing" | "license" | "security";
+
+// RepoOverviewFile is a file shown in a tab below the file list, e.g., the
+// README or the license. It has html in a markup language, and text otherwise.
+export interface RepoOverviewFile {
+  kind: RepoOverviewKind;
+  // path is relative to the directory being viewed, e.g., ".github/CONTRIBUTING.md".
+  path: string;
+  html?: string;
+  text?: string;
+}
+
 export interface RepoSrcData {
   // empty is set for a repository without commits, which only has the fields
   // of its quick guide.
@@ -1126,8 +1138,9 @@ export interface RepoSrcData {
   kind: "dir" | "file";
   latestCommit?: RepoCommitListItem;
   entries?: RepoTreeEntry[];
-  // readme has html in a markup language, and text otherwise.
-  readme?: { name: string; html?: string; text?: string };
+  // overview lists the files shown in tabs below the file list, in the order
+  // of the tabs.
+  overview?: RepoOverviewFile[];
   file?: RepoFile;
   // summary is set for the root directory.
   summary?: { description: string; website: string; commitCount: number; cloneLinks: RepoCloneLinks };
