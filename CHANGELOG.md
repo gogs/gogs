@@ -173,6 +173,7 @@ All notable changes to Gogs are documented in this file.
 - The API no longer shows the parent of a fork to those who cannot read it, e.g., after the owner of the fork is removed as a collaborator of a private base repository, and the parent shows the permissions of the user on it instead of always read access. Webhook payloads no longer show a private parent. Listing the forks of a repository through the API no longer includes private forks the user cannot read. [#8626](https://github.com/gogs/gogs/pull/8626)
 - Starting Gogs with `gogs web --port` no longer replaces the port of `[server] EXTERNAL_URL` when it differs from `HTTP_PORT`, e.g., behind a reverse proxy, so clone URLs and links keep the configured port. [#8605](https://github.com/gogs/gogs/pull/8605)
 - The Docker image health check counted any response as healthy, e.g., when the database is unreachable, and could only check `http://localhost:3000`. It now fails on an error response, and the `GOGS_HEALTHCHECK_URL` environment variable sets the URL to check when `[server]` sets another `HTTP_ADDR` or `HTTP_PORT`. [#8603](https://github.com/gogs/gogs/pull/8603)
+- The raw view of a symbolic link shows its target instead of failing. [#8609](https://github.com/gogs/gogs/pull/8609)
 
 ### Removed
 
