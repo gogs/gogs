@@ -147,7 +147,22 @@ func TestMarkdown_SpecialLinks(t *testing.T) {
 		{
 			name:  "image in a link",
 			input: "[![badge](badge.svg)](https://example.com)",
-			want:  "<p><a href=\"https://example.com\" rel=\"nofollow\"><img src=\"badge.svg\" alt=\"badge\"></a></p>\n",
+			want:  "<p><a href=\"https://example.com\" rel=\"nofollow\"><img src=\"/user/repo/badge.svg\" alt=\"badge\"></a></p>\n",
+		},
+		{
+			name:  "image with a path from the root in a link",
+			input: "[![badge](/img/badge.svg)](https://example.com)",
+			want:  "<p><a href=\"https://example.com\" rel=\"nofollow\"><img src=\"/user/repo/img/badge.svg\" alt=\"badge\"></a></p>\n",
+		},
+		{
+			name:  "absolute image in a link",
+			input: "[![badge](https://example.com/badge.svg)](https://example.com)",
+			want:  "<p><a href=\"https://example.com\" rel=\"nofollow\"><img src=\"https://example.com/badge.svg\" alt=\"badge\"></a></p>\n",
+		},
+		{
+			name:  "image in a raw anchor",
+			input: "<a href=\"https://example.com\"><img src=\"badge.svg\"></a> and <a href=\"https://example.com\"><code><img src=\"x.png\"></code></a>",
+			want:  "<p><a href=\"https://example.com\" rel=\"nofollow\"><img src=\"/user/repo/badge.svg\"></a> and <a href=\"https://example.com\" rel=\"nofollow\"><code><img src=\"x.png\"></code></a></p>\n",
 		},
 		{
 			name:  "raw anchor",

@@ -74,6 +74,9 @@ func (r *renderer) postProcess(b []byte) []byte {
 						emoji.write(&out, []byte(inner.String()))
 						continue
 					}
+					if inner.Type == html.StartTagToken && inner.Data == "img" && code == 0 {
+						inner.Attr = r.linkedImageAttrs(inner.Attr)
+					}
 					out.WriteString(inner.String())
 					if inner.Type == html.StartTagToken && !isNoEndTag(inner.Data) {
 						depth++
@@ -166,6 +169,20 @@ func (r *renderer) specialLinks(out *bytes.Buffer, text []byte, e *emojiText) {
 	e.write(out, text[last:])
 }
 
+// rawImagePrefix returns the prefix that resolves the relative image source
+// src against the raw file URL of Options.LinkBase, and reports whether src is
+// relative. Sources that are empty or data URIs are not.
+func (r *renderer) rawImagePrefix(src string) (string, bool) {
+	if src == "" || strings.HasPrefix(src, "data:") || r.opts.IsLink != nil && r.opts.IsLink([]byte(src)) {
+		return "", false
+	}
+	prefix := strings.Replace(r.opts.LinkBase, "/src/", "/raw/", 1)
+	if src[0] != '/' {
+		prefix += "/"
+	}
+	return prefix, true
+}
+
 // imageLink writes an image wrapped in a link to its source and reports
 // whether it did. Relative sources are resolved against the raw file URL of
 // Options.LinkBase. Images without a source or with a data URI are not
@@ -180,14 +197,7 @@ func (r *renderer) imageLink(out *bytes.Buffer, t html.Token) bool {
 	if src == "" || strings.HasPrefix(src, "data:") {
 		return false
 	}
-	prefix := r.opts.LinkBase
-	relative := r.opts.IsLink == nil || !r.opts.IsLink([]byte(src))
-	if relative {
-		prefix = strings.Replace(prefix, "/src/", "/raw/", 1)
-		if src[0] != '/' {
-			prefix += "/"
-		}
-	}
+	prefix, relative := r.rawImagePrefix(src)
 	out.WriteString(`<a href="`)
 	if relative {
 		out.WriteString(html.EscapeString(prefix))
@@ -206,4 +216,21 @@ func (r *renderer) imageLink(out *bytes.Buffer, t html.Token) bool {
 	out.WriteString(t.String())
 	out.WriteString("</a>")
 	return true
+}
+
+// linkedImageAttrs returns the attributes of an image inside a link with a
+// relative source resolved like imageLink does. The image is not wrapped in
+// another link, so that it keeps going where the author's link goes.
+func (r *renderer) linkedImageAttrs(attrs []html.Attribute) []html.Attribute {
+	for i, a := range attrs {
+		if a.Key != "src" {
+			continue
+		}
+		if prefix, ok := r.rawImagePrefix(a.Val); ok {
+			attrs = slices.Clone(attrs)
+			attrs[i].Val = strings.ReplaceAll(prefix+a.Val, " ", "%20")
+		}
+		break
+	}
+	return attrs
 }

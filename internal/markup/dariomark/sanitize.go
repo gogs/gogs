@@ -122,6 +122,9 @@ func (s *sanitizeSink) startTag(name string, attrs []html.Attribute) {
 		if !isNoEndTag(name) {
 			s.verbatim++
 		}
+		if name == "img" && s.code == 0 {
+			attrs = s.r.linkedImageAttrs(attrs)
+		}
 		s.emitStart(name, attrs)
 		return
 	}
