@@ -1979,11 +1979,18 @@ func (s *RepositoriesStore) GetByRef(ctx context.Context, ref string) (*Reposito
 	return repo, s.LoadAttributes(ctx, repo)
 }
 
+// ownerExistsCond returns the condition that leaves out repositories whose
+// owner no longer exists, given the column of the owner ID. They cannot be
+// rendered, and counting them would add pages that list nothing.
+func ownerExistsCond(ownerIDColumn string) string {
+	return ownerIDColumn + dbx.Quote(" IN (SELECT id FROM %s)", "user")
+}
+
 // Count returns the number of repositories, of the owner with given ID when it
 // is positive. Private repositories are counted only when includePrivate is
 // true.
 func (s *RepositoriesStore) Count(ctx context.Context, ownerID int64, includePrivate bool) (int64, error) {
-	query := s.db.WithContext(ctx).Model(new(Repository))
+	query := s.db.WithContext(ctx).Model(new(Repository)).Where(ownerExistsCond("owner_id"))
 	if ownerID > 0 {
 		query = query.Where("owner_id = ?", ownerID)
 	}
@@ -1999,7 +2006,7 @@ func (s *RepositoriesStore) Count(ctx context.Context, ownerID int64, includePri
 // created.
 func (s *RepositoriesStore) ListByPage(ctx context.Context, page, pageSize int) ([]*Repository, error) {
 	repos := make([]*Repository, 0, pageSize)
-	return repos, s.db.WithContext(ctx).Order("id ASC").Limit(pageSize).Offset((max(page, 1) - 1) * pageSize).Find(&repos).Error
+	return repos, s.db.WithContext(ctx).Where(ownerExistsCond("owner_id")).Order("id ASC").Limit(pageSize).Offset((max(page, 1) - 1) * pageSize).Find(&repos).Error
 }
 
 // FilterIDsWithIssues returns the IDs among given ones of the repositories
@@ -2119,6 +2126,7 @@ func (s *RepositoriesStore) Search(ctx context.Context, opts SearchRepoOptions) 
 	if opts.OwnerID > 0 {
 		query = query.Where("repo.owner_id = ?", opts.OwnerID)
 	}
+	query = query.Where(ownerExistsCond("repo.owner_id"))
 
 	// We need all fields (repo.*) in final list but only ID (repo.id) is good enough for counting.
 	if err = query.Session(&gorm.Session{}).Distinct("repo.id").Count(&count).Error; err != nil {
