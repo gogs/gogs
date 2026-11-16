@@ -1087,6 +1087,20 @@ export interface RepoCompareData {
   // totalCommits is the number of commits after base up to after, which is
   // more than commits.length when the list is cut off.
   totalCommits: number;
+  // markdownExtensions are the extensions of files that show a rich diff.
+  markdownExtensions: string[];
+}
+
+// repoMarkdownFileQuery renders the Markdown file at the path in the commit
+// the way the file view does. Without a commit, the file is empty, e.g., the
+// old side of an added file.
+export function repoMarkdownFileQuery(owner: string, name: string, sha: string | undefined, path: string) {
+  return queryOptions({
+    queryKey: ["repo", owner, name, "markdown", sha, path] as const,
+    queryFn: async () =>
+      sha ? (await fetchJSON<{ html: string }>(repoURL(owner, name, `/markdown/${sha}/${refPath(path)}`))).html : "",
+    staleTime: Infinity,
+  });
 }
 
 // fetchRepoCommits lists the commits of the ref at the start of the path,

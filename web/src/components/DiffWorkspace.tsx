@@ -4,7 +4,8 @@ import {
   type FileDiffMetadata,
   parsePatchFiles,
 } from "@pierre/diffs";
-import { CodeView, type CodeViewHandle, type CodeViewItem } from "@pierre/diffs/react";
+import { CodeView, type CodeViewAnnotationArgs, type CodeViewHandle, type CodeViewItem } from "@pierre/diffs/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
   Check,
@@ -13,7 +14,10 @@ import {
   ChevronsDownUp,
   ChevronsUpDown,
   Copy,
+  FileCode2,
+  FileText,
   FolderTree,
+  LoaderCircle,
   Search,
   UnfoldVertical,
   X,
@@ -27,8 +31,10 @@ import { DiffSearch } from "@/components/DiffSearch";
 import { DiffToolbar, type DiffToolbarSettings, type WhitespaceMode } from "@/components/DiffToolbar";
 import { FileHeaderMenu } from "@/components/FileHeaderMenu";
 import { ResizableSidebar } from "@/components/ResizableSidebar";
+import { RichDiff } from "@/components/RichDiff";
 import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { repoMarkdownFileQuery } from "@/lib/queries/repo";
 import { resolveTheme, useTheme } from "@/lib/theme-context";
 import { subUrl } from "@/lib/url";
 import type { RepoCommitSearch } from "@/pages/repo/Commit.search";
@@ -83,6 +89,31 @@ const DIFF_UNSAFE_CSS = `
   [data-separator=line-info-basic] {
     background-color: var(--diffs-bg-separator) !important;
   }
+  /* A rich diff has no lines, so Pierre counts none. The header metadata slot
+     shows the counts of its source diff instead. */
+  :host([data-rich-diff]) [data-additions-count],
+  :host([data-rich-diff]) [data-deletions-count] {
+    display: none;
+  }
+  /* In split view, Pierre lays out a changed file in two columns. The rich
+     diff is on the additions side, so it takes the full width instead. */
+  :host([data-rich-diff]) [data-diff-type=split] {
+    grid-template-columns: 1fr;
+  }
+  :host([data-rich-diff]) [data-diff-type=split][data-overflow=wrap] {
+    grid-template-columns: var(--diffs-code-grid);
+  }
+  :host([data-rich-diff]) [data-diff-type=split] [data-deletions] {
+    display: none;
+  }
+  :host([data-rich-diff]) [data-diff-type=split][data-overflow=wrap] [data-additions] {
+    & [data-gutter] {
+      grid-column: 1;
+    }
+    & [data-content] {
+      grid-column: 2;
+    }
+  }
   /* Pierre handles context expansion on this span, so an empty label must
      still fill the separator's clickable area. */
   [data-unmodified-lines]:empty {
@@ -97,6 +128,24 @@ const DIFF_UNSAFE_CSS = `
     --diffs-selection-number-fg: var(--diffs-fg);
   }
 `;
+
+// richFileDiffs are the line-less copies of file diffs that show a rich diff
+// in their place. A WeakSet keeps a copy recognizable wherever Pierre hands
+// it back, without holding on to it.
+const richFileDiffs = new WeakSet<FileDiffMetadata>();
+
+// richFileDiffOf returns the line-less copy of the file diff, made once, which
+// renders only the file-level annotation that holds the rich diff.
+const richCopies = new WeakMap<FileDiffMetadata, FileDiffMetadata>();
+function richFileDiffOf(fileDiff: FileDiffMetadata): FileDiffMetadata {
+  let copy = richCopies.get(fileDiff);
+  if (!copy) {
+    copy = { ...fileDiff, hunks: [], splitLineCount: 0, unifiedLineCount: 0 };
+    richCopies.set(fileDiff, copy);
+    richFileDiffs.add(copy);
+  }
+  return copy;
+}
 
 // Bridge app tokens into the @pierre/trees shadow root.
 const TREE_THEME_STYLE: CSSProperties = {
@@ -125,6 +174,7 @@ export function DiffWorkspace({
   patch,
   oldRef,
   newRef,
+  markdownExtensions,
   search,
 }: {
   owner: string;
@@ -133,6 +183,8 @@ export function DiffWorkspace({
   // oldRef is undefined for a root commit, which has nothing before it.
   oldRef: string | undefined;
   newRef: string;
+  // markdownExtensions are the extensions of files that can show a rich diff.
+  markdownExtensions: string[];
   search: RepoCommitSearch;
 }) {
   const navigate = useNavigate();
@@ -217,13 +269,19 @@ export function DiffWorkspace({
   // Collapse is keyed by item id (path plus patch position), so putting it
   // in the URL would bloat it and would not be portably shareable.
   const [collapsedById, setCollapsedById] = useState<Record<string, boolean>>({});
+  const [richById, setRichById] = useState<Record<string, boolean>>({});
+  // loadingRichId is the item whose rich diff is being rendered before it
+  // shows, so the source diff stays in place meanwhile.
+  const [loadingRichId, setLoadingRichId] = useState<string>();
+  const queryClient = useQueryClient();
   const [copiedPathById, setCopiedPathById] = useState<Record<string, boolean>>({});
   // Key by metadata identity so a replacement patch starts with expansion
   // actions available, even when it reuses the same file IDs.
   const [fullyExpandedDiffs, setFullyExpandedDiffs] = useState<Set<FileDiffMetadata>>(() => new Set());
   const expansionCheckLine = useRef(new WeakMap<FileDiffMetadata, number>());
   const onDiffPostRender = useCallback<NonNullable<CodeViewOptions<undefined, undefined>["onPostRender"]>>(
-    (_node, _instance, _phase, context) => {
+    (node, _instance, _phase, context) => {
+      node.toggleAttribute("data-rich-diff", context.type === "diff" && richFileDiffs.has(context.item.fileDiff));
       if (context.type !== "diff" || context.item.collapsed) return;
       const { fileDiff } = context.item;
       if (fileDiff.isPartial) return;
@@ -294,28 +352,58 @@ export function DiffWorkspace({
     [patch],
   );
 
+  const isMarkdown = useCallback(
+    (item: CodeViewItem<undefined>) =>
+      item.type === "diff" &&
+      markdownExtensions.some((ext) => item.fileDiff.name.toLowerCase().endsWith(ext.toLowerCase())),
+    [markdownExtensions],
+  );
+
   // Pierre caches items by id and only re-reads `collapsed` when `version`
   // increases. Line expansion is Pierre-owned after `loadDiffFiles` hydrates.
+  // A rich diff replaces the lines with a file-level annotation, on the side
+  // that has the file.
   const items = useMemo<CodeViewItem<undefined>[]>(() => {
     return allItems.map((item) => {
       const collapsed = collapsedById[item.id] ?? false;
-      const version = collapsed ? 1 : 0;
-      return { ...item, collapsed, version };
+      const rich = item.type === "diff" && richById[item.id] === true;
+      const version = (collapsed ? 1 : 0) + (rich ? 2 : 0);
+      if (!rich) return { ...item, collapsed, version };
+      return {
+        ...item,
+        collapsed,
+        version,
+        fileDiff: richFileDiffOf(item.fileDiff),
+        annotations: [{ side: item.fileDiff.type === "deleted" ? "deletions" : "additions", lineNumber: 0 }],
+      };
     });
-  }, [allItems, collapsedById]);
+  }, [allItems, collapsedById, richById]);
 
-  const stats = useMemo(() => {
-    let additions = 0;
-    let deletions = 0;
-    for (const item of items) {
+  // Counted on the source diffs, so showing a rich diff leaves them unchanged.
+  const lineCounts = useMemo(() => {
+    const counts = new Map<string, { additions: number; deletions: number }>();
+    for (const item of allItems) {
       if (item.type !== "diff") continue;
+      let additions = 0;
+      let deletions = 0;
       for (const hunk of item.fileDiff.hunks) {
         additions += hunk.additionLines;
         deletions += hunk.deletionLines;
       }
+      counts.set(item.id, { additions, deletions });
     }
-    return { fileCount: items.length, additions, deletions };
-  }, [items]);
+    return counts;
+  }, [allItems]);
+
+  const stats = useMemo(() => {
+    let additions = 0;
+    let deletions = 0;
+    for (const count of lineCounts.values()) {
+      additions += count.additions;
+      deletions += count.deletions;
+    }
+    return { fileCount: allItems.length, additions, deletions };
+  }, [allItems, lineCounts]);
 
   const expandAllDiff = useCallback(() => {
     setCollapsedById({});
@@ -504,14 +592,58 @@ export function DiffWorkspace({
     }
   }, []);
 
+  // The versions a rich diff compares. An added file has no old version, and
+  // a deleted file no new one.
+  const richQueriesOf = useCallback(
+    (fileDiff: FileDiffMetadata) => [
+      repoMarkdownFileQuery(
+        owner,
+        repo,
+        fileDiff.type === "new" ? undefined : oldRef,
+        fileDiff.prevName ?? fileDiff.name,
+      ),
+      repoMarkdownFileQuery(owner, repo, fileDiff.type === "deleted" ? undefined : newRef, fileDiff.name),
+    ],
+    [owner, repo, oldRef, newRef],
+  );
+
+  const prefetchRich = useCallback(
+    (fileDiff: FileDiffMetadata) =>
+      Promise.all(richQueriesOf(fileDiff).map((query) => queryClient.prefetchQuery(query))),
+    [queryClient, richQueriesOf],
+  );
+
+  // Switching to a rich diff waits for it to render, so the file never shows
+  // a short loading state between two tall views.
+  const toggleRich = useCallback(
+    (item: CodeViewItem<undefined>) => {
+      if (item.type !== "diff") return;
+      if (richById[item.id]) {
+        setRichById((prev) => ({ ...prev, [item.id]: false }));
+        return;
+      }
+      setLoadingRichId(item.id);
+      void prefetchRich(item.fileDiff).then(() => {
+        setLoadingRichId((id) => (id === item.id ? undefined : id));
+        setRichById((prev) => ({ ...prev, [item.id]: true }));
+      });
+    },
+    [prefetchRich, richById],
+  );
+
   // Pierre slot: `header-filename-suffix`, immediately after the filename.
   const renderHeaderFilenameSuffix = useCallback(
     (item: CodeViewItem<undefined>) => {
       if (item.type !== "diff") return null;
       const path = item.fileDiff.name;
       const justCopied = copiedPathById[item.id] === true;
+      const rich = richById[item.id] === true;
+      const richLabel = rich ? t("repo.diff.show_source_diff") : t("repo.diff.show_rich_diff");
+      const richLoading = loadingRichId === item.id;
+      const RichIcon = richLoading ? LoaderCircle : rich ? FileCode2 : FileText;
       // New, deleted, and pure-rename files have no collapsed context.
       const canExpand =
+        !rich &&
         item.fileDiff.type !== "new" &&
         item.fileDiff.type !== "deleted" &&
         item.fileDiff.type !== "rename-pure" &&
@@ -543,6 +675,31 @@ export function DiffWorkspace({
             </TooltipTrigger>
             <TooltipContent>{t("repo.copy_file_path")}</TooltipContent>
           </Tooltip>
+          {isMarkdown(item) ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={richLabel}
+                  aria-pressed={rich}
+                  aria-busy={richLoading || undefined}
+                  onPointerEnter={() => void prefetchRich(item.fileDiff)}
+                  onFocus={() => void prefetchRich(item.fileDiff)}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleRich(item);
+                  }}
+                  className={buttonClass}
+                  data-no-collapse-on-click
+                >
+                  <RichIcon className={richLoading ? "size-3.5 motion-safe:animate-spin" : "size-3.5"} aria-hidden />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{richLabel}</TooltipContent>
+            </Tooltip>
+          ) : null}
           {canExpand ? (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -567,7 +724,18 @@ export function DiffWorkspace({
         </span>
       );
     },
-    [copiedPathById, copyFilePath, expandAllLinesFor, fullyExpandedDiffs, t],
+    [
+      copiedPathById,
+      copyFilePath,
+      expandAllLinesFor,
+      fullyExpandedDiffs,
+      isMarkdown,
+      loadingRichId,
+      prefetchRich,
+      richById,
+      t,
+      toggleRich,
+    ],
   );
 
   const renderHeaderMetadata = useCallback(
@@ -580,17 +748,40 @@ export function DiffWorkspace({
       // File history is `/commits/{ref}/{path}`. A commit SHA is a valid ref.
       const historyHref = `${repoLink}/commits/${newRef}/${path}`;
       // Edit/Delete need a branch ref. A commit SHA 404s in the editor.
+      const counts = richById[item.id] ? lineCounts.get(item.id) : undefined;
       return (
-        <FileHeaderMenu
-          filePath={path}
-          prevFilePath={prev}
-          viewFileHref={viewFileHref}
-          rawFileHref={rawFileHref}
-          historyHref={historyHref}
-        />
+        <span className="inline-flex items-center gap-[1ch]">
+          {counts ? (
+            <>
+              {counts.deletions > 0 || counts.additions === 0 ? (
+                <span className="text-(--color-diff-removed)">-{counts.deletions}</span>
+              ) : null}
+              {counts.additions > 0 || counts.deletions === 0 ? (
+                <span className="text-(--color-diff-added)">+{counts.additions}</span>
+              ) : null}
+            </>
+          ) : null}
+          <FileHeaderMenu
+            filePath={path}
+            prevFilePath={prev}
+            viewFileHref={viewFileHref}
+            rawFileHref={rawFileHref}
+            historyHref={historyHref}
+          />
+        </span>
       );
     },
-    [repoLink, newRef],
+    [repoLink, newRef, richById, lineCounts],
+  );
+
+  // The file-level annotation of an item that shows its rich diff.
+  const renderAnnotation = useCallback(
+    (...[, fileDiff]: CodeViewAnnotationArgs<undefined>) => {
+      if (!("hunks" in fileDiff)) return null;
+      const [before, after] = richQueriesOf(fileDiff);
+      return <RichDiff queries={[before, after]} />;
+    },
+    [richQueriesOf],
   );
 
   return (
@@ -788,6 +979,7 @@ export function DiffWorkspace({
               renderHeaderPrefix={renderHeaderPrefix}
               renderHeaderFilenameSuffix={renderHeaderFilenameSuffix}
               renderHeaderMetadata={renderHeaderMetadata}
+              renderAnnotation={renderAnnotation}
               options={{
                 theme: { light: "pierre-light", dark: "pierre-dark" },
                 themeType: resolvedTheme,

@@ -32,7 +32,7 @@ export function RepoCompare({
 }) {
   const { t } = useTranslation();
   const { data: repo } = useSuspenseQuery(repoHeaderQuery(owner, name));
-  const { before, after, base, baseIsEmptyTree, commits, totalCommits, patch } = data;
+  const { before, after, base, baseIsEmptyTree, commits, totalCommits, markdownExtensions, patch } = data;
   const [showAll, setShowAll] = useState(false);
   const hiddenCommits = showAll ? 0 : Math.max(commits.length - collapsedCommits, 0);
   const repoLink = subUrl(`/${owner}/${name}`);
@@ -108,6 +108,7 @@ export function RepoCompare({
           patch={patch}
           oldRef={baseIsEmptyTree ? undefined : base}
           newRef={after}
+          markdownExtensions={markdownExtensions}
           search={search}
         />
       ) : null}

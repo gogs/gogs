@@ -11,6 +11,7 @@ All notable changes to Gogs are documented in this file.
 - Markdown renders `<kbd>` keys as keycaps, like GitHub, e.g., `<kbd>Ctrl</kbd>+<kbd>C</kbd>`. [#8598](https://github.com/gogs/gogs/pull/8598)
 - Markdown renders emoji shortcodes as emoji, e.g., `:tada:` as 🎉, and Markdown editors suggest them as you type, e.g., `:ta` lists 🎉 tada. [#8600](https://github.com/gogs/gogs/pull/8600) [#8601](https://github.com/gogs/gogs/pull/8601)
 - Markdown editors suggest people to mention and issues or pull requests to reference as you type, e.g., `@al` lists `@alice` and `#12` or `#login` lists the matching issues. [#8610](https://github.com/gogs/gogs/pull/8610)
+- Markdown files on commit and compare pages can show a rich diff, like GitHub, with the rendered blocks that were removed or added marked. [#8621](https://github.com/gogs/gogs/pull/8621)
 - Task list items in Markdown show their checkbox in place of the list bullet, as on GitHub. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Git protocol v2 for clones and fetches over HTTP and SSH. With your own OpenSSH server, add `AcceptEnv GIT_PROTOCOL` to `sshd_config` to enable it over SSH. [#8485](https://github.com/gogs/gogs/pull/8485)
 - Tracing of HTTP requests and Git operations, exported over OTLP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. [#8487](https://github.com/gogs/gogs/pull/8487)

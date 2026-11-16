@@ -466,4 +466,40 @@ diffs-container {
   .markdown :where(.footnote-backref) {
     text-decoration: none;
   }
+
+  /* The blocks a rich diff marks as removed or added. The bar and its sign
+     carry the change along with the tint. */
+  .rich-diff :where(del, ins) {
+    display: block;
+  }
+  .rich-diff :where(.rich-diff-removed, .rich-diff-added) {
+    position: relative;
+    border-left: 3px solid;
+    border-radius: 0.25rem;
+    padding: 0.25rem 0.75rem 0.25rem 1.5rem;
+    text-decoration: none;
+  }
+  .rich-diff :where(.rich-diff-removed, .rich-diff-added)::before {
+    position: absolute;
+    top: 0.25rem;
+    left: 0.375rem;
+    font-family: var(--font-mono);
+    font-weight: 600;
+  }
+  .rich-diff :where(.rich-diff-removed) {
+    border-color: var(--color-diff-removed);
+    background-color: color-mix(in oklab, var(--color-diff-removed) 10%, transparent);
+  }
+  .rich-diff :where(.rich-diff-removed)::before {
+    content: "-";
+    color: var(--color-diff-removed);
+  }
+  .rich-diff :where(.rich-diff-added) {
+    border-color: var(--color-diff-added);
+    background-color: color-mix(in oklab, var(--color-diff-added) 10%, transparent);
+  }
+  .rich-diff :where(.rich-diff-added)::before {
+    content: "+";
+    color: var(--color-diff-added);
+  }
 }

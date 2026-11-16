@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"net/http"
+	"path"
 	"time"
 
 	"github.com/cockroachdb/errors"
@@ -13,6 +14,8 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
+	"gogs.io/gogs/internal/markup"
+	"gogs.io/gogs/internal/pathx"
 	"gogs.io/gogs/internal/repox"
 	"gogs.io/gogs/internal/tool"
 )
@@ -103,6 +106,8 @@ type repoCommit struct {
 	Body    string              `json:"body"`
 	Author  repoCommitSignature `json:"author"`
 	Parents []string            `json:"parents"`
+	// MarkdownExtensions are the extensions of files that show a rich diff.
+	MarkdownExtensions []string `json:"markdownExtensions"`
 }
 
 func getRepoCommit(c flamego.Context, repoCtx *repoContext) (statusCode int, resp *repoCommit, err error) {
@@ -154,11 +159,60 @@ func getRepoCommit(c flamego.Context, repoCtx *repoContext) (statusCode int, res
 	}
 
 	return http.StatusOK, &repoCommit{
-		SHA:     commitID,
-		Subject: subject,
-		Body:    body,
-		Author:  toSignature(commit.Author),
-		Parents: parents,
+		SHA:                commitID,
+		Subject:            subject,
+		Body:               body,
+		Author:             toSignature(commit.Author),
+		Parents:            parents,
+		MarkdownExtensions: conf.Markdown.FileExtensions,
+	}, nil
+}
+
+type repoMarkdownFile struct {
+	HTML string `json:"html"`
+}
+
+// getRepoMarkdownFile renders the Markdown file at the path in the commit the
+// way the file view does, e.g., to show the rich diff of a commit.
+func getRepoMarkdownFile(c flamego.Context, repoCtx *repoContext) (statusCode int, resp *repoMarkdownFile, err error) {
+	ctx := c.Request().Context()
+	repo := repoCtx.Repo
+	sha := c.Param("sha")
+	treePath := pathx.Clean(c.Param("path"))
+	if !markup.IsMarkdownFile(treePath) {
+		return http.StatusNotFound, nil, errors.New("file is not Markdown")
+	}
+
+	gitRepo, err := openRepoGit(repoCtx)
+	if err != nil {
+		log.Error("getRepoMarkdownFile: open repository %d: %v", repo.ID, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
+	}
+	commit, err := gitRepo.CatFileCommit(ctx, sha)
+	if err != nil {
+		if git.IsErrRevisionNotExist(err) {
+			return http.StatusNotFound, nil, errors.New("commit does not exist")
+		}
+		log.Error("getRepoMarkdownFile: get commit %q of repo %d: %v", sha, repo.ID, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "get commit")
+	}
+	blob, err := commit.Blob(ctx, treePath)
+	if err != nil {
+		if git.IsErrRevisionNotExist(err) || errors.Is(err, git.ErrNotBlob) {
+			return http.StatusNotFound, nil, errors.New("file does not exist")
+		}
+		log.Error("getRepoMarkdownFile: get blob %s:%s of repo %d: %v", sha, treePath, repo.ID, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "get blob")
+	}
+	p, err := blob.Bytes(ctx)
+	if err != nil {
+		log.Error("getRepoMarkdownFile: read blob %s:%s of repo %d: %v", sha, treePath, repo.ID, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "read blob")
+	}
+
+	fileLink := repo.Link() + "/src/" + commit.ID.String() + "/" + escapePath(treePath)
+	return http.StatusOK, &repoMarkdownFile{
+		HTML: string(markup.MarkdownFile(p, path.Dir(fileLink), repo.ComposeMetas())),
 	}, nil
 }
 
