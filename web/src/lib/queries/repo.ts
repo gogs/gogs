@@ -377,9 +377,9 @@ export function updateRepoDefaultBranch(owner: string, name: string, branch: str
 export interface RepoProtectedBranchForm {
   protected: boolean;
   requirePullRequest: boolean;
-  enableWhitelist: boolean;
-  whitelistUserIDs: number[];
-  whitelistTeamIDs: number[];
+  enableAllowlist: boolean;
+  allowlistUserIDs: number[];
+  allowlistTeamIDs: number[];
 }
 
 export interface RepoProtectedBranch extends RepoProtectedBranchForm {

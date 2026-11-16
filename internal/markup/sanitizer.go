@@ -111,12 +111,12 @@ func IsSafeDataURI(u *url.URL) bool {
 	return false
 }
 
-// Sanitize takes a string that contains a HTML fragment or document and applies policy whitelist.
+// Sanitize takes a string that contains a HTML fragment or document and applies policy allowlist.
 func Sanitize(s string) string {
 	return sanitizer.policy.Sanitize(s)
 }
 
-// SanitizeBytes takes a []byte slice that contains a HTML fragment or document and applies policy whitelist.
+// SanitizeBytes takes a []byte slice that contains a HTML fragment or document and applies policy allowlist.
 func SanitizeBytes(b []byte) []byte {
 	return sanitizer.policy.SanitizeBytes(b)
 }

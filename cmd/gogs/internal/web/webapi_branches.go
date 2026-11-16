@@ -334,9 +334,9 @@ type repoProtectedBranch struct {
 	Name               string  `json:"name"`
 	Protected          bool    `json:"protected"`
 	RequirePullRequest bool    `json:"requirePullRequest"`
-	EnableWhitelist    bool    `json:"enableWhitelist"`
-	WhitelistUserIDs   []int64 `json:"whitelistUserIDs"`
-	WhitelistTeamIDs   []int64 `json:"whitelistTeamIDs"`
+	EnableAllowlist    bool    `json:"enableAllowlist"`
+	AllowlistUserIDs   []int64 `json:"allowlistUserIDs"`
+	AllowlistTeamIDs   []int64 `json:"allowlistTeamIDs"`
 	// The options are only sent for repositories of organizations, which
 	// alone can let people and teams push past the protection.
 	UserOptions []repoProtectedBranchUser `json:"userOptions,omitempty"`
@@ -399,9 +399,9 @@ func getRepoProtectedBranch(logger *logx.Logger, rc *repoAdminContext, protectBr
 		Name:               protectBranch.Name,
 		Protected:          protectBranch.Protected,
 		RequirePullRequest: protectBranch.RequirePullRequest,
-		EnableWhitelist:    protectBranch.EnableWhitelist,
-		WhitelistUserIDs:   splitIDs(protectBranch.WhitelistUserIDs),
-		WhitelistTeamIDs:   splitIDs(protectBranch.WhitelistTeamIDs),
+		EnableAllowlist:    protectBranch.EnableAllowlist,
+		AllowlistUserIDs:   splitIDs(protectBranch.AllowlistUserIDs),
+		AllowlistTeamIDs:   splitIDs(protectBranch.AllowlistTeamIDs),
 	}
 	if !rc.Owner.IsOrganization() {
 		return http.StatusOK, resp, nil
@@ -431,20 +431,20 @@ func getRepoProtectedBranch(logger *logx.Logger, rc *repoAdminContext, protectBr
 type repoProtectedBranchRequest struct {
 	Protected          bool    `json:"protected"`
 	RequirePullRequest bool    `json:"requirePullRequest"`
-	EnableWhitelist    bool    `json:"enableWhitelist"`
-	WhitelistUserIDs   []int64 `json:"whitelistUserIDs"`
-	WhitelistTeamIDs   []int64 `json:"whitelistTeamIDs"`
+	EnableAllowlist    bool    `json:"enableAllowlist"`
+	AllowlistUserIDs   []int64 `json:"allowlistUserIDs"`
+	AllowlistTeamIDs   []int64 `json:"allowlistTeamIDs"`
 }
 
 func putRepoProtectedBranch(logger *logx.Logger, rc *repoAdminContext, protectBranch *database.ProtectBranch, req repoProtectedBranchRequest) (statusCode int, resp any, err error) {
 	protectBranch.Protected = req.Protected
 	protectBranch.RequirePullRequest = req.RequirePullRequest
 	if rc.Owner.IsOrganization() {
-		protectBranch.EnableWhitelist = req.EnableWhitelist
+		protectBranch.EnableAllowlist = req.EnableAllowlist
 		// People and teams who cannot write are dropped.
-		err = database.UpdateOrgProtectBranch(logger, rc.Repo, protectBranch, joinIDs(req.WhitelistUserIDs), joinIDs(req.WhitelistTeamIDs))
+		err = database.UpdateOrgProtectBranch(logger, rc.Repo, protectBranch, joinIDs(req.AllowlistUserIDs), joinIDs(req.AllowlistTeamIDs))
 	} else {
-		protectBranch.EnableWhitelist = false
+		protectBranch.EnableAllowlist = false
 		err = database.UpdateProtectBranch(protectBranch)
 	}
 	if err != nil {

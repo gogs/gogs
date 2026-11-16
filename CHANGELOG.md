@@ -84,7 +84,7 @@ All notable changes to Gogs are documented in this file.
 - Gogs commands, including Git over SSH, no longer fail to start when another process holds or rotates the same log file. [#8616](https://github.com/gogs/gogs/pull/8616)
 - Getting the `.editorconfig` definition of an empty repository through the API responded with 500 instead of 404. [#8454](https://github.com/gogs/gogs/pull/8454)
 - Updating a file through the contents API on a branch other than the default branch no longer fails after the first update. [#8189](https://github.com/gogs/gogs/issues/8189)
-- Users outside the push whitelist of a protected branch can no longer merge pull requests into it. [#8619](https://github.com/gogs/gogs/pull/8619)
+- Users outside the push allowlist of a protected branch can no longer merge pull requests into it. [#8619](https://github.com/gogs/gogs/pull/8619)
 
 ### Removed
 
