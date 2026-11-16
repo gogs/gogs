@@ -70,7 +70,7 @@ func TestPipe_SlowWriterGetsAllOutput(t *testing.T) {
 	// Git exits long before the writer takes the rest of its output, and the
 	// output must not be cut off at the wait delay.
 	w := &slowWriter{delay: 300 * time.Millisecond}
-	err := pipe(context.Background(), "", []string{"-c", "alias.big=!head -c 300000 /dev/zero", "big"}, nil, w)
+	err := pipe(context.Background(), "", []string{"-c", "alias.big=!head -c 300000 /dev/zero", "big"}, w)
 	require.NoError(t, err)
 	assert.Equal(t, 300000, w.n)
 }
