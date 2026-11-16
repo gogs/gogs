@@ -72,7 +72,8 @@ type repoFile struct {
 	// Kind is "text", "markup", "notebook", "image", "video", "pdf",
 	// "binary", or "too_large" for a text file too large to show.
 	Kind string `json:"kind"`
-	// Content is set for a text file, and HTML for a file in a markup
+	// Content is set for a text file, including a notebook or a file in a
+	// markup language for their code view, and HTML for a file in a markup
 	// language.
 	Content  *string `json:"content,omitempty"`
 	HTML     string  `json:"html,omitempty"`
@@ -333,6 +334,13 @@ func describeRepoFile(ctx context.Context, repo *database.Repository, commit *gi
 			file.Kind = "too_large"
 			break
 		}
+		content := toUTF8(p)
+		file.Content = &content
+		indent, err := editorconfigIndent(ctx, commit, treePath)
+		if err != nil {
+			return nil, errors.Wrap(err, "read .editorconfig")
+		}
+		file.TabWidth = indent.TabWidth
 		switch markup.Detect(file.Name) {
 		case markup.TypeMarkdown:
 			file.Kind = "markup"
@@ -344,13 +352,6 @@ func describeRepoFile(ctx context.Context, repo *database.Repository, commit *gi
 			file.Kind = "notebook"
 		default:
 			file.Kind = "text"
-			content := toUTF8(p)
-			file.Content = &content
-			indent, err := editorconfigIndent(ctx, commit, treePath)
-			if err != nil {
-				return nil, errors.Wrap(err, "read .editorconfig")
-			}
-			file.TabWidth = indent.TabWidth
 		}
 	case tool.IsPDFFile(p):
 		file.Kind = "pdf"

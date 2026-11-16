@@ -1,7 +1,7 @@
 import type { SelectedLineRange } from "@pierre/diffs";
 import { File as CodeFile } from "@pierre/diffs/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import {
   BookOpen,
   ChevronDown,
@@ -479,6 +479,18 @@ function FileView({
   const params = { owner, repo: name };
   const splat = splatOf(data.ref, data.path);
   const lineCount = useMemo(() => (file.content ? file.content.replace(/\n$/, "").split("\n").length : 0), [file]);
+  const navigate = useNavigate();
+  const plain = useSearch({ strict: false, select: (search: { plain?: unknown }) => search.plain === true });
+  // Rendered files can also show their source, like GitHub's "Preview" and
+  // "Code".
+  const hasPreview = (file.kind === "markup" || file.kind === "notebook") && file.content !== undefined;
+  const showSource = hasPreview && plain;
+  const setShowSource = (source: boolean) =>
+    void navigate({
+      to: ".",
+      search: (prev: Record<string, unknown>) => ({ ...prev, plain: source ? 1 : undefined }),
+      resetScroll: false,
+    });
   const isText =
     file.kind === "text" || file.kind === "markup" || file.kind === "notebook" || file.kind === "too_large";
   const canEdit = data.editor === "ok" && isText && !file.isSymlink;
@@ -500,6 +512,20 @@ function FileView({
       className="mt-4 overflow-hidden rounded-md border border-(--color-border)"
     >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-(--color-border) bg-(--color-surface) px-4 py-2">
+        {hasPreview ? (
+          <div
+            role="group"
+            aria-label={t("repo.file_view_mode")}
+            className="inline-flex h-7 items-stretch overflow-hidden rounded-md border border-(--color-border) text-xs"
+          >
+            <ViewModeButton active={!showSource} onClick={() => setShowSource(false)}>
+              {t("repo.file_preview")}
+            </ViewModeButton>
+            <ViewModeButton active={showSource} onClick={() => setShowSource(true)}>
+              {t("repo.code")}
+            </ViewModeButton>
+          </div>
+        ) : null}
         <h2 id="repo-file-heading" className="flex min-w-0 items-center gap-2 text-sm">
           {file.isSymlink ? (
             <FileSymlink className="size-4 shrink-0 text-(--color-muted-foreground)" aria-hidden />
@@ -585,8 +611,26 @@ function FileView({
           ) : null}
         </div>
       </div>
-      <FileBody file={file} rawURL={rawURL} />
+      {showSource ? <SourceView file={file} /> : <FileBody file={file} rawURL={rawURL} />}
     </section>
+  );
+}
+
+function ViewModeButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={cn(
+        "min-w-11 cursor-pointer px-2.5",
+        active
+          ? "bg-(--color-background) font-semibold text-(--color-foreground)"
+          : "text-(--color-muted-foreground) hover:text-(--color-foreground)",
+      )}
+    >
+      {children}
+    </button>
   );
 }
 

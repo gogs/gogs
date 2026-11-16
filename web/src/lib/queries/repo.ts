@@ -1098,7 +1098,8 @@ export interface RepoFile {
   size: number;
   // too_large is a text file too large to show.
   kind: "text" | "markup" | "notebook" | "image" | "video" | "pdf" | "binary" | "too_large";
-  // content is set for a text file, and html for a file in a markup language.
+  // content is set for a text file, including a notebook or a file in a markup
+  // language for their code view, and html for a file in a markup language.
   content?: string;
   html?: string;
   isReadme: boolean;

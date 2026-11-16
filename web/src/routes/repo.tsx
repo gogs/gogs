@@ -769,6 +769,11 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
   const repoSrcRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/$owner/$repo/src/$",
+    // plain shows the source of a file that is otherwise rendered, e.g.,
+    // Markdown, like GitHub's "?plain=1".
+    validateSearch: (search: Record<string, unknown>): { plain?: true } => ({
+      plain: search.plain === 1 || search.plain === "1" || search.plain === true ? true : undefined,
+    }),
     loader: ({ params, context }) =>
       loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
         fetchRepoSrc(params.owner, params.repo, params._splat ?? ""),
