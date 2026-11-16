@@ -2,8 +2,8 @@ import { BookMarked, EyeOff, GitFork, Link as LinkIcon, Lock, Star } from "lucid
 import type { ComponentType } from "react";
 import { useTranslation } from "react-i18next";
 
+import { RelativeTime } from "@/components/RelativeTime";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
 import { subUrl } from "@/lib/url";
 
 export interface RepoListItemData {
@@ -68,13 +68,7 @@ export function RepoListItem({ repo, showOwner = false }: { repo: RepoListItemDa
           />
         ) : null}
         <p className="mt-1 text-xs text-(--color-muted-foreground)">
-          {t("org.repo_updated")}{" "}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <time dateTime={repo.updatedAt}>{formatRelativeTime(t, repo.updatedAt)}</time>
-            </TooltipTrigger>
-            <TooltipContent>{formatAbsoluteTime(repo.updatedAt)}</TooltipContent>
-          </Tooltip>
+          {t("org.repo_updated")} <RelativeTime time={repo.updatedAt} />
         </p>
       </div>
     </li>
