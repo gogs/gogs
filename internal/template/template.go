@@ -2,8 +2,6 @@ package template
 
 import (
 	"encoding/json"
-	"fmt"
-	"html/template"
 	"strings"
 	"time"
 
@@ -13,7 +11,6 @@ import (
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -38,33 +35,6 @@ func ToUTF8WithErr(logger *logx.Logger, content []byte) (string, error) {
 	}
 
 	return result, err
-}
-
-// RenderCommitMessage renders commit message with special links.
-func RenderCommitMessage(full bool, msg, urlPrefix string, metas map[string]string) string {
-	cleanMsg := template.HTMLEscapeString(msg)
-	// Repository admins set the external issue tracker format the links are
-	// made of, which can be any URL, e.g., a "javascript:" URL.
-	fullMessage := markup.Sanitize(string(markup.RenderIssueIndexPattern([]byte(cleanMsg), urlPrefix, metas)))
-	msgLines := strings.Split(strings.TrimSpace(fullMessage), "\n")
-	numLines := len(msgLines)
-	if numLines == 0 {
-		return ""
-	} else if !full {
-		return msgLines[0]
-	} else if numLines == 1 || (numLines >= 2 && msgLines[1] == "") {
-		// First line is a header, standalone or followed by an empty line.
-		header := fmt.Sprintf("<h3>%s</h3>", msgLines[0])
-		if numLines >= 2 {
-			fullMessage = header + fmt.Sprintf("\n<pre>%s</pre>", strings.Join(msgLines[2:], "\n"))
-		} else {
-			fullMessage = header
-		}
-	} else {
-		// Non-standard Git message, there is no header line.
-		fullMessage = fmt.Sprintf("<h4>%s</h4>", strings.Join(msgLines, "<br>"))
-	}
-	return fullMessage
 }
 
 type Actioner interface {

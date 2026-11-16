@@ -14,8 +14,8 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/lazyregexp"
+	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/pathx"
-	"gogs.io/gogs/internal/template"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -124,8 +124,8 @@ func (a *commitAuthors) signature(s *git.Signature) repoCommitSignature {
 
 type repoCommitListItem struct {
 	SHA string `json:"sha"`
-	// SubjectHTML is the first line of the message, with links to the issues
-	// it mentions.
+	// SubjectHTML is the first line of the message, with links to the users
+	// and issues it mentions.
 	SubjectHTML string              `json:"subjectHTML"`
 	IsMerge     bool                `json:"isMerge"`
 	Author      repoCommitSignature `json:"author"`
@@ -163,7 +163,7 @@ func toCommitListItems(ctx context.Context, logger *logx.Logger, repo *database.
 	for _, commit := range commits {
 		item := repoCommitListItem{
 			SHA:         commit.ID.String(),
-			SubjectHTML: template.RenderCommitMessage(false, commit.Message, repo.Link(), metas),
+			SubjectHTML: markup.RenderCommitMessage(commit.Summary(), repo.Link(), metas),
 			IsMerge:     commit.ParentsCount() > 1,
 			Author:      authors.signature(commit.Author),
 		}

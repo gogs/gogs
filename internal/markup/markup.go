@@ -229,6 +229,15 @@ func replaceSpans(text []byte, spans []linkSpan) []byte {
 	return dariomark.AppendSpecialLinks(make([]byte, 0, len(text)+len(spans)*48), text, spans)
 }
 
+// RenderCommitMessage escapes msg and links the mentions and issue references
+// in it.
+func RenderCommitMessage(msg, urlPrefix string, metas map[string]string) string {
+	text := []byte(html.EscapeString(msg))
+	// Repository admins set the external issue tracker format the links are
+	// made of, which can be any URL, e.g., a "javascript:" URL.
+	return string(SanitizeBytes(replaceSpans(text, findIssueIndexes(text, urlPrefix, metas, findMentions(text)))))
+}
+
 // RenderIssueIndexPattern renders issue indexes to corresponding links.
 func RenderIssueIndexPattern(rawBytes []byte, urlPrefix string, metas map[string]string) []byte {
 	return replaceSpans(rawBytes, findIssueIndexes(rawBytes, urlPrefix, metas, nil))
