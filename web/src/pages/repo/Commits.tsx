@@ -149,7 +149,7 @@ export function RepoCommits({ owner, name, data }: { owner: string; name: string
 
 // CommitList lists commits grouped by the day they were authored. Their
 // "Browse files" links open the path at each commit. Compact lists show each
-// commit on one line without the actions, e.g., above a diff.
+// commit on one line without the actions or the days, e.g., above a diff.
 export function CommitList({
   owner,
   name,
@@ -163,25 +163,30 @@ export function CommitList({
   path?: string;
   compact?: boolean;
 }) {
+  if (compact) {
+    return (
+      <ul className="divide-y divide-(--color-border) rounded-md border border-(--color-border)">
+        {commits.map((commit) => (
+          <CompactCommitRow key={commit.sha} owner={owner} name={name} commit={commit} />
+        ))}
+      </ul>
+    );
+  }
   return (
     <div className="flex flex-col gap-6">
       {groupByDay(commits).map((group) => (
         <section key={group.day} aria-label={group.day}>
           <h2 className="mb-2 text-sm font-semibold text-(--color-muted-foreground)">{group.day}</h2>
           <ul className="divide-y divide-(--color-border) rounded-md border border-(--color-border)">
-            {group.commits.map((commit) =>
-              compact ? (
-                <CompactCommitRow key={commit.sha} owner={owner} name={name} commit={commit} />
-              ) : (
-                <CommitRow
-                  key={commit.sha}
-                  owner={owner}
-                  name={name}
-                  commit={commit}
-                  browseURL={subUrl(`/${owner}/${name}/src/${refPath(splatOf(commit.sha, path))}`)}
-                />
-              ),
-            )}
+            {group.commits.map((commit) => (
+              <CommitRow
+                key={commit.sha}
+                owner={owner}
+                name={name}
+                commit={commit}
+                browseURL={subUrl(`/${owner}/${name}/src/${refPath(splatOf(commit.sha, path))}`)}
+              />
+            ))}
           </ul>
         </section>
       ))}
@@ -308,8 +313,7 @@ function CompactCommitRow({ owner, name, commit }: { owner: string; name: string
 
   return (
     <li className="flex items-center gap-3 px-4 py-2">
-      <img src={author.avatarURL} alt="" className="size-5 shrink-0 rounded-full" />
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-3">
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-3">
         <p
           className={cn(
             "min-w-0 text-sm font-medium wrap-anywhere sm:truncate [&_a]:text-(--color-primary) [&_a]:hover:underline",
@@ -318,6 +322,7 @@ function CompactCommitRow({ owner, name, commit }: { owner: string; name: string
           dangerouslySetInnerHTML={{ __html: commit.subjectHTML }}
         />
         <p className="flex shrink-0 items-center gap-x-1.5 text-xs text-(--color-muted-foreground)">
+          <img src={author.avatarURL} alt="" className="size-4 shrink-0 rounded-full" />
           {author.profileURL ? (
             <a href={author.profileURL} className="font-semibold text-(--color-foreground) hover:underline">
               {author.name}
