@@ -41,12 +41,29 @@ type PullRequestMeta struct {
 	NumFiles int
 }
 
+// PullRequestMetaOptions contains optional arguments for gathering metadata
+// of a pull request.
+type PullRequestMetaOptions struct {
+	// The commit to compare the head branch against instead of the merge base
+	// with the base branch, e.g., a commit that merges the branches the pull
+	// request depends on. It must be in the repository.
+	Base string
+}
+
 // PullRequestMeta gathers metadata of a pull request that merges the head
 // branch of the repository into the base branch of the repository at the
 // basePath, which may be the same repository.
-func (r *Repository) PullRequestMeta(ctx context.Context, basePath, headBranch, baseBranch string) (*PullRequestMeta, error) {
+func (r *Repository) PullRequestMeta(ctx context.Context, basePath, headBranch, baseBranch string, opts ...PullRequestMetaOptions) (*PullRequestMeta, error) {
 	ctx, span := tracer.Start(ctx, "git.Repository.PullRequestMeta")
 	defer span.End()
+
+	var opt PullRequestMetaOptions
+	if len(opts) > 0 {
+		opt = opts[0]
+	}
+	if opt.Base != "" {
+		return r.pullRequestMeta(ctx, opt.Base, headBranch)
+	}
 
 	base := baseBranch
 	var envs []string
@@ -78,8 +95,15 @@ func (r *Repository) PullRequestMeta(ctx context.Context, basePath, headBranch, 
 	if err != nil {
 		return nil, errors.Wrap(err, "get merge base")
 	}
+	return r.pullRequestMeta(ctx, mergeBase, headBranch)
+}
 
-	commits, err := r.Log(ctx, mergeBase+"..."+headBranch)
+// pullRequestMeta gathers metadata of a pull request that compares the head
+// branch against the merge base.
+func (r *Repository) pullRequestMeta(ctx context.Context, mergeBase, headBranch string) (*PullRequestMeta, error) {
+	// A given base may not be an ancestor of the head branch, so only list the
+	// commits of the head branch.
+	commits, err := r.Log(ctx, mergeBase+".."+headBranch)
 	if err != nil {
 		return nil, errors.Wrap(err, "get commits")
 	}

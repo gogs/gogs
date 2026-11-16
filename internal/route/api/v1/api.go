@@ -339,6 +339,10 @@ func RegisterRoutes(f *flamego.Flame) {
 					})
 				}, mustEnableIssues)
 
+				f.Combo("/pulls/{index}/parents").
+					Get(listPullParents).
+					Put(reqRepoWriter(), bind(setPullParentsRequest{}), setPullParents)
+
 				f.Group("/labels", func() {
 					f.Get("", listLabels)
 					f.Get("/{id}", getLabel)

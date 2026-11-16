@@ -26,7 +26,7 @@ func TestDumpAndImport(t *testing.T) {
 	}
 	t.Parallel()
 
-	const wantTables = 8
+	const wantTables = 9
 	if len(Tables) != wantTables {
 		t.Fatalf("New table has added (want %d got %d), please add new tests for the table and update this check", wantTables, len(Tables))
 	}
@@ -182,6 +182,17 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			Type:        NoticeTypeRepository,
 			Description: "This is a notice",
 			CreatedUnix: 1588568886,
+		},
+
+		&PullRequestParent{
+			ID:       1,
+			PullID:   3,
+			ParentID: 1,
+		},
+		&PullRequestParent{
+			ID:       2,
+			PullID:   3,
+			ParentID: 2,
 		},
 	}
 	for _, val := range vals {

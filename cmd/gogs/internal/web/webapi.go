@@ -440,6 +440,8 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Group("", func() {
 				f.Post("/merge", bindJSON(repoPullMergeRequest{}), postRepoPullMerge)
 				f.Delete("/branch", deleteRepoPullBranch)
+				f.Put("/parents", bindJSON(repoPullParentsRequest{}), putRepoPullParents)
+				f.Post("/update", postRepoPullUpdate)
 			}, withRepoWriter)
 		}, withRepoPulls, withRepoPull)
 		f.Group("/releases", func() {

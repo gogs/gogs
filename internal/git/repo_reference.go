@@ -65,6 +65,34 @@ func RepoBranchCommitID(ctx context.Context, repoPath, branch string) (string, e
 	return r.BranchCommitID(ctx, branch)
 }
 
+// UpdateRefOptions contains optional arguments for updating a reference.
+//
+// Docs: https://git-scm.com/docs/git-update-ref
+type UpdateRefOptions struct {
+	// The commit the reference must point at for the update to happen, which
+	// guards against overwriting a concurrent update.
+	OldValue string
+}
+
+// UpdateRef points the fully qualified reference, e.g.,
+// "refs/pull/1/base", at the commit, creating the reference if it does not
+// exist.
+func (r *Repository) UpdateRef(ctx context.Context, ref, commitID string, opts ...UpdateRefOptions) error {
+	ctx, span := tracer.Start(ctx, "git.Repository.UpdateRef")
+	defer span.End()
+
+	var opt UpdateRefOptions
+	if len(opts) > 0 {
+		opt = opts[0]
+	}
+	args := []string{"update-ref", "--end-of-options", ref, commitID}
+	if opt.OldValue != "" {
+		args = append(args, opt.OldValue)
+	}
+	_, err := exec(ctx, r.path, args, nil)
+	return err
+}
+
 // TagCommitID returns the commit ID of given tag if it exists in the
 // repository. The tag must be given in short name, e.g., "v1.0.0".
 func (r *Repository) TagCommitID(ctx context.Context, tag string) (string, error) {

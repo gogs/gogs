@@ -129,3 +129,18 @@ Primary keys: id
 Primary keys: id
 ```
 
+# Table "pull_request_parent"
+
+```
+  Field   |  Column   |   PostgreSQL    |         MySQL         |        SQLite3        
+----------+-----------+-----------------+-----------------------+-----------------------
+ ID       | id        | BIGSERIAL       | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ PullID   | pull_id   | BIGINT NOT NULL | BIGINT NOT NULL       | INTEGER NOT NULL      
+ ParentID | parent_id | BIGINT NOT NULL | BIGINT NOT NULL       | INTEGER NOT NULL      
+
+Primary keys: id
+Indexes: 
+	"idx_pull_request_parent_parent_id" (parent_id)
+	"pull_request_parent_pull_parent_unique" UNIQUE (pull_id, parent_id)
+```
+
