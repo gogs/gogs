@@ -341,54 +341,6 @@ func (r *Repository) UpdateRepoFile(ctx context.Context, doer *User, opts Update
 	})
 }
 
-// GetDiffPreview produces and returns diff result of a file which is not yet committed.
-func (r *Repository) GetDiffPreview(ctx context.Context, branch, treePath, content string) (*git.Diff, error) {
-	// 🚨 SECURITY: Prevent uploading files into the ".git" directory.
-	if isRepositoryGitPath(treePath) {
-		return nil, errors.Errorf("bad tree path %q", treePath)
-	}
-
-	commit, err := git.RepoBranchCommit(ctx, r.RepoPath(), branch)
-	if err != nil {
-		return nil, errors.Wrapf(err, "get commit of branch %q", branch)
-	}
-	if err = checkNoSymlinkInPaths(ctx, commit, treePath); err != nil {
-		return nil, err
-	}
-
-	mode := git.EntryBlob
-	entry, err := treeEntry(ctx, commit, treePath)
-	if err != nil {
-		return nil, err
-	} else if entry != nil {
-		mode = entry.Mode()
-	}
-
-	tmpRepo, cleanup, err := newTemporaryRepository(ctx, r.RepoPath())
-	if err != nil {
-		return nil, errors.Wrap(err, "create temporary repository")
-	}
-	defer cleanup()
-
-	if err = tmpRepo.ReadTree(ctx, commit.ID.String()); err != nil {
-		return nil, errors.Wrap(err, "read tree")
-	}
-	err = tmpRepo.AddToIndex(ctx, git.IndexFile{
-		Path:       treePath,
-		Content:    strings.NewReader(content),
-		Executable: mode == git.EntryExec,
-	})
-	if err != nil {
-		return nil, errors.Wrapf(err, "add %q", treePath)
-	}
-
-	diff, err := tmpRepo.DiffCached(ctx, commit.ID.String(), treePath, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars)
-	if err != nil {
-		return nil, errors.Newf("get diff: %v", err)
-	}
-	return diff, nil
-}
-
 // ________         .__          __           ___________.__.__
 // \______ \   ____ |  |   _____/  |_  ____   \_   _____/|__|  |   ____
 //  |    |  \_/ __ \|  | _/ __ \   __\/ __ \   |    __)  |  |  | _/ __ \

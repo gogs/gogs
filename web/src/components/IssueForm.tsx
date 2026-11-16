@@ -54,7 +54,7 @@ export function MarkdownEditor({
   const [tab, setTab] = useState<"write" | "preview">("write");
   const preview = useQuery({
     queryKey: ["markdown", repo.owner, repo.name, value, wiki],
-    queryFn: () => renderRepoMarkdown(repo.owner, repo.name, value, wiki),
+    queryFn: () => renderRepoMarkdown(repo.owner, repo.name, value, { wiki }),
     enabled: tab === "preview" && value.trim() !== "",
     staleTime: Infinity,
   });

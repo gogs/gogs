@@ -194,39 +194,6 @@ func TestRepository_AddToIndex(t *testing.T) {
 	assert.Regexp(t, `^100755 \S+ 0\tc.dat\n100644 \S+ 0\tup/b.dat\n$`, string(stage))
 }
 
-func TestRepository_DiffCached(t *testing.T) {
-	ctx := context.Background()
-	r := setupBareRepoWithAlternates(t)
-
-	parent, err := testrepo.BranchCommit(ctx, "master")
-	require.NoError(t, err)
-	require.NoError(t, r.ReadTree(ctx, parent.ID.String()))
-	for _, path := range []string{"README.txt", "pom.xml"} {
-		require.NoError(t, r.AddToIndex(ctx, IndexFile{Path: path, Content: strings.NewReader("changed\n")}))
-	}
-
-	diff, err := r.DiffCached(ctx, parent.ID.String(), "README.txt", 0, 0, 0)
-	require.NoError(t, err)
-	require.Len(t, diff.Files, 1)
-	assert.Equal(t, "README.txt", diff.Files[0].Name)
-	assert.Equal(t, 1, diff.Files[0].NumAdditions())
-
-	t.Run("follows .gitattributes of the revision", func(t *testing.T) {
-		r, cleanup, err := setupTempRepo()
-		require.NoError(t, err)
-		defer cleanup()
-
-		rev := commitFiles(t, r, "attributes", map[string]string{".gitattributes": "*.dat -diff\n", "a.dat": "a\n"})
-		require.NoError(t, r.ReadTree(ctx, rev))
-		require.NoError(t, r.AddToIndex(ctx, IndexFile{Path: "a.dat", Content: strings.NewReader("b\n")}))
-
-		diff, err := r.DiffCached(ctx, rev, "a.dat", 0, 0, 0)
-		require.NoError(t, err)
-		require.Len(t, diff.Files, 1)
-		assert.True(t, diff.Files[0].IsBinary())
-	})
-}
-
 func TestRepository_IsValidBranchName(t *testing.T) {
 	ctx := context.Background()
 	for _, name := range []string{"feature", "feature/a", "v1.0"} {
