@@ -179,6 +179,7 @@ All notable changes to Gogs are documented in this file.
 - Signing in through an SMTP authentication source on port 465 no longer fails with an error. [#8627](https://github.com/gogs/gogs/pull/8627)
 - Migrating a repository from an SSH clone address now explains that SSH is not supported instead of reporting that importing local repositories is not allowed. [#8584](https://github.com/gogs/gogs/pull/8584)
 - Files listed by the Git trees API now link to their blobs instead of a tree URL that responded with 500. [#8611](https://github.com/gogs/gogs/pull/8611)
+- `gogs backup` no longer needs free space in the system temporary directory for the whole archive, and respects `--tempdir`. [#8614](https://github.com/gogs/gogs/pull/8614)
 
 ### Removed
 
