@@ -1287,11 +1287,6 @@ func (u *User) maxNumRepos() int {
 	return u.MaxRepoCreation
 }
 
-// canCreateRepo returns true if the user can create a repository.
-func (u *User) canCreateRepo() bool {
-	return u.maxNumRepos() <= -1 || u.NumRepos < u.maxNumRepos()
-}
-
 // CanCreateOrganization returns true if user can create organizations.
 func (u *User) CanCreateOrganization() bool {
 	return !conf.Admin.DisableRegularOrgCreation || u.IsAdmin

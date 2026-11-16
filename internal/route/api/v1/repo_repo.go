@@ -182,7 +182,8 @@ func createUserRepo(c *context.APIContext, owner *database.User, opt createRepoR
 	})
 	if err != nil {
 		if database.IsErrRepoAlreadyExist(err) ||
-			database.IsErrNameNotAllowed(err) {
+			database.IsErrNameNotAllowed(err) ||
+			database.IsErrReachLimitOfRepo(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
 		} else {
 			if repo != nil {
