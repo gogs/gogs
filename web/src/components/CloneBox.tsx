@@ -1,5 +1,5 @@
 import { Check, Copy } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -13,8 +13,16 @@ const PROTOCOL_KEY = "repo-clone-protocol";
 
 // CloneBox shows the clone URL of a repository in the protocol the viewer
 // last picked, with a button to copy it. label names the URL for assistive
-// technology.
-export function CloneBox({ links, label }: { links: RepoCloneLinks; label: string }) {
+// technology, and onURLChange receives the URL whenever the protocol changes.
+export function CloneBox({
+  links,
+  label,
+  onURLChange,
+}: {
+  links: RepoCloneLinks;
+  label: string;
+  onURLChange?: (url: string) => void;
+}) {
   const { t } = useTranslation();
   const protocols = [
     ...(links.https
@@ -27,8 +35,9 @@ export function CloneBox({ links, label }: { links: RepoCloneLinks; label: strin
     return protocols.some((p) => p.key === stored) ? stored : protocols[0]?.key;
   });
   const [copied, setCopied] = useState(false);
+  const url = protocols.find((p) => p.key === selected)?.url ?? protocols[0]?.url ?? "";
+  useEffect(() => onURLChange?.(url), [url, onURLChange]);
   if (!protocols.length) return null;
-  const url = protocols.find((p) => p.key === selected)?.url ?? protocols[0].url;
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(url);

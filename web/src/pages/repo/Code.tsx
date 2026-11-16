@@ -809,6 +809,8 @@ function NotebookView({ rawURL }: { rawURL: string }) {
 
 function EmptyRepo({ data }: { data: RepoSrcData }) {
   const { t } = useTranslation();
+  const links = data.cloneLinks ?? {};
+  const [remote, setRemote] = useState(links.ssh ?? links.https ?? "");
   if (!data.viewerCanWrite || data.isMirror) {
     return (
       <p className="rounded-md border border-(--color-border) px-4 py-10 text-center text-sm text-(--color-muted-foreground)">
@@ -816,8 +818,6 @@ function EmptyRepo({ data }: { data: RepoSrcData }) {
       </p>
     );
   }
-  const links = data.cloneLinks ?? {};
-  const remote = links.ssh ?? links.https ?? "";
   const branch = data.defaultBranch;
   return (
     <section aria-labelledby="repo-quick-guide" className="overflow-hidden rounded-md border border-(--color-border)">
@@ -837,7 +837,7 @@ function EmptyRepo({ data }: { data: RepoSrcData }) {
             />
           </p>
           <div className="max-w-xl">
-            <CloneBox links={links} label={t("repo.clone_this_repo")} />
+            <CloneBox links={links} label={t("repo.clone_this_repo")} onURLChange={setRemote} />
           </div>
         </div>
         <div className="flex flex-col gap-2 p-4">
