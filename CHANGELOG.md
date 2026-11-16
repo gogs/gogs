@@ -20,7 +20,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Fixed
 
-- _Security:_ Anyone with a GitHub account could sign in as any user of a GitHub authentication source with their own GitHub token. [#PR](https://github.com/gogs/gogs/pull/PR) - [GHSA-v5w5-6j48-6jv2](https://github.com/gogs/gogs/security/advisories/GHSA-v5w5-6j48-6jv2)
+- _Security:_ Anyone with a GitHub account could sign in as any user of a GitHub authentication source with their own GitHub token. [#8634](https://github.com/gogs/gogs/pull/8634) - [GHSA-v5w5-6j48-6jv2](https://github.com/gogs/gogs/security/advisories/GHSA-v5w5-6j48-6jv2)
 
 ## 0.14.0
 
