@@ -179,47 +179,75 @@ func parentHeadID(ctx context.Context, gitRepo *git.Repository, parent *PullRequ
 	return id, nil
 }
 
-// updateSyntheticBase merges the heads of the parents into the commit that the
-// pull request is reviewed against, pins it at "refs/pull/<index>/base" so it
-// is not garbage collected, and returns its ID. With one parent, the base is
-// the head of that parent. Merged parents count with the commit they were
-// merged at, so the pull request keeps showing only its own changes while its
-// parents land one by one. The head branches of the pull request and its
-// parents must be in the given repository.
+// updateSyntheticBase merges the parents into the commit that the pull
+// request is reviewed against, pins it at "refs/pull/<index>/base" so it is
+// not garbage collected, and returns its ID. Each parent counts with the
+// newest commit of it that the head branch contains, so changes a parent made
+// after the pull request last took them in do not show up as reverted by it.
+// With one parent, the base is that commit itself. Merged parents count with
+// the commit they were merged at, so the pull request keeps showing only its
+// own changes while its parents land one by one. It returns
+// ErrPullRequestParentsConflict when the heads of the parents cannot be
+// merged together. The head branches of the pull request and its parents must
+// be in the given repository.
 func (pr *PullRequest) updateSyntheticBase(ctx context.Context, gitRepo *git.Repository, parents []*PullRequest) (string, error) {
 	// A fixed signature keeps the commit ID the same for the same parents, so
 	// the base only changes when a parent does.
 	sig := &git.Signature{Name: "Gogs", Email: "noreply@" + conf.Server.Domain, When: time.Unix(0, 0).UTC()}
+	combine := func(ids []string) (string, error) {
+		baseID := ids[0]
+		for i, id := range ids[1:] {
+			tree, err := gitRepo.MergeTree(ctx, baseID, id)
+			if errors.Is(err, git.ErrMergeConflict) {
+				return "", errors.Wrapf(ErrPullRequestParentsConflict, "merge parent #%d", parents[i+1].Index)
+			} else if err != nil {
+				return "", errors.Wrapf(err, "merge parent #%d", parents[i+1].Index)
+			}
+			message := fmt.Sprintf("Synthetic base of pull request #%d\n", pr.Index)
+			baseID, err = gitRepo.CommitTree(ctx, tree, message, git.CommitTreeOptions{
+				Parents:   []string{baseID, id},
+				Author:    sig,
+				Committer: sig,
+			})
+			if err != nil {
+				return "", errors.Wrap(err, "commit tree")
+			}
+		}
+		return baseID, nil
+	}
 
-	var baseID string
-	for _, parent := range parents {
-		headID, err := parentHeadID(ctx, gitRepo, parent)
+	heads := make([]string, len(parents))
+	for i, parent := range parents {
+		id, err := parentHeadID(ctx, gitRepo, parent)
 		if err != nil {
 			return "", err
 		}
-		if baseID == "" {
-			baseID = headID
-			continue
-		}
+		heads[i] = id
+	}
+	baseID, err := combine(heads)
+	if err != nil {
+		return "", err
+	}
 
-		tree, err := gitRepo.MergeTree(ctx, baseID, headID)
-		if errors.Is(err, git.ErrMergeConflict) {
-			return "", errors.Wrapf(ErrPullRequestParentsConflict, "merge parent #%d", parent.Index)
-		} else if err != nil {
-			return "", errors.Wrapf(err, "merge parent #%d", parent.Index)
+	// A head branch that is gone keeps the base of the parents as they are.
+	if headID, err := gitRepo.BranchCommitID(ctx, pr.HeadBranch); err == nil {
+		contained := make([]string, len(heads))
+		changed := false
+		for i, id := range heads {
+			contained[i], err = gitRepo.MergeBase(ctx, id, headID)
+			if err != nil {
+				return "", errors.Wrapf(err, "find what the head contains of parent #%d", parents[i].Index)
+			}
+			changed = changed || contained[i] != id
 		}
-		message := fmt.Sprintf("Synthetic base of pull request #%d\n", pr.Index)
-		baseID, err = gitRepo.CommitTree(ctx, tree, message, git.CommitTreeOptions{
-			Parents:   []string{baseID, headID},
-			Author:    sig,
-			Committer: sig,
-		})
-		if err != nil {
-			return "", errors.Wrap(err, "commit tree")
+		if changed {
+			if baseID, err = combine(contained); err != nil {
+				return "", err
+			}
 		}
 	}
 
-	err := gitRepo.UpdateRef(ctx, fmt.Sprintf("refs/pull/%d/base", pr.Index), baseID)
+	err = gitRepo.UpdateRef(ctx, fmt.Sprintf("refs/pull/%d/base", pr.Index), baseID)
 	if err != nil {
 		return "", errors.Wrap(err, "update reference")
 	}

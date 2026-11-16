@@ -135,6 +135,14 @@ func TestPullRequest_updateSyntheticBase(t *testing.T) {
 
 		assert.Equal(t, before, run("rev-parse", "refs/pull/4/base"), "the pinned base should be untouched")
 	})
+
+	t.Run("behind a parent", func(t *testing.T) {
+		// "b" moves ahead after "d" took it in, so "d" lacks the new change.
+		commit("b", "b.txt", "b v2\n")
+		base, err := pr.updateSyntheticBase(ctx, gitRepo, []*PullRequest{parentB, parentC})
+		require.NoError(t, err)
+		assert.Equal(t, "d.txt", run("diff", "--name-only", base, "d"), "the new change of the parent should not show as reverted")
+	})
 }
 
 func TestSortPullRequestStack(t *testing.T) {
