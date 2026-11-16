@@ -189,18 +189,24 @@ func getRepoRawFile(logger *logx.Logger, c flamego.Context, repoCtx *repoContext
 		return
 	}
 
-	blob, err := commit.Blob(c.Request().Context(), filepath)
+	entry, err := commit.TreeEntry(c.Request().Context(), filepath)
 	if err != nil {
-		if git.IsErrRevisionNotExist(err) || errors.Is(err, git.ErrNotBlob) {
+		if git.IsErrRevisionNotExist(err) {
 			writeErrorResponse(w, http.StatusNotFound, errors.New("file does not exist"))
 			return
 		}
-		logger.Error("Failed to get blob", "commitID", commit.ID, "path", filepath, "ownerName", owner.Name, "repoName", repo.Name, "error", err)
-		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "get blob"))
+		logger.Error("Failed to get tree entry", "commitID", commit.ID, "path", filepath, "ownerName", owner.Name, "repoName", repo.Name, "error", err)
+		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "get tree entry"))
+		return
+	}
+	// The content of a symlink is its target path, which is served like GitHub
+	// does instead of following the link.
+	if !entry.IsBlob() && !entry.IsExec() && !entry.IsSymlink() {
+		writeErrorResponse(w, http.StatusNotFound, errors.New("file does not exist"))
 		return
 	}
 
-	data, err := blob.Bytes(c.Request().Context())
+	data, err := entry.Blob().Bytes(c.Request().Context())
 	if err != nil {
 		logger.Error("Failed to read blob", "commitID", commit.ID, "path", filepath, "error", err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "read blob"))

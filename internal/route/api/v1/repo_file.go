@@ -81,12 +81,18 @@ func getRawFile(c *apiContext) {
 		return
 	}
 
-	blob, err := commit.Blob(ctx, treePath)
+	entry, err := commit.TreeEntry(ctx, treePath)
 	if err != nil {
-		c.NotFoundOrError(git.NewError(err), "get blob")
+		c.NotFoundOrError(git.NewError(err), "get tree entry")
 		return
 	}
-	if err = serveBlob(c, commit, treePath, blob); err != nil {
+	// The content of a symlink is its target path, which is served like GitHub
+	// does instead of following the link.
+	if !entry.IsBlob() && !entry.IsExec() && !entry.IsSymlink() {
+		c.NotFound()
+		return
+	}
+	if err = serveBlob(c, commit, treePath, entry.Blob()); err != nil {
 		c.Error(err, "serve blob")
 	}
 }
