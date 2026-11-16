@@ -149,10 +149,6 @@ func InitLogging(logger *logx.Logger, hookMode bool) (*logx.Logger, error) {
 		return logger, nil
 	}
 
-	if err := os.MkdirAll(logConf.RootPath, os.ModePerm); err != nil {
-		return nil, errors.Wrap(err, "create log directory")
-	}
-
 	handlers := make([]slog.Handler, 0, len(logConf.Configs))
 	for _, c := range logConf.Configs {
 		h, err := newLogHandler(c, logConf.JSON)

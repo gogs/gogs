@@ -284,7 +284,7 @@ func getRepoSrc(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (s
 			if dirCount <= flattenDirsMax {
 				item.Name, err = flattenDir(ctx, tree, item.Name)
 				if err != nil {
-					log.Error("getRepoSrc: flatten %q of %q in repo %d: %v", item.Name, treePath, repo.ID, err)
+					logger.Error("Failed to flatten directory", "dirName", item.Name, "treePath", treePath, "repoID", repo.ID, "error", err)
 					return http.StatusInternalServerError, nil, errors.Wrap(err, "flatten directory")
 				}
 			}
@@ -505,17 +505,17 @@ type repoPathsResponse struct {
 
 // getRepoPaths lists the paths of every file of the ref in the route, or of
 // the default branch without one.
-func getRepoPaths(c flamego.Context, repoCtx *repoContext) (statusCode int, resp *repoPathsResponse, err error) {
+func getRepoPaths(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoPathsResponse, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
 	gitRepo, err := openRepoGit(repoCtx)
 	if err != nil {
-		log.Error("getRepoPaths: open repository %d: %v", repo.ID, err)
+		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
 	}
 	ref, err := resolveRepoRef(ctx, repo, gitRepo, c.Param("path"))
 	if err != nil {
-		log.Error("getRepoPaths: resolve ref %q in repo %d: %v", c.Param("path"), repo.ID, err)
+		logger.Error("Failed to resolve ref", "path", c.Param("path"), "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "resolve ref")
 	} else if ref == nil || ref.Path != "" {
 		return http.StatusNotFound, nil, errors.New("ref does not exist")
@@ -523,7 +523,7 @@ func getRepoPaths(c flamego.Context, repoCtx *repoContext) (statusCode int, resp
 
 	paths, err := gitRepo.TreePaths(ctx, ref.Commit.ID.String())
 	if err != nil {
-		log.Error("getRepoPaths: list paths of %q in repo %d: %v", ref.Name, repo.ID, err)
+		logger.Error("Failed to list paths", "ref", ref.Name, "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list paths")
 	}
 	resp = &repoPathsResponse{
