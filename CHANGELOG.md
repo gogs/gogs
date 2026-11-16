@@ -16,6 +16,12 @@ All notable changes to Gogs are documented in this file.
 
 - Git clone via the built-in SSH server hangs. [#8132](https://github.com/gogs/gogs/issues/8132)
 
+## 0.14.5
+
+### Fixed
+
+- _Security:_ Anyone with a GitHub account could sign in as any user of a GitHub authentication source with their own GitHub token. [#8634](https://github.com/gogs/gogs/pull/8634) - [GHSA-v5w5-6j48-6jv2](https://github.com/gogs/gogs/security/advisories/GHSA-v5w5-6j48-6jv2)
+
 ## 0.14.0
 
 ### Added
