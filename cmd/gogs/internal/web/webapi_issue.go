@@ -1039,14 +1039,16 @@ func postRepoIssue(c flamego.Context, l i18n.Locale, viewer *database.User, repo
 				}
 			}
 			req.Content, err = tmpl.RenderForm(req.Fields, files)
-			if fieldErr := (*issuetemplate.FieldError)(nil); errors.As(err, &fieldErr) {
-				msg := fieldErr.Label + ": " + fieldErr.Message
-				if fieldErr.Missing {
-					msg = fieldErr.Label + l.Tr("form.require_error")
+			if fieldErrs := issuetemplate.FieldErrors(nil); errors.As(err, &fieldErrs) {
+				fields := fieldErrors{}
+				for _, fieldErr := range fieldErrs {
+					msg := fieldErr.Label + ": " + fieldErr.Message
+					if fieldErr.Missing {
+						msg = fieldErr.Label + l.Tr("form.require_error")
+					}
+					fields["field-"+strconv.Itoa(fieldErr.Index)] = &msg
 				}
-				return http.StatusBadRequest, &bindingErrorResponse{
-					Fields: fieldErrors{"field-" + strconv.Itoa(fieldErr.Index): &msg},
-				}, nil
+				return http.StatusBadRequest, &bindingErrorResponse{Fields: fields}, nil
 			} else if err != nil {
 				return http.StatusBadRequest, nil, err
 			}

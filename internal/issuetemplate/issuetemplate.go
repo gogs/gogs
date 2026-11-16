@@ -477,6 +477,18 @@ func (e *FieldError) Error() string {
 	return e.Label + ": " + e.Message
 }
 
+// FieldErrors are the values of an issue form that are not valid, in the
+// order of the form.
+type FieldErrors []*FieldError
+
+func (errs FieldErrors) Error() string {
+	msgs := make([]string, len(errs))
+	for i, err := range errs {
+		msgs[i] = err.Error()
+	}
+	return strings.Join(msgs, "; ")
+}
+
 const noResponse = "_No response_"
 
 // File is an uploaded file the value of an upload element names.
@@ -508,112 +520,127 @@ var linkTextEscaper = strings.NewReplacer(`\`, `\\`, "[", `\[`, "]", `\]`)
 // the form: the text of an input or a textarea, the chosen option labels of a
 // dropdown or checkboxes, or the IDs of the files of an upload element, which
 // files looks up. A nil files means uploads are disabled, so upload elements
-// are left without a response. It returns a *FieldError when a value is not
-// valid.
+// are left without a response. It returns FieldErrors with every value that
+// is not valid.
 func (t *Template) RenderForm(values [][]string, files func(id string) (File, bool)) (string, error) {
 	if len(values) != len(t.Form) {
 		return "", errors.Newf("expect %d form values but got %d", len(t.Form), len(values))
 	}
 
 	var sections []string
+	var fieldErrs FieldErrors
 	for i, el := range t.Form {
 		if el.Type == ElementMarkdown {
 			continue
 		}
-		label := strings.TrimSpace(el.Attributes.Label)
-		fail := func(message string) (string, error) {
-			return "", &FieldError{Index: i, Label: label, Message: message}
+		value, fieldErr := renderElement(i, el, values[i], files)
+		if fieldErr != nil {
+			fieldErrs = append(fieldErrs, fieldErr)
+			continue
 		}
-		missing := func(label string) (string, error) {
-			return "", &FieldError{Index: i, Label: label, Missing: true}
-		}
-		var value string
-		switch el.Type {
-		case ElementInput, ElementTextarea:
-			if len(values[i]) > 1 {
-				return fail("expect a single value")
-			}
-			if len(values[i]) == 1 {
-				value = strings.TrimSpace(values[i][0])
-			}
-			if value == "" {
-				if el.Validations.Required {
-					return missing(label)
-				}
-				value = noResponse
-			} else if el.Type == ElementTextarea && el.Attributes.Render != "" {
-				value = "```" + el.Attributes.Render + "\n" + value + "\n```"
-			}
-
-		case ElementDropdown:
-			chosen, err := chooseOptions(el, values[i])
-			if err != nil {
-				return fail(err.Error())
-			}
-			if len(chosen) > 1 && !el.Attributes.Multiple {
-				return fail("expect a single option")
-			}
-			if len(chosen) == 0 {
-				if el.Validations.Required {
-					return missing(label)
-				}
-				value = noResponse
-			} else {
-				value = strings.Join(chosen, ", ")
-			}
-
-		case ElementUpload:
-			links := make([]string, 0, len(values[i]))
-			if files != nil {
-				for _, id := range values[i] {
-					f, ok := files(id)
-					if !ok {
-						return fail("file does not exist")
-					}
-					if !accepts(el.Validations.Accept, f.Name) {
-						return fail(f.Name + " is not an accepted file type")
-					}
-					link := "[" + linkTextEscaper.Replace(f.Name) + "](" + f.URL + ")"
-					if f.IsImage {
-						link = "!" + link
-					}
-					links = append(links, link)
-				}
-			}
-			if len(links) == 0 {
-				if el.Validations.Required && files != nil {
-					return missing(label)
-				}
-				value = noResponse
-			} else {
-				value = strings.Join(links, "\n")
-			}
-
-		case ElementCheckboxes:
-			chosen, err := chooseOptions(el, values[i])
-			if err != nil {
-				return fail(err.Error())
-			}
-			lines := make([]string, 0, len(el.Attributes.Options))
-			for _, o := range el.Attributes.Options {
-				mark := " "
-				if slices.Contains(chosen, o.Label) {
-					mark = "X"
-				} else if o.Required {
-					// The label of an option may be Markdown, so the error names the
-					// group, which the error is shown under.
-					return missing(label)
-				}
-				lines = append(lines, "- ["+mark+"] "+o.Label)
-			}
-			if el.Validations.Required && len(chosen) == 0 {
-				return missing(label)
-			}
-			value = strings.Join(lines, "\n")
-		}
-		sections = append(sections, "### "+label+"\n\n"+value)
+		sections = append(sections, "### "+strings.TrimSpace(el.Attributes.Label)+"\n\n"+value)
+	}
+	if len(fieldErrs) > 0 {
+		return "", fieldErrs
 	}
 	return strings.Join(sections, "\n\n"), nil
+}
+
+// renderElement returns the issue content for the values of the element at
+// index i of an issue form, or the error when they are not valid.
+func renderElement(i int, el *Element, values []string, files func(id string) (File, bool)) (string, *FieldError) {
+	label := strings.TrimSpace(el.Attributes.Label)
+	fail := func(message string) (string, *FieldError) {
+		return "", &FieldError{Index: i, Label: label, Message: message}
+	}
+	missing := func(label string) (string, *FieldError) {
+		return "", &FieldError{Index: i, Label: label, Missing: true}
+	}
+	var value string
+	switch el.Type {
+	case ElementInput, ElementTextarea:
+		if len(values) > 1 {
+			return fail("expect a single value")
+		}
+		if len(values) == 1 {
+			value = strings.TrimSpace(values[0])
+		}
+		if value == "" {
+			if el.Validations.Required {
+				return missing(label)
+			}
+			value = noResponse
+		} else if el.Type == ElementTextarea && el.Attributes.Render != "" {
+			value = "```" + el.Attributes.Render + "\n" + value + "\n```"
+		}
+
+	case ElementDropdown:
+		chosen, err := chooseOptions(el, values)
+		if err != nil {
+			return fail(err.Error())
+		}
+		if len(chosen) > 1 && !el.Attributes.Multiple {
+			return fail("expect a single option")
+		}
+		if len(chosen) == 0 {
+			if el.Validations.Required {
+				return missing(label)
+			}
+			value = noResponse
+		} else {
+			value = strings.Join(chosen, ", ")
+		}
+
+	case ElementUpload:
+		links := make([]string, 0, len(values))
+		if files != nil {
+			for _, id := range values {
+				f, ok := files(id)
+				if !ok {
+					return fail("file does not exist")
+				}
+				if !accepts(el.Validations.Accept, f.Name) {
+					return fail(f.Name + " is not an accepted file type")
+				}
+				link := "[" + linkTextEscaper.Replace(f.Name) + "](" + f.URL + ")"
+				if f.IsImage {
+					link = "!" + link
+				}
+				links = append(links, link)
+			}
+		}
+		if len(links) == 0 {
+			if el.Validations.Required && files != nil {
+				return missing(label)
+			}
+			value = noResponse
+		} else {
+			value = strings.Join(links, "\n")
+		}
+
+	case ElementCheckboxes:
+		chosen, err := chooseOptions(el, values)
+		if err != nil {
+			return fail(err.Error())
+		}
+		lines := make([]string, 0, len(el.Attributes.Options))
+		for _, o := range el.Attributes.Options {
+			mark := " "
+			if slices.Contains(chosen, o.Label) {
+				mark = "X"
+			} else if o.Required {
+				// The label of an option may be Markdown, so the error names the
+				// group, which the error is shown under.
+				return missing(label)
+			}
+			lines = append(lines, "- ["+mark+"] "+o.Label)
+		}
+		if el.Validations.Required && len(chosen) == 0 {
+			return missing(label)
+		}
+		value = strings.Join(lines, "\n")
+	}
+	return value, nil
 }
 
 // chooseOptions returns the chosen options in the order of the element.

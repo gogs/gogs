@@ -204,20 +204,25 @@ func TestTemplate_RenderForm(t *testing.T) {
 	})
 
 	tests := []struct {
-		name      string
-		values    [][]string
-		wantIndex int
+		name        string
+		values      [][]string
+		wantIndexes []int
 	}{
-		{name: "missing required input", values: [][]string{nil, {" "}, nil, nil, {"I searched existing issues"}}, wantIndex: 1},
-		{name: "unknown option", values: [][]string{nil, {"1"}, nil, {"Edge"}, {"I searched existing issues"}}, wantIndex: 3},
-		{name: "missing required checkbox", values: [][]string{nil, {"1"}, nil, nil, {"I want to fix it"}}, wantIndex: 4},
+		{name: "missing required input", values: [][]string{nil, {" "}, nil, nil, {"I searched existing issues"}}, wantIndexes: []int{1}},
+		{name: "unknown option", values: [][]string{nil, {"1"}, nil, {"Edge"}, {"I searched existing issues"}}, wantIndexes: []int{3}},
+		{name: "missing required checkbox", values: [][]string{nil, {"1"}, nil, nil, {"I want to fix it"}}, wantIndexes: []int{4}},
+		{name: "every invalid value", values: [][]string{nil, nil, nil, {"Edge"}, nil}, wantIndexes: []int{1, 3, 4}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			_, err := tmpl.RenderForm(test.values, nil)
-			var fieldErr *FieldError
-			require.ErrorAs(t, err, &fieldErr)
-			assert.Equal(t, test.wantIndex, fieldErr.Index)
+			var fieldErrs FieldErrors
+			require.ErrorAs(t, err, &fieldErrs)
+			var indexes []int
+			for _, fieldErr := range fieldErrs {
+				indexes = append(indexes, fieldErr.Index)
+			}
+			assert.Equal(t, test.wantIndexes, indexes)
 		})
 	}
 
@@ -248,9 +253,9 @@ body:
 `))
 	require.NoError(t, err)
 	_, err = tmpl.RenderForm([][]string{nil}, nil)
-	var fieldErr *FieldError
-	require.ErrorAs(t, err, &fieldErr)
-	assert.True(t, fieldErr.Missing)
+	var fieldErrs FieldErrors
+	require.ErrorAs(t, err, &fieldErrs)
+	assert.True(t, fieldErrs[0].Missing)
 
 	got, err := tmpl.RenderForm([][]string{{"linux"}}, nil)
 	require.NoError(t, err)
@@ -284,8 +289,8 @@ body:
 
 	for _, values := range [][]string{nil, {"c"}, {"missing"}} {
 		_, err = tmpl.RenderForm([][]string{values}, files)
-		var fieldErr *FieldError
-		require.ErrorAs(t, err, &fieldErr, values)
+		var fieldErrs FieldErrors
+		require.ErrorAs(t, err, &fieldErrs, values)
 	}
 
 	// Without uploads, the field cannot be filled in, so it is not required.
@@ -305,6 +310,6 @@ body:
 `))
 	require.NoError(t, err)
 	_, err = tmpl.RenderForm([][]string{{"x", "y"}}, nil)
-	var fieldErr *FieldError
-	require.ErrorAs(t, err, &fieldErr)
+	var fieldErrs FieldErrors
+	require.ErrorAs(t, err, &fieldErrs)
 }

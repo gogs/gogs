@@ -195,6 +195,19 @@ function NewIssueForm({
         to: "/$owner/$repo/issues/$index",
         params: { owner, repo: name, index: String(index) },
       }),
+    // The first invalid field may be far above the submit button, so it is
+    // brought into view below the sticky header.
+    onError: (err) => {
+      const { fields } = formErrors(err);
+      const ids = ["title", ...(form ?? []).map((_, i) => `field-${i}`)].filter((key) => key in fields);
+      if (ids.length === 0) return;
+      const id = `new-issue-${ids[0]}`;
+      requestAnimationFrame(() => {
+        const el = document.getElementById(id) ?? document.getElementById(`${id}-0`);
+        el?.scrollIntoView({ block: "center" });
+        el?.focus({ preventScroll: true });
+      });
+    },
   });
   const { fields, formError } = formErrors(mutation.error);
   const onSubmit = (e: FormEvent) => {
@@ -234,6 +247,7 @@ function NewIssueForm({
           ) : null}
           <div className="flex flex-col gap-1.5">
             <Input
+              id="new-issue-title"
               aria-label={t("repo.milestones.title")}
               placeholder={t("repo.milestones.title")}
               value={title}
