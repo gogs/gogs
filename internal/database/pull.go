@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -231,9 +232,13 @@ type MergeMessage struct {
 func (pr *PullRequest) DefaultMergeMessage(mergeStyle MergeStyle, commits []*git.Commit) MergeMessage {
 	message := pr.presetMergeMessage(mergeStyle, commits)
 	// Squashing leaves only the author of the pull request on the commit, so
-	// the other authors are credited the way GitHub does.
+	// the other authors are credited the way GitHub does. The trailers must
+	// end the message to count, so those the body copies from commit messages
+	// or the description move there, and each person is credited once.
 	if mergeStyle == MergeStyleSquash {
-		if trailers := coAuthorTrailers(commits, pr.Issue.Poster); trailers != "" {
+		var credited []string
+		message.Body, credited = cutCoAuthorLines(message.Body)
+		if trailers := coAuthorTrailers(commits, credited, pr.Issue.Poster); trailers != "" {
 			if message.Body != "" {
 				message.Body += "\n\n"
 			}
@@ -243,10 +248,44 @@ func (pr *PullRequest) DefaultMergeMessage(mergeStyle MergeStyle, commits []*git
 	return message
 }
 
+// parseCoAuthorLine returns the name and email of a "Co-authored-by" trailer
+// line, matched case-insensitively.
+func parseCoAuthorLine(line string) (name, email string, ok bool) {
+	const prefix = "co-authored-by:"
+	line = strings.TrimSpace(line)
+	if len(line) <= len(prefix) || !strings.EqualFold(line[:len(prefix)], prefix) {
+		return "", "", false
+	}
+	name, email, ok = strings.Cut(line[len(prefix):], "<")
+	email, closed := strings.CutSuffix(email, ">")
+	return name, email, ok && closed
+}
+
+// cutCoAuthorLines removes the "Co-authored-by" lines from the text, and
+// returns the text left and the lines removed.
+func cutCoAuthorLines(text string) (rest string, lines []string) {
+	var kept strings.Builder
+	for line := range strings.Lines(text) {
+		if _, _, ok := parseCoAuthorLine(line); ok {
+			lines = append(lines, line)
+			continue
+		}
+		kept.WriteString(line)
+	}
+	if lines == nil {
+		return text, nil
+	}
+	// Removing the lines can leave runs of blank lines behind.
+	return strings.TrimSpace(blankLines.ReplaceAllString(kept.String(), "\n\n")), lines
+}
+
+var blankLines = regexp.MustCompile(`\n(?:[ \t]*\n){2,}`)
+
 // coAuthorTrailers returns a "Co-authored-by" trailer for each author of the
-// commits, oldest first, and each co-author their messages already credit,
-// except the poster of the pull request.
-func coAuthorTrailers(commits []*git.Commit, poster *User) string {
+// commits, oldest first, each co-author their messages already credit, and
+// then each co-author of the credited lines, except the poster of the pull
+// request.
+func coAuthorTrailers(commits []*git.Commit, credited []string, poster *User) string {
 	seen := map[string]bool{}
 	if poster != nil && poster.ID > 0 {
 		seen[strings.ToLower(poster.Email)] = true
@@ -260,22 +299,22 @@ func coAuthorTrailers(commits []*git.Commit, poster *User) string {
 		seen[key] = true
 		trailers = append(trailers, fmt.Sprintf("Co-authored-by: %s <%s>", strings.TrimSpace(name), strings.TrimSpace(email)))
 	}
-	const prefix = "co-authored-by:"
+	addLine := func(line string) {
+		if name, email, ok := parseCoAuthorLine(line); ok {
+			add(name, email)
+		}
+	}
 	for i := len(commits) - 1; i >= 0; i-- {
 		c := commits[i]
 		if c.Author != nil {
 			add(c.Author.Name, c.Author.Email)
 		}
 		for line := range strings.Lines(c.Message) {
-			line = strings.TrimSpace(line)
-			if len(line) <= len(prefix) || !strings.EqualFold(line[:len(prefix)], prefix) {
-				continue
-			}
-			name, email, ok := strings.Cut(line[len(prefix):], "<")
-			if email, ok2 := strings.CutSuffix(email, ">"); ok && ok2 {
-				add(name, email)
-			}
+			addLine(line)
 		}
+	}
+	for _, line := range credited {
+		addLine(line)
 	}
 	return strings.Join(trailers, "\n")
 }

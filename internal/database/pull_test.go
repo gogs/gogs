@@ -109,6 +109,46 @@ func TestPullRequest_DefaultMergeMessage_CoAuthors(t *testing.T) {
 	want := "* Change a\n* Add b\n* Change b\n\nCo-authored-by: Carol <carol@example.com>\nCo-authored-by: Dave <DAVE@example.com>"
 	assert.Equal(t, want, got.Body)
 
+	// Trailers copied into the body by a preset move to the end, and each
+	// person is credited once.
+	movedTests := []struct {
+		name          string
+		squashMessage string
+		content       string
+		commits       []*git.Commit
+		want          string
+	}{
+		{
+			name:          "commit details",
+			squashMessage: MergeMessageTitleCommits,
+			commits:       commits,
+			want:          "* Change a\n\n* Add b\n\n* Change b\n\nCo-authored-by: Carol <carol@example.com>\nCo-authored-by: Dave <DAVE@example.com>",
+		},
+		{
+			name:          "description",
+			squashMessage: MergeMessageTitleDescription,
+			content:       "Adds b.txt.\n\nCo-authored-by: Eve <eve@example.com>\nCo-authored-by: Carol <carol@example.com>\n",
+			commits:       commits,
+			want:          "Adds b.txt.\n\nCo-authored-by: Carol <carol@example.com>\nCo-authored-by: Dave <DAVE@example.com>\nCo-authored-by: Eve <eve@example.com>",
+		},
+		{
+			name:          "one commit with a trailer before more text",
+			squashMessage: MergeMessageDefault,
+			commits:       []*git.Commit{{Author: bob, Message: "Add b\n\nCo-authored-by: Dave <dave@example.com>\n\nKeep it short.\n"}},
+			want:          "Keep it short.\n\nCo-authored-by: Dave <dave@example.com>",
+		},
+	}
+	for _, test := range movedTests {
+		t.Run(test.name, func(t *testing.T) {
+			pull := &PullRequest{
+				Index:    7,
+				Issue:    &Issue{Title: "Add b and update a", Content: test.content, Poster: &User{ID: 2, Email: "Bob@example.com"}},
+				BaseRepo: &Repository{PullsSquashMessage: test.squashMessage},
+			}
+			assert.Equal(t, test.want, pull.DefaultMergeMessage(MergeStyleSquash, test.commits).Body)
+		})
+	}
+
 	// Merge commits keep the authors of the commits, so they credit no one.
 	assert.NotContains(t, pull.DefaultMergeMessage(MergeStyleRegular, commits).Body, "Co-authored-by")
 }
