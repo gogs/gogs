@@ -1,5 +1,5 @@
 import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
-import { Link, useRouter } from "@tanstack/react-router";
+import { Link, useRouter, useRouterState } from "@tanstack/react-router";
 import { CircleCheck, CircleDot, Download, GitCommitHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -254,6 +254,12 @@ function UserLink({ user, className, children }: { user: IssueUser; className?: 
   );
 }
 
+// useIsLinked reports whether the URL links to the anchor, e.g., to a comment,
+// which is then highlighted like on GitHub.
+function useIsLinked(anchor: string) {
+  return useRouterState({ select: (state) => state.location.hash === anchor });
+}
+
 // EventSentence renders a translated sentence about something that happened,
 // e.g., "commented <a>3 hours ago</a>", making its link the time, which links
 // to the anchor of the event.
@@ -313,6 +319,7 @@ function CommentCard({
   const { t } = useTranslation();
   const router = useRouter();
   const [editing, setEditing] = useState(false);
+  const linked = useIsLinked(anchor);
   const tagLabel = {
     owner: t("repo.issues.owner"),
     writer: t("repo.issues.collaborator"),
@@ -324,7 +331,12 @@ function CommentCard({
       <UserLink user={poster} className="hidden shrink-0 sm:block">
         <img src={poster.avatarURL} alt="" className="size-10 rounded-full border border-(--color-border)" />
       </UserLink>
-      <div className="min-w-0 flex-1 rounded-md border border-(--color-border)">
+      <div
+        className={cn(
+          "min-w-0 flex-1 rounded-md border",
+          linked ? "border-(--color-primary) ring-2 ring-(--color-primary)/30" : "border-(--color-border)",
+        )}
+      >
         <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 rounded-t-md border-b border-(--color-border) bg-(--color-surface) py-1 pr-1 pl-3 text-sm">
           <p className="min-w-0 py-1 text-(--color-muted-foreground) wrap-anywhere">
             <UserLink user={poster} className="font-semibold text-(--color-foreground) hover:underline">
@@ -492,6 +504,7 @@ function ContentEditor({
 function TimelineEvent({ comment }: { comment: IssueComment }) {
   const { t } = useTranslation();
   const anchor = `event-${comment.id}`;
+  const linked = useIsLinked(anchor);
   const event = {
     reopen: { icon: CircleDot, text: t("repo.issues.reopened_at"), className: "text-(--color-success)" },
     close: { icon: CircleCheck, text: t("repo.issues.closed_at"), className: "text-(--color-destructive)" },
@@ -506,7 +519,15 @@ function TimelineEvent({ comment }: { comment: IssueComment }) {
   const Icon = event.icon;
 
   return (
-    <div id={anchor} className="flex scroll-mt-4 gap-3 text-sm sm:pl-3">
+    <div
+      id={anchor}
+      className={cn(
+        // The padding leaves room inside the highlight. The negative margins
+        // keep the event where it is otherwise.
+        "-my-1 -ml-1 flex scroll-mt-4 gap-3 rounded-md py-1 pr-2 pl-1 text-sm sm:ml-0 sm:pl-3",
+        linked && "outline outline-(--color-primary) ring-2 ring-(--color-primary)/30",
+      )}
+    >
       <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-(--color-surface)">
         <Icon className={cn("size-4", event.className)} aria-hidden />
       </span>

@@ -115,6 +115,10 @@ Tailwind 4's preflight removes the browser default `cursor: pointer` on `<button
 
 When in doubt, hover-test the new control: if the cursor is still an I-beam or arrow, add `cursor-pointer`.
 
+## Linked items
+
+When the URL links to an item on the page, e.g., `#issuecomment-1` or `#event-2`, highlight it like GitHub does: a primary-colored 1px edge with a soft `ring-2 ring-(--color-primary)/30` halo. Read the hash from the router state, not `:target`, which doesn't match items that render after the page loads or links that update the URL through the router. The page's `scroll-padding-top` keeps the item clear of the sticky navbar.
+
 ## Tabs
 
 Page-level tabs (the repository header tabs, the explore tabs, the user profile tabs) are links in a row with a bottom border of `--color-border`. Each tab is `border-b-2 px-3 py-2 text-sm` with a leading `size-4` icon. The active tab gets `border-(--color-primary)`, `font-semibold`, foreground text, and `aria-current="page"`. Inactive tabs are muted and show a `--color-border` underline on hover. Below `sm`, never scroll the row horizontally. Keep only as many tabs inline as fit at 375px, always including the active one, and fold the rest into a trailing "More" popover menu (`Menu` icon, `aria-label` of `more_tabs`). From `sm` up, show the full row. Build these rows with `PageTabs`, which does this given how many tabs to keep inline. The repository header has its own row.

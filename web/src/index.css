@@ -141,6 +141,11 @@
   body {
     -webkit-font-smoothing: antialiased;
   }
+  /* Links to an anchor, e.g., a comment or a footnote, scroll it into view
+     below the sticky navbar instead of under it. */
+  html {
+    scroll-padding-top: 4rem;
+  }
 }
 
 /* Flame flicker for terminal-style hover affordances: a Hermès-orange glow
@@ -460,24 +465,5 @@ diffs-container {
   }
   .markdown :where(.footnote-backref) {
     text-decoration: none;
-  }
-  .markdown :where(h1, h2, h3, h4, h5, h6):has(> .heading-anchor) {
-    position: relative;
-  }
-  .markdown :where(.heading-anchor) {
-    margin-left: 0.375rem;
-    color: var(--color-muted-foreground);
-    font-weight: 400;
-    text-decoration: none;
-    opacity: 0;
-  }
-  .markdown :where(h1, h2, h3, h4, h5, h6):hover > .heading-anchor,
-  .markdown .heading-anchor:focus-visible {
-    opacity: 1;
-  }
-  @media (hover: none) {
-    .markdown .heading-anchor {
-      opacity: 1;
-    }
   }
 }
