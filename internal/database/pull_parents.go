@@ -226,27 +226,82 @@ func (pr *PullRequest) updateSyntheticBase(ctx context.Context, gitRepo *git.Rep
 	return baseID, nil
 }
 
-// BehindParents returns the parents that are not merged yet and have changes
-// the head branch of the pull request does not have.
-func (pr *PullRequest) BehindParents(ctx context.Context, gitRepo *git.Repository, parents []*PullRequest) ([]*PullRequest, error) {
-	headID, err := gitRepo.BranchCommitID(ctx, pr.HeadBranch)
+// Behind returns, for each open pull request of the stack, the parents that
+// are not merged yet and have changes its head branch does not contain, keyed
+// by the ID of the pull request. It reads the whole stack with two git
+// commands, since a page shows every pull request of a stack and a git command
+// per edge adds up to seconds. Pull requests whose branch is gone are left
+// out, since they cannot be behind.
+func (s *PullRequestStack) Behind(ctx context.Context, gitRepo *git.Repository, baseBranch string) (map[int64][]*PullRequest, error) {
+	heads, err := gitRepo.BranchCommitIDs(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "get head commit")
+		return nil, errors.Wrap(err, "get branch heads")
 	}
-	var behind []*PullRequest
-	for _, parent := range parents {
-		if parent.HasMerged {
+	byID := make(map[int64]*PullRequest, len(s.Pulls))
+	revs := make([]string, 0, len(s.Pulls))
+	for _, p := range s.Pulls {
+		byID[p.ID] = p
+		if id := heads[p.HeadBranch]; id != "" && !p.HasMerged {
+			revs = append(revs, id)
+		}
+	}
+	var exclude []string
+	if id := heads[baseBranch]; id != "" {
+		exclude = append(exclude, id)
+	}
+	// Only the commits of the stack are listed, the ones in the base branch
+	// are left out, so the graph stays as small as the stack.
+	graph, err := gitRepo.CommitParents(ctx, revs, exclude)
+	if err != nil {
+		return nil, errors.Wrap(err, "list commits of the stack")
+	}
+
+	reachable := make(map[string]map[string]bool)
+	contains := func(head, commit string) (bool, error) {
+		if _, ok := graph[commit]; !ok {
+			// The commit is in the base branch, which the head may not
+			// contain all of, so ask git.
+			return gitRepo.IsAncestor(ctx, commit, head)
+		}
+		seen, ok := reachable[head]
+		if !ok {
+			seen = make(map[string]bool)
+			pending := []string{head}
+			for len(pending) > 0 {
+				id := pending[len(pending)-1]
+				pending = pending[:len(pending)-1]
+				if seen[id] {
+					continue
+				}
+				seen[id] = true
+				pending = append(pending, graph[id]...)
+			}
+			reachable[head] = seen
+		}
+		return seen[commit], nil
+	}
+
+	behind := make(map[int64][]*PullRequest)
+	for _, p := range s.Pulls {
+		head := heads[p.HeadBranch]
+		if p.HasMerged || p.Issue.IsClosed || head == "" {
 			continue
 		}
-		parentID, err := parentHeadID(ctx, gitRepo, parent)
-		if err != nil {
-			return nil, err
-		}
-		contained, err := gitRepo.IsAncestor(ctx, parentID, headID)
-		if err != nil {
-			return nil, errors.Wrapf(err, "check if parent #%d is contained", parent.Index)
-		} else if !contained {
-			behind = append(behind, parent)
+		for _, parentID := range s.Parents[p.ID] {
+			parent := byID[parentID]
+			if parent == nil || parent.HasMerged {
+				continue
+			}
+			parentHead := heads[parent.HeadBranch]
+			if parentHead == "" {
+				continue
+			}
+			ok, err := contains(head, parentHead)
+			if err != nil {
+				return nil, errors.Wrapf(err, "check if #%d contains #%d", p.Index, parent.Index)
+			} else if !ok {
+				behind[p.ID] = append(behind[p.ID], parent)
+			}
 		}
 	}
 	return behind, nil

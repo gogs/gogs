@@ -234,28 +234,43 @@ func TestPullRequest_updateSyntheticBase_mergedParent(t *testing.T) {
 	assert.Equal(t, "d.txt", run("diff", "--name-only", base, "d"), "only the own change should be reviewed")
 }
 
-func TestPullRequest_BehindParents(t *testing.T) {
+func TestPullRequestStack_Behind(t *testing.T) {
 	ctx := context.Background()
-	gitRepo, _, commit := stackTestRepo(t)
-	parentB := &PullRequest{Index: 2, HeadBranch: "b"}
-	parentC := &PullRequest{Index: 3, HeadBranch: "c"}
-	pr := &PullRequest{Index: 4, HeadBranch: "d"}
+	gitRepo, run, commit := stackTestRepo(t)
+	parentB := &PullRequest{ID: 2, Index: 2, HeadBranch: "b", Issue: &Issue{}}
+	parentC := &PullRequest{ID: 3, Index: 3, HeadBranch: "c", Issue: &Issue{}}
+	pr := &PullRequest{ID: 4, Index: 4, HeadBranch: "d", Issue: &Issue{}}
+	stack := &PullRequestStack{
+		Pulls:   []*PullRequest{parentB, parentC, pr},
+		Parents: map[int64][]int64{4: {2, 3}},
+	}
+	behindIndexes := func() []int64 {
+		t.Helper()
+		behind, err := stack.Behind(ctx, gitRepo, "main")
+		require.NoError(t, err)
+		var indexes []int64
+		for _, p := range behind[pr.ID] {
+			indexes = append(indexes, p.Index)
+		}
+		return indexes
+	}
 
-	behind, err := pr.BehindParents(ctx, gitRepo, []*PullRequest{parentB, parentC})
-	require.NoError(t, err)
-	assert.Empty(t, behind)
+	assert.Empty(t, behindIndexes())
 
 	commit("b", "b.txt", "b v2\n")
-	behind, err = pr.BehindParents(ctx, gitRepo, []*PullRequest{parentB, parentC})
-	require.NoError(t, err)
-	require.Len(t, behind, 1)
-	assert.Equal(t, int64(2), behind[0].Index)
+	assert.Equal(t, []int64{2}, behindIndexes())
 
-	// A merged parent is in the base branch already, whatever its branch.
-	merged := &PullRequest{Index: 2, HeadBranch: "b", HasMerged: true}
-	behind, err = pr.BehindParents(ctx, gitRepo, []*PullRequest{merged, parentC})
-	require.NoError(t, err)
-	assert.Empty(t, behind)
+	t.Run("parent head in the base branch", func(t *testing.T) {
+		// The new head of "b" is now in "main" but still not in "d".
+		run("branch", "--force", "main", "b")
+		assert.Equal(t, []int64{2}, behindIndexes())
+	})
+
+	t.Run("merged parent", func(t *testing.T) {
+		// A merged parent is in the base branch already, whatever its branch.
+		parentB.HasMerged = true
+		assert.Empty(t, behindIndexes())
+	})
 }
 
 func TestMergeParentsInto(t *testing.T) {

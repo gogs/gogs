@@ -398,6 +398,36 @@ func (r *Repository) RevList(ctx context.Context, refspecs []string) ([]*Commit,
 	return r.parsePrettyFormatLogToList(ctx, bytes.TrimSpace(stdout))
 }
 
+// CommitParents returns the parents of every commit reachable from the
+// revisions and not from the excluded ones, keyed by commit ID.
+func (r *Repository) CommitParents(ctx context.Context, revs, exclude []string) (map[string][]string, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.CommitParents")
+	defer span.End()
+
+	if len(revs) == 0 {
+		return map[string][]string{}, nil
+	}
+	args := []string{"rev-list", "--parents", "--end-of-options"}
+	args = append(args, revs...)
+	for _, rev := range exclude {
+		args = append(args, "^"+rev)
+	}
+	args = append(args, "--")
+
+	stdout, err := exec(ctx, r.path, args, nil)
+	if err != nil {
+		return nil, err
+	}
+	parents := make(map[string][]string)
+	for _, line := range strings.Split(strings.TrimSpace(string(stdout)), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) > 0 {
+			parents[fields[0]] = fields[1:]
+		}
+	}
+	return parents, nil
+}
+
 // LatestCommitTime returns the time of latest commit of the repository.
 func (r *Repository) LatestCommitTime(ctx context.Context) (time.Time, error) {
 	ctx, span := tracer.Start(ctx, "git.Repository.LatestCommitTime")

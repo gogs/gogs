@@ -273,6 +273,23 @@ func (r *Repository) Branches(ctx context.Context) ([]string, error) {
 	return branches, nil
 }
 
+// BranchCommitIDs returns the commit ID of every branch in the repository,
+// keyed by the short name of the branch.
+func (r *Repository) BranchCommitIDs(ctx context.Context) (map[string]string, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.BranchCommitIDs")
+	defer span.End()
+
+	heads, err := r.showRef(ctx, showRefOptions{Heads: true})
+	if err != nil {
+		return nil, err
+	}
+	ids := make(map[string]string, len(heads))
+	for _, head := range heads {
+		ids[strings.TrimPrefix(head.Refspec, RefsHeads)] = head.ID
+	}
+	return ids, nil
+}
+
 // RepoBranches is like Repository.Branches for the repository in given path.
 func RepoBranches(ctx context.Context, repoPath string) ([]string, error) {
 	r, err := Open(repoPath)

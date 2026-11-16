@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"sort"
+	"time"
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
@@ -38,7 +39,10 @@ type pullStackNode struct {
 	// "conflict".
 	Status string `json:"status"`
 	// Parents are the numbers of the pull requests it depends on.
-	Parents []int64 `json:"parents"`
+	Parents   []int64   `json:"parents"`
+	Poster    issueUser `json:"poster"`
+	UpdatedAt time.Time `json:"updatedAt"`
+	Comments  int       `json:"comments"`
 }
 
 func pullParentState(pr *database.PullRequest) string {
@@ -65,16 +69,39 @@ func describePullStack(ctx context.Context, repoCtx *repoContext, gitRepo *git.R
 		byID[p.ID] = p
 	}
 
+	// A branch that cannot be read only hides "behind", and the page still
+	// shows the rest of the stack.
+	behindOf, err := stack.Behind(ctx, gitRepo, pull.BaseBranch)
+	if err != nil {
+		log.Trace("describePullStack: check which pull requests are behind: %v", err)
+	}
+
 	info.Parents = []pullParent{}
 	info.Waiting = []int64{}
 	info.Behind = []int64{}
+	// Agents and people tend to open a whole stack themselves, so most of its
+	// pull requests share a few posters.
+	posters := make(map[int64]*database.User)
 	nodes := make([]pullStackNode, 0, len(stack.Pulls))
 	for _, p := range stack.Pulls {
+		poster, ok := posters[p.Issue.PosterID]
+		if !ok {
+			poster, err = database.Handle.Users().GetByID(ctx, p.Issue.PosterID)
+			if database.IsErrUserNotExist(err) {
+				poster = database.NewGhostUser()
+			} else if err != nil {
+				return errors.Wrapf(err, "get poster of pull request %d", p.ID)
+			}
+			posters[p.Issue.PosterID] = poster
+		}
 		node := pullStackNode{
 			Index:      p.Index,
 			Title:      p.Issue.Title,
 			HeadBranch: p.HeadBranch,
 			Parents:    []int64{},
+			Poster:     toIssueUser(poster),
+			UpdatedAt:  time.Unix(p.Issue.UpdatedUnix, 0),
+			Comments:   p.Issue.NumComments,
 		}
 		var unmerged []*database.PullRequest
 		for _, parentID := range stack.Parents[p.ID] {
@@ -101,12 +128,7 @@ func describePullStack(ctx context.Context, repoCtx *repoContext, gitRepo *git.R
 			node.Status = "closed"
 		case len(unmerged) > 0:
 			node.Status = "blocked"
-			// A branch that is gone cannot be behind, and the page still
-			// shows the rest of the stack.
-			behind, err := p.BehindParents(ctx, gitRepo, unmerged)
-			if err != nil {
-				log.Trace("describePullStack: check if pull request %d is behind: %v", p.ID, err)
-			} else if len(behind) > 0 {
+			if behind := behindOf[p.ID]; len(behind) > 0 {
 				node.Status = "behind"
 				if p.ID == pull.ID {
 					for _, parent := range behind {
