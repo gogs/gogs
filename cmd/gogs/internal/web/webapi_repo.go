@@ -44,7 +44,7 @@ type repoHeader struct {
 	ViewerIsStarring    bool `json:"viewerIsStarring"`
 }
 
-func getRepoHeader(logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoHeader, err error) {
+func getRepoHeader(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoHeader, err error) {
 	owner := repoCtx.Owner
 	repo := repoCtx.Repo
 
@@ -85,7 +85,7 @@ func getRepoHeader(logger *logx.Logger, repoCtx *repoContext) (statusCode int, r
 	}
 
 	if repo.IsMirror {
-		mirror, err := database.GetMirrorByRepoID(repo.ID)
+		mirror, err := database.Handle.Mirrors().GetByRepoID(c.Request().Context(), repo.ID)
 		if err != nil {
 			logger.Error("Failed to get mirror by repository ID", "repoID", repo.ID, "error", err)
 		} else if mirror != nil {

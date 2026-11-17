@@ -560,11 +560,6 @@ func (r *Repository) IssueStats(userID int64, filterMode FilterMode, isPull bool
 	return GetRepoIssueStats(r.ID, userID, filterMode, isPull)
 }
 
-func (r *Repository) GetMirror() (err error) {
-	r.Mirror, err = GetMirrorByRepoID(r.ID)
-	return err
-}
-
 func (r *Repository) repoPath(tx *gorm.DB) string {
 	return RepoPath(r.mustOwner(tx).Name, r.Name)
 }
@@ -818,12 +813,12 @@ func MigrateRepository(ctx context.Context, logger *logx.Logger, doer, owner *Us
 	}
 
 	if opts.IsMirror {
-		if _, err = x.InsertOne(&Mirror{
+		if err = Handle.db.Create(&Mirror{
 			RepoID:      repo.ID,
 			Interval:    conf.Mirror.DefaultInterval,
 			EnablePrune: true,
 			NextSync:    time.Now().Add(time.Duration(conf.Mirror.DefaultInterval) * time.Hour),
-		}); err != nil {
+		}).Error; err != nil {
 			return repo, errors.Newf("InsertOne: %v", err)
 		}
 
@@ -2259,41 +2254,6 @@ func CheckRepoStats(logger *logx.Logger) {
 		}
 	}
 	// ***** END: Repository.NumForks *****
-}
-
-type MirrorRepositoryList []*Repository
-
-func (repos MirrorRepositoryList) loadAttributes(e Engine) error {
-	if len(repos) == 0 {
-		return nil
-	}
-
-	// Load mirrors.
-	repoIDs := make([]int64, 0, len(repos))
-	for i := range repos {
-		if !repos[i].IsMirror {
-			continue
-		}
-
-		repoIDs = append(repoIDs, repos[i].ID)
-	}
-	mirrors := make([]*Mirror, 0, len(repoIDs))
-	if err := e.Where("id > 0").In("repo_id", repoIDs).Find(&mirrors); err != nil {
-		return errors.Newf("find mirrors: %v", err)
-	}
-
-	set := make(map[int64]*Mirror)
-	for i := range mirrors {
-		set[mirrors[i].RepoID] = mirrors[i]
-	}
-	for i := range repos {
-		repos[i].Mirror = set[repos[i].ID]
-	}
-	return nil
-}
-
-func (repos MirrorRepositoryList) LoadAttributes() error {
-	return repos.loadAttributes(x)
 }
 
 //  __      __         __         .__
