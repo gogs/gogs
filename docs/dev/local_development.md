@@ -176,7 +176,7 @@ moon run gogs:test-integration
 
 A full run fails when a route of the server gets no request from any test, except the routes that render pages of the web frontend. The tests find every route in the source and compare them with the requests the server records, so a new route needs a test in the same change. A run of some tests, e.g., with `-run`, lists the routes left without failing.
 
-The tests need PostgreSQL 13 or later. Each run creates a new database on the server that the `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD` and `PGSSLMODE` environment variables point to, and drops it when the run passes.
+The tests need PostgreSQL. Each run creates a new database on the server that the `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD` and `PGSSLMODE` environment variables point to, and drops it when the run passes.
 
 ## Other nice things
 

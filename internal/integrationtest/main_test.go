@@ -298,13 +298,13 @@ func createPostgresDatabase() (name string, drop func() error, _ error) {
 	if err != nil {
 		return "", nil, errors.Wrap(err, "new DSN")
 	}
-	exec := func(query string) error {
+	exec := func(query string, args ...any) error {
 		db, err := sql.Open("pgx", dsn)
 		if err != nil {
 			return errors.Wrap(err, "open")
 		}
 		defer func() { _ = db.Close() }()
-		_, err = db.Exec(query)
+		_, err = db.Exec(query, args...)
 		return err
 	}
 
@@ -312,8 +312,15 @@ func createPostgresDatabase() (name string, drop func() error, _ error) {
 	if err = exec(fmt.Sprintf("CREATE DATABASE %q", name)); err != nil {
 		return "", nil, errors.Wrap(err, "create database")
 	}
-	// The test process still holds connections to the database.
-	return name, func() error { return exec(fmt.Sprintf("DROP DATABASE %q WITH (FORCE)", name)) }, nil
+	drop = func() error {
+		// The test process still holds connections to the database.
+		err := exec("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()", name)
+		if err != nil {
+			return errors.Wrap(err, "terminate connections")
+		}
+		return exec(fmt.Sprintf("DROP DATABASE %q", name))
+	}
+	return name, drop, nil
 }
 
 func waitForServer(exited <-chan error) error {
