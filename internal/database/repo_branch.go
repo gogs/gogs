@@ -74,12 +74,12 @@ func (br *Branch) GetCommit(ctx context.Context) (*git.Commit, error) {
 // ProtectBranch contains options of a protected branch.
 type ProtectBranch struct {
 	ID                 int64
-	RepoID             int64  `xorm:"UNIQUE(protect_branch)"`
-	Name               string `xorm:"UNIQUE(protect_branch)"`
+	RepoID             int64  `gorm:"uniqueIndex:UQE_protect_branch_protect_branch"`
+	Name               string `gorm:"size:255;uniqueIndex:UQE_protect_branch_protect_branch"`
 	Protected          bool
 	RequirePullRequest bool
 	// The allowlist columns keep their legacy names.
-	EnableAllowlist  bool   `xorm:"'enable_whitelist'" gorm:"column:enable_whitelist"`
-	AllowlistUserIDs string `xorm:"'whitelist_user_i_ds' TEXT" gorm:"column:whitelist_user_i_ds"`
-	AllowlistTeamIDs string `xorm:"'whitelist_team_i_ds' TEXT" gorm:"column:whitelist_team_i_ds"`
+	EnableAllowlist  bool   `gorm:"column:enable_whitelist"`
+	AllowlistUserIDs string `gorm:"column:whitelist_user_i_ds;type:TEXT"`
+	AllowlistTeamIDs string `gorm:"column:whitelist_team_i_ds;type:TEXT"`
 }

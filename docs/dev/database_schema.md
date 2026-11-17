@@ -105,6 +105,33 @@ Indexes:
 	"follow_user_follow_unique" UNIQUE (user_id, follow_id)
 ```
 
+# Table "hook_task"
+
+```
+      Field      |      Column      |  PostgreSQL  |         MySQL         |        SQLite3        
+-----------------+------------------+--------------+-----------------------+-----------------------
+ ID              | id               | BIGSERIAL    | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ RepoID          | repo_id          | BIGINT       | BIGINT                | INTEGER               
+ HookID          | hook_id          | BIGINT       | BIGINT                | INTEGER               
+ UUID            | uuid             | VARCHAR(255) | VARCHAR(255)          | TEXT                  
+ Type            | type             | INTEGER      | INT                   | INTEGER               
+ URL             | url              | TEXT         | TEXT                  | TEXT                  
+ Signature       | signature        | TEXT         | TEXT                  | TEXT                  
+ PayloadContent  | payload_content  | TEXT         | TEXT                  | TEXT                  
+ ContentType     | content_type     | INTEGER      | INT                   | INTEGER               
+ EventType       | event_type       | VARCHAR(255) | VARCHAR(255)          | TEXT                  
+ IsSSL           | is_ssl           | BOOLEAN      | BOOLEAN               | NUMERIC               
+ IsDelivered     | is_delivered     | BOOLEAN      | BOOLEAN               | NUMERIC               
+ Delivered       | delivered        | BIGINT       | BIGINT                | INTEGER               
+ IsSucceed       | is_succeed       | BOOLEAN      | BOOLEAN               | NUMERIC               
+ RequestContent  | request_content  | TEXT         | TEXT                  | TEXT                  
+ ResponseContent | response_content | TEXT         | TEXT                  | TEXT                  
+
+Primary keys: id
+Indexes: 
+	"IDX_hook_task_repo_id" (repo_id)
+```
+
 # Table "issue_label"
 
 ```
@@ -117,6 +144,28 @@ Indexes:
 Primary keys: id
 Indexes: 
 	"UQE_issue_label_s" UNIQUE (issue_id, label_id)
+```
+
+# Table "issue_user"
+
+```
+    Field    |    Column    | PostgreSQL |         MySQL         |        SQLite3        
+-------------+--------------+------------+-----------------------+-----------------------
+ ID          | id           | BIGSERIAL  | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ UserID      | uid          | BIGINT     | BIGINT                | INTEGER               
+ IssueID     | issue_id     | BIGINT     | BIGINT                | INTEGER               
+ RepoID      | repo_id      | BIGINT     | BIGINT                | INTEGER               
+ MilestoneID | milestone_id | BIGINT     | BIGINT                | INTEGER               
+ IsRead      | is_read      | BOOLEAN    | BOOLEAN               | NUMERIC               
+ IsAssigned  | is_assigned  | BOOLEAN    | BOOLEAN               | NUMERIC               
+ IsMentioned | is_mentioned | BOOLEAN    | BOOLEAN               | NUMERIC               
+ IsPoster    | is_poster    | BOOLEAN    | BOOLEAN               | NUMERIC               
+ IsClosed    | is_closed    | BOOLEAN    | BOOLEAN               | NUMERIC               
+
+Primary keys: id
+Indexes: 
+	"IDX_issue_user_repo_id" (repo_id)
+	"IDX_issue_user_uid" (uid)
 ```
 
 # Table "label"
@@ -167,6 +216,27 @@ Primary keys: repo_id, oid
 Primary keys: id
 ```
 
+# Table "milestone"
+
+```
+      Field      |      Column       |  PostgreSQL  |         MySQL         |        SQLite3        
+-----------------+-------------------+--------------+-----------------------+-----------------------
+ ID              | id                | BIGSERIAL    | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ RepoID          | repo_id           | BIGINT       | BIGINT                | INTEGER               
+ Name            | name              | VARCHAR(255) | VARCHAR(255)          | TEXT                  
+ Content         | content           | TEXT         | TEXT                  | TEXT                  
+ IsClosed        | is_closed         | BOOLEAN      | BOOLEAN               | NUMERIC               
+ NumIssues       | num_issues        | INTEGER      | INT                   | INTEGER               
+ NumClosedIssues | num_closed_issues | INTEGER      | INT                   | INTEGER               
+ Completeness    | completeness      | INTEGER      | INT                   | INTEGER               
+ DeadlineUnix    | deadline_unix     | BIGINT       | BIGINT                | INTEGER               
+ ClosedDateUnix  | closed_date_unix  | BIGINT       | BIGINT                | INTEGER               
+
+Primary keys: id
+Indexes: 
+	"IDX_milestone_repo_id" (repo_id)
+```
+
 # Table "notice"
 
 ```
@@ -178,6 +248,25 @@ Primary keys: id
  CreatedUnix | created_unix | BIGINT     | BIGINT                | INTEGER               
 
 Primary keys: id
+```
+
+# Table "org_user"
+
+```
+  Field   |  Column   | PostgreSQL |         MySQL         |        SQLite3        
+----------+-----------+------------+-----------------------+-----------------------
+ ID       | id        | BIGSERIAL  | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ UID      | uid       | BIGINT     | BIGINT                | INTEGER               
+ OrgID    | org_id    | BIGINT     | BIGINT                | INTEGER               
+ IsPublic | is_public | BOOLEAN    | BOOLEAN               | NUMERIC               
+ IsOwner  | is_owner  | BOOLEAN    | BOOLEAN               | NUMERIC               
+ NumTeams | num_teams | INTEGER    | INT                   | INTEGER               
+
+Primary keys: id
+Indexes: 
+	"IDX_org_user_org_id" (org_id)
+	"IDX_org_user_uid" (uid)
+	"UQE_org_user_s" UNIQUE (uid, org_id)
 ```
 
 # Table "passkey"
@@ -195,6 +284,25 @@ Primary keys: id
 Primary keys: id
 Indexes: 
 	"idx_passkey_user_id" (user_id)
+```
+
+# Table "protect_branch"
+
+```
+       Field        |        Column        |  PostgreSQL  |         MySQL         |        SQLite3        
+--------------------+----------------------+--------------+-----------------------+-----------------------
+ ID                 | id                   | BIGSERIAL    | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ RepoID             | repo_id              | BIGINT       | BIGINT                | INTEGER               
+ Name               | name                 | VARCHAR(255) | VARCHAR(255)          | TEXT                  
+ Protected          | protected            | BOOLEAN      | BOOLEAN               | NUMERIC               
+ RequirePullRequest | require_pull_request | BOOLEAN      | BOOLEAN               | NUMERIC               
+ EnableAllowlist    | enable_whitelist     | BOOLEAN      | BOOLEAN               | NUMERIC               
+ AllowlistUserIDs   | whitelist_user_i_ds  | TEXT         | TEXT                  | TEXT                  
+ AllowlistTeamIDs   | whitelist_team_i_ds  | TEXT         | TEXT                  | TEXT                  
+
+Primary keys: id
+Indexes: 
+	"UQE_protect_branch_protect_branch" UNIQUE (repo_id, name)
 ```
 
 # Table "public_key"
@@ -215,6 +323,100 @@ Indexes:
 Primary keys: id
 Indexes: 
 	"IDX_public_key_owner_id" (owner_id)
+```
+
+# Table "pull_request"
+
+```
+     Field      |      Column      |  PostgreSQL  |         MySQL         |        SQLite3        
+----------------+------------------+--------------+-----------------------+-----------------------
+ ID             | id               | BIGSERIAL    | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ Type           | type             | INTEGER      | INT                   | INTEGER               
+ Status         | status           | INTEGER      | INT                   | INTEGER               
+ IssueID        | issue_id         | BIGINT       | BIGINT                | INTEGER               
+ Index          | index            | BIGINT       | BIGINT                | INTEGER               
+ HeadRepoID     | head_repo_id     | BIGINT       | BIGINT                | INTEGER               
+ BaseRepoID     | base_repo_id     | BIGINT       | BIGINT                | INTEGER               
+ HeadUserName   | head_user_name   | VARCHAR(255) | VARCHAR(255)          | TEXT                  
+ HeadBranch     | head_branch      | VARCHAR(255) | VARCHAR(255)          | TEXT                  
+ BaseBranch     | base_branch      | VARCHAR(255) | VARCHAR(255)          | TEXT                  
+ MergeBase      | merge_base       | VARCHAR(64)  | VARCHAR(64)           | TEXT                  
+ HasMerged      | has_merged       | BOOLEAN      | BOOLEAN               | NUMERIC               
+ MergedCommitID | merged_commit_id | VARCHAR(64)  | VARCHAR(64)           | TEXT                  
+ MergerID       | merger_id        | BIGINT       | BIGINT                | INTEGER               
+ MergedUnix     | merged_unix      | BIGINT       | BIGINT                | INTEGER               
+
+Primary keys: id
+Indexes: 
+	"IDX_pull_request_issue_id" (issue_id)
+```
+
+# Table "release"
+
+```
+    Field     |     Column     |           PostgreSQL           |             MySQL              |            SQLite3             
+--------------+----------------+--------------------------------+--------------------------------+--------------------------------
+ ID           | id             | BIGSERIAL                      | BIGINT AUTO_INCREMENT          | INTEGER AUTOINCREMENT          
+ RepoID       | repo_id        | BIGINT                         | BIGINT                         | INTEGER                        
+ PublisherID  | publisher_id   | BIGINT                         | BIGINT                         | INTEGER                        
+ TagName      | tag_name       | VARCHAR(255)                   | VARCHAR(255)                   | TEXT                           
+ LowerTagName | lower_tag_name | VARCHAR(255)                   | VARCHAR(255)                   | TEXT                           
+ Target       | target         | VARCHAR(255)                   | VARCHAR(255)                   | TEXT                           
+ Title        | title          | VARCHAR(255)                   | VARCHAR(255)                   | TEXT                           
+ Sha1         | sha1           | VARCHAR(64)                    | VARCHAR(64)                    | TEXT                           
+ NumCommits   | num_commits    | BIGINT                         | BIGINT                         | INTEGER                        
+ Note         | note           | TEXT                           | TEXT                           | TEXT                           
+ IsDraft      | is_draft       | BOOLEAN NOT NULL DEFAULT FALSE | BOOLEAN NOT NULL DEFAULT FALSE | NUMERIC NOT NULL DEFAULT FALSE 
+ IsPrerelease | is_prerelease  | BOOLEAN                        | BOOLEAN                        | NUMERIC                        
+ CreatedUnix  | created_unix   | BIGINT                         | BIGINT                         | INTEGER                        
+
+Primary keys: id
+```
+
+# Table "star"
+
+```
+ Field  | Column  | PostgreSQL |         MySQL         |        SQLite3        
+--------+---------+------------+-----------------------+-----------------------
+ ID     | id      | BIGSERIAL  | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ UserID | uid     | BIGINT     | BIGINT                | INTEGER               
+ RepoID | repo_id | BIGINT     | BIGINT                | INTEGER               
+
+Primary keys: id
+Indexes: 
+	"UQE_star_s" UNIQUE (uid, repo_id)
+```
+
+# Table "team_repo"
+
+```
+ Field  | Column  | PostgreSQL |         MySQL         |        SQLite3        
+--------+---------+------------+-----------------------+-----------------------
+ ID     | id      | BIGSERIAL  | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ OrgID  | org_id  | BIGINT     | BIGINT                | INTEGER               
+ TeamID | team_id | BIGINT     | BIGINT                | INTEGER               
+ RepoID | repo_id | BIGINT     | BIGINT                | INTEGER               
+
+Primary keys: id
+Indexes: 
+	"IDX_team_repo_org_id" (org_id)
+	"UQE_team_repo_s" UNIQUE (team_id, repo_id)
+```
+
+# Table "team_user"
+
+```
+ Field  | Column  | PostgreSQL |         MySQL         |        SQLite3        
+--------+---------+------------+-----------------------+-----------------------
+ ID     | id      | BIGSERIAL  | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ OrgID  | org_id  | BIGINT     | BIGINT                | INTEGER               
+ TeamID | team_id | BIGINT     | BIGINT                | INTEGER               
+ UID    | uid     | BIGINT     | BIGINT                | INTEGER               
+
+Primary keys: id
+Indexes: 
+	"IDX_team_user_org_id" (org_id)
+	"UQE_team_user_s" UNIQUE (team_id, uid)
 ```
 
 # Table "two_factor"
@@ -257,5 +459,86 @@ Primary keys: id
 Primary keys: id
 Indexes: 
 	"UQE_upload_uuid" UNIQUE (uuid)
+```
+
+# Table "user"
+
+```
+       Field        |        Column        |         PostgreSQL          |           MySQL           |           SQLite3           
+--------------------+----------------------+-----------------------------+---------------------------+-----------------------------
+ ID                 | id                   | BIGSERIAL                   | BIGINT AUTO_INCREMENT     | INTEGER AUTOINCREMENT       
+ LowerName          | lower_name           | VARCHAR(255) NOT NULL       | VARCHAR(255) NOT NULL     | TEXT NOT NULL               
+ Name               | name                 | VARCHAR(255) NOT NULL       | VARCHAR(255) NOT NULL     | TEXT NOT NULL               
+ FullName           | full_name            | VARCHAR(255)                | VARCHAR(255)              | TEXT                        
+ Email              | email                | VARCHAR(255) NOT NULL       | VARCHAR(255) NOT NULL     | TEXT NOT NULL               
+ Password           | passwd               | VARCHAR(255) NOT NULL       | VARCHAR(255) NOT NULL     | TEXT NOT NULL               
+ LoginSource        | login_source         | BIGINT NOT NULL DEFAULT 0   | BIGINT NOT NULL DEFAULT 0 | INTEGER NOT NULL DEFAULT 0  
+ LoginName          | login_name           | VARCHAR(255)                | VARCHAR(255)              | TEXT                        
+ Type               | type                 | INTEGER                     | INT                       | INTEGER                     
+ Location           | location             | VARCHAR(255)                | VARCHAR(255)              | TEXT                        
+ Website            | website              | VARCHAR(255)                | VARCHAR(255)              | TEXT                        
+ Rands              | rands                | VARCHAR(10)                 | VARCHAR(10)               | TEXT                        
+ Salt               | salt                 | VARCHAR(10)                 | VARCHAR(10)               | TEXT                        
+ CreatedUnix        | created_unix         | BIGINT                      | BIGINT                    | INTEGER                     
+ UpdatedUnix        | updated_unix         | BIGINT                      | BIGINT                    | INTEGER                     
+ LastRepoVisibility | last_repo_visibility | BOOLEAN                     | BOOLEAN                   | NUMERIC                     
+ MaxRepoCreation    | max_repo_creation    | INTEGER NOT NULL DEFAULT -1 | INT NOT NULL DEFAULT -1   | INTEGER NOT NULL DEFAULT -1 
+ IsActive           | is_active            | BOOLEAN                     | BOOLEAN                   | NUMERIC                     
+ IsAdmin            | is_admin             | BOOLEAN                     | BOOLEAN                   | NUMERIC                     
+ AllowGitHook       | allow_git_hook       | BOOLEAN                     | BOOLEAN                   | NUMERIC                     
+ AllowImportLocal   | allow_import_local   | BOOLEAN                     | BOOLEAN                   | NUMERIC                     
+ ProhibitLogin      | prohibit_login       | BOOLEAN                     | BOOLEAN                   | NUMERIC                     
+ Avatar             | avatar               | VARCHAR(2048) NOT NULL      | VARCHAR(2048) NOT NULL    | TEXT NOT NULL               
+ AvatarEmail        | avatar_email         | VARCHAR(255) NOT NULL       | VARCHAR(255) NOT NULL     | TEXT NOT NULL               
+ UseCustomAvatar    | use_custom_avatar    | BOOLEAN                     | BOOLEAN                   | NUMERIC                     
+ NumFollowers       | num_followers        | INTEGER                     | INT                       | INTEGER                     
+ NumFollowing       | num_following        | INTEGER NOT NULL DEFAULT 0  | INT NOT NULL DEFAULT 0    | INTEGER NOT NULL DEFAULT 0  
+ NumStars           | num_stars            | INTEGER                     | INT                       | INTEGER                     
+ NumRepos           | num_repos            | INTEGER                     | INT                       | INTEGER                     
+ Description        | description          | VARCHAR(255)                | VARCHAR(255)              | TEXT                        
+ NumTeams           | num_teams            | INTEGER                     | INT                       | INTEGER                     
+ NumMembers         | num_members          | INTEGER                     | INT                       | INTEGER                     
+
+Primary keys: id
+Indexes: 
+	"UQE_user_lower_name" UNIQUE (lower_name)
+	"UQE_user_name" UNIQUE (name)
+```
+
+# Table "watch"
+
+```
+ Field  | Column  | PostgreSQL |         MySQL         |        SQLite3        
+--------+---------+------------+-----------------------+-----------------------
+ ID     | id      | BIGSERIAL  | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ UserID | user_id | BIGINT     | BIGINT                | INTEGER               
+ RepoID | repo_id | BIGINT     | BIGINT                | INTEGER               
+
+Primary keys: id
+Indexes: 
+	"UQE_watch_watch" UNIQUE (user_id, repo_id)
+```
+
+# Table "webhook"
+
+```
+    Field     |     Column     | PostgreSQL |         MySQL         |        SQLite3        
+--------------+----------------+------------+-----------------------+-----------------------
+ ID           | id             | BIGSERIAL  | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ RepoID       | repo_id        | BIGINT     | BIGINT                | INTEGER               
+ OrgID        | org_id         | BIGINT     | BIGINT                | INTEGER               
+ URL          | url            | TEXT       | TEXT                  | TEXT                  
+ ContentType  | content_type   | INTEGER    | INT                   | INTEGER               
+ Secret       | secret         | TEXT       | TEXT                  | TEXT                  
+ Events       | events         | TEXT       | TEXT                  | TEXT                  
+ IsSSL        | is_ssl         | BOOLEAN    | BOOLEAN               | NUMERIC               
+ IsActive     | is_active      | BOOLEAN    | BOOLEAN               | NUMERIC               
+ HookTaskType | hook_task_type | INTEGER    | INT                   | INTEGER               
+ Meta         | meta           | TEXT       | TEXT                  | TEXT                  
+ LastStatus   | last_status    | INTEGER    | INT                   | INTEGER               
+ CreatedUnix  | created_unix   | BIGINT     | BIGINT                | INTEGER               
+ UpdatedUnix  | updated_unix   | BIGINT     | BIGINT                | INTEGER               
+
+Primary keys: id
 ```
 

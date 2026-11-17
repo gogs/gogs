@@ -27,7 +27,7 @@ func TestDumpAndImport(t *testing.T) {
 	}
 	t.Parallel()
 
-	const wantTables = 16
+	const wantTables = 29
 	if len(Tables) != wantTables {
 		t.Fatalf("New table has added (want %d got %d), please add new tests for the table and update this check", wantTables, len(Tables))
 	}
@@ -162,10 +162,48 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			FollowID: 1,
 		},
 
+		&HookTask{
+			ID:              1,
+			RepoID:          1,
+			HookID:          1,
+			UUID:            "0f9b1a2c-3d4e-4f50-8a6b-7c8d9e0f1a2b",
+			Type:            GOGS,
+			URL:             "https://example.com/hook",
+			Signature:       "5d41402abc4b2a76b9719d911017c592",
+			PayloadContent:  `{"ref":"refs/heads/main"}`,
+			ContentType:     JSON,
+			EventType:       HookEventTypePush,
+			IsSSL:           true,
+			IsDelivered:     true,
+			Delivered:       1588568886000000000,
+			IsSucceed:       true,
+			RequestContent:  `{"headers":{}}`,
+			ResponseContent: `{"status":200}`,
+		},
+
 		&IssueLabel{
 			ID:      1,
 			IssueID: 1,
 			LabelID: 1,
+		},
+
+		&IssueUser{
+			ID:          1,
+			UserID:      1,
+			IssueID:     1,
+			RepoID:      1,
+			MilestoneID: 1,
+			IsRead:      true,
+			IsPoster:    true,
+		},
+		&IssueUser{
+			ID:          2,
+			UserID:      2,
+			IssueID:     1,
+			RepoID:      1,
+			MilestoneID: 1,
+			IsAssigned:  true,
+			IsMentioned: true,
 		},
 
 		&Label{
@@ -203,11 +241,43 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			UpdatedUnix: 1588572486, // 1 hour later
 		},
 
+		&Milestone{
+			ID:              1,
+			RepoID:          1,
+			Name:            "v1.0",
+			Content:         "The first release",
+			NumIssues:       1,
+			NumClosedIssues: 0,
+			Completeness:    0,
+			DeadlineUnix:    1588655286,
+			ClosedDateUnix:  0,
+		},
+		&Milestone{
+			ID:              2,
+			RepoID:          1,
+			Name:            "v0.9",
+			IsClosed:        true,
+			NumIssues:       3,
+			NumClosedIssues: 3,
+			Completeness:    100,
+			DeadlineUnix:    1588568886,
+			ClosedDateUnix:  1588572486,
+		},
+
 		&Notice{
 			ID:          1,
 			Type:        NoticeTypeRepository,
 			Description: "This is a notice",
 			CreatedUnix: 1588568886,
+		},
+
+		&OrgUser{
+			ID:       1,
+			UID:      1,
+			OrgID:    3,
+			IsPublic: true,
+			IsOwner:  true,
+			NumTeams: 1,
 		},
 
 		&Passkey{
@@ -224,6 +294,17 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			},
 			CreatedUnix: 1588568886,
 			UpdatedUnix: 1588572486, // 1 hour later
+		},
+
+		&ProtectBranch{
+			ID:                 1,
+			RepoID:             1,
+			Name:               "main",
+			Protected:          true,
+			RequirePullRequest: true,
+			EnableAllowlist:    true,
+			AllowlistUserIDs:   "1,2",
+			AllowlistTeamIDs:   "1",
 		},
 
 		&PublicKey{
@@ -246,6 +327,59 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			Mode:        AccessModeRead,
 			Type:        KeyTypeDeploy,
 			CreatedUnix: 1588568886,
+		},
+
+		&PullRequest{
+			ID:             1,
+			Type:           PullRequestTypeGogs,
+			Status:         PullRequestStatusMergeable,
+			IssueID:        2,
+			Index:          2,
+			HeadRepoID:     1,
+			BaseRepoID:     1,
+			HeadUserName:   "alice",
+			HeadBranch:     "fix",
+			BaseBranch:     "main",
+			MergeBase:      "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3",
+			HasMerged:      true,
+			MergedCommitID: "f3a9c2b4f0c9e5c1a2d3e4f5a6b7c8d9e0f1a2b3",
+			MergerID:       1,
+			MergedUnix:     1588572486,
+		},
+
+		&Release{
+			ID:           1,
+			RepoID:       1,
+			PublisherID:  1,
+			TagName:      "v1.0",
+			LowerTagName: "v1.0",
+			Target:       "main",
+			Title:        "First release",
+			Sha1:         "f3a9c2b4f0c9e5c1a2d3e4f5a6b7c8d9e0f1a2b3",
+			NumCommits:   42,
+			Note:         "Release notes",
+			IsPrerelease: true,
+			CreatedUnix:  1588568886,
+		},
+
+		&Star{
+			ID:     1,
+			UserID: 2,
+			RepoID: 1,
+		},
+
+		&TeamRepo{
+			ID:     1,
+			OrgID:  3,
+			TeamID: 1,
+			RepoID: 2,
+		},
+
+		&TeamUser{
+			ID:     1,
+			OrgID:  3,
+			TeamID: 1,
+			UID:    1,
 		},
 
 		&TwoFactor{
@@ -272,9 +406,119 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			UUID: "8c2d0f1e-5a6b-4c7d-9e8f-0a1b2c3d4e5f",
 			Name: "notes.txt",
 		},
+
+		&User{
+			ID:               1,
+			LowerName:        "alice",
+			Name:             "Alice",
+			FullName:         "Alice Anders",
+			Email:            "alice@example.com",
+			Password:         "6c1f1a9d0e2b3c4d5e6f7a8b9c0d1e2f",
+			LoginName:        "alice",
+			Type:             UserTypeIndividual,
+			Location:         "Earth",
+			Website:          "https://alice.example.com",
+			Rands:            "abcdefghij",
+			Salt:             "klmnopqrst",
+			CreatedUnix:      1588568886,
+			UpdatedUnix:      1588572486,
+			MaxRepoCreation:  -1,
+			IsActive:         true,
+			IsAdmin:          true,
+			AllowGitHook:     true,
+			AllowImportLocal: true,
+			Avatar:           "1",
+			AvatarEmail:      "alice@example.com",
+			UseCustomAvatar:  true,
+			NumFollowers:     1,
+			NumFollowing:     1,
+			NumStars:         1,
+			NumRepos:         1,
+			Description:      "Hello",
+		},
+		&User{
+			ID:              2,
+			LowerName:       "bob",
+			Name:            "bob",
+			Email:           "bob@example.com",
+			LoginSource:     1,
+			LoginName:       "bob",
+			Type:            UserTypeIndividual,
+			CreatedUnix:     1588568886,
+			UpdatedUnix:     1588568886,
+			MaxRepoCreation: 10,
+			ProhibitLogin:   true,
+			AvatarEmail:     "bob@example.com",
+		},
+		&User{
+			ID:              3,
+			LowerName:       "acme",
+			Name:            "acme",
+			FullName:        "Acme Inc.",
+			Type:            UserTypeOrganization,
+			CreatedUnix:     1588568886,
+			UpdatedUnix:     1588568886,
+			MaxRepoCreation: -1,
+			IsActive:        true,
+			NumRepos:        1,
+			NumTeams:        1,
+			NumMembers:      1,
+		},
+
+		&Watch{
+			ID:     1,
+			UserID: 1,
+			RepoID: 1,
+		},
+		&Watch{
+			ID:     2,
+			UserID: 2,
+			RepoID: 1,
+		},
+
+		&Webhook{
+			ID:           1,
+			RepoID:       1,
+			URL:          "https://example.com/hook",
+			ContentType:  JSON,
+			Secret:       "s3cr3t",
+			Events:       `{"push_only":true,"send_everything":false,"choose_events":false,"events":{}}`,
+			IsSSL:        true,
+			IsActive:     true,
+			HookTaskType: GOGS,
+			LastStatus:   HookStatusSucceed,
+			CreatedUnix:  1588568886,
+			UpdatedUnix:  1588572486,
+		},
+		&Webhook{
+			ID:           2,
+			OrgID:        3,
+			URL:          "https://hooks.slack.com/services/T/B/X",
+			ContentType:  JSON,
+			Events:       `{"push_only":false,"send_everything":true,"choose_events":false,"events":{}}`,
+			HookTaskType: SLACK,
+			Meta:         `{"channel":"#dev","username":"gogs"}`,
+			LastStatus:   HookStatusFailed,
+			CreatedUnix:  1588568886,
+			UpdatedUnix:  1588568886,
+		},
 	}
 	for _, val := range vals {
 		err := db.Create(val).Error
+		require.NoError(t, err)
+	}
+
+	// Store values that hooks or column defaults would replace on create, so that
+	// importing has to restore them as they are.
+	updates := []struct {
+		model  any
+		values map[string]any
+	}{
+		{&User{ID: 2}, map[string]any{"max_repo_creation": 0, "created_unix": 0, "updated_unix": 0}},
+		{&Milestone{ID: 1}, map[string]any{"deadline_unix": 0}},
+	}
+	for _, u := range updates {
+		err := db.Model(u.model).UpdateColumns(u.values).Error
 		require.NoError(t, err)
 	}
 }

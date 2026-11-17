@@ -2256,8 +2256,8 @@ func CheckRepoStats(logger *logx.Logger) {
 // Watch is connection request for receiving repository notification.
 type Watch struct {
 	ID     int64 `gorm:"primaryKey"`
-	UserID int64 `xorm:"UNIQUE(watch)" gorm:"uniqueIndex:watch_user_repo_unique;not null"`
-	RepoID int64 `xorm:"UNIQUE(watch)" gorm:"uniqueIndex:watch_user_repo_unique;not null"`
+	UserID int64 `gorm:"uniqueIndex:UQE_watch_watch"`
+	RepoID int64 `gorm:"uniqueIndex:UQE_watch_watch"`
 }
 
 //   _________ __
@@ -2269,8 +2269,8 @@ type Watch struct {
 
 type Star struct {
 	ID     int64 `gorm:"primaryKey"`
-	UserID int64 `xorm:"uid UNIQUE(s)" gorm:"column:uid;uniqueIndex:star_user_repo_unique;not null"`
-	RepoID int64 `xorm:"UNIQUE(s)" gorm:"uniqueIndex:star_user_repo_unique;not null"`
+	UserID int64 `gorm:"column:uid;uniqueIndex:UQE_star_s"`
+	RepoID int64 `gorm:"uniqueIndex:UQE_star_s"`
 }
 
 // ___________           __

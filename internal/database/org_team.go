@@ -404,9 +404,9 @@ func DeleteTeam(t *Team) error {
 // TeamUser represents an team-user relation.
 type TeamUser struct {
 	ID     int64
-	OrgID  int64 `xorm:"INDEX"`
-	TeamID int64 `xorm:"UNIQUE(s)"`
-	UID    int64 `xorm:"UNIQUE(s)"`
+	OrgID  int64 `gorm:"index:IDX_team_user_org_id"`
+	TeamID int64 `gorm:"uniqueIndex:UQE_team_user_s"`
+	UID    int64 `gorm:"uniqueIndex:UQE_team_user_s"`
 }
 
 func isTeamMember(tx *gorm.DB, orgID, teamID, uid int64) bool {
@@ -585,9 +585,9 @@ func RemoveTeamMember(orgID, teamID, uid int64) error {
 // TeamRepo represents an team-repository relation.
 type TeamRepo struct {
 	ID     int64
-	OrgID  int64 `xorm:"INDEX"`
-	TeamID int64 `xorm:"UNIQUE(s)"`
-	RepoID int64 `xorm:"UNIQUE(s)"`
+	OrgID  int64 `gorm:"index:IDX_team_repo_org_id"`
+	TeamID int64 `gorm:"uniqueIndex:UQE_team_repo_s"`
+	RepoID int64 `gorm:"uniqueIndex:UQE_team_repo_s"`
 }
 
 func hasTeamRepo(tx *gorm.DB, orgID, teamID, repoID int64) bool {
