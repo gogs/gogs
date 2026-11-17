@@ -93,6 +93,8 @@ func webhooksGet(t *testing.T, ctx context.Context, s *WebhooksStore) {
 		func() (*Webhook, error) { return s.GetOfRepo(ctx, 1, orgHook.ID) },
 		func() (*Webhook, error) { return s.GetOfOrg(ctx, 1, repoHook.ID) },
 		func() (*Webhook, error) { return s.GetOfOrg(ctx, 2, 404) },
+		func() (*Webhook, error) { return s.GetOfRepo(ctx, 1, 0) },
+		func() (*Webhook, error) { return s.GetOfOrg(ctx, 2, 0) },
 	} {
 		_, err = get()
 		assert.True(t, IsErrWebhookNotExist(err), "got %v", err)
@@ -159,12 +161,18 @@ func webhooksDelete(t *testing.T, ctx context.Context, s *WebhooksStore) {
 	}
 
 	// Webhooks of other repositories are neither deleted nor lose their
-	// deliveries.
+	// deliveries, and an ID of 0 deletes nothing.
 	err := s.DeleteOfRepo(ctx, 1, hook2.ID)
 	require.NoError(t, err)
 	_, err = s.GetOfRepo(ctx, 2, hook2.ID)
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), countTasks(hook2.ID))
+	require.NoError(t, s.DeleteOfRepo(ctx, 2, 0))
+	require.NoError(t, s.DeleteOfOrg(ctx, 3, 0))
+	_, err = s.GetOfRepo(ctx, 2, hook2.ID)
+	require.NoError(t, err)
+	_, err = s.GetOfOrg(ctx, 3, orgHook.ID)
+	require.NoError(t, err)
 
 	err = s.DeleteOfRepo(ctx, 1, hook1.ID)
 	require.NoError(t, err)

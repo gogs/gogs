@@ -242,12 +242,14 @@ func (s *WebhooksStore) Create(ctx context.Context, w *Webhook) error {
 	return s.db.WithContext(ctx).Create(w).Error
 }
 
-func (s *WebhooksStore) get(ctx context.Context, where *Webhook) (*Webhook, error) {
+// get returns the webhook with given ID whose column of given name, i.e.,
+// "repo_id" or "org_id", has given value.
+func (s *WebhooksStore) get(ctx context.Context, ownerColumn string, ownerID, id int64) (*Webhook, error) {
 	w := new(Webhook)
-	err := s.db.WithContext(ctx).Where(where).First(w).Error
+	err := s.db.WithContext(ctx).Where("id = ? AND "+ownerColumn+" = ?", id, ownerID).First(w).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrWebhookNotExist{args: map[string]any{"webhookID": where.ID}}
+			return nil, ErrWebhookNotExist{args: map[string]any{"webhookID": id}}
 		}
 		return nil, err
 	}
@@ -257,13 +259,13 @@ func (s *WebhooksStore) get(ctx context.Context, where *Webhook) (*Webhook, erro
 // GetOfRepo returns the webhook with given ID of the repository. It returns
 // ErrWebhookNotExist when not found.
 func (s *WebhooksStore) GetOfRepo(ctx context.Context, repoID, id int64) (*Webhook, error) {
-	return s.get(ctx, &Webhook{ID: id, RepoID: repoID})
+	return s.get(ctx, "repo_id", repoID, id)
 }
 
 // GetOfOrg returns the webhook with given ID of the organization. It returns
 // ErrWebhookNotExist when not found.
 func (s *WebhooksStore) GetOfOrg(ctx context.Context, orgID, id int64) (*Webhook, error) {
-	return s.get(ctx, &Webhook{ID: id, OrgID: orgID})
+	return s.get(ctx, "org_id", orgID, id)
 }
 
 // ListByRepo returns all webhooks of the repository.
@@ -317,27 +319,29 @@ func (s *WebhooksStore) setLastStatus(ctx context.Context, id int64, status Hook
 		Error
 }
 
-func (s *WebhooksStore) delete(ctx context.Context, where *Webhook) error {
+// delete deletes the webhook with given ID whose column of given name, i.e.,
+// "repo_id" or "org_id", has given value, and its deliveries.
+func (s *WebhooksStore) delete(ctx context.Context, ownerColumn string, ownerID, id int64) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		result := tx.Where(where).Delete(new(Webhook))
+		result := tx.Where("id = ? AND "+ownerColumn+" = ?", id, ownerID).Delete(new(Webhook))
 		if result.Error != nil {
 			return errors.Wrap(result.Error, "delete webhook")
 		}
 		if result.RowsAffected == 0 {
 			return nil
 		}
-		return tx.Where("hook_id = ?", where.ID).Delete(new(HookTask)).Error
+		return tx.Where("hook_id = ?", id).Delete(new(HookTask)).Error
 	})
 }
 
 // DeleteOfRepo deletes the webhook with given ID of the repository and its
 // deliveries. Deleting a webhook that does not exist is not an error.
 func (s *WebhooksStore) DeleteOfRepo(ctx context.Context, repoID, id int64) error {
-	return s.delete(ctx, &Webhook{ID: id, RepoID: repoID})
+	return s.delete(ctx, "repo_id", repoID, id)
 }
 
 // DeleteOfOrg deletes the webhook with given ID of the organization and its
 // deliveries. Deleting a webhook that does not exist is not an error.
 func (s *WebhooksStore) DeleteOfOrg(ctx context.Context, orgID, id int64) error {
-	return s.delete(ctx, &Webhook{ID: id, OrgID: orgID})
+	return s.delete(ctx, "org_id", orgID, id)
 }
