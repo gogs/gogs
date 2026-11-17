@@ -125,9 +125,9 @@ func (issue *Issue) loadAttributes(e Engine) (err error) {
 	}
 
 	if issue.Attachments == nil {
-		issue.Attachments, err = getAttachmentsByIssueID(legacyTx(e), issue.ID)
+		issue.Attachments, err = newAttachmentsStore(legacyTx(e)).ListByIssueID(context.TODO(), issue.ID)
 		if err != nil {
-			return errors.Newf("getAttachmentsByIssueID [%d]: %v", issue.ID, err)
+			return errors.Wrap(err, "list attachments")
 		}
 	}
 
@@ -719,18 +719,9 @@ func newIssue(e *xorm.Session, opts NewIssueOptions) (err error) {
 		return err
 	}
 
-	if len(opts.Attachments) > 0 {
-		attachments, err := getUnboundAttachmentsByUUIDs(legacyTx(e), opts.Attachments)
-		if err != nil {
-			return errors.Newf("getUnboundAttachmentsByUUIDs [uuids: %v]: %v", opts.Attachments, err)
-		}
-
-		for i := range attachments {
-			attachments[i].IssueID = opts.Issue.ID
-			if _, err = e.ID(attachments[i].ID).Update(attachments[i]); err != nil {
-				return errors.Newf("update attachment [id: %d]: %v", attachments[i].ID, err)
-			}
-		}
+	err = newAttachmentsStore(legacyTx(e)).Bind(context.TODO(), opts.Issue.ID, 0, opts.Attachments)
+	if err != nil {
+		return errors.Wrap(err, "attach files")
 	}
 
 	return opts.Issue.loadAttributes(e)

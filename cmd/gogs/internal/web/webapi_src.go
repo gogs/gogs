@@ -113,11 +113,11 @@ type repoLatestRelease struct {
 
 // latestRelease returns the newest published release that is not a
 // pre-release, or the newest of tags, which are sorted newest first.
-func latestRelease(repoID int64, tags []string) (*repoLatestRelease, error) {
+func latestRelease(ctx context.Context, repoID int64, tags []string) (*repoLatestRelease, error) {
 	if len(tags) == 0 {
 		return nil, nil
 	}
-	releases, err := database.GetPublishedReleasesByRepoID(repoID)
+	releases, err := database.Handle.Releases().ListPublishedByRepoID(ctx, repoID)
 	if err != nil {
 		return nil, errors.Wrap(err, "list published releases")
 	}
@@ -282,7 +282,7 @@ func getRepoSrc(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (s
 			logger.Error("Failed to count commits", "repoID", repo.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "count commits")
 		}
-		if resp.Summary.LatestRelease, err = latestRelease(repo.ID, resp.Tags); err != nil {
+		if resp.Summary.LatestRelease, err = latestRelease(ctx, repo.ID, resp.Tags); err != nil {
 			logger.Error("Failed to get latest release", "repoID", repo.ID, "error", err)
 			return http.StatusInternalServerError, nil, err
 		}

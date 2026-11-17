@@ -1,6 +1,7 @@
 package web
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"mime"
@@ -131,8 +132,8 @@ func toIssueAttachments(attachments []*database.Attachment, content string) []is
 // updateLinkedAttachments attaches the new files to the issue or comment, and
 // deletes the attached files the content no longer links to. Files that were
 // never linked, e.g., attached before files were linked in place, are kept.
-func updateLinkedAttachments(issueID, commentID int64, attached []*database.Attachment, oldContent, newContent string, uuids []string) error {
-	if err := database.BindAttachments(issueID, commentID, uuids); err != nil {
+func updateLinkedAttachments(ctx context.Context, issueID, commentID int64, attached []*database.Attachment, oldContent, newContent string, uuids []string) error {
+	if err := database.Handle.Attachments().Bind(ctx, issueID, commentID, uuids); err != nil {
 		return errors.Wrap(err, "attach files")
 	}
 	var unlinked []*database.Attachment
@@ -141,7 +142,7 @@ func updateLinkedAttachments(issueID, commentID int64, attached []*database.Atta
 			unlinked = append(unlinked, a)
 		}
 	}
-	if _, err := database.DeleteAttachments(unlinked, true); err != nil {
+	if err := database.Handle.Attachments().Delete(ctx, true, unlinked...); err != nil {
 		return errors.Wrap(err, "delete unlinked files")
 	}
 	return nil
@@ -422,7 +423,8 @@ type repoIssueRequest struct {
 	Attachments []string `json:"attachments"`
 }
 
-func patchRepoIssue(logger *logx.Logger, l i18n.Locale, viewer *database.User, issue *database.Issue, req repoIssueRequest) (statusCode int, resp any, err error) {
+func patchRepoIssue(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, issue *database.Issue, req repoIssueRequest) (statusCode int, resp any, err error) {
+	ctx := c.Request().Context()
 	if req.Title != nil {
 		title := strings.TrimSpace(*req.Title)
 		if resp := textFieldError(l, "title", "repo.milestones.title", title, 255); resp != nil {
@@ -436,7 +438,7 @@ func patchRepoIssue(logger *logx.Logger, l i18n.Locale, viewer *database.User, i
 		}
 	}
 	if req.Content != nil && *req.Content != issue.Content {
-		if statusCode, err = checkNewAttachments(issueAttachmentLimits(), req.Attachments); err != nil {
+		if statusCode, err = checkNewAttachments(ctx, issueAttachmentLimits(), req.Attachments); err != nil {
 			if statusCode == http.StatusInternalServerError {
 				logger.Error("Failed to check new attachments", "error", err)
 			}
@@ -447,9 +449,9 @@ func patchRepoIssue(logger *logx.Logger, l i18n.Locale, viewer *database.User, i
 			logger.Error("Failed to change issue content", "issueID", issue.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "change content")
 		}
-		attached, err := database.GetAttachmentsByIssueID(issue.ID)
+		attached, err := database.Handle.Attachments().ListByIssueID(ctx, issue.ID)
 		if err == nil {
-			err = updateLinkedAttachments(issue.ID, 0, attached, oldContent, issue.Content, req.Attachments)
+			err = updateLinkedAttachments(ctx, issue.ID, 0, attached, oldContent, issue.Content, req.Attachments)
 		}
 		if err != nil {
 			logger.Error("Failed to update issue attachments", "issueID", issue.ID, "error", err)
@@ -622,7 +624,7 @@ type repoIssueCommentRequest struct {
 // when the files cannot be attached. Unlike the server-rendered pages, only
 // files that are not attached yet can be, so an issue or a comment cannot take
 // over those of others.
-func checkNewAttachments(lim attachmentLimits, uuids []string) (statusCode int, err error) {
+func checkNewAttachments(ctx context.Context, lim attachmentLimits, uuids []string) (statusCode int, err error) {
 	if len(uuids) == 0 {
 		return 0, nil
 	}
@@ -633,7 +635,7 @@ func checkNewAttachments(lim attachmentLimits, uuids []string) (statusCode int, 
 		return http.StatusBadRequest, errors.Newf("at most %d files can be attached", lim.MaxFiles)
 	}
 	for _, uuid := range uuids {
-		a, err := database.GetAttachmentByUUID(uuid)
+		a, err := database.Handle.Attachments().GetByUUID(ctx, uuid)
 		if err != nil {
 			if database.IsErrAttachmentNotExist(err) {
 				return http.StatusBadRequest, errors.New("attachment does not exist")
@@ -647,13 +649,14 @@ func checkNewAttachments(lim attachmentLimits, uuids []string) (statusCode int, 
 	return 0, nil
 }
 
-func postRepoIssueComment(logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, issue *database.Issue, req repoIssueCommentRequest) (statusCode int, resp any, err error) {
+func postRepoIssueComment(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, issue *database.Issue, req repoIssueCommentRequest) (statusCode int, resp any, err error) {
+	ctx := c.Request().Context()
 	// Like the server-rendered page, a comment can be only attachments.
 	if strings.TrimSpace(req.Content) == "" && len(req.Attachments) == 0 {
 		msg := l.Tr("form.Content") + l.Tr("form.require_error")
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
 	}
-	if statusCode, err = checkNewAttachments(issueAttachmentLimits(), req.Attachments); err != nil {
+	if statusCode, err = checkNewAttachments(ctx, issueAttachmentLimits(), req.Attachments); err != nil {
 		if statusCode == http.StatusInternalServerError {
 			logger.Error("Failed to check new attachments", "error", err)
 		}
@@ -690,12 +693,13 @@ func withIssueComment(c flamego.Context, logger *logx.Logger, repoCtx *repoConte
 	c.Map(comment)
 }
 
-func patchRepoIssueComment(logger *logx.Logger, l i18n.Locale, viewer *database.User, comment *database.Comment, req repoIssueCommentRequest) (statusCode int, resp any, err error) {
+func patchRepoIssueComment(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, comment *database.Comment, req repoIssueCommentRequest) (statusCode int, resp any, err error) {
+	ctx := c.Request().Context()
 	if strings.TrimSpace(req.Content) == "" {
 		msg := l.Tr("form.Content") + l.Tr("form.require_error")
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
 	}
-	if statusCode, err = checkNewAttachments(issueAttachmentLimits(), req.Attachments); err != nil {
+	if statusCode, err = checkNewAttachments(ctx, issueAttachmentLimits(), req.Attachments); err != nil {
 		if statusCode == http.StatusInternalServerError {
 			logger.Error("Failed to check new attachments", "error", err)
 		}
@@ -707,9 +711,9 @@ func patchRepoIssueComment(logger *logx.Logger, l i18n.Locale, viewer *database.
 		logger.Error("Failed to update comment", "commentID", comment.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update comment")
 	}
-	attached, err := database.GetAttachmentsByCommentID(comment.ID)
+	attached, err := database.Handle.Attachments().ListByCommentID(ctx, comment.ID)
 	if err == nil {
-		err = updateLinkedAttachments(comment.IssueID, comment.ID, attached, oldContent, comment.Content, req.Attachments)
+		err = updateLinkedAttachments(ctx, comment.IssueID, comment.ID, attached, oldContent, comment.Content, req.Attachments)
 	}
 	if err != nil {
 		logger.Error("Failed to update comment attachments", "commentID", comment.ID, "error", err)
@@ -816,7 +820,7 @@ func storeAttachment(c flamego.Context, l i18n.Locale, viewer *database.User, li
 	}
 	defer func() { _ = f.File.Close() }()
 
-	attachment, err := database.NewAttachment(viewer.ID, f.Header.Filename, f.Head, f.File)
+	attachment, err := database.Handle.Attachments().Create(c.Request().Context(), viewer.ID, f.Header.Filename, io.MultiReader(bytes.NewReader(f.Head), f.File))
 	if err != nil {
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "store attachment")
 	}
@@ -1049,13 +1053,13 @@ func templateLabelsAndAssignee(repo *database.Repository, t *issuetemplate.Templ
 // newIssueFromRequest checks the form to open an issue or a pull request, and
 // returns the issue to create with its labels. A non-nil resp or err is what to
 // answer with instead.
-func newIssueFromRequest(l i18n.Locale, viewer *database.User, repoCtx *repoContext, req repoNewIssueRequest) (issue *database.Issue, labelIDs []int64, statusCode int, resp any, err error) {
+func newIssueFromRequest(ctx context.Context, l i18n.Locale, viewer *database.User, repoCtx *repoContext, req repoNewIssueRequest) (issue *database.Issue, labelIDs []int64, statusCode int, resp any, err error) {
 	repo := repoCtx.Repo
 	title := strings.TrimSpace(req.Title)
 	if resp := textFieldError(l, "title", "repo.milestones.title", title, 255); resp != nil {
 		return nil, nil, http.StatusBadRequest, resp, nil
 	}
-	if statusCode, err = checkNewAttachments(issueAttachmentLimits(), req.Attachments); err != nil {
+	if statusCode, err = checkNewAttachments(ctx, issueAttachmentLimits(), req.Attachments); err != nil {
 		return nil, nil, statusCode, nil, err
 	}
 
@@ -1091,6 +1095,7 @@ func newIssueFromRequest(l i18n.Locale, viewer *database.User, repoCtx *repoCont
 }
 
 func postRepoIssue(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, req repoNewIssueRequest) (statusCode int, resp any, err error) {
+	ctx := c.Request().Context()
 	repo := repoCtx.Repo
 	// The title is checked before the fields of an issue form, so its error
 	// shows first.
@@ -1113,7 +1118,7 @@ func postRepoIssue(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer
 			var files func(id string) (issuetemplate.File, bool)
 			if issueAttachmentLimits().Enabled {
 				files = func(id string) (issuetemplate.File, bool) {
-					a, err := database.GetAttachmentByUUID(id)
+					a, err := database.Handle.Attachments().GetByUUID(ctx, id)
 					if err != nil || a.IssueID > 0 || a.CommentID > 0 || a.ReleaseID > 0 {
 						return issuetemplate.File{}, false
 					}
@@ -1141,7 +1146,7 @@ func postRepoIssue(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer
 			}
 		}
 	}
-	issue, labelIDs, statusCode, resp, err := newIssueFromRequest(l, viewer, repoCtx, req)
+	issue, labelIDs, statusCode, resp, err := newIssueFromRequest(ctx, l, viewer, repoCtx, req)
 	if resp != nil || err != nil {
 		if statusCode == http.StatusInternalServerError {
 			logger.Error("Failed to check new issue", "repoID", repo.ID, "error", err)
