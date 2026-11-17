@@ -129,7 +129,7 @@ func runBackup(ctx context.Context, cmd *cli.Command) error {
 		reposDump := filepath.Join(rootDir, "repositories.zip")
 		logger.Info("Dumping repositories", "repoRoot", conf.Repository.Root)
 		if cmd.Bool("exclude-mirror-repos") {
-			repos, err := database.GetNonMirrorRepositories()
+			repos, err := database.Handle.Repositories().ListNonMirrors(ctx)
 			if err != nil {
 				logger.FatalContext(ctx, "Failed to get non-mirror repositories", "error", err)
 			}

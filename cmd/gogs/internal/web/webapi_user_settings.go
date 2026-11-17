@@ -158,7 +158,8 @@ type userSettingsRepos struct {
 // getUserSettingsRepos lists the repositories of the authenticated user and the
 // ones they collaborate on.
 func getUserSettingsRepos(c flamego.Context, logger *logx.Logger, viewer *database.User) (statusCode int, resp *userSettingsRepos, err error) {
-	repos, err := database.GetUserAndCollaborativeRepositories(viewer.ID)
+	ctx := c.Request().Context()
+	repos, err := database.Handle.Repositories().ListOwnedAndCollaborative(ctx, viewer.ID)
 	if err != nil {
 		logger.Error("Failed to list repositories", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list repositories")

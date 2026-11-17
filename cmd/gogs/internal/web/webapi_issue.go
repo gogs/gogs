@@ -231,7 +231,7 @@ func listIssueMetaOptions(ctx context.Context, repo *database.Repository) (opts 
 		})
 	}
 
-	assignees, err := repo.GetAssignees()
+	assignees, err := database.Handle.Repositories().ListAssignees(ctx, repo)
 	if err != nil {
 		return opts, errors.Wrap(err, "list assignees")
 	}
@@ -579,11 +579,11 @@ func checkIssueMilestone(ctx context.Context, repo *database.Repository, id int6
 
 // checkIssueAssignee returns the status code and the error to answer with when
 // issues of the repository cannot be assigned to the user, unless 0.
-func checkIssueAssignee(repo *database.Repository, id int64) (statusCode int, err error) {
+func checkIssueAssignee(ctx context.Context, repo *database.Repository, id int64) (statusCode int, err error) {
 	if id == 0 {
 		return 0, nil
 	}
-	assignees, err := repo.GetAssignees()
+	assignees, err := database.Handle.Repositories().ListAssignees(ctx, repo)
 	if err != nil {
 		return http.StatusInternalServerError, errors.Wrapf(err, "list assignees of repository %d", repo.ID)
 	}
@@ -616,10 +616,11 @@ func putRepoIssueMilestone(c flamego.Context, logger *logx.Logger, viewer *datab
 }
 
 func putRepoIssueAssignee(c flamego.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, issue *database.Issue, req repoIssueIDRequest) (statusCode int, resp any, err error) {
+	ctx := c.Request().Context()
 	if req.ID == issue.AssigneeID {
 		return http.StatusNoContent, nil, nil
 	}
-	if statusCode, err = checkIssueAssignee(repoCtx.Repo, req.ID); err != nil {
+	if statusCode, err = checkIssueAssignee(ctx, repoCtx.Repo, req.ID); err != nil {
 		if statusCode == http.StatusInternalServerError {
 			logger.Error("Failed to check issue assignee", "error", err)
 		}
@@ -1050,7 +1051,7 @@ func templateLabelsAndAssignee(ctx context.Context, repo *database.Repository, t
 		}
 	}
 	if len(t.Assignees) > 0 {
-		assignees, err := repo.GetAssignees()
+		assignees, err := database.Handle.Repositories().ListAssignees(ctx, repo)
 		if err != nil {
 			return nil, 0, errors.Wrap(err, "list assignees")
 		}
@@ -1097,7 +1098,7 @@ func newIssueFromRequest(ctx context.Context, l i18n.Locale, viewer *database.Us
 			}
 		}
 		if statusCode, err = checkIssueMilestone(ctx, repo, req.MilestoneID); err == nil {
-			statusCode, err = checkIssueAssignee(repo, req.AssigneeID)
+			statusCode, err = checkIssueAssignee(ctx, repo, req.AssigneeID)
 		}
 		if err != nil {
 			return nil, nil, statusCode, nil, err

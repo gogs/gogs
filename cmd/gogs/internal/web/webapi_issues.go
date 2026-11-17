@@ -69,6 +69,7 @@ func getRepoPulls(c flamego.Context, logger *logx.Logger, viewer *database.User,
 // and sorted by the `type`, `labels`, `milestone`, `assignee`, `state`, `sort`
 // and `page` query parameters.
 func listRepoIssues(c flamego.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, isPull bool) (statusCode int, resp *repoIssues, err error) {
+	ctx := c.Request().Context()
 	repo := repoCtx.Repo
 	filterMode := database.FilterModeYourRepos
 	assigneeID := c.QueryInt64("assignee")
@@ -202,7 +203,7 @@ func listRepoIssues(c flamego.Context, logger *logx.Logger, viewer *database.Use
 		})
 	}
 
-	assignees, err := repo.GetAssignees()
+	assignees, err := database.Handle.Repositories().ListAssignees(ctx, repo)
 	if err != nil {
 		logger.Error("Failed to list assignees", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list assignees")
@@ -283,18 +284,18 @@ type repoFork struct {
 
 // getRepoForks lists the forks of the repository that the viewer can see.
 func getRepoForks(c flamego.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext) (statusCode int, resp map[string][]repoFork, err error) {
+	ctx := c.Request().Context()
 	repo := repoCtx.Repo
 	// An empty repository has no forks page.
 	if !repoCtx.Viewer.CanRead() || repo.IsEmpty {
 		return http.StatusNotFound, nil, errors.New("repository does not exist")
 	}
-	forks, err := repo.GetForks()
+	forks, err := database.Handle.Repositories().ListForks(ctx, repo)
 	if err != nil {
 		logger.Error("Failed to list forks", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list forks")
 	}
 
-	ctx := c.Request().Context()
 	items := make([]repoFork, 0, len(forks))
 	for _, fork := range forks {
 		if fork.IsPrivate && (viewer == nil || !viewer.IsAdmin) &&

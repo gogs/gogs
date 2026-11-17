@@ -450,7 +450,7 @@ func (s *IssuesStore) create(ctx context.Context, opts NewIssueOptions) error {
 // createIssueUsers creates the relations of the new issue to the users who
 // can be assigned in its repository and to its poster.
 func (s *IssuesStore) createIssueUsers(ctx context.Context, repo *Repository, issue *Issue) error {
-	assignees, err := repo.getAssignees(s.db.WithContext(ctx))
+	assignees, err := newReposStore(s.db).ListAssignees(ctx, repo)
 	if err != nil {
 		return errors.Wrap(err, "list assignees")
 	}
@@ -527,7 +527,7 @@ func (s *IssuesStore) getByRef(ctx context.Context, ref string) (*Issue, error) 
 		return nil, ErrIssueNotExist{args: map[string]any{"ref": ref}}
 	}
 
-	repo, err := GetRepositoryByRef(before)
+	repo, err := newReposStore(s.db).GetByRef(ctx, before)
 	if err != nil {
 		return nil, err
 	}

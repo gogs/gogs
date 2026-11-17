@@ -146,7 +146,7 @@ func protectBranchesCheckPush(t *testing.T, ctx context.Context, s *ProtectBranc
 func newTestRepoOnDisk(t *testing.T, ctx context.Context, s *ProtectBranchesStore, owner *User, name string) *Repository {
 	t.Helper()
 
-	repo, err := newReposStore(s.db).Create(ctx, owner.ID, CreateRepoOptions{Name: name})
+	repo, err := newReposStore(s.db).create(ctx, owner.ID, CreateRepoOptions{Name: name})
 	require.NoError(t, err)
 	repo.Owner = owner
 	err = os.MkdirAll(filepath.Join(repo.RepoPath(), "hooks"), os.ModePerm)

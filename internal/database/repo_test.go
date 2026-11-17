@@ -82,7 +82,8 @@ func Test_CreateRepository_PreventDeletion(t *testing.T) {
 	canary := filepath.Join(repoPath, "canary.txt")
 	require.NoError(t, os.WriteFile(canary, []byte("should survive"), 0o644))
 
-	_, err = CreateRepository(context.Background(), logx.NewNoopLogger(), owner, owner, opts)
+	// No database is needed, because the existing directory stops creation first.
+	_, err = newReposStore(nil).Create(context.Background(), logx.NewNoopLogger(), owner, owner, opts)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "repository directory already exists")
 	assert.True(t, osx.Exist(canary))

@@ -263,7 +263,7 @@ func TestAPIV1ListForks(t *testing.T) {
 	baseRepo, err := getRepository(t, repo.ID)
 	require.NoError(t, err)
 	forkName := UniqueName("fork-")
-	_, err = database.ForkRepository(ctx, logger, forkOwner, forkOwner, baseRepo, forkName, "")
+	_, err = database.Handle.Repositories().Fork(ctx, logger, forkOwner, forkOwner, baseRepo, forkName, "")
 	require.NoError(t, err)
 
 	var forks []apiV1Repo

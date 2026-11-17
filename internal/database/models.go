@@ -225,7 +225,7 @@ func GetStatistic(ctx context.Context, logger *logx.Logger) (stats Statistic) {
 	stats.Counter.User = Handle.Users().Count(ctx)
 	stats.Counter.Org = Handle.Organizations().Count(ctx)
 	stats.Counter.PublicKey = count(new(PublicKey))
-	stats.Counter.Repo = CountRepositories(logger, true)
+	stats.Counter.Repo = count(new(Repository))
 	stats.Counter.Watch = count(new(Watch))
 	stats.Counter.Star = count(new(Star))
 	stats.Counter.Action = count(new(Action))

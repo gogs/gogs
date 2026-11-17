@@ -177,7 +177,7 @@ func TestRepositoryExternalWikiAndTracker(t *testing.T) {
 		// URLs stored before they were checked are not used.
 		got.ExternalWikiURL = "javascript:alert(1)"
 		got.ExternalTrackerURL = ""
-		require.NoError(t, database.UpdateRepository(logger, got, false))
+		require.NoError(t, database.Handle.Repositories().Update(t.Context(), logger, got, false))
 		assertNoRedirect(t, "owner", ownerClient, repo, "wiki")
 		assertNoRedirect(t, "owner", ownerClient, repo, "issues")
 		var header map[string]any

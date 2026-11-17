@@ -75,8 +75,8 @@ type createIssueRequest struct {
 
 // isAssignable returns true if issues of the repository can be assigned to the
 // user, the same users as in the web interface.
-func isAssignable(repo *database.Repository, u *database.User) (bool, error) {
-	assignees, err := repo.GetAssignees()
+func isAssignable(ctx context.Context, repo *database.Repository, u *database.User) (bool, error) {
+	assignees, err := database.Handle.Repositories().ListAssignees(ctx, repo)
 	if err != nil {
 		return false, errors.Wrap(err, "list assignees")
 	}
@@ -103,7 +103,7 @@ func createIssue(c *apiContext, form createIssueRequest) {
 				}
 				return
 			}
-			assignable, err := isAssignable(c.Repo.Repository, assignee)
+			assignable, err := isAssignable(c.Request().Context(), c.Repo.Repository, assignee)
 			if err != nil {
 				c.Error(err, "check assignee")
 				return
@@ -184,7 +184,7 @@ func editIssue(c *apiContext, form editIssueRequest) {
 				}
 				return
 			}
-			assignable, err := isAssignable(c.Repo.Repository, assignee)
+			assignable, err := isAssignable(c.Request().Context(), c.Repo.Repository, assignee)
 			if err != nil {
 				c.Error(err, "check assignee")
 				return

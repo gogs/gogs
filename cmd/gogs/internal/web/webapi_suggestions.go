@@ -22,8 +22,9 @@ type repoMentionSuggestions struct {
 
 // getRepoMentionSuggestions lists the users to suggest when mentioning someone
 // in the Markdown of the repository, i.e., the users who can read it.
-func getRepoMentionSuggestions(logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoMentionSuggestions, err error) {
-	users, err := repoCtx.Repo.GetAssignees()
+func getRepoMentionSuggestions(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoMentionSuggestions, err error) {
+	ctx := c.Request().Context()
+	users, err := database.Handle.Repositories().ListAssignees(ctx, repoCtx.Repo)
 	if err != nil {
 		logger.Error("Failed to list repository users", "repoID", repoCtx.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list users")
