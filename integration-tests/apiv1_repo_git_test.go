@@ -68,8 +68,26 @@ func TestAPIV1Contents(t *testing.T) {
 	assert.Equal(t, "Updated guide", string(content))
 
 	t.Run("existing branch", func(t *testing.T) {
-		apiV1PutFile(t, api, repo, "branch.md", "First", "feature/contents")
-		apiV1PutFile(t, api, repo, "branch.md", "Second", "feature/contents")
+		firstSHA := apiV1PutFile(t, api, repo, "branch.md", "First", "feature/contents")
+		secondSHA := apiV1PutFile(t, api, repo, "branch.md", "Second", "feature/contents")
+
+		var second struct {
+			Parents []struct {
+				SHA string `json:"sha"`
+			} `json:"parents"`
+		}
+		api.doJSON(http.MethodGet, apiV1RepoPath(repo, "/commits/"+secondSHA), nil, http.StatusOK, &second)
+		require.Len(t, second.Parents, 1)
+		assert.Equal(t, firstSHA, second.Parents[0].SHA, "second update is not on top of the first")
+
+		var file apiV1Content
+		api.doJSON(http.MethodGet, apiV1RepoPath(repo, "/contents/branch.md?ref=feature/contents"), nil, http.StatusOK, &file)
+		content, err := base64.StdEncoding.DecodeString(file.Content)
+		require.NoError(t, err)
+		assert.Equal(t, "Second", string(content))
+
+		status, body := api.do(http.MethodGet, apiV1RepoPath(repo, "/contents/branch.md"), nil)
+		assert.Equal(t, http.StatusNotFound, status, "file only on another branch, response: %s", body)
 	})
 
 	status, body := api.do(http.MethodGet, apiV1RepoPath(repo, "/contents/missing.md"), nil)
