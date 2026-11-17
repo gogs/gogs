@@ -369,8 +369,12 @@ func getDiscordReleasePayload(p *apiv1types.WebhookReleasePayload) *DiscordPaylo
 
 func GetDiscordPayload(p apiv1types.WebhookPayloader, event HookEventType, meta string) (payload *DiscordPayload, err error) {
 	slack := &SlackMeta{}
-	if err := json.Unmarshal([]byte(meta), slack); err != nil {
-		return nil, errors.Newf("unmarshal: %v", err)
+	// The API creates Discord webhooks without metadata, whose fields are all
+	// optional.
+	if meta != "" {
+		if err := json.Unmarshal([]byte(meta), slack); err != nil {
+			return nil, errors.Newf("unmarshal: %v", err)
+		}
 	}
 
 	switch event {

@@ -103,6 +103,7 @@ All notable changes to Gogs are documented in this file.
 - Webhook payloads and API responses for a newly created issue, comment, or repository, and webhook test deliveries, no longer show `0001-01-01T00:00:00Z` as their time. [#8528](https://github.com/gogs/gogs/pull/8528)
 - Mentioning an organization marks its members as mentioned, instead of unrelated users. [#8505](https://github.com/gogs/gogs/pull/8505)
 - The issue list of a repository marks issues that mention you as unread until you read them, as it does for your other issues. [#8528](https://github.com/gogs/gogs/pull/8528)
+- Events that a Discord webhook created through the API subscribes to no longer fail, e.g., pushes to its repository were missing from activity feeds and from some other webhooks. [#8528](https://github.com/gogs/gogs/pull/8528)
 
 ### Removed
 
