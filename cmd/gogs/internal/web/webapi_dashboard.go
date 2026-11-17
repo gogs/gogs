@@ -178,7 +178,7 @@ func getDashboard(logger *logx.Logger, c flamego.Context, viewer *database.User,
 		HasMoreRepos:     owner.NumRepos > conf.UI.User.RepoPagingNum,
 		Mirrors:          make([]dashboardMirror, 0, len(mirrors)),
 	}
-	if err = database.MirrorRepositoryList(mirrors).LoadAttributes(); err != nil {
+	if err = database.Handle.Mirrors().LoadForRepos(ctx, mirrors...); err != nil {
 		logger.Error("Failed to load attributes of mirrors", "userID", owner.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "load mirror attributes")
 	}

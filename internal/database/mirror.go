@@ -71,12 +71,7 @@ func (m *Mirror) BeforeUpdate(_ *gorm.DB) error {
 }
 
 // AfterFind implements the GORM query hook.
-func (m *Mirror) AfterFind(tx *gorm.DB) error {
-	var err error
-	m.Repo, err = getRepositoryByID(tx, m.RepoID)
-	if err != nil {
-		handleLogger().Error("Failed to get mirror repository", "mirrorID", m.ID, "error", err)
-	}
+func (m *Mirror) AfterFind(_ *gorm.DB) error {
 	m.LastSync = time.Unix(m.LastSyncUnix, 0).Local()
 	m.NextSync = time.Unix(m.NextSyncUnix, 0).Local()
 	return nil
@@ -351,35 +346,6 @@ func (m *Mirror) runSync(logger *logx.Logger) ([]*mirrorSyncResult, bool) {
 	return parseRemoteUpdateOutput(logger, output), true
 }
 
-func getMirrorByRepoID(tx *gorm.DB, repoID int64) (*Mirror, error) {
-	m := new(Mirror)
-	err := tx.Where(&Mirror{RepoID: repoID}).First(m).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, MirrorNotExist{RepoID: repoID}
-		}
-		return nil, err
-	}
-	return m, nil
-}
-
-// GetMirrorByRepoID returns mirror information of a repository.
-func GetMirrorByRepoID(repoID int64) (*Mirror, error) {
-	return getMirrorByRepoID(Handle.db, repoID)
-}
-
-func updateMirror(tx *gorm.DB, m *Mirror) error {
-	return tx.Model(m).Select("*").Updates(m).Error
-}
-
-func UpdateMirror(m *Mirror) error {
-	return updateMirror(Handle.db, m)
-}
-
-func DeleteMirrorByRepoID(repoID int64) error {
-	return Handle.db.Where(&Mirror{RepoID: repoID}).Delete(new(Mirror)).Error
-}
-
 // MirrorUpdate checks and updates mirror repositories.
 func MirrorUpdate(logger *logx.Logger) {
 	if taskStatusTable.IsRunning(taskNameMirrorUpdate) {
@@ -390,17 +356,12 @@ func MirrorUpdate(logger *logx.Logger) {
 
 	logger.Debug("Queueing mirrors for update")
 
-	var mirrors []*Mirror
-	if err := Handle.db.Where("next_update_unix <= ?", time.Now().Unix()).Find(&mirrors).Error; err != nil {
+	repoIDs, err := Handle.Mirrors().listDueRepoIDs(context.Background(), logger, time.Now())
+	if err != nil {
 		logger.Error("Failed to queue mirrors for update", "error", err)
 	}
-	for _, m := range mirrors {
-		if m.Repo == nil {
-			logger.Error("Disconnected mirror repository found", "mirrorID", m.ID)
-			continue
-		}
-
-		MirrorQueue.Add(m.RepoID)
+	for _, repoID := range repoIDs {
+		MirrorQueue.Add(repoID)
 	}
 }
 
@@ -408,6 +369,7 @@ func MirrorUpdate(logger *logx.Logger) {
 // TODO: sync more mirrors at same time.
 func SyncMirrors(logger *logx.Logger) {
 	ctx := context.Background()
+	mirrors := Handle.Mirrors()
 
 	// Start listening on new sync requests.
 	for repoID := range MirrorQueue.Queue() {
@@ -415,7 +377,7 @@ func SyncMirrors(logger *logx.Logger) {
 		MirrorQueue.Remove(repoID)
 
 		id, _ := strconv.ParseInt(repoID, 10, 64)
-		m, err := GetMirrorByRepoID(id)
+		m, err := mirrors.GetByRepoID(ctx, id)
 		if err != nil {
 			logger.Error("Failed to get mirror", "repoID", repoID, "error", err)
 			continue
@@ -427,7 +389,7 @@ func SyncMirrors(logger *logx.Logger) {
 		}
 
 		m.ScheduleNextSync()
-		if err = UpdateMirror(m); err != nil {
+		if err = mirrors.Update(ctx, m); err != nil {
 			logger.Error("Failed to update mirror", "repoID", m.RepoID, "error", err)
 			continue
 		}
@@ -575,7 +537,7 @@ func SyncMirrors(logger *logx.Logger) {
 			}
 		}
 
-		if err = Handle.db.Exec("UPDATE mirror SET updated_unix = ? WHERE repo_id = ?", time.Now().Unix(), m.RepoID).Error; err != nil {
+		if err = mirrors.markSynced(ctx, m.RepoID, time.Now()); err != nil {
 			logger.Error("Failed to update mirror sync time", "repoID", m.RepoID, "error", err)
 			continue
 		}

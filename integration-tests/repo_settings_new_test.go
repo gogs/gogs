@@ -186,7 +186,7 @@ func TestRepoSettingsMirror(t *testing.T) {
 		"enablePrune": false,
 	})
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-	stored, err := database.GetMirrorByRepoID(mirror.ID)
+	stored, err := database.Handle.Mirrors().GetByRepoID(t.Context(), mirror.ID)
 	require.NoError(t, err)
 	assert.Equal(t, 24, stored.Interval)
 	assert.False(t, stored.EnablePrune)
@@ -237,7 +237,7 @@ func TestRepoSettingsConvertMirror(t *testing.T) {
 	got, err = getRepository(t, mirror.ID)
 	require.NoError(t, err)
 	assert.False(t, got.IsMirror)
-	_, err = database.GetMirrorByRepoID(mirror.ID)
+	_, err = database.Handle.Mirrors().GetByRepoID(t.Context(), mirror.ID)
 	assert.Error(t, err, "mirror left behind")
 
 	var settings struct {

@@ -560,11 +560,6 @@ func (r *Repository) IssueStats(userID int64, filterMode FilterMode, isPull bool
 	return GetRepoIssueStats(r.ID, userID, filterMode, isPull)
 }
 
-func (r *Repository) GetMirror() (err error) {
-	r.Mirror, err = GetMirrorByRepoID(r.ID)
-	return err
-}
-
 func (r *Repository) repoPath(tx *gorm.DB) string {
 	return RepoPath(r.mustOwner(tx).Name, r.Name)
 }
@@ -2259,41 +2254,6 @@ func CheckRepoStats(logger *logx.Logger) {
 		}
 	}
 	// ***** END: Repository.NumForks *****
-}
-
-type MirrorRepositoryList []*Repository
-
-func (repos MirrorRepositoryList) loadAttributes(tx *gorm.DB) error {
-	if len(repos) == 0 {
-		return nil
-	}
-
-	// Load mirrors.
-	repoIDs := make([]int64, 0, len(repos))
-	for i := range repos {
-		if !repos[i].IsMirror {
-			continue
-		}
-
-		repoIDs = append(repoIDs, repos[i].ID)
-	}
-	mirrors := make([]*Mirror, 0, len(repoIDs))
-	if err := tx.Where("id > 0 AND repo_id IN ?", repoIDs).Find(&mirrors).Error; err != nil {
-		return errors.Newf("find mirrors: %v", err)
-	}
-
-	set := make(map[int64]*Mirror)
-	for i := range mirrors {
-		set[mirrors[i].RepoID] = mirrors[i]
-	}
-	for i := range repos {
-		repos[i].Mirror = set[repos[i].ID]
-	}
-	return nil
-}
-
-func (repos MirrorRepositoryList) LoadAttributes() error {
-	return repos.loadAttributes(Handle.db)
 }
 
 //  __      __         __         .__
