@@ -723,3 +723,11 @@ diffs-container {
   --diffs-light-bg: var(--color-field);
   --diffs-dark-bg: var(--color-field);
 }
+
+/* Pages with a file tree, i.e., the code view and diffs, set data-fullwidth on
+   <html> to widen the navbar, the repository header and the footer to the
+   page, so they line up with the workspace. Brittle if those max-width classes
+   change. */
+html[data-fullwidth] :is(.max-w-6xl, .max-w-7xl) {
+  max-width: none;
+}

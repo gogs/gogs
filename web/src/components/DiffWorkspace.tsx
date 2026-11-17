@@ -40,14 +40,9 @@ import { TREE_THEME_STYLE } from "@/lib/tree-theme";
 import { subUrl } from "@/lib/url";
 import type { RepoCommitSearch } from "@/pages/repo/Commit.search";
 
-// Page-local override of the unique max-width utilities on Navbar, Footer,
-// and RepoHeader. Brittle if those classes change, but keeps the override
-// in one file.
+// The data-fullwidth attribute widens the page chrome, see index.css. These
+// rules only apply to the diff workspace.
 const FULLWIDTH_CSS = `
-  html[data-fullwidth="diff"] .max-w-6xl,
-  html[data-fullwidth="diff"] .max-w-7xl {
-    max-width: none;
-  }
   /* Pierre inlines 8px top/bottom margin on the virtual scroll container. */
   html[data-fullwidth="diff"] .gogs-diff-scroller > div {
     margin-top: 0 !important;

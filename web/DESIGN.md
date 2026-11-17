@@ -86,6 +86,10 @@ The landing and 404/500 pages wrap their content in a faux-terminal frame (round
 
 Strings rendered inside a terminal frame stay in English across all locales, regardless of the active UI language. Real CLI output (`git`, `ls`, `cat`, etc.) doesn't localize. Faux-CLI that does loses authenticity and reads as a translated error page in a costume. Translate the surrounding prose (headings, descriptions, CTAs), but leave command names, prompts, error tokens like `fatal:`, and command output strings untouched.
 
+## Page width
+
+Pages with a file tree, i.e., the code view below the repository root and commit, compare and pull request diffs, use the whole window width. They set `data-fullwidth` on `<html>`, which widens the navbar, the repository header and the footer to match, and keep the 16px or 24px page padding. The file tree sits in its own bordered box beside the content, never flush against the window edge. Other pages stay centered at `max-w-6xl` or `max-w-7xl`.
+
 ## File naming
 
 Two conventions coexist in `web/src/`:

@@ -119,6 +119,14 @@ export function RepoCode({
   if (data.file) title = `${data.file.name} - ${fullName}`;
   else if (!data.empty && data.ref !== data.defaultBranch) title += ` @ ${data.ref}`;
   usePageTitle(title);
+  // Files and directories below the root show the file tree and widen the page
+  // chrome to line up with it, like diffs.
+  const wide = !summary && !data.empty;
+  useEffect(() => {
+    if (!wide) return;
+    document.documentElement.setAttribute("data-fullwidth", "code");
+    return () => document.documentElement.removeAttribute("data-fullwidth");
+  }, [wide]);
 
   if (data.empty) {
     return (
@@ -396,13 +404,13 @@ export function RepoCode({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <RepoHeader repo={repo} activeTab="code" />
-      <div className={cn("flex min-h-0 w-full flex-1", !treeShown && "mx-auto max-w-7xl")}>
+      <div className="flex min-h-0 w-full flex-1 gap-4 px-4 sm:px-6">
         {treeShown ? (
           <ResizableSidebar
             defaultWidth={300}
             minWidth={220}
             maxWidth={480}
-            className="glass-bar hidden border-r border-(--color-border) lg:sticky lg:top-[calc(3.5rem+1px)] lg:flex lg:h-[calc(100dvh-3.5rem-1px)] lg:self-start"
+            className="glass hidden overflow-hidden rounded-md border border-(--color-border) lg:sticky lg:top-[calc(3.5rem+1px+1.5rem)] lg:my-6 lg:flex lg:h-[calc(100dvh-3.5rem-1px-3rem)] lg:self-start"
           >
             <div className="flex flex-col gap-2 p-3">
               <div className="flex items-center gap-2">
@@ -439,7 +447,7 @@ export function RepoCode({
             </div>
           </ResizableSidebar>
         ) : null}
-        <main className={cn("min-w-0 flex-1 px-4 py-6 sm:px-6", treeShown && "lg:pt-3 lg:pl-3")}>
+        <main className="min-w-0 flex-1 py-6">
           <h1 className="sr-only">{data.path}</h1>
           <div className="mb-3 flex flex-wrap items-center gap-2">
             {withTree && !treeOpen ? (
