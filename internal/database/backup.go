@@ -21,6 +21,7 @@ import (
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/database/migrations"
 	"gogs.io/gogs/internal/osx"
 )
 
@@ -108,8 +109,6 @@ func dumpTable(ctx context.Context, db *gorm.DB, table any, w io.Writer) error {
 }
 
 func dumpLegacyTables(ctx context.Context, logger *logx.Logger, dirPath string, verbose bool) error {
-	// Purposely create a local variable to not modify global variable
-	legacyTables := append(legacyTables, new(Version))
 	for _, table := range legacyTables {
 		select {
 		case <-ctx.Done():
@@ -139,9 +138,16 @@ func dumpLegacyTables(ctx context.Context, logger *logx.Logger, dirPath string, 
 	return nil
 }
 
-// ImportDatabase imports data from backup archive in JSON Lines format.
+// ImportDatabase migrates the database to the current schema version and
+// replaces the rows of each table with those in the backup archive in JSON Lines
+// format.
 func ImportDatabase(ctx context.Context, logger *logx.Logger, db *gorm.DB, dirPath string, verbose bool) error {
-	err := importLegacyTables(ctx, logger, dirPath, verbose)
+	err := migrations.Migrate(logger, db.WithContext(ctx))
+	if err != nil {
+		return errors.Wrap(err, "migrate")
+	}
+
+	err = importLegacyTables(ctx, logger, dirPath, verbose)
 	if err != nil {
 		return errors.Wrap(err, "import legacy tables")
 	}
@@ -182,14 +188,9 @@ func ImportDatabase(ctx context.Context, logger *logx.Logger, db *gorm.DB, dirPa
 }
 
 func importTable(ctx context.Context, db *gorm.DB, table any, r io.Reader) error {
-	err := db.WithContext(ctx).Migrator().DropTable(table)
+	err := db.WithContext(ctx).Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(table).Error
 	if err != nil {
-		return errors.Wrap(err, "drop table")
-	}
-
-	err = db.WithContext(ctx).Migrator().AutoMigrate(table)
-	if err != nil {
-		return errors.Wrap(err, "auto migrate")
+		return errors.Wrap(err, "delete rows")
 	}
 
 	s, err := schema.Parse(table, &sync.Map{}, db.NamingStrategy)
@@ -236,8 +237,6 @@ func importLegacyTables(ctx context.Context, logger *logx.Logger, dirPath string
 		"milestone": true,
 	}
 
-	// Purposely create a local variable to not modify global variable
-	legacyTables := append(legacyTables, new(Version))
 	for _, table := range legacyTables {
 		select {
 		case <-ctx.Done():
@@ -255,17 +254,15 @@ func importLegacyTables(ctx context.Context, logger *logx.Logger, dirPath string
 			logger.Debug("Importing table", "tableName", tableName)
 		}
 
-		if err := x.DropTables(table); err != nil {
-			return errors.Newf("drop table %q: %v", tableName, err)
-		} else if err = x.Sync2(table); err != nil {
-			return errors.Newf("sync table %q: %v", tableName, err)
+		rawTableName := x.TableName(table)
+		if _, err := x.Exec("DELETE FROM `" + rawTableName + "`"); err != nil {
+			return errors.Newf("delete rows of table %q: %v", tableName, err)
 		}
 
 		f, err := os.Open(tableFile)
 		if err != nil {
 			return errors.Newf("open JSON file: %v", err)
 		}
-		rawTableName := x.TableName(table)
 		_, isInsertProcessor := table.(xorm.BeforeInsertProcessor)
 		scanner := bufio.NewScanner(f)
 		for scanner.Scan() {
