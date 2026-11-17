@@ -271,7 +271,7 @@ func startProcessSpan(ctx context.Context, logger *logx.Logger, name string, exp
 	// Gogs passes the repository and the pusher to Git, which passes them on
 	// to hooks.
 	if repoID, err := strconv.ParseInt(os.Getenv(database.EnvRepoID), 10, 64); err == nil {
-		telemetry.SetRepository(ctx, repoID, os.Getenv(database.EnvRepoOwnerName)+"/"+os.Getenv(database.EnvRepoName))
+		telemetry.SetRepository(ctx, repoID)
 	}
 	if userID, err := strconv.ParseInt(os.Getenv(database.EnvAuthUserID), 10, 64); err == nil {
 		telemetry.SetUser(ctx, userID, os.Getenv(database.EnvAuthUserName))

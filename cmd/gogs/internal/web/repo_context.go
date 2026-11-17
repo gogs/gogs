@@ -105,7 +105,7 @@ func withRepoContext(logger *logx.Logger, c flamego.Context, user *database.User
 		return
 	}
 
-	telemetry.SetRepository(ctx, repo.ID, owner.Name+"/"+repo.Name)
+	telemetry.SetRepository(ctx, repo.ID)
 	c.Map(&repoContext{
 		Owner:  owner,
 		Repo:   repo,

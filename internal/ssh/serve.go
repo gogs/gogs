@@ -108,7 +108,7 @@ func Serve(ctx context.Context, logger *logx.Logger, opts ServeOptions) error {
 	}
 	repo.Owner = owner
 	repo.Owner = owner
-	telemetry.SetRepository(ctx, repo.ID, owner.Name+"/"+repo.Name)
+	telemetry.SetRepository(ctx, repo.ID)
 
 	requestMode, ok := allowedCommands[verb]
 	if !ok {
@@ -128,8 +128,8 @@ func Serve(ctx context.Context, logger *logx.Logger, opts ServeOptions) error {
 		return serveError("Invalid key ID", "Invalid key ID '%d': %v", opts.KeyID, err)
 	}
 	trace.SpanFromContext(ctx).SetAttributes(
-		attribute.Int64("gogs.ssh.key.id", key.ID),
-		attribute.Bool("gogs.ssh.key.deploy", key.IsDeployKey()),
+		attribute.Int64("ssh.key.id", key.ID),
+		attribute.Bool("ssh.key.deploy", key.IsDeployKey()),
 	)
 
 	if requestMode == database.AccessModeWrite || repo.IsPrivate {

@@ -58,7 +58,7 @@ func repoAssignment() flamego.Handler {
 		}
 
 		c.Repo.Repository = repo
-		telemetry.SetRepository(c.Request().Context(), repo.ID, owner.Name+"/"+repo.Name)
+		telemetry.SetRepository(c.Request().Context(), repo.ID)
 	}
 }
 
