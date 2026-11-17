@@ -410,7 +410,7 @@ export function RepoCode({
             defaultWidth={300}
             minWidth={220}
             maxWidth={480}
-            className="glass hidden overflow-hidden rounded-md border border-(--color-border) lg:sticky lg:top-[calc(3.5rem+1px+1.5rem)] lg:my-6 lg:flex lg:h-[calc(100dvh-3.5rem-1px-3rem)] lg:self-start"
+            className="glass hidden overflow-hidden rounded-md border border-(--color-border) lg:sticky lg:top-[calc(3.5rem+1px+1.5rem)] lg:my-6 lg:flex lg:max-h-[calc(100dvh-3.5rem-1px-3rem)] lg:self-start"
           >
             <div className="flex flex-col gap-2 p-3">
               <div className="flex items-center gap-2">
@@ -436,7 +436,7 @@ export function RepoCode({
               </div>
               {goToFile()}
             </div>
-            <div className="min-h-0 flex-1">
+            <div className="flex min-h-0 flex-col pb-2">
               <RepoFileTree
                 owner={repo.owner}
                 name={repo.name}
@@ -449,7 +449,7 @@ export function RepoCode({
         ) : null}
         <main className="min-w-0 flex-1 py-6">
           <h1 className="sr-only">{data.path}</h1>
-          <div className="mb-3 flex flex-wrap items-center gap-2">
+          <div className="mb-3 flex flex-wrap items-center gap-2 glass glass-ui:border glass-ui:px-3 glass-ui:py-2">
             {withTree && !treeOpen ? (
               <Tooltip>
                 <TooltipTrigger asChild>
