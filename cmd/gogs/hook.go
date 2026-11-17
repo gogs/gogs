@@ -74,14 +74,14 @@ func runHookPreReceive(ctx context.Context, cmd *cli.Command) error {
 	isWiki := strings.Contains(os.Getenv(database.EnvRepoCustomHooksPath), ".wiki.git/")
 
 	buf := bytes.NewBuffer(nil)
-	var refs []string
-	defer func() { processSpan.SetAttributes(attribute.StringSlice("git.refs", refs)) }()
+	var refCount int
+	defer func() { processSpan.SetAttributes(attribute.Int("git.refs.count", refCount)) }()
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		buf.Write(scanner.Bytes())
 		buf.WriteByte('\n')
 		if fields := bytes.Fields(scanner.Bytes()); len(fields) == 3 {
-			refs = append(refs, string(fields[2]))
+			refCount++
 		}
 
 		if isWiki {
@@ -191,7 +191,6 @@ func runHookUpdate(ctx context.Context, cmd *cli.Command) error {
 	// from slowing down every push.
 	_ = startProcessSpan(ctx, logger, "hook update", 300*time.Millisecond)
 	defer endProcessSpan()
-	processSpan.SetAttributes(attribute.StringSlice("git.refs", args[:1]))
 
 	var hookCmd *exec.Cmd
 	if conf.IsWindowsRuntime() {
