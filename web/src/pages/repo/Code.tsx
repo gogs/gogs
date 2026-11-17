@@ -1134,15 +1134,9 @@ function FileView({
             </ViewModeButton>
           </div>
         ) : null}
-        <h2 id="repo-file-heading" className="flex min-w-0 items-center gap-2 text-sm">
-          {file.isSymlink ? (
-            <FileSymlink className="size-4 shrink-0 text-(--color-muted-foreground)" aria-hidden />
-          ) : file.isReadme ? (
-            <BookOpen className="size-4 shrink-0 text-(--color-muted-foreground)" aria-hidden />
-          ) : (
-            <FileIcon name={file.name} />
-          )}
-          <span className="font-semibold wrap-anywhere">{file.name}</span>
+        {/* The breadcrumb above shows the file name. */}
+        <h2 id="repo-file-heading" className="sr-only">
+          {file.name}
         </h2>
         <span className="font-mono text-xs text-(--color-muted-foreground)">
           {lineCount

@@ -1260,7 +1260,6 @@ export interface RepoFile {
   content?: string;
   html?: string;
   notebook?: RepoNotebook;
-  isReadme: boolean;
   // isSymlink is set for a symbolic link, whose content is its target.
   isSymlink: boolean;
   // tabWidth is the width of a tab that .editorconfig sets for the file.
