@@ -4,6 +4,7 @@ import { Trans, useTranslation } from "react-i18next";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { webContext } from "@/lib/context";
 import { readGlass, setGlass } from "@/lib/glass";
 import { type Theme, useTheme } from "@/lib/theme-context";
@@ -121,6 +122,7 @@ export function SettingsMenu() {
             type="button"
             role="switch"
             aria-checked={glass}
+            aria-describedby="glass-experimental"
             onClick={() => {
               setGlass(!glass);
               setGlassState(!glass);
@@ -128,12 +130,16 @@ export function SettingsMenu() {
             className="mt-1 flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-(--color-foreground) outline-none hover:bg-(--color-surface) focus-visible:ring-1 focus-visible:ring-(--color-ring)"
           >
             <Blend className="size-4 text-(--color-muted-foreground)" aria-hidden />
-            <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
-              {t("glass_effect")}
-              <span className="inline-flex items-center gap-1 rounded-full border border-(--color-border) px-2 text-xs/5 font-medium text-(--color-muted-foreground)">
-                <FlaskConical className="size-3" aria-hidden />
-                {t("experiment")}
-              </span>
+            <span className="flex min-w-0 flex-1 items-center gap-1.5">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="underline decoration-(--color-muted-foreground) decoration-dotted underline-offset-4">
+                    {t("glass_effect")}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{t("experimental_feature")}</TooltipContent>
+              </Tooltip>
+              <FlaskConical className="size-3.5 text-(--color-muted-foreground)" aria-hidden />
             </span>
             <span
               aria-hidden
@@ -150,6 +156,9 @@ export function SettingsMenu() {
               />
             </span>
           </button>
+          <span id="glass-experimental" className="sr-only">
+            {t("experimental_feature")}
+          </span>
         </div>
 
         <div className="my-1 h-px bg-(--color-border)" />
