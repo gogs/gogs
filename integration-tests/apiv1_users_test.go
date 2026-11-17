@@ -211,7 +211,7 @@ func TestAPIV1UserKeys(t *testing.T) {
 
 	status, body = api.do(http.MethodDelete, "/api/v1/user/keys/"+apiV1Itoa(created.ID), nil)
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-	_, err := database.GetPublicKeyByID(created.ID)
+	_, err := database.Handle.PublicKeys().GetByID(t.Context(), created.ID)
 	assert.True(t, database.IsErrKeyNotExist(err), "key not deleted: %v", err)
 
 	t.Run("deleted key", func(t *testing.T) {

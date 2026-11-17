@@ -1,11 +1,13 @@
 package database
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/osx"
@@ -18,6 +20,110 @@ type PublicKeysStore struct {
 
 func newPublicKeysStore(db *gorm.DB) *PublicKeysStore {
 	return &PublicKeysStore{db: db}
+}
+
+// Add adds a new public key of given user to the database and the
+// "authorized_keys" file. The content must already be checked by
+// CheckPublicKeyString. It returns ErrKeyAlreadyExist when the content is used
+// by another user key, and ErrKeyNameAlreadyUsed when the user has a key of
+// the same name.
+func (s *PublicKeysStore) Add(ctx context.Context, logger *logx.Logger, ownerID int64, name, content string) (*PublicKey, error) {
+	db := s.db.WithContext(ctx)
+	if err := checkKeyContent(db, content); err != nil {
+		return nil, err
+	}
+
+	var count int64
+	err := db.Model(new(PublicKey)).Where("owner_id = ? AND name = ?", ownerID, name).Count(&count).Error
+	if err != nil {
+		return nil, errors.Wrap(err, "count keys by name")
+	} else if count > 0 {
+		return nil, ErrKeyNameAlreadyUsed{ownerID, name}
+	}
+
+	key := &PublicKey{
+		OwnerID: ownerID,
+		Name:    name,
+		Content: content,
+		Mode:    AccessModeWrite,
+		Type:    KeyTypeUser,
+	}
+	err = db.Transaction(func(tx *gorm.DB) error {
+		return addKey(logger, tx, key)
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "add key")
+	}
+	return key, nil
+}
+
+// GetByID returns the public key with given ID. It returns ErrKeyNotExist when
+// not found.
+func (s *PublicKeysStore) GetByID(ctx context.Context, id int64) (*PublicKey, error) {
+	key := new(PublicKey)
+	err := s.db.WithContext(ctx).Where("id = ?", id).First(key).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrKeyNotExist{id}
+		}
+		return nil, err
+	}
+	return key, nil
+}
+
+// GetByContent returns the public key whose content starts with given
+// content, so that the comment of the stored key is ignored. It returns
+// ErrKeyNotExist when not found.
+func (s *PublicKeysStore) GetByContent(ctx context.Context, content string) (*PublicKey, error) {
+	key := new(PublicKey)
+	err := s.db.WithContext(ctx).Where("content LIKE ?", content+"%").First(key).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrKeyNotExist{}
+		}
+		return nil, err
+	}
+	return key, nil
+}
+
+// List returns all public keys of given user.
+func (s *PublicKeysStore) List(ctx context.Context, ownerID int64) ([]*PublicKey, error) {
+	keys := make([]*PublicKey, 0, 5)
+	return keys, s.db.WithContext(ctx).Where("owner_id = ?", ownerID).Find(&keys).Error
+}
+
+// Touch marks the public key with given ID as used now.
+func (s *PublicKeysStore) Touch(ctx context.Context, id int64) error {
+	return s.db.WithContext(ctx).
+		Model(new(PublicKey)).
+		Where("id = ?", id).
+		Update("updated_unix", s.db.NowFunc().Unix()).
+		Error
+}
+
+// Delete deletes the public key with given ID from the database and the
+// "authorized_keys" file. Only the owner of the key and site admins can delete
+// it, and others get ErrKeyAccessDenied. Deleting a key that does not exist is
+// not an error.
+func (s *PublicKeysStore) Delete(ctx context.Context, logger *logx.Logger, doer *User, id int64) error {
+	key, err := s.GetByID(ctx, id)
+	if err != nil {
+		if IsErrKeyNotExist(err) {
+			return nil
+		}
+		return errors.Wrap(err, "get key")
+	}
+
+	if !doer.IsAdmin && doer.ID != key.OwnerID {
+		return ErrKeyAccessDenied{doer.ID, key.ID, "public"}
+	}
+
+	if err = deletePublicKeys(s.db.WithContext(ctx), id); err != nil {
+		return errors.Wrap(err, "delete key")
+	}
+
+	logger.Debug("Rewriting authorized_keys file")
+	return s.RewriteAuthorizedKeys()
 }
 
 func authorizedKeysPath() string {

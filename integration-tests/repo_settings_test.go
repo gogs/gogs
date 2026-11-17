@@ -431,7 +431,7 @@ func repoSettingsPublicKey(t *testing.T) string {
 func repoSettingsSeedDeployKey(t *testing.T, repo *Repository, name string) *database.DeployKey {
 	t.Helper()
 
-	key, err := database.AddDeployKey(logger, repo.ID, name, repoSettingsPublicKey(t))
+	key, err := database.Handle.DeployKeys().Add(t.Context(), logger, repo.ID, name, repoSettingsPublicKey(t))
 	require.NoError(t, err)
 	return key
 }
@@ -453,12 +453,12 @@ func TestRepoSettingsDeployKeys(t *testing.T) {
 	status, body = c.do(http.MethodPost, path, map[string]any{"title": "again", "content": content})
 	require.Equal(t, http.StatusUnprocessableEntity, status, "response: %s", body)
 
-	keysOfRepo, err := database.ListDeployKeys(repo.ID)
+	keysOfRepo, err := database.Handle.DeployKeys().List(t.Context(), repo.ID)
 	require.NoError(t, err)
 	require.Len(t, keysOfRepo, 1)
 	key := keysOfRepo[0]
 	assert.Equal(t, "deploy", key.Name)
-	stored, err := database.GetPublicKeyByID(key.KeyID)
+	stored, err := database.Handle.PublicKeys().GetByID(t.Context(), key.KeyID)
 	require.NoError(t, err)
 	assert.Equal(t, content, strings.TrimSpace(stored.Content))
 
@@ -484,12 +484,12 @@ func TestRepoSettingsDeployKeys(t *testing.T) {
 	// Keys of other repositories are not found.
 	status, body = c.do(http.MethodDelete, path+"/"+strconv.FormatInt(otherKey.ID, 10), repoSettingsNoBody)
 	require.Equal(t, http.StatusNotFound, status, "response: %s", body)
-	_, err = database.GetDeployKeyByID(otherKey.ID)
+	_, err = database.Handle.DeployKeys().GetByID(t.Context(), otherKey.ID)
 	require.NoError(t, err)
 
 	status, body = c.do(http.MethodDelete, path+"/"+strconv.FormatInt(key.ID, 10), repoSettingsNoBody)
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-	_, err = database.GetDeployKeyByID(key.ID)
+	_, err = database.Handle.DeployKeys().GetByID(t.Context(), key.ID)
 	assert.True(t, database.IsErrDeployKeyNotExist(err), "key not deleted: %v", err)
 	resp = keys{}
 	c.doJSON(http.MethodGet, path, nil, http.StatusOK, &resp)
@@ -539,7 +539,7 @@ func TestRepoSettingsBranches(t *testing.T) {
 		c.doJSON(http.MethodGet, path, nil, http.StatusOK, &got)
 		assert.Equal(t, protection{Name: branch, Protected: true, RequirePullRequest: true}, got)
 
-		stored, err := database.GetProtectBranchOfRepoByName(repo.ID, branch)
+		stored, err := database.Handle.ProtectBranches().GetByName(t.Context(), repo.ID, branch)
 		require.NoError(t, err)
 		assert.True(t, stored.Protected)
 		assert.True(t, stored.RequirePullRequest)

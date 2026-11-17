@@ -80,7 +80,7 @@ func TestAPIV1AdminUsers(t *testing.T) {
 		var resp apiV1PublicKeyResp
 		admin.doJSON(http.MethodPost, "/api/v1/admin/users/"+name+"/keys", map[string]any{"title": title, "key": key}, http.StatusCreated, &resp)
 		assert.Equal(t, title, resp.Title)
-		got, err := database.GetPublicKeyByID(resp.ID)
+		got, err := database.Handle.PublicKeys().GetByID(t.Context(), resp.ID)
 		require.NoError(t, err)
 		assert.Equal(t, created.ID, got.OwnerID)
 		assert.Equal(t, key, got.Content)

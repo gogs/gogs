@@ -1,8 +1,10 @@
 package web
 
 import (
+	"bytes"
 	"cmp"
 	"html"
+	"io"
 	"net/http"
 	"net/url"
 	"path"
@@ -55,8 +57,9 @@ func withRepoEditor(c flamego.Context, repoCtx *repoContext) {
 
 // editableBranch reports whether files of the branch can be changed in the
 // browser: it exists and does not take changes only through pull requests.
-func editableBranch(c flamego.Context, repoCtx *repoContext, gitRepo *git.Repository, branch string) bool {
-	return branch != "" && gitRepo.HasBranch(c.Request().Context(), branch) && !repoCtx.Repo.IsBranchRequirePullRequest(branch)
+func editableBranch(c flamego.Context, logger *logx.Logger, repoCtx *repoContext, gitRepo *git.Repository, branch string) bool {
+	ctx := c.Request().Context()
+	return branch != "" && gitRepo.HasBranch(ctx, branch) && !database.Handle.ProtectBranches().RequiresPullRequest(ctx, logger, repoCtx.Repo.ID, branch)
 }
 
 type repoEditorTarget struct {
@@ -99,7 +102,7 @@ func getRepoEditorTarget(c flamego.Context, logger *logx.Logger, repoCtx *repoCo
 			break
 		}
 	}
-	if !editableBranch(c, repoCtx, gitRepo, branch) {
+	if !editableBranch(c, logger, repoCtx, gitRepo, branch) {
 		return http.StatusNotFound, nil, errors.New("branch does not exist")
 	}
 	// 🚨 SECURITY: Prevent path traversal.
@@ -180,7 +183,7 @@ func getRepoEditorIndent(c flamego.Context, logger *logx.Logger, repoCtx *repoCo
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
 	}
 	branch := c.Query("branch")
-	if !editableBranch(c, repoCtx, gitRepo, branch) {
+	if !editableBranch(c, logger, repoCtx, gitRepo, branch) {
 		return http.StatusNotFound, nil, errors.New("branch does not exist")
 	}
 	commit, err := gitRepo.BranchCommit(ctx, branch)
@@ -233,8 +236,8 @@ type repoEditorCommitResult struct {
 
 // checkEditorCommit checks the branches of a commit request, and returns the
 // response for a request that cannot be committed, or nil.
-func checkEditorCommit(c flamego.Context, l i18n.Locale, repoCtx *repoContext, gitRepo *git.Repository, req *repoEditorCommitRequest) (statusCode int, resp any, err error) {
-	if !editableBranch(c, repoCtx, gitRepo, req.Branch) {
+func checkEditorCommit(c flamego.Context, logger *logx.Logger, l i18n.Locale, repoCtx *repoContext, gitRepo *git.Repository, req *repoEditorCommitRequest) (statusCode int, resp any, err error) {
+	if !editableBranch(c, logger, repoCtx, gitRepo, req.Branch) {
 		return http.StatusNotFound, nil, errors.New("branch does not exist")
 	}
 	if utf8.RuneCountInString(req.Summary) > 100 {
@@ -335,7 +338,7 @@ func postRepoEditorFile(c flamego.Context, logger *logx.Logger, l i18n.Locale, v
 		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
 	}
-	if statusCode, resp, err = checkEditorCommit(c, l, repoCtx, gitRepo, &req.repoEditorCommitRequest); statusCode != 0 {
+	if statusCode, resp, err = checkEditorCommit(c, logger, l, repoCtx, gitRepo, &req.repoEditorCommitRequest); statusCode != 0 {
 		return statusCode, resp, err
 	}
 	commit, err := gitRepo.BranchCommit(ctx, req.Branch)
@@ -445,7 +448,7 @@ func postRepoEditorDelete(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
 	}
-	if statusCode, resp, err = checkEditorCommit(c, l, repoCtx, gitRepo, &req.repoEditorCommitRequest); statusCode != 0 {
+	if statusCode, resp, err = checkEditorCommit(c, logger, l, repoCtx, gitRepo, &req.repoEditorCommitRequest); statusCode != 0 {
 		return statusCode, resp, err
 	}
 	commit, err := gitRepo.BranchCommit(ctx, req.Branch)
@@ -533,7 +536,7 @@ func postRepoEditorUpload(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
 	}
-	if statusCode, resp, err = checkEditorCommit(c, l, repoCtx, gitRepo, &req.repoEditorCommitRequest); statusCode != 0 {
+	if statusCode, resp, err = checkEditorCommit(c, logger, l, repoCtx, gitRepo, &req.repoEditorCommitRequest); statusCode != 0 {
 		return statusCode, resp, err
 	}
 	commit, err := gitRepo.BranchCommit(ctx, req.Branch)
@@ -560,7 +563,7 @@ func postRepoEditorUpload(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 		}
 	}
 
-	uploads, err := database.GetUploadsByUUIDs(req.Files)
+	uploads, err := database.Handle.Uploads().ListByUUIDs(ctx, req.Files)
 	if err != nil {
 		logger.Error("Failed to get uploads", "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get uploads")
@@ -591,7 +594,7 @@ func postRepoEditorUploadFile(c flamego.Context, logger *logx.Logger, l i18n.Loc
 	}
 	defer func() { _ = f.File.Close() }()
 
-	upload, err := database.NewUpload(f.Header.Filename, f.Head, f.File)
+	upload, err := database.Handle.Uploads().New(c.Request().Context(), f.Header.Filename, io.MultiReader(bytes.NewReader(f.Head), f.File))
 	if err != nil {
 		logger.Error("Failed to store upload", "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "store upload")
@@ -601,7 +604,7 @@ func postRepoEditorUploadFile(c flamego.Context, logger *logx.Logger, l i18n.Loc
 
 // deleteRepoEditorUploadFile removes a stored file that will not be committed.
 func deleteRepoEditorUploadFile(c flamego.Context, logger *logx.Logger) (statusCode int, resp any, err error) {
-	if err = database.DeleteUploadByUUID(c.Param("uuid")); err != nil {
+	if err = database.Handle.Uploads().DeleteByUUID(c.Request().Context(), c.Param("uuid")); err != nil {
 		logger.Error("Failed to delete upload", "uploadUUID", c.Param("uuid"), "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete upload")
 	}

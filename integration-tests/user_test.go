@@ -95,7 +95,7 @@ func TestSignInWithTwoFactor(t *testing.T) {
 		require.Equal(t, http.StatusOK, status, "response: %s", body)
 		assert.Equal(t, u.Name, c.username())
 
-		recoveryCodes, err := database.GetRecoveryCodesByUserID(u.ID)
+		recoveryCodes, err := database.Handle.TwoFactors().ListRecoveryCodes(t.Context(), u.ID)
 		require.NoError(t, err)
 		for _, rc := range recoveryCodes {
 			assert.Equal(t, rc.Code == code, rc.IsUsed, "recovery code %q", rc.Code)

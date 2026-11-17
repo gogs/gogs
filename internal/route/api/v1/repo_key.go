@@ -16,7 +16,7 @@ func composeDeployKeysAPILink(repoPath string) string {
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories-Deploy-Keys#list-deploy-keys
 func listDeployKeys(c *apiContext) {
-	keys, err := database.ListDeployKeys(c.Repo.Repository.ID)
+	keys, err := database.Handle.DeployKeys().List(c.Request().Context(), c.Repo.Repository.ID)
 	if err != nil {
 		c.Error(err, "list deploy keys")
 		return
@@ -25,10 +25,6 @@ func listDeployKeys(c *apiContext) {
 	apiLink := composeDeployKeysAPILink(c.Repo.Owner.Name + "/" + c.Repo.Repository.Name)
 	apiKeys := make([]*types.RepositoryDeployKey, len(keys))
 	for i := range keys {
-		if err = keys[i].GetContent(); err != nil {
-			c.Error(err, "get content")
-			return
-		}
 		apiKeys[i] = toDeployKey(apiLink, keys[i])
 	}
 
@@ -37,7 +33,7 @@ func listDeployKeys(c *apiContext) {
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories-Deploy-Keys#get-a-deploy-key
 func getDeployKey(c *apiContext) {
-	key, err := database.GetDeployKeyByID(c.ParamInt64("id"))
+	key, err := database.Handle.DeployKeys().GetByID(c.Request().Context(), c.ParamInt64("id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get deploy key by ID")
 		return
@@ -45,11 +41,6 @@ func getDeployKey(c *apiContext) {
 
 	if key.RepoID != c.Repo.Repository.ID {
 		c.NotFound()
-		return
-	}
-
-	if err = key.GetContent(); err != nil {
-		c.Error(err, "get content")
 		return
 	}
 
@@ -89,20 +80,19 @@ func createDeployKey(c *apiContext, form createDeployKeyRequest) {
 		return
 	}
 
-	key, err := database.AddDeployKey(c.Logger, c.Repo.Repository.ID, form.Title, content)
+	key, err := database.Handle.DeployKeys().Add(c.Request().Context(), c.Logger, c.Repo.Repository.ID, form.Title, content)
 	if err != nil {
 		handleAddKeyError(c, err)
 		return
 	}
 
-	key.Content = content
 	apiLink := composeDeployKeysAPILink(c.Repo.Owner.Name + "/" + c.Repo.Repository.Name)
 	c.JSON(http.StatusCreated, toDeployKey(apiLink, key))
 }
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories-Deploy-Keys#remove-a-deploy-key
 func deleteDeploykey(c *apiContext) {
-	key, err := database.GetDeployKeyByID(c.ParamInt64("id"))
+	key, err := database.Handle.DeployKeys().GetByID(c.Request().Context(), c.ParamInt64("id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get deploy key by ID")
 		return
@@ -113,7 +103,7 @@ func deleteDeploykey(c *apiContext) {
 		return
 	}
 
-	if err := database.DeleteDeployKey(c.Logger, c.User, key.ID); err != nil {
+	if err := database.Handle.DeployKeys().Delete(c.Request().Context(), c.Logger, c.User, key.ID); err != nil {
 		if database.IsErrKeyAccessDenied(err) {
 			c.ErrorStatus(http.StatusForbidden, errors.New("You do not have access to this key"))
 		} else {

@@ -654,7 +654,7 @@ func TestRepoCodeEditor(t *testing.T) {
 
 		status, body := ownerClient.do(http.MethodDelete, api+"/editor/uploads/"+dropped, nil)
 		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-		_, err := database.GetUploadByUUID(dropped)
+		_, err := database.Handle.Uploads().GetByUUID(t.Context(), dropped)
 		var notExist database.ErrUploadNotExist
 		assert.ErrorAs(t, err, &notExist)
 

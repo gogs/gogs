@@ -574,8 +574,8 @@ func deleteRepoCollaborator(c flamego.Context, logger *logx.Logger, rc *repoAdmi
 	return http.StatusNoContent, nil, nil
 }
 
-func getRepoDeployKeys(logger *logx.Logger, rc *repoAdminContext) (statusCode int, resp any, err error) {
-	keys, err := database.ListDeployKeys(rc.Repo.ID)
+func getRepoDeployKeys(c flamego.Context, logger *logx.Logger, rc *repoAdminContext) (statusCode int, resp any, err error) {
+	keys, err := database.Handle.DeployKeys().List(c.Request().Context(), rc.Repo.ID)
 	if err != nil {
 		logger.Error("Failed to list deploy keys", "repoID", rc.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list deploy keys")
@@ -592,13 +592,13 @@ func getRepoDeployKeys(logger *logx.Logger, rc *repoAdminContext) (statusCode in
 }
 
 // postRepoDeployKey gives an SSH key read access to the repository.
-func postRepoDeployKey(logger *logx.Logger, l i18n.Locale, rc *repoAdminContext, req userSSHKeyRequest) (statusCode int, resp any, err error) {
+func postRepoDeployKey(c flamego.Context, logger *logx.Logger, l i18n.Locale, rc *repoAdminContext, req userSSHKeyRequest) (statusCode int, resp any, err error) {
 	content, err := database.CheckPublicKeyString(logger, req.Content)
 	if err != nil {
 		msg := l.Tr("form.invalid_ssh_key", err.Error())
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
 	}
-	if _, err = database.AddDeployKey(logger, rc.Repo.ID, req.SSHTitle, content); err != nil {
+	if _, err = database.Handle.DeployKeys().Add(c.Request().Context(), logger, rc.Repo.ID, req.SSHTitle, content); err != nil {
 		var msg string
 		switch {
 		case database.IsErrKeyAlreadyExist(err), database.IsErrDeployKeyAlreadyExist(err):
@@ -618,7 +618,7 @@ func postRepoDeployKey(logger *logx.Logger, l i18n.Locale, rc *repoAdminContext,
 // repositories are not found.
 func deleteRepoDeployKey(c flamego.Context, logger *logx.Logger, viewer *database.User, rc *repoAdminContext) (statusCode int, resp any, err error) {
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
-	key, err := database.GetDeployKeyByID(id)
+	key, err := database.Handle.DeployKeys().GetByID(c.Request().Context(), id)
 	if err != nil {
 		if database.IsErrDeployKeyNotExist(err) {
 			return http.StatusNotFound, nil, errors.New("key not found")
@@ -629,7 +629,7 @@ func deleteRepoDeployKey(c flamego.Context, logger *logx.Logger, viewer *databas
 	if key.RepoID != rc.Repo.ID {
 		return http.StatusNotFound, nil, errors.New("key not found")
 	}
-	if err = database.DeleteDeployKey(logger, viewer, key.ID); err != nil {
+	if err = database.Handle.DeployKeys().Delete(c.Request().Context(), logger, viewer, key.ID); err != nil {
 		logger.Error("Failed to delete deploy key", "keyID", key.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete deploy key")
 	}

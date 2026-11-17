@@ -46,7 +46,7 @@ func sshUserKey(t *testing.T, userID int64) *sshKey {
 	t.Helper()
 
 	key, content := sshNewKey(t)
-	_, err := database.AddPublicKey(logger, userID, UniqueName("key-"), content)
+	_, err := database.Handle.PublicKeys().Add(t.Context(), logger, userID, UniqueName("key-"), content)
 	require.NoError(t, err)
 	return key
 }
@@ -56,7 +56,7 @@ func sshDeployKey(t *testing.T, repo *Repository) *sshKey {
 	t.Helper()
 
 	key, content := sshNewKey(t)
-	_, err := database.AddDeployKey(logger, repo.ID, UniqueName("deploy-"), content)
+	_, err := database.Handle.DeployKeys().Add(t.Context(), logger, repo.ID, UniqueName("deploy-"), content)
 	require.NoError(t, err)
 	return key
 }
@@ -231,7 +231,7 @@ func TestSSHServ(t *testing.T) {
 	remoteURL := fmt.Sprintf("ssh://git@localhost/%s/%s.git", repo.Owner, repo.Name)
 	addKey := func(userID int64) int64 {
 		_, content := sshNewKey(t)
-		key, err := database.AddPublicKey(logger, userID, UniqueName("key-"), content)
+		key, err := database.Handle.PublicKeys().Add(t.Context(), logger, userID, UniqueName("key-"), content)
 		require.NoError(t, err)
 		return key.ID
 	}

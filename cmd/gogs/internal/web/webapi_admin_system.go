@@ -192,7 +192,7 @@ var adminOperations = map[string]struct {
 	"delete-repo-archives":  {func(*logx.Logger) error { return database.DeleteRepositoryArchives() }, "admin.dashboard.delete_repo_archives_success"},
 	"delete-missing-repos":  {database.DeleteMissingRepositories, "admin.dashboard.delete_missing_repos_success"},
 	"git-gc-repos":          {func(*logx.Logger) error { return database.GitGcRepos() }, "admin.dashboard.git_gc_repos_success"},
-	"resync-ssh-keys":       {database.RewriteAuthorizedKeys, "admin.dashboard.resync_all_sshkeys_success"},
+	"resync-ssh-keys":       {func(*logx.Logger) error { return database.Handle.PublicKeys().RewriteAuthorizedKeys() }, "admin.dashboard.resync_all_sshkeys_success"},
 	"resync-repo-hooks":     {func(*logx.Logger) error { return database.SyncRepositoryHooks() }, "admin.dashboard.resync_all_hooks_success"},
 	"reinit-missing-repos":  {database.ReinitMissingRepositories, "admin.dashboard.reinit_missing_repos_success"},
 }

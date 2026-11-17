@@ -228,7 +228,7 @@ func getRepoSrc(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (s
 			resp.Editor = "not_branch"
 		case !repoCtx.Viewer.CanWrite():
 			resp.Editor = "no_write"
-		case editableBranch(c, repoCtx, gitRepo, ref.Name):
+		case editableBranch(c, logger, repoCtx, gitRepo, ref.Name):
 			resp.Editor = "ok"
 			resp.CanUploadFile = conf.Repository.Upload.Enabled
 		}

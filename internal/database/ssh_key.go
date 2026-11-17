@@ -1,7 +1,6 @@
 package database
 
 import (
-	"context"
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
@@ -349,9 +348,9 @@ func appendAuthorizedKeysToFile(logger *logx.Logger, keys ...*PublicKey) error {
 
 // checkKeyContent onlys checks if key content has been used as public key,
 // it is OK to use same key as deploy key for multiple repositories/users.
-func checkKeyContent(content string) error {
+func checkKeyContent(tx *gorm.DB, content string) error {
 	var count int64
-	err := Handle.db.Model(new(PublicKey)).Where("content = ? AND type = ?", content, KeyTypeUser).Count(&count).Error
+	err := tx.Model(new(PublicKey)).Where("content = ? AND type = ?", content, KeyTypeUser).Count(&count).Error
 	if err != nil {
 		return err
 	} else if count > 0 {
@@ -388,80 +387,6 @@ func addKey(logger *logx.Logger, tx *gorm.DB, key *PublicKey) (err error) {
 	return appendAuthorizedKeysToFile(logger, key)
 }
 
-// AddPublicKey adds new public key to database and authorized_keys file.
-func AddPublicKey(logger *logx.Logger, ownerID int64, name, content string) (*PublicKey, error) {
-	logger.Debug("Adding public key", "content", content)
-	if err := checkKeyContent(content); err != nil {
-		return nil, err
-	}
-
-	// Key name of same user cannot be duplicated.
-	var count int64
-	err := Handle.db.Model(new(PublicKey)).Where("owner_id = ? AND name = ?", ownerID, name).Count(&count).Error
-	if err != nil {
-		return nil, err
-	} else if count > 0 {
-		return nil, ErrKeyNameAlreadyUsed{ownerID, name}
-	}
-
-	key := &PublicKey{
-		OwnerID: ownerID,
-		Name:    name,
-		Content: content,
-		Mode:    AccessModeWrite,
-		Type:    KeyTypeUser,
-	}
-	err = Handle.db.Transaction(func(tx *gorm.DB) error {
-		if err := addKey(logger, tx, key); err != nil {
-			return errors.Newf("addKey: %v", err)
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return key, nil
-}
-
-// GetPublicKeyByID returns public key by given ID.
-func GetPublicKeyByID(keyID int64) (*PublicKey, error) {
-	key := new(PublicKey)
-	err := Handle.db.Where("id = ?", keyID).First(key).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrKeyNotExist{keyID}
-		}
-		return nil, err
-	}
-	return key, nil
-}
-
-// SearchPublicKeyByContent searches a public key using the content as prefix
-// (i.e. ignore the email part). It returns ErrKeyNotExist if no such key
-// exists.
-func SearchPublicKeyByContent(content string) (*PublicKey, error) {
-	key := new(PublicKey)
-	err := Handle.db.Where("content LIKE ?", content+"%").First(key).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrKeyNotExist{}
-		}
-		return nil, err
-	}
-	return key, nil
-}
-
-// ListPublicKeys returns a list of public keys belongs to given user.
-func ListPublicKeys(uid int64) ([]*PublicKey, error) {
-	keys := make([]*PublicKey, 0, 5)
-	return keys, Handle.db.Where("owner_id = ?", uid).Find(&keys).Error
-}
-
-// UpdatePublicKey updates given public key.
-func UpdatePublicKey(key *PublicKey) error {
-	return Handle.db.Model(key).Select("*").Updates(key).Error
-}
-
 // deletePublicKeys does the actual key deletion but does not update authorized_keys file.
 func deletePublicKeys(tx *gorm.DB, keyIDs ...int64) error {
 	if len(keyIDs) == 0 {
@@ -469,36 +394,6 @@ func deletePublicKeys(tx *gorm.DB, keyIDs ...int64) error {
 	}
 
 	return tx.Where("id IN ?", keyIDs).Delete(new(PublicKey)).Error
-}
-
-// DeletePublicKey deletes SSH key information both in database and authorized_keys file.
-func DeletePublicKey(logger *logx.Logger, doer *User, id int64) (err error) {
-	key, err := GetPublicKeyByID(id)
-	if err != nil {
-		if IsErrKeyNotExist(err) {
-			return nil
-		}
-		return errors.Newf("GetPublicKeyByID: %v", err)
-	}
-
-	// Check if user has access to delete this key.
-	if !doer.IsAdmin && doer.ID != key.OwnerID {
-		return ErrKeyAccessDenied{doer.ID, key.ID, "public"}
-	}
-
-	if err = deletePublicKeys(Handle.db, id); err != nil {
-		return err
-	}
-
-	return RewriteAuthorizedKeys(logger)
-}
-
-// RewriteAuthorizedKeys removes any authorized key and rewrite all keys from database again.
-//
-// Deprecated: Use PublicKeys.RewriteAuthorizedKeys instead.
-func RewriteAuthorizedKeys(logger *logx.Logger) error {
-	logger.Debug("Rewriting authorized_keys file")
-	return newPublicKeysStore(Handle.db).RewriteAuthorizedKeys()
 }
 
 // ________                .__                 ____  __.
@@ -548,16 +443,6 @@ func (k *DeployKey) AfterFind(_ *gorm.DB) error {
 	return nil
 }
 
-// GetContent gets associated public key content.
-func (k *DeployKey) GetContent() error {
-	pkey, err := GetPublicKeyByID(k.KeyID)
-	if err != nil {
-		return err
-	}
-	k.Content = pkey.Content
-	return nil
-}
-
 func checkDeployKey(tx *gorm.DB, keyID, repoID int64, name string) error {
 	// Note: We want error detail, not just true or false here.
 	var count int64
@@ -593,57 +478,6 @@ func addDeployKey(tx *gorm.DB, keyID, repoID int64, name, fingerprint string) (*
 	return key, tx.Create(key).Error
 }
 
-// HasDeployKey returns true if public key is a deploy key of given repository.
-func HasDeployKey(keyID, repoID int64) bool {
-	var count int64
-	_ = Handle.db.Model(new(DeployKey)).Where("key_id = ? AND repo_id = ?", keyID, repoID).Count(&count).Error
-	return count > 0
-}
-
-// AddDeployKey add new deploy key to database and authorized_keys file.
-func AddDeployKey(logger *logx.Logger, repoID int64, name, content string) (*DeployKey, error) {
-	if err := checkKeyContent(content); err != nil {
-		return nil, err
-	}
-
-	pkey := &PublicKey{
-		Content: content,
-		Mode:    AccessModeRead,
-		Type:    KeyTypeDeploy,
-	}
-	existing := new(PublicKey)
-	err := Handle.db.Where("content = ? AND mode = ? AND type = ?", pkey.Content, pkey.Mode, pkey.Type).First(existing).Error
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, err
-	}
-	has := err == nil
-	if has {
-		pkey = existing
-	}
-
-	var key *DeployKey
-	err = Handle.db.Transaction(func(tx *gorm.DB) error {
-		// First time use this deploy key.
-		if !has {
-			if err := addKey(logger, tx, pkey); err != nil {
-				return errors.Newf("addKey: %v", err)
-			}
-		}
-
-		var err error
-		key, err = addDeployKey(tx, pkey.ID, repoID, name, pkey.Fingerprint)
-		// Callers tell the user when the key or its name is already used.
-		if err != nil && !IsErrDeployKeyAlreadyExist(err) && !IsErrDeployKeyNameAlreadyUsed(err) {
-			return errors.Newf("addDeployKey: %v", err)
-		}
-		return err
-	})
-	if err != nil {
-		return nil, err
-	}
-	return key, nil
-}
-
 var _ errx.NotFound = (*ErrDeployKeyNotExist)(nil)
 
 type ErrDeployKeyNotExist struct {
@@ -661,85 +495,4 @@ func (err ErrDeployKeyNotExist) Error() string {
 
 func (ErrDeployKeyNotExist) NotFound() bool {
 	return true
-}
-
-// GetDeployKeyByID returns deploy key by given ID.
-func GetDeployKeyByID(id int64) (*DeployKey, error) {
-	key := new(DeployKey)
-	err := Handle.db.Where("id = ?", id).First(key).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrDeployKeyNotExist{args: map[string]any{"deployKeyID": id}}
-		}
-		return nil, err
-	}
-	return key, nil
-}
-
-// GetDeployKeyByRepo returns deploy key by given public key ID and repository ID.
-func GetDeployKeyByRepo(keyID, repoID int64) (*DeployKey, error) {
-	key := new(DeployKey)
-	err := Handle.db.Where("key_id = ? AND repo_id = ?", keyID, repoID).First(key).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrDeployKeyNotExist{args: map[string]any{"keyID": keyID, "repoID": repoID}}
-		}
-		return nil, err
-	}
-	return key, nil
-}
-
-// UpdateDeployKey updates deploy key information.
-func UpdateDeployKey(key *DeployKey) error {
-	return Handle.db.Model(key).Select("*").Updates(key).Error
-}
-
-// DeleteDeployKey deletes deploy key from its repository authorized_keys file if needed.
-func DeleteDeployKey(logger *logx.Logger, doer *User, id int64) error {
-	key, err := GetDeployKeyByID(id)
-	if err != nil {
-		if IsErrDeployKeyNotExist(err) {
-			return nil
-		}
-		return errors.Newf("GetDeployKeyByID: %v", err)
-	}
-
-	// Check if user has access to delete this key.
-	if !doer.IsAdmin {
-		repo, err := GetRepositoryByID(key.RepoID)
-		if err != nil {
-			return errors.Newf("GetRepositoryByID: %v", err)
-		}
-		if !Handle.Permissions().Authorize(context.TODO(), logger, doer.ID, repo.ID, AccessModeAdmin,
-			AccessModeOptions{
-				OwnerID: repo.OwnerID,
-				Private: repo.IsPrivate,
-			},
-		) {
-			return ErrKeyAccessDenied{doer.ID, key.ID, "deploy"}
-		}
-	}
-
-	return Handle.db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Where("id = ?", key.ID).Delete(new(DeployKey)).Error; err != nil {
-			return errors.Newf("delete deploy key [%d]: %v", key.ID, err)
-		}
-
-		// Check if this is the last reference to same key content.
-		var count int64
-		if err := tx.Model(new(DeployKey)).Where("key_id = ?", key.KeyID).Count(&count).Error; err != nil {
-			return err
-		} else if count == 0 {
-			if err = deletePublicKeys(tx, key.KeyID); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-}
-
-// ListDeployKeys returns all deploy keys by given repository ID.
-func ListDeployKeys(repoID int64) ([]*DeployKey, error) {
-	keys := make([]*DeployKey, 0, 5)
-	return keys, Handle.db.Where("repo_id = ?", repoID).Find(&keys).Error
 }

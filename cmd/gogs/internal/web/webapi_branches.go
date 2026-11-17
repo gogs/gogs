@@ -1,9 +1,9 @@
 package web
 
 import (
+	"context"
 	"net/http"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
@@ -127,8 +127,8 @@ func (f branchesFilter) selectBranches(branches []*git.Branch, view string, offs
 
 // protectedBranchNames returns the names of the protected branches of the
 // repository.
-func protectedBranchNames(repoID int64) (map[string]bool, error) {
-	protected, err := database.GetProtectBranchesByRepoID(repoID)
+func protectedBranchNames(ctx context.Context, repoID int64) (map[string]bool, error) {
+	protected, err := database.Handle.ProtectBranches().ListProtected(ctx, repoID)
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +164,7 @@ func getRepoBranches(c flamego.Context, logger *logx.Logger, repoCtx *repoContex
 		logger.Error("Failed to list branches", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list branches")
 	}
-	protected, err := protectedBranchNames(repo.ID)
+	protected, err := protectedBranchNames(ctx, repo.ID)
 	if err != nil {
 		logger.Error("Failed to list protected branches", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list protected branches")
@@ -273,7 +273,7 @@ func getRepoBranchSettings(c flamego.Context, logger *logx.Logger, repoCtx *repo
 		logger.Error("Failed to list branches", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list branches")
 	}
-	protected, err := database.GetProtectBranchesByRepoID(repo.ID)
+	protected, err := database.Handle.ProtectBranches().ListProtected(c.Request().Context(), repo.ID)
 	if err != nil {
 		logger.Error("Failed to list protected branches", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list protected branches")
@@ -364,7 +364,7 @@ func withRepoProtectedBranch(c flamego.Context, logger *logx.Logger, repoCtx *re
 		return
 	}
 
-	protectBranch, err := database.GetProtectBranchOfRepoByName(repo.ID, branch)
+	protectBranch, err := database.Handle.ProtectBranches().GetByName(c.Request().Context(), repo.ID, branch)
 	if err != nil {
 		if !database.IsErrBranchNotExist(err) {
 			logger.Error("Failed to get branch protection", "repoID", repo.ID, "branch", branch, "error", err)
@@ -384,14 +384,6 @@ func splitIDs(s string) []int64 {
 		}
 	}
 	return ids
-}
-
-func joinIDs(ids []int64) string {
-	strs := make([]string, len(ids))
-	for i, id := range ids {
-		strs[i] = strconv.FormatInt(id, 10)
-	}
-	return strings.Join(strs, ",")
 }
 
 func getRepoProtectedBranch(logger *logx.Logger, rc *repoAdminContext, protectBranch *database.ProtectBranch) (statusCode int, resp *repoProtectedBranch, err error) {
@@ -436,16 +428,16 @@ type repoProtectedBranchRequest struct {
 	AllowlistTeamIDs   []int64 `json:"allowlistTeamIDs"`
 }
 
-func putRepoProtectedBranch(logger *logx.Logger, rc *repoAdminContext, protectBranch *database.ProtectBranch, req repoProtectedBranchRequest) (statusCode int, resp any, err error) {
+func putRepoProtectedBranch(c flamego.Context, logger *logx.Logger, rc *repoAdminContext, protectBranch *database.ProtectBranch, req repoProtectedBranchRequest) (statusCode int, resp any, err error) {
 	protectBranch.Protected = req.Protected
 	protectBranch.RequirePullRequest = req.RequirePullRequest
 	if rc.Owner.IsOrganization() {
 		protectBranch.EnableAllowlist = req.EnableAllowlist
 		// People and teams who cannot write are dropped.
-		err = database.UpdateOrgProtectBranch(logger, rc.Repo, protectBranch, joinIDs(req.AllowlistUserIDs), joinIDs(req.AllowlistTeamIDs))
+		err = database.Handle.ProtectBranches().SaveForOrg(c.Request().Context(), logger, protectBranch, req.AllowlistUserIDs, req.AllowlistTeamIDs)
 	} else {
 		protectBranch.EnableAllowlist = false
-		err = database.UpdateProtectBranch(protectBranch)
+		err = database.Handle.ProtectBranches().Save(c.Request().Context(), protectBranch)
 	}
 	if err != nil {
 		logger.Error("Failed to update branch protection", "repoID", rc.Repo.ID, "branch", protectBranch.Name, "error", err)

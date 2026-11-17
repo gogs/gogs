@@ -91,12 +91,12 @@ func runHookPreReceive(ctx context.Context, cmd *cli.Command) error {
 
 		// Branch protection
 		repoID, _ := strconv.ParseInt(os.Getenv(database.EnvRepoID), 10, 64)
-		protectBranch, err := database.GetProtectBranchOfRepoByName(repoID, branchName)
+		protectBranch, err := database.Handle.ProtectBranches().GetByName(ctx, repoID, branchName)
 		if err != nil {
 			if database.IsErrBranchNotExist(err) {
 				continue
 			}
-			fail(logger, "Internal error", "GetProtectBranchOfRepoByName [repo_id: %d, branch: %s]: %v", repoID, branchName, err)
+			fail(logger, "Internal error", "Get protected branch [repo_id: %d, branch: %s]: %v", repoID, branchName, err)
 		}
 		if !protectBranch.Protected {
 			continue
@@ -108,7 +108,7 @@ func runHookPreReceive(ctx context.Context, cmd *cli.Command) error {
 		// Check if user is in allowlist when enabled
 		userID, _ := strconv.ParseInt(os.Getenv(database.EnvAuthUserID), 10, 64)
 		if protectBranch.EnableAllowlist {
-			inAllowlist, err := protectBranch.IsUserInAllowlist(userID)
+			inAllowlist, err := database.Handle.ProtectBranches().IsUserInAllowlist(ctx, protectBranch, userID)
 			if err != nil {
 				fail(logger, "Internal error", "IsUserInAllowlist [repo_id: %d, branch: %s, user_id: %d]: %v", repoID, branchName, userID, err)
 			}

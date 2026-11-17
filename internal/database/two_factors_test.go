@@ -76,6 +76,9 @@ func TestTwoFactors(t *testing.T) {
 		{"GetByUserID", twoFactorsGetByUserID},
 		{"IsEnabled", twoFactorsIsEnabled},
 		{"UseRecoveryCode", twoFactorsUseRecoveryCode},
+		{"DeleteByUserID", twoFactorsDeleteByUserID},
+		{"ListRecoveryCodes", twoFactorsListRecoveryCodes},
+		{"RegenerateRecoveryCodes", twoFactorsRegenerateRecoveryCodes},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
@@ -181,4 +184,92 @@ func twoFactorsUseRecoveryCode(t *testing.T, ctx context.Context, s *TwoFactorsS
 	// Using a non-existent code should fail
 	err = s.UseRecoveryCode(ctx, 1, "invalid-code")
 	assert.True(t, IsTwoFactorRecoveryCodeNotFound(err), "expected error for invalid recovery code")
+}
+
+func twoFactorsDeleteByUserID(t *testing.T, ctx context.Context, s *TwoFactorsStore) {
+	err := s.Create(ctx, 1, "secure-key", "secure-secret")
+	require.NoError(t, err)
+	err = s.Create(ctx, 2, "secure-key", "secure-secret")
+	require.NoError(t, err)
+
+	err = s.DeleteByUserID(ctx, 1)
+	require.NoError(t, err)
+
+	assert.False(t, s.IsEnabled(ctx, logx.NewNoopLogger(), 1))
+	codes, err := s.ListRecoveryCodes(ctx, 1)
+	require.NoError(t, err)
+	assert.Empty(t, codes)
+
+	// Other users keep theirs.
+	assert.True(t, s.IsEnabled(ctx, logx.NewNoopLogger(), 2))
+	codes, err = s.ListRecoveryCodes(ctx, 2)
+	require.NoError(t, err)
+	assert.Len(t, codes, 10)
+}
+
+func twoFactorsListRecoveryCodes(t *testing.T, ctx context.Context, s *TwoFactorsStore) {
+	err := s.Create(ctx, 1, "secure-key", "secure-secret")
+	require.NoError(t, err)
+	err = s.Create(ctx, 2, "secure-key", "secure-secret")
+	require.NoError(t, err)
+
+	codes, err := s.ListRecoveryCodes(ctx, 1)
+	require.NoError(t, err)
+	require.Len(t, codes, 10)
+	err = s.UseRecoveryCode(ctx, 1, codes[3].Code)
+	require.NoError(t, err)
+
+	// Used codes are listed too, in the same order.
+	got, err := s.ListRecoveryCodes(ctx, 1)
+	require.NoError(t, err)
+	require.Len(t, got, 10)
+	for i := range got {
+		assert.Equal(t, int64(1), got[i].UserID)
+		assert.Equal(t, codes[i].Code, got[i].Code)
+		assert.Equal(t, i == 3, got[i].IsUsed, "code %d", i)
+	}
+
+	codes, err = s.ListRecoveryCodes(ctx, 3)
+	require.NoError(t, err)
+	assert.Empty(t, codes)
+}
+
+func twoFactorsRegenerateRecoveryCodes(t *testing.T, ctx context.Context, s *TwoFactorsStore) {
+	err := s.Create(ctx, 1, "secure-key", "secure-secret")
+	require.NoError(t, err)
+	err = s.Create(ctx, 2, "secure-key", "secure-secret")
+	require.NoError(t, err)
+
+	before, err := s.ListRecoveryCodes(ctx, 1)
+	require.NoError(t, err)
+	err = s.UseRecoveryCode(ctx, 1, before[0].Code)
+	require.NoError(t, err)
+	otherBefore, err := s.ListRecoveryCodes(ctx, 2)
+	require.NoError(t, err)
+
+	err = s.RegenerateRecoveryCodes(ctx, 1)
+	require.NoError(t, err)
+
+	after, err := s.ListRecoveryCodes(ctx, 1)
+	require.NoError(t, err)
+	require.Len(t, after, 10)
+	oldCodes := make(map[string]bool, len(before))
+	for _, code := range before {
+		oldCodes[code.Code] = true
+	}
+	for _, code := range after {
+		assert.False(t, code.IsUsed)
+		assert.False(t, oldCodes[code.Code], "old code %q kept", code.Code)
+	}
+
+	// Old codes no longer work, new ones do.
+	err = s.UseRecoveryCode(ctx, 1, before[1].Code)
+	assert.True(t, IsTwoFactorRecoveryCodeNotFound(err), "got %v", err)
+	err = s.UseRecoveryCode(ctx, 1, after[0].Code)
+	require.NoError(t, err)
+
+	// Other users keep theirs.
+	otherAfter, err := s.ListRecoveryCodes(ctx, 2)
+	require.NoError(t, err)
+	assert.Equal(t, otherBefore, otherAfter)
 }

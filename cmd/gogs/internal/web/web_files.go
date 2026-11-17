@@ -148,7 +148,7 @@ func getUserPublicKeys(c flamego.Context, logger *logx.Logger, pages webAppPages
 		return
 	}
 
-	keys, err := database.ListPublicKeys(user.ID)
+	keys, err := database.Handle.PublicKeys().List(c.Request().Context(), user.ID)
 	if err != nil {
 		logger.Error("Failed to list public keys", "userID", user.ID, "error", err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "list public keys"))

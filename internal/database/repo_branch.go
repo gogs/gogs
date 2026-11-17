@@ -3,16 +3,11 @@ package database
 import (
 	"context"
 	"fmt"
-	"slices"
-	"strings"
 
 	"github.com/cockroachdb/errors"
-	"gorm.io/gorm"
-	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/git"
-	"gogs.io/gogs/internal/tool"
 )
 
 type Branch struct {
@@ -87,130 +82,4 @@ type ProtectBranch struct {
 	EnableAllowlist  bool   `xorm:"'enable_whitelist'" gorm:"column:enable_whitelist"`
 	AllowlistUserIDs string `xorm:"'whitelist_user_i_ds' TEXT" gorm:"column:whitelist_user_i_ds"`
 	AllowlistTeamIDs string `xorm:"'whitelist_team_i_ds' TEXT" gorm:"column:whitelist_team_i_ds"`
-}
-
-// GetProtectBranchOfRepoByName returns *ProtectBranch by branch name in given repository.
-func GetProtectBranchOfRepoByName(repoID int64, name string) (*ProtectBranch, error) {
-	protectBranch := new(ProtectBranch)
-	err := Handle.db.Where("repo_id = ? AND name = ?", repoID, name).First(protectBranch).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrBranchNotExist{args: map[string]any{"name": name}}
-		}
-		return nil, err
-	}
-	return protectBranch, nil
-}
-
-// IsUserInAllowlist returns whether the user is in the allowlist of the branch,
-// by name or as a current member of an allowlisted team.
-func (pb *ProtectBranch) IsUserInAllowlist(userID int64) (bool, error) {
-	if userID <= 0 {
-		return false, nil
-	}
-	if slices.Contains(tool.StringsToInt64s(strings.Split(pb.AllowlistUserIDs, ",")), userID) {
-		return true, nil
-	}
-	teamIDs := tool.StringsToInt64s(strings.Split(pb.AllowlistTeamIDs, ","))
-	if len(teamIDs) == 0 {
-		return false, nil
-	}
-	var count int64
-	err := Handle.db.Model(new(TeamUser)).Where("team_id IN ? AND uid = ?", teamIDs, userID).Count(&count).Error
-	return count > 0, err
-}
-
-// IsBranchOfRepoRequirePullRequest returns true if branch requires pull request in given repository.
-func IsBranchOfRepoRequirePullRequest(repoID int64, name string) bool {
-	protectBranch, err := GetProtectBranchOfRepoByName(repoID, name)
-	if err != nil {
-		return false
-	}
-	return protectBranch.Protected && protectBranch.RequirePullRequest
-}
-
-// UpdateProtectBranch saves branch protection options.
-// If ID is 0, it creates a new record. Otherwise, updates existing record.
-func UpdateProtectBranch(protectBranch *ProtectBranch) error {
-	repo, err := GetRepositoryByID(protectBranch.RepoID)
-	if err != nil {
-		return errors.Wrap(err, "get repository")
-	}
-	if err = enforceProtectBranch(repo, protectBranch); err != nil {
-		return err
-	}
-
-	err = Handle.db.Transaction(func(tx *gorm.DB) error {
-		if protectBranch.ID == 0 {
-			if err := tx.Create(protectBranch).Error; err != nil {
-				return errors.Newf("insert: %v", err)
-			}
-		}
-
-		if err := tx.Model(protectBranch).Select("*").Updates(protectBranch).Error; err != nil {
-			return errors.Newf("update: %v", err)
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	return repo.SyncDelegateHooks()
-}
-
-// enforceProtectBranch installs the pre-receive hook that enforces the
-// protection of the branch before it is saved, so that a failure leaves the
-// branch unprotected rather than protected but not enforced.
-func enforceProtectBranch(repo *Repository, protectBranch *ProtectBranch) error {
-	if !protectBranch.Protected {
-		return nil
-	}
-	return writeDelegateHook(repo.RepoPath(), git.HookPreReceive)
-}
-
-// UpdateOrgProtectBranch saves branch protection options of organizational
-// repository, dropping users and teams of the allowlist who cannot write to the
-// repository. If ID is 0, it creates a new record. Otherwise, updates existing
-// record.
-func UpdateOrgProtectBranch(logger *logx.Logger, repo *Repository, protectBranch *ProtectBranch, allowlistUserIDs, allowlistTeamIDs string) (err error) {
-	if err = repo.GetOwner(); err != nil {
-		return errors.Newf("GetOwner: %v", err)
-	} else if !repo.Owner.IsOrganization() {
-		return errors.Newf("expect repository owner to be an organization")
-	}
-
-	userIDs := tool.StringsToInt64s(strings.Split(allowlistUserIDs, ","))
-	validUserIDs := make([]int64, 0, len(userIDs))
-	for _, userID := range userIDs {
-		if userID > 0 && Handle.Permissions().Authorize(context.TODO(), logger, userID, repo.ID, AccessModeWrite,
-			AccessModeOptions{
-				OwnerID: repo.OwnerID,
-				Private: repo.IsPrivate,
-			},
-		) {
-			validUserIDs = append(validUserIDs, userID)
-		}
-	}
-	protectBranch.AllowlistUserIDs = strings.Join(tool.Int64sToStrings(validUserIDs), ",")
-
-	teamIDs := tool.StringsToInt64s(strings.Split(allowlistTeamIDs, ","))
-	teams, err := GetTeamsHaveAccessToRepo(repo.OwnerID, repo.ID, AccessModeWrite)
-	if err != nil {
-		return errors.Newf("GetTeamsHaveAccessToRepo [org_id: %d, repo_id: %d]: %v", repo.OwnerID, repo.ID, err)
-	}
-	validTeamIDs := make([]int64, 0, len(teams))
-	for i := range teams {
-		if teams[i].HasWriteAccess() && slices.Contains(teamIDs, teams[i].ID) {
-			validTeamIDs = append(validTeamIDs, teams[i].ID)
-		}
-	}
-	protectBranch.AllowlistTeamIDs = strings.Join(tool.Int64sToStrings(validTeamIDs), ",")
-
-	return UpdateProtectBranch(protectBranch)
-}
-
-// GetProtectBranchesByRepoID returns a list of *ProtectBranch in given repository.
-func GetProtectBranchesByRepoID(repoID int64) ([]*ProtectBranch, error) {
-	protectBranches := make([]*ProtectBranch, 0, 2)
-	return protectBranches, Handle.db.Where("repo_id = ? AND protected = ?", repoID, true).Order("name ASC").Find(&protectBranches).Error
 }
