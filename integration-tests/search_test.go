@@ -3,6 +3,7 @@ package integrationtests
 import (
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -62,6 +63,7 @@ func TestCodeSearch(t *testing.T) {
 		Keyword    string           `json:"keyword"`
 		Exhaustive bool             `json:"exhaustive"`
 		Files      []codeSearchFile `json:"files"`
+		Truncated  bool             `json:"truncated"`
 		Branches   []string         `json:"branches"`
 	}
 	repoSearch := func(t *testing.T, c *client, repo *Repository, ref, q string) repoSearchResponse {
@@ -116,29 +118,86 @@ func TestCodeSearch(t *testing.T) {
 	})
 
 	t.Run("repository exhaustive", func(t *testing.T) {
-		// A keyword of its own, so other searches do not find this file.
-		many := UniqueName("many")
-		repoCodeNewFile(t, ownerClient, public, "many.txt", strings.Repeat(many+"\n", 15), "Add many")
-		matches := func(resp repoSearchResponse) int {
+		exhaustiveSearch := func(t *testing.T, c *client, q string) repoSearchResponse {
+			t.Helper()
+			var resp repoSearchResponse
+			c.doJSON(http.MethodGet, repoCodeAPI(public)+"/search?exhaustive=true&q="+url.QueryEscape(q), nil, http.StatusOK, &resp)
+			return resp
+		}
+		matches := func(f codeSearchFile) int {
 			n := 0
-			for _, f := range resp.Files {
-				for _, l := range f.Lines {
-					if l.IsMatch {
-						n++
-					}
+			for _, l := range f.Lines {
+				if l.IsMatch {
+					n++
 				}
 			}
 			return n
 		}
 
-		resp := repoSearch(t, anonymous, public, "", many)
-		assert.False(t, resp.Exhaustive)
-		assert.Equal(t, 10, matches(resp), "a search lists at most 10 lines of a file")
+		// Keywords of their own, so other searches do not find these files. Each
+		// match is followed by a line without it, which is its context.
+		many := UniqueName("many")
+		var content strings.Builder
+		for i := 1; i <= 15; i++ {
+			content.WriteString(many + " " + strconv.Itoa(i) + "\nfiller\n")
+		}
+		repoCodeNewFile(t, ownerClient, public, "docs/many.txt", content.String(), "Add many")
+		repoCodeNewFile(t, ownerClient, public, "src/many.txt", many+"\n", "Add one more")
 
-		var all repoSearchResponse
-		anonymous.doJSON(http.MethodGet, repoCodeAPI(public)+"/search?exhaustive=true&q="+url.QueryEscape(many), nil, http.StatusOK, &all)
-		assert.True(t, all.Exhaustive)
-		assert.Equal(t, 15, matches(all))
+		t.Run("lists at most 10 lines of a file by default", func(t *testing.T) {
+			for _, q := range []string{"?q=", "?exhaustive=false&q="} {
+				var resp repoSearchResponse
+				anonymous.doJSON(http.MethodGet, repoCodeAPI(public)+"/search"+q+url.QueryEscape(many), nil, http.StatusOK, &resp)
+				assert.False(t, resp.Exhaustive, q)
+				require.Equal(t, []string{"docs/many.txt", "src/many.txt"}, codeSearchPaths(resp.Files), q)
+				assert.Equal(t, 10, matches(resp.Files[0]), q)
+			}
+		})
+
+		t.Run("lists every line of a file with context", func(t *testing.T) {
+			resp := exhaustiveSearch(t, anonymous, many)
+			assert.True(t, resp.Exhaustive)
+			assert.False(t, resp.Truncated)
+			require.Equal(t, []string{"docs/many.txt", "src/many.txt"}, codeSearchPaths(resp.Files))
+			lines := resp.Files[0].Lines
+			require.Len(t, lines, 30)
+			for i, l := range lines {
+				assert.Equal(t, i+1, l.Line)
+				if i%2 == 0 {
+					assert.Equal(t, codeSearchLine{Line: i + 1, Text: many + " " + strconv.Itoa(i/2+1), IsMatch: true}, l)
+				} else {
+					assert.Equal(t, codeSearchLine{Line: i + 1, Text: "filler"}, l)
+				}
+			}
+		})
+
+		t.Run("keeps the path qualifier", func(t *testing.T) {
+			resp := exhaustiveSearch(t, anonymous, "path:docs "+many)
+			assert.Equal(t, many, resp.Keyword)
+			assert.Equal(t, []string{"docs/many.txt"}, codeSearchPaths(resp.Files))
+		})
+
+		t.Run("lists at most 5,000 lines", func(t *testing.T) {
+			huge := UniqueName("huge")
+			repoCodeNewFile(t, ownerClient, public, "huge.txt", strings.Repeat(huge+"\n", 5001), "Add huge")
+
+			resp := exhaustiveSearch(t, anonymous, huge)
+			assert.True(t, resp.Truncated)
+			require.Equal(t, []string{"huge.txt"}, codeSearchPaths(resp.Files))
+			assert.Equal(t, 5000, matches(resp.Files[0]))
+		})
+
+		t.Run("private repository", func(t *testing.T) {
+			// 🚨 SECURITY: Higher limits do not skip the read check.
+			for name, c := range map[string]*client{"anonymous": anonymous, "other": otherClient} {
+				status, body := c.do(http.MethodGet, repoCodeAPI(private)+"/search?exhaustive=true&q="+keyword, nil)
+				assert.Equal(t, http.StatusNotFound, status, "%s viewer, response: %s", name, body)
+				assert.NotContains(t, string(body), keyword, "%s viewer", name)
+			}
+			var resp repoSearchResponse
+			ownerClient.doJSON(http.MethodGet, repoCodeAPI(private)+"/search?exhaustive=true&q="+keyword, nil, http.StatusOK, &resp)
+			assert.Equal(t, []string{"secret.go"}, codeSearchPaths(resp.Files))
+		})
 	})
 
 	t.Run("repository without keyword", func(t *testing.T) {
