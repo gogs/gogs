@@ -173,6 +173,9 @@ func Clone(ctx context.Context, url, dst string, opts ...CloneOptions) error {
 type PushOptions struct {
 	// The additional environment variables to run the command with.
 	Envs []string
+	// When set, the push is rejected unless the remote reference has this ID, or
+	// does not exist when it is the empty ID.
+	ExpectedOldID string
 }
 
 // Push pushes local changes to given remote and branch for the repository.
@@ -186,6 +189,14 @@ func (r *Repository) Push(ctx context.Context, remote, branch string, opts ...Pu
 	}
 
 	args := []string{"push"}
+	if opt.ExpectedOldID != "" {
+		_, dst, _ := strings.Cut(branch, ":")
+		expected := opt.ExpectedOldID
+		if IsEmptyID(expected) {
+			expected = ""
+		}
+		args = append(args, "--force-with-lease="+dst+":"+expected)
+	}
 	args = append(args, "--end-of-options", remote, branch)
 	_, err := exec(ctx, r.path, args, opt.Envs)
 	return err

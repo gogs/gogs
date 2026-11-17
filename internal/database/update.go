@@ -35,6 +35,35 @@ func CommitsToPushCommits(commits []*git.Commit) *PushCommits {
 	return &PushCommits{len(pcs), pcs, "", nil}
 }
 
+// PushUpdates calls PushUpdate for each reference update of a push by the
+// pusher to the repository, and then calls trigger with the short name of the
+// reference, e.g., TriggerPushTasks. Failures are logged, because the push has
+// already happened.
+func PushUpdates(ctx context.Context, logger *logx.Logger, pusher *User, ownerName, repoName string, updates []git.RefUpdate, trigger func(refName string)) {
+	for _, update := range updates {
+		err := PushUpdate(ctx, logger, PushUpdateOptions{
+			OldCommitID:  update.OldID,
+			NewCommitID:  update.NewID,
+			FullRefspec:  update.RefName,
+			PusherID:     pusher.ID,
+			PusherName:   pusher.Name,
+			RepoUserName: ownerName,
+			RepoName:     repoName,
+		})
+		if err != nil {
+			logger.Error("Failed to update for push", "ownerName", ownerName, "repoName", repoName, "refName", update.RefName, "error", err)
+		}
+		trigger(git.RefShortName(update.RefName))
+	}
+}
+
+// TriggerPushTasks queues the webhook deliveries of the repository and the
+// tests of pull requests affected by the push to the branch.
+func TriggerPushTasks(logger *logx.Logger, pusher *User, repoID int64, branch string) {
+	go HookQueue.Add(repoID)
+	go AddTestPullRequestTask(logger, pusher, repoID, branch, true)
+}
+
 type PushUpdateOptions struct {
 	OldCommitID  string
 	NewCommitID  string

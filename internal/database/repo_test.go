@@ -219,3 +219,66 @@ func TestResolveMissingDefaultBranch(t *testing.T) {
 		})
 	}
 }
+
+func TestSyncDelegateHooks(t *testing.T) {
+	hookNames := func(repoPath string) []string {
+		var names []string
+		for _, name := range []string{"pre-receive", "update", "post-receive"} {
+			if osx.IsFile(filepath.Join(repoPath, "hooks", name)) {
+				names = append(names, name)
+			}
+		}
+		return names
+	}
+
+	tests := []struct {
+		name               string
+		customHooks        []string
+		hasProtectedBranch bool
+		want               []string
+	}{
+		{name: "nothing to do"},
+		{name: "protected branch", hasProtectedBranch: true, want: []string{"pre-receive"}},
+		{name: "custom update hook", customHooks: []string{"update"}, want: []string{"update"}},
+		{
+			name:               "custom post-receive hook and protected branch",
+			customHooks:        []string{"post-receive"},
+			hasProtectedBranch: true,
+			want:               []string{"pre-receive", "post-receive"},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			repoPath := t.TempDir()
+			require.NoError(t, os.MkdirAll(filepath.Join(repoPath, "hooks"), 0o755))
+			require.NoError(t, os.MkdirAll(filepath.Join(repoPath, "custom_hooks"), 0o755))
+			// Delegate hooks from before are removed when no longer needed.
+			for _, name := range []string{"pre-receive", "update", "post-receive"} {
+				require.NoError(t, os.WriteFile(filepath.Join(repoPath, "hooks", name), nil, 0o755))
+			}
+			for _, name := range test.customHooks {
+				require.NoError(t, os.WriteFile(filepath.Join(repoPath, "custom_hooks", name), nil, 0o755))
+			}
+
+			require.NoError(t, syncDelegateHooks(repoPath, func() (bool, error) { return test.hasProtectedBranch, nil }))
+			assert.Equal(t, test.want, hookNames(repoPath))
+		})
+	}
+}
+
+func TestSyncDelegateHooks_ProtectedMeanwhile(t *testing.T) {
+	repoPath := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(repoPath, "hooks"), 0o755))
+	hookPath := filepath.Join(repoPath, "hooks", "pre-receive")
+	require.NoError(t, os.WriteFile(hookPath, nil, 0o755))
+
+	// A branch is protected, e.g., in another process, after the sync first read
+	// that none was, and before it removed the hook.
+	checks := 0
+	hasProtectedBranch := func() (bool, error) {
+		checks++
+		return checks > 1, nil
+	}
+	require.NoError(t, syncDelegateHooks(repoPath, hasProtectedBranch))
+	assert.True(t, osx.IsFile(hookPath), "pre-receive hook must stay installed")
+}

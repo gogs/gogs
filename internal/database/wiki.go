@@ -80,8 +80,6 @@ func (r *Repository) InitWiki(ctx context.Context) error {
 
 	if err := git.Init(ctx, r.WikiPath(), git.InitOptions{Bare: true}); err != nil {
 		return errors.Newf("init repository: %v", err)
-	} else if err = createDelegateHooks(r.WikiPath()); err != nil {
-		return errors.Newf("createDelegateHooks: %v", err)
 	}
 	return nil
 }
@@ -134,7 +132,7 @@ func (r *Repository) updateWikiPage(ctx context.Context, doer *User, oldTitle, t
 		message = "Update page '" + title + "'"
 	}
 	sig := &git.Signature{Name: doer.DisplayName(), Email: doer.Email}
-	return commitAndPush(ctx, r.WikiPath(), parent, branch, message, sig, sig, nil, func(tmpRepo *git.Repository) error {
+	_, err = commitAndPush(ctx, r.WikiPath(), parent, branch, message, sig, sig, git.PushOptions{}, func(tmpRepo *git.Repository) error {
 		if parent != nil {
 			if isNew {
 				entry, err := treeEntry(ctx, parent, filename)
@@ -167,6 +165,7 @@ func (r *Repository) updateWikiPage(ctx context.Context, doer *User, oldTitle, t
 		err := tmpRepo.AddToIndex(ctx, git.IndexFile{Path: filename, Content: strings.NewReader(content)})
 		return errors.Wrapf(err, "add %q", filename)
 	})
+	return err
 }
 
 func (r *Repository) AddWikiPage(ctx context.Context, doer *User, title, content, message string) error {
@@ -191,7 +190,7 @@ func (r *Repository) DeleteWikiPage(ctx context.Context, doer *User, title strin
 	title = CleanWikiPageName(title)
 	filename := title + ".md"
 	sig := &git.Signature{Name: doer.DisplayName(), Email: doer.Email}
-	return commitAndPush(ctx, r.WikiPath(), parent, branch, "Delete page '"+title+"'", sig, sig, nil, func(tmpRepo *git.Repository) error {
+	_, err = commitAndPush(ctx, r.WikiPath(), parent, branch, "Delete page '"+title+"'", sig, sig, git.PushOptions{}, func(tmpRepo *git.Repository) error {
 		entry, err := treeEntry(ctx, parent, filename)
 		if err != nil {
 			return err
@@ -203,4 +202,5 @@ func (r *Repository) DeleteWikiPage(ctx context.Context, doer *User, title strin
 		}
 		return nil
 	})
+	return err
 }

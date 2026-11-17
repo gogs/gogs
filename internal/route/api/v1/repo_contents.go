@@ -195,6 +195,7 @@ func putContents(c *apiContext, r putContentsRequest) {
 
 	err = c.Repo.Repository.UpdateRepoFile(
 		c.Request().Context(),
+		c.Logger,
 		c.User,
 		database.UpdateRepoFileOptions{
 			OldBranch:   oldBranch,

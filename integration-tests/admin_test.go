@@ -162,13 +162,22 @@ func TestAdminOperations(t *testing.T) {
 	})
 
 	t.Run("resync hooks", func(t *testing.T) {
-		repo := seedRepository(t, owner.ID, CreateRepositoryOptions{})
-		hook := filepath.Join(repox.RepositoryPath(repo.Owner, repo.Name), "hooks", "pre-receive")
-		require.NoError(t, os.WriteFile(hook, []byte("#!/bin/sh\nexit 1\n"), 0o755))
+		// A repository gets the delegate hooks it needs, e.g., pre-receive for a
+		// protected branch, and loses the others.
+		unprotected := seedRepository(t, owner.ID, CreateRepositoryOptions{})
+		protected := seedRepository(t, owner.ID, CreateRepositoryOptions{})
+		require.NoError(t, database.UpdateProtectBranch(&database.ProtectBranch{RepoID: protected.ID, Name: "main", Protected: true}))
+		hook := func(repo *Repository) string {
+			return filepath.Join(repox.RepositoryPath(repo.Owner, repo.Name), "hooks", "pre-receive")
+		}
+		for _, repo := range []*Repository{unprotected, protected} {
+			require.NoError(t, os.WriteFile(hook(repo), []byte("#!/bin/sh\nexit 1\n"), 0o755))
+		}
 
 		msg := adminRunOperation(t, admin, nonAdmin, anonymous, "resync-repo-hooks")
 		assert.Equal(t, "All repositories' pre-receive, update and post-receive hooks have been resynced successfully.", msg)
-		content, err := os.ReadFile(hook)
+		assert.NoFileExists(t, hook(unprotected))
+		content, err := os.ReadFile(hook(protected))
 		require.NoError(t, err)
 		// TestMain points the first argument to the binary of the server.
 		assert.Contains(t, string(content), `"`+os.Args[0]+`" hook`)

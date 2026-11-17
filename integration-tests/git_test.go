@@ -264,7 +264,7 @@ func TestGitPush(t *testing.T) {
 	}
 	assert.ElementsMatch(t, []string{"README.md", fileName}, names)
 
-	// The post-receive hook records the push in the news feed of the owner.
+	// The server records the push in the news feed of the owner.
 	actions, err := database.Handle.Actions().ListByUser(t.Context(), owner.ID, owner.ID, 0, false)
 	require.NoError(t, err)
 	var pushed *database.Action
@@ -291,6 +291,151 @@ func TestGitPush(t *testing.T) {
 		gitRun(t, dir, "push", "origin", "main")
 		assert.Equal(t, want, gitMainOnDisk(t, repo))
 	})
+}
+
+// gitRepoActions returns the actions of the repository in the news feed of the
+// owner, newest first.
+func gitRepoActions(t *testing.T, ownerID, repoID int64) []*database.Action {
+	t.Helper()
+
+	actions, err := database.Handle.Actions().ListByUser(t.Context(), ownerID, ownerID, 0, false)
+	require.NoError(t, err)
+	var repoActions []*database.Action
+	for _, a := range actions {
+		if a.RepoID == repoID {
+			repoActions = append(repoActions, a)
+		}
+	}
+	return repoActions
+}
+
+// gitRefAction is the type and reference of an action.
+type gitRefAction struct {
+	OpType  database.ActionType
+	RefName string
+}
+
+// gitNewRefActions returns the type and reference of the actions of the
+// repository in the news feed of the owner that come after the first skip
+// actions, oldest first.
+func gitNewRefActions(t *testing.T, ownerID, repoID int64, skip int) []gitRefAction {
+	t.Helper()
+
+	actions := gitRepoActions(t, ownerID, repoID)
+	var got []gitRefAction
+	for i := len(actions) - 1 - skip; i >= 0; i-- {
+		assert.Equal(t, ownerID, actions[i].ActUserID)
+		got = append(got, gitRefAction{OpType: actions[i].OpType, RefName: actions[i].RefName})
+	}
+	return got
+}
+
+// gitTransports returns, by name, functions that run Git in a directory as the
+// owner of the repository over each transport, and return its trimmed output
+// and whether it succeeded, along with the URL of the repository.
+func gitTransports(t *testing.T, owner *User, repo *Repository) map[string]struct {
+	url string
+	git func(dir string, args ...string) (string, error)
+} {
+	t.Helper()
+
+	key := sshUserKey(t, owner.ID)
+	return map[string]struct {
+		url string
+		git func(dir string, args ...string) (string, error)
+	}{
+		"http": {
+			url: gitRemoteURL(t, repo, owner.Name, owner.Password),
+			git: func(dir string, args ...string) (string, error) {
+				out, err := gitCommand(dir, args...).CombinedOutput()
+				return strings.TrimSpace(string(out)), err
+			},
+		},
+		"ssh": {url: sshRemoteURL(repo), git: key.git},
+	}
+}
+
+func TestGitPushRecordsRefUpdates(t *testing.T) {
+	owner := seedUser(t, CreateUserOptions{})
+	for _, name := range []string{"http", "ssh"} {
+		t.Run(name, func(t *testing.T) {
+			repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+			remote := gitTransports(t, owner, repo)[name]
+			dir := filepath.Join(t.TempDir(), "clone")
+			out, err := remote.git(filepath.Dir(dir), "clone", remote.url, dir)
+			require.NoError(t, err, "clone: %s", out)
+
+			gitCommitFile(t, dir, UniqueName("file-")+".txt")
+			gitRun(t, dir, "branch", "gone")
+			out, err = remote.git(dir, "push", "origin", "main", "gone")
+			require.NoError(t, err, "push: %s", out)
+			before := len(gitRepoActions(t, owner.ID, repo.ID))
+
+			// One push that creates a branch and a tag and deletes a branch records
+			// each update, as Git reports it applied them.
+			want := gitCommitFile(t, dir, UniqueName("file-")+".txt")
+			gitRun(t, dir, "tag", "v1")
+			out, err = remote.git(dir, "push", "origin", "HEAD:refs/heads/feature", "v1", ":gone")
+			require.NoError(t, err, "push: %s", out)
+
+			// A new branch with commits also records its commits.
+			assert.ElementsMatch(t, []gitRefAction{
+				{OpType: database.ActionCreateBranch, RefName: "feature"},
+				{OpType: database.ActionCommitRepo, RefName: "feature"},
+				{OpType: database.ActionPushTag, RefName: "v1"},
+				{OpType: database.ActionDeleteBranch, RefName: "gone"},
+			}, gitNewRefActions(t, owner.ID, repo.ID, before))
+			assert.Equal(t, want, gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(repo.Owner, repo.Name), "rev-parse", "refs/heads/feature"))
+		})
+	}
+}
+
+func TestGitPushProtectedBranch(t *testing.T) {
+	owner := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	branch := repoSettingsDefaultBranch(t, repo)
+	hooksDir := filepath.Join(database.RepoPath(repo.Owner, repo.Name), "hooks")
+	path := repoSettingsAPIPath(repo, "/settings/branches/"+branch)
+	c := repoSettingsSignedIn(t, owner)
+
+	// Pushes to a repository without protected branches or custom hooks run no
+	// Gogs hook.
+	for _, hook := range []string{"pre-receive", "update", "post-receive"} {
+		assert.NoFileExists(t, filepath.Join(hooksDir, hook))
+	}
+
+	status, body := c.do(http.MethodPut, path, map[string]any{"protected": true})
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	assert.FileExists(t, filepath.Join(hooksDir, "pre-receive"))
+
+	for name, remote := range gitTransports(t, owner, repo) {
+		t.Run(name, func(t *testing.T) {
+			dir := filepath.Join(t.TempDir(), "clone")
+			out, err := remote.git(filepath.Dir(dir), "clone", remote.url, dir)
+			require.NoError(t, err, "clone: %s", out)
+			gitCommitFile(t, dir, UniqueName("file-")+".txt")
+			out, err = remote.git(dir, "push", "origin", branch)
+			require.NoError(t, err, "push: %s", out)
+			head := gitMainOnDisk(t, repo)
+			before := len(gitRepoActions(t, owner.ID, repo.ID))
+
+			gitRun(t, dir, "commit", "--amend", "-m", "Rewritten")
+			out, err = remote.git(dir, "push", "--force", "origin", branch)
+			require.Error(t, err, "force push succeeded: %s", out)
+			assert.Contains(t, out, "Gogs: Branch '"+branch+"' is protected from force push")
+			assert.Equal(t, head, gitMainOnDisk(t, repo))
+			assert.Len(t, gitRepoActions(t, owner.ID, repo.ID), before)
+		})
+	}
+
+	status, body = c.do(http.MethodPut, path, map[string]any{"protected": false})
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	assert.NoFileExists(t, filepath.Join(hooksDir, "pre-receive"))
+	dir := gitClone(t, gitRemoteURL(t, repo, owner.Name, owner.Password))
+	gitRun(t, dir, "commit", "--amend", "-m", "Rewritten")
+	want := gitRun(t, dir, "rev-parse", "HEAD")
+	gitRun(t, dir, "push", "--force", "origin", branch)
+	assert.Equal(t, want, gitMainOnDisk(t, repo))
 }
 
 func TestGitPushWithoutWriteAccess(t *testing.T) {

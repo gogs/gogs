@@ -622,3 +622,60 @@ func TestRepoSettingsGitHooks(t *testing.T) {
 	c.doJSON(http.MethodGet, path+"/pre-receive", nil, http.StatusOK, &got)
 	assert.False(t, got.IsActive)
 }
+
+func TestRepoSettingsGitHooksRunOnPush(t *testing.T) {
+	owner := seedUser(t, CreateUserOptions{})
+	allow := true
+	require.NoError(t, database.Handle.Users().Update(t.Context(), owner.ID, database.UpdateUserOptions{AllowGitHook: &allow}))
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	c := repoSettingsSignedIn(t, owner)
+	path := repoSettingsAPIPath(repo, "/settings/githooks")
+	hooksDir := filepath.Join(database.RepoPath(repo.Owner, repo.Name), "hooks")
+
+	// The update hook rejects tags, and the post-receive hook keeps what Git
+	// passes it.
+	received := filepath.Join(t.TempDir(), "post-receive")
+	hooks := map[string]string{
+		"update":       "#!/bin/sh\ncase \"$1\" in refs/tags/*) echo 'tags are not allowed' >&2; exit 1;; esac\n",
+		"post-receive": "#!/bin/sh\ncat >> '" + received + "'\n",
+	}
+	for name, content := range hooks {
+		status, body := c.do(http.MethodPut, path+"/"+name, map[string]any{"content": content})
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	}
+
+	dir := gitClone(t, gitRemoteURL(t, repo, owner.Name, owner.Password))
+	want := gitCommitFile(t, dir, UniqueName("file-")+".txt")
+	gitRun(t, dir, "tag", "v1")
+	before := len(gitRepoActions(t, owner.ID, repo.ID))
+	out, err := gitCommand(dir, "push", "origin", "HEAD:refs/heads/feature", "v1").CombinedOutput()
+	require.Error(t, err, "push succeeded: %s", out)
+	assert.Contains(t, string(out), "tags are not allowed")
+
+	// Only the branch that the update hook accepted is pushed and recorded.
+	repoPath := database.RepoPath(repo.Owner, repo.Name)
+	assert.Equal(t, want, gitRun(t, t.TempDir(), "--git-dir", repoPath, "rev-parse", "refs/heads/feature"))
+	_, err = gitCommand(t.TempDir(), "--git-dir", repoPath, "rev-parse", "--verify", "refs/tags/v1").CombinedOutput()
+	assert.Error(t, err, "rejected tag was pushed")
+	assert.ElementsMatch(t, []gitRefAction{
+		{OpType: database.ActionCreateBranch, RefName: "feature"},
+		{OpType: database.ActionCommitRepo, RefName: "feature"},
+	}, gitNewRefActions(t, owner.ID, repo.ID, before))
+	got, err := os.ReadFile(received)
+	require.NoError(t, err)
+	fields := strings.Fields(string(got))
+	require.Len(t, fields, 3, "post-receive input: %s", got)
+	assert.Equal(t, []string{want, "refs/heads/feature"}, fields[1:])
+
+	// Without custom hooks, pushes run no Gogs hook again.
+	for name := range hooks {
+		status, body := c.do(http.MethodDelete, path+"/"+name, repoSettingsNoBody)
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	}
+	for _, hook := range []string{"pre-receive", "update", "post-receive"} {
+		assert.NoFileExists(t, filepath.Join(hooksDir, hook))
+	}
+	before = len(gitRepoActions(t, owner.ID, repo.ID))
+	gitRun(t, dir, "push", "origin", "v1")
+	assert.Equal(t, []gitRefAction{{OpType: database.ActionPushTag, RefName: "v1"}}, gitNewRefActions(t, owner.ID, repo.ID, before))
+}
