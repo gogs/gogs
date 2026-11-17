@@ -1361,6 +1361,9 @@ export interface RepoSearchData {
   // query is what was searched for, and keyword its part without qualifiers.
   query: string;
   keyword: string;
+  // exhaustive is set for a search that lists every matching line of a file,
+  // with higher limits.
+  exhaustive: boolean;
   // files are ordered by path.
   files: RepoSearchFile[];
   // truncated is set when more lines matched than files lists.
@@ -1385,8 +1388,11 @@ export interface CodeSearchData {
 
 // fetchRepoSearch searches the files of the ref in the splat, or of the
 // default branch for an empty splat, for lines that contain the keyword.
-export function fetchRepoSearch(owner: string, name: string, splat: string, q?: string) {
-  const qs = q ? `?${new URLSearchParams({ q }).toString()}` : "";
+export function fetchRepoSearch(owner: string, name: string, splat: string, q?: string, exhaustive?: boolean) {
+  const params = new URLSearchParams();
+  if (q) params.set("q", q);
+  if (exhaustive) params.set("exhaustive", "true");
+  const qs = params.size ? `?${params.toString()}` : "";
   return fetchJSON<RepoSearchData>(repoURL(owner, name, `/search/${refPath(splat)}${qs}`));
 }
 

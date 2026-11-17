@@ -6,9 +6,15 @@ import { useTranslation } from "react-i18next";
 import { CodeSearchForm, CodeSearchHelp, CodeSearchResults } from "@/components/CodeSearchResults";
 import { RefPicker } from "@/components/RefPicker";
 import { RepoHeader } from "@/components/RepoHeader";
+import { Checkbox } from "@/components/ui/checkbox";
 import { usePageTitle } from "@/lib/page-title";
 import { type RepoSearchData, refPath, repoHeaderQuery } from "@/lib/queries/repo";
 import { subUrl } from "@/lib/url";
+
+export interface RepoSearchSearch {
+  q?: string;
+  exhaustive?: boolean;
+}
 
 // RepoSearch searches the files of a branch, a tag or a commit for lines that
 // contain a keyword, and lists them by file.
@@ -19,6 +25,12 @@ export function RepoSearch({ owner, name, data }: { owner: string; name: string;
   usePageTitle(`${data.query ? `${data.query} - ` : ""}${t("repo.code_search")} - ${repo.owner}/${repo.name}`);
   const params = { owner: repo.owner, repo: repo.name };
   const fullName = `${repo.owner}/${repo.name}`;
+  const search = (q: string, exhaustive: boolean) =>
+    void navigate({
+      to: "/$owner/$repo/search/$",
+      params: { ...params, _splat: data.ref },
+      search: { q: q || undefined, exhaustive: exhaustive || undefined },
+    });
 
   let message: string | null = null;
   if (data.keyword && data.timedOut) message = t("repo.code_search.timed_out");
@@ -39,24 +51,18 @@ export function RepoSearch({ owner, name, data }: { owner: string; name: string;
               <Link
                 to="/$owner/$repo/search/$"
                 params={{ ...params, _splat: ref }}
-                search={{ q: data.query || undefined }}
+                search={{ q: data.query || undefined, exhaustive: data.exhaustive || undefined }}
                 className={className}
               >
                 {children}
               </Link>
             )}
           />
-          <CodeSearchForm
-            query={data.query}
-            autoFocus={!data.query}
-            onSearch={(q) =>
-              void navigate({
-                to: "/$owner/$repo/search/$",
-                params: { ...params, _splat: data.ref },
-                search: { q: q || undefined },
-              })
-            }
-          />
+          <CodeSearchForm query={data.query} autoFocus={!data.query} onSearch={(q) => search(q, data.exhaustive)} />
+          <label className="flex min-h-8 cursor-pointer items-center gap-2 text-sm">
+            <Checkbox checked={data.exhaustive} onCheckedChange={(checked) => search(data.query, checked === true)} />
+            {t("repo.code_search.exhaustive")}
+          </label>
         </div>
 
         {!data.keyword ? (
@@ -77,9 +83,19 @@ export function RepoSearch({ owner, name, data }: { owner: string; name: string;
             />
             {data.truncated ? (
               <p className="mt-4 text-center text-sm text-(--color-muted-foreground)">
-                {t("repo.code_search.truncated", {
+                {t(data.exhaustive ? "repo.code_search.truncated_exhaustive" : "repo.code_search.truncated", {
                   count: data.files.reduce((n, f) => n + f.lines.filter((l) => l.isMatch).length, 0),
-                })}
+                })}{" "}
+                {data.exhaustive ? null : (
+                  <Link
+                    to="/$owner/$repo/search/$"
+                    params={{ ...params, _splat: data.ref }}
+                    search={{ q: data.query, exhaustive: true }}
+                    className="text-(--color-primary) hover:underline"
+                  >
+                    {t("repo.code_search.run_exhaustive")}
+                  </Link>
+                )}
               </p>
             ) : null}
           </>

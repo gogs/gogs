@@ -3,6 +3,7 @@ package integrationtests
 import (
 	"net/http"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -55,12 +56,13 @@ func TestCodeSearch(t *testing.T) {
 	repoCodeNewFile(t, ownerClient, private, "secret.go", "package secret\n\nconst token = \""+keyword+"\"\n", "Add secret")
 
 	type repoSearchResponse struct {
-		Ref      string           `json:"ref"`
-		RefType  string           `json:"refType"`
-		Query    string           `json:"query"`
-		Keyword  string           `json:"keyword"`
-		Files    []codeSearchFile `json:"files"`
-		Branches []string         `json:"branches"`
+		Ref        string           `json:"ref"`
+		RefType    string           `json:"refType"`
+		Query      string           `json:"query"`
+		Keyword    string           `json:"keyword"`
+		Exhaustive bool             `json:"exhaustive"`
+		Files      []codeSearchFile `json:"files"`
+		Branches   []string         `json:"branches"`
 	}
 	repoSearch := func(t *testing.T, c *client, repo *Repository, ref, q string) repoSearchResponse {
 		t.Helper()
@@ -111,6 +113,32 @@ func TestCodeSearch(t *testing.T) {
 
 		status, body := anonymous.do(http.MethodGet, repoCodeAPI(public)+"/search/no-such-ref?q="+keyword, nil)
 		assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
+	})
+
+	t.Run("repository exhaustive", func(t *testing.T) {
+		// A keyword of its own, so other searches do not find this file.
+		many := UniqueName("many")
+		repoCodeNewFile(t, ownerClient, public, "many.txt", strings.Repeat(many+"\n", 15), "Add many")
+		matches := func(resp repoSearchResponse) int {
+			n := 0
+			for _, f := range resp.Files {
+				for _, l := range f.Lines {
+					if l.IsMatch {
+						n++
+					}
+				}
+			}
+			return n
+		}
+
+		resp := repoSearch(t, anonymous, public, "", many)
+		assert.False(t, resp.Exhaustive)
+		assert.Equal(t, 10, matches(resp), "a search lists at most 10 lines of a file")
+
+		var all repoSearchResponse
+		anonymous.doJSON(http.MethodGet, repoCodeAPI(public)+"/search?exhaustive=true&q="+url.QueryEscape(many), nil, http.StatusOK, &all)
+		assert.True(t, all.Exhaustive)
+		assert.Equal(t, 15, matches(all))
 	})
 
 	t.Run("repository without keyword", func(t *testing.T) {

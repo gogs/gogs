@@ -80,7 +80,7 @@ import { RepoPeople } from "@/pages/repo/People";
 import { RepoPull } from "@/pages/repo/Pull";
 import { RepoReleaseEditor, RepoReleases } from "@/pages/repo/Releases";
 import { type RepoReleasesSearch, validateRepoReleasesSearch } from "@/pages/repo/Releases.search";
-import { RepoSearch } from "@/pages/repo/Search";
+import { RepoSearch, type RepoSearchSearch } from "@/pages/repo/Search";
 import {
   RepoBranchProtection,
   RepoBranchSettings,
@@ -896,16 +896,26 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
   const repoSearchRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/$owner/$repo/search/$",
-    validateSearch: (search: Record<string, unknown>): { q?: string } => ({ q: validateListSearch(search).q }),
-    loaderDeps: ({ search }: { search: { q?: string } }) => ({ q: search.q }),
+    validateSearch: (search: Record<string, unknown>): RepoSearchSearch => ({
+      q: validateListSearch(search).q,
+      exhaustive: search.exhaustive === true || search.exhaustive === "true" ? true : undefined,
+    }),
+    loaderDeps: ({ search }: { search: RepoSearchSearch }) => ({ q: search.q, exhaustive: search.exhaustive }),
     loader: ({ params, deps, context }) =>
       loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
-        fetchRepoSearch(params.owner, params.repo, params._splat ?? "", deps.q),
+        fetchRepoSearch(params.owner, params.repo, params._splat ?? "", deps.q, deps.exhaustive),
       ),
     component: function Search() {
       const { owner, repo } = repoSearchRoute.useParams();
       const data = repoSearchRoute.useLoaderData();
-      return <RepoSearch key={`${owner}/${repo}@${data.ref}?${data.query}`} owner={owner} name={repo} data={data} />;
+      return (
+        <RepoSearch
+          key={`${owner}/${repo}@${data.ref}?${data.query}&${data.exhaustive}`}
+          owner={owner}
+          name={repo}
+          data={data}
+        />
+      );
     },
   });
 

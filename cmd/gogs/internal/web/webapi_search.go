@@ -25,6 +25,10 @@ const (
 	codeSearchContextLines      = 1
 	codeSearchMaxLineLength     = 500
 	codeSearchTimeout           = 10 * time.Second
+	// An exhaustive search of a repository lists every matching line of a
+	// file, and is allowed more lines and more time.
+	codeSearchExhaustiveMaxResults = 5000
+	codeSearchExhaustiveTimeout    = time.Minute
 	// A search of all repositories looks at the most recently updated ones
 	// first, and at most this many of them.
 	codeSearchMaxRepos = 1000
@@ -141,9 +145,11 @@ type repoSearchResponse struct {
 	RefType string `json:"refType"`
 	// Query is what was searched for, and Keyword is its part without the
 	// qualifiers.
-	Query   string           `json:"query"`
-	Keyword string           `json:"keyword"`
-	Files   []repoSearchFile `json:"files"`
+	Query   string `json:"query"`
+	Keyword string `json:"keyword"`
+	// Exhaustive is set for an exhaustive search, see getRepoSearch.
+	Exhaustive bool             `json:"exhaustive"`
+	Files      []repoSearchFile `json:"files"`
 	// Truncated is set when more lines matched than the response lists.
 	Truncated bool `json:"truncated"`
 	// TimedOut is set when the search took too long and listed nothing.
@@ -153,7 +159,9 @@ type repoSearchResponse struct {
 }
 
 // getRepoSearch searches the files of the ref in the route, or of the default
-// branch when there is none, for lines that contain the "q" query.
+// branch when there is none, for lines that contain the "q" query. With
+// "exhaustive=true", it lists every matching line of a file rather than the
+// first few, and gets higher limits.
 func getRepoSearch(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoSearchResponse, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
@@ -172,11 +180,12 @@ func getRepoSearch(c flamego.Context, logger *logx.Logger, repoCtx *repoContext)
 
 	query := parseCodeQuery(c.Query("q"))
 	resp = &repoSearchResponse{
-		Ref:     ref.Name,
-		RefType: ref.Type,
-		Query:   strings.TrimSpace(c.Query("q")),
-		Keyword: query.Keyword,
-		Files:   []repoSearchFile{},
+		Ref:        ref.Name,
+		RefType:    ref.Type,
+		Query:      strings.TrimSpace(c.Query("q")),
+		Keyword:    query.Keyword,
+		Exhaustive: c.QueryBool("exhaustive"),
+		Files:      []repoSearchFile{},
 	}
 	if query.Keyword != "" {
 		release, err := acquireCodeSearchSlot(ctx)
@@ -184,13 +193,20 @@ func getRepoSearch(c flamego.Context, logger *logx.Logger, repoCtx *repoContext)
 			logger.Error("Failed to wait for a code search slot", "repoID", repo.ID, "error", err)
 			return http.StatusServiceUnavailable, nil, err
 		}
-		searchCtx, cancel := context.WithTimeout(ctx, codeSearchTimeout)
-		results, truncated, err := gitRepo.Grep(searchCtx, ref.Commit.ID.String(), query.Keyword, git.GrepOptions{
+		timeout := codeSearchTimeout
+		opts := git.GrepOptions{
 			MaxResults:        codeSearchMaxResults,
 			MaxResultsPerFile: codeSearchMaxResultsPerFile,
 			ContextLines:      codeSearchContextLines,
 			Pathspecs:         query.pathspecs(),
-		})
+		}
+		if resp.Exhaustive {
+			timeout = codeSearchExhaustiveTimeout
+			opts.MaxResults = codeSearchExhaustiveMaxResults
+			opts.MaxResultsPerFile = 0
+		}
+		searchCtx, cancel := context.WithTimeout(ctx, timeout)
+		results, truncated, err := gitRepo.Grep(searchCtx, ref.Commit.ID.String(), query.Keyword, opts)
 		cancel()
 		release()
 		switch {
