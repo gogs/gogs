@@ -80,7 +80,7 @@ func getAttachment(c flamego.Context, logger *logx.Logger, viewer *database.User
 	var repo *database.Repository
 	switch {
 	case attach.IssueID > 0:
-		issue, err := database.GetIssueByID(attach.IssueID)
+		issue, err := database.Handle.Issues().GetByID(ctx, attach.IssueID)
 		if err != nil {
 			if errx.IsNotFound(err) {
 				pages.NotFound(c)

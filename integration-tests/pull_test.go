@@ -166,7 +166,7 @@ func TestPullLifecycle(t *testing.T) {
 	issue := issueFromDatabase(t, repo, index)
 	assert.True(t, issue.IsPull)
 	assert.Equal(t, title, issue.Title)
-	pr, err := database.GetPullRequestByIssueID(issue.ID)
+	pr, err := database.Handle.PullRequests().GetByIssueID(t.Context(), issue.ID)
 	require.NoError(t, err)
 	assert.Equal(t, branch, pr.HeadBranch)
 	assert.Equal(t, "main", pr.BaseBranch)
@@ -254,7 +254,7 @@ func TestPullLifecycle(t *testing.T) {
 			ID int64 `json:"id"`
 		}
 		otherClient.doJSON(http.MethodPost, issueAPIPath(repo, "pulls", index, "comments"), map[string]any{"content": "Looks good"}, http.StatusCreated, &created)
-		comment, err := database.GetCommentByID(created.ID)
+		comment, err := database.Handle.Comments().GetByID(t.Context(), created.ID)
 		require.NoError(t, err)
 		assert.Equal(t, issue.ID, comment.IssueID)
 	})
@@ -277,7 +277,7 @@ func TestPullLifecycle(t *testing.T) {
 		assert.Equal(t, "Merge the feature", pullMustGit(t, repo, "log", "-1", "--format=%s", "main"))
 		assert.Equal(t, mainBefore+" "+headCommit, pullMustGit(t, repo, "log", "-1", "--format=%P", "main"))
 
-		pr, err := database.GetPullRequestByIssueID(issue.ID)
+		pr, err := database.Handle.PullRequests().GetByIssueID(t.Context(), issue.ID)
 		require.NoError(t, err)
 		assert.True(t, pr.HasMerged)
 		assert.Equal(t, owner.ID, pr.MergerID)
@@ -501,12 +501,12 @@ func TestPullFork(t *testing.T) {
 		v, _ = pullCompareFork(t, bobClient, fork, "main..."+branch)
 		assert.Equal(t, "exists", v.State)
 
-		inForkPull, err := database.GetPullRequestByIssueID(issueFromDatabase(t, fork, inFork).ID)
+		inForkPull, err := database.Handle.PullRequests().GetByIssueID(t.Context(), issueFromDatabase(t, fork, inFork).ID)
 		require.NoError(t, err)
 		assert.Equal(t, fork.ID, inForkPull.HeadRepoID)
 		assert.Equal(t, fork.ID, inForkPull.BaseRepoID)
 		assert.Equal(t, pullMustGit(t, fork, "rev-parse", "refs/heads/"+branch), pullMustGit(t, fork, "rev-parse", "refs/pull/"+strconv.FormatInt(inFork, 10)+"/head"))
-		intoBasePull, err := database.GetPullRequestByIssueID(issueFromDatabase(t, base, created.Index).ID)
+		intoBasePull, err := database.Handle.PullRequests().GetByIssueID(t.Context(), issueFromDatabase(t, base, created.Index).ID)
 		require.NoError(t, err)
 		assert.Equal(t, fork.ID, intoBasePull.HeadRepoID)
 		assert.Equal(t, base.ID, intoBasePull.BaseRepoID)

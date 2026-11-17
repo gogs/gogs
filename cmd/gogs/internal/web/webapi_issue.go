@@ -52,7 +52,7 @@ func injectRepoIssue(c flamego.Context, logger *logx.Logger, repoCtx *repoContex
 		writeErrorResponse(w, http.StatusNotFound, errors.New("issue does not exist"))
 		return
 	}
-	issue, err := database.GetIssueByIndex(repo.ID, index)
+	issue, err := database.Handle.Issues().GetByIndex(c.Request().Context(), repo.ID, index)
 	if err != nil {
 		if database.IsErrIssueNotExist(err) {
 			writeErrorResponse(w, http.StatusNotFound, errors.New("issue does not exist"))
@@ -135,10 +135,6 @@ func toIssueAttachments(attachments []*database.Attachment, content string) []is
 // The comment is the one with given commentID, or the issue itself when it is
 // 0.
 func updateLinkedAttachments(ctx context.Context, issueID, commentID int64, oldContent, newContent string, uuids []string) error {
-	// The content that links the files is already saved, so the files have to
-	// follow even when the client goes away.
-	ctx = context.WithoutCancel(ctx)
-
 	var attached []*database.Attachment
 	var err error
 	if commentID > 0 {
@@ -408,7 +404,7 @@ func toRepoIssueView(ctx context.Context, logger *logx.Logger, viewer *database.
 
 	if viewer != nil {
 		resp.Attachment = attachmentSettings(issueAttachmentLimits())
-		if err = issue.ReadBy(viewer.ID); err != nil {
+		if err = database.Handle.Issues().MarkRead(ctx, viewer.ID, issue.ID); err != nil {
 			return nil, errors.Wrap(err, "mark as read")
 		}
 	}
@@ -446,7 +442,7 @@ func patchRepoIssue(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewe
 			return http.StatusBadRequest, resp, nil
 		}
 		if title != issue.Title {
-			if err = issue.ChangeTitle(logger, viewer, title); err != nil {
+			if err = database.Handle.Issues().ChangeTitle(ctx, logger, viewer, issue, title); err != nil {
 				logger.Error("Failed to change issue title", "issueID", issue.ID, "error", err)
 				return http.StatusInternalServerError, nil, errors.Wrap(err, "change title")
 			}
@@ -459,8 +455,11 @@ func patchRepoIssue(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewe
 			}
 			return statusCode, nil, err
 		}
+		// Keep going if the client disconnects, so the attachments stay in sync
+		// with the saved content.
+		ctx := context.WithoutCancel(ctx)
 		oldContent := issue.Content
-		if err = issue.ChangeContent(logger, viewer, *req.Content); err != nil {
+		if err = database.Handle.Issues().ChangeContent(ctx, logger, viewer, issue, *req.Content); err != nil {
 			logger.Error("Failed to change issue content", "issueID", issue.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "change content")
 		}
@@ -481,21 +480,21 @@ func setRepoIssueClosed(c flamego.Context, logger *logx.Logger, l i18n.Locale, v
 		// A pull request only reopens when no other one merges the same
 		// branches, and it is checked for conflicts again.
 		if !closed {
-			other, err := database.GetUnmergedPullRequest(pull.HeadRepoID, pull.BaseRepoID, pull.HeadBranch, pull.BaseBranch)
+			other, err := database.Handle.PullRequests().GetUnmerged(c.Request().Context(), pull.HeadRepoID, pull.BaseRepoID, pull.HeadBranch, pull.BaseBranch)
 			if err != nil && !database.IsErrPullRequestNotExist(err) {
 				logger.Error("Failed to get open pull request with the same branches", "pullID", pull.ID, "error", err)
 				return http.StatusInternalServerError, nil, errors.Wrap(err, "get open pull request")
 			} else if other != nil {
 				return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("repo.pulls.open_unmerged_pull_exists", other.Index)}, nil
 			}
-			if err = pull.UpdatePatch(c.Request().Context(), logger); err != nil {
+			if err = database.Handle.PullRequests().UpdatePatch(c.Request().Context(), logger, pull); err != nil {
 				logger.Error("Failed to update pull request patch", "pullID", pull.ID, "error", err)
 				return http.StatusInternalServerError, nil, errors.Wrap(err, "update patch")
 			}
-			pull.AddToTaskQueue(logger)
+			database.Handle.PullRequests().AddToTaskQueue(c.Request().Context(), logger, pull)
 		}
 	}
-	if err = issue.ChangeStatus(logger, viewer, repoCtx.Repo, closed); err != nil {
+	if err = database.Handle.Issues().ChangeStatus(c.Request().Context(), logger, viewer, repoCtx.Repo, issue, closed); err != nil {
 		logger.Error("Failed to change issue state", "issueID", issue.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "change state")
 	}
@@ -534,7 +533,7 @@ func putRepoIssueLabels(c flamego.Context, logger *logx.Logger, viewer *database
 		if slices.ContainsFunc(labels, func(l *database.Label) bool { return l.ID == label.ID }) {
 			continue
 		}
-		if err = issue.RemoveLabel(logger, viewer, label); err != nil {
+		if err = database.Handle.Issues().RemoveLabel(ctx, logger, viewer, issue, label); err != nil {
 			logger.Error("Failed to remove label from issue", "labelID", label.ID, "issueID", issue.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "remove label")
 		}
@@ -543,7 +542,7 @@ func putRepoIssueLabels(c flamego.Context, logger *logx.Logger, viewer *database
 		if slices.ContainsFunc(issue.Labels, func(l *database.Label) bool { return l.ID == label.ID }) {
 			continue
 		}
-		if err = issue.AddLabel(logger, viewer, label); err != nil {
+		if err = database.Handle.Issues().AddLabels(ctx, logger, viewer, issue, label); err != nil {
 			logger.Error("Failed to add label to issue", "labelID", label.ID, "issueID", issue.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "add label")
 		}
@@ -607,7 +606,7 @@ func putRepoIssueMilestone(c flamego.Context, logger *logx.Logger, viewer *datab
 	return http.StatusNoContent, nil, nil
 }
 
-func putRepoIssueAssignee(logger *logx.Logger, viewer *database.User, repoCtx *repoContext, issue *database.Issue, req repoIssueIDRequest) (statusCode int, resp any, err error) {
+func putRepoIssueAssignee(c flamego.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, issue *database.Issue, req repoIssueIDRequest) (statusCode int, resp any, err error) {
 	if req.ID == issue.AssigneeID {
 		return http.StatusNoContent, nil, nil
 	}
@@ -617,7 +616,7 @@ func putRepoIssueAssignee(logger *logx.Logger, viewer *database.User, repoCtx *r
 		}
 		return statusCode, nil, err
 	}
-	if err = issue.ChangeAssignee(logger, viewer, req.ID); err != nil {
+	if err = database.Handle.Issues().ChangeAssignee(c.Request().Context(), logger, viewer, issue, req.ID); err != nil {
 		logger.Error("Failed to change issue assignee", "issueID", issue.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "change assignee")
 	}
@@ -672,7 +671,7 @@ func postRepoIssueComment(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 		return statusCode, nil, err
 	}
 
-	comment, err := database.CreateIssueComment(logger, viewer, repoCtx.Repo, issue, req.Content, req.Attachments)
+	comment, err := database.Handle.Comments().Create(ctx, logger, viewer, repoCtx.Repo, issue, req.Content, req.Attachments)
 	if err != nil {
 		logger.Error("Failed to create issue comment", "issueID", issue.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "create comment")
@@ -684,7 +683,7 @@ func postRepoIssueComment(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 // its poster and admins can change.
 func withIssueComment(c flamego.Context, logger *logx.Logger, repoCtx *repoContext, issue *database.Issue) {
 	w := c.ResponseWriter()
-	comment, err := database.GetCommentByID(idParam(c))
+	comment, err := database.Handle.Comments().GetByID(c.Request().Context(), idParam(c))
 	if err != nil {
 		if database.IsErrCommentNotExist(err) {
 			writeErrorResponse(w, http.StatusNotFound, errors.New("comment does not exist"))
@@ -714,9 +713,12 @@ func patchRepoIssueComment(c flamego.Context, logger *logx.Logger, l i18n.Locale
 		}
 		return statusCode, nil, err
 	}
+	// Keep going if the client disconnects, so the attachments stay in sync
+	// with the saved content.
+	ctx = context.WithoutCancel(ctx)
 	oldContent := comment.Content
 	comment.Content = req.Content
-	if err = database.UpdateComment(logger, viewer, comment, oldContent); err != nil {
+	if err = database.Handle.Comments().Update(ctx, logger, viewer, comment, oldContent); err != nil {
 		logger.Error("Failed to update comment", "commentID", comment.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update comment")
 	}
@@ -727,8 +729,8 @@ func patchRepoIssueComment(c flamego.Context, logger *logx.Logger, l i18n.Locale
 	return http.StatusNoContent, nil, nil
 }
 
-func deleteRepoIssueComment(logger *logx.Logger, viewer *database.User, comment *database.Comment) (statusCode int, resp any, err error) {
-	if err = database.DeleteCommentByID(logger, viewer, comment.ID); err != nil {
+func deleteRepoIssueComment(c flamego.Context, logger *logx.Logger, viewer *database.User, comment *database.Comment) (statusCode int, resp any, err error) {
+	if err = database.Handle.Comments().DeleteByID(c.Request().Context(), logger, viewer, comment.ID); err != nil {
 		logger.Error("Failed to delete comment", "commentID", comment.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete comment")
 	}
@@ -1169,7 +1171,7 @@ func postRepoIssue(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer
 	// Creating the issue notifies watchers and webhooks about the repository
 	// and its owner.
 	repo.Owner = repoCtx.Owner
-	if err = database.NewIssue(logger, repo, issue, labelIDs, req.Attachments); err != nil {
+	if err = database.Handle.Issues().Create(ctx, logger, repo, issue, labelIDs, req.Attachments); err != nil {
 		logger.Error("Failed to create issue", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "create issue")
 	}

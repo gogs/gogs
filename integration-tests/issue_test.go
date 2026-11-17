@@ -62,7 +62,7 @@ func issueGet(t *testing.T, c *client, repo *Repository, index int64) *issueView
 func issueFromDatabase(t *testing.T, repo *Repository, index int64) *database.Issue {
 	t.Helper()
 
-	issue, err := database.GetIssueByIndex(repo.ID, index)
+	issue, err := database.Handle.Issues().GetByIndex(t.Context(), repo.ID, index)
 	require.NoError(t, err)
 	return issue
 }
@@ -263,7 +263,7 @@ func TestIssueComments(t *testing.T) {
 		ID int64 `json:"id"`
 	}
 	commenterClient.doJSON(http.MethodPost, path, map[string]any{"content": "I **agree**."}, http.StatusCreated, &created)
-	comment, err := database.GetCommentByID(created.ID)
+	comment, err := database.Handle.Comments().GetByID(t.Context(), created.ID)
 	require.NoError(t, err)
 	assert.Equal(t, "I **agree**.", comment.Content)
 	assert.Equal(t, commenter.ID, comment.PosterID)
@@ -290,13 +290,13 @@ func TestIssueComments(t *testing.T) {
 
 	status, body = commenterClient.do(http.MethodPatch, commentPath, map[string]any{"content": "I disagree."})
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-	comment, err = database.GetCommentByID(created.ID)
+	comment, err = database.Handle.Comments().GetByID(t.Context(), created.ID)
 	require.NoError(t, err)
 	assert.Equal(t, "I disagree.", comment.Content)
 
 	status, body = ownerClient.do(http.MethodDelete, commentPath, map[string]any{})
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-	_, err = database.GetCommentByID(created.ID)
+	_, err = database.Handle.Comments().GetByID(t.Context(), created.ID)
 	assert.True(t, database.IsErrCommentNotExist(err), "comment not deleted: %v", err)
 	assert.Empty(t, issueGet(t, ownerClient, repo, index).Comments)
 }
@@ -452,6 +452,13 @@ func TestIssueEditAttachmentsClientGone(t *testing.T) {
 	require.Eventually(t, func() bool {
 		return gone(oldUUID) && attachedTo(newUUID, issue.ID, comment.ID)
 	}, 10*time.Second, 100*time.Millisecond, "files of the comment not updated")
+
+	c.goAwayWhileLocked("SELECT id FROM attachment WHERE uuid = ? FOR UPDATE", newUUID,
+		http.MethodDelete, issueAPIPath(repo, "issues", created.Index, "comments", comment.ID), nil)
+	require.Eventually(t, func() bool {
+		_, err := database.Handle.Comments().GetByID(t.Context(), comment.ID)
+		return database.IsErrCommentNotExist(err) && gone(newUUID)
+	}, 10*time.Second, 100*time.Millisecond, "comment or its files not deleted")
 }
 
 func TestIssueAttachments(t *testing.T) {

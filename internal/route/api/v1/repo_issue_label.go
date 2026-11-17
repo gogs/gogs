@@ -8,7 +8,7 @@ import (
 )
 
 func listIssueLabels(c *apiContext) {
-	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamInt64("index"))
+	issue, err := database.Handle.Issues().GetByIndex(c.Request().Context(), c.Repo.Repository.ID, c.ParamInt64("index"))
 	if err != nil {
 		c.NotFoundOrError(err, "get issue by index")
 		return
@@ -26,7 +26,7 @@ type issueLabelsRequest struct {
 }
 
 func addIssueLabels(c *apiContext, form issueLabelsRequest) {
-	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamInt64("index"))
+	issue, err := database.Handle.Issues().GetByIndex(c.Request().Context(), c.Repo.Repository.ID, c.ParamInt64("index"))
 	if err != nil {
 		c.NotFoundOrError(err, "get issue by index")
 		return
@@ -38,7 +38,7 @@ func addIssueLabels(c *apiContext, form issueLabelsRequest) {
 		return
 	}
 
-	if err = issue.AddLabels(c.Logger, c.User, labels); err != nil {
+	if err = database.Handle.Issues().AddLabels(c.Request().Context(), c.Logger, c.User, issue, labels...); err != nil {
 		c.Error(err, "add labels")
 		return
 	}
@@ -57,7 +57,7 @@ func addIssueLabels(c *apiContext, form issueLabelsRequest) {
 }
 
 func deleteIssueLabel(c *apiContext) {
-	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamInt64("index"))
+	issue, err := database.Handle.Issues().GetByIndex(c.Request().Context(), c.Repo.Repository.ID, c.ParamInt64("index"))
 	if err != nil {
 		c.NotFoundOrError(err, "get issue by index")
 		return
@@ -82,7 +82,7 @@ func deleteIssueLabel(c *apiContext) {
 }
 
 func replaceIssueLabels(c *apiContext, form issueLabelsRequest) {
-	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamInt64("index"))
+	issue, err := database.Handle.Issues().GetByIndex(c.Request().Context(), c.Repo.Repository.ID, c.ParamInt64("index"))
 	if err != nil {
 		c.NotFoundOrError(err, "get issue by index")
 		return
@@ -94,7 +94,7 @@ func replaceIssueLabels(c *apiContext, form issueLabelsRequest) {
 		return
 	}
 
-	if err := issue.ReplaceLabels(labels); err != nil {
+	if err := database.Handle.Issues().ReplaceLabels(c.Request().Context(), issue, labels...); err != nil {
 		c.Error(err, "replace labels")
 		return
 	}
@@ -113,13 +113,13 @@ func replaceIssueLabels(c *apiContext, form issueLabelsRequest) {
 }
 
 func clearIssueLabels(c *apiContext) {
-	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamInt64("index"))
+	issue, err := database.Handle.Issues().GetByIndex(c.Request().Context(), c.Repo.Repository.ID, c.ParamInt64("index"))
 	if err != nil {
 		c.NotFoundOrError(err, "get issue by index")
 		return
 	}
 
-	if err := issue.ClearLabels(c.Logger, c.User); err != nil {
+	if err := database.Handle.Issues().ClearLabels(c.Request().Context(), c.Logger, c.User, issue); err != nil {
 		c.Error(err, "clear labels")
 		return
 	}

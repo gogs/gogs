@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"context"
 	"net/http"
 	"strings"
 
@@ -12,25 +13,20 @@ import (
 )
 
 func queryIssues(c *apiContext, opts *database.IssuesOptions) {
-	issues, err := database.Issues(opts)
+	issues, err := database.Handle.Issues().List(c.Request().Context(), opts)
 	if err != nil {
 		c.Error(err, "list issues")
 		return
 	}
 
-	count, err := database.IssuesCount(opts)
+	count, err := database.Handle.Issues().Count(c.Request().Context(), opts)
 	if err != nil {
 		c.Error(err, "count issues")
 		return
 	}
 
-	// FIXME: use IssueList to improve performance.
 	apiIssues := make([]*types.Issue, len(issues))
 	for i := range issues {
-		if err = issues[i].LoadAttributes(); err != nil {
-			c.Error(err, "load attributes")
-			return
-		}
 		apiIssues[i] = toIssue(issues[i])
 	}
 
@@ -59,7 +55,7 @@ func listIssues(c *apiContext) {
 }
 
 func getIssue(c *apiContext) {
-	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamInt64("index"))
+	issue, err := database.Handle.Issues().GetByIndex(c.Request().Context(), c.Repo.Repository.ID, c.ParamInt64("index"))
 	if err != nil {
 		c.NotFoundOrError(err, "get issue by index")
 		return
@@ -103,13 +99,13 @@ func createIssue(c *apiContext, form createIssueRequest) {
 		form.Labels = nil
 	}
 
-	if err := database.NewIssue(c.Logger, c.Repo.Repository, issue, form.Labels, nil); err != nil {
+	if err := database.Handle.Issues().Create(c.Request().Context(), c.Logger, c.Repo.Repository, issue, form.Labels, nil); err != nil {
 		c.Error(err, "new issue")
 		return
 	}
 
 	if form.Closed {
-		if err := issue.ChangeStatus(c.Logger, c.User, c.Repo.Repository, true); err != nil {
+		if err := database.Handle.Issues().ChangeStatus(c.Request().Context(), c.Logger, c.User, c.Repo.Repository, issue, true); err != nil {
 			c.Error(err, "change status to closed")
 			return
 		}
@@ -117,7 +113,7 @@ func createIssue(c *apiContext, form createIssueRequest) {
 
 	// Refetch from database to assign some automatic values
 	var err error
-	issue, err = database.GetIssueByID(issue.ID)
+	issue, err = database.Handle.Issues().GetByID(c.Request().Context(), issue.ID)
 	if err != nil {
 		c.Error(err, "get issue by ID")
 		return
@@ -134,7 +130,7 @@ type editIssueRequest struct {
 }
 
 func editIssue(c *apiContext, form editIssueRequest) {
-	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamInt64("index"))
+	issue, err := database.Handle.Issues().GetByIndex(c.Request().Context(), c.Repo.Repository.ID, c.ParamInt64("index"))
 	if err != nil {
 		c.NotFoundOrError(err, "get issue by index")
 		return
@@ -145,6 +141,9 @@ func editIssue(c *apiContext, form editIssueRequest) {
 		return
 	}
 
+	// Stopping midway, e.g., when the client disconnects, would leave a partial
+	// change behind.
+	ctx := context.WithoutCancel(c.Request().Context())
 	if len(form.Title) > 0 {
 		issue.Title = form.Title
 	}
@@ -157,7 +156,7 @@ func editIssue(c *apiContext, form editIssueRequest) {
 		if *form.Assignee == "" {
 			issue.AssigneeID = 0
 		} else {
-			assignee, err := database.Handle.Users().GetByUsername(c.Request().Context(), *form.Assignee)
+			assignee, err := database.Handle.Users().GetByUsername(ctx, *form.Assignee)
 			if err != nil {
 				if database.IsErrUserNotExist(err) {
 					c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("assignee does not exist: [name: %s]", *form.Assignee))
@@ -169,7 +168,7 @@ func editIssue(c *apiContext, form editIssueRequest) {
 			issue.AssigneeID = assignee.ID
 		}
 
-		if err = database.UpdateIssueUserByAssignee(issue); err != nil {
+		if err = database.Handle.Issues().UpdateAssignee(ctx, issue); err != nil {
 			c.Error(err, "update issue user by assignee")
 			return
 		}
@@ -178,25 +177,25 @@ func editIssue(c *apiContext, form editIssueRequest) {
 		issue.MilestoneID != *form.Milestone {
 		oldMilestoneID := issue.MilestoneID
 		issue.MilestoneID = *form.Milestone
-		if err = database.Handle.Milestones().AssignIssue(c.Request().Context(), c.Logger, c.User, issue, oldMilestoneID); err != nil {
+		if err = database.Handle.Milestones().AssignIssue(ctx, c.Logger, c.User, issue, oldMilestoneID); err != nil {
 			c.Error(err, "change milestone assign")
 			return
 		}
 	}
 
-	if err = database.UpdateIssue(issue); err != nil {
+	if err = database.Handle.Issues().Update(ctx, issue); err != nil {
 		c.Error(err, "update issue")
 		return
 	}
 	if form.State != nil {
-		if err = issue.ChangeStatus(c.Logger, c.User, c.Repo.Repository, types.IssueStateClosed == types.IssueStateType(*form.State)); err != nil {
+		if err = database.Handle.Issues().ChangeStatus(ctx, c.Logger, c.User, c.Repo.Repository, issue, types.IssueStateClosed == types.IssueStateType(*form.State)); err != nil {
 			c.Error(err, "change status")
 			return
 		}
 	}
 
 	// Refetch from database to assign some automatic values
-	issue, err = database.GetIssueByID(issue.ID)
+	issue, err = database.Handle.Issues().GetByID(ctx, issue.ID)
 	if err != nil {
 		c.Error(err, "get issue by ID")
 		return

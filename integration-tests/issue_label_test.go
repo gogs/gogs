@@ -358,3 +358,27 @@ func TestIssueCountsUnderConcurrentChanges(t *testing.T) {
 	whileCounting("milestone", milestoneID, http.MethodPatch, "/issues/"+apiV1Itoa(inMilestone), map[string]any{"milestone": 0})
 	assert.Equal(t, []int{4, 4, 100}, countsOf("milestone", milestoneID), "closed issue removed from the milestone")
 }
+
+// Replacing labels finishes even if the client disconnects, so the issue never
+// ends up with half the change.
+func TestIssueReplaceLabelsClientGone(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{})
+	c := authenticatedClient(t, owner)
+	bug := issueCreateLabel(t, repo, "bug")
+	feature := issueCreateLabel(t, repo, "feature")
+	var created struct {
+		Index int64 `json:"index"`
+	}
+	c.doJSON(http.MethodPost, issueAPIPath(repo, "issues"), map[string]any{"title": "Labeled", "labelIDs": []int64{bug}}, http.StatusCreated, &created)
+	issueID := issueFromDatabase(t, repo, created.Index).ID
+
+	c.goAwayWhileLocked("SELECT id FROM label WHERE id = ? FOR UPDATE", feature,
+		http.MethodPut, issueAPIPath(repo, "issues", created.Index, "labels"), map[string]any{"ids": []int64{feature}})
+	require.Eventually(t, func() bool {
+		labels, err := database.Handle.Labels().ListByIssueID(t.Context(), issueID)
+		return err == nil && len(labels) == 1 && labels[0].ID == feature
+	}, 10*time.Second, 100*time.Millisecond, "labels not replaced")
+}

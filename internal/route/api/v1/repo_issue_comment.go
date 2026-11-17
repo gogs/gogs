@@ -20,13 +20,13 @@ func listIssueComments(c *apiContext) {
 	}
 
 	// comments,err:=db.GetCommentsByIssueIDSince(, since)
-	issue, err := database.GetRawIssueByIndex(c.Repo.Repository.ID, c.ParamInt64("index"))
+	issue, err := database.Handle.Issues().GetByIndex(c.Request().Context(), c.Repo.Repository.ID, c.ParamInt64("index"))
 	if err != nil {
 		c.Error(err, "get raw issue by index")
 		return
 	}
 
-	comments, err := database.GetCommentsByIssueIDSince(issue.ID, since.Unix())
+	comments, err := database.Handle.Comments().ListByIssueID(c.Request().Context(), issue.ID, since.Unix())
 	if err != nil {
 		c.Error(err, "get comments by issue ID")
 		return
@@ -50,7 +50,7 @@ func listRepoIssueComments(c *apiContext) {
 		}
 	}
 
-	comments, err := database.GetCommentsByRepoIDSince(c.Repo.Repository.ID, since.Unix())
+	comments, err := database.Handle.Comments().ListByRepoID(c.Request().Context(), c.Repo.Repository.ID, since.Unix())
 	if err != nil {
 		c.Error(err, "get comments by repository ID")
 		return
@@ -68,13 +68,13 @@ type createIssueCommentRequest struct {
 }
 
 func createIssueComment(c *apiContext, form createIssueCommentRequest) {
-	issue, err := database.GetIssueByIndex(c.Repo.Repository.ID, c.ParamInt64("index"))
+	issue, err := database.Handle.Issues().GetByIndex(c.Request().Context(), c.Repo.Repository.ID, c.ParamInt64("index"))
 	if err != nil {
 		c.Error(err, "get issue by index")
 		return
 	}
 
-	comment, err := database.CreateIssueComment(c.Logger, c.User, c.Repo.Repository, issue, form.Body, nil)
+	comment, err := database.Handle.Comments().Create(c.Request().Context(), c.Logger, c.User, c.Repo.Repository, issue, form.Body, nil)
 	if err != nil {
 		c.Error(err, "create issue comment")
 		return
@@ -88,13 +88,13 @@ type editIssueCommentRequest struct {
 }
 
 func editIssueComment(c *apiContext, form editIssueCommentRequest) {
-	comment, err := database.GetCommentByID(c.ParamInt64("id"))
+	comment, err := database.Handle.Comments().GetByID(c.Request().Context(), c.ParamInt64("id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get comment by ID")
 		return
 	}
 
-	issue, err := database.GetIssueByID(comment.IssueID)
+	issue, err := database.Handle.Issues().GetByID(c.Request().Context(), comment.IssueID)
 	if err != nil {
 		c.NotFoundOrError(err, "get issue by ID")
 		return
@@ -115,7 +115,7 @@ func editIssueComment(c *apiContext, form editIssueCommentRequest) {
 
 	oldContent := comment.Content
 	comment.Content = form.Body
-	if err := database.UpdateComment(c.Logger, c.User, comment, oldContent); err != nil {
+	if err := database.Handle.Comments().Update(c.Request().Context(), c.Logger, c.User, comment, oldContent); err != nil {
 		c.Error(err, "update comment")
 		return
 	}
@@ -123,13 +123,13 @@ func editIssueComment(c *apiContext, form editIssueCommentRequest) {
 }
 
 func deleteIssueComment(c *apiContext) {
-	comment, err := database.GetCommentByID(c.ParamInt64("id"))
+	comment, err := database.Handle.Comments().GetByID(c.Request().Context(), c.ParamInt64("id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get comment by ID")
 		return
 	}
 
-	issue, err := database.GetIssueByID(comment.IssueID)
+	issue, err := database.Handle.Issues().GetByID(c.Request().Context(), comment.IssueID)
 	if err != nil {
 		c.NotFoundOrError(err, "get issue by ID")
 		return
@@ -148,7 +148,7 @@ func deleteIssueComment(c *apiContext) {
 		return
 	}
 
-	if err = database.DeleteCommentByID(c.Logger, c.User, comment.ID); err != nil {
+	if err = database.Handle.Comments().DeleteByID(c.Request().Context(), c.Logger, c.User, comment.ID); err != nil {
 		c.Error(err, "delete comment by ID")
 		return
 	}

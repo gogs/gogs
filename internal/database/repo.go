@@ -567,11 +567,6 @@ func (r *Repository) GetWriters() (_ []*User, err error) {
 	return r.getUsersWithAccesMode(Handle.db, AccessModeWrite)
 }
 
-// IssueStats returns number of open and closed repository issues by given filter mode.
-func (r *Repository) IssueStats(userID int64, filterMode FilterMode, isPull bool) (int64, int64) {
-	return GetRepoIssueStats(r.ID, userID, filterMode, isPull)
-}
-
 func (r *Repository) repoPath(tx *gorm.DB) string {
 	return RepoPath(r.mustOwner(tx).Name, r.Name)
 }
@@ -2337,12 +2332,13 @@ func CheckRepoStats(logger *logx.Logger) {
 				continue
 			}
 
-			rawResult, err := x.Query("SELECT COUNT(*) FROM `repository` WHERE fork_id=?", repo.ID)
+			var numForks int64
+			err = Handle.db.Model(new(Repository)).Where("fork_id = ?", repo.ID).Count(&numForks).Error
 			if err != nil {
 				logger.Error("Failed to count forks", "repoID", repo.ID, "error", err)
 				continue
 			}
-			repo.NumForks = int(parseCountResult(rawResult))
+			repo.NumForks = int(numForks)
 
 			if err = UpdateRepository(logger, repo, false); err != nil {
 				logger.Error("Failed to update repository", "repoID", id, "error", err)
