@@ -87,7 +87,7 @@ func orgAssignment(args ...bool) flamego.Handler {
 		}
 
 		if assignTeam {
-			c.Org.Team, err = database.GetTeamByID(c.ParamInt64("teamid"))
+			c.Org.Team, err = database.Handle.Teams().GetByID(c.Request().Context(), c.ParamInt64("teamid"))
 			if err != nil {
 				c.NotFoundOrError(err, "get team by ID")
 				return

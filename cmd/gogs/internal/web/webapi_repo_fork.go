@@ -76,8 +76,9 @@ type repoForkOptions struct {
 	ForcePrivate bool `json:"forcePrivate"`
 }
 
-func getRepoFork(logger *logx.Logger, viewer *database.User, base *forkBase) (statusCode int, resp any, err error) {
-	owners, err := repoNewOwners(viewer, viewer)
+func getRepoFork(c flamego.Context, logger *logx.Logger, viewer *database.User, base *forkBase) (statusCode int, resp any, err error) {
+	ctx := c.Request().Context()
+	owners, err := repoNewOwners(ctx, viewer, viewer)
 	if err != nil {
 		logger.Error("Failed to list owners", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, err
@@ -102,10 +103,11 @@ type repoForkRequest struct {
 }
 
 func postRepoFork(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, base *forkBase, req repoForkRequest) (statusCode int, resp any, err error) {
+	ctx := c.Request().Context()
 	owner, err := repoOwner(c.Request().Context(), viewer, req.OwnerID)
 	// Unlike creating a repository, forking to an organization takes owning
 	// it, even for site admins.
-	if errors.Is(err, errRepoOwnerNotAllowed) || (err == nil && owner.IsOrganization() && !owner.IsOwnedBy(viewer.ID)) {
+	if errors.Is(err, errRepoOwnerNotAllowed) || (err == nil && owner.IsOrganization() && !database.Handle.Organizations().IsOwner(ctx, owner.ID, viewer.ID)) {
 		return http.StatusForbidden, repoOwnerError(l), nil
 	} else if err != nil {
 		logger.Error("Failed to get owner", "ownerID", req.OwnerID, "error", err)

@@ -489,6 +489,25 @@ Indexes:
 	"UQE_star_s" UNIQUE (uid, repo_id)
 ```
 
+# Table "team"
+
+```
+    Field    |   Column    |  PostgreSQL  |         MySQL         |        SQLite3        
+-------------+-------------+--------------+-----------------------+-----------------------
+ ID          | id          | BIGSERIAL    | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ OrgID       | org_id      | BIGINT       | BIGINT                | INTEGER               
+ LowerName   | lower_name  | VARCHAR(255) | VARCHAR(255)          | TEXT                  
+ Name        | name        | VARCHAR(255) | VARCHAR(255)          | TEXT                  
+ Description | description | VARCHAR(255) | VARCHAR(255)          | TEXT                  
+ Authorize   | authorize   | INTEGER      | INT                   | INTEGER               
+ NumRepos    | num_repos   | INTEGER      | INT                   | INTEGER               
+ NumMembers  | num_members | INTEGER      | INT                   | INTEGER               
+
+Primary keys: id
+Indexes: 
+	"IDX_team_org_id" (org_id)
+```
+
 # Table "team_repo"
 
 ```

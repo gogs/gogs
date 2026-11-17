@@ -154,9 +154,9 @@ func TestAPIV1AdminCreateForUser(t *testing.T) {
 		admin.doJSON(http.MethodPost, "/api/v1/admin/users/"+u.Name+"/orgs", map[string]any{"username": name, "full_name": "Org"}, http.StatusCreated, &org)
 		assert.Equal(t, name, org.UserName)
 		assert.Equal(t, "Org", org.FullName)
-		got, err := database.GetOrgByName(name)
+		got, err := database.Handle.Organizations().GetByName(t.Context(), name)
 		require.NoError(t, err)
-		assert.True(t, got.IsOwnedBy(u.ID), "user does not own the organization")
+		assert.True(t, database.Handle.Organizations().IsOwner(t.Context(), got.ID, u.ID), "user does not own the organization")
 	})
 
 	t.Run("repository", func(t *testing.T) {
@@ -230,9 +230,9 @@ func TestAPIV1AdminTeams(t *testing.T) {
 		hasRepository := func() bool {
 			t.Helper()
 
-			got, err := database.GetTeamByID(team.ID)
+			got, err := database.Handle.Teams().GetByID(t.Context(), team.ID)
 			require.NoError(t, err)
-			return got.HasRepository(repo.ID)
+			return database.Handle.Teams().HasRepo(t.Context(), got.OrgID, got.ID, repo.ID)
 		}
 
 		status, body := nonAdmin.do(http.MethodPut, teamPath+"/repos/"+repo.Name, nil)

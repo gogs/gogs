@@ -32,7 +32,7 @@ func orgSeed(t *testing.T, ownerID int64) *database.User {
 		IsActive: true,
 		Type:     database.UserTypeOrganization,
 	}
-	require.NoError(t, database.CreateOrganization(org, owner))
+	require.NoError(t, database.Handle.Organizations().Create(t.Context(), org, owner))
 	return org
 }
 
@@ -40,7 +40,7 @@ func orgSeed(t *testing.T, ownerID int64) *database.User {
 // membership private.
 func orgAddMember(t *testing.T, org *database.User, userID int64) {
 	t.Helper()
-	require.NoError(t, org.AddMember(userID))
+	require.NoError(t, database.Handle.Organizations().AddMember(t.Context(), org.ID, userID))
 }
 
 type orgMember struct {
@@ -65,7 +65,7 @@ func TestOrgCreate(t *testing.T) {
 	org, err := database.Handle.Users().GetByUsername(t.Context(), name)
 	require.NoError(t, err)
 	assert.True(t, org.IsOrganization())
-	assert.True(t, org.IsOwnedBy(owner.ID))
+	assert.True(t, database.Handle.Organizations().IsOwner(t.Context(), org.ID, owner.ID))
 
 	status, body := c.do(http.MethodPost, "/api/web/orgs", map[string]any{"orgName": name})
 	assert.Equal(t, http.StatusUnprocessableEntity, status, "duplicate name, response: %s", body)
@@ -200,10 +200,10 @@ func TestOrgDelete(t *testing.T) {
 	_, err = database.Handle.Users().GetByID(t.Context(), org.ID)
 	assert.True(t, database.IsErrUserNotExist(err), "organization still exists: %v", err)
 	// Only the memberships of the deleted organization are gone.
-	assert.False(t, database.IsOrganizationMember(org.ID, member.ID))
-	assert.False(t, database.IsOrganizationMember(org.ID, owner.ID))
-	assert.True(t, database.IsOrganizationMember(other.ID, member.ID))
-	assert.True(t, database.IsOrganizationMember(other.ID, owner.ID))
+	assert.False(t, database.Handle.Organizations().IsMember(t.Context(), org.ID, member.ID))
+	assert.False(t, database.Handle.Organizations().IsMember(t.Context(), org.ID, owner.ID))
+	assert.True(t, database.Handle.Organizations().IsMember(t.Context(), other.ID, member.ID))
+	assert.True(t, database.Handle.Organizations().IsMember(t.Context(), other.ID, owner.ID))
 	_, err = database.Handle.Webhooks().GetOfOrg(t.Context(), org.ID, hookIDs[org.ID])
 	assert.True(t, database.IsErrWebhookNotExist(err), "webhook of deleted organization still exists: %v", err)
 	tasks, err = database.Handle.HookTasks().ListByWebhook(t.Context(), hookIDs[org.ID], 1, 0)
@@ -448,20 +448,20 @@ func TestOrgMembers(t *testing.T) {
 
 	status, body = ownerClient.do(http.MethodPut, path+"/"+member.Name, orgNoBody)
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-	assert.True(t, database.IsOrganizationMember(org.ID, member.ID))
+	assert.True(t, database.Handle.Organizations().IsMember(t.Context(), org.ID, member.ID))
 	assert.Equal(t, orgMember{Name: member.Name}, listMembers(memberClient)[member.Name])
 	assert.True(t, listMembers(ownerClient)[owner.Name].IsOwner, "owner listed as owner")
 
 	status, body = memberClient.do(http.MethodPut, path+"/"+outsider.Name, orgNoBody)
 	assert.Equal(t, http.StatusForbidden, status, "member inviting, response: %s", body)
-	assert.False(t, database.IsOrganizationMember(org.ID, outsider.ID))
+	assert.False(t, database.Handle.Organizations().IsMember(t.Context(), org.ID, outsider.ID))
 
 	t.Run("public membership", func(t *testing.T) {
 		status, body := memberClient.do(http.MethodPut, path+"/"+member.Name+"/public", orgNoBody)
 		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 		stored, err := database.Handle.Users().GetByID(t.Context(), member.ID)
 		require.NoError(t, err)
-		assert.True(t, stored.IsPublicMember(org.ID))
+		assert.True(t, database.Handle.Organizations().IsPublicMember(t.Context(), org.ID, stored.ID))
 		assert.True(t, listMembers(ownerClient)[member.Name].IsPublic)
 
 		status, body = memberClient.do(http.MethodDelete, path+"/"+owner.Name+"/public", orgNoBody)
@@ -469,23 +469,23 @@ func TestOrgMembers(t *testing.T) {
 
 		status, body = ownerClient.do(http.MethodDelete, path+"/"+member.Name+"/public", orgNoBody)
 		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-		assert.False(t, stored.IsPublicMember(org.ID))
+		assert.False(t, database.Handle.Organizations().IsPublicMember(t.Context(), org.ID, stored.ID))
 	})
 
 	status, body = memberClient.do(http.MethodDelete, path+"/"+owner.Name, orgNoBody)
 	assert.Equal(t, http.StatusForbidden, status, "member removing the owner, response: %s", body)
 	status, body = ownerClient.do(http.MethodDelete, path+"/"+owner.Name, orgNoBody)
 	assert.Equal(t, http.StatusConflict, status, "last owner leaving, response: %s", body)
-	assert.True(t, database.IsOrganizationOwner(org.ID, owner.ID))
+	assert.True(t, database.Handle.Organizations().IsOwner(t.Context(), org.ID, owner.ID))
 
 	status, body = memberClient.do(http.MethodDelete, path+"/"+member.Name, orgNoBody)
 	require.Equal(t, http.StatusNoContent, status, "member leaving, response: %s", body)
-	assert.False(t, database.IsOrganizationMember(org.ID, member.ID))
+	assert.False(t, database.Handle.Organizations().IsMember(t.Context(), org.ID, member.ID))
 
 	orgAddMember(t, org, outsider.ID)
 	status, body = ownerClient.do(http.MethodDelete, path+"/"+outsider.Name, orgNoBody)
 	require.Equal(t, http.StatusNoContent, status, "owner removing, response: %s", body)
-	assert.False(t, database.IsOrganizationMember(org.ID, outsider.ID))
+	assert.False(t, database.Handle.Organizations().IsMember(t.Context(), org.ID, outsider.ID))
 	assert.NotContains(t, listMembers(ownerClient), outsider.Name)
 }
 
@@ -638,7 +638,7 @@ func TestOrgTeams(t *testing.T) {
 	}
 	ownerClient.doJSON(http.MethodPost, teamsPath, request, http.StatusCreated, &created)
 	require.Equal(t, strings.ToLower(name), created.LowerName)
-	team, err := database.GetTeamOfOrgByName(org.ID, name)
+	team, err := database.Handle.Teams().GetByName(t.Context(), org.ID, name)
 	require.NoError(t, err)
 	assert.Equal(t, database.AccessModeWrite, team.Authorize)
 
@@ -670,7 +670,7 @@ func TestOrgTeams(t *testing.T) {
 	}
 	ownerClient.doJSON(http.MethodPatch, teamPath, update, http.StatusOK, &updated)
 	assert.Equal(t, strings.ToLower(newName), updated.LowerName)
-	team, err = database.GetTeamByID(team.ID)
+	team, err = database.Handle.Teams().GetByID(t.Context(), team.ID)
 	require.NoError(t, err)
 	assert.Equal(t, newName, team.Name)
 	assert.Equal(t, "Builds more.", team.Description)
@@ -681,7 +681,7 @@ func TestOrgTeams(t *testing.T) {
 		membersPath := teamPath + "/members"
 		status, body := ownerClient.do(http.MethodPut, membersPath+"/"+member.Name, orgNoBody)
 		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-		assert.True(t, database.IsTeamMember(org.ID, team.ID, member.ID))
+		assert.True(t, database.Handle.Teams().IsMember(t.Context(), org.ID, team.ID, member.ID))
 
 		var members struct {
 			Items []struct {
@@ -695,12 +695,12 @@ func TestOrgTeams(t *testing.T) {
 
 		status, body = memberClient.do(http.MethodPut, membersPath+"/"+owner.Name, orgNoBody)
 		assert.Equal(t, http.StatusForbidden, status, "member adding, response: %s", body)
-		assert.False(t, database.IsTeamMember(org.ID, team.ID, owner.ID))
+		assert.False(t, database.Handle.Teams().IsMember(t.Context(), org.ID, team.ID, owner.ID))
 
 		status, body = memberClient.do(http.MethodDelete, membersPath+"/"+member.Name, orgNoBody)
 		require.Equal(t, http.StatusNoContent, status, "member leaving, response: %s", body)
-		assert.False(t, database.IsTeamMember(org.ID, team.ID, member.ID))
-		assert.True(t, database.IsOrganizationMember(org.ID, member.ID), "leaving a team keeps the organization membership")
+		assert.False(t, database.Handle.Teams().IsMember(t.Context(), org.ID, team.ID, member.ID))
+		assert.True(t, database.Handle.Organizations().IsMember(t.Context(), org.ID, member.ID), "leaving a team keeps the organization membership")
 
 		ownersMembers := teamsPath + "/owners/members/" + owner.Name
 		status, body = ownerClient.do(http.MethodDelete, ownersMembers, orgNoBody)
@@ -718,9 +718,9 @@ func TestOrgTeams(t *testing.T) {
 
 		status, body = ownerClient.do(http.MethodPut, reposPath+"/"+repo.Name, orgNoBody)
 		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-		stored, err := database.GetTeamByID(team.ID)
+		stored, err := database.Handle.Teams().GetByID(t.Context(), team.ID)
 		require.NoError(t, err)
-		assert.True(t, stored.HasRepository(repo.ID))
+		assert.True(t, database.Handle.Teams().HasRepo(t.Context(), stored.OrgID, stored.ID, repo.ID))
 
 		var repos struct {
 			Items []struct {
@@ -733,7 +733,7 @@ func TestOrgTeams(t *testing.T) {
 
 		status, body = ownerClient.do(http.MethodDelete, reposPath+"/"+repo.Name, orgNoBody)
 		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-		assert.False(t, stored.HasRepository(repo.ID))
+		assert.False(t, database.Handle.Teams().HasRepo(t.Context(), stored.OrgID, stored.ID, repo.ID))
 		ownerClient.doJSON(http.MethodGet, reposPath, nil, http.StatusOK, &repos)
 		assert.Empty(t, repos.Items)
 	})
@@ -743,7 +743,7 @@ func TestOrgTeams(t *testing.T) {
 
 	status, body = ownerClient.do(http.MethodDelete, teamPath, orgNoBody)
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-	_, err = database.GetTeamByID(team.ID)
+	_, err = database.Handle.Teams().GetByID(t.Context(), team.ID)
 	assert.True(t, database.IsErrTeamNotExist(err), "team still exists: %v", err)
 	status, body = ownerClient.do(http.MethodGet, teamPath, nil)
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
