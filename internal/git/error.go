@@ -27,6 +27,7 @@ type Error struct {
 
 func (e Error) NotFound() bool {
 	return errors.Is(e.error, ErrSubmoduleNotExist) ||
+		errors.Is(e.error, ErrReferenceNotExist) ||
 		IsErrRevisionNotExist(e.error)
 }
 

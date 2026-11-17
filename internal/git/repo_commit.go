@@ -118,6 +118,11 @@ func (r *Repository) catFileType(ctx context.Context, rev string) (ObjectType, e
 	args := []string{"cat-file", "-t", rev}
 	typ, err := exec(ctx, r.path, args, nil)
 	if err != nil {
+		// "git rev-parse" takes a full object ID without checking the object
+		// exists, so this is where a missing object is found.
+		if isExitStatus(err, 128) {
+			return "", ErrRevisionNotExist
+		}
 		return "", err
 	}
 	typ = bytes.TrimSpace(typ)

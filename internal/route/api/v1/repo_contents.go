@@ -184,6 +184,11 @@ func putContents(c *apiContext, r putContentsRequest) {
 	if r.Branch == "" {
 		r.Branch = c.Repo.Repository.DefaultBranch
 	}
+	// A branch that does not exist yet is created from the default branch.
+	oldBranch := c.Repo.Repository.DefaultBranch
+	if git.RepoHasBranch(c.Request().Context(), c.Repo.Repository.RepoPath(), r.Branch) {
+		oldBranch = r.Branch
+	}
 
 	// 🚨 SECURITY: Prevent path traversal.
 	treePath := pathx.Clean(c.Param("**"))
@@ -192,7 +197,7 @@ func putContents(c *apiContext, r putContentsRequest) {
 		c.Request().Context(),
 		c.User,
 		database.UpdateRepoFileOptions{
-			OldBranch:   c.Repo.Repository.DefaultBranch,
+			OldBranch:   oldBranch,
 			NewBranch:   r.Branch,
 			OldTreeName: treePath,
 			NewTreeName: treePath,

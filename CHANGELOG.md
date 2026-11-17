@@ -57,6 +57,14 @@ All notable changes to Gogs are documented in this file.
 - Commits made in the web editor or the wiki no longer lose the author email when the full name contains `<`. [#8446](https://github.com/gogs/gogs/pull/8446)
 - Merging several pull requests at the same time no longer fails. [#8446](https://github.com/gogs/gogs/pull/8446)
 - The compare link in the news feed for a branch created by a mirror sync no longer leads to an error page. It now shows the commits of the branch since it forked from the default branch, or all of its commits when it adds none or they share no history, and the news feed counts the same commits when the branch is created. Comparing against a commit that does not exist now shows a not found page. [#8510](https://github.com/gogs/gogs/pull/8510)
+- Activating an email address from the link in the email now shows the confirmation on the email settings page instead of a page that is not found.
+- Looking up a user by email address at `/user/email2user` now leads to their profile instead of a page that is not found.
+- Deleting an upload in the web editor that is already gone no longer fails.
+- The API responds with the ID of a created label instead of 0.
+- The API lists the real mode of each entry of a Git tree, e.g., `100644` for a regular file instead of the mode of a symbolic link.
+- The API responds with 404 instead of 500 for a missing SSH key, Git blob, or branch or tag reference.
+- Creating a repository through the API with a name the owner already uses responds with 422 instead of 500.
+- Creating or updating a file through the API on an existing branch other than the default one no longer fails.
 - _Security:_ Open redirect on the `/redirect` endpoint and post-action flows via a backslash in the redirect target. [#8391](https://github.com/gogs/gogs/pull/8391) - [GHSA-3g28-2vwg-gxq6](https://github.com/gogs/gogs/security/advisories/GHSA-3g28-2vwg-gxq6)
 - _Security:_ The "remember me" auto-login cookie was derived from database columns, so an attacker with a database dump could forge a valid cookie for any user. The auto-login cookie path has been removed entirely. Persistence is now provided by the server-issued session cookie. [#8289](https://github.com/gogs/gogs/pull/8289) - [GHSA-4pph-25p3-pw73](https://github.com/gogs/gogs/security/advisories/GHSA-4pph-25p3-pw73)
 - _Security:_ Session fixation. Signing in kept the session ID from before, so an attacker who planted a session ID in a user's browser was signed in as that user once they signed in. [#8618](https://github.com/gogs/gogs/pull/8618) - [GHSA-h48f-pxp7-c4mj](https://github.com/gogs/gogs/security/advisories/GHSA-h48f-pxp7-c4mj)

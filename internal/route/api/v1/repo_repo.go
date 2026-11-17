@@ -168,6 +168,17 @@ type createRepoRequest struct {
 }
 
 func createUserRepo(c *apiContext, owner *database.User, opt createRepoRequest) {
+	// The directory of a repository that exists is there too, which creating
+	// it reports as a failure rather than the name being taken.
+	taken, err := database.IsRepositoryExist(owner, opt.Name)
+	if err != nil {
+		c.Error(err, "check repository existence")
+		return
+	} else if taken {
+		c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("repository %q already exists", opt.Name))
+		return
+	}
+
 	repo, err := database.CreateRepository(c.Request().Context(), c.Logger, c.User, owner, database.CreateRepoOptionsLegacy{
 		Name:         opt.Name,
 		Description:  opt.Description,
