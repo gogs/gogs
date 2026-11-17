@@ -165,6 +165,8 @@
   --glass-line: #0a0a0a17;
   --glass-divider: #0a0a0a0f;
   --glass-control: #ffffffb3;
+  --glass-control-hover: #e9e9efe6;
+  --glass-line-hover: #0a0a0a33;
   --glass-edge: inset 0 1px 0 #ffffffcc, inset 0 -1px 0 #0a0a0a0a;
   --glass-shadow: 0 1px 2px #0a0a0a0f, 0 18px 40px -22px #3b2a5559;
 }
@@ -190,6 +192,8 @@
   --glass-line: #ffffff1f;
   --glass-divider: #ffffff0f;
   --glass-control: #ffffff12;
+  --glass-control-hover: #ffffff24;
+  --glass-line-hover: #ffffff3d;
   --glass-edge: inset 0 1px 0 #ffffff2e, inset 0 -1px 0 #00000066;
   --glass-shadow: 0 24px 50px -28px #000000;
 }
@@ -659,8 +663,16 @@ diffs-container {
   -webkit-backdrop-filter: blur(12px) saturate(1.5);
   backdrop-filter: blur(12px) saturate(1.5);
 }
-:root.glass-ui :is(a, button).glass-control:hover:not(:disabled) {
-  background-color: var(--color-surface);
+@media (hover: hover) {
+  :root.glass-ui :is(a, button).glass-control:hover:not(:disabled) {
+    border-color: var(--glass-line-hover);
+    background-color: var(--glass-control-hover);
+  }
+  /* Segmented groups light their edge while a button in them is hovered. Each
+     button fills itself through its own hover utility. */
+  :root.glass-ui .glass-control:has(:is(a, button):hover) {
+    border-color: var(--glass-line-hover);
+  }
 }
 
 /* Code sits inset in the glass panels it is shown in, and file trees take the
