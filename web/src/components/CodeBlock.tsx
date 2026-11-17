@@ -49,7 +49,7 @@ export function CodeBlock({ code, lang }: { code: string; lang: SupportedLanguag
             type="button"
             onClick={() => void copy()}
             aria-label={label}
-            className="absolute top-1.5 right-1.5 grid size-7 cursor-pointer place-items-center rounded-md border border-(--color-border) bg-(--color-background) text-(--color-muted-foreground) group-hover:opacity-100 hover:text-(--color-foreground) focus-visible:opacity-100 pointer-coarse:hidden pointer-fine:opacity-0"
+            className="glass-control absolute top-1.5 right-1.5 grid size-7 cursor-pointer place-items-center rounded-md border border-(--color-border) bg-(--color-background) text-(--color-muted-foreground) group-hover:opacity-100 hover:text-(--color-foreground) focus-visible:opacity-100 pointer-coarse:hidden pointer-fine:opacity-0"
           >
             {copied ? (
               <Check className="size-3.5 text-(--color-success)" aria-hidden />

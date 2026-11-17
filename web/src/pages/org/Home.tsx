@@ -100,7 +100,7 @@ export function OrgHome({ org, repos }: { org: OrgProfileData; repos: OwnerRepos
           ) : null}
         </section>
 
-        <aside className="min-w-0">
+        <aside className="glass min-w-0 glass-ui:self-start glass-ui:border glass-ui:p-4">
           {org.members.length > 0 || org.viewerIsOwner ? (
             <section>
               <SectionHeader

@@ -443,7 +443,7 @@ export function IssueMeta({
   const assigneeClass = "inline-flex max-w-full items-center gap-2 text-sm font-semibold";
 
   return (
-    <aside className="flex min-w-0 flex-col">
+    <aside className="glass flex min-w-0 flex-col glass-ui:self-start glass-ui:border glass-ui:p-4">
       <SidebarSection
         title={t("repo.issues.new.assignee")}
         editor={

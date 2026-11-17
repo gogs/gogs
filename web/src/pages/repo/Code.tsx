@@ -166,7 +166,7 @@ export function RepoCode({
             `${data.pullRequest.repoLink}/compare/${refPath(data.pullRequest.baseBranch)}...${refPath(data.pullRequest.head).replace(/%3A/g, ":")}`,
           )}
           aria-label={t("repo.pulls.compare_changes")}
-          className="grid size-8 shrink-0 place-items-center rounded-md border border-(--color-border) hover:bg-(--color-surface)"
+          className="glass-control grid size-8 shrink-0 place-items-center rounded-md border border-(--color-border) hover:bg-(--color-surface)"
         >
           <GitPullRequestArrow className="size-4 text-(--color-success)" aria-hidden />
         </a>
@@ -293,7 +293,10 @@ export function RepoCode({
               </div>
               {readme}
             </div>
-            <aside aria-labelledby="repo-about-heading" className="hidden min-w-0 lg:block">
+            <aside
+              aria-labelledby="repo-about-heading"
+              className="glass hidden min-w-0 glass-ui:self-start glass-ui:border glass-ui:p-4 lg:block"
+            >
               <h2 id="repo-about-heading" className="mb-3 font-semibold">
                 {t("repo.about")}
               </h2>

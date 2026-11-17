@@ -122,7 +122,7 @@ export function ProfileSidebar({ profile }: { profile: UserProfileData }) {
   const authenticated = useUserInfo() !== null;
 
   return (
-    <aside className="min-w-0">
+    <aside className="glass min-w-0 glass-ui:self-start glass-ui:border glass-ui:p-4">
       <div className="flex items-center gap-4 md:block">
         {profile.viewerIsSelf ? (
           <a

@@ -267,7 +267,7 @@ function CommitRow({
         <Link
           to="/$owner/$repo/commit/$sha"
           params={{ owner, repo: name, sha: commit.sha }}
-          className="rounded-md border border-(--color-border) px-2 py-1 font-mono text-xs hover:bg-(--color-surface)"
+          className="glass-control rounded-md border border-(--color-border) px-2 py-1 font-mono text-xs hover:bg-(--color-surface)"
         >
           {commit.sha.slice(0, 10)}
         </Link>
@@ -335,7 +335,7 @@ function CompactCommitRow({ owner, name, commit }: { owner: string; name: string
       <Link
         to="/$owner/$repo/commit/$sha"
         params={{ owner, repo: name, sha: commit.sha }}
-        className="shrink-0 rounded-md border border-(--color-border) px-2 py-1 font-mono text-xs hover:bg-(--color-surface)"
+        className="glass-control shrink-0 rounded-md border border-(--color-border) px-2 py-1 font-mono text-xs hover:bg-(--color-surface)"
       >
         {commit.sha.slice(0, 7)}
       </Link>

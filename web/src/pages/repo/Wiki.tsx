@@ -181,9 +181,11 @@ export function RepoWiki({ owner, name, data }: { owner: string; name: string; d
               ])}
             </p>
           </header>
-          <Markdown html={page.html} />
+          <div className="glass glass-ui:mt-4 glass-ui:border glass-ui:p-4 sm:glass-ui:p-6">
+            <Markdown html={page.html} />
+          </div>
         </article>
-        <aside className="flex min-w-0 flex-col gap-6 max-md:border-t max-md:border-(--color-border) max-md:pt-6">
+        <aside className="glass flex min-w-0 flex-col gap-6 max-md:border-t max-md:border-(--color-border) max-md:pt-6 glass-ui:self-start glass-ui:border glass-ui:p-4">
           <PageList owner={owner} name={name} pages={data.pages ?? []} current={page.name} />
           {data.cloneLinks?.https || data.cloneLinks?.ssh ? <WikiCloneBox links={data.cloneLinks} /> : null}
         </aside>
@@ -220,7 +222,7 @@ function PageList({ owner, name, pages, current }: { owner: string; name: string
           className="mb-2 h-8 text-sm"
         />
       ) : null}
-      <ul className="max-h-96 overflow-y-auto glass rounded-md border border-(--color-border) text-sm">
+      <ul className="max-h-96 overflow-y-auto rounded-md border border-(--color-border) text-sm">
         {shown.map((p) => (
           <li key={p} className="border-b border-(--color-border) last:border-b-0">
             <PageLink

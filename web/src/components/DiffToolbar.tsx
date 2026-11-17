@@ -212,7 +212,7 @@ function ToolbarButton({
       type="button"
       {...rest}
       className={cn(
-        "inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md border border-(--color-border) px-2 text-xs hover:bg-(--color-surface)",
+        "glass-control inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md border border-(--color-border) px-2 text-xs hover:bg-(--color-surface)",
         className,
       )}
     >

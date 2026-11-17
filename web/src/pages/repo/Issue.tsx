@@ -479,7 +479,7 @@ function AttachmentList({ attachments, className }: { attachments: IssueAttachme
               target="_blank"
               rel="noopener noreferrer"
               aria-label={t("repo.issues.attachment.download").replace("%s", a.name)}
-              className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-(--color-border) px-2 py-1 text-sm hover:bg-(--color-surface)"
+              className="glass-control inline-flex max-w-full items-center gap-1.5 rounded-md border border-(--color-border) px-2 py-1 text-sm hover:bg-(--color-surface)"
             >
               <Download className="size-4 shrink-0" aria-hidden />
               <span className="truncate">{a.name}</span>

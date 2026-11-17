@@ -162,7 +162,7 @@ export function RepoIssues({
   );
 }
 
-const TRIGGER_CLASS = "h-9 w-auto gap-2 bg-(--color-field)";
+const TRIGGER_CLASS = "glass-control h-9 w-auto gap-2 bg-(--color-field)";
 
 // Filters narrows the list by label, milestone, assignee and whose issues they
 // are, and sorts it.
