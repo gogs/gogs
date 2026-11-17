@@ -139,7 +139,7 @@ type repoSettings struct {
 	CanAllowPublicIssues bool `json:"canAllowPublicIssues"`
 }
 
-func getRepoSettings(logger *logx.Logger, viewer *database.User, rc *repoAdminContext) (statusCode int, resp any, err error) {
+func getRepoSettings(c flamego.Context, logger *logx.Logger, viewer *database.User, rc *repoAdminContext) (statusCode int, resp any, err error) {
 	repo := rc.Repo
 	avatarURL := repo.RelAvatarLink()
 	settings := &repoSettings{
@@ -188,7 +188,7 @@ func getRepoSettings(logger *logx.Logger, viewer *database.User, rc *repoAdminCo
 		settings.AvatarURL = tool.AppendAvatarSize(rc.Owner.AvatarURLPath(), 200)
 	}
 	if repo.IsMirror {
-		mirror, err := database.GetMirrorByRepoID(repo.ID)
+		mirror, err := database.Handle.Mirrors().GetByRepoID(c.Request().Context(), repo.ID)
 		if err != nil {
 			logger.Error("Failed to get mirror", "repoID", repo.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "get mirror")
@@ -324,7 +324,7 @@ func putRepoMirror(r *http.Request, logger *logx.Logger, l i18n.Locale, viewer *
 	if !repo.IsMirror {
 		return http.StatusNotFound, nil, errors.New("repository is not a mirror")
 	}
-	mirror, err := database.GetMirrorByRepoID(repo.ID)
+	mirror, err := database.Handle.Mirrors().GetByRepoID(r.Context(), repo.ID)
 	if err != nil {
 		logger.Error("Failed to get mirror", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get mirror")
@@ -335,7 +335,7 @@ func putRepoMirror(r *http.Request, logger *logx.Logger, l i18n.Locale, viewer *
 		mirror.EnablePrune = req.EnablePrune
 		mirror.Interval = req.Interval
 		mirror.NextSync = time.Now().Add(time.Duration(req.Interval) * time.Hour)
-		if err = database.UpdateMirror(mirror); err != nil {
+		if err = database.Handle.Mirrors().Update(r.Context(), mirror); err != nil {
 			logger.Error("Failed to update mirror", "repoID", repo.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "update mirror")
 		}
@@ -429,7 +429,7 @@ func confirmRepoName(l i18n.Locale, repo *database.Repository, name string) *bin
 }
 
 // postRepoConvert turns a mirror into a regular repository.
-func postRepoConvert(logger *logx.Logger, l i18n.Locale, viewer *database.User, rc *repoAdminContext, req repoConfirmRequest) (statusCode int, resp any, err error) {
+func postRepoConvert(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, rc *repoAdminContext, req repoConfirmRequest) (statusCode int, resp any, err error) {
 	repo := rc.Repo
 	if !rc.viewerCanManage(viewer, false) || !repo.IsMirror {
 		return http.StatusNotFound, nil, errors.New("repository does not exist")
@@ -443,7 +443,7 @@ func postRepoConvert(logger *logx.Logger, l i18n.Locale, viewer *database.User, 
 		logger.Error("Failed to clean up migrate info", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "clean up migrate info")
 	}
-	if err = database.DeleteMirrorByRepoID(repo.ID); err != nil {
+	if err = database.Handle.Mirrors().DeleteByRepoID(c.Request().Context(), repo.ID); err != nil {
 		logger.Error("Failed to delete mirror", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete mirror")
 	}

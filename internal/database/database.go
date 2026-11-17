@@ -153,6 +153,10 @@ func (db *DB) LoginSources() *LoginSourcesStore {
 	return newLoginSourcesStore(db.db, loadedLoginSourceFilesStore)
 }
 
+func (db *DB) Mirrors() *MirrorsStore {
+	return newMirrorsStore(db.db)
+}
+
 func (db *DB) Notices() *NoticesStore {
 	return newNoticesStore(db.db)
 }
