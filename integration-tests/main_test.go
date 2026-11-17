@@ -28,6 +28,8 @@ import (
 var (
 	// serverURL is the URL of the server under test, without a trailing slash.
 	serverURL string
+	// sshPort is the port of the builtin SSH server of the server under test.
+	sshPort int
 	// sessions reads the sessions the server under test stores in files.
 	sessions *session.Manager
 	logger   = logx.NewNoopLogger()
@@ -79,12 +81,16 @@ func run(m *testing.M, dir string) (int, error) {
 	if err != nil {
 		return 0, errors.Wrap(err, "find free port")
 	}
+	sshPort, err = freePort()
+	if err != nil {
+		return 0, errors.Wrap(err, "find free SSH port")
+	}
 	dbName, dropDatabase, err := createPostgresDatabase()
 	if err != nil {
 		return 0, errors.Wrap(err, "create Postgres database")
 	}
 	configPath := filepath.Join(dir, "app.ini")
-	if err = writeConfig(dir, configPath, port, dbName); err != nil {
+	if err = writeConfig(dir, configPath, port, sshPort, dbName); err != nil {
 		return 0, errors.Wrap(err, "write configuration")
 	}
 
@@ -222,7 +228,7 @@ func freePort() (int, error) {
 // writeConfig writes the configuration of the server under test, which uses the
 // Postgres database of the name on the server the PG* environment variables
 // point to.
-func writeConfig(dir, path string, port int, dbName string) error {
+func writeConfig(dir, path string, port, sshPort int, dbName string) error {
 	u, err := user.Current()
 	if err != nil {
 		return errors.Wrap(err, "get current user")
@@ -248,10 +254,13 @@ DOMAIN = 127.0.0.1
 HTTP_ADDR = 127.0.0.1
 HTTP_PORT = %[2]d
 OFFLINE_MODE = true
-; Tests add SSH keys, which are written to the authorized_keys file in the work
-; directory rather than the one of the user running the tests. The SSH server
-; does not start.
+; Tests clone and push over the builtin SSH server. Rewriting the
+; authorized_keys file, e.g., by an admin operation, writes to the work
+; directory rather than the one of the user running the tests.
 SSH_ROOT_PATH = %[6]s
+START_SSH_SERVER = true
+SSH_LISTEN_HOST = 127.0.0.1
+SSH_PORT = %[7]d
 
 [repository]
 ROOT = %[3]s
@@ -280,7 +289,7 @@ ENABLE_REGISTRATION_CAPTCHA = true
 [log]
 MODE = console
 LEVEL = Info
-`, u.Username, port, filepath.Join(dir, "repositories"), database, hex.EncodeToString(secretKey), filepath.Join(dir, "ssh"))
+`, u.Username, port, filepath.Join(dir, "repositories"), database, hex.EncodeToString(secretKey), filepath.Join(dir, "ssh"), sshPort)
 	return os.WriteFile(path, []byte(config), 0o600)
 }
 

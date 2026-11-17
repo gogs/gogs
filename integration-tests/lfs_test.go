@@ -2,14 +2,19 @@ package integrationtests
 
 import (
 	"bytes"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"net/http"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"gogs.io/gogs/internal/database"
 )
 
 const lfsMediaType = "application/vnd.git-lfs+json"
@@ -240,5 +245,52 @@ func TestLFSAccess(t *testing.T) {
 		status, body = lfsPostJSON(t, ownerClient, lfsBasePath(public)+"/batch", map[string]any{"operation": "delete"})
 		assert.Equal(t, http.StatusBadRequest, status, "response: %s", body)
 		assert.Contains(t, string(body), "Operation not recognized")
+	})
+}
+
+// TestLFSGitClient pushes and pulls an LFS object with the Git LFS client, so
+// the batch, upload, verify and download requests are the ones the client
+// sends.
+func TestLFSGitClient(t *testing.T) {
+	owner := seedUser(t, CreateUserOptions{})
+	other := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+
+	dir := gitClone(t, gitRemoteURL(t, repo, owner.Name, owner.Password))
+	gitRun(t, dir, "lfs", "install", "--local")
+	gitRun(t, dir, "lfs", "track", "*.bin")
+	content := make([]byte, 200<<10)
+	_, err := rand.Read(content)
+	require.NoError(t, err)
+	sum := sha256.Sum256(content)
+	oid := hex.EncodeToString(sum[:])
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "large.bin"), content, 0o600))
+	gitRun(t, dir, "add", ".gitattributes", "large.bin")
+	gitRun(t, dir, "commit", "-m", "Add large.bin")
+	gitRun(t, dir, "push", "origin", "main")
+
+	// The repository stores a pointer and the server stores the object.
+	pointer := gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(repo.Owner, repo.Name), "show", "main:large.bin")
+	assert.Contains(t, pointer, "oid sha256:"+oid)
+	status, _, body := lfsClient(t, owner).doRaw(http.MethodGet, lfsBasePath(repo)+"/basic/"+oid, "", nil)
+	require.Equal(t, http.StatusOK, status)
+	assert.Equal(t, content, body)
+
+	// Another user pulls the object into a new clone.
+	clone := gitClone(t, gitRemoteURL(t, repo, other.Name, other.Password))
+	gitRun(t, clone, "lfs", "install", "--local")
+	gitRun(t, clone, "lfs", "pull")
+	got, err := os.ReadFile(filepath.Join(clone, "large.bin"))
+	require.NoError(t, err)
+	assert.Equal(t, content, got)
+
+	t.Run("user without write access", func(t *testing.T) {
+		gitRun(t, clone, "lfs", "track", "*.dat")
+		require.NoError(t, os.WriteFile(filepath.Join(clone, "other.dat"), []byte(UniqueName("lfs-content-")), 0o600))
+		gitRun(t, clone, "add", ".gitattributes", "other.dat")
+		gitRun(t, clone, "commit", "-m", "Add other.dat")
+		out, err := gitCommand(clone, "push", "origin", "main").CombinedOutput()
+		require.Error(t, err, "push succeeded: %s", out)
+		assert.NotEqual(t, gitRun(t, clone, "rev-parse", "HEAD"), gitMainOnDisk(t, repo))
 	})
 }

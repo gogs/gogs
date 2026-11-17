@@ -470,6 +470,13 @@ func isBridge(handlers []ast.Expr) bool {
 				return true
 			}
 		}
+		// Git over HTTP and LFS go to Flamego directly, without the session that
+		// flamegoBridger needs.
+		if sel, ok := h.(*ast.SelectorExpr); ok && sel.Sel.Name == "ServeHTTP" {
+			if id, ok := sel.X.(*ast.Ident); ok && id.Name == "webHandler" {
+				return true
+			}
+		}
 	}
 	return false
 }

@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 
-	"gopkg.in/macaron.v1"
+	"github.com/flamego/flamego"
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/auth"
@@ -16,8 +16,9 @@ import (
 )
 
 // RegisterRoutes registers LFS routes using given router, and inherits all
-// groups and middleware.
-func RegisterRoutes(logger *logx.Logger, r *macaron.Router) {
+// groups and middleware. The routes take the repository from the "owner" and
+// "repo" path parameters.
+func RegisterRoutes(logger *logx.Logger, r flamego.Router) {
 	verifyAccept := verifyHeader(logger, "Accept", contentType, http.StatusNotAcceptable)
 	verifyContentTypeJSON := verifyHeader(logger, "Content-Type", contentType, http.StatusBadRequest)
 	verifyContentTypeStream := verifyHeader(logger, "Content-Type", "application/octet-stream", http.StatusBadRequest)
@@ -34,7 +35,7 @@ func RegisterRoutes(logger *logx.Logger, r *macaron.Router) {
 					lfsx.StorageLocal: &lfsx.LocalStorage{Root: conf.LFS.ObjectsPath, TempDir: conf.LFS.ObjectsTempPath},
 				},
 			}
-			r.Combo("/:oid", verifyOID(logger)).
+			r.Combo("/{oid}", verifyOID(logger)).
 				Get(authorize(logger, store, database.AccessModeRead), basic.serveDownload).
 				Put(authorize(logger, store, database.AccessModeWrite), verifyContentTypeStream, basic.serveUpload)
 			r.Post("/verify", authorize(logger, store, database.AccessModeWrite), verifyAccept, verifyContentTypeJSON, basic.serveVerify)
@@ -44,7 +45,7 @@ func RegisterRoutes(logger *logx.Logger, r *macaron.Router) {
 
 // authenticate tries to authenticate user via HTTP Basic Auth. It first tries to authenticate
 // as plain username and password, then use username as access token if previous step failed.
-func authenticate(logger *logx.Logger, store Store) macaron.Handler {
+func authenticate(logger *logx.Logger, store Store) flamego.Handler {
 	askCredentials := func(w http.ResponseWriter) {
 		w.Header().Set("Lfs-Authenticate", `Basic realm="Git LFS"`)
 		responseJSON(logger, w, http.StatusUnauthorized, responseError{
@@ -52,41 +53,43 @@ func authenticate(logger *logx.Logger, store Store) macaron.Handler {
 		})
 	}
 
-	return func(c *macaron.Context) {
-		username, password := authx.DecodeBasic(c.Req.Header)
+	return func(c flamego.Context) {
+		username, password := authx.DecodeBasic(c.Request().Header)
 		if username == "" {
-			askCredentials(c.Resp)
+			askCredentials(c.ResponseWriter())
 			return
 		}
 
-		user, err := store.AuthenticateUser(c.Req.Context(), username, password, -1)
+		user, err := store.AuthenticateUser(c.Request().Context(), username, password, -1)
 		if err != nil && !auth.IsErrBadCredentials(err) {
-			internalServerError(logger, c.Resp)
+			internalServerError(logger, c.ResponseWriter())
 			logger.Error("Failed to authenticate user", "userName", username, "error", err)
 			return
 		}
 
-		if err == nil && store.IsTwoFactorEnabled(c.Req.Context(), user.ID) {
-			c.Error(http.StatusBadRequest, "Users with 2FA enabled are not allowed to authenticate via username and password.")
+		if err == nil && store.IsTwoFactorEnabled(c.Request().Context(), user.ID) {
+			w := c.ResponseWriter()
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte("Users with 2FA enabled are not allowed to authenticate via username and password."))
 			return
 		}
 
 		// If username and password combination failed, try again using either username
 		// or password as the token.
 		if auth.IsErrBadCredentials(err) {
-			user, err = context.AuthenticateByToken(c.Req.Context(), logger, store, username)
+			user, err = context.AuthenticateByToken(c.Request().Context(), logger, store, username)
 			if err != nil && !database.IsErrAccessTokenNotExist(err) {
-				internalServerError(logger, c.Resp)
+				internalServerError(logger, c.ResponseWriter())
 				logger.Error("Failed to authenticate by access token via username", "error", err)
 				return
 			} else if database.IsErrAccessTokenNotExist(err) {
 				// Try again using the password field as the token.
-				user, err = context.AuthenticateByToken(c.Req.Context(), logger, store, password)
+				user, err = context.AuthenticateByToken(c.Request().Context(), logger, store, password)
 				if err != nil {
 					if database.IsErrAccessTokenNotExist(err) {
-						askCredentials(c.Resp)
+						askCredentials(c.ResponseWriter())
 					} else {
-						c.Status(http.StatusInternalServerError)
+						c.ResponseWriter().WriteHeader(http.StatusInternalServerError)
 						logger.Error("Failed to authenticate by access token via password", "error", err)
 					}
 					return
@@ -95,7 +98,7 @@ func authenticate(logger *logx.Logger, store Store) macaron.Handler {
 		}
 
 		if user.IsDisabled() {
-			responseJSON(logger, c.Resp, http.StatusForbidden, responseError{
+			responseJSON(logger, c.ResponseWriter(), http.StatusForbidden, responseError{
 				Message: "User account is disabled",
 			})
 			return
@@ -108,40 +111,40 @@ func authenticate(logger *logx.Logger, store Store) macaron.Handler {
 }
 
 // authorize tries to authorize the user to the context repository with given access mode.
-func authorize(logger *logx.Logger, store Store, mode database.AccessMode) macaron.Handler {
-	return func(c *macaron.Context, actor *database.User) {
-		username := c.Params(":username")
-		reponame := strings.TrimSuffix(c.Params(":reponame"), ".git")
+func authorize(logger *logx.Logger, store Store, mode database.AccessMode) flamego.Handler {
+	return func(c flamego.Context, actor *database.User) {
+		username := c.Param("owner")
+		reponame := strings.TrimSuffix(c.Param("repo"), ".git")
 
-		owner, err := store.GetUserByUsername(c.Req.Context(), username)
+		owner, err := store.GetUserByUsername(c.Request().Context(), username)
 		if err != nil {
 			if database.IsErrUserNotExist(err) {
-				c.Status(http.StatusNotFound)
+				c.ResponseWriter().WriteHeader(http.StatusNotFound)
 			} else {
-				internalServerError(logger, c.Resp)
+				internalServerError(logger, c.ResponseWriter())
 				logger.Error("Failed to get user", "userName", username, "error", err)
 			}
 			return
 		}
 
-		repo, err := store.GetRepositoryByName(c.Req.Context(), owner.ID, reponame)
+		repo, err := store.GetRepositoryByName(c.Request().Context(), owner.ID, reponame)
 		if err != nil {
 			if database.IsErrRepoNotExist(err) {
-				c.Status(http.StatusNotFound)
+				c.ResponseWriter().WriteHeader(http.StatusNotFound)
 			} else {
-				internalServerError(logger, c.Resp)
+				internalServerError(logger, c.ResponseWriter())
 				logger.Error("Failed to get repository", "ownerID", owner.ID, "repoName", reponame, "error", err)
 			}
 			return
 		}
 
-		if !store.AuthorizeRepositoryAccess(c.Req.Context(), actor.ID, repo.ID, mode,
+		if !store.AuthorizeRepositoryAccess(c.Request().Context(), actor.ID, repo.ID, mode,
 			database.AccessModeOptions{
 				OwnerID: repo.OwnerID,
 				Private: repo.IsPrivate,
 			},
 		) {
-			c.Status(http.StatusNotFound)
+			c.ResponseWriter().WriteHeader(http.StatusNotFound)
 			return
 		}
 
@@ -154,9 +157,9 @@ func authorize(logger *logx.Logger, store Store, mode database.AccessMode) macar
 
 // verifyHeader checks if the HTTP header contains given value.
 // When not, response given "failCode" as status code.
-func verifyHeader(logger *logx.Logger, key, value string, failCode int) macaron.Handler {
-	return func(c *macaron.Context) {
-		vals := c.Req.Header.Values(key)
+func verifyHeader(logger *logx.Logger, key, value string, failCode int) flamego.Handler {
+	return func(c flamego.Context) {
+		vals := c.Request().Header.Values(key)
 		for _, val := range vals {
 			if strings.Contains(val, value) {
 				return
@@ -164,16 +167,16 @@ func verifyHeader(logger *logx.Logger, key, value string, failCode int) macaron.
 		}
 
 		logger.Debug("HTTP header does not contain expected value", "header", key, "expectedValue", value)
-		c.Status(failCode)
+		c.ResponseWriter().WriteHeader(failCode)
 	}
 }
 
-// verifyOID checks if the ":oid" URL parameter is valid.
-func verifyOID(logger *logx.Logger) macaron.Handler {
-	return func(c *macaron.Context) {
-		oid := lfsx.OID(c.Params(":oid"))
+// verifyOID checks if the "oid" URL parameter is valid.
+func verifyOID(logger *logx.Logger) flamego.Handler {
+	return func(c flamego.Context) {
+		oid := lfsx.OID(c.Param("oid"))
 		if !lfsx.ValidOID(oid) {
-			responseJSON(logger, c.Resp, http.StatusBadRequest, responseError{
+			responseJSON(logger, c.ResponseWriter(), http.StatusBadRequest, responseError{
 				Message: "Invalid oid",
 			})
 			return
