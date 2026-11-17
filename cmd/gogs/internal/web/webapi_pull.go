@@ -62,6 +62,9 @@ type repoPullInfo struct {
 	AllowSquash  bool       `json:"allowSquash"`
 	// ViewerCanMerge is whether the viewer can merge it now.
 	ViewerCanMerge bool `json:"viewerCanMerge"`
+	// ViewerNotInAllowlist is whether the viewer could merge it if they were
+	// in the push allowlist of the protected base branch.
+	ViewerNotInAllowlist bool `json:"viewerNotInAllowlist"`
 	// ViewerID is the viewer who can merge, whose browser remembers the merge
 	// style they last used in the repository.
 	ViewerID int64 `json:"viewerID,omitempty"`
@@ -198,7 +201,13 @@ func describePull(ctx context.Context, repoCtx *repoContext, issue *database.Iss
 		info.State = "checking"
 	case pull.CanAutoMerge():
 		info.State = "mergeable"
-		info.ViewerCanMerge = repoCtx.Viewer.CanWrite()
+		if repoCtx.Viewer.CanWrite() {
+			info.ViewerCanMerge, err = canPushTo(repoCtx, pull.BaseBranch)
+			if err != nil {
+				return nil, nil, nil, errors.Wrap(err, "check push allowlist")
+			}
+			info.ViewerNotInAllowlist = !info.ViewerCanMerge
+		}
 		if info.ViewerCanMerge {
 			info.ViewerID = repoCtx.Viewer.ID()
 			pull.Issue = issue
@@ -292,11 +301,36 @@ type repoPullMergeRequest struct {
 	Body  string `json:"body"`
 }
 
+// canPushTo returns whether the push allowlist of the branch, when it is
+// protected and has one, lets in the viewer, who must already be a writer. A
+// merge pushes to its base branch, so it takes the same allowlist as the
+// pre-receive hook does for pushes.
+func canPushTo(repoCtx *repoContext, branch string) (bool, error) {
+	protectBranch, err := database.GetProtectBranchOfRepoByName(repoCtx.Repo.ID, branch)
+	if err != nil {
+		if database.IsErrBranchNotExist(err) {
+			return true, nil
+		}
+		return false, errors.Wrap(err, "get protected branch")
+	}
+	if !protectBranch.Protected || !protectBranch.EnableAllowlist {
+		return true, nil
+	}
+	return protectBranch.IsUserInAllowlist(repoCtx.Viewer.ID())
+}
+
 // postRepoPullMerge merges the pull request into its base branch.
 func postRepoPullMerge(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, issue *database.Issue, req repoPullMergeRequest) (statusCode int, resp any, err error) {
 	pull := issue.PullRequest
 	if issue.IsClosed || pull.HasMerged || !pull.CanAutoMerge() {
 		return http.StatusNotFound, nil, errors.New("pull request cannot be merged")
+	}
+	canPush, err := canPushTo(repoCtx, pull.BaseBranch)
+	if err != nil {
+		logger.Error("Failed to check push allowlist", "pullID", pull.ID, "error", err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "check push allowlist")
+	} else if !canPush {
+		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("repo.pulls.merge_not_in_allowlist")}, nil
 	}
 	gitRepo, err := openRepoGit(repoCtx)
 	if err != nil {

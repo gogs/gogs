@@ -40,10 +40,11 @@ func TestMigrate(t *testing.T) {
 		tables, err := db.Migrator().GetTables()
 		require.NoError(t, err)
 		tables = slices.DeleteFunc(tables, func(name string) bool { return name == "sqlite_sequence" })
-		assert.Len(t, tables, 38) // 37 tables and "goose_db_version"
+		assert.Len(t, tables, 37) // 36 tables and "goose_db_version"
 		assert.Contains(t, tables, "user")
 		assert.Contains(t, tables, "passkey")
 		assert.NotContains(t, tables, "version")
+		assert.NotContains(t, tables, "protect_branch_whitelist")
 		assert.True(t, db.Migrator().HasIndex("attachment", "UQE_attachment_uuid"))
 		assert.Equal(t, latestVersion(db), gooseVersion(t, db))
 
@@ -72,6 +73,7 @@ func TestMigrate(t *testing.T) {
 		assert.True(t, db.Migrator().HasTable("lfs_object"))
 		assert.True(t, db.Migrator().HasTable("passkey"))
 		assert.True(t, db.Migrator().HasColumn("attachment", "uploader_id"))
+		assert.False(t, db.Migrator().HasTable("protect_branch_whitelist"))
 
 		// Existing repositories keep allowing merge commits, do not allow squashing,
 		// keep head branches, and have no message presets.

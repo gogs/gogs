@@ -106,14 +106,18 @@ func runHookPreReceive(ctx context.Context, cmd *cli.Command) error {
 			continue
 		}
 
-		// Whitelist users can bypass require pull request check
+		// Allowlist users can bypass require pull request check
 		bypassRequirePullRequest := false
 
-		// Check if user is in whitelist when enabled
+		// Check if user is in allowlist when enabled
 		userID, _ := strconv.ParseInt(os.Getenv(database.EnvAuthUserID), 10, 64)
-		if protectBranch.EnableWhitelist {
-			if !database.IsUserInProtectBranchWhitelist(repoID, userID, branchName) {
-				fail(logger, fmt.Sprintf("Branch '%s' is protected and you are not in the push whitelist", branchName), "")
+		if protectBranch.EnableAllowlist {
+			inAllowlist, err := protectBranch.IsUserInAllowlist(userID)
+			if err != nil {
+				fail(logger, "Internal error", "IsUserInAllowlist [repo_id: %d, branch: %s, user_id: %d]: %v", repoID, branchName, userID, err)
+			}
+			if !inAllowlist {
+				fail(logger, fmt.Sprintf("Branch '%s' is protected and you are not in the push allowlist", branchName), "")
 			}
 
 			bypassRequirePullRequest = true

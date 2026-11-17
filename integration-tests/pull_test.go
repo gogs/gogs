@@ -75,6 +75,7 @@ type pullView struct {
 		CommitCount            int    `json:"commitCount"`
 		FileCount              int    `json:"fileCount"`
 		ViewerCanMerge         bool   `json:"viewerCanMerge"`
+		ViewerNotInAllowlist   bool   `json:"viewerNotInAllowlist"`
 		ViewerCanDeleteBranch  bool   `json:"viewerCanDeleteBranch"`
 		ViewerCanRestoreBranch bool   `json:"viewerCanRestoreBranch"`
 		Merger                 *struct {

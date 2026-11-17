@@ -1511,9 +1511,9 @@ export function RepoBranchProtection({
   const [form, setForm] = useState<RepoProtectedBranchForm>({
     protected: branch.protected,
     requirePullRequest: branch.requirePullRequest,
-    enableWhitelist: branch.enableWhitelist,
-    whitelistUserIDs: branch.whitelistUserIDs,
-    whitelistTeamIDs: branch.whitelistTeamIDs,
+    enableAllowlist: branch.enableAllowlist,
+    allowlistUserIDs: branch.allowlistUserIDs,
+    allowlistTeamIDs: branch.allowlistTeamIDs,
   });
   const set = (patch: Partial<RepoProtectedBranchForm>) => setForm({ ...form, ...patch });
   const toggle = (ids: number[], id: number, on: boolean) => (on ? [...ids, id] : ids.filter((x) => x !== id));
@@ -1573,30 +1573,30 @@ export function RepoBranchProtection({
                 />
                 {isOrg ? (
                   <CheckboxField
-                    id="enableWhitelist"
-                    checked={form.enableWhitelist}
-                    onChange={(on) => set({ enableWhitelist: on })}
+                    id="enableAllowlist"
+                    checked={form.enableAllowlist}
+                    onChange={(on) => set({ enableAllowlist: on })}
                     label={
                       <OptionLabel
-                        title={t("repo.settings.protect_whitelist_committers")}
-                        desc={t("repo.settings.protect_whitelist_committers_desc")}
+                        title={t("repo.settings.protect_allowlist_committers")}
+                        desc={t("repo.settings.protect_allowlist_committers_desc")}
                       />
                     }
                   />
                 ) : null}
-                {isOrg && form.enableWhitelist ? (
+                {isOrg && form.enableAllowlist ? (
                   <div className="ml-2 flex flex-col gap-5 border-l-2 border-(--color-border) pl-4">
                     {branch.userOptions?.length ? (
                       <fieldset className="flex flex-col gap-2.5">
                         <legend className="mb-2.5 text-sm font-medium">
-                          {t("repo.settings.protect_whitelist_users")}
+                          {t("repo.settings.protect_allowlist_users")}
                         </legend>
                         {branch.userOptions.map((u) => (
                           <CheckboxField
                             key={u.id}
-                            id={`whitelist-user-${u.id}`}
-                            checked={form.whitelistUserIDs.includes(u.id)}
-                            onChange={(on) => set({ whitelistUserIDs: toggle(form.whitelistUserIDs, u.id, on) })}
+                            id={`allowlist-user-${u.id}`}
+                            checked={form.allowlistUserIDs.includes(u.id)}
+                            onChange={(on) => set({ allowlistUserIDs: toggle(form.allowlistUserIDs, u.id, on) })}
                             label={
                               <span className="inline-flex items-center gap-2">
                                 <img src={u.avatarURL} alt="" className="size-5 rounded-full" />
@@ -1610,14 +1610,14 @@ export function RepoBranchProtection({
                     {branch.teamOptions?.length ? (
                       <fieldset className="flex flex-col gap-2.5">
                         <legend className="mb-2.5 text-sm font-medium">
-                          {t("repo.settings.protect_whitelist_teams")}
+                          {t("repo.settings.protect_allowlist_teams")}
                         </legend>
                         {branch.teamOptions.map((team) => (
                           <CheckboxField
                             key={team.id}
-                            id={`whitelist-team-${team.id}`}
-                            checked={form.whitelistTeamIDs.includes(team.id)}
-                            onChange={(on) => set({ whitelistTeamIDs: toggle(form.whitelistTeamIDs, team.id, on) })}
+                            id={`allowlist-team-${team.id}`}
+                            checked={form.allowlistTeamIDs.includes(team.id)}
+                            onChange={(on) => set({ allowlistTeamIDs: toggle(form.allowlistTeamIDs, team.id, on) })}
                             label={
                               <span className="inline-flex items-center gap-2">
                                 <Users className="size-4 text-(--color-muted-foreground)" aria-hidden />
