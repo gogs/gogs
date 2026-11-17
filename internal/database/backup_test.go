@@ -27,7 +27,7 @@ func TestDumpAndImport(t *testing.T) {
 	}
 	t.Parallel()
 
-	const wantTables = 30
+	const wantTables = 34
 	if len(Tables) != wantTables {
 		t.Fatalf("New table has added (want %d got %d), please add new tests for the table and update this check", wantTables, len(Tables))
 	}
@@ -128,6 +128,43 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			CreatedUnix:  1588568886,
 		},
 
+		&Attachment{
+			ID:          1,
+			UUID:        "4b9e1b8c-6c1f-4a3e-9d43-0c5f3c3f8e2a",
+			IssueID:     1,
+			CommentID:   1,
+			ReleaseID:   0,
+			Name:        "screenshot.png",
+			CreatedUnix: 1588568886,
+		},
+
+		&Collaboration{
+			ID:     1,
+			UserID: 2,
+			RepoID: 1,
+			Mode:   AccessModeWrite,
+		},
+
+		&Comment{
+			ID:          1,
+			Type:        CommentTypeComment,
+			PosterID:    2,
+			IssueID:     1,
+			Content:     "Looks good to me",
+			CreatedUnix: 1588568886,
+			UpdatedUnix: 1588572486,
+		},
+		&Comment{
+			ID:          2,
+			Type:        CommentTypeCommitRef,
+			PosterID:    1,
+			IssueID:     1,
+			Content:     `<a href="/alice/example/commit/f3a9c2b">fix the bug</a>`,
+			CreatedUnix: 1588568887,
+			UpdatedUnix: 1588568887,
+			CommitSHA:   "f3a9c2b4f0c9e5c1a2d3e4f5a6b7c8d9e0f1a2b3",
+		},
+
 		&DeployKey{
 			ID:          1,
 			KeyID:       2,
@@ -179,6 +216,33 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			IsSucceed:       true,
 			RequestContent:  `{"headers":{}}`,
 			ResponseContent: `{"status":200}`,
+		},
+
+		&Issue{
+			ID:           1,
+			RepoID:       1,
+			Index:        1,
+			PosterID:     1,
+			Title:        "Something is broken",
+			Content:      "Steps to reproduce",
+			MilestoneID:  1,
+			Priority:     2,
+			AssigneeID:   2,
+			NumComments:  2,
+			DeadlineUnix: 1588655286,
+			CreatedUnix:  1588568886,
+			UpdatedUnix:  1588572486,
+		},
+		&Issue{
+			ID:          2,
+			RepoID:      1,
+			Index:       2,
+			PosterID:    2,
+			Title:       "Fix the bug",
+			IsClosed:    true,
+			IsPull:      true,
+			CreatedUnix: 1588568886,
+			UpdatedUnix: 1588568886,
 		},
 
 		&IssueLabel{
@@ -527,6 +591,7 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 	}{
 		{&User{ID: 2}, map[string]any{"max_repo_creation": 0, "created_unix": 0, "updated_unix": 0}},
 		{&Milestone{ID: 1}, map[string]any{"deadline_unix": 0}},
+		{&Comment{ID: 1}, map[string]any{"created_unix": 0}},
 	}
 	for _, u := range updates {
 		err := db.Model(u.model).UpdateColumns(u.values).Error

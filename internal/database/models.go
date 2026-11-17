@@ -32,8 +32,7 @@ func init() {
 	sql.Register("sqlite3", &sqlite.Driver{})
 
 	legacyTables = append(legacyTables,
-		new(Repository), new(Collaboration),
-		new(Issue), new(Comment), new(Attachment),
+		new(Repository),
 		new(Mirror),
 	)
 
