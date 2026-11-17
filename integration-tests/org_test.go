@@ -2,6 +2,7 @@ package integrationtests
 
 import (
 	"bytes"
+	"encoding/json"
 	"image"
 	"image/png"
 	"mime/multipart"
@@ -259,6 +260,67 @@ func TestOrgWebhooks(t *testing.T) {
 	assert.True(t, database.IsErrWebhookNotExist(err), "webhook still exists: %v", err)
 	status, body = c.do(http.MethodGet, hookPath, nil)
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
+}
+
+// Issues of a repository of the organization reach the webhooks of both the
+// repository and the organization. Issues of a repository of a user reach no
+// webhook of an organization.
+func TestOrgWebhookEvents(t *testing.T) {
+	owner := seedUser(t, CreateUserOptions{})
+	org := orgSeed(t, owner.ID)
+	orgRepo := seedRepository(t, org.ID, CreateRepositoryOptions{})
+	userRepo := seedRepository(t, owner.ID, CreateRepositoryOptions{})
+	c := orgSignedIn(t, owner)
+	api := apiV1Client(t, owner)
+	issuesOnly := func(url string) map[string]any {
+		return map[string]any{
+			"type":         "gogs",
+			"url":          url,
+			"contentType":  "json",
+			"events":       "choose_events",
+			"chosenEvents": map[string]bool{"issues": true},
+			"active":       true,
+		}
+	}
+	var created struct {
+		ID int64 `json:"id"`
+	}
+	repoURL, repoDeliveries := repoSettingsWebhookReceiver(t)
+	c.doJSON(http.MethodPost, repoSettingsAPIPath(orgRepo, "/settings/hooks"), issuesOnly(repoURL), http.StatusCreated, &created)
+	repoHookID := created.ID
+	orgURL, orgDeliveries := repoSettingsWebhookReceiver(t)
+	c.doJSON(http.MethodPost, "/api/web/orgs/"+org.Name+"/settings/hooks", issuesOnly(orgURL), http.StatusCreated, &created)
+	orgHookID := created.ID
+
+	// The issue of the user repository is created first, so a delivery of it
+	// to the organization webhook would be queued before the other.
+	apiV1CreateIssue(t, api, userRepo, map[string]any{"title": "of user"})
+	apiV1CreateIssue(t, api, orgRepo, map[string]any{"title": "of organization"})
+
+	type issuesPayload struct {
+		Action string `json:"action"`
+		Issue  struct {
+			Title string `json:"title"`
+		} `json:"issue"`
+		Repo struct {
+			FullName string `json:"full_name"`
+		} `json:"repository"`
+	}
+	for name, deliveries := range map[string]<-chan repoSettingsDelivery{"repository": repoDeliveries, "organization": orgDeliveries} {
+		d := repoSettingsNextDelivery(t, deliveries)
+		assert.Equal(t, "issues", d.Header.Get("X-Gogs-Event"), name)
+		var payload issuesPayload
+		require.NoError(t, json.Unmarshal(d.Body, &payload), "payload: %s", d.Body)
+		assert.Equal(t, "opened", payload.Action, name)
+		assert.Equal(t, "of organization", payload.Issue.Title, name)
+		assert.Equal(t, org.Name+"/"+orgRepo.Name, payload.Repo.FullName, name)
+	}
+
+	for _, id := range []int64{repoHookID, orgHookID} {
+		tasks, err := database.Handle.HookTasks().ListByWebhook(t.Context(), id, 1, 10)
+		require.NoError(t, err)
+		assert.Len(t, tasks, 1, "deliveries of webhook %d", id)
+	}
 }
 
 // orgAvatarForm returns a multipart form with the content as the avatar file.
