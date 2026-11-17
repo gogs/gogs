@@ -163,6 +163,13 @@ func TestUserSettingsAvatar(t *testing.T) {
 	c.doJSON(http.MethodGet, "/api/web/user/settings", nil, http.StatusOK, &settings)
 	assert.True(t, settings.HasCustomAvatar)
 
+	status, header, body := anonymous.doRaw(http.MethodGet, "/-/avatars/"+strconv.FormatInt(u.ID, 10), "", nil)
+	require.Equal(t, http.StatusOK, status, "response: %s", body)
+	assert.Equal(t, "image/png", header.Get("Content-Type"))
+	assert.Equal(t, "private", header.Get("Cache-Control"))
+	status, _, body = anonymous.doRaw(http.MethodGet, "/-/avatars/0", "", nil)
+	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
+
 	status, _, body = c.doRaw(http.MethodDelete, "/api/web/user/settings/avatar", "", nil)
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 	assert.False(t, userGet(t, u.ID).UseCustomAvatar)

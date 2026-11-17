@@ -320,18 +320,6 @@ func newRoutingHandler(logger *logx.Logger, localizer, sessioner, authenticate f
 		SetETag:       true,
 		EnableLogging: !conf.Server.DisableRouterLog,
 	}))
-	f.Use(flamego.Static(flamego.StaticOptions{
-		Directory:     conf.Picture.AvatarUploadPath,
-		Prefix:        conf.UsersAvatarPathPrefix,
-		SetETag:       true,
-		EnableLogging: !conf.Server.DisableRouterLog,
-	}))
-	f.Use(flamego.Static(flamego.StaticOptions{
-		Directory:     conf.Picture.RepositoryAvatarUploadPath,
-		Prefix:        database.RepoAvatarURLPrefix,
-		SetETag:       true,
-		EnableLogging: !conf.Server.DisableRouterLog,
-	}))
 
 	f.Use(localizer)
 
@@ -401,6 +389,8 @@ func newRoutingHandler(logger *logx.Logger, localizer, sessioner, authenticate f
 			c.Redirect(conf.Server.Subpath + "/explore/repos")
 		})
 		f.Get("/attachments/{uuid}", requireViewAccess, getAttachment)
+		f.Get("/-/avatars/{id}", getUserAvatar)
+		f.Get("/-/repo-avatars/{id}", getRepoAvatar)
 		f.Get("/{username}.keys", requireViewAccess, getUserPublicKeys)
 		f.Any("/user/activate_email", activateEmail)
 		f.Get("/user/email2user", email2User)

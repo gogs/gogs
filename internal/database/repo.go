@@ -40,8 +40,9 @@ import (
 	"gogs.io/gogs/internal/sync"
 )
 
-// RepoAvatarURLPrefix is used to identify a URL is to access repository avatar.
-const RepoAvatarURLPrefix = "repo-avatars"
+// RepoAvatarURLPrefix is the path prefix to repository avatars. It is under
+// "-", a reserved username, so it never shadows the pages of a user.
+const RepoAvatarURLPrefix = "-/repo-avatars"
 
 // InvalidRepoReference represents an error when repository reference is invalid.
 type InvalidRepoReference struct {

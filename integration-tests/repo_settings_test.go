@@ -268,7 +268,7 @@ func TestRepoSettingsAvatar(t *testing.T) {
 	var settings avatarSettings
 	c.doJSON(http.MethodGet, repoSettingsAPIPath(repo, "/settings"), nil, http.StatusOK, &settings)
 	assert.True(t, settings.HasCustomAvatar)
-	assert.Equal(t, "/repo-avatars/"+strconv.FormatInt(repo.ID, 10), settings.AvatarURL)
+	assert.Equal(t, "/-/repo-avatars/"+strconv.FormatInt(repo.ID, 10), settings.AvatarURL)
 
 	status, _, body = c.doRaw(http.MethodDelete, repoSettingsAPIPath(repo, "/settings/avatar"), "", nil)
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
@@ -276,7 +276,68 @@ func TestRepoSettingsAvatar(t *testing.T) {
 	settings = avatarSettings{}
 	c.doJSON(http.MethodGet, repoSettingsAPIPath(repo, "/settings"), nil, http.StatusOK, &settings)
 	assert.False(t, settings.HasCustomAvatar)
-	assert.NotEqual(t, "/repo-avatars/"+strconv.FormatInt(repo.ID, 10), settings.AvatarURL)
+	assert.NotEqual(t, "/-/repo-avatars/"+strconv.FormatInt(repo.ID, 10), settings.AvatarURL)
+}
+
+func TestRepoAvatarAccess(t *testing.T) {
+	owner := seedUser(t, CreateUserOptions{})
+	reader := seedUser(t, CreateUserOptions{})
+	other := seedUser(t, CreateUserOptions{})
+	admin := seedUser(t, CreateUserOptions{Admin: true})
+	disabled := seedUser(t, CreateUserOptions{})
+	private := seedRepository(t, owner.ID, CreateRepositoryOptions{Private: true})
+	public := seedRepository(t, owner.ID, CreateRepositoryOptions{})
+	repoSettingsAddCollaborator(t, private, reader, database.AccessModeRead)
+	repoSettingsAddCollaborator(t, private, disabled, database.AccessModeRead)
+
+	// The disabled collaborator stays authenticated by the session they had
+	// before their account was disabled.
+	disabledClient := repoSettingsSignedIn(t, disabled)
+	prohibitLogin := true
+	require.NoError(t, database.Handle.Users().Update(t.Context(), disabled.ID, database.UpdateUserOptions{ProhibitLogin: &prohibitLogin}))
+
+	avatar := []byte("avatar")
+	require.NoError(t, os.MkdirAll(conf.Picture.RepositoryAvatarUploadPath, 0o755))
+	for _, repo := range []*Repository{private, public} {
+		require.NoError(t, os.WriteFile(filepath.Join(conf.Picture.RepositoryAvatarUploadPath, strconv.FormatInt(repo.ID, 10)), avatar, 0o644))
+	}
+	avatarPath := func(repo *Repository) string {
+		return "/-/repo-avatars/" + strconv.FormatInt(repo.ID, 10)
+	}
+
+	tests := []struct {
+		name       string
+		client     *client
+		repo       *Repository
+		wantStatus int
+	}{
+		{name: "owner of a private repository", client: repoSettingsSignedIn(t, owner), repo: private, wantStatus: http.StatusOK},
+		{name: "reader of a private repository", client: repoSettingsSignedIn(t, reader), repo: private, wantStatus: http.StatusOK},
+		{name: "site admin of a private repository", client: repoSettingsSignedIn(t, admin), repo: private, wantStatus: http.StatusOK},
+		{name: "other user of a private repository", client: repoSettingsSignedIn(t, other), repo: private, wantStatus: http.StatusNotFound},
+		{name: "disabled reader of a private repository", client: disabledClient, repo: private, wantStatus: http.StatusNotFound},
+		{name: "anonymous of a private repository", client: newClient(t), repo: private, wantStatus: http.StatusNotFound},
+		{name: "anonymous of a public repository", client: newClient(t), repo: public, wantStatus: http.StatusOK},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			status, header, body := test.client.doRaw(http.MethodGet, avatarPath(test.repo), "", nil)
+			require.Equal(t, test.wantStatus, status, "response: %s", body)
+			if test.wantStatus == http.StatusOK {
+				assert.Equal(t, avatar, body)
+				assert.Equal(t, "private", header.Get("Cache-Control"))
+			} else {
+				assert.NotEqual(t, avatar, body)
+			}
+		})
+	}
+
+	status, _, body := newClient(t).doRaw(http.MethodGet, "/-/repo-avatars/0", "", nil)
+	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
+
+	// The old path is the page of a user named "repo-avatars", not the avatar.
+	_, _, body = newClient(t).doRaw(http.MethodGet, "/repo-avatars/"+strconv.FormatInt(public.ID, 10), "", nil)
+	assert.NotEqual(t, avatar, body)
 }
 
 func TestRepoSettingsDelete(t *testing.T) {
