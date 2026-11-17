@@ -46,7 +46,7 @@ func (s *IssuesStore) Create(ctx context.Context, logger *logx.Logger, repo *Rep
 		return errors.Wrap(err, "create issue")
 	}
 
-	err = notifyWatchers(s.db.WithContext(ctx), &Action{
+	err = newActionsStore(s.db).notifyWatchers(ctx, &Action{
 		ActUserID:    issue.Poster.ID,
 		ActUserName:  issue.Poster.Name,
 		OpType:       ActionCreateIssue,

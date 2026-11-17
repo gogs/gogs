@@ -134,6 +134,10 @@ func (db *DB) Attachments() *AttachmentsStore {
 	return newAttachmentsStore(db.db)
 }
 
+func (db *DB) Collaborations() *CollaborationsStore {
+	return newCollaborationsStore(db.db)
+}
+
 func (db *DB) Comments() *CommentsStore {
 	return newCommentsStore(db.db)
 }

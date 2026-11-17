@@ -103,9 +103,12 @@ func TestRepos(t *testing.T) {
 		{"GetByName", reposGetByName},
 		{"LoadAttributes", reposLoadAttributes},
 		{"Star", reposStar},
+		{"Unstar", reposUnstar},
+		{"ListStargazersAndWatchers", reposListStargazersAndWatchers},
 		{"Touch", reposTouch},
 		{"ListByRepo", reposListWatches},
 		{"Watch", reposWatch},
+		{"Unwatch", reposUnwatch},
 		{"HasForkedBy", reposHasForkedBy},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -265,6 +268,86 @@ func reposStar(t *testing.T, ctx context.Context, s *RepositoriesStore) {
 	assert.Equal(t, 1, alice.NumStars)
 }
 
+func reposUnstar(t *testing.T, ctx context.Context, s *RepositoriesStore) {
+	repo1, err := s.Create(ctx, 9999, CreateRepoOptions{Name: "repo1"})
+	require.NoError(t, err)
+	repo2, err := s.Create(ctx, 9999, CreateRepoOptions{Name: "repo2"})
+	require.NoError(t, err)
+	usersStore := newUsersStore(s.db)
+	alice, err := usersStore.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+	bob, err := usersStore.Create(ctx, "bob", "bob@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+	for _, star := range [][2]int64{{alice.ID, repo1.ID}, {alice.ID, repo2.ID}, {bob.ID, repo1.ID}} {
+		require.NoError(t, s.Star(ctx, star[0], star[1]))
+	}
+
+	counts := func() []int {
+		t.Helper()
+		r1, err := s.GetByID(ctx, repo1.ID)
+		require.NoError(t, err)
+		r2, err := s.GetByID(ctx, repo2.ID)
+		require.NoError(t, err)
+		a, err := usersStore.GetByID(ctx, alice.ID)
+		require.NoError(t, err)
+		b, err := usersStore.GetByID(ctx, bob.ID)
+		require.NoError(t, err)
+		return []int{r1.NumStars, r2.NumStars, a.NumStars, b.NumStars}
+	}
+	assert.Equal(t, []int{2, 1, 2, 1}, counts())
+
+	err = s.Unstar(ctx, alice.ID, repo1.ID)
+	require.NoError(t, err)
+	assert.Equal(t, []int{1, 1, 1, 1}, counts())
+	assert.False(t, s.IsStarring(ctx, alice.ID, repo1.ID))
+	assert.True(t, s.IsStarring(ctx, alice.ID, repo2.ID))
+	assert.True(t, s.IsStarring(ctx, bob.ID, repo1.ID))
+
+	// Unstarring a repository that the user does not star is a no-op.
+	err = s.Unstar(ctx, alice.ID, repo1.ID)
+	require.NoError(t, err)
+	assert.Equal(t, []int{1, 1, 1, 1}, counts())
+
+	assert.False(t, s.IsStarring(ctx, 0, repo1.ID))
+}
+
+func reposListStargazersAndWatchers(t *testing.T, ctx context.Context, s *RepositoriesStore) {
+	repo1, err := s.Create(ctx, 9999, CreateRepoOptions{Name: "repo1"})
+	require.NoError(t, err)
+	repo2, err := s.Create(ctx, 9999, CreateRepoOptions{Name: "repo2"})
+	require.NoError(t, err)
+	usersStore := newUsersStore(s.db)
+	alice, err := usersStore.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+	bob, err := usersStore.Create(ctx, "bob", "bob@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+	carol, err := usersStore.Create(ctx, "carol", "carol@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+
+	require.NoError(t, s.Star(ctx, carol.ID, repo1.ID))
+	require.NoError(t, s.Star(ctx, alice.ID, repo1.ID))
+	require.NoError(t, s.Star(ctx, bob.ID, repo2.ID))
+	require.NoError(t, s.Watch(ctx, bob.ID, repo1.ID))
+	require.NoError(t, s.Watch(ctx, carol.ID, repo2.ID))
+
+	userIDs := func(users []*User, err error) []int64 {
+		t.Helper()
+		require.NoError(t, err)
+		ids := make([]int64, 0, len(users))
+		for _, u := range users {
+			ids = append(ids, u.ID)
+		}
+		return ids
+	}
+	got, err := s.ListStargazers(ctx, repo1.ID, 1)
+	assert.Equal(t, []int64{carol.ID, alice.ID}, userIDs(got, err))
+	require.NotEmpty(t, got)
+	assert.Equal(t, "carol", got[0].Name)
+	assert.Empty(t, userIDs(s.ListStargazers(ctx, repo1.ID, 2)))
+	assert.Equal(t, []int64{bob.ID}, userIDs(s.ListWatchers(ctx, repo1.ID, 1)))
+	assert.Equal(t, []int64{carol.ID}, userIDs(s.ListWatchers(ctx, repo2.ID, 0)))
+}
+
 func reposTouch(t *testing.T, ctx context.Context, s *RepositoriesStore) {
 	repo, err := s.Create(ctx, 1,
 		CreateRepoOptions{
@@ -327,6 +410,42 @@ func reposWatch(t *testing.T, ctx context.Context, s *RepositoriesStore) {
 	repo1, err = reposStore.GetByID(ctx, repo1.ID)
 	require.NoError(t, err)
 	assert.Equal(t, 2, repo1.NumWatches) // The owner is watching the repo by default.
+}
+
+func reposUnwatch(t *testing.T, ctx context.Context, s *RepositoriesStore) {
+	repo1, err := s.Create(ctx, 9999, CreateRepoOptions{Name: "repo1"})
+	require.NoError(t, err)
+	repo2, err := s.Create(ctx, 9999, CreateRepoOptions{Name: "repo2"})
+	require.NoError(t, err)
+	for _, repoID := range []int64{repo1.ID, repo2.ID} {
+		require.NoError(t, s.Watch(ctx, 2, repoID))
+		require.NoError(t, s.Watch(ctx, 3, repoID))
+	}
+
+	numWatches := func() []int {
+		t.Helper()
+		r1, err := s.GetByID(ctx, repo1.ID)
+		require.NoError(t, err)
+		r2, err := s.GetByID(ctx, repo2.ID)
+		require.NoError(t, err)
+		return []int{r1.NumWatches, r2.NumWatches}
+	}
+	// The owner watches the repository too.
+	assert.Equal(t, []int{3, 3}, numWatches())
+
+	err = s.Unwatch(ctx, 2, repo1.ID)
+	require.NoError(t, err)
+	assert.Equal(t, []int{2, 3}, numWatches())
+	assert.False(t, s.IsWatching(ctx, 2, repo1.ID))
+	assert.True(t, s.IsWatching(ctx, 2, repo2.ID))
+	assert.True(t, s.IsWatching(ctx, 3, repo1.ID))
+
+	// Unwatching a repository that the user does not watch is a no-op.
+	err = s.Unwatch(ctx, 2, repo1.ID)
+	require.NoError(t, err)
+	assert.Equal(t, []int{2, 3}, numWatches())
+
+	assert.False(t, s.IsWatching(ctx, 0, repo1.ID))
 }
 
 func reposHasForkedBy(t *testing.T, ctx context.Context, s *RepositoriesStore) {

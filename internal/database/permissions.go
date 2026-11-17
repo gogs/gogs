@@ -124,8 +124,85 @@ func (s *PermissionsStore) SetRepoPerms(ctx context.Context, repoID int64, acces
 		err := tx.Where("repo_id = ?", repoID).Delete(new(Access)).Error
 		if err != nil {
 			return err
+		} else if len(records) == 0 {
+			return nil
 		}
 
 		return tx.Create(&records).Error
 	})
+}
+
+// recalculateAccesses sets the access modes of the repository from its
+// collaborators and, when an organization owns it, from the teams of the
+// organization.
+func (s *PermissionsStore) recalculateAccesses(ctx context.Context, repo *Repository) error {
+	if err := repo.getOwner(s.db.WithContext(ctx)); err != nil {
+		return errors.Wrap(err, "get owner")
+	}
+	if repo.Owner.IsOrganization() {
+		return s.recalculateTeamAccesses(ctx, repo, 0)
+	}
+
+	accessMap, err := s.collaboratorAccesses(ctx, repo.ID)
+	if err != nil {
+		return err
+	}
+	return s.SetRepoPerms(ctx, repo.ID, accessMap)
+}
+
+// collaboratorAccesses returns the access modes of the collaborators of the
+// repository with given ID, keyed by their user IDs.
+func (s *PermissionsStore) collaboratorAccesses(ctx context.Context, repoID int64) (map[int64]AccessMode, error) {
+	collaborations, err := newCollaborationsStore(s.db).listByRepoID(ctx, repoID)
+	if err != nil {
+		return nil, errors.Wrap(err, "list collaborations")
+	}
+
+	accessMap := make(map[int64]AccessMode, len(collaborations))
+	for _, c := range collaborations {
+		accessMap[c.UserID] = c.Mode
+	}
+	return accessMap, nil
+}
+
+// recalculateTeamAccesses sets the access modes of the repository, which an
+// organization owns, from its collaborators and the teams of the organization
+// other than the team with given ID. The owner team has owner access to every
+// repository of the organization, and a member of several teams gets the
+// highest access mode among them.
+func (s *PermissionsStore) recalculateTeamAccesses(ctx context.Context, repo *Repository, ignoredTeamID int64) error {
+	db := s.db.WithContext(ctx)
+	if err := repo.getOwner(db); err != nil {
+		return errors.Wrap(err, "get owner")
+	} else if !repo.Owner.IsOrganization() {
+		return errors.Newf("owner is not an organization: %d", repo.OwnerID)
+	}
+
+	accessMap, err := s.collaboratorAccesses(ctx, repo.ID)
+	if err != nil {
+		return err
+	}
+
+	if err = repo.Owner.getTeams(db); err != nil {
+		return errors.Wrap(err, "list teams")
+	}
+	for _, t := range repo.Owner.Teams {
+		if t.ID == ignoredTeamID {
+			continue
+		}
+
+		if t.IsOwnerTeam() {
+			t.Authorize = AccessModeOwner
+		} else if !t.hasRepository(db, repo.ID) {
+			continue
+		}
+
+		if err = t.getMembers(db); err != nil {
+			return errors.Wrapf(err, "list members of team %d", t.ID)
+		}
+		for _, m := range t.Members {
+			accessMap[m.ID] = max(accessMap[m.ID], t.Authorize)
+		}
+	}
+	return s.SetRepoPerms(ctx, repo.ID, accessMap)
 }
