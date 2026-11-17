@@ -252,7 +252,7 @@ export function RepoCode({
           <div className="mb-4 lg:hidden">
             <AboutText summary={summary} />
           </div>
-          <div className="grid gap-8 glass-ui:gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+          <div className="grid gap-8 glass-ui:gap-x-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
             <div className="min-w-0">
               <div className="mb-4 flex flex-wrap items-center gap-2">
                 {refPicker}
@@ -402,7 +402,7 @@ export function RepoCode({
             defaultWidth={300}
             minWidth={220}
             maxWidth={480}
-            className="hidden border-r border-(--color-border) lg:sticky lg:top-[calc(3.5rem+1px)] lg:flex lg:h-[calc(100dvh-3.5rem-1px)] lg:self-start"
+            className="glass-bar hidden border-r border-(--color-border) lg:sticky lg:top-[calc(3.5rem+1px)] lg:flex lg:h-[calc(100dvh-3.5rem-1px)] lg:self-start"
           >
             <div className="flex flex-col gap-2 p-3">
               <div className="flex items-center gap-2">

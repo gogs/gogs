@@ -32,7 +32,7 @@ export function SettingsLayout({
   return (
     <div
       className={cn(
-        "mx-auto grid w-full max-w-6xl content-start gap-6 px-4 py-6 sm:px-6 md:grid-cols-[200px_minmax(0,1fr)]",
+        "mx-auto grid w-full max-w-6xl content-start gap-6 px-4 glass-ui:gap-x-4 py-6 sm:px-6 md:grid-cols-[200px_minmax(0,1fr)]",
         className,
       )}
     >

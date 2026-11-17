@@ -138,7 +138,7 @@ export function RepoWiki({ owner, name, data }: { owner: string; name: string; d
 
   return (
     <WikiLayout owner={owner} name={name} title={page.name}>
-      <div className="grid gap-8 glass-ui:gap-6 md:grid-cols-[minmax(0,1fr)_16rem] lg:grid-cols-[minmax(0,1fr)_18rem]">
+      <div className="grid gap-8 glass-ui:gap-x-4 md:grid-cols-[minmax(0,1fr)_16rem] lg:grid-cols-[minmax(0,1fr)_18rem]">
         <article className="min-w-0">
           <header className="mb-6 border-b border-(--color-border) pb-4">
             <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
@@ -327,7 +327,7 @@ export function RepoWikiEditor({
         <h1 className="text-2xl font-semibold">{heading}</h1>
         {page ? <NewPageButton owner={owner} name={name} /> : null}
       </div>
-      <form onSubmit={onSubmit} noValidate>
+      <form onSubmit={onSubmit} noValidate className="glass glass-ui:border glass-ui:p-4 sm:glass-ui:p-6">
         <fieldset disabled={save.isPending} className="flex flex-col gap-5">
           <FormAlert message={formError} />
           <FormField

@@ -235,7 +235,7 @@ function NewRepoPage({
   };
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-10 sm:px-6">
-      <form onSubmit={submit} noValidate>
+      <form onSubmit={submit} noValidate className="glass glass-ui:border glass-ui:p-4 sm:glass-ui:p-6">
         <fieldset disabled={pending} className="contents">
           <h1 className="mb-4 text-xl font-semibold">{title}</h1>
           <FormAlert message={formError} />

@@ -39,23 +39,25 @@ export function OrgTeam({ org: orgName, data }: { org: string; data: TeamPageDat
   return (
     <main className="flex-1">
       <OrgHeader org={org} activeTab="teams" />
-      <div className="mx-auto grid w-full max-w-6xl content-start gap-6 px-4 py-6 sm:px-6 md:grid-cols-[256px_minmax(0,1fr)] lg:grid-cols-[296px_minmax(0,1fr)]">
+      <div className="mx-auto grid w-full max-w-6xl content-start gap-6 px-4 glass-ui:gap-x-4 py-6 sm:px-6 md:grid-cols-[256px_minmax(0,1fr)] lg:grid-cols-[296px_minmax(0,1fr)]">
         <TeamSidebar org={org.name} team={team} viewerIsOwner={org.viewerIsOwner} />
-        <section className="min-w-0">
+        <section className="glass-section min-w-0 glass-ui:self-start">
           <h2 className="border-b border-(--color-border) pb-2 text-base font-semibold">
             {data.tab === "members" ? t("org.teams.members") : t("org.teams.repositories")}
           </h2>
-          {data.tab === "members" ? (
-            <TeamMembers org={org.name} team={team} members={data.members} viewerIsOwner={org.viewerIsOwner} />
-          ) : (
-            <TeamRepos
-              org={org.name}
-              team={team}
-              repos={data.repos}
-              // The owners team has every repository.
-              canChange={org.viewerIsOwner && !team.isOwnerTeam}
-            />
-          )}
+          <div className="glass-ui:px-4 glass-ui:pb-4">
+            {data.tab === "members" ? (
+              <TeamMembers org={org.name} team={team} members={data.members} viewerIsOwner={org.viewerIsOwner} />
+            ) : (
+              <TeamRepos
+                org={org.name}
+                team={team}
+                repos={data.repos}
+                // The owners team has every repository.
+                canChange={org.viewerIsOwner && !team.isOwnerTeam}
+              />
+            )}
+          </div>
         </section>
       </div>
     </main>

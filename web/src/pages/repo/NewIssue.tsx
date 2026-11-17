@@ -268,9 +268,9 @@ export function NewIssueForm({
     setFieldsUploading((list) => (uploading ? [...new Set([...list, index])] : list.filter((i) => i !== index)));
 
   return (
-    <form onSubmit={onSubmit} className="grid content-start gap-8 md:grid-cols-[minmax(0,1fr)_16rem]">
+    <form onSubmit={onSubmit} className="grid content-start gap-8 glass-ui:gap-x-4 md:grid-cols-[minmax(0,1fr)_16rem]">
       <fieldset disabled={mutation.isPending} className="contents">
-        <div className="min-w-0">
+        <div className="glass glass-ui:border glass-ui:p-4 sm:glass-ui:p-6 min-w-0 glass-ui:self-start">
           <FormAlert message={formError} />
           {template ? (
             <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2 text-sm">

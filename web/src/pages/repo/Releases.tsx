@@ -407,7 +407,7 @@ export function RepoReleaseEditor({
       <p className="-mt-2 mb-6 text-sm text-(--color-muted-foreground)">
         {release ? t("repo.release.edit_subheader") : t("repo.release.new_subheader")}
       </p>
-      <form onSubmit={onSubmit} className="max-w-3xl">
+      <form onSubmit={onSubmit} className="glass glass-ui:border glass-ui:p-4 sm:glass-ui:p-6 max-w-3xl">
         <fieldset disabled={mutation.isPending} className="flex flex-col gap-5">
           <FormAlert message={formError} />
           {release ? (

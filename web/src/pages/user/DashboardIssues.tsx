@@ -29,7 +29,7 @@ export function DashboardIssues({
   const isOrg = data.kind === "organization";
 
   return (
-    <main className="mx-auto grid w-full max-w-6xl flex-1 content-start gap-6 px-4 py-6 sm:px-6 md:grid-cols-[256px_minmax(0,1fr)] lg:grid-cols-[296px_minmax(0,1fr)]">
+    <main className="mx-auto grid w-full max-w-6xl flex-1 content-start gap-6 px-4 glass-ui:gap-x-4 py-6 sm:px-6 md:grid-cols-[256px_minmax(0,1fr)] lg:grid-cols-[296px_minmax(0,1fr)]">
       <h1 className="sr-only">{title}</h1>
       <aside className="glass min-w-0 glass-ui:self-start glass-ui:border glass-ui:p-3">
         <ContextSwitcher data={data} page={kind} />

@@ -646,6 +646,25 @@ diffs-container {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
+/* A section inside a section, e.g., the commit days of a pull request,
+   keeps its heading as a header row but loses its frame. */
+:root.glass-ui .glass-section .glass-section {
+  border-width: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+/* A panel inside another panel, e.g., the Markdown editor in a form, keeps a
+   faint border instead of stacking a second pane on the first. */
+:root.glass-ui :is(.glass, .glass-list) :is(.glass, .glass-list) {
+  border-color: var(--color-border);
+  background: none;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
 /* E.g., the "Show more" button below the activity feed. */
 :root.glass-ui .glass-section .glass-list + * {
   margin-bottom: 1rem;

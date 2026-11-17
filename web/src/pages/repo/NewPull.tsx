@@ -114,7 +114,7 @@ export function RepoNewPull({
         )}
 
         {data.commits.length ? (
-          <section className="mt-8">
+          <section className="glass-section mt-8">
             <h2 className="mb-3 text-lg font-semibold">
               {t(data.commits.length === 1 ? "repo.commits.n_commit" : "repo.commits.n_commits", {
                 count: data.commits.length,

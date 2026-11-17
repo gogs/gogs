@@ -151,7 +151,7 @@ export function IssueConversation({
   const ref = issueRef;
 
   return (
-    <div className={cn("grid content-start gap-8 md:grid-cols-[minmax(0,1fr)_16rem]", className)}>
+    <div className={cn("grid content-start gap-8 glass-ui:gap-x-4 md:grid-cols-[minmax(0,1fr)_16rem]", className)}>
       <div className="flex min-w-0 flex-col gap-4">
         <CommentCard
           issueRef={ref}
