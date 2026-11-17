@@ -478,13 +478,14 @@ function ScatterPlot({ result, search }: { result: AdminTraceSearchData; search:
   const start = search.from ?? Math.max(now - result.maxAgeMinutes * 60_000, Math.min(oldest, now - 5 * 60_000));
   const end = Math.max(Math.min(search.to ?? now, now), start + 60_000);
   const windowed = search.from !== undefined || search.to !== undefined;
-  const maxMs = Math.max(10, ...result.points.map((p) => p.durationMs));
-  // Powers of ten from 1 ms up to the slowest trace.
+  const slow = result.slowThresholdMs;
+  const maxMs = Math.max(10, slow, ...result.points.map((p) => p.durationMs));
+  // Powers of ten from 1 ms up to the slowest trace or the slow threshold,
+  // whichever is higher, so the threshold line stays inside the plot.
   const top = Math.ceil(Math.log10(maxMs));
   const ticks = Array.from({ length: top + 1 }, (_, i) => 10 ** i);
   const x = (iso: string) => ((Date.parse(iso) - start) / (end - start)) * W;
   const y = (ms: number) => H - 4 - (Math.log10(Math.max(ms, 1)) / top) * (H - 8);
-  const slow = result.slowThresholdMs;
 
   // Zero-length lines with round caps draw dots that keep their shape while
   // the plot stretches to its width.
