@@ -37,10 +37,14 @@ export function CodeSearch() {
       ) : (
         <>
           {data.timedOut ? (
-            <p className="mb-4 flex items-center gap-2 rounded-md border border-(--color-warning) bg-(--color-warning)/10 px-4 py-2 text-sm">
-              <TriangleAlert className="size-4 shrink-0 text-(--color-warning)" aria-hidden />
-              {t("repo.code_search.timed_out_partial")}
-            </p>
+            // The tint is on an inner layer because the glass marker sets the
+            // panel's own background color.
+            <div className="glass mb-4 rounded-md border !border-(--color-warning)">
+              <p className="flex items-center gap-2 rounded-[inherit] bg-(--color-warning)/10 px-4 py-2 text-sm">
+                <TriangleAlert className="size-4 shrink-0 text-(--color-warning)" aria-hidden />
+                {t("repo.code_search.timed_out_partial")}
+              </p>
+            </div>
           ) : null}
           {data.files.length ? (
             <CodeSearchResults
@@ -68,7 +72,7 @@ export function CodeSearch() {
               }}
             />
           ) : (
-            <p className="rounded-md border border-(--color-border) px-4 py-10 text-center text-sm text-(--color-muted-foreground)">
+            <p className="glass rounded-md border border-(--color-border) px-4 py-10 text-center text-sm text-(--color-muted-foreground)">
               {t("repo.code_search.no_results")}
             </p>
           )}

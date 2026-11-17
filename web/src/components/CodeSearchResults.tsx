@@ -121,9 +121,9 @@ export function CodeSearchResults({
         <section
           key={`${file.repo}/${file.path}`}
           aria-label={file.repo ? `${file.repo}/${file.path}` : file.path}
-          className="overflow-hidden rounded-md border border-(--color-border)"
+          className="glass overflow-hidden rounded-md border border-(--color-border)"
         >
-          <h2 className="flex items-center gap-2 border-b border-(--color-border) bg-(--color-surface) px-4 py-2 text-sm">
+          <h2 className="flex items-center gap-2 rounded-t-[inherit] border-b border-(--color-border) bg-(--color-surface) px-4 py-2 text-sm">
             <FileCode className="size-4 shrink-0 text-(--color-muted-foreground)" aria-hidden />
             <span className="min-w-0 wrap-anywhere">
               {headerOf?.(file)}
@@ -132,7 +132,7 @@ export function CodeSearchResults({
               </a>
             </span>
           </h2>
-          <div className="divide-y divide-dashed divide-(--color-border) overflow-x-auto font-mono text-xs/5">
+          <div className="divide-y divide-dashed divide-(--color-border) overflow-x-auto bg-(--color-field) font-mono text-xs/5">
             {snippetsOf(file.lines).map((snippet) => (
               <Snippet
                 key={snippet[0].line}
@@ -200,7 +200,7 @@ function Snippet({
             <a
               href={lineURL(line.line)}
               aria-label={t("repo.code_search.line", { line: line.line })}
-              className="sticky left-0 w-14 shrink-0 bg-(--color-background) pr-3 text-right text-(--color-muted-foreground) tabular-nums hover:text-(--color-primary) hover:underline"
+              className="sticky left-0 w-14 shrink-0 bg-(--color-field) pr-3 glass-ui:backdrop-blur-xl text-right text-(--color-muted-foreground) tabular-nums hover:text-(--color-primary) hover:underline"
             >
               {line.line}
             </a>
@@ -259,7 +259,7 @@ export function CodeSearchHelp({ hint, global }: { hint: string; global?: boolea
     { syntax: "path:internal/ path:*.go", label: t("repo.code_search.qualifier_path") },
   ];
   return (
-    <div className="rounded-md border border-(--color-border) px-4 py-6 text-sm">
+    <div className="glass rounded-md border border-(--color-border) px-4 py-6 text-sm">
       <p className="text-(--color-muted-foreground)">{hint}</p>
       <h2 className="mt-4 mb-2 font-semibold">{t("repo.code_search.qualifiers")}</h2>
       <dl className="grid gap-x-4 gap-y-2 sm:grid-cols-[max-content_1fr]">

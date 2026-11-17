@@ -234,7 +234,7 @@ export function CodeSearchInput({
     <div className={cn("relative min-w-0 flex-1", compact && "w-full")}>
       <div
         className={cn(
-          "flex min-h-8 w-full cursor-text flex-wrap items-center gap-1 rounded-md border border-(--color-input) bg-(--color-background) py-0.5 pr-1 pl-2.5 text-sm",
+          "flex min-h-8 w-full cursor-text flex-wrap items-center gap-1 rounded-md border border-(--color-input) bg-(--color-field) py-0.5 pr-1 pl-2.5 text-sm",
           "focus-within:border-(--color-ring) focus-within:ring-1 focus-within:ring-(--color-ring)",
         )}
         onClick={() => inputRef.current?.focus()}
@@ -301,7 +301,7 @@ export function CodeSearchInput({
         aria-label={t("repo.code_search.suggestions")}
         hidden={!expanded}
         className={cn(
-          "absolute top-full left-0 z-20 mt-1 w-full overflow-hidden rounded-md border border-(--color-border) bg-(--color-popover) p-1 text-sm text-(--color-popover-foreground) shadow-md",
+          "absolute top-full left-0 z-20 mt-1 w-full overflow-hidden rounded-md border border-(--color-border) bg-(--color-popover) p-1 text-sm text-(--color-popover-foreground) shadow-md glass-ui:backdrop-blur-xl",
           compact && "min-w-72",
         )}
       >

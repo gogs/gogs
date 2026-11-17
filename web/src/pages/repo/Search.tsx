@@ -62,7 +62,7 @@ export function RepoSearch({ owner, name, data }: { owner: string; name: string;
         {!data.keyword ? (
           <CodeSearchHelp hint={t("repo.code_search.hint", { ref: data.ref })} />
         ) : message ? (
-          <p className="flex items-center justify-center gap-2 rounded-md border border-(--color-border) px-4 py-10 text-center text-sm text-(--color-muted-foreground)">
+          <p className="glass flex items-center justify-center gap-2 rounded-md border border-(--color-border) px-4 py-10 text-center text-sm text-(--color-muted-foreground)">
             {data.timedOut ? <TriangleAlert className="size-4 shrink-0 text-(--color-warning)" aria-hidden /> : null}
             <span className="wrap-anywhere">{message}</span>
           </p>
