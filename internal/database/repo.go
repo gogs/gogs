@@ -1860,6 +1860,12 @@ func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 		if _, err = sess.Where("issue_id = ?", issues[i].ID).Delete(new(Comment)); err != nil {
 			return err
 		}
+		if _, err = sess.Delete(&Review{IssueID: issues[i].ID}); err != nil {
+			return err
+		}
+		if _, err = sess.Delete(&ReviewRequest{IssueID: issues[i].ID}); err != nil {
+			return err
+		}
 
 		rows, err := sess.Query("SELECT uuid FROM attachment WHERE issue_id = ?", issues[i].ID)
 		if err != nil {

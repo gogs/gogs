@@ -167,12 +167,13 @@ func updateLinkedAttachments(ctx context.Context, issueID, commentID int64, oldC
 
 type issueComment struct {
 	ID int64 `json:"id"`
-	// Type is "comment", "reopen", "close" or "commit_ref".
+	// Type is "comment", "reopen", "close", "commit_ref", "review", "code",
+	// "review_request" or "review_request_removed".
 	Type      string    `json:"type"`
 	Poster    issueUser `json:"poster"`
 	CreatedAt time.Time `json:"createdAt"`
-	// ContentHTML is the rendered content of a comment, or the link to the
-	// commit of a commit reference.
+	// ContentHTML is the rendered content of a comment or the summary of a
+	// review, or the link to the commit of a commit reference.
 	ContentHTML string `json:"contentHTML,omitempty"`
 	// Content is the Markdown of a comment, only sent to viewers who can edit
 	// it.
@@ -182,13 +183,63 @@ type issueComment struct {
 	Tag           string            `json:"tag,omitempty"`
 	Attachments   []issueAttachment `json:"attachments,omitempty"`
 	ViewerCanEdit bool              `json:"viewerCanEdit,omitempty"`
+	// Replies are the replies to the first comment of a thread, oldest first.
+	Replies []issueComment `json:"replies,omitempty"`
+	// Pending marks the viewer's own comment of a review not submitted yet.
+	Pending bool `json:"pending,omitempty"`
+	// Thread is where the first comment of a thread of code comments is.
+	Thread *issueThread `json:"thread,omitempty"`
+	// Review is the review a "review" item shows.
+	Review *issueReview `json:"review,omitempty"`
+	// Target is who a review was requested from.
+	Target *issueUser `json:"target,omitempty"`
+}
+
+// issueThread is where a thread of code comments is in the diff of a pull
+// request, and whether it is resolved.
+type issueThread struct {
+	// ReviewID is the review the thread started in.
+	ReviewID int64  `json:"reviewID"`
+	Path     string `json:"path"`
+	// Side and StartSide are "old" or "new".
+	Side      string `json:"side"`
+	StartSide string `json:"startSide"`
+	StartLine int64  `json:"startLine"`
+	Line      int64  `json:"line"`
+	// Outdated marks a thread whose lines changed since it started, which
+	// only shows in the conversation.
+	Outdated bool `json:"outdated"`
+	// DiffHunk is the last lines of the diff up to Line when the thread
+	// started, with their prefix.
+	DiffHunk   string     `json:"diffHunk"`
+	ResolvedBy *issueUser `json:"resolvedBy,omitempty"`
+	ResolvedAt *time.Time `json:"resolvedAt,omitempty"`
+	// ViewerCanResolve is whether the viewer can resolve or unresolve it.
+	ViewerCanResolve bool `json:"viewerCanResolve,omitempty"`
+}
+
+type issueReview struct {
+	ID int64 `json:"id"`
+	// State is "comment", "approve" or "request_changes".
+	State     string `json:"state"`
+	CommitSHA string `json:"commitSHA"`
+}
+
+var reviewStates = map[database.ReviewState]string{
+	database.ReviewStateComment:        "comment",
+	database.ReviewStateApprove:        "approve",
+	database.ReviewStateRequestChanges: "request_changes",
 }
 
 var issueCommentTypes = map[database.CommentType]string{
-	database.CommentTypeComment:   "comment",
-	database.CommentTypeReopen:    "reopen",
-	database.CommentTypeClose:     "close",
-	database.CommentTypeCommitRef: "commit_ref",
+	database.CommentTypeComment:              "comment",
+	database.CommentTypeReopen:               "reopen",
+	database.CommentTypeClose:                "close",
+	database.CommentTypeCommitRef:            "commit_ref",
+	database.CommentTypeReview:               "review",
+	database.CommentTypeCode:                 "code",
+	database.CommentTypeReviewRequest:        "review_request",
+	database.CommentTypeReviewRequestRemoved: "review_request_removed",
 }
 
 type issueAttachmentSettings struct {
@@ -325,7 +376,7 @@ func toRepoIssueView(ctx context.Context, logger *logx.Logger, viewer *database.
 		IsClosed:    issue.IsClosed,
 		Poster:      toIssueUser(issue.Poster),
 		CreatedAt:   issue.Created.UTC(),
-		ContentHTML: string(markup.Markdown(issue.Content, repo.Link(), metas)),
+		ContentHTML: embedPermalinks(ctx, logger, repoCtx.Owner.Name, repo.Name, string(markup.Markdown(issue.Content, repo.Link(), metas))),
 		Content:     issue.Content,
 		Attachments: toIssueAttachments(issue.Attachments, issue.Content),
 		Comments:    make([]issueComment, 0, len(issue.Comments)),
@@ -348,53 +399,67 @@ func toRepoIssueView(ctx context.Context, logger *logx.Logger, viewer *database.
 		resp.Assignee = &repoIssueAssignee{ID: issue.Assignee.ID, Name: issue.Assignee.Name, AvatarURL: issue.Assignee.AvatarURLPath()}
 	}
 
-	tags := make(map[int64]string)
-	participants := []*database.User{issue.Poster}
+	cv := newCommentViewer(ctx, logger, viewer, repoCtx, issue)
+	var reviews map[int64]*database.Review
+	if issue.IsPull {
+		submitted, err := database.GetSubmittedReviewsByIssueID(issue.ID)
+		if err != nil {
+			return nil, errors.Wrap(err, "list reviews")
+		}
+		reviews = make(map[int64]*database.Review, len(submitted))
+		for _, r := range submitted {
+			reviews[r.ID] = r
+		}
+	}
+
+	// Comments are oldest first, so the first comment of a thread comes
+	// before its replies.
+	roots := make(map[int64]int)
 	for _, comment := range issue.Comments {
 		typ, ok := issueCommentTypes[comment.Type]
-		// References from comments and pull requests are not shown.
-		if !ok {
+		// References from comments and pull requests are not shown. Code
+		// comments show in the threads of their review.
+		if !ok || comment.Type == database.CommentTypeCode {
 			continue
 		}
-		item := issueComment{
-			ID:        comment.ID,
-			Type:      typ,
-			Poster:    toIssueUser(comment.Poster),
-			CreatedAt: comment.Created.UTC(),
+		if comment.ReplyToID > 0 {
+			if i, ok := roots[comment.ReplyToID]; ok {
+				resp.Comments[i].Replies = append(resp.Comments[i].Replies, cv.toItem(comment))
+			}
+			continue
 		}
+
+		var item issueComment
 		switch comment.Type {
 		case database.CommentTypeCommitRef:
+			item = issueComment{ID: comment.ID, Type: typ, Poster: toIssueUser(comment.Poster), CreatedAt: comment.Created.UTC()}
 			item.ContentHTML = markup.Sanitize(comment.Content)
-		case database.CommentTypeComment:
-			item.ContentHTML = string(markup.Markdown(comment.Content, repo.Link(), metas))
-			item.Attachments = toIssueAttachments(comment.Attachments, comment.Content)
-			// The poster and admins can change a comment.
-			if viewer != nil && (comment.PosterID == viewer.ID || repoCtx.Viewer.CanAdminister()) {
-				item.ViewerCanEdit = true
-				item.Content = comment.Content
+		case database.CommentTypeReview:
+			review := reviews[comment.ReviewID]
+			if review == nil {
+				continue
 			}
-
-			tag, ok := tags[comment.PosterID]
-			if !ok {
-				switch {
-				case repo.IsOwnedBy(comment.PosterID) || (repoCtx.Owner.IsOrganization() && repoCtx.Owner.IsOwnedBy(comment.PosterID)):
-					tag = "owner"
-				case database.Handle.Permissions().Authorize(ctx, logger, comment.PosterID, repo.ID, database.AccessModeWrite,
-					database.AccessModeOptions{OwnerID: repo.OwnerID, Private: repo.IsPrivate}):
-					tag = "writer"
-				case comment.PosterID == issue.PosterID:
-					tag = "poster"
+			item = cv.toItem(comment)
+			item.Review = &issueReview{ID: review.ID, State: reviewStates[review.State], CommitSHA: review.CommitSHA}
+		case database.CommentTypeReviewRequest, database.CommentTypeReviewRequestRemoved:
+			target, err := database.Handle.Users().GetByID(ctx, comment.TargetUserID)
+			if err != nil {
+				if !database.IsErrUserNotExist(err) {
+					return nil, errors.Wrap(err, "get requested reviewer")
 				}
-				tags[comment.PosterID] = tag
+				target = database.NewGhostUser()
 			}
-			item.Tag = tag
-
-			if !slices.ContainsFunc(participants, func(u *database.User) bool { return u.ID == comment.Poster.ID }) {
-				participants = append(participants, comment.Poster)
-			}
+			targetUser := toIssueUser(target)
+			item = issueComment{ID: comment.ID, Type: typ, Poster: toIssueUser(comment.Poster), CreatedAt: comment.Created.UTC(), Target: &targetUser}
+		case database.CommentTypeComment:
+			item = cv.toItem(comment)
+			roots[comment.ID] = len(resp.Comments)
+		default:
+			item = issueComment{ID: comment.ID, Type: typ, Poster: toIssueUser(comment.Poster), CreatedAt: comment.Created.UTC()}
 		}
 		resp.Comments = append(resp.Comments, item)
 	}
+	participants := cv.participants
 	resp.Participants = make([]issueUser, 0, len(participants))
 	for _, u := range participants {
 		resp.Participants = append(resp.Participants, toIssueUser(u))
@@ -413,6 +478,82 @@ func toRepoIssueView(ctx context.Context, logger *logx.Logger, viewer *database.
 		}
 	}
 	return resp, nil
+}
+
+// commentViewer describes comments to the viewer, and collects the users who
+// took part in the conversation.
+type commentViewer struct {
+	ctx          context.Context
+	logger       *logx.Logger
+	viewer       *database.User
+	repoCtx      *repoContext
+	issue        *database.Issue
+	metas        map[string]string
+	tags         map[int64]string
+	participants []*database.User
+}
+
+func newCommentViewer(ctx context.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, issue *database.Issue) *commentViewer {
+	return &commentViewer{
+		ctx:          ctx,
+		logger:       logger,
+		viewer:       viewer,
+		repoCtx:      repoCtx,
+		issue:        issue,
+		metas:        repoCtx.Repo.ComposeMetas(),
+		tags:         make(map[int64]string),
+		participants: []*database.User{issue.Poster},
+	}
+}
+
+// toItem describes a comment with content: a comment, a reply, a code
+// comment or the summary of a review.
+func (cv *commentViewer) toItem(comment *database.Comment) issueComment {
+	repo := cv.repoCtx.Repo
+	item := issueComment{
+		ID:        comment.ID,
+		Type:      issueCommentTypes[comment.Type],
+		Poster:    toIssueUser(comment.Poster),
+		CreatedAt: comment.Created.UTC(),
+		Pending:   comment.IsPending,
+	}
+	if comment.Content != "" {
+		item.ContentHTML = embedPermalinks(cv.ctx, cv.logger, cv.repoCtx.Owner.Name, repo.Name, string(markup.Markdown(comment.Content, repo.Link(), cv.metas)))
+	}
+	item.Attachments = toIssueAttachments(comment.Attachments, comment.Content)
+	// The poster and admins can change a comment. The summary of a review is
+	// changed with the review.
+	if comment.Type != database.CommentTypeReview && cv.viewer != nil &&
+		(comment.PosterID == cv.viewer.ID || cv.repoCtx.Viewer.CanAdminister()) {
+		item.ViewerCanEdit = true
+		item.Content = comment.Content
+	}
+
+	tag, ok := cv.tags[comment.PosterID]
+	if !ok {
+		switch {
+		case repo.IsOwnedBy(comment.PosterID) || (cv.repoCtx.Owner.IsOrganization() && cv.repoCtx.Owner.IsOwnedBy(comment.PosterID)):
+			tag = "owner"
+		case cv.canWrite(comment.PosterID):
+			tag = "writer"
+		case comment.PosterID == cv.issue.PosterID:
+			tag = "poster"
+		}
+		cv.tags[comment.PosterID] = tag
+	}
+	item.Tag = tag
+
+	if !comment.IsPending && !slices.ContainsFunc(cv.participants, func(u *database.User) bool { return u.ID == comment.Poster.ID }) {
+		cv.participants = append(cv.participants, comment.Poster)
+	}
+	return item
+}
+
+// canWrite returns whether the user can write to the repository.
+func (cv *commentViewer) canWrite(userID int64) bool {
+	repo := cv.repoCtx.Repo
+	return database.Handle.Permissions().Authorize(cv.ctx, cv.logger, userID, repo.ID, database.AccessModeWrite,
+		database.AccessModeOptions{OwnerID: repo.OwnerID, Private: repo.IsPrivate})
 }
 
 // limitIssueContent caps the size of the Markdown sent to the issue page,
@@ -628,6 +769,10 @@ type repoIssueCommentRequest struct {
 	Content string `json:"content"`
 	// Attachments are the UUIDs of the uploaded files to attach.
 	Attachments []string `json:"attachments"`
+	// ReplyTo is the first comment of the thread to reply to.
+	ReplyTo int64 `json:"replyTo"`
+	// Pending adds a reply to a code comment to the viewer's pending review.
+	Pending bool `json:"pending"`
 }
 
 // checkNewAttachments returns the status code and the error to answer with
@@ -672,6 +817,27 @@ func postRepoIssueComment(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 		return statusCode, nil, err
 	}
 
+	if req.ReplyTo > 0 {
+		root, err := database.GetCommentByID(req.ReplyTo)
+		if err != nil && !database.IsErrCommentNotExist(err) {
+			logger.Error("Failed to get comment", "commentID", req.ReplyTo, "error", err)
+			return http.StatusInternalServerError, nil, errors.Wrap(err, "get comment")
+		}
+		// Replies never reply to replies, and nobody else sees a pending
+		// comment.
+		if root == nil || root.IssueID != issue.ID || root.ReplyToID != 0 ||
+			(root.Type != database.CommentTypeComment && root.Type != database.CommentTypeCode) ||
+			(root.IsPending && root.PosterID != viewer.ID) {
+			return http.StatusUnprocessableEntity, &bindingErrorResponse{Error: l.Tr("repo.issues.reply_not_allowed")}, nil
+		}
+		comment, err := database.CreateReply(logger, viewer, repoCtx.Repo, issue, root, req.Content, req.Attachments, req.Pending || root.IsPending)
+		if err != nil {
+			logger.Error("Failed to create reply", "issueID", issue.ID, "error", err)
+			return http.StatusInternalServerError, nil, errors.Wrap(err, "create reply")
+		}
+		return http.StatusCreated, map[string]int64{"id": comment.ID}, nil
+	}
+
 	comment, err := database.CreateIssueComment(logger, viewer, repoCtx.Repo, issue, req.Content, req.Attachments)
 	if err != nil {
 		logger.Error("Failed to create issue comment", "issueID", issue.ID, "error", err)
@@ -694,7 +860,8 @@ func withIssueComment(c flamego.Context, logger *logx.Logger, repoCtx *repoConte
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "get comment"))
 		return
 	}
-	if comment.IssueID != issue.ID || comment.Type != database.CommentTypeComment ||
+	if comment.IssueID != issue.ID || (comment.Type != database.CommentTypeComment && comment.Type != database.CommentTypeCode) ||
+		(comment.IsPending && comment.PosterID != repoCtx.Viewer.ID()) ||
 		(comment.PosterID != repoCtx.Viewer.ID() && !repoCtx.Viewer.CanAdminister()) {
 		writeErrorResponse(w, http.StatusNotFound, errors.New("comment does not exist"))
 		return
@@ -748,7 +915,7 @@ type markdownRequest struct {
 
 // postRepoMarkdown renders Markdown the way the issues of the repository are,
 // the way its wiki pages are, or the way one of its files is.
-func postRepoMarkdown(repoCtx *repoContext, req markdownRequest) (statusCode int, resp any, err error) {
+func postRepoMarkdown(c flamego.Context, logger *logx.Logger, repoCtx *repoContext, req markdownRequest) (statusCode int, resp any, err error) {
 	repo := repoCtx.Repo
 	var html []byte
 	switch {
@@ -758,7 +925,7 @@ func postRepoMarkdown(repoCtx *repoContext, req markdownRequest) (statusCode int
 		fileLink := repo.Link() + "/src/" + escapePath(req.Branch) + "/" + escapePath(pathx.Clean(req.Path))
 		html = markup.MarkdownFile(req.Text, path.Dir(fileLink), repo.ComposeMetas())
 	default:
-		html = markup.Markdown(req.Text, repo.Link(), repo.ComposeMetas())
+		html = []byte(embedPermalinks(c.Request().Context(), logger, repoCtx.Owner.Name, repo.Name, string(markup.Markdown(req.Text, repo.Link(), repo.ComposeMetas()))))
 	}
 	return http.StatusOK, map[string]string{"html": string(html)}, nil
 }

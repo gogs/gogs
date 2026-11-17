@@ -50,6 +50,7 @@ func newMigrations(logger *logx.Logger, db *gorm.DB) []*goose.Migration {
 		newMigration(logger, db, 20261116225300, "add repository pull request merge settings", addRepositoryPullsMergeSettings),
 		newMigration(logger, db, 20261117073704, "drop protect_branch_whitelist table", dropProtectBranchWhitelistTable),
 		newMigration(logger, db, 20261118160000, "disable push allowlists of protected branches of user repositories", disableProtectBranchAllowlistOfUserRepositories),
+		newMigration(logger, db, 20261119000000, "add pull request reviews", addPullRequestReviews),
 	}
 }
 

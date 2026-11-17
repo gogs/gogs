@@ -84,6 +84,7 @@ func init() {
 		new(Repository), new(Collaboration),
 		new(Watch), new(Star),
 		new(Issue), new(PullRequest), new(Comment), new(IssueUser),
+		new(Review), new(ReviewRequest),
 		new(ProtectBranch),
 		new(Team), new(OrgUser), new(TeamUser), new(TeamRepo),
 	)

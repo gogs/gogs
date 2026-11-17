@@ -1,7 +1,17 @@
 import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
-import { Link, useRouter, useRouterState } from "@tanstack/react-router";
-import { CircleCheck, CircleDot, Download, GitCommitHorizontal, GitMerge, Pencil, Plus, Trash2 } from "lucide-react";
-import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
+import { Link, useRouter } from "@tanstack/react-router";
+import {
+  CircleCheck,
+  CircleDot,
+  Download,
+  GitCommitHorizontal,
+  GitMerge,
+  type LucideIcon,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
+import { type FormEvent, Fragment, type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -35,6 +45,7 @@ import { formErrors } from "@/lib/queries/request";
 import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
 import { subUrl } from "@/lib/url";
 import { linkedUploads, useAttachmentUploads } from "@/lib/use-attachment-uploads";
+import { useIsLinked } from "@/lib/use-is-linked";
 import { useUserInfo } from "@/lib/use-user-info";
 import { cn } from "@/lib/utils";
 
@@ -135,12 +146,19 @@ export function IssueConversation({
   data,
   mergeBox,
   canChangeState = data.viewerCanEdit,
+  renderItem,
+  sidebar,
   className,
 }: {
   issueRef: IssueRef;
   data: RepoIssueData;
   mergeBox?: ReactNode;
   canChangeState?: boolean;
+  // renderItem shows the items of the timeline only a pull request has,
+  // e.g., reviews.
+  renderItem?: (comment: IssueComment) => ReactNode;
+  // sidebar shows at the top of the sidebar, e.g., the reviewers.
+  sidebar?: ReactNode;
   className?: string;
 }) {
   // The browser looks for the anchor of a link, e.g., to a comment, before
@@ -148,6 +166,7 @@ export function IssueConversation({
   useEffect(() => {
     if (window.location.hash) document.getElementById(window.location.hash.slice(1))?.scrollIntoView();
   }, []);
+  const { t } = useTranslation();
   const ref = issueRef;
 
   return (
@@ -188,18 +207,22 @@ export function IssueConversation({
                       content: comment.content ?? "",
                       save: (content, attachments) => updateRepoIssueComment(ref, comment.id, content, attachments),
                       remove: () => deleteRepoIssueComment(ref, comment.id),
+                      removeDescription: deleteDescription(t, comment),
                     }
                   : undefined
               }
+              footer={<ThreadReplies issueRef={ref} root={comment} attachment={data.attachment} />}
             />
           ) : (
-            <TimelineEvent key={comment.id} comment={comment} />
+            <Fragment key={comment.id}>{renderItem?.(comment) ?? <TimelineEvent comment={comment} />}</Fragment>
           ),
         )}
         {mergeBox}
         <NewComment issueRef={ref} data={data} canChangeState={canChangeState} />
       </div>
-      <IssueSidebar issueRef={ref} data={data} />
+      <IssueSidebar issueRef={ref} data={data}>
+        {sidebar}
+      </IssueSidebar>
     </div>
   );
 }
@@ -307,16 +330,10 @@ export function UserLink({ user, className, children }: { user: IssueUser; class
   );
 }
 
-// useIsLinked reports whether the URL links to the anchor, e.g., to a comment,
-// which is then highlighted like on GitHub.
-function useIsLinked(anchor: string) {
-  return useRouterState({ select: (state) => state.location.hash === anchor });
-}
-
 // EventSentence renders a translated sentence about something that happened,
 // e.g., "commented <a>3 hours ago</a>", making its link the time, which links
 // to the anchor of the event.
-function EventSentence({ text, anchor, time }: { text: string; anchor: string; time: string }) {
+export function EventSentence({ text, anchor, time }: { text: string; anchor: string; time: string }) {
   const { t } = useTranslation();
   return (
     <>
@@ -339,8 +356,9 @@ function EventSentence({ text, anchor, time }: { text: string; anchor: string; t
 }
 
 // CommentCard shows the content of the issue or one of its comments, and lets
-// those who can change it edit or delete it.
-function CommentCard({
+// those who can change it edit or delete it. The footer shows below the
+// content, e.g., the replies to the comment.
+export function CommentCard({
   issueRef,
   anchor,
   poster,
@@ -350,6 +368,9 @@ function CommentCard({
   attachments,
   attachment,
   edit,
+  sentence,
+  badge,
+  footer,
 }: {
   issueRef: IssueRef;
   anchor: string;
@@ -367,7 +388,15 @@ function CommentCard({
     content: string;
     save: (content: string, attachments: string[]) => Promise<void>;
     remove?: () => Promise<void>;
+    // removeDescription asks before deleting, e.g., with the replies that go
+    // with the comment.
+    removeDescription?: string;
   };
+  // sentence says what the poster did, by default that they commented.
+  sentence?: string;
+  // badge shows before the tag, e.g., the outcome of a review.
+  badge?: ReactNode;
+  footer?: ReactNode;
 }) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -395,9 +424,10 @@ function CommentCard({
             <UserLink user={poster} className="font-semibold text-(--color-foreground) hover:underline">
               {poster.name}
             </UserLink>{" "}
-            <EventSentence text={t("repo.issues.commented_at")} anchor={anchor} time={createdAt} />
+            <EventSentence text={sentence ?? t("repo.issues.commented_at")} anchor={anchor} time={createdAt} />
           </p>
           <div className="flex items-center gap-1">
+            {badge}
             {tag ? (
               <span className="mr-1 rounded-full border border-(--color-border) px-2 text-xs/5 text-(--color-muted-foreground)">
                 {tagLabel[tag]}
@@ -424,7 +454,7 @@ function CommentCard({
               <ConfirmButton
                 label={t("repo.issues.delete_comment")}
                 title={t("repo.issues.delete_comment")}
-                description={t("repo.issues.delete_comment_confirm")}
+                description={edit.removeDescription ?? t("repo.issues.delete_comment_confirm")}
                 icon={Trash2}
                 action={edit.remove}
                 onDone={() => router.invalidate()}
@@ -450,8 +480,256 @@ function CommentCard({
         {attachments.length ? (
           <AttachmentList attachments={attachments} className={cn((html || editing) && "border-t")} />
         ) : null}
+        {footer}
       </div>
     </div>
+  );
+}
+
+// deleteDescription asks before deleting a comment, and says how many replies
+// are deleted with it.
+function deleteDescription(t: (key: string) => string, comment: IssueComment) {
+  const replies = comment.replies?.length ?? 0;
+  return replies > 0
+    ? t("repo.issues.delete_thread_confirm").replace("%d", String(replies))
+    : t("repo.issues.delete_comment_confirm");
+}
+
+// ThreadReplies shows the replies to the first comment of a thread, which are
+// never replied to themselves, and the form to reply. The actions show next
+// to the form, e.g., to resolve the thread.
+export function ThreadReplies({
+  issueRef,
+  root,
+  attachment,
+  pending = false,
+  includeRoot = false,
+  actions,
+}: {
+  issueRef: IssueRef;
+  root: IssueComment;
+  attachment?: IssueAttachmentSettings;
+  // pending adds the reply to the viewer's pending review.
+  pending?: boolean;
+  // includeRoot shows the first comment like the replies, e.g., for a
+  // thread on lines of a diff.
+  includeRoot?: boolean;
+  actions?: ReactNode;
+}) {
+  const { t } = useTranslation();
+  const user = useUserInfo();
+  const replies = includeRoot ? [root, ...(root.replies ?? [])] : (root.replies ?? []);
+  if (!replies.length && !user && !actions) return null;
+  return (
+    <div className={cn(!includeRoot && "border-t border-(--color-border)")}>
+      {replies.map((reply) => (
+        <ReplyItem
+          key={reply.id}
+          issueRef={issueRef}
+          reply={reply}
+          attachment={attachment}
+          removeDescription={reply === root ? deleteDescription(t, root) : undefined}
+        />
+      ))}
+      {user || actions ? (
+        <div
+          className={cn(
+            "flex flex-wrap items-start gap-2 rounded-b-md bg-(--color-surface) px-3 py-2",
+            replies.length && "border-t border-(--color-border)",
+          )}
+        >
+          {user ? (
+            <ReplyForm issueRef={issueRef} root={root} attachment={attachment} pending={pending || !!root.pending} />
+          ) : null}
+          {actions}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// ReplyItem shows a reply in a thread, and lets those who can change it edit
+// or delete it.
+function ReplyItem({
+  issueRef,
+  reply,
+  attachment,
+  removeDescription,
+}: {
+  issueRef: IssueRef;
+  reply: IssueComment;
+  attachment?: IssueAttachmentSettings;
+  removeDescription?: string;
+}) {
+  const { t } = useTranslation();
+  const router = useRouter();
+  const [editing, setEditing] = useState(false);
+  const anchor = `issuecomment-${reply.id}`;
+  const linked = useIsLinked(anchor);
+  const tagLabel = {
+    owner: t("repo.issues.owner"),
+    writer: t("repo.issues.collaborator"),
+    poster: t("repo.issues.poster"),
+  };
+  return (
+    <div
+      id={anchor}
+      className={cn(
+        "flex scroll-mt-4 gap-2 px-3 py-2.5 not-first:border-t not-first:border-(--color-border)",
+        linked && "bg-(--color-primary)/10",
+      )}
+    >
+      <UserLink user={reply.poster} className="shrink-0">
+        <img src={reply.poster.avatarURL} alt="" className="size-6 rounded-full border border-(--color-border)" />
+      </UserLink>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center justify-between gap-x-2">
+          <p className="min-w-0 text-sm text-(--color-muted-foreground) wrap-anywhere">
+            <UserLink user={reply.poster} className="font-semibold text-(--color-foreground) hover:underline">
+              {reply.poster.name}
+            </UserLink>{" "}
+            <EventSentence text={t("repo.issues.commented_at")} anchor={anchor} time={reply.createdAt} />
+          </p>
+          <div className="flex items-center gap-1">
+            {reply.pending ? <Chip>{t("repo.pulls.review.pending")}</Chip> : null}
+            {reply.tag ? <Chip>{tagLabel[reply.tag]}</Chip> : null}
+            {reply.viewerCanEdit && !editing ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label={t("repo.issues.edit")}
+                    className="size-7 text-(--color-muted-foreground)"
+                    onClick={() => setEditing(true)}
+                  >
+                    <Pencil className="size-3.5" aria-hidden />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t("repo.issues.edit")}</TooltipContent>
+              </Tooltip>
+            ) : null}
+            {reply.viewerCanEdit ? (
+              <ConfirmButton
+                label={t("repo.issues.delete_comment")}
+                title={t("repo.issues.delete_comment")}
+                description={removeDescription ?? t("repo.issues.delete_comment_confirm")}
+                icon={Trash2}
+                action={() => deleteRepoIssueComment(issueRef, reply.id)}
+                onDone={() => router.invalidate()}
+              />
+            ) : null}
+          </div>
+        </div>
+        {editing ? (
+          <ContentEditor
+            issueRef={issueRef}
+            attachment={attachment}
+            initial={reply.content ?? ""}
+            save={(content, attachments) => updateRepoIssueComment(issueRef, reply.id, content, attachments)}
+            onClose={() => setEditing(false)}
+          />
+        ) : reply.contentHTML ? (
+          <div className="mt-1">
+            <Markdown html={reply.contentHTML} />
+          </div>
+        ) : null}
+        {reply.attachments?.length ? (
+          <AttachmentList attachments={reply.attachments} className="px-0 pt-2 pb-0" />
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+// Chip is a small outlined label, e.g., the relation of a poster to the
+// repository.
+export function Chip({ children }: { children: ReactNode }) {
+  return (
+    <span className="rounded-full border border-(--color-border) px-2 text-xs/5 whitespace-nowrap text-(--color-muted-foreground)">
+      {children}
+    </span>
+  );
+}
+
+// ReplyForm starts as a field to click, and opens the editor to reply to the
+// thread.
+function ReplyForm({
+  issueRef,
+  root,
+  attachment,
+  pending,
+}: {
+  issueRef: IssueRef;
+  root: IssueComment;
+  attachment?: IssueAttachmentSettings;
+  pending: boolean;
+}) {
+  const { t } = useTranslation();
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [content, setContent] = useState("");
+  const uploads = useAttachmentUploads(issueRef.owner, issueRef.name, attachment);
+  const mutation = useMutation({
+    mutationFn: () =>
+      createRepoIssueComment(issueRef, {
+        content,
+        attachments: linkedUploads(uploads.uploaded, content),
+        replyTo: root.id,
+        pending,
+      }),
+    onSuccess: async () => {
+      await router.invalidate();
+      setContent("");
+      uploads.clear();
+      setOpen(false);
+    },
+  });
+  const { fields, formError } = formErrors(mutation.error);
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="min-h-8 min-w-0 flex-[1_1_12rem] cursor-text rounded-md border border-(--color-input) bg-(--color-background) px-3 py-1 text-left text-sm text-(--color-muted-foreground) outline-none focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring)"
+      >
+        {t("repo.issues.reply_placeholder")}
+      </button>
+    );
+  }
+  const onSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    mutation.mutate();
+  };
+  return (
+    <form onSubmit={onSubmit} className="w-full min-w-0">
+      <fieldset disabled={mutation.isPending} className="contents">
+        <MarkdownEditor
+          repo={issueRef}
+          label={t("repo.issues.reply")}
+          value={content}
+          onChange={setContent}
+          error={fields.content ?? formError}
+          autoFocus
+          disabled={mutation.isPending}
+          uploads={uploads}
+          linkFiles
+        />
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+          <AttachFilesButton uploads={uploads} />
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)}>
+              {t("repo.issues.cancel")}
+            </Button>
+            <Button type="submit" size="sm" disabled={!content.trim() || uploads.uploading}>
+              {pending ? t("repo.pulls.review.add_to_review") : t("repo.issues.reply")}
+            </Button>
+          </div>
+        </div>
+      </fieldset>
+    </form>
   );
 }
 
@@ -558,7 +836,7 @@ function TimelineEvent({ comment }: { comment: IssueComment }) {
   const { t } = useTranslation();
   const anchor = `event-${comment.id}`;
   const linked = useIsLinked(anchor);
-  const event = {
+  const events: Partial<Record<IssueComment["type"], { icon: LucideIcon; text: string; className: string }>> = {
     reopen: { icon: CircleDot, text: t("repo.issues.reopened_at"), className: "text-(--color-success)" },
     close: { icon: CircleCheck, text: t("repo.issues.closed_at"), className: "text-(--color-destructive)" },
     commit_ref: {
@@ -566,8 +844,8 @@ function TimelineEvent({ comment }: { comment: IssueComment }) {
       text: t("repo.issues.commit_ref_at"),
       className: "text-(--color-muted-foreground)",
     },
-    comment: null,
-  }[comment.type];
+  };
+  const event = events[comment.type];
   if (!event) return null;
   const Icon = event.icon;
 
@@ -751,7 +1029,7 @@ function NewComment({
 
 // IssueSidebar shows the labels, the milestone, the assignee and the
 // participants of the issue, and lets writers change the first three.
-function IssueSidebar({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueData }) {
+function IssueSidebar({ issueRef, data, children }: { issueRef: IssueRef; data: RepoIssueData; children?: ReactNode }) {
   const { t } = useTranslation();
   const labels = useIssueChange((ids: number[]) => setRepoIssueLabels(issueRef, ids));
   const milestone = useIssueChange((id: number) => setRepoIssueMilestone(issueRef, id));
@@ -767,6 +1045,7 @@ function IssueSidebar({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueD
       onMilestone={milestone.mutateAsync}
       onAssignee={assignee.mutateAsync}
     >
+      {children}
       <SidebarSection
         title={t("repo.issues.num_participants").replace(/%(?:\[1\])?d/, String(data.participants.length))}
       >

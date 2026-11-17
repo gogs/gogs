@@ -396,6 +396,11 @@ export function updateRepoDefaultBranch(owner: string, name: string, branch: str
 export interface RepoProtectedBranchForm {
   protected: boolean;
   requirePullRequest: boolean;
+  // requiredApprovals is how many approving reviews from writers a pull
+  // request needs to merge, or 0 for none.
+  requiredApprovals: number;
+  dismissStaleApprovals: boolean;
+  requireResolvedConversations: boolean;
   enableAllowlist: boolean;
   allowlistUserIDs: number[];
   allowlistTeamIDs: number[];
@@ -633,7 +638,7 @@ export interface IssueAttachment {
 
 export interface IssueComment {
   id: number;
-  type: "comment" | "reopen" | "close" | "commit_ref";
+  type: "comment" | "reopen" | "close" | "commit_ref" | "review" | "code" | "review_request" | "review_request_removed";
   poster: IssueUser;
   createdAt: string;
   // contentHTML is the rendered content of a comment, or the link to the
@@ -645,6 +650,36 @@ export interface IssueComment {
   tag?: "owner" | "writer" | "poster";
   attachments?: IssueAttachment[];
   viewerCanEdit?: boolean;
+  // replies are the replies to the first comment of a thread, oldest first.
+  replies?: IssueComment[];
+  // pending marks the viewer's own comment of a review not submitted yet.
+  pending?: boolean;
+  // thread is where the first comment of a thread of code comments is.
+  thread?: IssueThread;
+  // review is the review a "review" item shows.
+  review?: { id: number; state: ReviewState; commitSHA: string };
+  // target is who a review was requested from.
+  target?: IssueUser;
+}
+
+export type ReviewState = "comment" | "approve" | "request_changes";
+
+// IssueThread is where a thread of code comments is in the diff of a pull
+// request. Sides are "old" or "new", and line is the last line of the range.
+export interface IssueThread {
+  reviewID: number;
+  path: string;
+  side: "old" | "new";
+  startSide: "old" | "new";
+  startLine: number;
+  line: number;
+  // outdated marks a thread whose lines changed since it started.
+  outdated: boolean;
+  // diffHunk is the last lines of the diff up to line, with their prefix.
+  diffHunk: string;
+  resolvedBy?: IssueUser;
+  resolvedAt?: string;
+  viewerCanResolve?: boolean;
 }
 
 export interface IssueAttachmentSettings {
@@ -784,7 +819,10 @@ export function setRepoIssueClosed(issue: IssueRef, closed: boolean) {
   return send(closed ? "PUT" : "DELETE", issueURL(issue, "/closed"));
 }
 
-export function createRepoIssueComment(issue: IssueRef, form: { content: string; attachments: string[] }) {
+export function createRepoIssueComment(
+  issue: IssueRef,
+  form: { content: string; attachments: string[]; replyTo?: number; pending?: boolean },
+) {
   return submit<{ id: number }>("POST", issueURL(issue, "/comments"), form);
 }
 
@@ -848,8 +886,56 @@ export interface RepoPullInfo {
   diff?: { base: string; head: string; owner: string; name: string; markdownExtensions: string[] };
 }
 
+export interface RepoPullReviewer {
+  user: IssueUser;
+  state: "requested" | "approved" | "changes_requested" | "commented";
+  // stale marks an approval of an older head commit.
+  stale?: boolean;
+  // counts is whether the review counts toward merging.
+  counts: boolean;
+}
+
 export interface RepoPullData extends RepoIssueData {
   pull: RepoPullInfo;
+  threads: IssueComment[];
+  reviewers: RepoPullReviewer[];
+  reviewDecision?: "approved" | "changes_requested" | "review_required";
+  requiredApprovals?: number;
+  mergeBlockers: ("approvals" | "changes_requested" | "unresolved_conversations")[];
+  viewerPendingReview?: { commentCount: number };
+  reviewerOptions?: IssueUser[];
+}
+
+export interface CodeCommentForm {
+  path: string;
+  side: "old" | "new";
+  startSide: "old" | "new";
+  startLine: number;
+  line: number;
+  headSHA: string;
+  content: string;
+  attachments: string[];
+  pending: boolean;
+}
+
+export function createRepoPullCodeComment(issue: IssueRef, form: CodeCommentForm) {
+  return submit<{ id: number }>("POST", issueURL(issue, "/code-comments"), form);
+}
+
+export function submitRepoPullReview(issue: IssueRef, form: { state: ReviewState; content: string; headSHA: string }) {
+  return submit<void>("POST", issueURL(issue, "/reviews"), form);
+}
+
+export function discardRepoPullReview(issue: IssueRef) {
+  return send("DELETE", issueURL(issue, "/reviews/pending"));
+}
+
+export function setRepoPullThreadResolved(issue: IssueRef, id: number, resolved: boolean) {
+  return send(resolved ? "PUT" : "DELETE", issueURL(issue, `/threads/${id}/resolved`));
+}
+
+export function setRepoPullReviewer(issue: IssueRef, username: string, requested: boolean) {
+  return send(requested ? "PUT" : "DELETE", issueURL(issue, `/reviewers/${encodeURIComponent(username)}`));
 }
 
 export function fetchRepoPull(owner: string, name: string, index: number) {

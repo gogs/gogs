@@ -1077,7 +1077,7 @@ func SuggestIssues(opts SuggestIssuesOptions) ([]*Issue, error) {
 func GetParticipantsByIssueID(e Engine, issueID int64) ([]*User, error) {
 	userIDs := make([]int64, 0, 5)
 	if err := e.Table("comment").Cols("poster_id").
-		Where("issue_id = ?", issueID).
+		Where("issue_id = ? AND is_pending = ?", issueID, false).
 		Distinct("poster_id").
 		Find(&userIDs); err != nil {
 		return nil, errors.Newf("get poster IDs: %v", err)
