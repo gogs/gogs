@@ -1228,9 +1228,10 @@ func findLowerMentions(content string) []string {
 	return mentions
 }
 
-// updateMentions marks the issue with given ID as mentioning the users with
-// given lowercase names, and the members of the organizations with them.
-func (s *IssuesStore) updateMentions(ctx context.Context, issueID int64, lowerNames []string) error {
+// updateMentions marks the issue with given ID in the repository as mentioning
+// the users with given lowercase names, and the members of the organizations
+// with them.
+func (s *IssuesStore) updateMentions(ctx context.Context, repoID, issueID int64, lowerNames []string) error {
 	if len(lowerNames) == 0 {
 		return nil
 	}
@@ -1268,7 +1269,7 @@ func (s *IssuesStore) updateMentions(ctx context.Context, issueID int64, lowerNa
 		if err == nil {
 			err = db.Model(iu).Update("is_mentioned", true).Error
 		} else {
-			err = db.Create(&IssueUser{UserID: userID, IssueID: issueID, IsMentioned: true}).Error
+			err = db.Create(&IssueUser{UserID: userID, RepoID: repoID, IssueID: issueID, IsMentioned: true}).Error
 		}
 		if err != nil {
 			return errors.Wrapf(err, "mention user %d", userID)
@@ -1281,7 +1282,7 @@ func (s *IssuesStore) updateMentions(ctx context.Context, issueID int64, lowerNa
 // emails about the issue to them and to the participants of the issue.
 func (s *IssuesStore) mailParticipants(ctx context.Context, logger *logx.Logger, issue *Issue) error {
 	mentions := findLowerMentions(issue.Content)
-	err := s.updateMentions(ctx, issue.ID, mentions)
+	err := s.updateMentions(ctx, issue.RepoID, issue.ID, mentions)
 	if err != nil {
 		return errors.Wrap(err, "update mentions")
 	}

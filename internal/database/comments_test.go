@@ -93,7 +93,7 @@ func commentsCreate(t *testing.T, ctx context.Context, s *CommentsStore) {
 	assert.Equal(t, 0, numComments(other.ID))
 
 	var mentions []int64
-	err = s.db.Model(new(IssueUser)).Where("issue_id = ? AND is_mentioned = ?", issue.ID, true).Pluck("uid", &mentions).Error
+	err = s.db.Model(new(IssueUser)).Where("repo_id = ? AND issue_id = ? AND is_mentioned = ?", repo.ID, issue.ID, true).Pluck("uid", &mentions).Error
 	require.NoError(t, err)
 	assert.Equal(t, []int64{mentioned.ID}, mentions)
 
