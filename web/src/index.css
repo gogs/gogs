@@ -388,8 +388,8 @@ diffs-container {
     line-height: 1.6;
     overflow-wrap: anywhere;
   }
-  .markdown > * + *,
-  .markdown > div > * + * {
+  /* No more specific than the margins around headings below, so that they apply. */
+  :where(.markdown > * + *, .markdown > div > * + *) {
     margin-top: 0.75rem;
   }
   .markdown :where(h1, h2, h3, h4, h5, h6) {
