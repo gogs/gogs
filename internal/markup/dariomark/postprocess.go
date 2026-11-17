@@ -171,13 +171,10 @@ func (r *renderer) specialLinks(out *bytes.Buffer, text []byte, e *emojiText) {
 // Options.LinkBase. Images without a source or with a data URI are not
 // wrapped.
 func (r *renderer) imageLink(out *bytes.Buffer, t html.Token) bool {
-	var src, alt string
+	var src string
 	for _, a := range t.Attr {
-		switch a.Key {
-		case "src":
+		if a.Key == "src" {
 			src = a.Val
-		case "alt":
-			alt = a.Val
 		}
 	}
 	if src == "" || strings.HasPrefix(src, "data:") {
@@ -198,18 +195,15 @@ func (r *renderer) imageLink(out *bytes.Buffer, t html.Token) bool {
 	out.WriteString(html.EscapeString(src))
 	out.WriteString(`">`)
 	if relative {
-		out.WriteString(`<img src="`)
-		out.WriteString(html.EscapeString(strings.ReplaceAll(prefix+src, " ", "%20")))
-		out.WriteByte('"')
-		if alt != "" {
-			out.WriteString(` alt="`)
-			out.WriteString(html.EscapeString(alt))
-			out.WriteByte('"')
+		// Keep the other attributes, e.g., width and align in READMEs.
+		t.Attr = slices.Clone(t.Attr)
+		for i := range t.Attr {
+			if t.Attr[i].Key == "src" {
+				t.Attr[i].Val = strings.ReplaceAll(prefix+src, " ", "%20")
+			}
 		}
-		out.WriteByte('>')
-	} else {
-		out.WriteString(t.String())
 	}
+	out.WriteString(t.String())
 	out.WriteString("</a>")
 	return true
 }

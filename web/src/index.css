@@ -495,6 +495,26 @@ diffs-container {
     display: inline-block;
     max-width: 100%;
   }
+  .markdown :where([align="left" i]) {
+    text-align: left;
+  }
+  .markdown :where([align="center" i]) {
+    text-align: center;
+  }
+  .markdown :where([align="right" i]) {
+    text-align: right;
+  }
+  .markdown :where([align="justify" i]) {
+    text-align: justify;
+  }
+  .markdown :where(img[align="left" i]) {
+    float: left;
+    margin-right: 1em;
+  }
+  .markdown :where(img[align="right" i]) {
+    float: right;
+    margin-left: 1em;
+  }
   /* GitHub's convention for images that only fit one theme. */
   :root:not(.dark) .markdown img[src$="#gh-dark-mode-only"],
   :root.dark .markdown img[src$="#gh-light-mode-only"] {
