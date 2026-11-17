@@ -95,7 +95,8 @@ func TestActions(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	t.Parallel()
+	// NOTE: The suite does not run in parallel because it mocks global
+	// configuration that other suites read without locks.
 	s := &ActionsStore{
 		db: newTestDB(t, "ActionsStore"),
 	}

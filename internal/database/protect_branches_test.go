@@ -21,7 +21,8 @@ func TestProtectBranches(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	t.Parallel()
+	// NOTE: The suite does not run in parallel because it mocks global
+	// configuration that other suites read without locks.
 
 	ctx := context.Background()
 	s := &ProtectBranchesStore{
