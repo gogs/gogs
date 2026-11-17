@@ -1104,20 +1104,18 @@ func (s *UsersStore) ListEmails(ctx context.Context, userID int64) ([]*EmailAddr
 	return emails, nil
 }
 
-// MarkEmailActivated marks the email address of the given user as activated,
-// and new rands are generated for the user.
+// MarkEmailActivated marks the email address of the given user as activated.
+// The rands of the user are kept, so that confirmation links of their other
+// email addresses keep working.
 func (s *UsersStore) MarkEmailActivated(ctx context.Context, userID int64, email string) error {
-	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		err := tx.Model(&EmailAddress{}).
-			Where("uid = ? AND email = ?", userID, email).
-			Update("is_activated", true).
-			Error
-		if err != nil {
-			return errors.Wrap(err, "mark email activated")
-		}
-
-		return newUsersStore(tx).Update(ctx, userID, UpdateUserOptions{GenerateNewRands: true})
-	})
+	err := s.db.WithContext(ctx).Model(&EmailAddress{}).
+		Where("uid = ? AND email = ?", userID, email).
+		Update("is_activated", true).
+		Error
+	if err != nil {
+		return errors.Wrap(err, "mark email activated")
+	}
+	return nil
 }
 
 type ErrEmailNotVerified struct {
