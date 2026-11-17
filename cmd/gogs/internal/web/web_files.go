@@ -200,7 +200,7 @@ func serveAvatar(c flamego.Context, pages webAppPages, avatarPath string) error 
 	}
 	defer func() { _ = fr.Close() }()
 
-	// Avatars can be private to signed-in viewers or to the readers of a
+	// Avatars can be private to authenticated viewers or to the readers of a
 	// repository, so shared caches must not keep them.
 	c.ResponseWriter().Header().Set("Cache-Control", "private")
 	http.ServeContent(c.ResponseWriter(), c.Request().Request, "", fi.ModTime(), fr)

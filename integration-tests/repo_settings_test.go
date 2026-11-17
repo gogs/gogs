@@ -290,8 +290,8 @@ func TestRepoAvatarAccess(t *testing.T) {
 	repoSettingsAddCollaborator(t, private, reader, database.AccessModeRead)
 	repoSettingsAddCollaborator(t, private, disabled, database.AccessModeRead)
 
-	// The disabled collaborator keeps the session they signed in with before
-	// their account was disabled.
+	// The disabled collaborator stays authenticated by the session they had
+	// before their account was disabled.
 	disabledClient := repoSettingsSignedIn(t, disabled)
 	prohibitLogin := true
 	require.NoError(t, database.Handle.Users().Update(t.Context(), disabled.ID, database.UpdateUserOptions{ProhibitLogin: &prohibitLogin}))
