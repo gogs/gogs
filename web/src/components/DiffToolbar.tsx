@@ -53,6 +53,8 @@ export interface DiffToolbarProps {
   desktopTreeOpen?: boolean;
   // actions show after the view controls, e.g., to review a pull request.
   actions?: ReactNode;
+  // comments, where the diff has them, toggles whether they show.
+  comments?: { shown: boolean; onChange: (shown: boolean) => void };
 }
 
 export function DiffToolbar({
@@ -68,6 +70,7 @@ export function DiffToolbar({
   onToggleTreeDesktop,
   desktopTreeOpen,
   actions,
+  comments,
 }: DiffToolbarProps) {
   const { t } = useTranslation();
   const setStyle = (diffStyle: DiffStyle) => onSettingsChange({ ...settings, diffStyle });
@@ -178,6 +181,11 @@ export function DiffToolbar({
             <MenuCheckbox checked={settings.wrapLines} onSelect={() => setWrap(!settings.wrapLines)}>
               {t("repo.diff.wrap_long_lines")}
             </MenuCheckbox>
+            {comments ? (
+              <MenuCheckbox checked={comments.shown} onSelect={() => comments.onChange(!comments.shown)}>
+                {t("repo.diff.show_comments")}
+              </MenuCheckbox>
+            ) : null}
           </PopoverContent>
         </Popover>
 
