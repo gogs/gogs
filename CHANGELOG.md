@@ -42,8 +42,8 @@ All notable changes to Gogs are documented in this file.
 - The database schema version is now recorded in the `goose_db_version` table. The `version` table is no longer updated and can be dropped. [#8559](https://github.com/gogs/gogs/pull/8559)
 - `gogs web` and `gogs restore` refuse to start when `[database] MAX_OPEN_CONNS` is 1. Set it to at least 2. [#8559](https://github.com/gogs/gogs/pull/8559)
 - Pushes are up to three times faster, and clones and fetches over the built-in SSH server are faster. Existing repositories get the faster pushes once an admin runs `gogs admin resync-hooks` or "Resync pre-receive, update and post-receive hooks of all repositories" in the admin dashboard after upgrading. [#8552](https://github.com/gogs/gogs/pull/8552)
-- Uploading files in the web editor fails with a message when one of them would go into the `.git` directory, e.g., a file named `.git`. Previously the other files were committed and that one was silently left out. [#8655](https://github.com/gogs/gogs/pull/8655)
 - Git hooks placed in a repository's `custom_hooks` directory directly on disk, rather than saved in the repository settings, now only run after an admin runs `gogs admin resync-hooks`. [#8552](https://github.com/gogs/gogs/pull/8552)
+- Uploading files in the web editor fails with a message when one of them would go into the `.git` directory, e.g., a file named `.git`. Previously the other files were committed and that one was silently left out. [#8655](https://github.com/gogs/gogs/pull/8655)
 
 ### Fixed
 
