@@ -9,6 +9,9 @@ import (
 	"strings"
 	"sync"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+
 	"gogs.io/gogs/internal/lazyregexp"
 )
 
@@ -96,9 +99,9 @@ func (c *Commit) loadSubmodules(ctx context.Context) (*sync.Map, error) {
 
 // Submodule returns submodule by given name. It returns an ErrSubmoduleNotExist
 // if the path does not exist as a submodule.
-func (c *Commit) Submodule(ctx context.Context, path string) (*Submodule, error) {
-	ctx, span := tracer.Start(ctx, "git.Commit.Submodule")
-	defer span.End()
+func (c *Commit) Submodule(ctx context.Context, path string) (_ *Submodule, err error) {
+	ctx, span := tracer.Start(ctx, "git.Commit.Submodule", trace.WithAttributes(attribute.String("git.commit", c.ID.String()), attribute.String("git.path", path)))
+	defer func() { endSpan(span, err) }()
 
 	mods, err := c.loadSubmodules(ctx)
 	if err != nil {

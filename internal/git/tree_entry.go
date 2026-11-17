@@ -11,6 +11,8 @@ import (
 	"sync/atomic"
 
 	"github.com/cockroachdb/errors"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // EntryMode is the unix file mode of a tree entry.
@@ -88,7 +90,7 @@ func (e *TreeEntry) Name() string {
 // size on first call. Successful results are cached. Failed attempts are not
 // cached, allowing retries with a fresh context.
 func (e *TreeEntry) Size(ctx context.Context) int64 {
-	ctx, span := tracer.Start(ctx, "git.TreeEntry.Size")
+	ctx, span := tracer.Start(ctx, "git.TreeEntry.Size", trace.WithAttributes(attribute.String("git.entry", e.name)))
 	defer span.End()
 
 	e.sizeMu.Lock()
@@ -171,9 +173,9 @@ var defaultConcurrency = runtime.GOMAXPROCS(0)
 // the state of given commit and subpath. It takes advantages of concurrency to
 // speed up the process. The returned list has the same number of items as tree
 // entries, so the caller can access them via slice indices.
-func (es Entries) CommitsInfo(ctx context.Context, commit *Commit, opts ...CommitsInfoOptions) ([]*EntryCommitInfo, error) {
-	ctx, span := tracer.Start(ctx, "git.Entries.CommitsInfo")
-	defer span.End()
+func (es Entries) CommitsInfo(ctx context.Context, commit *Commit, opts ...CommitsInfoOptions) (_ []*EntryCommitInfo, err error) {
+	ctx, span := tracer.Start(ctx, "git.Entries.CommitsInfo", trace.WithAttributes(attribute.String("git.commit", commit.ID.String()), attribute.Int("git.entries", len(es))))
+	defer func() { endSpan(span, err) }()
 
 	if len(es) == 0 {
 		return []*EntryCommitInfo{}, nil

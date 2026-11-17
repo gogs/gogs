@@ -5,15 +5,17 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // MergeBase returns merge base between base and head revisions of the
 // repository. It returns ErrNoMergeBase when there is none, including when a
 // revision does not name a commit, e.g., a branch that only exists in another
 // repository.
-func (r *Repository) MergeBase(ctx context.Context, base, head string) (string, error) {
-	ctx, span := tracer.Start(ctx, "git.Repository.MergeBase")
-	defer span.End()
+func (r *Repository) MergeBase(ctx context.Context, base, head string) (_ string, err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.MergeBase", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.base", base), attribute.String("git.head", head)))
+	defer func() { endSpan(span, err) }()
 
 	return r.mergeBase(ctx, base, head, nil)
 }
@@ -44,9 +46,9 @@ type PullRequestMeta struct {
 // PullRequestMeta gathers metadata of a pull request that merges the head
 // branch of the repository into the base branch of the repository at the
 // basePath, which may be the same repository.
-func (r *Repository) PullRequestMeta(ctx context.Context, basePath, headBranch, baseBranch string) (*PullRequestMeta, error) {
-	ctx, span := tracer.Start(ctx, "git.Repository.PullRequestMeta")
-	defer span.End()
+func (r *Repository) PullRequestMeta(ctx context.Context, basePath, headBranch, baseBranch string) (_ *PullRequestMeta, err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.PullRequestMeta", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.head_branch", headBranch), attribute.String("git.base_branch", baseBranch)))
+	defer func() { endSpan(span, err) }()
 
 	base := baseBranch
 	var envs []string

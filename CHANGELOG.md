@@ -25,7 +25,7 @@ All notable changes to Gogs are documented in this file.
 - A frosted glass look for the web interface, in light and dark themes. Turn it on with "Glass effect" in the settings menu next to the theme. [#8647](https://github.com/gogs/gogs/pull/8647)
 - Code search, with syntax-highlighted results. Search one repository at any branch, tag or commit from its file browser, or the default branches of all repositories you can read from the navbar. Narrow down the search with `org:`, `user:`, `repo:` and `path:`. Turn on Match case to match letter case. Run an exhaustive search of one repository to list every matching line. [#8549](https://github.com/gogs/gogs/pull/8549)
 - The name `search` is reserved and cannot be used for users or organizations. [#8549](https://github.com/gogs/gogs/pull/8549)
-- The admin panel shows recent traces of requests, with the Git commands and database queries they ran and search by trace ID, and charts of server health over the last hour and day on its own page, kept in memory without a collector. Set `[tracing] ENABLED = false` to turn it off. [#8554](https://github.com/gogs/gogs/pull/8554)
+- The admin panel shows recent traces of requests, with the user, repository and error behind each one, the Git commands and database queries they ran and search by trace ID, and charts of server health over the last hour and day on its own page, kept in memory without a collector. Set `[tracing] ENABLED = false` to turn it off. [#8554](https://github.com/gogs/gogs/pull/8554)
 
 ### Changed
 

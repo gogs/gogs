@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // Service is a Git service that serves fetches and pushes.
@@ -72,9 +74,9 @@ var serviceIdleTimeout = 30 * time.Minute
 // RunService runs the service for the repository in given path, e.g., "git
 // upload-pack <path>". Instead of a fixed timeout, which would cut off a large
 // transfer, the service is killed once it has been idle for too long.
-func RunService(ctx context.Context, service Service, path string, opts ...ServiceOptions) error {
-	ctx, span := tracer.Start(ctx, "git.RunService")
-	defer span.End()
+func RunService(ctx context.Context, service Service, path string, opts ...ServiceOptions) (err error) {
+	ctx, span := tracer.Start(ctx, "git.RunService", trace.WithAttributes(attribute.String("git.service", string(service)), attribute.String("git.dir", path)))
+	defer func() { endSpan(span, err) }()
 
 	var opt ServiceOptions
 	if len(opts) > 0 {
@@ -132,7 +134,7 @@ func RunService(ctx context.Context, service Service, path string, opts ...Servi
 	}
 	c.Stdout = activityWriter{w: opt.Stdout, touch: touch}
 	c.Stderr = activityWriter{w: opt.Stderr, touch: touch}
-	err := runCommand(ctx, c)
+	err = runCommand(ctx, c)
 	if context.Cause(ctx) == ErrExecTimeout {
 		return ErrExecTimeout
 	}

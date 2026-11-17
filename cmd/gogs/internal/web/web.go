@@ -345,6 +345,9 @@ func newRoutingHandler(logger *logx.Logger, localizer, sessioner, authenticate f
 		w := c.ResponseWriter()
 		w.Header().Set("Cache-Control", "no-store")
 		if err != nil {
+			if statusCode >= http.StatusInternalServerError {
+				telemetry.RecordFailure(c.Request().Context(), err)
+			}
 			msg := err.Error()
 			if statusCode >= http.StatusInternalServerError && conf.IsProdMode() {
 				msg = "Internal server error"

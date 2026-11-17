@@ -14,6 +14,7 @@ import (
 
 	"github.com/urfave/cli/v3"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 	"unknwon.dev/x/logx"
@@ -23,6 +24,7 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/osx"
+	"gogs.io/gogs/internal/telemetry"
 )
 
 var (
@@ -72,10 +74,15 @@ func runHookPreReceive(ctx context.Context, cmd *cli.Command) error {
 	isWiki := strings.Contains(os.Getenv(database.EnvRepoCustomHooksPath), ".wiki.git/")
 
 	buf := bytes.NewBuffer(nil)
+	var refs []string
+	defer func() { processSpan.SetAttributes(attribute.StringSlice("git.refs", refs)) }()
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		buf.Write(scanner.Bytes())
 		buf.WriteByte('\n')
+		if fields := bytes.Fields(scanner.Bytes()); len(fields) == 3 {
+			refs = append(refs, string(fields[2]))
+		}
 
 		if isWiki {
 			continue
@@ -184,6 +191,7 @@ func runHookUpdate(ctx context.Context, cmd *cli.Command) error {
 	// from slowing down every push.
 	_ = startProcessSpan(ctx, logger, "hook update", 300*time.Millisecond)
 	defer endProcessSpan()
+	processSpan.SetAttributes(attribute.StringSlice("git.refs", args[:1]))
 
 	var hookCmd *exec.Cmd
 	if conf.IsWindowsRuntime() {
@@ -260,6 +268,14 @@ func startProcessSpan(ctx context.Context, logger *logx.Logger, name string, exp
 		"tracestate":  os.Getenv("TRACESTATE"),
 	})
 	ctx, processSpan = otel.Tracer("gogs.io/gogs/cmd/gogs").Start(ctx, name)
+	// Gogs passes the repository and the pusher to Git, which passes them on
+	// to hooks.
+	if repoID, err := strconv.ParseInt(os.Getenv(database.EnvRepoID), 10, 64); err == nil {
+		telemetry.SetRepository(ctx, repoID, os.Getenv(database.EnvRepoOwnerName)+"/"+os.Getenv(database.EnvRepoName))
+	}
+	if userID, err := strconv.ParseInt(os.Getenv(database.EnvAuthUserID), 10, 64); err == nil {
+		telemetry.SetUser(ctx, userID, os.Getenv(database.EnvAuthUserName))
+	}
 	endProcessSpan = func() {
 		processSpan.End()
 		shutdown(exportTimeout)

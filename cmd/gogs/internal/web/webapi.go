@@ -22,6 +22,7 @@ import (
 	"gogs.io/gogs/internal/i18n"
 	"gogs.io/gogs/internal/lazyregexp"
 	apiv1 "gogs.io/gogs/internal/route/api/v1"
+	"gogs.io/gogs/internal/telemetry"
 )
 
 // authMethod is how the authenticated user of a request authenticated.
@@ -37,6 +38,9 @@ type authMethod struct {
 func authenticator(store context.Store) flamego.Handler {
 	return func(c flamego.Context, logger *logx.Logger, sess session.Session) {
 		user, isBasicAuth, isTokenAuth := context.AuthenticatedUser(logger, store, c.Request().Request, sess)
+		if user != nil {
+			telemetry.SetUser(c.Request().Context(), user.ID, user.Name)
+		}
 		c.Map(user, authMethod{basicAuth: isBasicAuth, tokenAuth: isTokenAuth})
 	}
 }

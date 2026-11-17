@@ -72,7 +72,10 @@ func endQuerySpan(db *gorm.DB) {
 		name += " " + db.Statement.Table
 	}
 	span.SetName(name)
-	span.SetAttributes(attribute.String("db.query.text", query))
+	span.SetAttributes(
+		attribute.String("db.query.text", query),
+		attribute.Int64("db.response.rows", db.RowsAffected),
+	)
 	if db.Error != nil && !errors.Is(db.Error, gorm.ErrRecordNotFound) {
 		span.RecordError(db.Error)
 		span.SetStatus(codes.Error, db.Error.Error())

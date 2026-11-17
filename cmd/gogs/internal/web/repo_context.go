@@ -9,6 +9,7 @@ import (
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/telemetry"
 )
 
 // Viewer is the request-scoped user looking at a repository. User is nil for an
@@ -104,6 +105,7 @@ func withRepoContext(logger *logx.Logger, c flamego.Context, user *database.User
 		return
 	}
 
+	telemetry.SetRepository(ctx, repo.ID, owner.Name+"/"+repo.Name)
 	c.Map(&repoContext{
 		Owner:  owner,
 		Repo:   repo,

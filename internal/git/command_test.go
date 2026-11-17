@@ -149,3 +149,17 @@ func TestTracing(t *testing.T) {
 		assert.Equal(t, want, string(stdout))
 	})
 }
+
+func TestCommandArgs(t *testing.T) {
+	got := commandArgs([]string{
+		"-c", "http.extraHeader=Authorization: Basic c2VjcmV0",
+		"commit-tree", "-m", "private message", "--message=another one",
+		"fetch", "https://user:token@example.com/owner/repo.git", "refs/heads/main",
+	})
+	want := []string{
+		"-c", "<redacted>",
+		"commit-tree", "-m", "<redacted>", "--message=<redacted>",
+		"fetch", "https://example.com/owner/repo.git", "refs/heads/main",
+	}
+	assert.Equal(t, want, got)
+}

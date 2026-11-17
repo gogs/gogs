@@ -4,6 +4,9 @@ import (
 	"context"
 	"strings"
 	"sync"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // Tree represents a flat directory listing in Git.
@@ -19,9 +22,9 @@ type Tree struct {
 }
 
 // Subtree returns a subtree by given subpath of the tree.
-func (t *Tree) Subtree(ctx context.Context, subpath string) (*Tree, error) {
-	ctx, span := tracer.Start(ctx, "git.Tree.Subtree")
-	defer span.End()
+func (t *Tree) Subtree(ctx context.Context, subpath string) (_ *Tree, err error) {
+	ctx, span := tracer.Start(ctx, "git.Tree.Subtree", trace.WithAttributes(attribute.String("git.tree", t.id.String())))
+	defer func() { endSpan(span, err) }()
 
 	if len(subpath) == 0 {
 		return t, nil
@@ -29,10 +32,9 @@ func (t *Tree) Subtree(ctx context.Context, subpath string) (*Tree, error) {
 
 	paths := strings.Split(subpath, "/")
 	var (
-		err error
-		g   = t
-		p   = t
-		e   *TreeEntry
+		g = t
+		p = t
+		e *TreeEntry
 	)
 	for _, name := range paths {
 		e, err = p.TreeEntry(ctx, name)
@@ -52,9 +54,9 @@ func (t *Tree) Subtree(ctx context.Context, subpath string) (*Tree, error) {
 
 // Entries returns all entries of the tree. Successful results are cached.
 // Failed attempts are not cached, allowing retries with a fresh context.
-func (t *Tree) Entries(ctx context.Context) (Entries, error) {
-	ctx, span := tracer.Start(ctx, "git.Tree.Entries")
-	defer span.End()
+func (t *Tree) Entries(ctx context.Context) (_ Entries, err error) {
+	ctx, span := tracer.Start(ctx, "git.Tree.Entries", trace.WithAttributes(attribute.String("git.tree", t.id.String())))
+	defer func() { endSpan(span, err) }()
 
 	t.entriesMu.Lock()
 	defer t.entriesMu.Unlock()

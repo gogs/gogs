@@ -261,6 +261,19 @@ func copySpan(sp sdktrace.ReadOnlySpan) span {
 	}
 	if status := sp.Status(); status.Code == codes.Error {
 		out.err = status.Description
+		// The HTTP instrumentation sets the status of a 5xx response again
+		// after the handler, without the description of the error the
+		// handler recorded, which its exception event still has.
+		for _, event := range sp.Events() {
+			if out.err != "" || event.Name != "exception" {
+				continue
+			}
+			for _, kv := range event.Attributes {
+				if kv.Key == "exception.message" {
+					out.err = kv.Value.AsString()
+				}
+			}
+		}
 		if out.err == "" {
 			out.err = "error"
 		}
