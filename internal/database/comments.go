@@ -240,7 +240,7 @@ func (s *CommentsStore) create(ctx context.Context, logger *logx.Logger, opts *C
 
 	// Only plain comments and closing or reopening are announced to watchers.
 	if act.OpType > 0 {
-		if err = notifyWatchers(db, act); err != nil {
+		if err = newActionsStore(s.db).notifyWatchers(ctx, act); err != nil {
 			logger.Error("Failed to notify watchers", "error", err)
 		}
 		if err = s.mailParticipants(ctx, logger, comment, act.OpType, opts.Issue); err != nil {
