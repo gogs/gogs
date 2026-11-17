@@ -193,10 +193,45 @@ func TestLFSAccess(t *testing.T) {
 
 	t.Run("anonymous", func(t *testing.T) {
 		c := lfsClient(t, nil)
-		status, header, body := c.doRaw(http.MethodGet, lfsBasePath(public)+"/basic/"+oid, "", nil)
-		assert.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
-		assert.Equal(t, `Basic realm="Git LFS"`, header.Get("Lfs-Authenticate"))
-		assert.NotEqual(t, content, body)
+
+		// Anyone reads objects of a public repository without signing in.
+		status, _, body := c.doRaw(http.MethodGet, lfsBasePath(public)+"/basic/"+oid, "", nil)
+		require.Equal(t, http.StatusOK, status, "response: %s", body)
+		assert.Equal(t, content, body)
+		download := lfsBatch(t, c, public, "download", oid, len(content)).Objects[0].Actions
+		require.NotNil(t, download.Download)
+		assert.Equal(t, serverURL+lfsBasePath(public)+"/basic/"+oid, download.Download.Href)
+
+		// Anything else asks for credentials, so the Git LFS client prompts for
+		// them instead of giving up.
+		assertAskedCredentials := func(t *testing.T, status int, header http.Header, body []byte) {
+			t.Helper()
+
+			assert.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
+			assert.Equal(t, `Basic realm="Git LFS"`, header.Get("Lfs-Authenticate"))
+			assert.NotEqual(t, content, body)
+		}
+		status, header, body := c.doRaw(http.MethodGet, lfsBasePath(private)+"/basic/"+oid, "", nil)
+		assertAskedCredentials(t, status, header, body)
+		status, header, body = c.doRaw(http.MethodPost, lfsBasePath(private)+"/batch", lfsMediaType,
+			bytes.NewReader([]byte(`{"operation":"download","objects":[{"oid":"`+oid+`","size":1}]}`)))
+		assertAskedCredentials(t, status, header, body)
+
+		otherContent, otherOID := lfsObject()
+		status, header, body = c.doRaw(http.MethodPut, lfsBasePath(public)+"/basic/"+otherOID, "application/octet-stream", bytes.NewReader(otherContent))
+		assertAskedCredentials(t, status, header, body)
+		status, header, body = c.doRaw(http.MethodPost, lfsBasePath(public)+"/basic/verify", lfsMediaType,
+			bytes.NewReader([]byte(`{"oid":"`+oid+`","size":1}`)))
+		assertAskedCredentials(t, status, header, body)
+
+		missing := lfsBatch(t, ownerClient, public, "download", otherOID, len(otherContent)).Objects[0].Actions
+		require.NotNil(t, missing.Error, "object uploaded without signing in")
+		assert.Equal(t, http.StatusNotFound, missing.Error.Code)
+
+		// A repository that does not exist is not found, whether or not the user
+		// signs in.
+		status, _, body = c.doRaw(http.MethodGet, "/"+owner.Name+"/"+UniqueName("missing-")+".git/info/lfs/objects/basic/"+oid, "", nil)
+		assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 	})
 
 	t.Run("token", func(t *testing.T) {
@@ -283,6 +318,28 @@ func TestLFSGitClient(t *testing.T) {
 	got, err := os.ReadFile(filepath.Join(clone, "large.bin"))
 	require.NoError(t, err)
 	assert.Equal(t, content, got)
+
+	t.Run("anonymous clone", func(t *testing.T) {
+		// The LFS filter checks out the object during the clone, as with Git LFS
+		// installed globally.
+		dir := filepath.Join(t.TempDir(), "clone")
+		gitRun(t, filepath.Dir(dir), "clone",
+			"--config", "filter.lfs.process=git-lfs filter-process",
+			"--config", "filter.lfs.required=true",
+			gitRemoteURL(t, repo, "", ""), dir,
+		)
+		got, err := os.ReadFile(filepath.Join(dir, "large.bin"))
+		require.NoError(t, err)
+		assert.Equal(t, content, got)
+
+		gitRun(t, dir, "lfs", "install", "--local")
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "anonymous.bin"), []byte(UniqueName("lfs-content-")), 0o600))
+		gitRun(t, dir, "add", "anonymous.bin")
+		gitRun(t, dir, "commit", "-m", "Add anonymous.bin")
+		out, err := gitCommand(dir, "push", "origin", "main").CombinedOutput()
+		require.Error(t, err, "push succeeded: %s", out)
+		assert.NotEqual(t, gitRun(t, dir, "rev-parse", "HEAD"), gitMainOnDisk(t, repo))
+	})
 
 	t.Run("user without write access", func(t *testing.T) {
 		gitRun(t, clone, "lfs", "track", "*.dat")
