@@ -38,7 +38,8 @@ func withRepoCode(c flamego.Context, repoCtx *repoContext) {
 func withRepoRelease(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) {
 	w := c.ResponseWriter()
 	tag := c.Param("tag")
-	rel, err := database.GetRelease(repoCtx.Repo.ID, tag)
+	ctx := c.Request().Context()
+	rel, err := database.Handle.Releases().GetByTagName(ctx, repoCtx.Repo.ID, tag)
 	if err != nil {
 		if database.IsErrReleaseNotExist(err) {
 			writeErrorResponse(w, http.StatusNotFound, errors.New("release does not exist"))
@@ -48,7 +49,7 @@ func withRepoRelease(c flamego.Context, logger *logx.Logger, repoCtx *repoContex
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "get release"))
 		return
 	}
-	if err = rel.LoadAttributes(); err != nil {
+	if err = database.Handle.Releases().LoadAttributes(ctx, rel); err != nil {
 		logger.Error("Failed to load release attributes", "releaseID", rel.ID, "error", err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "load release"))
 		return
@@ -123,7 +124,7 @@ func getRepoReleases(c flamego.Context, logger *logx.Logger, repoCtx *repoContex
 		logger.Error("Failed to list tags", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list tags")
 	}
-	published, err := database.GetPublishedReleasesByRepoID(repo.ID, page.Tags...)
+	published, err := database.Handle.Releases().ListPublishedByRepoID(ctx, repo.ID, page.Tags...)
 	if err != nil {
 		logger.Error("Failed to list published releases", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list releases")
@@ -163,7 +164,7 @@ func getRepoReleases(c flamego.Context, logger *logx.Logger, repoCtx *repoContex
 	// publish them.
 	viewerCanWrite := repoCtx.Viewer.CanWrite()
 	if viewerCanWrite && page.HasLatest {
-		drafts, err := database.GetDraftReleasesByRepoID(repo.ID)
+		drafts, err := database.Handle.Releases().ListDraftsByRepoID(ctx, repo.ID)
 		if err != nil {
 			logger.Error("Failed to list draft releases", "repoID", repo.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "list drafts")
@@ -181,7 +182,7 @@ func getRepoReleases(c flamego.Context, logger *logx.Logger, repoCtx *repoContex
 	for _, r := range releases {
 		item := repoRelease{TagName: r.TagName, Sha: r.Sha1}
 		if r.ID > 0 {
-			if err = r.LoadAttributes(); err != nil {
+			if err = database.Handle.Releases().LoadAttributes(ctx, r); err != nil {
 				logger.Error("Failed to load release attributes", "releaseID", r.ID, "error", err)
 				return http.StatusInternalServerError, nil, errors.Wrap(err, "load release")
 			}
@@ -287,7 +288,7 @@ func postRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, view
 	if resp := textFieldError(l, "title", "repo.release.title", req.Title, 255); resp != nil {
 		return http.StatusBadRequest, resp, nil
 	}
-	if statusCode, err = checkNewAttachments(releaseAttachmentLimits(), req.Attachments); err != nil {
+	if statusCode, err = checkNewAttachments(ctx, releaseAttachmentLimits(), req.Attachments); err != nil {
 		if statusCode == http.StatusInternalServerError {
 			logger.Error("Failed to check attachments", "error", err)
 		}
@@ -335,7 +336,7 @@ func postRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, view
 		IsPrerelease: req.IsPrerelease,
 		CreatedUnix:  tagCreatedUnix,
 	}
-	if err = database.NewRelease(ctx, logger, gitRepo, rel, req.Attachments); err != nil {
+	if err = database.Handle.Releases().Create(ctx, logger, gitRepo, rel, req.Attachments); err != nil {
 		var msg string
 		switch {
 		case database.IsErrReleaseAlreadyExist(err):
@@ -410,7 +411,7 @@ func patchRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, vie
 	if len(req.Attachments) > lim.MaxFiles && len(added) > 0 {
 		return http.StatusBadRequest, nil, errors.Newf("at most %d files can be attached", lim.MaxFiles)
 	}
-	if statusCode, err = checkNewAttachments(lim, added); err != nil {
+	if statusCode, err = checkNewAttachments(c.Request().Context(), lim, added); err != nil {
 		if statusCode == http.StatusInternalServerError {
 			logger.Error("Failed to check attachments", "error", err)
 		}
@@ -431,7 +432,7 @@ func patchRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, vie
 	rel.Note = req.Content
 	rel.IsDraft = rel.IsDraft && req.IsDraft
 	rel.IsPrerelease = req.IsPrerelease
-	if err = database.UpdateRelease(c.Request().Context(), logger, viewer, gitRepo, rel, isPublish, req.Attachments); err != nil {
+	if err = database.Handle.Releases().Update(c.Request().Context(), logger, viewer, gitRepo, rel, isPublish, req.Attachments); err != nil {
 		if database.IsErrInvalidTagName(err) {
 			msg := l.Tr("repo.release.tag_name_invalid")
 			return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"tagName": &msg}}, nil
@@ -439,7 +440,7 @@ func patchRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, vie
 		logger.Error("Failed to update release", "releaseID", rel.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update release")
 	}
-	if _, err = database.DeleteAttachments(unlinked, true); err != nil {
+	if err = database.Handle.Attachments().Delete(c.Request().Context(), true, unlinked...); err != nil {
 		logger.Error("Failed to delete unlinked files", "releaseID", rel.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete unlinked files")
 	}
@@ -447,7 +448,7 @@ func patchRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, vie
 }
 
 func deleteRepoRelease(c flamego.Context, logger *logx.Logger, repoCtx *repoContext, rel *database.Release) (statusCode int, resp any, err error) {
-	if err = database.DeleteReleaseOfRepoByID(c.Request().Context(), repoCtx.Repo.ID, rel.ID); err != nil {
+	if err = database.Handle.Releases().DeleteByID(c.Request().Context(), repoCtx.Repo.ID, rel.ID); err != nil {
 		logger.Error("Failed to delete release", "releaseID", rel.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete release")
 	}

@@ -129,6 +129,10 @@ func (db *DB) Actions() *ActionsStore {
 	return newActionsStore(db.db)
 }
 
+func (db *DB) Attachments() *AttachmentsStore {
+	return newAttachmentsStore(db.db)
+}
+
 func (db *DB) DeployKeys() *DeployKeysStore {
 	return newDeployKeysStore(db.db)
 }
@@ -175,6 +179,10 @@ func (db *DB) ProtectBranches() *ProtectBranchesStore {
 
 func (db *DB) PublicKeys() *PublicKeysStore {
 	return newPublicKeysStore(db.db)
+}
+
+func (db *DB) Releases() *ReleasesStore {
+	return newReleasesStore(db.db)
 }
 
 func (db *DB) Repositories() *RepositoriesStore {

@@ -2,15 +2,10 @@ package database
 
 import (
 	"fmt"
-	"io"
-	"mime/multipart"
-	"os"
 	"path"
 	"time"
 
-	"github.com/cockroachdb/errors"
-	"github.com/google/uuid"
-	"xorm.io/xorm"
+	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
@@ -32,15 +27,18 @@ type Attachment struct {
 	CreatedUnix int64
 }
 
-func (a *Attachment) BeforeInsert() {
-	a.CreatedUnix = time.Now().Unix()
+// BeforeCreate implements the GORM create hook.
+func (a *Attachment) BeforeCreate(tx *gorm.DB) error {
+	if a.CreatedUnix == 0 {
+		a.CreatedUnix = tx.NowFunc().Unix()
+	}
+	return nil
 }
 
-func (a *Attachment) AfterSet(colName string, _ xorm.Cell) {
-	switch colName {
-	case "created_unix":
-		a.Created = time.Unix(a.CreatedUnix, 0).Local()
-	}
+// AfterFind implements the GORM query hook.
+func (a *Attachment) AfterFind(_ *gorm.DB) error {
+	a.Created = time.Unix(a.CreatedUnix, 0).Local()
+	return nil
 }
 
 // AttachmentLocalPath returns where attachment is stored in local file system based on given UUID.
@@ -51,38 +49,6 @@ func AttachmentLocalPath(uuid string) string {
 // LocalPath returns where attachment is stored in local file system.
 func (a *Attachment) LocalPath() string {
 	return AttachmentLocalPath(a.UUID)
-}
-
-// NewAttachment creates a new attachment object.
-func NewAttachment(uploaderID int64, name string, buf []byte, file multipart.File) (_ *Attachment, err error) {
-	attach := &Attachment{
-		UUID:       uuid.New().String(),
-		UploaderID: uploaderID,
-		Name:       name,
-	}
-
-	localPath := attach.LocalPath()
-	if err = os.MkdirAll(path.Dir(localPath), os.ModePerm); err != nil {
-		return nil, errors.Newf("MkdirAll: %v", err)
-	}
-
-	fw, err := os.Create(localPath)
-	if err != nil {
-		return nil, errors.Newf("Create: %v", err)
-	}
-	defer fw.Close()
-
-	if _, err = fw.Write(buf); err != nil {
-		return nil, errors.Newf("write: %v", err)
-	} else if _, err = io.Copy(fw, file); err != nil {
-		return nil, errors.Newf("copy: %v", err)
-	}
-
-	if _, err := x.Insert(attach); err != nil {
-		return nil, err
-	}
-
-	return attach, nil
 }
 
 var _ errx.NotFound = (*ErrAttachmentNotExist)(nil)
@@ -102,128 +68,4 @@ func (err ErrAttachmentNotExist) Error() string {
 
 func (ErrAttachmentNotExist) NotFound() bool {
 	return true
-}
-
-func getAttachmentByUUID(e Engine, uuid string) (*Attachment, error) {
-	attach := &Attachment{UUID: uuid}
-	has, err := e.Get(attach)
-	if err != nil {
-		return nil, err
-	} else if !has {
-		return nil, ErrAttachmentNotExist{args: map[string]any{"uuid": uuid}}
-	}
-	return attach, nil
-}
-
-// unboundAttachmentCond matches attachments that are not yet linked to any
-// issue, comment, or release. Attachments carry no owner, so only unbound ones
-// may be linked to prevent claiming attachments of other repositories by UUID.
-const unboundAttachmentCond = "issue_id = 0 AND comment_id = 0 AND release_id = 0"
-
-func getUnboundAttachmentsByUUIDs(e Engine, uuids []string) ([]*Attachment, error) {
-	if len(uuids) == 0 {
-		return []*Attachment{}, nil
-	}
-
-	// Silently drop invalid and already bound uuids.
-	attachments := make([]*Attachment, 0, len(uuids))
-	return attachments, e.Where(unboundAttachmentCond).In("uuid", uuids).Find(&attachments)
-}
-
-// BindAttachments links the unbound attachments with the given UUIDs to the
-// issue, and to the comment when commentID is not 0, e.g., files added while
-// editing them.
-func BindAttachments(issueID, commentID int64, uuids []string) error {
-	attachments, err := getUnboundAttachmentsByUUIDs(x, uuids)
-	if err != nil {
-		return errors.Wrap(err, "get unbound attachments")
-	}
-	for _, a := range attachments {
-		a.IssueID = issueID
-		a.CommentID = commentID
-		if _, err = x.ID(a.ID).Cols("issue_id", "comment_id").Update(a); err != nil {
-			return errors.Wrapf(err, "update attachment %d", a.ID)
-		}
-	}
-	return nil
-}
-
-// GetAttachmentByUUID returns attachment by given UUID.
-func GetAttachmentByUUID(uuid string) (*Attachment, error) {
-	return getAttachmentByUUID(x, uuid)
-}
-
-func getAttachmentsByIssueID(e Engine, issueID int64) ([]*Attachment, error) {
-	attachments := make([]*Attachment, 0, 5)
-	return attachments, e.Where("issue_id = ? AND comment_id = 0", issueID).Find(&attachments)
-}
-
-// GetAttachmentsByIssueID returns all attachments of an issue.
-func GetAttachmentsByIssueID(issueID int64) ([]*Attachment, error) {
-	return getAttachmentsByIssueID(x, issueID)
-}
-
-func getAttachmentsByCommentID(e Engine, commentID int64) ([]*Attachment, error) {
-	attachments := make([]*Attachment, 0, 5)
-	return attachments, e.Where("comment_id=?", commentID).Find(&attachments)
-}
-
-// GetAttachmentsByCommentID returns all attachments of a comment.
-func GetAttachmentsByCommentID(commentID int64) ([]*Attachment, error) {
-	return getAttachmentsByCommentID(x, commentID)
-}
-
-func getAttachmentsByReleaseID(e Engine, releaseID int64) ([]*Attachment, error) {
-	attachments := make([]*Attachment, 0, 10)
-	return attachments, e.Where("release_id = ?", releaseID).Find(&attachments)
-}
-
-// GetAttachmentsByReleaseID returns all attachments of a release.
-func GetAttachmentsByReleaseID(releaseID int64) ([]*Attachment, error) {
-	return getAttachmentsByReleaseID(x, releaseID)
-}
-
-// DeleteAttachment deletes the given attachment and optionally the associated file.
-func DeleteAttachment(a *Attachment, remove bool) error {
-	_, err := DeleteAttachments([]*Attachment{a}, remove)
-	return err
-}
-
-// DeleteAttachments deletes the given attachments and optionally the associated files.
-func DeleteAttachments(attachments []*Attachment, remove bool) (int, error) {
-	for i, a := range attachments {
-		if remove {
-			if err := os.Remove(a.LocalPath()); err != nil && !os.IsNotExist(err) {
-				return i, err
-			}
-		}
-
-		// Delete by ID alone, because the other fields may be stale, e.g., a release
-		// detaches its files before deleting those that were left out.
-		if _, err := x.ID(a.ID).Delete(new(Attachment)); err != nil {
-			return i, err
-		}
-	}
-
-	return len(attachments), nil
-}
-
-// DeleteAttachmentsByIssue deletes all attachments associated with the given issue.
-func DeleteAttachmentsByIssue(issueID int64, remove bool) (int, error) {
-	attachments, err := GetAttachmentsByIssueID(issueID)
-	if err != nil {
-		return 0, err
-	}
-
-	return DeleteAttachments(attachments, remove)
-}
-
-// DeleteAttachmentsByComment deletes all attachments associated with the given comment.
-func DeleteAttachmentsByComment(commentID int64, remove bool) (int, error) {
-	attachments, err := GetAttachmentsByCommentID(commentID)
-	if err != nil {
-		return 0, err
-	}
-
-	return DeleteAttachments(attachments, remove)
 }
