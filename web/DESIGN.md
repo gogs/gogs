@@ -68,6 +68,7 @@ With glass on, `html` paints `--glass-backdrop`, a few soft color blobs over `--
 - **`glass-section`** goes on a section whose heading labels one glass box or list below it, e.g., the dashboard activity feed, the branch groups and the commit days. The section becomes the panel, the heading its header row and the box inside loses its own frame, so the heading does not float alone on the backdrop. Page titles stay above their panels.
 - **`glass-bar`** goes on full-width chrome that content scrolls under: the navbar and the repository header.
 - **`glass-control`** goes on outline buttons and segmented groups, e.g., Watch, Star and Fork, and the view switchers. A glass control sets its own fill, which outranks `hover:` utilities, so it brings its own hover: `--glass-control-hover` and a `--glass-line-hover` edge, and a group lights its edge while a button in it is hovered. Check hover in a browser that reports `(hover: hover)`, since Tailwind wraps `hover:` in that media query and headless Chrome without a mouse matches none of them.
+- **`glass-solid`** goes on filled buttons, with `--glass-solid` set to the fill color. It adds a light sheen, a bright top edge, a ring in that color and a soft glow, like the landing page's call to action. Glass shadows that replace `box-shadow` list Tailwind's `--tw-ring-offset-shadow` and `--tw-ring-shadow` first, so keyboard focus stays visible.
 
 Layout that only applies to glass, e.g., a border or padding the plain look does not have, uses the `glass-ui:` variant, e.g., `glass-ui:border glass-ui:p-3`.
 

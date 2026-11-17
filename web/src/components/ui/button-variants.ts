@@ -5,12 +5,14 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-(--color-primary) text-(--color-primary-foreground) hover:opacity-90",
+        default:
+          "glass-solid bg-(--color-primary) text-(--color-primary-foreground) [--glass-solid:var(--color-primary)] hover:opacity-90",
         outline:
           "glass-control border border-(--color-input) bg-(--color-field) text-(--color-foreground) hover:bg-(--color-surface)",
         ghost: "text-(--color-foreground) hover:bg-(--color-surface)",
         link: "text-(--color-foreground) underline-offset-4 hover:underline",
-        destructive: "bg-(--color-destructive) text-(--color-destructive-foreground) hover:opacity-90",
+        destructive:
+          "glass-solid bg-(--color-destructive) text-(--color-destructive-foreground) [--glass-solid:var(--color-destructive)] hover:opacity-90",
       },
       size: {
         default: "h-10 px-4 py-2",

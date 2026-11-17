@@ -608,6 +608,7 @@ diffs-container {
      heading does not float alone above the box.
    - glass-bar: full-width chrome that content scrolls under, e.g., the navbar.
    - glass-control: outline buttons and segmented button groups.
+   - glass-solid: filled buttons, with --glass-solid set to their fill color.
    A state that recolors a panel's edge, e.g., a linked comment, needs
    `!border-...`. */
 :root.glass-ui :is(.glass, .glass-list, .glass-section) {
@@ -656,12 +657,24 @@ diffs-container {
   -webkit-backdrop-filter: blur(16px) saturate(1.8);
   backdrop-filter: blur(16px) saturate(1.8);
 }
+/* Glass shadows keep Tailwind's ring layers so focus stays visible. */
 :root.glass-ui .glass-control {
   border-color: var(--glass-line);
   background-color: var(--glass-control);
-  box-shadow: var(--glass-edge);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--glass-edge);
   -webkit-backdrop-filter: blur(12px) saturate(1.5);
   backdrop-filter: blur(12px) saturate(1.5);
+}
+/* Lit from above like the landing page's call to action: a light sheen, a
+   bright top edge, a ring in the button's own color and a soft glow below. */
+:root.glass-ui .glass-solid {
+  background-image: linear-gradient(180deg, #ffffff38, #ffffff00 70%);
+  box-shadow:
+    var(--tw-ring-offset-shadow, 0 0 #0000),
+    var(--tw-ring-shadow, 0 0 #0000),
+    inset 0 1px 0 #ffffff59,
+    0 0 0 1px color-mix(in oklab, var(--glass-solid) 80%, #000000),
+    0 10px 28px -12px color-mix(in oklab, var(--glass-solid) 80%, transparent);
 }
 @media (hover: hover) {
   :root.glass-ui :is(a, button).glass-control:hover:not(:disabled) {
