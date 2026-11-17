@@ -23,7 +23,6 @@ import (
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/repox"
 	routerepo "gogs.io/gogs/internal/route/repo"
-	"gogs.io/gogs/internal/template"
 	"gogs.io/gogs/internal/tool"
 	"gogs.io/gogs/internal/userx"
 )
@@ -178,7 +177,7 @@ func email2User(c flamego.Context, logger *logx.Logger) {
 		writeErrorResponse(c.ResponseWriter(), http.StatusInternalServerError, errors.Wrap(err, "get user"))
 		return
 	}
-	c.Redirect(template.EscapePound(conf.Server.Subpath + "/user/" + u.Name))
+	c.Redirect(u.HomeURLPath())
 }
 
 // getRepoArchive serves the archive of a branch, a tag or a commit, e.g.,
