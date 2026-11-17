@@ -2,6 +2,7 @@ package git
 
 import (
 	"context"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,11 +12,17 @@ import (
 func TestRepository_Grep(t *testing.T) {
 	ctx := context.Background()
 	r := setupBareRepoWithAlternates(t)
+	// Git prints a result as "<rev>:<path>", so a colon in the path checks
+	// that it is not split there. Windows does not allow colons in paths.
+	special := "dir/a: b.txt"
+	if runtime.GOOS == "windows" {
+		special = "dir/a b.txt"
+	}
 	commitID := commitFiles(t, r, "search", map[string]string{
-		"dir/a: b.txt": "Hello world\r\nfoo\nsay HELLO again\n",
-		"main.go":      "abc\na.c\nhello\n",
-		"image.bin":    "hello\x00binary",
-		"ctx.txt":      "one\ntwo\nhello 3\nfour\nfive\nsix\nhello 7\neight\n",
+		special:     "Hello world\r\nfoo\nsay HELLO again\n",
+		"main.go":   "abc\na.c\nhello\n",
+		"image.bin": "hello\x00binary",
+		"ctx.txt":   "one\ntwo\nhello 3\nfour\nfive\nsix\nhello 7\neight\n",
 	})
 
 	t.Run("matches literally and ignores case", func(t *testing.T) {
@@ -25,8 +32,8 @@ func TestRepository_Grep(t *testing.T) {
 		assert.Equal(t, []*GrepResult{
 			{Path: "ctx.txt", Line: 3, Text: "hello 3", IsMatch: true},
 			{Path: "ctx.txt", Line: 7, Text: "hello 7", IsMatch: true},
-			{Path: "dir/a: b.txt", Line: 1, Text: "Hello world", IsMatch: true},
-			{Path: "dir/a: b.txt", Line: 3, Text: "say HELLO again", IsMatch: true},
+			{Path: special, Line: 1, Text: "Hello world", IsMatch: true},
+			{Path: special, Line: 3, Text: "say HELLO again", IsMatch: true},
 			{Path: "main.go", Line: 3, Text: "hello", IsMatch: true},
 		}, results)
 
@@ -38,16 +45,16 @@ func TestRepository_Grep(t *testing.T) {
 	t.Run("matches case", func(t *testing.T) {
 		results, _, err := r.Grep(ctx, commitID, "HELLO", GrepOptions{MatchCase: true})
 		require.NoError(t, err)
-		assert.Equal(t, []*GrepResult{{Path: "dir/a: b.txt", Line: 3, Text: "say HELLO again", IsMatch: true}}, results)
+		assert.Equal(t, []*GrepResult{{Path: special, Line: 3, Text: "say HELLO again", IsMatch: true}}, results)
 
 		// A line around a match that contains the keyword in another case is
 		// context.
 		results, _, err = r.Grep(ctx, commitID, "Hello", GrepOptions{MatchCase: true, ContextLines: 2})
 		require.NoError(t, err)
 		assert.Equal(t, []*GrepResult{
-			{Path: "dir/a: b.txt", Line: 1, Text: "Hello world", IsMatch: true},
-			{Path: "dir/a: b.txt", Line: 2, Text: "foo"},
-			{Path: "dir/a: b.txt", Line: 3, Text: "say HELLO again"},
+			{Path: special, Line: 1, Text: "Hello world", IsMatch: true},
+			{Path: special, Line: 2, Text: "foo"},
+			{Path: special, Line: 3, Text: "say HELLO again"},
 		}, results)
 	})
 
@@ -96,7 +103,7 @@ func TestRepository_Grep(t *testing.T) {
 		for _, result := range results {
 			paths = append(paths, result.Path)
 		}
-		assert.Equal(t, []string{"dir/a: b.txt", "dir/a: b.txt", "main.go"}, paths)
+		assert.Equal(t, []string{special, special, "main.go"}, paths)
 	})
 
 	t.Run("limits", func(t *testing.T) {
@@ -105,7 +112,7 @@ func TestRepository_Grep(t *testing.T) {
 		assert.False(t, truncated)
 		assert.Equal(t, []*GrepResult{
 			{Path: "ctx.txt", Line: 3, Text: "hello 3", IsMatch: true},
-			{Path: "dir/a: b.txt", Line: 1, Text: "Hello world", IsMatch: true},
+			{Path: special, Line: 1, Text: "Hello world", IsMatch: true},
 			{Path: "main.go", Line: 3, Text: "hello", IsMatch: true},
 		}, results)
 
