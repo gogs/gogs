@@ -169,6 +169,24 @@ func TestStore_KeepsRootPastSpanLimit(t *testing.T) {
 	assert.Equal(t, 1, got.DroppedSpans)
 }
 
+func TestStore_AttributeValues(t *testing.T) {
+	store, tracer := newTestStore(t, defaultOptions())
+
+	_, root := tracer.Start(context.Background(), "GET /{owner}/{repo}",
+		trace.WithSpanKind(trace.SpanKindServer),
+		trace.WithTimestamp(testNow.Add(-time.Second)),
+		trace.WithAttributes(
+			attribute.Int("http.response.status_code", 500),
+			attribute.StringSlice("git.args", []string{"log", "--", "<path>"}),
+		),
+	)
+	root.End(trace.WithTimestamp(testNow))
+
+	got, ok := store.Get(root.SpanContext().TraceID().String())
+	require.True(t, ok)
+	assert.Contains(t, got.Spans[0].Attributes, Attribute{Key: "git.args", Value: `["log","--","<path>"]`})
+}
+
 // A client can send many requests with the trace ID of one that is still
 // running, and they must not grow that trace past the limit and push out the
 // other kept traces when it ends.

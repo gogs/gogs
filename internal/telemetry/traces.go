@@ -2,12 +2,14 @@ package telemetry
 
 import (
 	"context"
+	"encoding/json"
 	"slices"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
@@ -294,13 +296,29 @@ func copySpan(sp sdktrace.ReadOnlySpan) span {
 	}
 	out.attrs = make([]Attribute, 0, len(attrs))
 	for _, kv := range attrs {
-		value := kv.Value.Emit()
+		value := attributeValue(kv.Value)
 		if len(value) > maxValueBytes {
 			value = value[:maxValueBytes] + "…"
 		}
 		out.attrs = append(out.attrs, Attribute{Key: string(kv.Key), Value: value})
 	}
 	return out
+}
+
+// attributeValue returns the value of an attribute as text. Unlike Emit, it
+// keeps characters in lists of strings as they are, e.g., "<path>" in the
+// arguments of a Git command, rather than escaping them for HTML.
+func attributeValue(v attribute.Value) string {
+	if v.Type() != attribute.STRINGSLICE {
+		return v.Emit()
+	}
+	var b strings.Builder
+	enc := json.NewEncoder(&b)
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(v.AsStringSlice()); err != nil {
+		return v.Emit()
+	}
+	return strings.TrimSuffix(b.String(), "\n")
 }
 
 func (s *Store) OnEnd(sp sdktrace.ReadOnlySpan) {
