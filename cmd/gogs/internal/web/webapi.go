@@ -40,6 +40,11 @@ func flamegoBridger(webHandler http.Handler) func(c *context.Context, l i18n.Loc
 		ctx = stdctx.WithValue(ctx, webAPISessionKey{}, c.Session)
 		ctx = stdctx.WithValue(ctx, webAPIMacaronKey{}, c.Context)
 		ctx = stdctx.WithValue(ctx, webAPILocaleKey{}, l)
+		// The web app renders pages in the viewer's language.
+		ctx = stdctx.WithValue(ctx, context.WebContextKey{}, context.WebContext{
+			Lang:   l.Language(),
+			SubURL: conf.Server.Subpath,
+		})
 		req := c.Req.WithContext(ctx)
 		webHandler.ServeHTTP(c.Resp, req)
 		// Flamego's route, e.g., "GET /api/web/{owner}/{repo}/header", is more
@@ -444,6 +449,9 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			}, withOrgTeam)
 		}, requireAuthenticated, withOrgMembership)
 	}, requireJSON, enforceWebAPIMaxBodySize)
+	// The HTML, e.g., of a notebook with images, is larger than the bodies of
+	// other requests.
+	f.Post("/api/web/sanitize-html", requireViewAccess, postSanitizeHTML)
 	f.Group("/api/web/{owner}/{repo}", func() {
 		f.Post("/markdown", withIssueTracker, bindJSON(markdownRequest{}), postRepoMarkdown)
 		f.Get("/suggestions/mentions", withIssueTracker, getRepoMentionSuggestions)

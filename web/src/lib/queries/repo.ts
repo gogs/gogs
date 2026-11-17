@@ -13,6 +13,8 @@ export interface RepoHeaderData {
   name: string;
   avatarURL: string;
   visibility: "public" | "private";
+  // viewerCanRead is false for visitors who only see the public issues or wiki.
+  viewerCanRead: boolean;
   viewerCanAdminister: boolean;
   issuesEnabled: boolean;
   pullRequestsEnabled: boolean;

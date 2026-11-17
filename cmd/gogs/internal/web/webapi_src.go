@@ -3,6 +3,7 @@ package web
 import (
 	"bytes"
 	"context"
+	"io"
 	"net/http"
 	"path"
 	"strconv"
@@ -670,4 +671,21 @@ func getRepoPaths(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) 
 		resp.Truncated = true
 	}
 	return http.StatusOK, resp, nil
+}
+
+// postSanitizeHTML sanitizes the HTML in the request body like rendered
+// Markdown, e.g., a Jupyter notebook that the web app renders in the browser
+// before showing it. The HTML is sent and returned as is, because a notebook
+// with images can be large.
+func postSanitizeHTML(c flamego.Context, logger *logx.Logger) {
+	w := c.ResponseWriter()
+	html, err := io.ReadAll(c.Request().Request.Body)
+	if err != nil {
+		logger.Error("Failed to read request body", "error", err)
+		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "read body"))
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
+	_, _ = w.Write(markup.SanitizeBytes(html))
 }

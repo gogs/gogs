@@ -47,6 +47,12 @@ func checkRouteCoverage(spanNames map[string]bool) error {
 					covered[r] = true
 				}
 			}
+		case r.Method == "*":
+			for name := range spanNames {
+				if _, pattern, ok := strings.Cut(name, " "); ok && pattern == r.Pattern {
+					covered[r] = true
+				}
+			}
 		default:
 			covered[r] = spanNames[r.Method+" "+r.Pattern]
 		}

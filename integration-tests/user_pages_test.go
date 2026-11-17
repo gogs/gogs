@@ -87,6 +87,23 @@ func TestUserEmail2User(t *testing.T) {
 	})
 }
 
+func TestUserPublicKeys(t *testing.T) {
+	u := seedUser(t, CreateUserOptions{})
+	_, content := userSeedSSHKey(t, u.ID, "laptop")
+
+	t.Run("keys", func(t *testing.T) {
+		status, header, body := newClient(t).doRaw(http.MethodGet, "/"+u.Name+".keys", "", nil)
+		require.Equal(t, http.StatusOK, status, "response: %s", body)
+		assert.Equal(t, "text/plain; charset=UTF-8", header.Get("Content-Type"))
+		// The comment of the key, often an email address, is left out.
+		assert.Equal(t, content+"\n", string(body))
+	})
+
+	t.Run("unknown user", func(t *testing.T) {
+		userAssertPage(t, newClient(t), "/"+UniqueName("nobody-")+".keys", http.StatusNotFound)
+	})
+}
+
 var userLocaleURL = regexp.MustCompile(`"localeURL":"([^"]+)"`)
 
 func TestUserSiteLocale(t *testing.T) {
@@ -157,13 +174,14 @@ func TestUserSiteMetrics(t *testing.T) {
 	assert.Contains(t, string(body), "\ngo_goroutines ")
 }
 
-func TestUserSiteSanitizeIpynb(t *testing.T) {
-	html := `<div class="output" data-prompt-number="1" onclick="alert(1)">Result<script>alert(2)</script>` +
-		`<img class="plot" src="data:image/png;base64,iVBORw0KGgo="><img src="data:text/html;base64,PHNjcmlwdD4="></div>`
-	status, _, body := newClient(t).doRaw(http.MethodPost, "/-/api/sanitize_ipynb", "text/html", strings.NewReader(html))
+func TestUserSiteSanitizeHTML(t *testing.T) {
+	html := `<div class="nb-output" data-prompt-number="1" onclick="alert(1)">Result<script>alert(2)</script>` +
+		`<img class="nb-image-output" src="data:image/png;base64,iVBORw0KGgo="><img src="data:text/html;base64,PHNjcmlwdD4=">` +
+		`<div class="fixed inset-0">Cover</div></div>`
+	status, _, body := newClient(t).doRaw(http.MethodPost, "/api/web/sanitize-html", "text/html", strings.NewReader(html))
 	require.Equal(t, http.StatusOK, status, "response: %s", body)
 	assert.Equal(t,
-		`<div class="output" data-prompt-number="1">Result<img class="plot" src="data:image/png;base64,iVBORw0KGgo="></div>`,
+		`<div class="nb-output" data-prompt-number="1">Result<img class="nb-image-output" src="data:image/png;base64,iVBORw0KGgo="><div>Cover</div></div>`,
 		string(body),
 	)
 }

@@ -1,7 +1,12 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { type AnyRoute, createRoute, notFound, redirect } from "@tanstack/react-router";
 
-import { LoaderResponseError, loadAuthenticatedPage, loaderResponseError } from "@/lib/loader-error";
+import {
+  LoaderResponseError,
+  authenticationRedirect,
+  loadAuthenticatedPage,
+  loaderResponseError,
+} from "@/lib/loader-error";
 import {
   type BranchesSearch,
   type ListSearch,
@@ -50,6 +55,7 @@ import {
 } from "@/lib/queries/repo";
 import { type WebhookType, fetchWebhook, fetchWebhooks } from "@/lib/queries/webhooks";
 import { subUrl } from "@/lib/url";
+import type { UserInfo } from "@/lib/user-info";
 import { WebhookEdit, WebhookNew, Webhooks } from "@/pages/Webhooks";
 import { RepoBranches } from "@/pages/repo/Branches";
 import { RepoCode } from "@/pages/repo/Code";
@@ -95,14 +101,43 @@ const SHA_RE = /^[a-f0-9]{7,64}$/;
 const COMPARE_RANGE_RE = /^([a-f0-9]{40}|[a-f0-9]{64})\.\.\.([a-f0-9]{40}|[a-f0-9]{64})$/;
 
 interface RouterContext {
+  user: UserInfo | null;
   queryClient: QueryClient;
+}
+
+// loadRepoPage loads the header of a repository along with the data of the
+// page. Visitors who only see the public issues or wiki of the repository
+// are sent to those from its other pages.
+async function loadRepoPage<T>(queryClient: QueryClient, owner: string, repo: string, load: () => Promise<T>) {
+  try {
+    const [, data] = await Promise.all([queryClient.ensureQueryData(repoHeaderQuery(owner, repo)), load()]);
+    return data;
+  } catch (err) {
+    if (err instanceof LoaderResponseError && err.status === 404) {
+      // The page may be found missing before the header arrives.
+      const header = await queryClient.ensureQueryData(repoHeaderQuery(owner, repo)).catch(() => undefined);
+      if (header && !header.viewerCanRead) {
+        if (header.issuesEnabled) {
+          // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
+          throw redirect({ to: "/$owner/$repo/issues", params: { owner, repo }, replace: true });
+        }
+        if (header.wikiEnabled) {
+          // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
+          throw redirect({ to: "/$owner/$repo/wiki", params: { owner, repo }, replace: true });
+        }
+      }
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+      throw notFound();
+    }
+    throw err;
+  }
 }
 
 // loadDiffPage loads the header of a repository, the metadata of a diff page
 // at the path and the diff itself. The diff is fetched as raw text from the
 // path with a ".diff" suffix, which skips JSON-string escaping and lets the
 // browser cache the (often large) diff separately from the metadata.
-async function loadDiffPage<T>(
+function loadDiffPage<T>(
   queryClient: QueryClient,
   owner: string,
   repo: string,
@@ -111,9 +146,8 @@ async function loadDiffPage<T>(
 ): Promise<T & { patch: string }> {
   const rawBase = subUrl(`/${owner}/${repo}${path}.diff`);
   const rawURL = whitespace ? `${rawBase}?whitespace=${encodeURIComponent(whitespace)}` : rawBase;
-  try {
-    const [, meta, patch] = await Promise.all([
-      queryClient.ensureQueryData(repoHeaderQuery(owner, repo)),
+  return loadRepoPage(queryClient, owner, repo, async () => {
+    const [meta, patch] = await Promise.all([
       fetch(subUrl(`/api/web/${owner}/${repo}${path}`), { credentials: "same-origin" }).then(async (res) => {
         if (!res.ok) throw await loaderResponseError(res);
         return (await res.json()) as T;
@@ -124,13 +158,7 @@ async function loadDiffPage<T>(
       }),
     ]);
     return { ...meta, patch };
-  } catch (err) {
-    if (err instanceof LoaderResponseError && err.status === 404) {
-      // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
-      throw notFound();
-    }
-    throw err;
-  }
+  });
 }
 
 export function createRepoRoutes(rootRoute: AnyRoute) {
@@ -228,28 +256,6 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     },
   });
 
-  // loadRepoPage loads the header of a repository along with the data of the
-  // page.
-  async function loadRepoPage<T>(queryClient: QueryClient, owner: string, repo: string, load: () => Promise<T>) {
-    try {
-      const [, data] = await Promise.all([queryClient.ensureQueryData(repoHeaderQuery(owner, repo)), load()]);
-      return data;
-    } catch (err) {
-      if (err instanceof LoaderResponseError && err.status === 404) {
-        // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
-        throw notFound();
-      }
-      if (err instanceof LoaderResponseError && (err.status === 401 || err.status === 403)) {
-        // The viewer is not allowed to see site content. Reload the page so the
-        // server sends them to sign in, account activation, or the login
-        // prohibited page.
-        // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
-        throw redirect({ href: window.location.href, reloadDocument: true });
-      }
-      throw err;
-    }
-  }
-
   const repoStargazersRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/$owner/$repo/stars",
@@ -305,13 +311,6 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
         // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
         throw notFound();
       }
-      if (err instanceof LoaderResponseError && (err.status === 401 || err.status === 403)) {
-        // The viewer is unauthenticated, has not confirmed their email, or is
-        // prohibited from signing in. Reload the page so the server sends them to
-        // sign in, account activation, or the login prohibited page.
-        // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
-        throw redirect({ href: window.location.href, reloadDocument: true });
-      }
       throw err;
     }
   }
@@ -356,13 +355,6 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
         if (err instanceof LoaderResponseError && err.status === 404) {
           // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
           throw notFound();
-        }
-        if (err instanceof LoaderResponseError && (err.status === 401 || err.status === 403)) {
-          // The viewer is unauthenticated, has not confirmed their email, or is
-          // prohibited from signing in. Reload the page so the server sends them to
-          // sign in, account activation, or the login prohibited page.
-          // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
-          throw redirect({ href: window.location.href, reloadDocument: true });
         }
         throw err;
       }
@@ -651,6 +643,13 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
       getParentRoute: () => rootRoute,
       path: `/$owner/$repo/${kind}`,
       validateSearch: validateRepoIssuesSearch,
+      // The lists about the viewer need a viewer.
+      beforeLoad: ({ context, search, location }) => {
+        if (!(context as RouterContext).user && (search as RepoIssuesSearch).type) {
+          // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
+          throw authenticationRedirect(location.href);
+        }
+      },
       loaderDeps: ({ search }: { search: RepoIssuesSearch }) => search,
       loader: ({ params, deps, context }) =>
         loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
@@ -703,12 +702,31 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     return index;
   }
 
+  // otherwiseRedirect returns what load returns, or, when it is not found,
+  // throws the redirect that other returns, e.g., to the pull request of an
+  // issue link. Errors of other keep the original 404.
+  async function otherwiseRedirect<T>(load: Promise<T>, other: () => Promise<unknown>): Promise<T> {
+    try {
+      return await load;
+    } catch (err) {
+      if (!(err instanceof LoaderResponseError && err.status === 404)) throw err;
+      const signal = await other().catch(() => {
+        throw err;
+      });
+      throw signal;
+    }
+  }
+
   const repoIssueRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/$owner/$repo/issues/$index",
     loader: ({ params, context }) =>
       loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
-        fetchRepoIssue(params.owner, params.repo, issueIndex(params.index)),
+        otherwiseRedirect(fetchRepoIssue(params.owner, params.repo, issueIndex(params.index)), () =>
+          fetchRepoPull(params.owner, params.repo, issueIndex(params.index)).then(() =>
+            redirect({ to: "/$owner/$repo/pulls/$index", params, replace: true }),
+          ),
+        ),
       ),
     component: function Issue() {
       const { owner, repo } = repoIssueRoute.useParams();
@@ -723,7 +741,11 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     path: "/$owner/$repo/pulls/$index",
     loader: ({ params, context }) =>
       loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
-        fetchRepoPull(params.owner, params.repo, issueIndex(params.index)),
+        otherwiseRedirect(fetchRepoPull(params.owner, params.repo, issueIndex(params.index)), () =>
+          fetchRepoIssue(params.owner, params.repo, issueIndex(params.index)).then(() =>
+            redirect({ to: "/$owner/$repo/issues/$index", params, replace: true }),
+          ),
+        ),
       ),
     component: function Pull() {
       const { owner, repo } = repoPullRoute.useParams();

@@ -315,7 +315,8 @@ func TestUserSettingsEmails(t *testing.T) {
 }
 
 // userSeedSSHKey adds an SSH key to the user, which the server under test
-// cannot do with SSH disabled, and returns its SHA256 fingerprint.
+// cannot do with SSH disabled. Like a key from ssh-keygen, it ends with a
+// comment. The key is also returned without the comment.
 func userSeedSSHKey(t *testing.T, userID int64, name string) (*database.PublicKey, string) {
 	t.Helper()
 
@@ -325,9 +326,10 @@ func userSeedSSHKey(t *testing.T, userID int64, name string) (*database.PublicKe
 	require.NoError(t, err)
 	// Adding a key appends it to the authorized_keys file in this directory.
 	require.NoError(t, os.MkdirAll(conf.SSH.RootPath, 0o700))
-	key, err := database.AddPublicKey(logger, userID, name, strings.TrimSpace(string(ssh.MarshalAuthorizedKey(sshPub))))
+	content := strings.TrimSpace(string(ssh.MarshalAuthorizedKey(sshPub)))
+	key, err := database.AddPublicKey(logger, userID, name, content+" "+name+"@example.com")
 	require.NoError(t, err)
-	return key, ssh.FingerprintSHA256(sshPub)
+	return key, content
 }
 
 func TestUserSettingsSSHKeys(t *testing.T) {

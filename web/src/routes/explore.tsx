@@ -1,4 +1,4 @@
-import { type AnyRoute, createRoute, notFound, redirect } from "@tanstack/react-router";
+import { type AnyRoute, createRoute, notFound } from "@tanstack/react-router";
 
 import { loaderResponseError } from "@/lib/loader-error";
 import { subUrl } from "@/lib/url";
@@ -34,19 +34,6 @@ export function createExploreRoutes(rootRoute: AnyRoute) {
       const res = await fetch(subUrl(`/api/web/explore/${params.kind}`) + (qs ? `?${qs}` : ""), {
         credentials: "same-origin",
       });
-      if (res.status === 401 || res.status === 403) {
-        // The viewer is not allowed to see site content (unauthenticated, email
-        // not confirmed, or login prohibited). Reload the page so the server
-        // sends them to sign in, account activation, or the login prohibited
-        // page.
-        // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
-        throw redirect({
-          to: "/explore/$kind",
-          params: { kind: params.kind },
-          search: { q: deps.q, page: deps.page },
-          reloadDocument: true,
-        });
-      }
       if (!res.ok) {
         throw await loaderResponseError(res);
       }

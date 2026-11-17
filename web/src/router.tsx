@@ -2,12 +2,16 @@ import { canUseWASM } from "@pierre/diffs";
 import { WorkerPoolContextProvider } from "@pierre/diffs/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  type AnyRoute,
+  type ErrorComponentProps,
   Outlet,
   RouterProvider,
   createRootRouteWithContext,
   createRoute,
   createRouter,
+  notFound,
   parseSearchWith,
+  redirect,
   stringifySearchWith,
   useRouterState,
 } from "@tanstack/react-router";
@@ -18,6 +22,7 @@ import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { webContext } from "@/lib/context";
+import { LoaderResponseError, authenticationRedirect } from "@/lib/loader-error";
 import type { UserInfo } from "@/lib/user-info";
 import { NotFound } from "@/pages/NotFound";
 import { ServerError } from "@/pages/ServerError";
@@ -44,6 +49,15 @@ function RootLayout() {
       <Footer />
     </div>
   );
+}
+
+// RouteError shows the error of loading a page, or that the viewer is
+// prohibited from signing in.
+function RouteError({ error }: ErrorComponentProps) {
+  if (error instanceof LoaderResponseError && error.status === 403 && error.errorField === "login prohibited") {
+    return <ProhibitLogin />;
+  }
+  return <ServerError error={error} />;
 }
 
 const rootRoute = createRootRouteWithContext<RouterContext>()({
@@ -101,16 +115,40 @@ function parseSearchValue(value: string): unknown {
 }
 
 function makeRouter(context: RouterContext) {
-  return createRouter({
+  const router = createRouter({
     // The trees share their context, so the router is typed by the main one.
     routeTree: webContext.page ? (serverPageTree as unknown as typeof routeTree) : routeTree,
     basepath: webContext.subURL || "/",
     defaultNotFoundComponent: NotFound,
-    defaultErrorComponent: ServerError,
+    defaultErrorComponent: RouteError,
     parseSearch: parseSearchWith(parseSearchValue),
     stringifySearch: stringifySearchWith(JSON.stringify),
     context,
   });
+  // The web API turns away the viewers who may not see a page: they sign in
+  // or confirm their email first, and other pages they may not see are not
+  // found.
+  for (const route of Object.values(router.routesById) as AnyRoute[]) {
+    route.options.onError ??= (err: unknown) => {
+      if (!(err instanceof LoaderResponseError)) return;
+      if (err.status === 401) {
+        // The location being loaded, which is not the current one yet.
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
+        throw authenticationRedirect(router.latestLocation.href);
+      }
+      if (err.status === 403 && err.errorField === "account not activated") {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
+        throw redirect({ to: "/user/activate", replace: true });
+      }
+      // Pages the viewer may not see, e.g., the admin panel for other users,
+      // are not found.
+      if (err.status === 403 && err.errorField !== "login prohibited") {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+        throw notFound();
+      }
+    };
+  }
+  return router;
 }
 
 type AppRouterInstance = ReturnType<typeof makeRouter>;
