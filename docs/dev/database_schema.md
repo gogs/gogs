@@ -11,6 +11,7 @@
 Primary keys: id
 Indexes: 
 	"access_user_repo_unique" UNIQUE (user_id, repo_id)
+	"idx_access_repo_id" (repo_id)
 ```
 
 # Table "access_token"
@@ -53,6 +54,31 @@ Primary keys: id
 Indexes: 
 	"idx_action_repo_id" (repo_id)
 	"idx_action_user_id" (user_id)
+```
+
+# Table "background_jobs"
+
+```
+     Field      |      Column      |            PostgreSQL            |              MySQL               |             SQLite3              
+----------------+------------------+----------------------------------+----------------------------------+----------------------------------
+ ID             | id               | BIGSERIAL                        | BIGINT AUTO_INCREMENT            | INTEGER AUTOINCREMENT            
+ Kind           | kind             | VARCHAR(32) NOT NULL             | VARCHAR(32) NOT NULL             | VARCHAR(32) NOT NULL             
+ UniqueKey      | unique_key       | VARCHAR(255) NOT NULL DEFAULT '' | VARCHAR(255) NOT NULL DEFAULT '' | VARCHAR(255) NOT NULL DEFAULT "" 
+ Payload        | payload          | BYTEA NOT NULL                   | LONGBLOB NOT NULL                | BLOB NOT NULL                    
+ State          | state            | VARCHAR(16) NOT NULL             | VARCHAR(16) NOT NULL             | VARCHAR(16) NOT NULL             
+ Priority       | priority         | SMALLINT NOT NULL DEFAULT 100    | SMALLINT NOT NULL DEFAULT 100    | SMALLINT NOT NULL DEFAULT 100    
+ Attempts       | attempts         | BIGINT NOT NULL DEFAULT 0        | BIGINT NOT NULL DEFAULT 0        | INTEGER NOT NULL DEFAULT 0       
+ MaxAttempts    | max_attempts     | BIGINT NOT NULL                  | BIGINT NOT NULL                  | INTEGER NOT NULL                 
+ RunAt          | run_at           | TIMESTAMPTZ NOT NULL             | DATETIME(3) NOT NULL             | DATETIME NOT NULL                
+ LeaseExpiresAt | lease_expires_at | TIMESTAMPTZ                      | DATETIME(3) NULL                 | DATETIME                         
+ LastError      | last_error       | TEXT                             | TEXT                             | TEXT                             
+ CreatedAt      | created_at       | TIMESTAMPTZ NOT NULL             | DATETIME(3) NOT NULL             | DATETIME NOT NULL                
+ UpdatedAt      | updated_at       | TIMESTAMPTZ NOT NULL             | DATETIME(3) NOT NULL             | DATETIME NOT NULL                
+
+Primary keys: id
+Indexes: 
+	"idx_background_jobs_kind_state_priority_run_at" (kind, state, priority, run_at)
+	"idx_background_jobs_kind_unique_key" (kind, unique_key)
 ```
 
 # Table "email_address"

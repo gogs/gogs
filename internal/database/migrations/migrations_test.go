@@ -39,7 +39,7 @@ func TestMigrate(t *testing.T) {
 		tables, err := db.Migrator().GetTables()
 		require.NoError(t, err)
 		tables = slices.DeleteFunc(tables, func(name string) bool { return name == "sqlite_sequence" })
-		assert.Len(t, tables, 37) // 36 tables and "goose_db_version"
+		assert.Len(t, tables, 38) // 37 tables and "goose_db_version"
 		assert.Contains(t, tables, "user")
 		assert.NotContains(t, tables, "version")
 		assert.True(t, db.Migrator().HasIndex("attachment", "UQE_attachment_uuid"))
@@ -55,7 +55,7 @@ func TestMigrate(t *testing.T) {
 		require.NoError(t, Migrate(db))
 
 		// Turn the database into one of Gogs 0.12 that the legacy runner tracked.
-		require.NoError(t, db.Migrator().DropTable("goose_db_version", "lfs_object"))
+		require.NoError(t, db.Migrator().DropTable("goose_db_version", "lfs_object", "background_jobs"))
 		require.NoError(t, db.Exec("ALTER TABLE repository DROP COLUMN is_unlisted").Error)
 		require.NoError(t, db.Migrator().CreateTable(new(Version)))
 		require.NoError(t, db.Create(&Version{ID: 1, Version: 19}).Error)
@@ -65,6 +65,7 @@ func TestMigrate(t *testing.T) {
 		assert.Equal(t, latestVersion(db), gooseVersion(t, db))
 		assert.True(t, db.Migrator().HasColumn("repository", "is_unlisted"))
 		assert.True(t, db.Migrator().HasTable("lfs_object"))
+		assert.True(t, db.Migrator().HasTable("background_jobs"))
 
 		var count int64
 		require.NoError(t, db.Table("repository").Where("is_unlisted = ?", false).Count(&count).Error)

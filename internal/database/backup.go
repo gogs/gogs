@@ -98,6 +98,14 @@ func dumpTable(ctx context.Context, db *gorm.DB, table any, w io.Writer) error {
 		switch e := elem.(type) {
 		case *LFSObject:
 			e.CreatedAt = e.CreatedAt.UTC()
+		case *BackgroundJob:
+			e.RunAt = e.RunAt.UTC()
+			e.CreatedAt = e.CreatedAt.UTC()
+			e.UpdatedAt = e.UpdatedAt.UTC()
+			if e.LeaseExpiresAt != nil {
+				leaseExpiresAt := e.LeaseExpiresAt.UTC()
+				e.LeaseExpiresAt = &leaseExpiresAt
+			}
 		}
 
 		err = json.NewEncoder(w).Encode(elem)
