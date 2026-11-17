@@ -4,13 +4,11 @@ import (
 	"context"
 	"net"
 	"net/http"
-	"net/url"
 	"strings"
 
 	"github.com/cockroachdb/errors"
-	"github.com/go-macaron/session"
+	"github.com/flamego/session"
 	"github.com/google/uuid"
-	"gopkg.in/macaron.v1"
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/auth"
@@ -18,106 +16,6 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/tool"
 )
-
-type ToggleOptions struct {
-	SignInRequired  bool
-	SignOutRequired bool
-	AdminRequired   bool
-}
-
-func Toggle(options *ToggleOptions) macaron.Handler {
-	return func(c *Context) {
-		// Frontend assets match the "/:username/:reponame" routes. Serve them to the
-		// viewers this toggle turns away, because the pages they are sent to
-		// (sign-in, account activation) are built from them. Everyone else goes
-		// through the normal routes, which keeps repositories of owners named like
-		// an asset path reachable and missing assets a 404.
-		if isWebAssetPath(c.Req.URL.Path) && turnsAway(c, options) {
-			c.ServeWeb()
-			return
-		}
-
-		// Check prohibit login users.
-		if c.IsLogged && c.User.ProhibitLogin {
-			c.serveWeb(WebContext{
-				Lang:   c.Language(),
-				SubURL: conf.Server.Subpath,
-				Page:   WebPageProhibitLogin,
-			})
-			return
-		}
-
-		// Inactive users get bounced to the React activation page, which is
-		// responsible for offering a resend and showing status.
-		if c.IsLogged && !c.User.IsActive && conf.Auth.RequireEmailConfirmation {
-			if isAPIPath(c.Req.URL.Path) {
-				c.JSON(http.StatusForbidden, map[string]string{
-					"message": "User account is not activated.",
-				})
-				return
-			}
-			c.RedirectSubpath("/user/activate")
-			return
-		}
-
-		// Check non-logged users landing page.
-		if !c.IsLogged && c.Req.RequestURI == "/" && conf.Server.LandingURL != "/" {
-			c.RedirectSubpath(conf.Server.LandingURL)
-			return
-		}
-
-		// Redirect to dashboard if user tries to visit any non-login page.
-		if options.SignOutRequired && c.IsLogged && c.Req.RequestURI != "/" {
-			c.RedirectSubpath("/")
-			return
-		}
-
-		if options.SignInRequired {
-			if !c.IsLogged {
-				// Restrict API calls with error message.
-				if isAPIPath(c.Req.URL.Path) {
-					c.JSON(http.StatusForbidden, map[string]string{
-						"message": "Only authenticated user is allowed to call APIs.",
-					})
-					return
-				}
-
-				c.RawRedirect(conf.Server.Subpath + "/user/sign-in?redirect_to=" + url.QueryEscape(conf.Server.Subpath+c.Req.URL.RequestURI()))
-				return
-			}
-		}
-
-		if options.AdminRequired {
-			if !c.User.IsAdmin {
-				c.Status(http.StatusForbidden)
-				return
-			}
-		}
-	}
-}
-
-func isAPIPath(url string) bool {
-	return strings.HasPrefix(url, "/api/")
-}
-
-// isWebAssetPath returns true for the paths of frontend assets, including the
-// module paths of the Vite dev server.
-func isWebAssetPath(p string) bool {
-	return strings.HasPrefix(p, "/assets/") ||
-		strings.HasPrefix(p, "/img/") ||
-		strings.HasPrefix(p, "/@") ||
-		strings.HasPrefix(p, "/src/") ||
-		strings.HasPrefix(p, "/node_modules/")
-}
-
-// turnsAway returns true if the toggle sends the viewer to sign-in, account
-// activation, or the prohibit-login page.
-func turnsAway(c *Context, options *ToggleOptions) bool {
-	if c.IsLogged {
-		return c.User.IsDisabled()
-	}
-	return options.SignInRequired
-}
 
 type AuthStore interface {
 	// GetAccessTokenBySHA1 returns the access token with given SHA1. It returns
@@ -156,13 +54,13 @@ type AuthStore interface {
 
 // authenticatedUserID returns the ID of the authenticated user, along with a bool value
 // which indicates whether the user uses token authentication.
-func authenticatedUserID(logger *logx.Logger, store AuthStore, c *macaron.Context, sess session.Store) (_ int64, isTokenAuth bool) {
+func authenticatedUserID(logger *logx.Logger, store AuthStore, r *http.Request, sess session.Session) (_ int64, isTokenAuth bool) {
 	// Access tokens are for API v1 only. The web API under "/api/web" serves the
 	// browser, including the routes that change the credentials and two-factor
 	// authentication of an account, which a leaked token must not reach.
-	if strings.HasPrefix(c.Req.URL.Path, "/api/v1/") {
+	if strings.HasPrefix(r.URL.Path, "/api/v1/") {
 		var tokenSHA string
-		auHead := c.Req.Header.Get("Authorization")
+		auHead := r.Header.Get("Authorization")
 		if auHead != "" {
 			auths := strings.Fields(auHead)
 			if len(auths) == 2 && auths[0] == "token" {
@@ -172,14 +70,14 @@ func authenticatedUserID(logger *logx.Logger, store AuthStore, c *macaron.Contex
 
 		// Let's see if token is valid.
 		if len(tokenSHA) > 0 {
-			t, err := store.GetAccessTokenBySHA1(c.Req.Context(), tokenSHA)
+			t, err := store.GetAccessTokenBySHA1(r.Context(), tokenSHA)
 			if err != nil {
 				if !database.IsErrAccessTokenNotExist(err) {
 					logger.Error("Failed to get access token by SHA1", "error", err)
 				}
 				return 0, false
 			}
-			if err = store.TouchAccessTokenByID(c.Req.Context(), t.ID); err != nil {
+			if err = store.TouchAccessTokenByID(r.Context(), t.ID); err != nil {
 				logger.Error("Failed to touch access token", "tokenID", t.ID, "error", err)
 			}
 			return t.UserID, true
@@ -191,7 +89,7 @@ func authenticatedUserID(logger *logx.Logger, store AuthStore, c *macaron.Contex
 		return 0, false
 	}
 	if id, ok := uid.(int64); ok {
-		_, err := store.GetUserByID(c.Req.Context(), id)
+		_, err := store.GetUserByID(r.Context(), id)
 		if err != nil {
 			if !database.IsErrUserNotExist(err) {
 				logger.Error("Failed to get user by ID", "userID", id, "error", err)
@@ -203,16 +101,16 @@ func authenticatedUserID(logger *logx.Logger, store AuthStore, c *macaron.Contex
 	return 0, false
 }
 
-// authenticatedUser returns the user object of the authenticated user, along with two bool values
+// AuthenticatedUser returns the user object of the authenticated user, along with two bool values
 // which indicate whether the user uses HTTP Basic Authentication or token authentication respectively.
-func authenticatedUser(logger *logx.Logger, store AuthStore, ctx *macaron.Context, sess session.Store) (_ *database.User, isBasicAuth, isTokenAuth bool) {
-	uid, isTokenAuth := authenticatedUserID(logger, store, ctx, sess)
+func AuthenticatedUser(logger *logx.Logger, store AuthStore, r *http.Request, sess session.Session) (_ *database.User, isBasicAuth, isTokenAuth bool) {
+	uid, isTokenAuth := authenticatedUserID(logger, store, r, sess)
 
 	if uid <= 0 {
-		if conf.Auth.EnableReverseProxyAuthentication && isRequestFromTrustedProxy(ctx.Req.Request) {
-			webAuthUser := ctx.Req.Header.Get(conf.Auth.ReverseProxyAuthenticationHeader)
+		if conf.Auth.EnableReverseProxyAuthentication && isRequestFromTrustedProxy(r) {
+			webAuthUser := r.Header.Get(conf.Auth.ReverseProxyAuthenticationHeader)
 			if len(webAuthUser) > 0 {
-				user, err := store.GetUserByUsername(ctx.Req.Context(), webAuthUser)
+				user, err := store.GetUserByUsername(r.Context(), webAuthUser)
 				if err != nil {
 					if !database.IsErrUserNotExist(err) {
 						logger.Error("Failed to get user by name", "username", webAuthUser, "error", err)
@@ -222,7 +120,7 @@ func authenticatedUser(logger *logx.Logger, store AuthStore, ctx *macaron.Contex
 					// Check if enabled auto-registration.
 					if conf.Auth.EnableReverseProxyAutoRegistration {
 						user, err = store.CreateUser(
-							ctx.Req.Context(),
+							r.Context(),
 							webAuthUser,
 							uuid.New().String()+"@localhost",
 							database.CreateUserOptions{
@@ -243,13 +141,13 @@ func authenticatedUser(logger *logx.Logger, store AuthStore, ctx *macaron.Contex
 		// which signs in with the session, and includes the routes that change
 		// the credentials and two-factor authentication of an account. A password
 		// alone, without the second factor, must not reach them.
-		baHead := ctx.Req.Header.Get("Authorization")
-		if len(baHead) > 0 && !strings.HasPrefix(ctx.Req.URL.Path, "/api/web/") {
+		baHead := r.Header.Get("Authorization")
+		if len(baHead) > 0 && !strings.HasPrefix(r.URL.Path, "/api/web/") {
 			auths := strings.Fields(baHead)
 			if len(auths) == 2 && auths[0] == "Basic" {
 				uname, passwd, _ := tool.BasicAuthDecode(auths[1])
 
-				u, err := store.AuthenticateUser(ctx.Req.Context(), uname, passwd, -1)
+				u, err := store.AuthenticateUser(r.Context(), uname, passwd, -1)
 				if err != nil {
 					if !auth.IsErrBadCredentials(err) {
 						logger.Error("Failed to authenticate user", "error", err)
@@ -266,7 +164,7 @@ func authenticatedUser(logger *logx.Logger, store AuthStore, ctx *macaron.Contex
 		return nil, false, false
 	}
 
-	u, err := store.GetUserByID(ctx.Req.Context(), uid)
+	u, err := store.GetUserByID(r.Context(), uid)
 	if err != nil {
 		logger.Error("Failed to get user by ID", "userID", uid, "error", err)
 		return nil, false, false

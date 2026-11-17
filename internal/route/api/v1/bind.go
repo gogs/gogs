@@ -2,14 +2,17 @@ package v1
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"reflect"
+	"regexp"
+	"slices"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
-	"github.com/go-macaron/binding"
 	"github.com/unknwon/com"
 	"gopkg.in/yaml.v3"
 )
@@ -22,8 +25,9 @@ const maxMultipartMemory = 10 << 20 // 10 MiB
 // the model based on the Content-Type of the request, validates it against the
 // "binding" struct tags, and maps it for subsequent handlers.
 //
-// It mirrors how github.com/go-macaron/binding binds request bodies, which API
-// v1 used before migrating to Flamego, so that clients get the same responses:
+// It mirrors how github.com/go-macaron/binding bound request bodies, which API
+// v1 used before migrating to Flamego, so that clients get responses of the
+// same shape:
 // a JSON list of binding errors with 415 for an unsupported Content-Type, 400
 // for a malformed body, and 422 for a body that fails validation.
 func bind(model any) func(c *apiContext) {
@@ -41,14 +45,14 @@ func bind(model any) func(c *apiContext) {
 
 // decodeBody decodes the request body into obj, which must be a pointer to a
 // struct, and validates it. It returns all errors found.
-func decodeBody(r *http.Request, obj reflect.Value) binding.Errors {
-	var errs binding.Errors
+func decodeBody(r *http.Request, obj reflect.Value) bindingErrors {
+	var errs bindingErrors
 	contentType := r.Header.Get("Content-Type")
 	switch {
 	case strings.Contains(contentType, "form-urlencoded"):
 		err := r.ParseForm()
 		if err != nil {
-			errs.Add([]string{}, binding.ERR_DESERIALIZATION, err.Error())
+			errs.Add([]string{}, errDeserialization, err.Error())
 		}
 		errs = mapForm(obj.Elem(), r.Form, errs)
 
@@ -56,12 +60,12 @@ func decodeBody(r *http.Request, obj reflect.Value) binding.Errors {
 		if r.MultipartForm == nil {
 			reader, err := r.MultipartReader()
 			if err != nil {
-				errs.Add([]string{}, binding.ERR_DESERIALIZATION, err.Error())
+				errs.Add([]string{}, errDeserialization, err.Error())
 				return errs
 			}
 			form, err := reader.ReadForm(maxMultipartMemory)
 			if err != nil {
-				errs.Add([]string{}, binding.ERR_DESERIALIZATION, err.Error())
+				errs.Add([]string{}, errDeserialization, err.Error())
 				return errs
 			}
 			r.MultipartForm = form
@@ -72,7 +76,7 @@ func decodeBody(r *http.Request, obj reflect.Value) binding.Errors {
 		if r.Body != nil {
 			err := json.NewDecoder(r.Body).Decode(obj.Interface())
 			if err != nil && err != io.EOF {
-				errs.Add([]string{}, binding.ERR_DESERIALIZATION, err.Error())
+				errs.Add([]string{}, errDeserialization, err.Error())
 				return errs
 			}
 		}
@@ -81,29 +85,29 @@ func decodeBody(r *http.Request, obj reflect.Value) binding.Errors {
 		if r.Body != nil {
 			err := yaml.NewDecoder(r.Body).Decode(obj.Interface())
 			if err != nil && err != io.EOF {
-				errs.Add([]string{}, binding.ERR_DESERIALIZATION, err.Error())
+				errs.Add([]string{}, errDeserialization, err.Error())
 				return errs
 			}
 		}
 
 	case contentType == "":
-		errs.Add([]string{}, binding.ERR_CONTENT_TYPE, "Empty Content-Type")
+		errs.Add([]string{}, errContentType, "Empty Content-Type")
 		return errs
 	default:
-		errs.Add([]string{}, binding.ERR_CONTENT_TYPE, "Unsupported Content-Type")
+		errs.Add([]string{}, errContentType, "Unsupported Content-Type")
 		return errs
 	}
-	return append(errs, binding.RawValidate(obj.Interface())...)
+	return append(errs, validateStruct(obj.Elem())...)
 }
 
 // writeBindingErrors responds with errs in the format of
 // github.com/go-macaron/binding.
-func writeBindingErrors(w http.ResponseWriter, errs binding.Errors) {
+func writeBindingErrors(w http.ResponseWriter, errs bindingErrors) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	switch {
-	case errs.Has(binding.ERR_DESERIALIZATION):
+	case errs.Has(errDeserialization):
 		w.WriteHeader(http.StatusBadRequest)
-	case errs.Has(binding.ERR_CONTENT_TYPE):
+	case errs.Has(errContentType):
 		w.WriteHeader(http.StatusUnsupportedMediaType)
 	default:
 		w.WriteHeader(http.StatusUnprocessableEntity)
@@ -115,7 +119,7 @@ func writeBindingErrors(w http.ResponseWriter, errs binding.Errors) {
 // mapForm sets fields of the struct from form values, using the snake case of
 // the field name as the form key, and returns errs with an error added for each
 // value that does not parse.
-func mapForm(obj reflect.Value, form url.Values, errs binding.Errors) binding.Errors {
+func mapForm(obj reflect.Value, form url.Values, errs bindingErrors) bindingErrors {
 	typ := obj.Type()
 	for i := 0; i < typ.NumField(); i++ {
 		field := obj.Field(i)
@@ -145,7 +149,7 @@ func mapForm(obj reflect.Value, form url.Values, errs binding.Errors) binding.Er
 	return errs
 }
 
-func setFormValue(field reflect.Value, value, name string, errs binding.Errors) binding.Errors {
+func setFormValue(field reflect.Value, value, name string, errs bindingErrors) bindingErrors {
 	switch field.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		if value == "" {
@@ -153,7 +157,7 @@ func setFormValue(field reflect.Value, value, name string, errs binding.Errors) 
 		}
 		v, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
-			errs.Add([]string{name}, binding.ERR_INTERGER_TYPE, "Value could not be parsed as integer")
+			errs.Add([]string{name}, errIntegerType, "Value could not be parsed as integer")
 		} else {
 			field.SetInt(v)
 		}
@@ -164,7 +168,7 @@ func setFormValue(field reflect.Value, value, name string, errs binding.Errors) 
 		}
 		v, err := strconv.ParseUint(value, 10, 64)
 		if err != nil {
-			errs.Add([]string{name}, binding.ERR_INTERGER_TYPE, "Value could not be parsed as unsigned integer")
+			errs.Add([]string{name}, errIntegerType, "Value could not be parsed as unsigned integer")
 		} else {
 			field.SetUint(v)
 		}
@@ -179,7 +183,7 @@ func setFormValue(field reflect.Value, value, name string, errs binding.Errors) 
 		}
 		v, err := strconv.ParseBool(value)
 		if err != nil {
-			errs.Add([]string{name}, binding.ERR_BOOLEAN_TYPE, "Value could not be parsed as boolean")
+			errs.Add([]string{name}, errBooleanType, "Value could not be parsed as boolean")
 		} else if v {
 			field.SetBool(true)
 		}
@@ -194,7 +198,7 @@ func setFormValue(field reflect.Value, value, name string, errs binding.Errors) 
 		}
 		v, err := strconv.ParseFloat(value, bitSize)
 		if err != nil {
-			errs.Add([]string{name}, binding.ERR_FLOAT_TYPE, class)
+			errs.Add([]string{name}, errFloatType, class)
 		} else {
 			field.SetFloat(v)
 		}
@@ -203,4 +207,124 @@ func setFormValue(field reflect.Value, value, name string, errs binding.Errors) 
 		field.SetString(value)
 	}
 	return errs
+}
+
+// Classifications of binding errors, the same as github.com/go-macaron/binding
+// used.
+const (
+	errContentType     = "ContentTypeError"
+	errDeserialization = "DeserializationError"
+	errIntegerType     = "IntegerTypeError"
+	errBooleanType     = "BooleanTypeError"
+	errFloatType       = "FloatTypeError"
+	errRequired        = "RequiredError"
+	errAlphaDashDot    = "AlphaDashDotError"
+	errSize            = "SizeError"
+	errMaxSize         = "MaxSizeError"
+	errEmail           = "EmailError"
+	errIn              = "InError"
+)
+
+type bindingError struct {
+	FieldNames     []string `json:"fieldNames,omitempty"`
+	Classification string   `json:"classification,omitempty"`
+	Message        string   `json:"message,omitempty"`
+}
+
+type bindingErrors []bindingError
+
+func (errs *bindingErrors) Add(fieldNames []string, classification, message string) {
+	*errs = append(*errs, bindingError{FieldNames: fieldNames, Classification: classification, Message: message})
+}
+
+func (errs bindingErrors) Has(classification string) bool {
+	for _, err := range errs {
+		if err.Classification == classification {
+			return true
+		}
+	}
+	return false
+}
+
+var (
+	alphaDashDotInvalid = regexp.MustCompile(`[^\d\w-_\.]`)
+	emailPattern        = regexp.MustCompile("[\\w!#$%&'*+/=?^_`{|}~-]+(?:\\.[\\w!#$%&'*+/=?^_`{|}~-]+)*@(?:[\\w](?:[\\w-]*[\\w])?\\.)+[a-zA-Z0-9](?:[\\w-]*[\\w])?")
+)
+
+// validateStruct checks the fields of the struct, and of the structs nested
+// in it, against the rules of their "binding" tags, e.g.,
+// `binding:"Required;MaxSize(100)"`. Validation of a field stops at its first
+// failed rule.
+func validateStruct(obj reflect.Value) bindingErrors {
+	var errs bindingErrors
+	typ := obj.Type()
+	for i := 0; i < typ.NumField(); i++ {
+		field := typ.Field(i)
+		if !field.IsExported() {
+			continue
+		}
+		value := obj.Field(i)
+		if value.Kind() == reflect.Struct {
+			errs = append(errs, validateStruct(value)...)
+		} else if value.Kind() == reflect.Pointer && !value.IsNil() && value.Elem().Kind() == reflect.Struct {
+			errs = append(errs, validateStruct(value.Elem())...)
+		}
+		if err, ok := validateField(field, value); !ok {
+			errs = append(errs, err)
+		}
+	}
+	return errs
+}
+
+func validateField(field reflect.StructField, value reflect.Value) (bindingError, bool) {
+	fail := func(classification, message string) (bindingError, bool) {
+		return bindingError{FieldNames: []string{field.Name}, Classification: classification, Message: message}, false
+	}
+	str := fmt.Sprintf("%v", value.Interface())
+	length := -1
+	switch value.Kind() {
+	case reflect.String:
+		length = utf8.RuneCountInString(value.String())
+	case reflect.Slice:
+		length = value.Len()
+	}
+
+	for _, rule := range strings.Split(field.Tag.Get("binding"), ";") {
+		switch {
+		case rule == "":
+		case rule == "OmitEmpty":
+			if value.IsZero() {
+				return bindingError{}, true
+			}
+		case rule == "Required":
+			if value.IsZero() || (value.Kind() == reflect.Slice && value.Len() == 0) {
+				return fail(errRequired, "Required")
+			}
+		case rule == "AlphaDashDot":
+			if alphaDashDotInvalid.MatchString(str) {
+				return fail(errAlphaDashDot, "AlphaDashDot")
+			}
+		case rule == "Email":
+			if !emailPattern.MatchString(str) {
+				return fail(errEmail, "Email")
+			}
+		case strings.HasPrefix(rule, "Size("):
+			size, _ := strconv.Atoi(rule[len("Size(") : len(rule)-1])
+			if length >= 0 && length != size {
+				return fail(errSize, "Size")
+			}
+		case strings.HasPrefix(rule, "MaxSize("):
+			size, _ := strconv.Atoi(rule[len("MaxSize(") : len(rule)-1])
+			if length > size {
+				return fail(errMaxSize, "MaxSize")
+			}
+		case strings.HasPrefix(rule, "In("):
+			if !slices.Contains(strings.Split(rule[len("In("):len(rule)-1], ","), str) {
+				return fail(errIn, "In")
+			}
+		default:
+			panic(fmt.Sprintf("unsupported binding rule %q of field %s", rule, field.Name))
+		}
+	}
+	return bindingError{}, true
 }

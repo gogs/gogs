@@ -42,6 +42,22 @@ func (p webAppPages) NotFound(c flamego.Context) {
 	p.ServeHTTP(c.ResponseWriter(), r.WithContext(stdctx.WithValue(r.Context(), context.WebContextKey{}, wc)))
 }
 
+// Error renders the page of a server error, with a 500 status. Only site
+// admins, or anyone outside production, see the error.
+func (p webAppPages) Error(w http.ResponseWriter, r *http.Request, viewer *database.User, err error) {
+	wc := context.WebContextFrom(r)
+	wc.StatusCode = http.StatusInternalServerError
+	wc.Page = context.WebPageServerError
+	isAdmin := viewer != nil && viewer.IsAdmin
+	if !conf.IsProdMode() || isAdmin {
+		wc.Error = err.Error()
+	}
+	if isAdmin {
+		wc.Version = conf.App.Version
+	}
+	p.ServeHTTP(w, r.WithContext(stdctx.WithValue(r.Context(), context.WebContextKey{}, wc)))
+}
+
 // getAttachment serves an attachment of an issue, a comment or a release to
 // viewers who can read the repository.
 func getAttachment(c flamego.Context, logger *logx.Logger, viewer *database.User, pages webAppPages) {

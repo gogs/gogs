@@ -173,7 +173,7 @@ func TestUserSignOut(t *testing.T) {
 	status, body := c.do(http.MethodPost, "/api/web/user/sign-out", map[string]any{})
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 	assert.Empty(t, c.username())
-	store, err := sessions.Read(sessionID)
+	store, err := sessions.Read(t.Context(), sessionID)
 	require.NoError(t, err)
 	assert.Nil(t, store.Get("uid"), "session of the signed-out user still signed in")
 }

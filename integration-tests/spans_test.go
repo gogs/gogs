@@ -14,8 +14,7 @@ import (
 
 // spanReceiver receives the spans the server under test exports over OTLP. The
 // server names the span of a request after the route it matched, e.g.,
-// "GET /api/web/{owner}/{repo}/header", or after the method and the path for
-// routes of Macaron, which records no route, e.g., "GET /alice/repo.git/info/refs".
+// "GET /api/web/{owner}/{repo}/header".
 type spanReceiver struct {
 	server *http.Server
 	url    string

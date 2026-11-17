@@ -8,72 +8,101 @@ import (
 	"net/url"
 	"reflect"
 	"strings"
-	"time"
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/binding"
 	"github.com/flamego/flamego"
 	"github.com/flamego/session"
-	"github.com/go-macaron/i18n"
-	macaronsession "github.com/go-macaron/session"
 	"github.com/go-playground/validator/v10"
-	"gopkg.in/macaron.v1"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/i18n"
 	"gogs.io/gogs/internal/lazyregexp"
 	apiv1 "gogs.io/gogs/internal/route/api/v1"
 )
 
-type (
-	apiV1RequestKey  struct{}
-	webAPISessionKey struct{}
-	webAPIMacaronKey struct{}
-	webAPILocaleKey  struct{}
-)
+// authMethod is how the authenticated user of a request authenticated.
+type authMethod struct {
+	basicAuth bool
+	tokenAuth bool
+}
 
-func flamegoBridger(webHandler http.Handler) func(c *context.Context, l i18n.Locale) {
-	return func(c *context.Context, l i18n.Locale) {
-		ctx := c.Req.Context()
-		ctx = stdctx.WithValue(ctx, context.UserKey{}, c.User)
-		ctx = stdctx.WithValue(ctx, webAPISessionKey{}, c.Session)
-		ctx = stdctx.WithValue(ctx, webAPIMacaronKey{}, c.Context)
-		ctx = stdctx.WithValue(ctx, webAPILocaleKey{}, l)
-		// The web app renders pages in the viewer's language.
-		ctx = stdctx.WithValue(ctx, context.WebContextKey{}, context.WebContext{
-			Lang:   l.Language(),
-			SubURL: conf.Server.Subpath,
-		})
-		req := c.Req.WithContext(ctx)
-		webHandler.ServeHTTP(c.Resp, req)
-		// Flamego's route, e.g., "GET /api/web/{owner}/{repo}/header", is more
-		// specific than the Macaron route that bridges to it, e.g.,
-		// "GET /api/web/*". Copy it to the outer request, the one the tracing
-		// handler reads.
-		if req.Pattern != "" {
-			c.Req.Pattern = req.Pattern
-		}
+// authenticator returns the middleware that maps the authenticated user
+// (*database.User, nil for anonymous visitors) and the authMethod of each
+// request, from the session, the access token, the reverse proxy
+// authentication header, or HTTP Basic Authentication.
+func authenticator(store context.Store) flamego.Handler {
+	return func(c flamego.Context, logger *logx.Logger, sess session.Session) {
+		user, isBasicAuth, isTokenAuth := context.AuthenticatedUser(logger, store, c.Request().Request, sess)
+		c.Map(user, authMethod{basicAuth: isBasicAuth, tokenAuth: isTokenAuth})
 	}
 }
 
-// apiV1Bridger bridges API v1 requests to Flamego. Macaron trims the trailing
-// slash and unescapes each segment of the escaped path before matching, so an
-// encoded slash (%2F) stays within its segment. Flamego matches against the
-// path as-is, so the path is normalized here to keep routing unchanged.
-func apiV1Bridger(apiHandler http.Handler) func(c *context.Context, l i18n.Locale) {
-	bridge := flamegoBridger(apiHandler)
-	segmentEscaper := strings.NewReplacer("%", "%25", "/", "%2F")
-	return func(c *context.Context, l i18n.Locale) {
-		info := apiv1.RequestInfo{
-			IsBasicAuth: c.IsBasicAuth,
-			IsTokenAuth: c.IsTokenAuth,
-			Path:        c.Req.URL.Path,
-			WebNotFound: c.NotFound,
-			WebError:    c.Error,
-		}
+func corsHeaders(w http.ResponseWriter) {
+	if conf.HTTP.AccessControlAllowOrigin == "" {
+		return
+	}
+	w.Header().Set("Access-Control-Allow-Origin", conf.HTTP.AccessControlAllowOrigin)
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Max-Age", "3600")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With")
+}
 
-		u := *c.Req.URL
+// withWebContext attaches the WebContext of the request, so the web app renders
+// pages in the viewer's language. The request is changed in place, so the route
+// that apiV1Bridger copies to it reaches the tracing handler, which holds it.
+func withWebContext(r *http.Request, l i18n.Locale) {
+	*r = *r.WithContext(stdctx.WithValue(r.Context(), context.WebContextKey{}, context.WebContext{
+		Lang:   l.Language(),
+		SubURL: conf.Server.Subpath,
+	}))
+}
+
+// apiV1Access turns away the API v1 requests of users prohibited from signing
+// in, users who have not confirmed their email when that is required, and,
+// when the site requires signing in to view content, anonymous visitors.
+func apiV1Access(c flamego.Context, viewer *database.User, pages webAppPages) {
+	writeJSON := func(message string) {
+		w := c.ResponseWriter()
+		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+		w.WriteHeader(http.StatusForbidden)
+		body, _ := json.Marshal(map[string]string{"message": message})
+		_, _ = w.Write(body)
+	}
+	switch {
+	case viewer != nil && viewer.ProhibitLogin:
+		r := c.Request().Request
+		wc := context.WebContextFrom(r)
+		wc.Page = context.WebPageProhibitLogin
+		pages.ServeHTTP(c.ResponseWriter(), r.WithContext(stdctx.WithValue(r.Context(), context.WebContextKey{}, wc)))
+	case viewer != nil && !viewer.IsActive && conf.Auth.RequireEmailConfirmation:
+		writeJSON("User account is not activated.")
+	case viewer == nil && conf.Auth.RequireSigninView:
+		writeJSON("Only authenticated user is allowed to call APIs.")
+	}
+}
+
+type apiV1RequestKey struct{}
+
+// apiV1Request is what apiV1Bridger passes to the API v1 handler.
+type apiV1Request struct {
+	user   *database.User
+	info   apiv1.RequestInfo
+	locale i18n.Locale
+}
+
+// apiV1Bridger hands API v1 requests to its handler. Like Macaron did, the
+// trailing slash is trimmed and each segment of the escaped path is unescaped
+// before matching, so an encoded slash (%2F) stays within its segment.
+func apiV1Bridger(apiHandler http.Handler) flamego.Handler {
+	segmentEscaper := strings.NewReplacer("%", "%25", "/", "%2F")
+	return func(c flamego.Context, logger *logx.Logger, user *database.User, method authMethod, l i18n.Locale, pages webAppPages) {
+		r := c.Request().Request
+		w := c.ResponseWriter()
+		u := *r.URL
 		segments := strings.Split(strings.TrimSuffix(u.EscapedPath(), "/"), "/")
 		for i, segment := range segments {
 			unescaped, err := url.PathUnescape(segment)
@@ -84,55 +113,35 @@ func apiV1Bridger(apiHandler http.Handler) func(c *context.Context, l i18n.Local
 		u.Path = strings.Join(segments, "/")
 		u.RawPath = ""
 
-		orig := c.Req.Request
-		r := orig.WithContext(stdctx.WithValue(orig.Context(), apiV1RequestKey{}, info))
-		r.URL = &u
-		c.Req.Request = r
-		bridge(c, l)
-		// The bridge copies the Flamego route to the request it was given, so
-		// hand it on to the request the tracing handler reads.
-		orig.Pattern = r.Pattern
-		c.Req.Request = orig
+		req := r.WithContext(stdctx.WithValue(r.Context(), apiV1RequestKey{}, apiV1Request{
+			user: user,
+			info: apiv1.RequestInfo{
+				IsBasicAuth: method.basicAuth,
+				IsTokenAuth: method.tokenAuth,
+				Path:        r.URL.Path,
+				WebNotFound: func() { pages.NotFound(c) },
+				WebError: func(err error, msg string) {
+					logger.Error("Internal server error", "method", r.Method, "path", r.URL.Path, "operation", msg, "error", err)
+					pages.Error(w, r, user, err)
+				},
+			},
+			locale: l,
+		}))
+		req.URL = &u
+		apiHandler.ServeHTTP(w, req)
+		// The API v1 route, e.g., "GET /api/v1/repos/{owner}/{repo}", is more
+		// specific than the route that bridges to it. Copy it to the outer
+		// request, the one the tracing handler reads.
+		if req.Pattern != "" {
+			r.Pattern = req.Pattern
+		}
 	}
 }
 
-func flamegoInjector(c flamego.Context) {
-	ctx := c.Request().Context()
-	viewer, _ := ctx.Value(context.UserKey{}).(*database.User)
-	apiV1Request, _ := ctx.Value(apiV1RequestKey{}).(apiv1.RequestInfo)
-	sess, _ := ctx.Value(webAPISessionKey{}).(macaronsession.Store)
-	mc, _ := ctx.Value(webAPIMacaronKey{}).(*macaron.Context)
-	l, _ := ctx.Value(webAPILocaleKey{}).(i18n.Locale)
-	c.Map(viewer, apiV1Request, sess, mc, l)
-	c.MapTo(flamegoSessionAdapter{sess: sess}, (*session.Session)(nil))
+func apiV1Injector(c flamego.Context) {
+	req, _ := c.Request().Context().Value(apiV1RequestKey{}).(apiV1Request)
+	c.Map(req.user, req.info, req.locale)
 }
-
-// flamegoSessionAdapter exposes the underlying Macaron session via the Flamego
-// session interface so the captcha middleware (and any future Flamego-native
-// session consumer) can read/write the same session store the rest of the app
-// uses.
-//
-// The Macaron session manager owns the session lifecycle and persistence, so
-// ID regeneration, deadlines, and change tracking are no-ops here.
-type flamegoSessionAdapter struct {
-	sess macaronsession.Store
-}
-
-var _ session.Session = flamegoSessionAdapter{}
-
-func (s flamegoSessionAdapter) ID() string { return s.sess.ID() }
-func (flamegoSessionAdapter) RegenerateID(http.ResponseWriter, *http.Request) error {
-	return errors.New("regenerating session ID is not supported")
-}
-func (s flamegoSessionAdapter) Get(key any) any           { return s.sess.Get(key) }
-func (s flamegoSessionAdapter) Set(key, val any)          { _ = s.sess.Set(key, val) }
-func (s flamegoSessionAdapter) SetFlash(val any)          { _ = s.sess.Set("_flash", val) }
-func (s flamegoSessionAdapter) Delete(key any)            { _ = s.sess.Delete(key) }
-func (s flamegoSessionAdapter) Flush()                    { _ = s.sess.Flush() }
-func (flamegoSessionAdapter) SetDeadline(time.Time)       {}
-func (flamegoSessionAdapter) Deadline() (time.Time, bool) { return time.Time{}, false }
-func (flamegoSessionAdapter) Encode() ([]byte, error)     { return nil, nil }
-func (flamegoSessionAdapter) HasChanged() bool            { return false }
 
 // requireViewAccess turns away the same viewers as the sign-in toggle of the
 // server-rendered pages: disabled users and, when the site requires signing in

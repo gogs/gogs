@@ -8,13 +8,12 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
-	"github.com/go-macaron/i18n"
-	"gopkg.in/macaron.v1"
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
+	"gogs.io/gogs/internal/i18n"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -323,7 +322,7 @@ type adminUserCreated struct {
 	Name string `json:"name"`
 }
 
-func postAdminUser(logger *logx.Logger, c flamego.Context, mc *macaron.Context, l i18n.Locale, admin *database.User, req adminUserCreateRequest) (statusCode int, resp any, err error) {
+func postAdminUser(logger *logx.Logger, c flamego.Context, l i18n.Locale, admin *database.User, req adminUserCreateRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	fields, err := checkAdminLoginSource(ctx, l, req.LoginSource, req.LoginName)
 	if err != nil {
@@ -366,7 +365,7 @@ func postAdminUser(logger *logx.Logger, c flamego.Context, mc *macaron.Context, 
 	logger.Debug("Account created by admin", "userName", user.Name, "adminName", admin.Name)
 
 	if req.SendNotify && conf.Email.Enabled {
-		if err = email.SendRegisterNotifyMail(logger, mc, database.NewMailerUser(user)); err != nil {
+		if err = email.SendRegisterNotifyMail(logger, l, database.NewMailerUser(user)); err != nil {
 			logger.Error("Failed to send register notify mail", "userID", user.ID, "error", err)
 		}
 	}
