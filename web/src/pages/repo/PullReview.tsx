@@ -17,7 +17,6 @@ import { toast } from "sonner";
 
 import type { DiffLineTarget } from "@/components/DiffWorkspace";
 import { AttachFilesButton, MarkdownEditor, SidebarSection } from "@/components/IssueForm";
-import { Markdown } from "@/components/Markdown";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -38,7 +37,7 @@ import { useIsLinked } from "@/lib/use-is-linked";
 import { useUserInfo } from "@/lib/use-user-info";
 import { cn } from "@/lib/utils";
 
-import { Chip, EventSentence, ThreadReplies, UserLink } from "./Issue";
+import { Chip, CommentCard, EventSentence, ThreadReplies, UserLink } from "./Issue";
 
 const REVIEW_EVENTS: Record<ReviewState, { icon: LucideIcon; text: string; className: string; label: string }> = {
   approve: {
@@ -94,24 +93,46 @@ export function PullTimelineItem({
   const event = REVIEW_EVENTS[comment.review.state];
   const threads = data.threads.filter((th) => th.thread?.reviewID === comment.review?.id);
   const anchor = `pullrequestreview-${comment.review.id}`;
+  const Icon = event.icon;
   return (
     <div className="flex flex-col gap-3">
-      <EventRow
-        anchor={anchor}
-        icon={event.icon}
-        iconClassName={event.className}
-        comment={comment}
-        text={t(event.text)}
-      />
-      {comment.contentHTML || threads.length ? (
+      {/* A review with a summary shows like a comment, with its outcome in the
+          header. One without shows as a line of the timeline. */}
+      {comment.contentHTML ? (
+        <CommentCard
+          issueRef={issueRef}
+          anchor={anchor}
+          poster={comment.poster}
+          createdAt={comment.createdAt}
+          html={comment.contentHTML}
+          tag={comment.tag}
+          attachments={comment.attachments ?? []}
+          sentence={t(event.text)}
+          badge={
+            <span
+              className={cn(
+                "mr-1 inline-flex items-center gap-1 rounded-full border border-current px-2 text-xs/5",
+                event.className,
+              )}
+            >
+              <Icon className="size-3.5" aria-hidden />
+              {t(event.label)}
+            </span>
+          }
+        />
+      ) : (
+        <EventRow
+          anchor={anchor}
+          icon={event.icon}
+          iconClassName={event.className}
+          comment={comment}
+          text={t(event.text)}
+        />
+      )}
+      {threads.length ? (
         <div className="flex flex-col gap-3 sm:pl-13">
           {/* The padding is the avatar column of comments, size-10 and gap-3,
-              so the review lines up with the comment cards around it. */}
-          {comment.contentHTML ? (
-            <div className="rounded-md border border-(--color-border) px-4 py-3">
-              <Markdown html={comment.contentHTML} />
-            </div>
-          ) : null}
+              so the threads line up with the comment cards around them. */}
           {threads.map((thread) => (
             <ReviewThread key={thread.id} issueRef={issueRef} data={data} thread={thread} />
           ))}
