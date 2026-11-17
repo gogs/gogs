@@ -101,8 +101,8 @@ func comparePull(ctx context.Context, logger *logx.Logger, viewer *database.User
 
 // openPullIndex returns the index of the open pull request of the same
 // branches, or 0 when there is none.
-func (p *pullCompare) openPullIndex(repo *database.Repository) (int64, error) {
-	pull, err := database.GetUnmergedPullRequest(p.HeadRepo.ID, repo.ID, p.HeadBranch, p.BaseBranch)
+func (p *pullCompare) openPullIndex(ctx context.Context, repo *database.Repository) (int64, error) {
+	pull, err := database.Handle.PullRequests().GetUnmerged(ctx, p.HeadRepo.ID, repo.ID, p.HeadBranch, p.BaseBranch)
 	if err != nil {
 		if database.IsErrPullRequestNotExist(err) {
 			return 0, nil
@@ -218,7 +218,7 @@ func getRepoNewPull(c flamego.Context, logger *logx.Logger, viewer *database.Use
 		Name:               p.HeadRepo.Name,
 		MarkdownExtensions: conf.Markdown.FileExtensions,
 	}
-	if resp.PullIndex, err = p.openPullIndex(repo); err != nil {
+	if resp.PullIndex, err = p.openPullIndex(ctx, repo); err != nil {
 		logger.Error("Failed to find open pull request", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, err
 	} else if resp.PullIndex > 0 {
@@ -276,7 +276,7 @@ func postRepoPull(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer 
 	case p.HeadCommitID == p.Meta.MergeBase:
 		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("repo.pulls.nothing_to_compare")}, nil
 	}
-	if index, err := p.openPullIndex(repo); err != nil {
+	if index, err := p.openPullIndex(ctx, repo); err != nil {
 		logger.Error("Failed to find open pull request", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, err
 	} else if index > 0 {
@@ -311,7 +311,7 @@ func postRepoPull(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer 
 	// Opening the pull request notifies watchers and webhooks about the
 	// repository and its owner.
 	repo.Owner = repoCtx.Owner
-	if err = database.NewPullRequest(ctx, logger, repo, issue, labelIDs, req.Attachments, pull, patch); err != nil {
+	if err = database.Handle.PullRequests().Create(ctx, logger, repo, issue, labelIDs, req.Attachments, pull, patch); err != nil {
 		logger.Error("Failed to create pull request", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "create pull request")
 	}

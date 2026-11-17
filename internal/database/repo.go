@@ -550,11 +550,6 @@ func (r *Repository) GetWriters() (_ []*User, err error) {
 	return r.getUsersWithAccesMode(Handle.db, AccessModeWrite)
 }
 
-// IssueStats returns number of open and closed repository issues by given filter mode.
-func (r *Repository) IssueStats(userID int64, filterMode FilterMode, isPull bool) (int64, int64) {
-	return GetRepoIssueStats(r.ID, userID, filterMode, isPull)
-}
-
 func (r *Repository) repoPath(tx *gorm.DB) string {
 	return RepoPath(r.mustOwner(tx).Name, r.Name)
 }
@@ -2637,4 +2632,16 @@ func (r *Repository) recalculateAccesses(e Engine) error {
 // RecalculateAccesses recalculates all accesses for repository.
 func (r *Repository) RecalculateAccesses() error {
 	return r.recalculateAccesses(x)
+}
+
+// TODO: Remove once the repository statistics are moved into a store.
+func parseCountResult(results []map[string][]byte) int64 {
+	if len(results) == 0 {
+		return 0
+	}
+	for _, result := range results[0] {
+		count, _ := strconv.ParseInt(string(result), 10, 64)
+		return count
+	}
+	return 0
 }

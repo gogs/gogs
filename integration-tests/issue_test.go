@@ -60,7 +60,7 @@ func issueGet(t *testing.T, c *client, repo *Repository, index int64) *issueView
 func issueFromDatabase(t *testing.T, repo *Repository, index int64) *database.Issue {
 	t.Helper()
 
-	issue, err := database.GetIssueByIndex(repo.ID, index)
+	issue, err := database.Handle.Issues().GetByIndex(t.Context(), repo.ID, index)
 	require.NoError(t, err)
 	return issue
 }
@@ -263,7 +263,7 @@ func TestIssueComments(t *testing.T) {
 		ID int64 `json:"id"`
 	}
 	commenterClient.doJSON(http.MethodPost, path, map[string]any{"content": "I **agree**."}, http.StatusCreated, &created)
-	comment, err := database.GetCommentByID(created.ID)
+	comment, err := database.Handle.Comments().GetByID(t.Context(), created.ID)
 	require.NoError(t, err)
 	assert.Equal(t, "I **agree**.", comment.Content)
 	assert.Equal(t, commenter.ID, comment.PosterID)
@@ -290,13 +290,13 @@ func TestIssueComments(t *testing.T) {
 
 	status, body = commenterClient.do(http.MethodPatch, commentPath, map[string]any{"content": "I disagree."})
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-	comment, err = database.GetCommentByID(created.ID)
+	comment, err = database.Handle.Comments().GetByID(t.Context(), created.ID)
 	require.NoError(t, err)
 	assert.Equal(t, "I disagree.", comment.Content)
 
 	status, body = ownerClient.do(http.MethodDelete, commentPath, map[string]any{})
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-	_, err = database.GetCommentByID(created.ID)
+	_, err = database.Handle.Comments().GetByID(t.Context(), created.ID)
 	assert.True(t, database.IsErrCommentNotExist(err), "comment not deleted: %v", err)
 	assert.Empty(t, issueGet(t, ownerClient, repo, index).Comments)
 }

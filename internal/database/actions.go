@@ -313,7 +313,8 @@ func assembleKeywordsPattern(words []string) string {
 }
 
 // updateCommitReferencesToIssues checks if issues are manipulated by commit message.
-func updateCommitReferencesToIssues(logger *logx.Logger, doer *User, repo *Repository, commits []*PushCommit) error {
+func (s *ActionsStore) updateCommitReferencesToIssues(ctx context.Context, logger *logx.Logger, doer *User, repo *Repository, commits []*PushCommit) error {
+	issues := newIssuesStore(s.db)
 	trimRightNonDigits := func(c rune) bool {
 		return !unicode.IsDigit(c)
 	}
@@ -337,7 +338,7 @@ func updateCommitReferencesToIssues(logger *logx.Logger, doer *User, repo *Repos
 				continue
 			}
 
-			issue, err := GetIssueByRef(ref)
+			issue, err := issues.getByRef(ctx, ref)
 			if err != nil {
 				if IsErrIssueNotExist(err) {
 					continue
@@ -362,7 +363,7 @@ func updateCommitReferencesToIssues(logger *logx.Logger, doer *User, repo *Repos
 				shortMsg += "..."
 			}
 			message := fmt.Sprintf(`<a href="%s/commit/%s">%s</a>`, repo.Link(), c.Sha1, shortMsg)
-			if err = CreateRefComment(logger, doer, repo, issue, message, c.Sha1); err != nil {
+			if err = newCommentsStore(s.db).createRef(ctx, logger, doer, repo, issue, message, c.Sha1); err != nil {
 				return err
 			}
 		}
@@ -385,7 +386,7 @@ func updateCommitReferencesToIssues(logger *logx.Logger, doer *User, repo *Repos
 				continue
 			}
 
-			issue, err := GetIssueByRef(ref)
+			issue, err := issues.getByRef(ctx, ref)
 			if err != nil {
 				if IsErrIssueNotExist(err) {
 					continue
@@ -402,7 +403,7 @@ func updateCommitReferencesToIssues(logger *logx.Logger, doer *User, repo *Repos
 				continue
 			}
 
-			if err = issue.ChangeStatus(logger, doer, repo, true); err != nil {
+			if err = issues.ChangeStatus(ctx, logger, doer, repo, issue, true); err != nil {
 				return err
 			}
 		}
@@ -425,7 +426,7 @@ func updateCommitReferencesToIssues(logger *logx.Logger, doer *User, repo *Repos
 				continue
 			}
 
-			issue, err := GetIssueByRef(ref)
+			issue, err := issues.getByRef(ctx, ref)
 			if err != nil {
 				if IsErrIssueNotExist(err) {
 					continue
@@ -442,7 +443,7 @@ func updateCommitReferencesToIssues(logger *logx.Logger, doer *User, repo *Repos
 				continue
 			}
 
-			if err = issue.ChangeStatus(logger, doer, repo, false); err != nil {
+			if err = issues.ChangeStatus(ctx, logger, doer, repo, issue, false); err != nil {
 				return err
 			}
 		}
@@ -525,7 +526,7 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, logger *logx.Logger, opts
 
 	// Only update issues via commits when internal issue tracker is enabled
 	if opts.Repo.EnableIssues && !opts.Repo.EnableExternalTracker {
-		if err = updateCommitReferencesToIssues(logger, pusher, opts.Repo, opts.Commits.Commits); err != nil {
+		if err = s.updateCommitReferencesToIssues(ctx, logger, pusher, opts.Repo, opts.Commits.Commits); err != nil {
 			logger.Error("Failed to update commit references to issues", "error", err)
 		}
 	}
@@ -808,7 +809,7 @@ func (a *Action) GetIssueInfos() []string {
 
 func (a *Action) GetIssueTitle() string {
 	index, _ := strconv.ParseInt(a.GetIssueInfos()[0], 10, 64)
-	issue, err := GetIssueByIndex(a.RepoID, index)
+	issue, err := Handle.Issues().getRaw(context.TODO(), map[string]any{"repoID": a.RepoID, "index": index}, "repo_id = ? AND "+Handle.db.Statement.Quote("index")+" = ?", a.RepoID, index)
 	if err != nil {
 		handleLogger().Error("Failed to get issue title", "repoID", a.RepoID, "index", index, "error", err)
 		return "error getting issue"
@@ -818,7 +819,7 @@ func (a *Action) GetIssueTitle() string {
 
 func (a *Action) GetIssueContent() string {
 	index, _ := strconv.ParseInt(a.GetIssueInfos()[0], 10, 64)
-	issue, err := GetIssueByIndex(a.RepoID, index)
+	issue, err := Handle.Issues().getRaw(context.TODO(), map[string]any{"repoID": a.RepoID, "index": index}, "repo_id = ? AND "+Handle.db.Statement.Quote("index")+" = ?", a.RepoID, index)
 	if err != nil {
 		handleLogger().Error("Failed to get issue content", "repoID", a.RepoID, "index", index, "error", err)
 		return "error getting issue"
