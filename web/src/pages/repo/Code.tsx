@@ -426,14 +426,14 @@ export function RepoCode({
       <RepoHeader repo={repo} activeTab="code" />
       <div className="flex min-h-0 w-full gap-4 px-4 sm:px-6">
         {treeShown ? (
-          // The column stretches to the file view, so the sticky tree inside
-          // ends where the file view ends, or at the window bottom.
+          // The tree is as tall as its rows, up to the height of the window,
+          // and scrolls inside beyond that.
           <div className="hidden shrink-0 lg:my-6 lg:block">
             <ResizableSidebar
               defaultWidth={300}
               minWidth={220}
               maxWidth={480}
-              className="glass overflow-hidden rounded-md border border-(--color-border) lg:sticky lg:top-[calc(3.5rem+1px+1.5rem)] lg:h-full lg:max-h-[calc(100dvh-3.5rem-1px-3rem)] lg:min-h-96"
+              className="glass overflow-hidden rounded-md border border-(--color-border) lg:sticky lg:top-[calc(3.5rem+1px+1.5rem)] lg:max-h-[calc(100dvh-3.5rem-1px-3rem)]"
             >
               <div className="flex flex-col gap-2 p-3">
                 <div className="flex items-center gap-2">
@@ -459,20 +459,17 @@ export function RepoCode({
                 </div>
                 {goToFile()}
               </div>
-              <div className="min-h-0 flex-1">
-                <RepoFileTree
-                  owner={repo.owner}
-                  name={repo.name}
-                  gitRef={data.ref}
-                  commitID={data.commitID}
-                  path={data.path}
-                />
-              </div>
+              <RepoFileTree
+                owner={repo.owner}
+                name={repo.name}
+                gitRef={data.ref}
+                commitID={data.commitID}
+                path={data.path}
+              />
             </ResizableSidebar>
           </div>
         ) : null}
-        {/* The last panel grows to the tree's minimum height, so the two always end together. */}
-        <main className="flex min-w-0 flex-1 flex-col py-6 [&>:last-child]:flex-1">
+        <main className="flex min-w-0 flex-1 flex-col py-6">
           <h1 className="sr-only">{data.path}</h1>
           <div className="mb-3 flex flex-wrap items-center gap-2 glass glass-ui:border glass-ui:px-3 glass-ui:py-2">
             {withTree && !treeOpen ? (
