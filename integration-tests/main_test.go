@@ -249,8 +249,8 @@ HTTP_ADDR = 127.0.0.1
 HTTP_PORT = %[2]d
 OFFLINE_MODE = true
 ; Tests add SSH keys, which are written to the authorized_keys file in the work
-; directory rather than the one of the user running the tests. The SSH server
-; does not start.
+; directory rather than the one of the user running the tests. The server does
+; not start the builtin SSH server, the SSH tests start one in their process.
 SSH_ROOT_PATH = %[6]s
 
 [repository]
