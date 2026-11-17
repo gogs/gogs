@@ -116,6 +116,7 @@ All notable changes to Gogs are documented in this file.
 - Changing the settings of a mirror while it syncs, e.g., its interval or pruning, is no longer undone when the sync finishes. [#8502](https://github.com/gogs/gogs/pull/8502)
 - Deleting a release, or the repository it belongs to, now also deletes the files attached to the release. [#8503](https://github.com/gogs/gogs/pull/8503)
 - Publishing a draft release whose tag name is not valid now says that the tag name is not valid, instead of failing with a server error. [#8503](https://github.com/gogs/gogs/pull/8503)
+- "New pull request" in a fork that takes pull requests now compares branches of the fork instead of always going to its base repository, and the comparison lets you choose between the fork and its base repository. [#8646](https://github.com/gogs/gogs/pull/8646)
 
 ### Removed
 
