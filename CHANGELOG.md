@@ -45,6 +45,7 @@ All notable changes to Gogs are documented in this file.
 - Pushes are up to three times faster, and clones and fetches over the built-in SSH server are faster. Existing repositories get the faster pushes once an admin runs `gogs admin resync-hooks` or "Resync pre-receive, update and post-receive hooks of all repositories" in the admin dashboard after upgrading. [#8552](https://github.com/gogs/gogs/pull/8552)
 - Git hooks placed in a repository's `custom_hooks` directory directly on disk, rather than saved in the repository settings, now only run after an admin runs `gogs admin resync-hooks`. [#8552](https://github.com/gogs/gogs/pull/8552)
 - Uploading files in the web editor fails with a message when one of them would go into the `.git` directory, e.g., a file named `.git`. Previously the other files were committed and that one was silently left out. [#8655](https://github.com/gogs/gogs/pull/8655)
+- Avatars hosted by Gogs are now served from `/-/avatars/<id>` and `/-/repo-avatars/<id>`, so they no longer hide the pages of users named `avatars` or `repo-avatars`. Links to the old `/avatars/<id>` and `/repo-avatars/<id>` paths, e.g., in chat messages sent by webhooks, no longer load. [#8650](https://github.com/gogs/gogs/pull/8650)
 
 ### Fixed
 

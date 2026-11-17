@@ -268,7 +268,7 @@ func TestRepoSettingsAvatar(t *testing.T) {
 	var settings avatarSettings
 	c.doJSON(http.MethodGet, repoSettingsAPIPath(repo, "/settings"), nil, http.StatusOK, &settings)
 	assert.True(t, settings.HasCustomAvatar)
-	assert.Equal(t, "/repo-avatars/"+strconv.FormatInt(repo.ID, 10), settings.AvatarURL)
+	assert.Equal(t, "/-/repo-avatars/"+strconv.FormatInt(repo.ID, 10), settings.AvatarURL)
 
 	status, _, body = c.doRaw(http.MethodDelete, repoSettingsAPIPath(repo, "/settings/avatar"), "", nil)
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
@@ -276,7 +276,7 @@ func TestRepoSettingsAvatar(t *testing.T) {
 	settings = avatarSettings{}
 	c.doJSON(http.MethodGet, repoSettingsAPIPath(repo, "/settings"), nil, http.StatusOK, &settings)
 	assert.False(t, settings.HasCustomAvatar)
-	assert.NotEqual(t, "/repo-avatars/"+strconv.FormatInt(repo.ID, 10), settings.AvatarURL)
+	assert.NotEqual(t, "/-/repo-avatars/"+strconv.FormatInt(repo.ID, 10), settings.AvatarURL)
 }
 
 func TestRepoAvatarAccess(t *testing.T) {
@@ -302,7 +302,7 @@ func TestRepoAvatarAccess(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(conf.Picture.RepositoryAvatarUploadPath, strconv.FormatInt(repo.ID, 10)), avatar, 0o644))
 	}
 	avatarPath := func(repo *Repository) string {
-		return "/repo-avatars/" + strconv.FormatInt(repo.ID, 10)
+		return "/-/repo-avatars/" + strconv.FormatInt(repo.ID, 10)
 	}
 
 	tests := []struct {
@@ -332,8 +332,12 @@ func TestRepoAvatarAccess(t *testing.T) {
 		})
 	}
 
-	status, _, body := newClient(t).doRaw(http.MethodGet, "/repo-avatars/0", "", nil)
+	status, _, body := newClient(t).doRaw(http.MethodGet, "/-/repo-avatars/0", "", nil)
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
+
+	// The old path is the page of a user named "repo-avatars", not the avatar.
+	_, _, body = newClient(t).doRaw(http.MethodGet, "/repo-avatars/"+strconv.FormatInt(public.ID, 10), "", nil)
+	assert.NotEqual(t, avatar, body)
 }
 
 func TestRepoSettingsDelete(t *testing.T) {

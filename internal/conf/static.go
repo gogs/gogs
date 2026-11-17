@@ -519,8 +519,9 @@ var (
 	UsePostgreSQL bool
 )
 
-// UsersAvatarPathPrefix is the path prefix to user avatars.
-const UsersAvatarPathPrefix = "avatars"
+// UsersAvatarPathPrefix is the path prefix to user avatars. It is under "-",
+// a reserved username, so it never shadows the pages of a user.
+const UsersAvatarPathPrefix = "-/avatars"
 
 // UserDefaultAvatarURLPath returns the URL path of the default user avatar.
 func UserDefaultAvatarURLPath() string {
