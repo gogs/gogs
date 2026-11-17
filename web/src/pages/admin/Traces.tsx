@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { AlertCircle, ArrowLeft, ChevronDown, ChevronRight, Search as SearchIcon, X } from "lucide-react";
-import { type FormEvent, Fragment, type ReactNode, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { type FormEvent, type ReactNode, useMemo, useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 
 import { AdminLayout } from "@/components/AdminLayout";
 import { InlineCode } from "@/components/InlineCode";
@@ -9,7 +9,7 @@ import { PageTabs } from "@/components/PageTabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { fill, formatMinutes, formatMs, formatNumber } from "@/lib/format";
+import { formatMinutes, formatMs, formatNumber } from "@/lib/format";
 import type { TraceSearch } from "@/lib/page-search";
 import type {
   AdminSpan,
@@ -35,13 +35,6 @@ const KIND_FILLS: Record<AdminSpanKind, string> = {
   other: "bg-(--color-muted-foreground)/50",
 };
 
-// fillNodes is fill for values that are elements, e.g., a name set in code.
-function fillNodes(message: string, ...values: ReactNode[]) {
-  return message
-    .split(/%(?:\[\d+\])?[sdv]/)
-    .flatMap((part, i) => (i === 0 ? [part] : [<Fragment key={i}>{values[i - 1]}</Fragment>, part]));
-}
-
 function KindChip({ kind }: { kind: AdminSpanKind }) {
   return (
     <span className="shrink-0 rounded border border-(--color-border) px-1 font-mono text-[0.6875rem]/4 text-(--color-muted-foreground)">
@@ -54,7 +47,7 @@ function RouteName({ route }: { route: AdminTraceRoute }) {
   const { t } = useTranslation();
   switch (route.kind) {
     case "other":
-      return <span>{fill(t("admin.traces.other_pages"), route.name)}</span>;
+      return <span>{t("admin.traces.other_pages", { method: route.name })}</span>;
     case "background":
       return (
         <span className="inline-flex flex-wrap items-baseline gap-x-1.5">
@@ -158,7 +151,7 @@ function TracesLayout({
         <div>
           <h1 className="text-xl font-semibold">{t("admin.traces")}</h1>
           <p className="mt-1 text-sm text-(--color-muted-foreground)">
-            {fill(t("admin.traces.desc"), formatMinutes(maxAgeMinutes))}
+            {t("admin.traces.desc", { duration: formatMinutes(maxAgeMinutes) })}
           </p>
         </div>
         <TraceIDForm q={q} />
@@ -188,11 +181,11 @@ function Disabled() {
     <AdminLayout active="traces">
       <h1 className="text-xl font-semibold">{t("admin.traces")}</h1>
       <p className="mt-1 text-sm text-(--color-muted-foreground)">
-        {fillNodes(
-          t("admin.traces.disabled"),
-          <InlineCode>ENABLED = true</InlineCode>,
-          <InlineCode>[tracing]</InlineCode>,
-        )}
+        <Trans
+          i18nKey="admin.traces.disabled"
+          values={{ setting: "ENABLED = true", section: "[tracing]" }}
+          components={{ code: <InlineCode /> }}
+        />
       </p>
     </AdminLayout>
   );
@@ -222,7 +215,7 @@ function OverviewChart({ overview }: { overview: AdminTraceOverviewData }) {
         role="img"
         aria-label={
           first && last
-            ? fill(t("admin.traces.chart_overview"), formatAbsoluteTime(first), formatAbsoluteTime(last))
+            ? t("admin.traces.chart_overview", { from: formatAbsoluteTime(first), to: formatAbsoluteTime(last) })
             : undefined
         }
         className="relative h-32"
@@ -282,7 +275,7 @@ function OverviewChart({ overview }: { overview: AdminTraceOverviewData }) {
         ) : null}
       </div>
       <div className="mt-1 flex justify-between text-xs text-(--color-muted-foreground)">
-        <span>{fill(t("admin.traces.minutes_ago"), minutes)}</span>
+        <span>{t("admin.traces.minutes_ago", { minutes })}</span>
         <span>{t("admin.traces.now")}</span>
       </div>
       <figcaption className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-(--color-muted-foreground)">
@@ -325,7 +318,7 @@ function ShowAll({ count, onClick }: { count: number; onClick: () => void }) {
       onClick={onClick}
       className="mt-2 cursor-pointer text-sm text-(--color-primary) hover:underline"
     >
-      {fill(t("admin.traces.show_all"), count)}
+      {t("admin.traces.show_all", { count })}
     </button>
   );
 }
@@ -522,7 +515,7 @@ function ScatterPlot({ result, search }: { result: AdminTraceSearchData; search:
         </div>
         <div
           role="img"
-          aria-label={fill(t("admin.traces.chart_search"), result.points.length)}
+          aria-label={t("admin.traces.chart_search", { count: result.points.length })}
           className="relative h-40 border-b border-l border-(--color-border)"
         >
           <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="size-full overflow-visible" aria-hidden>
@@ -582,7 +575,7 @@ function ScatterPlot({ result, search }: { result: AdminTraceSearchData; search:
         {slow > 0 ? (
           <span className="inline-flex items-center gap-1.5">
             <span aria-hidden className="size-2 rounded-full bg-(--color-primary)" />
-            {fill(t("admin.traces.slower_than"), formatMs(slow))}
+            {t("admin.traces.slower_than", { duration: formatMs(slow) })}
             <span aria-hidden className="w-3 border-t border-dashed border-(--color-primary)" />
           </span>
         ) : null}
@@ -625,10 +618,16 @@ export function AdminTraceSearch({ result, search }: { result: AdminTraceSearchD
     return (
       <TracesLayout view="search" q={search.q} maxAgeMinutes={result.maxAgeMinutes}>
         <Panel>
-          <p>{fillNodes(t("admin.traces.not_found"), <code className="font-mono wrap-anywhere">{search.q}</code>)}</p>
+          <p>
+            <Trans
+              i18nKey="admin.traces.not_found"
+              values={{ id: search.q }}
+              components={{ id: <code className="font-mono wrap-anywhere" /> }}
+            />
+          </p>
           <p className="mt-2 text-(--color-muted-foreground)">
-            {fill(t("admin.traces.not_found_desc"), formatMinutes(result.maxAgeMinutes))}
-            {result.oldest ? ` ${fill(t("admin.traces.oldest"), formatRelativeTime(t, result.oldest, now))}` : null}
+            {t("admin.traces.not_found_desc", { duration: formatMinutes(result.maxAgeMinutes) })}
+            {result.oldest ? ` ${t("admin.traces.oldest", { when: formatRelativeTime(t, result.oldest, now) })}` : null}
           </p>
           <Link
             to="/admin/traces"
@@ -676,18 +675,17 @@ export function AdminTraceSearch({ result, search }: { result: AdminTraceSearchD
                 : DURATION_FILTERS
               ).map((ms) => (
                 <SelectItem key={ms} value={String(ms)}>
-                  {fill(t("admin.traces.at_least"), formatMs(ms))}
+                  {t("admin.traces.at_least", { duration: formatMs(ms) })}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
           {search.from || search.to ? (
             <span className="inline-flex min-h-8 max-w-full items-center gap-1 rounded-md border border-(--color-ring) bg-(--color-surface) py-1 pr-1 pl-3 text-sm">
-              {fill(
-                t("admin.traces.window"),
-                search.from ? formatAbsoluteTime(search.from) : "",
-                search.to ? formatAbsoluteTime(search.to) : "",
-              )}
+              {t("admin.traces.window", {
+                from: search.from ? formatAbsoluteTime(search.from) : "",
+                to: search.to ? formatAbsoluteTime(search.to) : "",
+              })}
               <Link
                 to="/admin/traces"
                 search={{ ...search, from: undefined, to: undefined }}
@@ -714,7 +712,7 @@ export function AdminTraceSearch({ result, search }: { result: AdminTraceSearchD
 
       <div className="mt-6 mb-2 flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-(--color-muted-foreground)">
-          {fill(t("admin.traces.count"), formatNumber(result.total), result.traces.length)}
+          {t("admin.traces.count", { total: formatNumber(result.total), shown: result.traces.length })}
         </p>
         {search.q ? null : (
           <Select
@@ -835,7 +833,12 @@ function SpanDetails({ node, trace }: { node: SpanNode; trace: AdminTrace }) {
       </dl>
       {typical && node.depth > 0 ? (
         <p className="mt-2 text-xs text-(--color-muted-foreground)">
-          {fill(t("admin.traces.typical"), span.name, formatMs(typical.p50Ms), formatMs(typical.p95Ms), typical.calls)}
+          {t("admin.traces.typical", {
+            name: span.name,
+            p50: formatMs(typical.p50Ms),
+            p95: formatMs(typical.p95Ms),
+            count: typical.calls,
+          })}
           {span.durationMs > typical.p95Ms ? (
             <span className="text-(--color-foreground)"> {t("admin.traces.slower_than_p95")}</span>
           ) : null}
@@ -924,7 +927,7 @@ function Waterfall({ trace }: { trace: AdminTrace }) {
                       type="button"
                       onClick={() => toggle(span.id)}
                       aria-expanded={!isCollapsed}
-                      aria-label={fill(t(isCollapsed ? "admin.traces.expand" : "admin.traces.collapse"), span.name)}
+                      aria-label={t(isCollapsed ? "admin.traces.expand" : "admin.traces.collapse", { name: span.name })}
                       className="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
                     >
                       {isCollapsed ? (
@@ -972,7 +975,7 @@ function Waterfall({ trace }: { trace: AdminTrace }) {
           );
         })}
       </ul>
-      {trace.droppedSpans > 0 ? <Note>{fill(t("admin.traces.dropped_spans"), trace.droppedSpans)}</Note> : null}
+      {trace.droppedSpans > 0 ? <Note>{t("admin.traces.dropped_spans", { count: trace.droppedSpans })}</Note> : null}
     </div>
   );
 }
@@ -1017,7 +1020,6 @@ function Breakdown({ trace }: { trace: AdminTrace }) {
 const REPEATED_RUN = 5;
 
 function RepeatedSpans({ trace }: { trace: AdminTrace }) {
-  const { t } = useTranslation();
   const runs: { name: string; count: number; ms: number }[] = [];
   const visit = (node: SpanNode) => {
     let i = 0;
@@ -1044,12 +1046,11 @@ function RepeatedSpans({ trace }: { trace: AdminTrace }) {
           return (
             // A name can repeat under more than one parent.
             <li key={`${i}-${run.name}`}>
-              {fillNodes(
-                t("admin.traces.repeated"),
-                <code className="font-mono wrap-anywhere">{run.name}</code>,
-                run.count,
-                formatMs(run.ms),
-              )}
+              <Trans
+                i18nKey="admin.traces.repeated"
+                values={{ name: run.name, count: run.count, duration: formatMs(run.ms) }}
+                components={{ name: <code className="font-mono wrap-anywhere" /> }}
+              />
             </li>
           );
         })}
@@ -1067,7 +1068,11 @@ function RouteComparison({ trace }: { trace: AdminTrace }) {
   return (
     <Panel className="mt-4">
       <p>
-        {fillNodes(t("admin.traces.compare"), `${Math.floor(stats.fasterPercent)}%`, <RouteName route={trace.route} />)}
+        <Trans
+          i18nKey="admin.traces.compare"
+          values={{ percent: `${Math.floor(stats.fasterPercent)}%` }}
+          components={{ route: <RouteName route={trace.route} /> }}
+        />
       </p>
       <div aria-hidden className="relative mt-2 h-4 rounded-sm bg-(--color-border)/60">
         <span
@@ -1077,12 +1082,11 @@ function RouteComparison({ trace }: { trace: AdminTrace }) {
         <span className="absolute -inset-y-1 w-0.5 bg-(--color-foreground)" style={{ left: at(trace.durationMs) }} />
       </div>
       <p className="mt-2 text-xs text-(--color-muted-foreground)">
-        {fill(
-          t("admin.traces.compare_band"),
-          formatMs(stats.p50Ms),
-          formatMs(stats.p95Ms),
-          formatNumber(stats.requests),
-        )}
+        {t("admin.traces.compare_band", {
+          p50: formatMs(stats.p50Ms),
+          p95: formatMs(stats.p95Ms),
+          requests: formatNumber(stats.requests),
+        })}
       </p>
     </Panel>
   );
@@ -1119,7 +1123,7 @@ export function AdminTraceView({ trace }: { trace: AdminTrace }) {
           </span>
         ) : null}
         <span className="tabular-nums">{formatMs(trace.durationMs)}</span>
-        <span>{fill(t("admin.traces.spans"), trace.spans.length + trace.droppedSpans)}</span>
+        <span>{t("admin.traces.spans", { count: trace.spans.length + trace.droppedSpans })}</span>
         <span>{formatAbsoluteTime(trace.start)}</span>
         <KeptLabel kept={trace.kept} />
         <code className="font-mono text-xs wrap-anywhere">{trace.id}</code>

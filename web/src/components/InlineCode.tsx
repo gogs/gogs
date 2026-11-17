@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 
-// InlineCode is code within text, e.g., a configuration setting.
-export function InlineCode({ children }: { children: ReactNode }) {
+// InlineCode is code within text, e.g., a configuration setting. Its children
+// are optional for a translation to fill them in through Trans.
+export function InlineCode({ children }: { children?: ReactNode }) {
   return (
     // Cloned decoration keeps the chip's padding and corners on every line a
     // long value wraps to.

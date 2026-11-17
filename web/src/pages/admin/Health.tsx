@@ -3,7 +3,7 @@ import { type KeyboardEvent, type MouseEvent, type ReactNode, useState } from "r
 import { useTranslation } from "react-i18next";
 
 import { AdminLayout } from "@/components/AdminLayout";
-import { fill, formatMs, formatNumber } from "@/lib/format";
+import { formatMs, formatNumber } from "@/lib/format";
 import type { AdminHealth, AdminHealthKey, AdminHealthRange, AdminHealthSeries } from "@/lib/queries/admin";
 import { formatAbsoluteTime } from "@/lib/relative-time";
 import { cn } from "@/lib/utils";
@@ -215,14 +215,14 @@ export function AdminServerHealth({ health, range }: { health: AdminHealth; rang
     if (v === undefined) return "N/A";
     const value = row.metric.format(v);
     return row.metric.key === "dbConnections" && row.series.limit > 0
-      ? fill(t("admin.health.of"), value, formatCount(row.series.limit))
+      ? t("admin.health.of", { value, limit: formatCount(row.series.limit) })
       : value;
   };
   const flagText = (f: ReturnType<typeof flag>) => {
     if (!f) return "";
     return "up" in f
-      ? fill(t("admin.health.up_recently"), f.up.toFixed(1))
-      : fill(t("admin.health.spike_from"), formatAbsoluteTime(f.spikeAt));
+      ? t("admin.health.up_recently", { factor: f.up.toFixed(1) })
+      : t("admin.health.spike_from", { time: formatAbsoluteTime(f.spikeAt) });
   };
 
   let readout: ReactNode = t(empty ? "admin.health.collecting" : "admin.health.help");
@@ -236,14 +236,14 @@ export function AdminServerHealth({ health, range }: { health: AdminHealth; rang
     readout = (
       <>
         <span className="font-medium text-(--color-foreground)">
-          {hover === null ? fill(t("admin.health.pinned"), clock) : clock}
+          {hover === null ? t("admin.health.pinned", { time: clock }) : clock}
         </span>
         <Link
           to="/admin/traces"
           search={{ view: "search", from, to }}
           className="text-(--color-primary) hover:underline"
         >
-          {fill(t("admin.health.open_traces"), formatAbsoluteTime(from), formatAbsoluteTime(to))}
+          {t("admin.health.open_traces", { from: formatAbsoluteTime(from), to: formatAbsoluteTime(to) })}
         </Link>
         {pinned !== null ? (
           <button
@@ -321,7 +321,8 @@ export function AdminServerHealth({ health, range }: { health: AdminHealth; rang
                   cursor={cursor}
                   flagged={flagged !== ""}
                   label={
-                    fill(t("admin.health.chart"), label, rangeLabel, format(row, now)) + (flagged ? `, ${flagged}` : "")
+                    t("admin.health.chart", { label, range: rangeLabel, value: format(row, now) }) +
+                    (flagged ? `, ${flagged}` : "")
                   }
                   onCursor={(at) => {
                     if (pinned === null) setHover(at);
