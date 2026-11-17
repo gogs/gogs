@@ -40,9 +40,11 @@ func TestMigrate(t *testing.T) {
 		tables, err := db.Migrator().GetTables()
 		require.NoError(t, err)
 		tables = slices.DeleteFunc(tables, func(name string) bool { return name == "sqlite_sequence" })
-		assert.Len(t, tables, 37) // 36 tables and "goose_db_version"
+		assert.Len(t, tables, 39) // 38 tables and "goose_db_version"
 		assert.Contains(t, tables, "user")
 		assert.Contains(t, tables, "passkey")
+		assert.Contains(t, tables, "review")
+		assert.Contains(t, tables, "review_request")
 		assert.NotContains(t, tables, "version")
 		assert.NotContains(t, tables, "protect_branch_whitelist")
 		assert.True(t, db.Migrator().HasIndex("attachment", "UQE_attachment_uuid"))

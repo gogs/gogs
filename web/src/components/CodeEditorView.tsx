@@ -198,6 +198,9 @@ export default function CodeEditorView({
   useEffect(() => {
     const v = new EditorView({
       parent: host.current!,
+      // Diff annotations mount inside Pierre's shadow root before they are
+      // slotted into the page, where CodeMirror would otherwise put its styles.
+      root: document,
       state: EditorState.create({
         doc: initial.value,
         extensions: [

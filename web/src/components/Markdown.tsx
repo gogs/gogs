@@ -1,14 +1,26 @@
+import { File } from "@pierre/diffs/react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
 import { CodeBlock } from "@/components/CodeBlock";
 import { MermaidDiagram } from "@/components/MermaidDiagram";
+import { resolveTheme, useTheme } from "@/lib/theme-context";
 import { cn } from "@/lib/utils";
+
+// Permalink is where the lines of an embedded permalink come from.
+interface Permalink {
+  href: string;
+  path: string;
+  commit: string;
+  start: number;
+  end: number;
+}
 
 interface CodeBlockContent {
   code: string;
   lang: string;
+  permalink?: Permalink;
 }
 
 // HEADING_ID_PREFIX keeps the ids of headings from clobbering ids of the page.
@@ -21,7 +33,8 @@ const LINK_ICON =
 
 // prepareHTML replaces the code blocks, wherever they are nested, with
 // placeholders that CodeBlock renders into, and, given permalinkLabel, gives
-// each heading with an id a link to itself.
+// each heading with an id a link to itself. The lines of a permalink, which
+// the server embeds below it, render with where they come from.
 function prepareHTML(
   html: string,
   permalinkLabel?: (heading: string) => string,
@@ -30,9 +43,26 @@ function prepareHTML(
   const blocks: CodeBlockContent[] = [];
   for (const code of Array.from(body.querySelectorAll("pre > code"))) {
     // The server sanitizer drops data attributes, so content cannot forge a
-    // placeholder.
+    // placeholder or an embed.
     const placeholder = document.createElement("div");
     placeholder.dataset.codeBlock = String(blocks.length);
+    const embed = code.parentElement!.parentElement;
+    const data = embed?.dataset;
+    if (embed && data?.permalink !== undefined) {
+      blocks.push({
+        code: code.textContent ?? "",
+        lang: "text",
+        permalink: {
+          href: data.permalink,
+          path: data.path ?? "",
+          commit: data.commit ?? "",
+          start: Number(data.start),
+          end: Number(data.end),
+        },
+      });
+      embed.replaceWith(placeholder);
+      continue;
+    }
     blocks.push({
       code: (code.textContent ?? "").replace(/\n$/, ""),
       lang: code.className.startsWith("language-") ? code.className.slice("language-".length) : "text",
@@ -62,6 +92,49 @@ function scrollToHeading() {
     return;
   }
   if (slug) document.getElementById(HEADING_ID_PREFIX + slug)?.scrollIntoView();
+}
+
+// PermalinkSnippet shows the lines of a permalink highlighted, numbered as in
+// their file, below the path, the lines and the commit they link to.
+function PermalinkSnippet({ code, permalink }: { code: string; permalink: Permalink }) {
+  const { t } = useTranslation();
+  const { theme } = useTheme();
+  const { href, path, commit, start, end } = permalink;
+  const lines =
+    start === end
+      ? t("repo.permalink_line").replace("%s", String(start)).replace("%s", path)
+      : t("repo.permalink_lines").replace("%s", String(start)).replace("%s", String(end)).replace("%s", path);
+  // Pierre numbers lines from 1, so the numbers are drawn from a counter that
+  // starts at the first line of the permalink.
+  const numbersCSS = `[data-gutter] { counter-reset: permalink-line ${start - 1}; }
+[data-column-number] { counter-increment: permalink-line; }
+[data-line-number-content] { font-size: 0; }
+[data-line-number-content]::before { content: counter(permalink-line); font-size: var(--diffs-font-size, 13px); }`;
+  return (
+    <div className="overflow-hidden rounded-md border border-(--color-border) text-xs">
+      <div className="flex flex-wrap items-baseline gap-x-2 border-b border-(--color-border) bg-(--color-surface) px-3 py-1.5">
+        <a href={href} className="min-w-0 font-mono font-medium wrap-anywhere text-(--color-primary) hover:underline">
+          {path}
+        </a>
+        <span className="text-(--color-muted-foreground)">
+          <span className="sr-only">{lines}, </span>
+          <span aria-hidden>{start === end ? `L${start}` : `L${start}-L${end}`}</span>{" "}
+          <code className="font-mono">{commit.slice(0, 7)}</code>
+        </span>
+      </div>
+      <File
+        file={{ name: path.split("/").pop() ?? path, contents: code }}
+        style={{ border: "none" }}
+        options={{
+          theme: { light: "pierre-light", dark: "pierre-dark" },
+          themeType: resolveTheme(theme),
+          disableFileHeader: true,
+          overflow: "scroll",
+          unsafeCSS: numbersCSS,
+        }}
+      />
+    </div>
+  );
 }
 
 // Markdown shows Markdown that the server rendered and sanitized, e.g., the
@@ -123,12 +196,13 @@ export function Markdown({
         ? placeholders.elements.map((element) => {
             const index = Number(element.dataset.codeBlock);
             const block = content.blocks[index];
-            const node =
-              block.lang === "mermaid" ? (
-                <MermaidDiagram code={block.code} />
-              ) : (
-                <CodeBlock code={block.code} lang={block.lang} />
-              );
+            const node = block.permalink ? (
+              <PermalinkSnippet code={block.code} permalink={block.permalink} />
+            ) : block.lang === "mermaid" ? (
+              <MermaidDiagram code={block.code} />
+            ) : (
+              <CodeBlock code={block.code} lang={block.lang} />
+            );
             return createPortal(node, element, index);
           })
         : null}

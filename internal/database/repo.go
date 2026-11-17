@@ -1755,6 +1755,12 @@ func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 		if _, err = sess.Delete(&Comment{IssueID: issues[i].ID}); err != nil {
 			return err
 		}
+		if _, err = sess.Delete(&Review{IssueID: issues[i].ID}); err != nil {
+			return err
+		}
+		if _, err = sess.Delete(&ReviewRequest{IssueID: issues[i].ID}); err != nil {
+			return err
+		}
 
 		attachments := make([]*Attachment, 0, 5)
 		if err = sess.Where("issue_id=?", issues[i].ID).Find(&attachments); err != nil {
