@@ -20,10 +20,37 @@ func TestBackgroundJobs(t *testing.T) {
 	ctx := context.Background()
 	db := newTestDB(t, "BackgroundJobsStore")
 
-	for _, tc := range []struct {
+	// Another system's table with the same columns, but without the indexes,
+	// whose names are taken by background_jobs.
+	type otherJob struct {
+		ID             int64
+		Kind           string `gorm:"not null"`
+		UniqueKey      string `gorm:"not null;default:''"`
+		Payload        []byte `gorm:"not null"`
+		State          string `gorm:"not null"`
+		Priority       int    `gorm:"not null;default:100"`
+		Attempts       int    `gorm:"not null;default:0"`
+		MaxAttempts    int    `gorm:"not null"`
+		RunAt          time.Time
+		LeaseExpiresAt *time.Time
+		LastError      string
+		CreatedAt      time.Time
+		UpdatedAt      time.Time
+	}
+	const otherTable = "other_jobs"
+	require.NoError(t, db.Table(otherTable).Migrator().CreateTable(&otherJob{}))
+
+	countJobs := func(table string) int64 {
+		var count int64
+		require.NoError(t, db.Table(table).Count(&count).Error)
+		return count
+	}
+
+	type testCase struct {
 		name string
 		test func(t *testing.T, ctx context.Context, s *BackgroundJobsStore, clock *time.Time)
-	}{
+	}
+	testCases := []testCase{
 		{"Enqueue", jobsEnqueue},
 		{"Claim", jobsClaim},
 		{"Priority", jobsPriority},
@@ -31,25 +58,30 @@ func TestBackgroundJobs(t *testing.T) {
 		{"Lease", jobsLease},
 		{"Retry", jobsRetry},
 		{"DeleteFinished", jobsDeleteFinished},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Cleanup(func() {
-				err := clearTables(t, db)
-				require.NoError(t, err)
+	}
+	for _, tables := range [][2]string{{BackgroundJobsTable, otherTable}, {otherTable, BackgroundJobsTable}} {
+		table, untouched := tables[0], tables[1]
+		for _, tc := range testCases {
+			t.Run(table+"/"+tc.name, func(t *testing.T) {
+				t.Cleanup(func() {
+					require.NoError(t, clearTables(t, db))
+					require.NoError(t, db.Table(otherTable).Where("TRUE").Delete(&otherJob{}).Error)
+				})
+				clock := time.Unix(1700000000, 0).UTC()
+				s := NewBackgroundJobsStore(db.Session(&gorm.Session{NowFunc: func() time.Time { return clock }}), table)
+				tc.test(t, ctx, s, &clock)
+				assert.Zero(t, countJobs(untouched), "jobs in %q", untouched)
 			})
-			clock := time.Unix(1700000000, 0).UTC()
-			s := NewBackgroundJobsStore(db.Session(&gorm.Session{NowFunc: func() time.Time { return clock }}))
-			tc.test(t, ctx, s, &clock)
-		})
-		if t.Failed() {
-			break
+			if t.Failed() {
+				return
+			}
 		}
 	}
 }
 
 func listJobs(t *testing.T, s *BackgroundJobsStore) []*BackgroundJob {
 	var jobs []*BackgroundJob
-	require.NoError(t, s.db.Order("id").Find(&jobs).Error)
+	require.NoError(t, s.query(context.Background()).Order("id").Find(&jobs).Error)
 	return jobs
 }
 
@@ -79,7 +111,7 @@ func jobsEnqueue(t *testing.T, ctx context.Context, s *BackgroundJobsStore, _ *t
 
 	// Enqueueing in a transaction that rolls back adds nothing.
 	err = s.db.Transaction(func(tx *gorm.DB) error {
-		require.NoError(t, NewBackgroundJobsStore(tx).Enqueue(ctx, "sync", []byte("f"), EnqueueBackgroundJobOptions{}))
+		require.NoError(t, NewBackgroundJobsStore(tx, s.table).Enqueue(ctx, "sync", []byte("f"), EnqueueBackgroundJobOptions{}))
 		return errors.New("roll back")
 	})
 	require.Error(t, err)

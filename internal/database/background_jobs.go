@@ -75,15 +75,28 @@ func (*BackgroundJob) TableName() string {
 // lease ended and another worker took the job over.
 var ErrBackgroundJobLost = errors.New("the job is no longer held by this worker")
 
-// BackgroundJobsStore is the storage layer for background jobs.
+// BackgroundJobsTable is the table of the jobs that Gogs runs in the
+// background, e.g., sending emails.
+const BackgroundJobsTable = "background_jobs"
+
+// BackgroundJobsStore is the storage layer for background jobs in one table.
 type BackgroundJobsStore struct {
-	db *gorm.DB
+	db    *gorm.DB
+	table string
 }
 
-// NewBackgroundJobsStore returns the storage layer for background jobs in the given
-// database.
-func NewBackgroundJobsStore(db *gorm.DB) *BackgroundJobsStore {
-	return &BackgroundJobsStore{db: db}
+// NewBackgroundJobsStore returns the storage layer for background jobs in the
+// given table. Systems that keep their jobs apart from the others, e.g., to
+// keep them for longer, use a table of their own with every column of
+// BackgroundJob.
+func NewBackgroundJobsStore(db *gorm.DB, table string) *BackgroundJobsStore {
+	return &BackgroundJobsStore{db: db, table: table}
+}
+
+// query returns a query on the table of the store, which can be reused for
+// several statements.
+func (s *BackgroundJobsStore) query(ctx context.Context) *gorm.DB {
+	return s.db.WithContext(ctx).Table(s.table).Session(&gorm.Session{})
 }
 
 // now returns the current time in UTC, which keeps times comparable on SQLite,
@@ -93,18 +106,23 @@ func (s *BackgroundJobsStore) now() time.Time {
 }
 
 func (db *DB) BackgroundJobs() *BackgroundJobsStore {
-	return NewBackgroundJobsStore(db.db)
+	return NewBackgroundJobsStore(db.db, BackgroundJobsTable)
 }
 
-// jobWakeups has one channel per job kind that is signaled when a job of the
-// kind is enqueued in this process, so idle workers start without waiting for
-// their next poll.
-var jobWakeups sync.Map // map[BackgroundJobKind]chan struct{}
+type jobWakeupKey struct {
+	table string
+	kind  BackgroundJobKind
+}
+
+// jobWakeups has one channel per table and job kind that is signaled when a
+// job of the kind is enqueued in this process, so idle workers start without
+// waiting for their next poll.
+var jobWakeups sync.Map // map[jobWakeupKey]chan struct{}
 
 // Wakeup returns the channel that is signaled when a job of the given kind is
-// enqueued in this process.
-func (*BackgroundJobsStore) Wakeup(kind BackgroundJobKind) chan struct{} {
-	ch, _ := jobWakeups.LoadOrStore(kind, make(chan struct{}, 1))
+// enqueued in the table of the store in this process.
+func (s *BackgroundJobsStore) Wakeup(kind BackgroundJobKind) chan struct{} {
+	ch, _ := jobWakeups.LoadOrStore(jobWakeupKey{table: s.table, kind: kind}, make(chan struct{}, 1))
 	return ch.(chan struct{})
 }
 
@@ -169,7 +187,7 @@ func (s *BackgroundJobsStore) Enqueue(ctx context.Context, kind BackgroundJobKin
 		}
 	}
 
-	err := s.db.WithContext(ctx).Create(job).Error
+	err := s.query(ctx).Create(job).Error
 	if err != nil {
 		return errors.Wrap(err, "create")
 	}
@@ -182,7 +200,7 @@ func (s *BackgroundJobsStore) Enqueue(ctx context.Context, kind BackgroundJobKin
 // given time to run. It returns false when there is no such job.
 func (s *BackgroundJobsStore) mergeIntoPending(ctx context.Context, kind BackgroundJobKind, uniqueKey string, priority BackgroundJobPriority, runAt time.Time) (bool, error) {
 	var pending BackgroundJob
-	err := s.db.WithContext(ctx).
+	err := s.query(ctx).
 		Select("id").
 		Where("kind = ? AND unique_key = ? AND state = ?", kind, uniqueKey, BackgroundJobStatePending).
 		Limit(1).
@@ -195,7 +213,7 @@ func (s *BackgroundJobsStore) mergeIntoPending(ctx context.Context, kind Backgro
 	}
 
 	// The state condition leaves a job alone that a worker claimed meanwhile.
-	err = s.db.WithContext(ctx).Model(&BackgroundJob{}).
+	err = s.query(ctx).Model(&BackgroundJob{}).
 		Where("id = ? AND state = ?", pending.ID, BackgroundJobStatePending).
 		Updates(map[string]any{
 			"priority":   gorm.Expr("CASE WHEN priority > ? THEN ? ELSE priority END", priority, priority),
@@ -212,7 +230,7 @@ func (s *BackgroundJobsStore) mergeIntoPending(ctx context.Context, kind Backgro
 // whose lease has ended, and holds it for the given lease. It returns nil when
 // no job is due.
 func (s *BackgroundJobsStore) Claim(ctx context.Context, kind BackgroundJobKind, lease time.Duration) (*BackgroundJob, error) {
-	db := s.db.WithContext(ctx)
+	db := s.query(ctx)
 	now := s.now()
 
 	// A job whose worker stopped during its last attempt has no attempts left.
@@ -280,7 +298,7 @@ func (s *BackgroundJobsStore) Claim(ctx context.Context, kind BackgroundJobKind,
 // attempt number tells this worker's claim apart from a later one by another
 // worker after the lease ended.
 func (s *BackgroundJobsStore) held(ctx context.Context, job *BackgroundJob) *gorm.DB {
-	return s.db.WithContext(ctx).Model(&BackgroundJob{}).
+	return s.query(ctx).Model(&BackgroundJob{}).
 		Where("id = ? AND state = ? AND attempts = ?", job.ID, BackgroundJobStateRunning, job.Attempts)
 }
 
@@ -344,7 +362,7 @@ func (s *BackgroundJobsStore) Fail(ctx context.Context, job *BackgroundJob, jobE
 // do the work.
 func (s *BackgroundJobsStore) Retry(ctx context.Context, job *BackgroundJob, jobErr error, delay time.Duration) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		txStore := NewBackgroundJobsStore(tx)
+		txStore := NewBackgroundJobsStore(tx, s.table)
 		now := s.now()
 		if job.UniqueKey != "" {
 			merged, err := txStore.mergeIntoPending(ctx, job.Kind, job.UniqueKey, job.Priority, now.Add(delay))
@@ -369,7 +387,7 @@ func (s *BackgroundJobsStore) Retry(ctx context.Context, job *BackgroundJob, job
 // DeleteFinished deletes jobs that were done before doneBefore, and jobs that
 // failed before failedBefore.
 func (s *BackgroundJobsStore) DeleteFinished(ctx context.Context, doneBefore, failedBefore time.Time) error {
-	return s.db.WithContext(ctx).
+	return s.query(ctx).
 		Where("(state = ? AND updated_at < ?) OR (state = ? AND updated_at < ?)",
 			BackgroundJobStateDone, doneBefore, BackgroundJobStateFailed, failedBefore).
 		Delete(&BackgroundJob{}).Error

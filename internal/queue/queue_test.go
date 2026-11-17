@@ -27,7 +27,7 @@ func newTestStore(t *testing.T, suite string) (*database.BackgroundJobsStore, fu
 		require.NoError(t, db.Order("id").Find(&jobs).Error)
 		return jobs
 	}
-	return database.NewBackgroundJobsStore(db), list
+	return database.NewBackgroundJobsStore(db, database.BackgroundJobsTable), list
 }
 
 func testOptions(workers int) Options {
