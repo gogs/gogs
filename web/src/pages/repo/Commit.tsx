@@ -9,6 +9,7 @@ import { DiffWorkspace } from "@/components/DiffWorkspace";
 import { RelativeTime } from "@/components/RelativeTime";
 import { RepoHeader } from "@/components/RepoHeader";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { usePageTitle } from "@/lib/page-title";
 import { repoHeaderQuery } from "@/lib/queries/repo";
 import { subUrl } from "@/lib/url";
 
@@ -66,6 +67,7 @@ export function RepoCommit() {
   const { data: repoHeader } = useSuspenseQuery(repoHeaderQuery(owner, repo));
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
+  usePageTitle(`${subject} - ${owner}/${repo}@${sha.slice(0, 7)}`);
 
   const authorLabel = author.profileURL ? (
     <a href={author.profileURL} className="font-semibold text-(--color-foreground) hover:underline">
