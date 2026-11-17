@@ -65,6 +65,7 @@ With glass on, `html` paints `--glass-backdrop`, a few soft color blobs over `--
 
 - **`glass`** goes on content containers: bordered boxes, comments, `Card`, the terminal frames, the settings panels and the diff workspace. It sets the translucent `--glass-fill`, a light top edge and a soft drop shadow, blurs what is behind it and rounds it to `--glass-radius` (`0.75rem`, `Card` sets `1rem`).
 - **`glass-list`** goes on lists of rows divided by bottom borders, e.g., the activity feed and repository lists, which become a glass panel with the rows inset. An empty list hides.
+- **`glass-section`** goes on a section whose heading labels one glass box or list below it, e.g., the dashboard activity feed, the branch groups and the commit days. The section becomes the panel, the heading its header row and the box inside loses its own frame, so the heading does not float alone on the backdrop. Page titles stay above their panels.
 - **`glass-bar`** goes on full-width chrome that content scrolls under: the navbar and the repository header.
 - **`glass-control`** goes on outline buttons and segmented groups, e.g., Watch, Star and Fork, and the view switchers.
 

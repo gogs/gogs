@@ -176,7 +176,7 @@ export function CommitList({
   return (
     <div className="flex flex-col gap-6">
       {groupByDay(commits).map((group) => (
-        <section key={group.day} aria-label={group.day}>
+        <section key={group.day} aria-label={group.day} className="glass-section rounded-md">
           <h2 className="mb-2 text-sm font-semibold text-(--color-muted-foreground)">{group.day}</h2>
           <ul className="divide-y divide-(--color-border) glass rounded-md border border-(--color-border)">
             {group.commits.map((commit) => (

@@ -599,11 +599,14 @@ diffs-container {
      pane. Set --glass-radius on a panel to round it differently.
    - glass-list: a list of rows divided by bottom borders, e.g., the activity
      feed, which turns into a glass panel with the rows inset.
+   - glass-section: a section with a heading over a glass box or list, which
+     turns into one glass panel with the heading as its header row, so the
+     heading does not float alone above the box.
    - glass-bar: full-width chrome that content scrolls under, e.g., the navbar.
    - glass-control: outline buttons and segmented button groups.
    A state that recolors a panel's edge, e.g., a linked comment, needs
    `!border-...`. */
-:root.glass-ui :is(.glass, .glass-list) {
+:root.glass-ui :is(.glass, .glass-list, .glass-section) {
   --color-border: var(--glass-divider);
   border-color: var(--glass-line);
   border-radius: var(--glass-radius, 0.75rem);
@@ -615,6 +618,28 @@ diffs-container {
 :root.glass-ui .glass-list {
   border-width: 1px;
   padding-inline: 1rem;
+}
+:root.glass-ui .glass-section {
+  border-width: 1px;
+  overflow: hidden;
+}
+:root.glass-ui .glass-section > :is(h2, h3):first-child {
+  margin: 0;
+  border-bottom: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  padding: 0.625rem 1rem;
+}
+:root.glass-ui .glass-section :is(.glass, .glass-list) {
+  border-width: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+/* E.g., the "Show more" button below the activity feed. */
+:root.glass-ui .glass-section .glass-list + * {
+  margin-bottom: 1rem;
 }
 :root.glass-ui .glass-list:empty {
   display: none;

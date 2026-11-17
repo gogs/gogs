@@ -27,13 +27,11 @@ export function Dashboard({ org }: { org?: string }) {
         <ContextSwitcher data={data} page="dashboard" />
         <DashboardLists data={data} />
       </aside>
-      <section className="min-w-0" aria-label={t("activities")}>
+      <section className={cn("min-w-0", data.kind !== "organization" && "glass-section")} aria-label={t("activities")}>
         {data.kind === "organization" ? (
           <OrgNav name={data.name} page="dashboard" />
         ) : (
-          <h2 className="border-b border-(--color-border) pb-2 text-sm font-semibold glass-ui:border-b-0">
-            {t("activities")}
-          </h2>
+          <h2 className="border-b border-(--color-border) pb-2 text-sm font-semibold">{t("activities")}</h2>
         )}
         <DashboardActivity org={org} />
       </section>

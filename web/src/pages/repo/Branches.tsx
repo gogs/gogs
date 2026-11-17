@@ -132,7 +132,7 @@ export function RepoBranches({
         ) : view === "overview" ? (
           <div className="flex flex-col gap-8">
             {data.sections.map(({ kind, branches, hasMore }) => (
-              <section key={kind}>
+              <section key={kind} className="glass-section rounded-md">
                 <h2 className="mb-2 text-base font-semibold">{sectionTitles[kind]}</h2>
                 {list(branches)}
                 {hasMore && kind !== "default" ? (
@@ -141,7 +141,7 @@ export function RepoBranches({
                     params={params}
                     search={query ? { query } : {}}
                     aria-label={`${t("repo.branches.view_more")}: ${sectionTitles[kind]}`}
-                    className="mt-2 inline-block text-sm text-(--color-primary) hover:underline"
+                    className="mt-2 inline-block text-sm text-(--color-primary) hover:underline glass-ui:mx-4 glass-ui:mb-3"
                   >
                     {t("repo.branches.view_more")}
                   </Link>
