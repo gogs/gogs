@@ -21,11 +21,13 @@ import (
 // ⚠️ WARNING: This list is meant to be read-only.
 var Tables = []any{
 	new(Access), new(AccessToken), new(Action),
+	new(DeployKey),
 	new(EmailAddress),
 	new(Follow),
 	new(LFSObject), new(LoginSource),
 	new(Notice),
 	new(Passkey),
+	new(PublicKey),
 	new(TwoFactor), new(TwoFactorRecoveryCode),
 	new(Upload),
 }

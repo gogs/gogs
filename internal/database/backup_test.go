@@ -27,7 +27,7 @@ func TestDumpAndImport(t *testing.T) {
 	}
 	t.Parallel()
 
-	const wantTables = 12
+	const wantTables = 14
 	if len(Tables) != wantTables {
 		t.Fatalf("New table has added (want %d got %d), please add new tests for the table and update this check", wantTables, len(Tables))
 	}
@@ -128,6 +128,16 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			CreatedUnix:  1588568886,
 		},
 
+		&DeployKey{
+			ID:          1,
+			KeyID:       2,
+			RepoID:      1,
+			Name:        "CI",
+			Fingerprint: "SHA256:9W6J1BLrJPGbcvnCoyZKuQPRdOJ7zh4Ss3cn5a1ITqA",
+			CreatedUnix: 1588568886,
+			UpdatedUnix: 1588572486,
+		},
+
 		&EmailAddress{
 			ID:          1,
 			UserID:      1,
@@ -199,6 +209,28 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			},
 			CreatedUnix: 1588568886,
 			UpdatedUnix: 1588572486, // 1 hour later
+		},
+
+		&PublicKey{
+			ID:          1,
+			OwnerID:     1,
+			Name:        "laptop",
+			Fingerprint: "SHA256:ZtRfMl4sIkqP0ofV6QX9QJ0Wy3XFaDpqUVO0xE0lK3U",
+			Content:     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBy4YBnnqqtqN0UfhX6s1nLnNd4C6x5cDaoxqKyQbYxE alice@example.com",
+			Mode:        AccessModeWrite,
+			Type:        KeyTypeUser,
+			CreatedUnix: 1588568886,
+			UpdatedUnix: 1588572486,
+		},
+		&PublicKey{
+			ID:          2,
+			OwnerID:     1,
+			Name:        "CI",
+			Fingerprint: "SHA256:9W6J1BLrJPGbcvnCoyZKuQPRdOJ7zh4Ss3cn5a1ITqA",
+			Content:     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGd0o7l0n9bU8nSl6oTnD3v6Zr0hYz3Jw2nX7c0WbV9P ci@example.com",
+			Mode:        AccessModeRead,
+			Type:        KeyTypeDeploy,
+			CreatedUnix: 1588568886,
 		},
 
 		&TwoFactor{

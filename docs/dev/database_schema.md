@@ -55,6 +55,26 @@ Indexes:
 	"idx_action_user_id" (user_id)
 ```
 
+# Table "deploy_key"
+
+```
+    Field    |    Column    |  PostgreSQL  |         MySQL         |        SQLite3        
+-------------+--------------+--------------+-----------------------+-----------------------
+ ID          | id           | BIGSERIAL    | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ KeyID       | key_id       | BIGINT       | BIGINT                | INTEGER               
+ RepoID      | repo_id      | BIGINT       | BIGINT                | INTEGER               
+ Name        | name         | VARCHAR(255) | VARCHAR(255)          | TEXT                  
+ Fingerprint | fingerprint  | VARCHAR(255) | VARCHAR(255)          | TEXT                  
+ CreatedUnix | created_unix | BIGINT       | BIGINT                | INTEGER               
+ UpdatedUnix | updated_unix | BIGINT       | BIGINT                | INTEGER               
+
+Primary keys: id
+Indexes: 
+	"IDX_deploy_key_key_id" (key_id)
+	"IDX_deploy_key_repo_id" (repo_id)
+	"UQE_deploy_key_s" UNIQUE (key_id, repo_id)
+```
+
 # Table "email_address"
 
 ```
@@ -144,6 +164,26 @@ Primary keys: id
 Primary keys: id
 Indexes: 
 	"idx_passkey_user_id" (user_id)
+```
+
+# Table "public_key"
+
+```
+    Field    |    Column    |         PostgreSQL         |         MySQL          |          SQLite3           
+-------------+--------------+----------------------------+------------------------+----------------------------
+ ID          | id           | BIGSERIAL                  | BIGINT AUTO_INCREMENT  | INTEGER AUTOINCREMENT      
+ OwnerID     | owner_id     | BIGINT NOT NULL            | BIGINT NOT NULL        | INTEGER NOT NULL           
+ Name        | name         | VARCHAR(255) NOT NULL      | VARCHAR(255) NOT NULL  | TEXT NOT NULL              
+ Fingerprint | fingerprint  | VARCHAR(255) NOT NULL      | VARCHAR(255) NOT NULL  | TEXT NOT NULL              
+ Content     | content      | TEXT NOT NULL              | TEXT NOT NULL          | TEXT NOT NULL              
+ Mode        | mode         | INTEGER NOT NULL DEFAULT 2 | INT NOT NULL DEFAULT 2 | INTEGER NOT NULL DEFAULT 2 
+ Type        | type         | INTEGER NOT NULL DEFAULT 1 | INT NOT NULL DEFAULT 1 | INTEGER NOT NULL DEFAULT 1 
+ CreatedUnix | created_unix | BIGINT                     | BIGINT                 | INTEGER                    
+ UpdatedUnix | updated_unix | BIGINT                     | BIGINT                 | INTEGER                    
+
+Primary keys: id
+Indexes: 
+	"IDX_public_key_owner_id" (owner_id)
 ```
 
 # Table "two_factor"
