@@ -11,6 +11,7 @@ Gogs is written in [Go](https://golang.org/), please take [A Tour of Go](https:/
 - [Step 4: Configure database settings](#step-4-configure-database-settings)
 - [Step 5: Start the server](#step-5-start-the-server)
 - [Build a production binary](#build-a-production-binary)
+- [Run integration tests](#run-integration-tests)
 - [Other nice things](#other-nice-things)
 
 ## Environment
@@ -164,6 +165,18 @@ Copy `.bin/gogs` to your server and follow the [installation guide](https://gogs
 
 > [!NOTE]
 > A plain `go build` produces a development binary, which serves the web frontend from the Vite dev server that `moon run gogs:dev` starts, so it shows no pages on its own.
+
+## Run integration tests
+
+The integration tests in `integration-tests` build Gogs, start it with a configuration of their own, and call it over HTTP. They connect to the database of that server and read the sessions it stores, so they seed data and read secrets, e.g., captcha text and two-factor authentication secrets, without going through the server. They do not need the web frontend:
+
+```bash
+moon run gogs:test-integration
+```
+
+A full run fails when a route of the server gets no request from any test, except the routes that render pages of the web frontend. The tests find every route in the source and compare them with the requests the server records, so a new route needs a test in the same change. A run of some tests, e.g., with `-run`, lists the routes left without failing.
+
+The tests need PostgreSQL. Each run creates a new database on the server that the `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD` and `PGSSLMODE` environment variables point to, and drops it when the run passes.
 
 ## Other nice things
 

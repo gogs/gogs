@@ -6,6 +6,7 @@ import (
 
 	"unknwon.dev/x/logx"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/tool"
@@ -52,8 +53,9 @@ func ActivateEmail(c *context.Context) {
 		}
 
 		c.Logger.Debug("Email activated", "email", email.Email)
-		// The settings page confirms the activation.
-		c.RedirectSubpath("/user/settings/email?activated=1")
+		// The settings page confirms the activation. The location is raw, since
+		// escaping it would turn the query into part of the path.
+		c.RawRedirect(conf.Server.Subpath + "/user/settings/email?activated=1")
 		return
 	}
 

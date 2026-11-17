@@ -57,6 +57,10 @@ func (err ErrKeyNotExist) Error() string {
 	return fmt.Sprintf("public key does not exist [id: %d]", err.ID)
 }
 
+func (ErrKeyNotExist) NotFound() bool {
+	return true
+}
+
 type ErrKeyAlreadyExist struct {
 	OwnerID int64
 	Content string
@@ -261,10 +265,10 @@ type ErrUploadNotExist struct {
 }
 
 func IsErrUploadNotExist(err error) bool {
-	_, ok := err.(ErrAttachmentNotExist)
+	_, ok := err.(ErrUploadNotExist)
 	return ok
 }
 
 func (err ErrUploadNotExist) Error() string {
-	return fmt.Sprintf("attachment does not exist [id: %d, uuid: %s]", err.ID, err.UUID)
+	return fmt.Sprintf("upload does not exist [id: %d, uuid: %s]", err.ID, err.UUID)
 }

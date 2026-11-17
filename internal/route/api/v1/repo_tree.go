@@ -46,22 +46,9 @@ func getRepoGitTree(c *apiContext) {
 
 	children := make([]*repoGitTreeEntry, 0, len(entries))
 	for _, entry := range entries {
-		var mode string
-		switch entry.Type() {
-		case git.ObjectCommit:
-			mode = "160000"
-		case git.ObjectTree:
-			mode = "040000"
-		case git.ObjectBlob:
-			mode = "120000"
-		case git.ObjectTag:
-			mode = "100644"
-		default:
-			panic("unreachable")
-		}
 		children = append(children, &repoGitTreeEntry{
 			Path: entry.Name(),
-			Mode: mode,
+			Mode: fmt.Sprintf("%06o", entry.Mode()),
 			Type: string(entry.Type()),
 			Size: entry.Size(c.Request().Context()),
 			Sha:  entry.ID().String(),

@@ -97,8 +97,19 @@ func (l *Label) ForegroundColor() template.CSS {
 
 // NewLabels creates new label(s) for a repository.
 func NewLabels(labels ...*Label) error {
-	_, err := x.Insert(labels)
-	return err
+	sess := x.NewSession()
+	defer sess.Close()
+	if err := sess.Begin(); err != nil {
+		return err
+	}
+	// Inserting the labels one by one sets their IDs, which inserting them in
+	// one statement does not.
+	for _, label := range labels {
+		if _, err := sess.Insert(label); err != nil {
+			return err
+		}
+	}
+	return sess.Commit()
 }
 
 var _ errx.NotFound = (*ErrLabelNotExist)(nil)

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"net/http"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 )
@@ -30,5 +29,5 @@ func Email2User(c *context.Context) {
 		c.NotFoundOrError(err, "get user by email")
 		return
 	}
-	c.Redirect(conf.Server.Subpath + "/user/" + u.Name)
+	c.Redirect(u.HomeURLPath())
 }
