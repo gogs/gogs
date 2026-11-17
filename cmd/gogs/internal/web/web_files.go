@@ -133,6 +133,77 @@ func getAttachment(c flamego.Context, logger *logx.Logger, viewer *database.User
 	}
 }
 
+// getUserAvatar serves the uploaded or generated avatar of a user or an
+// organization. Unlike the pages, it does not turn away viewers who cannot sign
+// in or have not activated their account, because the pages that tell them so
+// show the avatar of the viewer.
+func getUserAvatar(c flamego.Context, logger *logx.Logger, viewer *database.User, pages webAppPages) {
+	if viewer == nil && conf.Auth.RequireSigninView {
+		pages.NotFound(c)
+		return
+	}
+	if err := serveAvatar(c, pages, userx.CustomAvatarPath(c.ParamInt64("id"))); err != nil {
+		logger.Error("Failed to serve user avatar", "userID", c.ParamInt64("id"), "error", err)
+		writeErrorResponse(c.ResponseWriter(), http.StatusInternalServerError, err)
+	}
+}
+
+// getRepoAvatar serves the uploaded avatar of a repository to the viewers who
+// can read the repository.
+func getRepoAvatar(c flamego.Context, logger *logx.Logger, viewer *database.User, pages webAppPages) {
+	if viewer == nil && conf.Auth.RequireSigninView {
+		pages.NotFound(c)
+		return
+	}
+
+	id := c.ParamInt64("id")
+	repo, err := database.Handle.Repositories().GetByID(c.Request().Context(), id)
+	if err != nil {
+		if errx.IsNotFound(err) {
+			pages.NotFound(c)
+			return
+		}
+		logger.Error("Failed to get repository by ID", "repoID", id, "error", err)
+		writeErrorResponse(c.ResponseWriter(), http.StatusInternalServerError, errors.Wrap(err, "get repository"))
+		return
+	}
+	var viewerID int64
+	if viewer != nil {
+		viewerID = viewer.ID
+	}
+	if !repo.HasAccess(logger, viewerID) {
+		pages.NotFound(c)
+		return
+	}
+	if err := serveAvatar(c, pages, repo.CustomAvatarPath()); err != nil {
+		logger.Error("Failed to serve repository avatar", "repoID", id, "error", err)
+		writeErrorResponse(c.ResponseWriter(), http.StatusInternalServerError, err)
+	}
+}
+
+// serveAvatar serves the avatar file at the path, or the page that is not
+// found when there is no such file. It returns the error of opening an
+// existing file.
+func serveAvatar(c flamego.Context, pages webAppPages, avatarPath string) error {
+	fi, err := os.Stat(avatarPath)
+	if err != nil || !fi.Mode().IsRegular() {
+		pages.NotFound(c)
+		return nil
+	}
+
+	fr, err := os.Open(avatarPath)
+	if err != nil {
+		return errors.Wrap(err, "open avatar")
+	}
+	defer func() { _ = fr.Close() }()
+
+	// Avatars can be private to signed-in viewers or to the readers of a
+	// repository, so shared caches must not keep them.
+	c.ResponseWriter().Header().Set("Cache-Control", "private")
+	http.ServeContent(c.ResponseWriter(), c.Request().Request, "", fi.ModTime(), fr)
+	return nil
+}
+
 // getUserPublicKeys serves the public SSH keys of a user as plain text.
 func getUserPublicKeys(c flamego.Context, logger *logx.Logger, pages webAppPages) {
 	w := c.ResponseWriter()
