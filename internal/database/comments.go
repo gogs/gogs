@@ -111,7 +111,7 @@ func (s *CommentsStore) create(ctx context.Context, logger *logx.Logger, opts *C
 // issue.
 func (s *CommentsStore) mailParticipants(ctx context.Context, logger *logx.Logger, c *Comment, opType ActionType, issue *Issue) error {
 	mentions := findLowerMentions(c.Content)
-	err := newIssuesStore(s.db).updateMentions(ctx, c.IssueID, mentions)
+	err := newIssuesStore(s.db).updateMentions(ctx, issue.RepoID, c.IssueID, mentions)
 	if err != nil {
 		return errors.Wrap(err, "update mentions")
 	}
