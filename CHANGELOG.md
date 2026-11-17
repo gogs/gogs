@@ -104,6 +104,7 @@ All notable changes to Gogs are documented in this file.
 - Mentioning an organization marks its members as mentioned, instead of unrelated users. [#8505](https://github.com/gogs/gogs/pull/8505)
 - The issue list of a repository marks issues that mention you as unread until you read them, as it does for your other issues. [#8528](https://github.com/gogs/gogs/pull/8528)
 - Events that a Discord webhook created through the API subscribes to no longer fail, e.g., pushes to its repository were missing from activity feeds and from some other webhooks. [#8528](https://github.com/gogs/gogs/pull/8528)
+- Listing or creating comments of an issue that does not exist through the API returns 404 instead of 500. [#8528](https://github.com/gogs/gogs/pull/8528)
 
 ### Removed
 
