@@ -832,7 +832,7 @@ func (s *PullRequestsStore) Create(ctx context.Context, logger *logx.Logger, rep
 		return err
 	}
 
-	err = notifyWatchers(s.db.WithContext(ctx), &Action{
+	err = newActionsStore(s.db).notifyWatchers(ctx, &Action{
 		ActUserID:    pull.Poster.ID,
 		ActUserName:  pull.Poster.Name,
 		OpType:       ActionCreatePullRequest,

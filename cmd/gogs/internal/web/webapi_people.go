@@ -58,7 +58,7 @@ func getRepoStargazers(logger *logx.Logger, c flamego.Context, repoCtx *repoCont
 	}
 	repo := repoCtx.Repo
 	page := pageParam(c)
-	users, err := repo.GetStargazers(page)
+	users, err := database.Handle.Repositories().ListStargazers(c.Request().Context(), repo.ID, page)
 	if err != nil {
 		logger.Error("Failed to list stargazers of repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list stargazers")
@@ -72,7 +72,7 @@ func getRepoWatchers(logger *logx.Logger, c flamego.Context, repoCtx *repoContex
 	}
 	repo := repoCtx.Repo
 	page := pageParam(c)
-	users, err := repo.GetWatchers(page)
+	users, err := database.Handle.Repositories().ListWatchers(c.Request().Context(), repo.ID, page)
 	if err != nil {
 		logger.Error("Failed to list watchers of repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list watchers")
@@ -99,7 +99,7 @@ func deleteRepoWatcher(logger *logx.Logger, c flamego.Context, viewer *database.
 	}
 
 	repo := repoCtx.Repo
-	if err = database.WatchRepo(watcher.ID, repo.ID, false); err != nil {
+	if err = database.Handle.Repositories().Unwatch(ctx, watcher.ID, repo.ID); err != nil {
 		logger.Error("Failed to unwatch repository", "repoID", repo.ID, "userID", watcher.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "unwatch repo")
 	}

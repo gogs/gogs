@@ -355,43 +355,15 @@ func (s *RepositoriesStore) GetByName(ctx context.Context, ownerID int64, name s
 	return repo, nil
 }
 
-func (s *RepositoriesStore) recountStars(tx *gorm.DB, userID, repoID int64) error {
-	/*
-		Equivalent SQL for PostgreSQL:
-
-		UPDATE repository
-		SET num_stars = (
-			SELECT COUNT(*) FROM star WHERE repo_id = @repoID
-		)
-		WHERE id = @repoID
-	*/
-	err := tx.Model(&Repository{}).
-		Where("id = ?", repoID).
-		Update(
-			"num_stars",
-			tx.Model(&Star{}).Select("COUNT(*)").Where("repo_id = ?", repoID),
-		).
-		Error
+// addStars adds delta to the numbers of stars of the repository and of the
+// user. Adding is atomic, unlike counting the rows of the table, which drifts
+// under concurrent changes and deadlocks on MySQL.
+func (*RepositoriesStore) addStars(tx *gorm.DB, userID, repoID int64, delta int) error {
+	err := tx.Model(&Repository{}).Where("id = ?", repoID).UpdateColumn("num_stars", gorm.Expr("num_stars + ?", delta)).Error
 	if err != nil {
 		return errors.Wrap(err, `update "repository.num_stars"`)
 	}
-
-	/*
-		Equivalent SQL for PostgreSQL:
-
-		UPDATE "user"
-		SET num_stars = (
-			SELECT COUNT(*) FROM star WHERE uid = @userID
-		)
-		WHERE id = @userID
-	*/
-	err = tx.Model(&User{}).
-		Where("id = ?", userID).
-		Update(
-			"num_stars",
-			tx.Model(&Star{}).Select("COUNT(*)").Where("uid = ?", userID),
-		).
-		Error
+	err = tx.Model(&User{}).Where("id = ?", userID).UpdateColumn("num_stars", gorm.Expr("num_stars + ?", delta)).Error
 	if err != nil {
 		return errors.Wrap(err, `update "user.num_stars"`)
 	}
@@ -412,8 +384,52 @@ func (s *RepositoriesStore) Star(ctx context.Context, userID, repoID int64) erro
 			return nil // Relation already exists
 		}
 
-		return s.recountStars(tx, userID, repoID)
+		return s.addStars(tx, userID, repoID, 1)
 	})
+}
+
+// Unstar removes the user's star from the repository. It is a no-op if the user
+// has not starred it.
+func (s *RepositoriesStore) Unstar(ctx context.Context, userID, repoID int64) error {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		result := tx.Where("uid = ? AND repo_id = ?", userID, repoID).Delete(new(Star))
+		if result.Error != nil {
+			return errors.Wrap(result.Error, "delete")
+		} else if result.RowsAffected <= 0 {
+			return nil
+		}
+
+		return s.addStars(tx, userID, repoID, -1)
+	})
+}
+
+// IsStarring returns true if the user stars the repository.
+func (s *RepositoriesStore) IsStarring(ctx context.Context, userID, repoID int64) bool {
+	if userID <= 0 {
+		return false
+	}
+
+	var count int64
+	s.db.WithContext(ctx).Model(new(Star)).Where("uid = ? AND repo_id = ?", userID, repoID).Count(&count)
+	return count > 0
+}
+
+// listUsersOf returns the page of users linked to the repository through the
+// table, whose user ID column is given, oldest link first.
+func (s *RepositoriesStore) listUsersOf(ctx context.Context, table, userIDColumn string, repoID int64, page int) ([]*User, error) {
+	db := s.db.WithContext(ctx)
+	users := make([]*User, 0, ItemsPerPage)
+	return users, db.Joins("INNER JOIN "+table+" ON "+table+"."+userIDColumn+" = "+db.Statement.Quote("user")+".id").
+		Where(table+".repo_id = ?", repoID).
+		Order(table + ".id ASC").
+		Limit(ItemsPerPage).Offset((max(page, 1) - 1) * ItemsPerPage).
+		Find(&users).Error
+}
+
+// ListStargazers returns the users of given page who star the repository, in
+// the order they starred it.
+func (s *RepositoriesStore) ListStargazers(ctx context.Context, repoID int64, page int) ([]*User, error) {
+	return s.listUsersOf(ctx, "star", "uid", repoID, page)
 }
 
 // Touch updates the updated time to the current time and removes the empty state
@@ -435,41 +451,73 @@ func (s *RepositoriesStore) ListWatches(ctx context.Context, repoID int64) ([]*W
 	return watches, s.db.WithContext(ctx).Where("repo_id = ?", repoID).Find(&watches).Error
 }
 
-func (s *RepositoriesStore) recountWatches(tx *gorm.DB, repoID int64) error {
-	/*
-		Equivalent SQL for PostgreSQL:
-
-		UPDATE repository
-		SET num_watches = (
-			SELECT COUNT(*) FROM watch WHERE repo_id = @repoID
-		)
-		WHERE id = @repoID
-	*/
-	return tx.Model(&Repository{}).
-		Where("id = ?", repoID).
-		Update(
-			"num_watches",
-			tx.Model(&Watch{}).Select("COUNT(*)").Where("repo_id = ?", repoID),
-		).
-		Error
+// addWatches adds delta to the number of watchers of the repository. Adding is
+// atomic, unlike counting the rows of the table, which drifts under concurrent
+// changes and deadlocks on MySQL.
+func (*RepositoriesStore) addWatches(tx *gorm.DB, repoID int64, delta int) error {
+	return tx.Model(&Repository{}).Where("id = ?", repoID).UpdateColumn("num_watches", gorm.Expr("num_watches + ?", delta)).Error
 }
 
 // Watch marks the user to watch the repository.
 func (s *RepositoriesStore) Watch(ctx context.Context, userID, repoID int64) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		w := &Watch{
-			UserID: userID,
-			RepoID: repoID,
-		}
-		result := tx.FirstOrCreate(w, w)
-		if result.Error != nil {
-			return errors.Wrap(result.Error, "upsert")
-		} else if result.RowsAffected <= 0 {
-			return nil // Relation already exists
-		}
-
-		return s.recountWatches(tx, repoID)
+		return newReposStore(tx).watch(ctx, userID, repoID)
 	})
+}
+
+// watch is Watch without a transaction of its own.
+func (s *RepositoriesStore) watch(ctx context.Context, userID, repoID int64) error {
+	db := s.db.WithContext(ctx)
+	w := &Watch{
+		UserID: userID,
+		RepoID: repoID,
+	}
+	result := db.FirstOrCreate(w, w)
+	if result.Error != nil {
+		return errors.Wrap(result.Error, "upsert")
+	} else if result.RowsAffected <= 0 {
+		return nil // Relation already exists
+	}
+
+	return s.addWatches(db, repoID, 1)
+}
+
+// Unwatch stops the user from watching the repository. It is a no-op if the
+// user does not watch it.
+func (s *RepositoriesStore) Unwatch(ctx context.Context, userID, repoID int64) error {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		return newReposStore(tx).unwatch(ctx, userID, repoID)
+	})
+}
+
+// unwatch is Unwatch without a transaction of its own.
+func (s *RepositoriesStore) unwatch(ctx context.Context, userID, repoID int64) error {
+	db := s.db.WithContext(ctx)
+	result := db.Where("user_id = ? AND repo_id = ?", userID, repoID).Delete(new(Watch))
+	if result.Error != nil {
+		return errors.Wrap(result.Error, "delete")
+	} else if result.RowsAffected <= 0 {
+		return nil
+	}
+
+	return s.addWatches(db, repoID, -1)
+}
+
+// IsWatching returns true if the user watches the repository.
+func (s *RepositoriesStore) IsWatching(ctx context.Context, userID, repoID int64) bool {
+	if userID <= 0 {
+		return false
+	}
+
+	var count int64
+	s.db.WithContext(ctx).Model(new(Watch)).Where("user_id = ? AND repo_id = ?", userID, repoID).Count(&count)
+	return count > 0
+}
+
+// ListWatchers returns the users of given page who watch the repository, in
+// the order they started to watch it.
+func (s *RepositoriesStore) ListWatchers(ctx context.Context, repoID int64, page int) ([]*User, error) {
+	return s.listUsersOf(ctx, "watch", "user_id", repoID, page)
 }
 
 // HasForkedBy returns true if the given repository has been forked by the given user.
