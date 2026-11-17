@@ -23,7 +23,7 @@ export function Dashboard({ org }: { org?: string }) {
   return (
     <main className="mx-auto grid w-full max-w-6xl flex-1 content-start gap-6 px-4 py-6 sm:px-6 md:grid-cols-[256px_minmax(0,1fr)] lg:grid-cols-[296px_minmax(0,1fr)]">
       <h1 className="sr-only">{t("dashboard")}</h1>
-      <aside className="min-w-0">
+      <aside className="glass min-w-0 self-start glass-ui:border glass-ui:p-3">
         <ContextSwitcher data={data} page="dashboard" />
         <DashboardLists data={data} />
       </aside>
@@ -31,7 +31,9 @@ export function Dashboard({ org }: { org?: string }) {
         {data.kind === "organization" ? (
           <OrgNav name={data.name} page="dashboard" />
         ) : (
-          <h2 className="border-b border-(--color-border) pb-2 text-sm font-semibold">{t("activities")}</h2>
+          <h2 className="border-b border-(--color-border) pb-2 text-sm font-semibold glass-ui:border-b-0">
+            {t("activities")}
+          </h2>
         )}
         <DashboardActivity org={org} />
       </section>

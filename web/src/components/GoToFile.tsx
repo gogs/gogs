@@ -102,7 +102,7 @@ export function GoToFile({
   const showList = open && q !== "";
   return (
     <div className={cn("relative min-w-0", className)}>
-      <div className="flex h-8 items-center gap-2 rounded-md border border-(--color-border) bg-(--color-background) px-2 focus-within:border-(--color-ring) focus-within:ring-1 focus-within:ring-(--color-ring)">
+      <div className="flex h-8 items-center gap-2 rounded-md border border-(--color-border) bg-(--color-field) px-2 focus-within:border-(--color-ring) focus-within:ring-1 focus-within:ring-(--color-ring)">
         <Search className="size-4 shrink-0 text-(--color-muted-foreground)" aria-hidden />
         <input
           ref={input}
@@ -147,7 +147,7 @@ export function GoToFile({
         </kbd>
       </div>
       {showList ? (
-        <div className="absolute top-full right-0 left-0 z-20 mt-1 overflow-hidden rounded-md border border-(--color-border) bg-(--color-background) shadow-lg sm:left-auto sm:w-[28rem]">
+        <div className="absolute top-full right-0 left-0 z-20 mt-1 overflow-hidden rounded-md border border-(--color-border) bg-(--color-popover) shadow-lg backdrop-blur-xl sm:left-auto sm:w-[28rem]">
           <ul id={listID} role="listbox" aria-label={t("repo.go_to_file")} className="max-h-80 overflow-y-auto p-1">
             {results.map((path, i) => (
               <li

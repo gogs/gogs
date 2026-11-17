@@ -88,7 +88,7 @@ export function OrgHome({ org, repos }: { org: OrgProfileData; repos: OwnerRepos
               </Button>
             </div>
           ) : null}
-          <ul className="border-t border-(--color-border)">
+          <ul className="glass-list border-t border-(--color-border)">
             {repos.items.map((repo) => (
               <RepoListItem key={repo.name} repo={repo} />
             ))}

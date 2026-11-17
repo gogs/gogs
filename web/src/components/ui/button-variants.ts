@@ -7,7 +7,7 @@ export const buttonVariants = cva(
       variant: {
         default: "bg-(--color-primary) text-(--color-primary-foreground) hover:opacity-90",
         outline:
-          "border border-(--color-input) bg-(--color-background) text-(--color-foreground) hover:bg-(--color-surface)",
+          "glass-control border border-(--color-input) bg-(--color-field) text-(--color-foreground) hover:bg-(--color-surface)",
         ghost: "text-(--color-foreground) hover:bg-(--color-surface)",
         link: "text-(--color-foreground) underline-offset-4 hover:underline",
         destructive: "bg-(--color-destructive) text-(--color-destructive-foreground) hover:opacity-90",

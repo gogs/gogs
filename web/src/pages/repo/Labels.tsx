@@ -80,7 +80,7 @@ export function IssueTrackerLayout({
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6">
         <h1 className="sr-only">{title}</h1>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <nav aria-label={t("issues")} className="inline-flex rounded-md border border-(--color-input)">
+          <nav aria-label={t("issues")} className="glass-control inline-flex rounded-md border border-(--color-input)">
             {tabs.map(({ key, to, label, icon: Icon }) => (
               <Link
                 key={key}
@@ -152,7 +152,7 @@ export function RepoLabels({ owner, name, data }: { owner: string; name: string;
       }
     >
       {creating ? (
-        <div className="mb-4 rounded-md border border-(--color-border) p-4">
+        <div className="mb-4 glass rounded-md border border-(--color-border) p-4">
           <LabelForm
             initial={{ name: "", color: "#70c24a" }}
             submitLabel={t("repo.issues.create_label")}
@@ -164,7 +164,7 @@ export function RepoLabels({ owner, name, data }: { owner: string; name: string;
       {data.viewerCanWrite && data.items.length === 0 && data.templates?.length ? (
         <LabelTemplates owner={owner} name={name} templates={data.templates} />
       ) : null}
-      <div className="rounded-md border border-(--color-border)">
+      <div className="glass rounded-md border border-(--color-border)">
         <h2 className="bg-(--color-surface) px-4 py-3 text-sm font-semibold">
           {t("repo.issues.label_count").replace(/%(?:\[1\])?d/, String(data.items.length))}
         </h2>
@@ -325,7 +325,7 @@ function LabelForm({
               aria-label={t("repo.issues.label_color")}
               value={shownColor}
               onChange={(e) => setForm({ ...form, color: e.target.value })}
-              className="size-10 shrink-0 cursor-pointer rounded-md border border-(--color-input) bg-(--color-background) p-1"
+              className="size-10 shrink-0 cursor-pointer rounded-md border border-(--color-input) bg-(--color-field) p-1"
             />
             <Input
               ref={colorRef}
@@ -393,7 +393,7 @@ function LabelTemplates({ owner, name, templates }: { owner: string; name: strin
     onError: (err) => toast.error(err.message),
   });
   return (
-    <section className="mb-4 rounded-md border border-(--color-border) p-4">
+    <section className="mb-4 glass rounded-md border border-(--color-border) p-4">
       <h2 className="flex items-center gap-1.5 font-semibold">
         {t("repo.issues.label_templates.title")}
         <a

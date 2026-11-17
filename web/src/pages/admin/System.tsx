@@ -242,7 +242,7 @@ export function AdminOperations() {
   return (
     <AdminLayout active="operations">
       <h1 className="mb-4 text-xl font-semibold">{t("admin.dashboard.operations")}</h1>
-      <ul className="border-t border-(--color-border)">
+      <ul className="glass-list border-t border-(--color-border)">
         {ADMIN_OPERATIONS.map((op) => {
           const label = t(OPERATION_LABELS[op]);
           const running = run.isPending && run.variables === op;
@@ -324,7 +324,7 @@ export function AdminCron({ monitor }: { monitor: AdminMonitorData }) {
     <AdminLayout active="cron">
       <h1 className="mb-4 text-xl font-semibold">{t("admin.monitor.cron")}</h1>
       {monitor.cronTasks.length > 0 ? (
-        <ul className="border-t border-(--color-border)">
+        <ul className="glass-list border-t border-(--color-border)">
           {monitor.cronTasks.map((task) => (
             <li key={task.description} className={ROW_CLASS}>
               <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -359,7 +359,7 @@ export function AdminProcesses({ monitor }: { monitor: AdminMonitorData }) {
     <AdminLayout active="processes">
       <h1 className="mb-4 text-xl font-semibold">{t("admin.processes")}</h1>
       {monitor.processes.length > 0 ? (
-        <ul className="border-t border-(--color-border)">
+        <ul className="glass-list border-t border-(--color-border)">
           {monitor.processes.map((proc) => (
             <li key={proc.pid} className={ROW_CLASS}>
               <p className="font-mono text-sm wrap-anywhere">{proc.description}</p>

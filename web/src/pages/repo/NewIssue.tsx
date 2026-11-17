@@ -29,7 +29,7 @@ import { cn } from "@/lib/utils";
 import type { RepoNewIssueSearch } from "@/pages/repo/NewIssue.search";
 
 const TEXTAREA_CLASS =
-  "block w-full rounded-md border border-(--color-input) bg-(--color-background) px-3 py-2 text-sm text-(--color-foreground) placeholder:text-(--color-muted-foreground) outline-none transition-colors focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-(--color-destructive)";
+  "block w-full rounded-md border border-(--color-input) bg-(--color-field) px-3 py-2 text-sm text-(--color-foreground) placeholder:text-(--color-muted-foreground) outline-none transition-colors focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-(--color-destructive)";
 
 // The value a single-choice dropdown has when no option is chosen, since a
 // select item cannot have an empty value.
@@ -99,7 +99,7 @@ function TemplateChooser({ owner, name, options }: { owner: string; name: string
   return (
     <div>
       <p className="mb-3 text-sm text-(--color-muted-foreground)">{t("repo.issues.new.choose_template")}</p>
-      <ul className="rounded-md border border-(--color-border)">
+      <ul className="glass rounded-md border border-(--color-border)">
         {options.templates.map((tmpl) => (
           <li key={tmpl.file} className={rowClass}>
             <div className="min-w-0">
@@ -326,7 +326,7 @@ export function NewIssueForm({
               </div>
             </div>
           ) : (
-            <div className="mt-4 rounded-md border border-(--color-border) p-3">
+            <div className="mt-4 glass rounded-md border border-(--color-border) p-3">
               <MarkdownEditor
                 repo={repoRef}
                 label={label}

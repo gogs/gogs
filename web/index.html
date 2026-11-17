@@ -24,6 +24,10 @@
         var explicit = saved === "light" || saved === "dark";
         var dark = saved === "dark" || (!explicit && window.matchMedia("(prefers-color-scheme: dark)").matches);
         if (dark) document.documentElement.classList.add("dark");
+        // Same rule as readGlass in src/lib/glass.ts.
+        var glass = localStorage.getItem("gogs-glass");
+        var reduce = window.matchMedia("(prefers-reduced-transparency: reduce)").matches;
+        if (glass === "on" || (glass !== "off" && !reduce)) document.documentElement.classList.add("glass-ui");
       })();
     </script>
   </head>

@@ -79,7 +79,9 @@ export function RepoBranches({
     <BranchRow key={branch.name} owner={owner} name={name} branch={branch} data={data} />
   );
   const list = (branches: RepoBranch[]) => (
-    <ul className="divide-y divide-(--color-border) rounded-md border border-(--color-border)">{branches.map(row)}</ul>
+    <ul className="divide-y divide-(--color-border) glass rounded-md border border-(--color-border)">
+      {branches.map(row)}
+    </ul>
   );
   const tabsRef = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -98,7 +100,7 @@ export function RepoBranches({
             <nav
               ref={tabsRef}
               aria-label={t("repo.git_branches")}
-              className="inline-flex rounded-md border border-(--color-input)"
+              className="glass-control inline-flex rounded-md border border-(--color-input)"
             >
               {tabs.map(({ key, to, label, icon: Icon }) => (
                 <Link
@@ -124,7 +126,7 @@ export function RepoBranches({
           <BranchSearch owner={repo.owner} name={repo.name} view={view} query={query} />
         </div>
         {isEmpty ? (
-          <p className="rounded-md border border-(--color-border) px-4 py-8 text-center text-sm text-(--color-muted-foreground)">
+          <p className="glass rounded-md border border-(--color-border) px-4 py-8 text-center text-sm text-(--color-muted-foreground)">
             {query ? t("repo.branches.no_match").replace("%s", query) : t("repo.branches.none")}
           </p>
         ) : view === "overview" ? (

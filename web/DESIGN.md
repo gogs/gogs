@@ -57,6 +57,23 @@ Don't use foreground vs muted-foreground to imply "primary action" vs "secondary
 
 The traffic-light cluster in the faux-terminal frame uses one ad-hoc value: the amber dot falls back to `oklch(0.795 0.184 86.047)` via `bg-(--color-warning,...)`. There is no `--color-warning` token defined, so the fallback always wins. This is deliberate. Promoting it to a real token would invite reuse, and warning is not a system-wide concern in the current UI. Leave it inline until a second site needs warning semantics, then define the token in both light and dark palettes.
 
+## Glass
+
+The app has a frosted glass look, on by default. Users switch it off with "Glass effect" in the settings menu, next to the theme. The choice is kept in `localStorage` under `gogs-glass` (see `lib/glass.ts`), and without a choice the OS setting for reduced transparency turns it off. While it is on, `<html>` carries the `glass-ui` class, which the inline script in `index.html` sets before the first paint. Every glass style is scoped under that class, so the app without it looks exactly as it does with plain tokens: never change the plain look to get a glass effect.
+
+With glass on, `html` paints `--glass-backdrop`, a few soft color blobs over `--glass-page`, fixed to the viewport, with a dot grid that fades toward the bottom. Panels are translucent over it. Components opt in with marker classes, which style nothing while glass is off. Write the element's plain look with utilities as usual and add the marker:
+
+- **`glass`** goes on content containers: bordered boxes, comments, `Card`, the terminal frames, the settings panels and the diff workspace. It sets the translucent `--glass-fill`, a light top edge and a soft drop shadow, blurs what is behind it and rounds it to `--glass-radius` (`0.75rem`, `Card` sets `1rem`).
+- **`glass-list`** goes on lists of rows divided by bottom borders, e.g., the activity feed and repository lists, which become a glass panel with the rows inset. An empty list hides.
+- **`glass-bar`** goes on full-width chrome that content scrolls under: the navbar and the repository header.
+- **`glass-control`** goes on outline buttons and segmented groups, e.g., Watch, Star and Fork, and the view switchers.
+
+Layout that only applies to glass, e.g., a border or padding the plain look does not have, uses the `glass-ui:` variant, e.g., `glass-ui:border glass-ui:p-3`.
+
+Borders follow the 1.0 landing page: thin translucent lines, never opaque gray. A glass panel draws its edge in `--glass-line` and lowers `--color-border` to `--glass-divider` for everything inside it, so its rows and sections divide faintly. A state that recolors a panel's edge, e.g., a linked comment, needs `!border-...`, since the marker rules outrank utilities. Round a header that fills the top of a panel with `rounded-t-[inherit]`, so it follows the panel's radius in both looks.
+
+Glass also makes `--color-surface`, `--color-secondary`, `--color-border` and `--color-input` translucent, so hover fills and dividers tint the glass under them, and `--color-popover` mostly opaque, so popovers, selects and dialogs keep text readable over what they cover. Form fields use `bg-(--color-field)`: the page color without glass, and with glass lighter than the panels in light mode and darker in dark mode, so fields read as inset. Code in diffs and highlighted blocks takes the same field color, and file trees take the panel they sit in. Don't put a glass marker on elements with `position: fixed` children, since `backdrop-filter` makes it their containing block.
+
 ## Surface chrome
 
 The landing and 404/500 pages wrap their content in a faux-terminal frame (rounded border, traffic-light dots, monospace body). Reuse the same frame for any page that represents a Git/CLI state: the landing page, error pages, command-output stubs, raw diff fallbacks. Don't reuse it for normal content pages like settings or repository views.

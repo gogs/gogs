@@ -153,7 +153,7 @@ export function DiffSearch<L, Caret>({ items, viewRef }: Props<L, Caret>) {
   }, []);
 
   return (
-    <search className="flex h-7 items-center gap-1 rounded-md border border-(--color-border) bg-(--color-background) px-1 focus-within:border-(--color-ring) focus-within:ring-2 focus-within:ring-(--color-ring)/30">
+    <search className="flex h-7 items-center gap-1 rounded-md border border-(--color-border) bg-(--color-field) px-1 focus-within:border-(--color-ring) focus-within:ring-2 focus-within:ring-(--color-ring)/30">
       <Search className="ml-1 size-3.5 text-(--color-muted-foreground)" aria-hidden />
       <input
         ref={inputRef}

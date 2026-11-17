@@ -39,7 +39,7 @@ export function DashboardIssues({
         {isOrg ? <OrgNav name={data.name} page={kind} /> : null}
         <Toolbar data={data} search={search} className={isOrg ? "mt-4" : undefined} />
         {data.items.length > 0 ? (
-          <ul>
+          <ul className="glass-list glass-ui:mt-4">
             {data.items.map((issue) => (
               <IssueListItem
                 key={`${issue.repo}#${issue.index}`}

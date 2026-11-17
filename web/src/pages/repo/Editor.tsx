@@ -38,7 +38,7 @@ import { cn } from "@/lib/utils";
 // to the branch or to a new branch.
 
 const TEXTAREA_CLASS =
-  "block w-full rounded-md border border-(--color-input) bg-(--color-background) px-3 py-2 text-sm text-(--color-foreground) placeholder:text-(--color-muted-foreground) outline-none transition-colors focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-60";
+  "block w-full rounded-md border border-(--color-input) bg-(--color-field) px-3 py-2 text-sm text-(--color-foreground) placeholder:text-(--color-muted-foreground) outline-none transition-colors focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-60";
 
 function EditorLayout({
   owner,
@@ -189,7 +189,7 @@ function CommitForm({
   return (
     <section
       aria-labelledby="commit-heading"
-      className="mt-6 flex gap-4 rounded-md border border-(--color-border) p-4 sm:p-5"
+      className="mt-6 flex gap-4 glass rounded-md border border-(--color-border) p-4 sm:p-5"
     >
       {user ? <img src={user.avatarURL} alt="" className="hidden size-10 shrink-0 rounded-full sm:block" /> : null}
       <div className="flex min-w-0 flex-1 flex-col gap-4">
@@ -480,7 +480,7 @@ export function RepoFileEditor({
               autoFocus={isNew}
             />
           </FormField>
-          <div className="min-w-0 rounded-md border border-(--color-border) p-3">
+          <div className="min-w-0 glass rounded-md border border-(--color-border) p-3">
             <EditorTabs id={id} label={heading} tabs={tabs} current={currentTab} onChange={setTab} />
             {currentTab === "write" ? (
               <div role="tabpanel" id={`${id}-write`} aria-labelledby={`${id}-write-tab`}>
@@ -505,7 +505,7 @@ export function RepoFileEditor({
                 id={`${id}-preview`}
                 aria-labelledby={`${id}-preview-tab`}
                 aria-busy={preview.isFetching}
-                className="min-h-32 rounded-md border border-(--color-border) px-4 py-3"
+                className="min-h-32 glass rounded-md border border-(--color-border) px-4 py-3"
               >
                 {content.trim() === "" ? (
                   <p className="text-sm text-(--color-muted-foreground) italic">{t("repo.issues.no_content")}</p>

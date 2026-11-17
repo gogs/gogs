@@ -21,6 +21,7 @@ All notable changes to Gogs are documented in this file.
 - Passkeys. Users add them on the security settings page and then sign in without a password or a two-factor passcode. The sign-in page asks for a passkey first, and offers to try again or to sign in with a password after three failed attempts, a timeout, or a cancelled prompt. [#8512](https://github.com/gogs/gogs/pull/8512)
 - The repository branches page has Overview, Yours, Active, Stale and All tabs, and a field to search branches by name. Yours lists the branches whose last commit uses one of your activated email addresses. The overview shows up to 5 branches per group with a link to the rest, and the other tabs show 20 branches a page. [#8590](https://github.com/gogs/gogs/pull/8590)
 - Pull requests can be merged with "Squash and merge", which adds their changes to the base branch as a single commit. Repository admins choose which merge methods to allow in the repository settings, including turning off merge commits.
+- A frosted glass look for the web interface, in light and dark themes, on by default. Turn it off with "Glass effect" in the settings menu next to the theme. It also stays off when the operating system asks for reduced transparency.
 
 ### Changed
 

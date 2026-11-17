@@ -155,7 +155,7 @@ export function MarkdownEditor({
           id={`${id}-preview`}
           aria-labelledby={`${id}-preview-tab`}
           aria-busy={preview.isFetching}
-          className="min-h-32 rounded-md border border-(--color-border) px-4 py-3"
+          className="min-h-32 glass rounded-md border border-(--color-border) px-4 py-3"
         >
           {value.trim() === "" ? (
             <p className="text-sm text-(--color-muted-foreground) italic">{t("repo.issues.no_content")}</p>

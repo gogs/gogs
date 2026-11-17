@@ -71,7 +71,7 @@ export function RepoMilestones({
         ) : null
       }
     >
-      <div className="rounded-md border border-(--color-border)">
+      <div className="glass rounded-md border border-(--color-border)">
         <ul className="flex gap-1 bg-(--color-surface) px-2 py-1.5">
           {states.map(({ state, label, count, icon: Icon }) => {
             const active = state === search.state;

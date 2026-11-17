@@ -6,7 +6,7 @@ export const TREE_THEME_STYLE: CSSProperties = {
   // @ts-expect-error -- CSS custom properties are valid in style objects.
   "--trees-fg-override": "var(--color-foreground)",
   "--trees-fg-muted-override": "var(--color-muted-foreground)",
-  "--trees-bg-override": "var(--color-background)",
+  "--trees-bg-override": "var(--glass-pane, var(--color-background))",
   "--trees-bg-muted-override": "var(--color-surface)",
   "--trees-accent-override": "var(--color-primary)",
   "--trees-border-color-override": "var(--color-border)",

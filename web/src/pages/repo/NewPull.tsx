@@ -90,7 +90,7 @@ export function RepoNewPull({
         </div>
 
         {message ? (
-          <p className="mt-4 rounded-md border border-(--color-border) px-4 py-6 text-center text-sm text-(--color-muted-foreground)">
+          <p className="mt-4 glass rounded-md border border-(--color-border) px-4 py-6 text-center text-sm text-(--color-muted-foreground)">
             <RichText text={message} links={[`/${repo.owner}/${repo.name}/pulls/${data.pullIndex}`]} />
           </p>
         ) : (

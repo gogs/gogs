@@ -107,7 +107,7 @@ function NewPageButton({ owner, name, primary }: { owner: string; name: string; 
 function WikiStart({ owner, name, canWrite }: { owner: string; name: string; canWrite: boolean }) {
   const { t } = useTranslation();
   return (
-    <section className="flex flex-col items-center rounded-md border border-(--color-border) px-6 py-16 text-center">
+    <section className="flex flex-col items-center glass rounded-md border border-(--color-border) px-6 py-16 text-center">
       <BookOpen className="size-12 text-(--color-muted-foreground)" aria-hidden />
       <h1 className="mt-4 text-2xl font-semibold">{t("repo.wiki.welcome")}</h1>
       <p className="mt-2 max-w-prose text-(--color-muted-foreground)">{t("repo.wiki.welcome_desc")}</p>
@@ -220,7 +220,7 @@ function PageList({ owner, name, pages, current }: { owner: string; name: string
           className="mb-2 h-8 text-sm"
         />
       ) : null}
-      <ul className="max-h-96 overflow-y-auto rounded-md border border-(--color-border) text-sm">
+      <ul className="max-h-96 overflow-y-auto glass rounded-md border border-(--color-border) text-sm">
         {shown.map((p) => (
           <li key={p} className="border-b border-(--color-border) last:border-b-0">
             <PageLink
@@ -264,7 +264,7 @@ export function RepoWikiPages({ owner, name, data }: { owner: string; name: stri
         {data.viewerCanWrite ? <NewPageButton owner={owner} name={name} /> : null}
       </div>
       {data.pages.length ? (
-        <ul className="divide-y divide-(--color-border) rounded-md border border-(--color-border)">
+        <ul className="divide-y divide-(--color-border) glass rounded-md border border-(--color-border)">
           {data.pages.map((p) => (
             <li key={p.name} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 text-sm">
               <PageLink
@@ -342,7 +342,7 @@ export function RepoWikiEditor({
               onChange={(e) => setTitle(e.target.value)}
             />
           </FormField>
-          <div className="rounded-md border border-(--color-border) p-3">
+          <div className="glass rounded-md border border-(--color-border) p-3">
             <MarkdownEditor
               wiki
               repo={{ owner, name }}

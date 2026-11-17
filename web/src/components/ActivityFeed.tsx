@@ -73,7 +73,7 @@ export function ActivityFeed({
 
   return (
     <div>
-      <ul ref={listRef}>
+      <ul ref={listRef} className="glass-list">
         {items.map((item) => (
           <ActivityRow key={item.id} item={item} />
         ))}

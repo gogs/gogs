@@ -1,10 +1,11 @@
-import { Bug, Check, Monitor, Moon, Settings, Sun } from "lucide-react";
+import { Blend, Bug, Check, Monitor, Moon, Settings, Sun } from "lucide-react";
 import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { webContext } from "@/lib/context";
+import { readGlass, setGlass } from "@/lib/glass";
 import { type Theme, useTheme } from "@/lib/theme-context";
 import { cn } from "@/lib/utils";
 
@@ -69,6 +70,7 @@ export function SettingsMenu() {
   const [open, setOpen] = useState(false);
   const [currentLang] = useState(() => webContext.lang);
   const { theme, setTheme } = useTheme();
+  const [glass, setGlassState] = useState(readGlass);
   const currentLangName = LANGUAGES.find((l) => l.code === currentLang)?.name ?? currentLang;
   const otherLanguages = LANGUAGES.filter((l) => l.code !== currentLang);
 
@@ -115,6 +117,33 @@ export function SettingsMenu() {
               {t("theme_system")}
             </ToggleGroupItem>
           </ToggleGroup>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={glass}
+            onClick={() => {
+              setGlass(!glass);
+              setGlassState(!glass);
+            }}
+            className="mt-1 flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-(--color-foreground) outline-none hover:bg-(--color-surface) focus-visible:ring-1 focus-visible:ring-(--color-ring)"
+          >
+            <Blend className="size-4 text-(--color-muted-foreground)" aria-hidden />
+            <span className="flex-1">{t("glass_effect")}</span>
+            <span
+              aria-hidden
+              className={cn(
+                "relative h-5 w-9 shrink-0 rounded-full border transition-colors",
+                glass ? "border-(--color-primary) bg-(--color-primary)" : "border-(--color-input) bg-(--color-field)",
+              )}
+            >
+              <span
+                className={cn(
+                  "absolute top-0.5 left-0.5 size-3.5 rounded-full shadow-sm transition-transform motion-reduce:transition-none",
+                  glass ? "translate-x-4 bg-(--color-primary-foreground)" : "bg-(--color-muted-foreground)",
+                )}
+              />
+            </span>
+          </button>
         </div>
 
         <div className="my-1 h-px bg-(--color-border)" />

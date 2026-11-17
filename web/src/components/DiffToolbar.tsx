@@ -71,7 +71,7 @@ export function DiffToolbar({
   const setWrap = (wrapLines: boolean) => onSettingsChange({ ...settings, wrapLines });
 
   return (
-    <div className="flex flex-wrap items-center gap-3 border-b border-(--color-border) bg-(--color-background) py-2 text-sm">
+    <div className="flex flex-wrap items-center gap-3 border-b border-(--color-border) bg-(--color-background) py-2 glass-ui:border-b-0 glass-ui:bg-transparent text-sm">
       <div className="flex min-w-0 flex-wrap items-center gap-3">
         <span className="flex items-center gap-1.5 text-(--color-foreground)">
           {onShowTreeMobile ? (
@@ -142,7 +142,7 @@ export function DiffToolbar({
       ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
-        <div className="inline-flex h-7 items-stretch overflow-hidden rounded-md border border-(--color-border) text-xs">
+        <div className="inline-flex h-7 items-stretch overflow-hidden rounded-md glass-control border border-(--color-border) text-xs">
           <SegmentButton active={settings.diffStyle === "unified"} onClick={() => setStyle("unified")}>
             {t("repo.diff.unified")}
           </SegmentButton>
@@ -178,7 +178,7 @@ export function DiffToolbar({
           </PopoverContent>
         </Popover>
 
-        <div className="inline-flex h-7 items-stretch overflow-hidden rounded-md border border-(--color-border) text-xs">
+        <div className="inline-flex h-7 items-stretch overflow-hidden rounded-md glass-control border border-(--color-border) text-xs">
           <IconActionButton
             onClick={onExpandAll}
             label={t("repo.diff.expand_all_files")}

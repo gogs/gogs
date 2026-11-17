@@ -51,7 +51,7 @@ export function OrgTeams({ org: orgName, teams }: { org: string; teams: OrgTeamS
 
 function TeamCard({ org, team, viewerIsOwner }: { org: string; team: OrgTeamSummary; viewerIsOwner: boolean }) {
   return (
-    <li className="flex flex-col rounded-md border border-(--color-border)">
+    <li className="flex flex-col glass rounded-md border border-(--color-border)">
       <div className="flex items-center justify-between gap-3 border-b border-(--color-border) px-4 py-3">
         <Link
           to="/org/$org/teams/$team"

@@ -50,7 +50,7 @@ export function Explore() {
 
       <SearchForm key={data.kind} q={search.q} />
 
-      <ul className="mt-4 border-t border-(--color-border)">
+      <ul className="glass-list mt-4 border-t border-(--color-border)">
         {data.kind === "repos"
           ? data.items.map((repo) => <RepoListItem key={`${repo.owner}/${repo.name}`} repo={repo} showOwner />)
           : data.items.map((user) => (

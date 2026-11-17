@@ -65,7 +65,7 @@ export function OrgTeam({ org: orgName, data }: { org: string; data: TeamPageDat
 function TeamSidebar({ org, team, viewerIsOwner }: { org: string; team: OrgTeamDetail; viewerIsOwner: boolean }) {
   const { t } = useTranslation();
   return (
-    <aside className="min-w-0 rounded-md border border-(--color-border)">
+    <aside className="min-w-0 glass rounded-md border border-(--color-border)">
       <div className="flex items-center justify-between gap-3 border-b border-(--color-border) px-4 py-3">
         <h2 className="min-w-0 font-semibold wrap-anywhere">{team.name}</h2>
         <TeamMembershipButton org={org} team={team} viewerIsOwner={viewerIsOwner} />

@@ -38,7 +38,7 @@ import { useUserInfo } from "@/lib/use-user-info";
 import { PasswordSection } from "@/pages/user/Settings";
 
 const TEXTAREA_CLASS =
-  "block w-full rounded-md border border-(--color-input) bg-(--color-background) px-3 py-2 font-mono text-sm text-(--color-foreground) outline-none transition-colors focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-(--color-destructive)";
+  "block w-full rounded-md border border-(--color-input) bg-(--color-field) px-3 py-2 font-mono text-sm text-(--color-foreground) outline-none transition-colors focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-(--color-destructive)";
 
 // fill puts values into a translated message in the order its Go
 // placeholders, such as `%s`, `%d` or `%[1]s`, appear.
@@ -299,7 +299,7 @@ export function UserSecuritySettings({
       <h2 className="mt-8 mb-4 border-t border-(--color-border) pt-6 text-base font-semibold">
         {t("settings.two_factor")}
       </h2>
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-(--color-border) px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 glass rounded-md border border-(--color-border) px-4 py-3">
         <p className="flex items-center gap-2 text-sm">
           <span className="font-semibold">{t("settings.two_factor_status")}</span>
           {enabled ? (
@@ -532,7 +532,7 @@ export function UserRecoveryCodes({ codes: initialCodes }: { codes: RecoveryCode
       <p className="text-sm">
         <RichText text={t("settings.two_factor_recovery_codes_desc")} />
       </p>
-      <ul className="my-4 grid grid-cols-1 gap-2 rounded-md border border-(--color-border) p-4 font-mono text-sm min-[360px]:grid-cols-2">
+      <ul className="my-4 grid grid-cols-1 gap-2 glass rounded-md border border-(--color-border) p-4 font-mono text-sm min-[360px]:grid-cols-2">
         {codes.map((code) =>
           code.isUsed ? (
             <li key={code.code} className="flex items-baseline gap-2">

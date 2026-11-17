@@ -83,7 +83,7 @@ function UserProfile({ username, profile, data }: { username: string; profile: U
         />
         {data.tab === "repos" ? (
           <>
-            <ul>
+            <ul className="glass-list glass-ui:mt-4">
               {data.repos.items.map((repo) => (
                 <RepoListItem key={repo.name} repo={repo} />
               ))}

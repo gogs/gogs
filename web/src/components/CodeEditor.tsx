@@ -55,7 +55,7 @@ export function CodeEditor(props: CodeEditorProps) {
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-md border border-(--color-input) bg-(--color-background) text-sm text-(--color-foreground) transition-colors focus-within:border-(--color-ring) focus-within:ring-1 focus-within:ring-(--color-ring)",
+        "overflow-hidden rounded-md border border-(--color-input) bg-(--color-field) text-sm text-(--color-foreground) transition-colors focus-within:border-(--color-ring) focus-within:ring-1 focus-within:ring-(--color-ring)",
         props["aria-invalid"] && "border-(--color-destructive)",
         disabled && "cursor-not-allowed opacity-60",
       )}

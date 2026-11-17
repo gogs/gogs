@@ -790,13 +790,13 @@ export function DiffWorkspace({
           desktopTreeOpen={desktopTreeOpen}
         />
 
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col lg:flex-row">
+        <div className="glass flex min-h-0 min-w-0 flex-1 flex-col lg:flex-row glass-ui:mb-4 glass-ui:overflow-hidden glass-ui:border">
           {desktopTreeOpen ? (
             <ResizableSidebar
               defaultWidth={320}
               minWidth={220}
               maxWidth={560}
-              className="hidden border-b border-(--color-border) bg-(--color-background) lg:flex lg:border-r lg:border-b-0 lg:border-l"
+              className="hidden border-b border-(--color-border) bg-(--color-background) lg:flex lg:border-r lg:border-b-0 lg:border-l glass-ui:bg-transparent glass-ui:lg:border-l-0"
               style={TREE_THEME_STYLE}
             >
               <div className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-(--color-border) pr-4 pl-1.5 text-xs">
@@ -816,7 +816,7 @@ export function DiffWorkspace({
                     </TooltipTrigger>
                     <TooltipContent>{treeSearchOpen ? t("repo.search_hide") : t("repo.search_files")}</TooltipContent>
                   </Tooltip>
-                  <span className="inline-flex items-stretch overflow-hidden rounded-md border border-(--color-border)">
+                  <span className="inline-flex items-stretch overflow-hidden rounded-md glass-control border border-(--color-border)">
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
@@ -890,7 +890,7 @@ export function DiffWorkspace({
                   <span className="sr-only">{t("repo.show_file_tree")}</span>
                 </span>
                 <span className="inline-flex items-center gap-1">
-                  <span className="inline-flex items-stretch overflow-hidden rounded-md border border-(--color-border)">
+                  <span className="inline-flex items-stretch overflow-hidden rounded-md glass-control border border-(--color-border)">
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
@@ -952,7 +952,7 @@ export function DiffWorkspace({
           </Sheet>
 
           <div
-            className={`relative min-h-0 min-w-0 flex-1 border-(--color-border) border-x lg:border-r ${
+            className={`relative min-h-0 min-w-0 flex-1 border-(--color-border) border-x lg:border-r glass-ui:border-x-0! ${
               desktopTreeOpen ? "lg:border-l-0" : "lg:border-l"
             }`}
           >

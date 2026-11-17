@@ -19,6 +19,7 @@
 }
 
 @custom-variant dark (&:where(.dark, .dark *));
+@custom-variant glass-ui (&:where(.glass-ui, .glass-ui *));
 
 /* Geist Mono carries a standard ligature set (liga, on by default) that
    substitutes single glyphs for programming symbol sequences. In a code or diff
@@ -50,6 +51,7 @@
   --color-secondary: initial;
   --color-secondary-foreground: initial;
   --color-surface: initial;
+  --color-field: initial;
   --color-muted-foreground: initial;
   --color-destructive: initial;
   --color-destructive-foreground: initial;
@@ -79,6 +81,7 @@
   --color-secondary: #f5f5f5;
   --color-secondary-foreground: #0a0a0a;
   --color-surface: #f5f5f5;
+  --color-field: #ffffff;
   --color-muted-foreground: #525252;
   --color-destructive: #d52c36;
   --color-destructive-foreground: #ffffff;
@@ -115,6 +118,7 @@
   --color-secondary: #1d1d1d;
   --color-secondary-foreground: #fafafa;
   --color-surface: #212121;
+  --color-field: #0a0a0a;
   --color-muted-foreground: #a3a3a3;
   --color-destructive: #ff6762;
   --color-destructive-foreground: #ffffff;
@@ -135,6 +139,61 @@
   --code-escape: #61d5c0;
 }
 
+/* Frosted glass, on by default and switched off from the settings menu,
+   which removes the glass-ui class (see lib/glass.ts). Panels are translucent
+   over a fixed backdrop of soft color blobs, blurred so the backdrop only
+   tints them. Hover fills, secondary fills and borders turn translucent so
+   they tint the glass instead of painting gray boxes. */
+:root.glass-ui {
+  --color-card: var(--glass-fill);
+  --color-popover: #ffffffd9;
+  --color-secondary: #0a0a0a0a;
+  --color-surface: #0a0a0a0d;
+  --color-field: #ffffffb3;
+  --color-border: #0a0a0a1f;
+  --color-input: #0a0a0a75;
+
+  --glass-backdrop:
+    radial-gradient(40rem 28rem at 8% -4%, #f47b5859, transparent 70%),
+    radial-gradient(36rem 30rem at 96% 12%, #7a5cff40, transparent 70%),
+    radial-gradient(44rem 30rem at 70% 108%, #c2417a33, transparent 70%),
+    radial-gradient(34rem 26rem at 0% 90%, #009fff2e, transparent 70%);
+  --glass-page: #f2f2f6;
+  --glass-dots: #0a0a0a12;
+  --glass-fill: #ffffffa6;
+  --glass-bar: #ffffff99;
+  --glass-line: #0a0a0a17;
+  --glass-divider: #0a0a0a0f;
+  --glass-control: #ffffffb3;
+  --glass-edge: inset 0 1px 0 #ffffffcc, inset 0 -1px 0 #0a0a0a0a;
+  --glass-shadow: 0 1px 2px #0a0a0a0f, 0 18px 40px -22px #3b2a5559;
+}
+
+:root.dark.glass-ui {
+  --color-card: var(--glass-fill);
+  --color-popover: #18181bd9;
+  --color-secondary: #ffffff0f;
+  --color-surface: #ffffff14;
+  --color-field: #06060899;
+  --color-border: #ffffff1a;
+  --color-input: #ffffff66;
+
+  --glass-backdrop:
+    radial-gradient(40rem 28rem at 8% -4%, #f47b5838, transparent 70%),
+    radial-gradient(36rem 30rem at 96% 12%, #7a5cff2e, transparent 70%),
+    radial-gradient(44rem 30rem at 70% 108%, #c2417a2e, transparent 70%),
+    radial-gradient(34rem 26rem at 0% 90%, #009fff1a, transparent 70%);
+  --glass-page: #0a0a0a;
+  --glass-dots: #ffffff14;
+  --glass-fill: #ffffff0d;
+  --glass-bar: #0a0a0a99;
+  --glass-line: #ffffff1f;
+  --glass-divider: #ffffff0f;
+  --glass-control: #ffffff12;
+  --glass-edge: inset 0 1px 0 #ffffff2e, inset 0 -1px 0 #00000066;
+  --glass-shadow: 0 24px 50px -28px #000000;
+}
+
 @layer base {
   html,
   body {
@@ -143,6 +202,24 @@
   }
   body {
     -webkit-font-smoothing: antialiased;
+  }
+  :root.glass-ui {
+    background: var(--glass-backdrop), var(--glass-page);
+    background-attachment: fixed;
+  }
+  :root.glass-ui body {
+    background: none;
+  }
+  /* A dot grid behind the panels, fading out toward the bottom so long pages
+     do not read as graph paper. */
+  :root.glass-ui body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(var(--glass-dots) 0.8px, transparent 0.8px) 0 0 / 22px 22px;
+    mask: linear-gradient(#000, transparent 70%);
   }
   /* Links to an anchor, e.g., a comment or a footnote, scroll it into view
      below the sticky navbar instead of under it. */
@@ -510,4 +587,63 @@ diffs-container {
     content: "+";
     color: var(--color-diff-added);
   }
+}
+
+/* Glass surfaces. Components mark themselves with one of these classes, which
+   only style anything while glass is on. The rules are unlayered and scoped
+   under :root.glass-ui, so they win over the utilities that give the same
+   element its plain look:
+   - glass: content containers such as bordered lists, boxes, comments and
+     cards. The panel draws its edge in --glass-line and lowers --color-border
+     for everything inside, so its rows divide faintly and it reads as one
+     pane. Set --glass-radius on a panel to round it differently.
+   - glass-list: a list of rows divided by bottom borders, e.g., the activity
+     feed, which turns into a glass panel with the rows inset.
+   - glass-bar: full-width chrome that content scrolls under, e.g., the navbar.
+   - glass-control: outline buttons and segmented button groups.
+   A state that recolors a panel's edge, e.g., a linked comment, needs
+   `!border-...`. */
+:root.glass-ui :is(.glass, .glass-list) {
+  --color-border: var(--glass-divider);
+  border-color: var(--glass-line);
+  border-radius: var(--glass-radius, 0.75rem);
+  background-color: var(--glass-fill);
+  box-shadow: var(--glass-edge), var(--glass-shadow);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  backdrop-filter: blur(20px) saturate(1.6);
+}
+:root.glass-ui .glass-list {
+  border-width: 1px;
+  padding-inline: 1rem;
+}
+:root.glass-ui .glass-list:empty {
+  display: none;
+}
+:root.glass-ui .glass-list > li:last-child {
+  border-bottom-width: 0;
+}
+:root.glass-ui .glass-bar {
+  background-color: var(--glass-bar);
+  -webkit-backdrop-filter: blur(16px) saturate(1.8);
+  backdrop-filter: blur(16px) saturate(1.8);
+}
+:root.glass-ui .glass-control {
+  border-color: var(--glass-line);
+  background-color: var(--glass-control);
+  box-shadow: var(--glass-edge);
+  -webkit-backdrop-filter: blur(12px) saturate(1.5);
+  backdrop-filter: blur(12px) saturate(1.5);
+}
+:root.glass-ui :is(a, button).glass-control:hover:not(:disabled) {
+  background-color: var(--color-surface);
+}
+
+/* Code sits inset in the glass panels it is shown in, and file trees take the
+   panel they sit in as their background. */
+:root.glass-ui {
+  --glass-pane: transparent;
+}
+:root.glass-ui diffs-container {
+  --diffs-light-bg: var(--color-field);
+  --diffs-dark-bg: var(--color-field);
 }

@@ -40,7 +40,7 @@ export function SettingsLayout({
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger
             aria-label={`${label}: ${current}`}
-            className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-(--color-input) bg-(--color-background) px-3 py-2 text-sm font-semibold outline-none hover:bg-(--color-surface) focus-visible:ring-2 focus-visible:ring-(--color-ring)"
+            className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-(--color-input) bg-(--color-field) px-3 py-2 text-sm font-semibold outline-none hover:bg-(--color-surface) focus-visible:ring-2 focus-visible:ring-(--color-ring)"
           >
             <span className="truncate">{current}</span>
             <ChevronDown className="size-4 shrink-0 text-(--color-muted-foreground)" aria-hidden />
@@ -54,10 +54,13 @@ export function SettingsLayout({
           </PopoverContent>
         </Popover>
       </nav>
-      <nav aria-label={label} className="hidden flex-col gap-0.5 pl-2 md:flex">
+      <nav
+        aria-label={label}
+        className="glass hidden flex-col gap-0.5 self-start pl-2 md:flex glass-ui:border glass-ui:p-2 glass-ui:pl-3"
+      >
         {nav}
       </nav>
-      <section className="min-w-0">{children}</section>
+      <section className="glass min-w-0 glass-ui:border glass-ui:p-4 glass-ui:sm:p-6">{children}</section>
     </div>
   );
 }
