@@ -1016,3 +1016,19 @@ func TestRepoCodeArchive(t *testing.T) {
 		assert.NoError(t, err)
 	})
 }
+
+func TestRepoCodeGoGet(t *testing.T) {
+	owner := seedUser(t, CreateUserOptions{})
+	// "go get" sends no credentials, so even a private repository answers.
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{Private: true, AutoInit: true})
+	importPath := strings.TrimPrefix(serverURL, "http://") + repoCodePage(repo)
+
+	status, _, body := newClient(t).doRaw(http.MethodGet, repoCodePage(repo)+"?go-get=1", "", nil)
+	require.Equal(t, http.StatusOK, status, "response: %s", body)
+	assert.Contains(t, string(body), `<meta name="go-import" content="`+importPath+` git `+serverURL+repoCodePage(repo)+`.git">`)
+	assert.Contains(t, string(body), "go get --insecure "+importPath)
+
+	t.Run("page", func(t *testing.T) {
+		userAssertPage(t, newClient(t), repoCodePage(repo), http.StatusOK)
+	})
+}
