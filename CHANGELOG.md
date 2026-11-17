@@ -36,6 +36,8 @@ All notable changes to Gogs are documented in this file.
 - Markdown renders up to five times faster. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Markdown and Org-mode documents larger than `[ui] MAX_DISPLAY_FILE_SIZE` are shown as plain text instead of being rendered. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Logs are written through the standard logger. Logs are JSON in production and in the Docker images, and `[log] FORMAT` can choose text or JSON instead. JSON puts the subsystem of a message, such as `gorm`, in its `component` field. Database logs no longer have their own files. `[log] LEVEL` now applies to a mode that does not set its own level. The default `[log] LEVEL` is now `Debug`, and `Trace` is the same as `Debug`. Errors that happen before the configuration is loaded are printed to standard error. [#8529](https://github.com/gogs/gogs/pull/8529)
+- The database schema version is now recorded in the `goose_db_version` table. The `version` table is no longer updated and can be dropped. [#8559](https://github.com/gogs/gogs/pull/8559)
+- `gogs web` and `gogs restore` refuse to start when `[database] MAX_OPEN_CONNS` is 1. Set it to at least 2. [#8559](https://github.com/gogs/gogs/pull/8559)
 
 ### Fixed
 
