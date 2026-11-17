@@ -33,6 +33,15 @@ const (
 	CommentTypeCommentRef
 	// Reference from a pull request
 	CommentTypePullRef
+	// A submitted review of a pull request, whose content is its summary.
+	CommentTypeReview
+	// A comment on lines of the diff of a pull request, which starts a thread
+	// or replies to one.
+	CommentTypeCode
+	// A review of the pull request was requested from TargetUserID.
+	CommentTypeReviewRequest
+	// The review request for TargetUserID was removed.
+	CommentTypeReviewRequestRemoved
 )
 
 type CommentTag int
@@ -62,8 +71,36 @@ type Comment struct {
 	Updated     time.Time `xorm:"-" json:"-" gorm:"-"`
 	UpdatedUnix int64
 
-	// Reference issue in commit message
+	// Reference issue in commit message, or the head commit a code comment was
+	// written on.
 	CommitSHA string `xorm:"VARCHAR(64)"`
+
+	// ReviewID is the review a code comment or a review summary belongs to.
+	ReviewID int64 `xorm:"INDEX NOT NULL DEFAULT 0"`
+	// ReplyToID is the first comment of the thread a reply belongs to. Replies
+	// never reply to replies.
+	ReplyToID int64 `xorm:"INDEX NOT NULL DEFAULT 0"`
+	// IsPending marks a comment of a review that is not submitted yet, which
+	// only its poster can see.
+	IsPending bool `xorm:"NOT NULL DEFAULT false"`
+	// TargetUserID is the user a review was requested from.
+	TargetUserID int64 `xorm:"NOT NULL DEFAULT 0"`
+
+	// The lines of the diff that a thread of code comments is on, set on its
+	// first comment. Side and StartSide are "old" or "new", and Line is the
+	// last line of the range.
+	TreePath  string `xorm:"VARCHAR(500)"`
+	Side      string `xorm:"VARCHAR(3)"`
+	StartSide string `xorm:"VARCHAR(3)"`
+	StartLine int64  `xorm:"NOT NULL DEFAULT 0"`
+	// BaseSHA is the merge base the old side of the lines is in.
+	BaseSHA string `xorm:"VARCHAR(64)"`
+	// DiffHunk is the last lines of the diff up to Line, with their prefix,
+	// saved when the thread starts.
+	DiffHunk string `xorm:"TEXT"`
+	// ResolvedByID is who resolved the thread, set on its first comment.
+	ResolvedByID int64 `xorm:"NOT NULL DEFAULT 0"`
+	ResolvedUnix int64 `xorm:"NOT NULL DEFAULT 0"`
 
 	Attachments []*Attachment `xorm:"-" json:"-" gorm:"-"`
 
@@ -193,6 +230,17 @@ func createComment(logger *logx.Logger, e *xorm.Session, opts *CreateCommentOpti
 		CommitSHA: opts.CommitSHA,
 		Line:      opts.LineNum,
 		Content:   opts.Content,
+
+		ReviewID:     opts.ReviewID,
+		ReplyToID:    opts.ReplyToID,
+		IsPending:    opts.IsPending,
+		TargetUserID: opts.TargetUserID,
+		TreePath:     opts.TreePath,
+		Side:         opts.Side,
+		StartSide:    opts.StartSide,
+		StartLine:    opts.StartLine,
+		BaseSHA:      opts.BaseSHA,
+		DiffHunk:     opts.DiffHunk,
 	}
 	if _, err = e.Insert(comment); err != nil {
 		return nil, err
@@ -212,11 +260,14 @@ func createComment(logger *logx.Logger, e *xorm.Session, opts *CreateCommentOpti
 
 	// Check comment type.
 	switch opts.Type {
-	case CommentTypeComment:
-		act.OpType = ActionCommentIssue
-
-		if _, err = e.Exec("UPDATE `issue` SET num_comments=num_comments+1 WHERE id=?", opts.Issue.ID); err != nil {
-			return nil, err
+	case CommentTypeComment, CommentTypeCode:
+		// A pending comment of a review notifies nobody until the review is
+		// submitted.
+		if !opts.IsPending {
+			act.OpType = ActionCommentIssue
+			if _, err = e.Exec("UPDATE `issue` SET num_comments=num_comments+1 WHERE id=?", opts.Issue.ID); err != nil {
+				return nil, err
+			}
 		}
 
 		attachments, err := getUnboundAttachmentsByUUIDs(e, opts.Attachments)
@@ -232,6 +283,9 @@ func createComment(logger *logx.Logger, e *xorm.Session, opts *CreateCommentOpti
 				return nil, errors.Newf("update attachment [%d]: %v", attachments[i].ID, err)
 			}
 		}
+
+	case CommentTypeReview:
+		act.OpType = ActionCommentIssue
 
 	case CommentTypeReopen:
 		act.OpType = ActionReopenIssue
@@ -264,6 +318,9 @@ func createComment(logger *logx.Logger, e *xorm.Session, opts *CreateCommentOpti
 		}
 	}
 
+	if opts.IsPending {
+		return comment, comment.loadAttributes(e)
+	}
 	if _, err = e.Exec("UPDATE `issue` SET updated_unix = ? WHERE id = ?", time.Now().Unix(), opts.Issue.ID); err != nil {
 		return nil, errors.Newf("update issue 'updated_unix': %v", err)
 	}
@@ -305,6 +362,19 @@ type CreateCommentOptions struct {
 	LineNum     int64
 	Content     string
 	Attachments []string // UUIDs of attachments
+
+	ReviewID     int64
+	ReplyToID    int64
+	IsPending    bool
+	TargetUserID int64
+	// The lines of the diff that a thread of code comments starts on, see
+	// the fields of the same names in Comment.
+	TreePath  string
+	Side      string
+	StartSide string
+	StartLine int64
+	BaseSHA   string
+	DiffHunk  string
 }
 
 // CreateComment creates comment of issue or commit.
@@ -424,7 +494,9 @@ func loadCommentsAttributes(e Engine, comments []*Comment) (err error) {
 
 func getCommentsByIssueIDSince(e Engine, issueID, since int64) ([]*Comment, error) {
 	comments := make([]*Comment, 0, 10)
-	sess := e.Where("issue_id = ?", issueID).Asc("created_unix")
+	// Pending comments are only shown to their poster, by the review threads
+	// of a pull request.
+	sess := e.Where("issue_id = ? AND is_pending = ?", issueID, false).Asc("created_unix").Asc("id")
 	if since > 0 {
 		sess.And("updated_unix >= ?", since)
 	}
@@ -437,7 +509,7 @@ func getCommentsByIssueIDSince(e Engine, issueID, since int64) ([]*Comment, erro
 
 func getCommentsByRepoIDSince(e Engine, repoID, since int64) ([]*Comment, error) {
 	comments := make([]*Comment, 0, 10)
-	sess := e.Where("issue.repo_id = ?", repoID).Join("INNER", "issue", "issue.id = comment.issue_id").Asc("comment.created_unix")
+	sess := e.Where("issue.repo_id = ? AND comment.is_pending = ?", repoID, false).Join("INNER", "issue", "issue.id = comment.issue_id").Asc("comment.created_unix")
 	if since > 0 {
 		sess.And("comment.updated_unix >= ?", since)
 	}
@@ -508,12 +580,26 @@ func DeleteCommentByID(logger *logx.Logger, doer *User, id int64) error {
 		return err
 	}
 
-	if _, err = sess.ID(comment.ID).Delete(new(Comment)); err != nil {
-		return err
+	// Deleting the first comment of a thread deletes its replies.
+	deleted := []*Comment{comment}
+	if comment.ReplyToID == 0 {
+		var replies []*Comment
+		if err = sess.Where("reply_to_id = ?", comment.ID).Find(&replies); err != nil {
+			return errors.Newf("find replies: %v", err)
+		}
+		deleted = append(deleted, replies...)
 	}
-
-	if comment.Type == CommentTypeComment {
-		if _, err = sess.Exec("UPDATE `issue` SET num_comments = num_comments - 1 WHERE id = ?", comment.IssueID); err != nil {
+	counted := 0
+	for _, c := range deleted {
+		if _, err = sess.ID(c.ID).Delete(new(Comment)); err != nil {
+			return err
+		}
+		if (c.Type == CommentTypeComment || c.Type == CommentTypeCode) && !c.IsPending {
+			counted++
+		}
+	}
+	if counted > 0 {
+		if _, err = sess.Exec("UPDATE `issue` SET num_comments = num_comments - ? WHERE id = ?", counted, comment.IssueID); err != nil {
 			return err
 		}
 	}
@@ -522,9 +608,14 @@ func DeleteCommentByID(logger *logx.Logger, doer *User, id int64) error {
 		return errors.Newf("commit: %v", err)
 	}
 
-	_, err = DeleteAttachmentsByComment(comment.ID, true)
-	if err != nil {
-		logger.Error("Failed to delete attachments of comment", "commentID", comment.ID, "error", err)
+	for _, c := range deleted {
+		if _, err = DeleteAttachmentsByComment(c.ID, true); err != nil {
+			logger.Error("Failed to delete attachments of comment", "commentID", c.ID, "error", err)
+		}
+	}
+	// A pending comment was never announced, so its deletion is not either.
+	if comment.IsPending {
+		return nil
 	}
 
 	if err = comment.Issue.LoadAttributes(); err != nil {

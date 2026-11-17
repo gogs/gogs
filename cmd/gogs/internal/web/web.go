@@ -528,20 +528,24 @@ func renderIndex(index []byte, wc context.WebContext, inject injectContent) ([]b
 		Lang      string `json:"lang"`
 		SubURL    string `json:"subURL"`
 		LocaleURL string `json:"localeURL"`
-		Page      string `json:"page,omitempty"`
-		Error     string `json:"error,omitempty"`
-		Version   string `json:"version,omitempty"`
+		// ExternalURL is what permalinks start with, which only embed in
+		// comments when they do.
+		ExternalURL string `json:"externalURL"`
+		Page        string `json:"page,omitempty"`
+		Error       string `json:"error,omitempty"`
+		Version     string `json:"version,omitempty"`
 		// The web app sends unauthenticated viewers to these pages.
 		LandingURL                 string `json:"landingURL,omitempty"`
 		RequireAuthenticatedViewer bool   `json:"requireAuthenticatedViewer,omitempty"`
 		Notice                     string `json:"notice,omitempty"`
 	}{
-		Lang:      wc.Lang,
-		SubURL:    wc.SubURL,
-		LocaleURL: wc.SubURL + webLocaleURL(wc.Lang),
-		Page:      wc.Page,
-		Error:     wc.Error,
-		Version:   wc.Version,
+		Lang:        wc.Lang,
+		SubURL:      wc.SubURL,
+		LocaleURL:   wc.SubURL + webLocaleURL(wc.Lang),
+		ExternalURL: conf.Server.ExternalURL,
+		Page:        wc.Page,
+		Error:       wc.Error,
+		Version:     wc.Version,
 
 		LandingURL:                 landingURL,
 		RequireAuthenticatedViewer: conf.Auth.RequireSigninView,

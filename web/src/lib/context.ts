@@ -6,6 +6,8 @@ export interface WebContext {
   subURL: string;
   // localeURL is where the translations of the active locale are served.
   localeURL: string;
+  // externalURL is the URL of the instance as configured, ending in "/".
+  externalURL: string;
   // The page the server chose to show in place of the one at the path.
   page?: "serverError" | "prohibitLogin";
   // The reason of a server error, for viewers allowed to see it.
@@ -29,13 +31,14 @@ declare global {
 
 function read(): WebContext {
   if (typeof window === "undefined") {
-    return { lang: "en-US", subURL: "", localeURL: "" };
+    return { lang: "en-US", subURL: "", localeURL: "", externalURL: "" };
   }
   const ctx = window.__webContext ?? {};
   return {
     lang: ctx.lang || "en-US",
     subURL: ctx.subURL ?? "",
     localeURL: ctx.localeURL ?? "",
+    externalURL: ctx.externalURL ?? "",
     page: ctx.page,
     error: ctx.error,
     version: ctx.version,
