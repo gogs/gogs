@@ -16,10 +16,9 @@ import {
 import { type ComponentType, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
+import { RelativeTime } from "@/components/RelativeTime";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { ActivityItem } from "@/lib/queries/user";
-import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
 import { subUrl } from "@/lib/url";
 
 // Icons by `ActionType`, after the octicons of the server-rendered feeds.
@@ -140,12 +139,7 @@ function ActivityRow({ item }: { item: ActivityItem }) {
         {item.title ? <p className="mt-1 break-words">{item.title}</p> : null}
         {item.detail ? <p className="mt-1 break-words text-(--color-muted-foreground)">{item.detail}</p> : null}
         <p className="mt-1 text-xs text-(--color-muted-foreground)">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <time dateTime={item.createdAt}>{formatRelativeTime(t, item.createdAt)}</time>
-            </TooltipTrigger>
-            <TooltipContent>{formatAbsoluteTime(item.createdAt)}</TooltipContent>
-          </Tooltip>
+          <RelativeTime time={item.createdAt} />
         </p>
       </div>
       {Icon ? <Icon className="mt-0.5 size-4 shrink-0 text-(--color-muted-foreground)" aria-hidden /> : null}

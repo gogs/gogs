@@ -2,27 +2,63 @@ import type { QueryClient } from "@tanstack/react-query";
 import { type AnyRoute, createRoute, notFound, redirect } from "@tanstack/react-router";
 
 import { LoaderResponseError, loadAuthenticatedPage, loaderResponseError } from "@/lib/loader-error";
-import { type PageSearch, validatePageSearch } from "@/lib/page-search";
 import {
+  type BranchesSearch,
+  type ListSearch,
+  type PageSearch,
+  validateBranchesSearch,
+  validateListSearch,
+  validatePageSearch,
+} from "@/lib/page-search";
+import {
+  type RepoBranchesData,
+  type RepoBranchesView,
+  type RepoCompareData,
+  type RepoNewPullData,
+  type RepoSrcData,
+  fetchRepoBranchSettings,
+  fetchRepoBranches,
   fetchRepoCollaborators,
+  fetchRepoCommits,
   fetchRepoDeployKeys,
+  fetchRepoEditorTarget,
   fetchRepoForkOptions,
   fetchRepoForks,
+  fetchRepoGitHook,
+  fetchRepoGitHooks,
   fetchRepoIssue,
   fetchRepoIssues,
   fetchRepoLabels,
   fetchRepoMilestone,
   fetchRepoMilestones,
+  fetchRepoNewIssue,
   fetchRepoNewOptions,
+  fetchRepoNewPull,
+  fetchRepoNewRelease,
   fetchRepoPeople,
+  fetchRepoProtectedBranch,
+  fetchRepoPull,
+  fetchRepoPullCommits,
+  fetchRepoRelease,
+  fetchRepoReleases,
+  fetchRepoSrc,
+  fetchRepoWiki,
+  fetchRepoWikiPageSource,
+  fetchRepoWikiPages,
   repoHeaderQuery,
   repoSettingsQuery,
 } from "@/lib/queries/repo";
 import { type WebhookType, fetchWebhook, fetchWebhooks } from "@/lib/queries/webhooks";
 import { subUrl } from "@/lib/url";
 import { WebhookEdit, WebhookNew, Webhooks } from "@/pages/Webhooks";
+import { RepoBranches } from "@/pages/repo/Branches";
+import { RepoCode } from "@/pages/repo/Code";
+import { type RepoCodeSearch, validateRepoCodeSearch } from "@/pages/repo/Code.search";
 import { RepoCommit, type RepoCommitPage } from "@/pages/repo/Commit";
 import { type RepoCommitSearch, validateRepoCommitSearch } from "@/pages/repo/Commit.search";
+import { RepoCommits } from "@/pages/repo/Commits";
+import { RepoCompare } from "@/pages/repo/Compare";
+import { RepoFileDelete, RepoFileEditor, RepoFileUpload } from "@/pages/repo/Editor";
 import { RepoForks } from "@/pages/repo/Forks";
 import { RepoIssue } from "@/pages/repo/Issue";
 import { RepoIssues } from "@/pages/repo/Issues";
@@ -30,17 +66,71 @@ import { type RepoIssuesSearch, validateRepoIssuesSearch } from "@/pages/repo/Is
 import { RepoLabels } from "@/pages/repo/Labels";
 import { RepoMilestoneEditor, RepoMilestones, type RepoMilestonesSearch } from "@/pages/repo/Milestones";
 import { RepoCreate, RepoFork, RepoMigrate } from "@/pages/repo/New";
+import { RepoNewIssue } from "@/pages/repo/NewIssue";
+import { type RepoNewIssueSearch, validateRepoNewIssueSearch } from "@/pages/repo/NewIssue.search";
+import { RepoNewPull } from "@/pages/repo/NewPull";
 import { RepoPeople } from "@/pages/repo/People";
-import { RepoCollaboration, RepoDeployKeys, RepoOptions } from "@/pages/repo/Settings";
+import { RepoPull } from "@/pages/repo/Pull";
+import { RepoReleaseEditor, RepoReleases } from "@/pages/repo/Releases";
+import { type RepoReleasesSearch, validateRepoReleasesSearch } from "@/pages/repo/Releases.search";
+import {
+  RepoBranchProtection,
+  RepoBranchSettings,
+  RepoCollaboration,
+  RepoDangerZone,
+  RepoDeployKeys,
+  RepoGeneral,
+  RepoGitHookEdit,
+  RepoGitHooks,
+  RepoMirror,
+} from "@/pages/repo/Settings";
+import { RepoWiki, RepoWikiEditor, RepoWikiPages } from "@/pages/repo/Wiki";
+import { wikiPageName } from "@/pages/repo/Wiki.path";
 
 // Match the legacy server-side route constraint (see `web.go` near the
 // `/commit/:sha([a-f0-9]{7,64})$` declaration). The server enforces the same
 // shape for SEO and to skip the SPA shell for malformed paths; this client
 // check short-circuits the loader so we render 404 without a wasted fetch.
 const SHA_RE = /^[a-f0-9]{7,64}$/;
+const COMPARE_RANGE_RE = /^([a-f0-9]{40}|[a-f0-9]{64})\.\.\.([a-f0-9]{40}|[a-f0-9]{64})$/;
 
 interface RouterContext {
   queryClient: QueryClient;
+}
+
+// loadDiffPage loads the header of a repository, the metadata of a diff page
+// at the path and the diff itself. The diff is fetched as raw text from the
+// path with a ".diff" suffix, which skips JSON-string escaping and lets the
+// browser cache the (often large) diff separately from the metadata.
+async function loadDiffPage<T>(
+  queryClient: QueryClient,
+  owner: string,
+  repo: string,
+  path: string,
+  whitespace: RepoCommitSearch["whitespace"],
+): Promise<T & { patch: string }> {
+  const rawBase = subUrl(`/${owner}/${repo}${path}.diff`);
+  const rawURL = whitespace ? `${rawBase}?whitespace=${encodeURIComponent(whitespace)}` : rawBase;
+  try {
+    const [, meta, patch] = await Promise.all([
+      queryClient.ensureQueryData(repoHeaderQuery(owner, repo)),
+      fetch(subUrl(`/api/web/${owner}/${repo}${path}`), { credentials: "same-origin" }).then(async (res) => {
+        if (!res.ok) throw await loaderResponseError(res);
+        return (await res.json()) as T;
+      }),
+      fetch(rawURL, { credentials: "same-origin" }).then(async (res) => {
+        if (!res.ok) throw await loaderResponseError(res);
+        return res.text();
+      }),
+    ]);
+    return { ...meta, patch };
+  } catch (err) {
+    if (err instanceof LoaderResponseError && err.status === 404) {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+      throw notFound();
+    }
+    throw err;
+  }
 }
 
 export function createRepoRoutes(rootRoute: AnyRoute) {
@@ -62,37 +152,80 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
       stringify: (params: { owner: string; repo: string; sha: string }) => params,
     },
     loaderDeps: ({ search }: { search: RepoCommitSearch }) => ({ whitespace: search.whitespace }),
-    loader: async ({ params, deps, context }): Promise<RepoCommitPage> => {
-      const metaURL = subUrl(`/api/web/${params.owner}/${params.repo}/commit/${params.sha}`);
-      const rawBase = subUrl(`/${params.owner}/${params.repo}/commit/${params.sha}.diff`);
-      const rawURL = deps.whitespace ? `${rawBase}?whitespace=${encodeURIComponent(deps.whitespace)}` : rawBase;
-      const routerContext = context as RouterContext;
-      // Three requests in parallel: repo header (via Query cache for cross-page
-      // reuse), commit metadata JSON, raw patch text. Splitting the patch out
-      // skips JSON-string escaping and lets the browser cache the (often large)
-      // patch separately from the metadata.
-      try {
-        const [, meta, patch] = await Promise.all([
-          routerContext.queryClient.ensureQueryData(repoHeaderQuery(params.owner, params.repo)),
-          fetch(metaURL, { credentials: "same-origin" }).then(async (res) => {
-            if (!res.ok) throw await loaderResponseError(res);
-            return (await res.json()) as Omit<RepoCommitPage, "patch">;
-          }),
-          fetch(rawURL, { credentials: "same-origin" }).then(async (res) => {
-            if (!res.ok) throw await loaderResponseError(res);
-            return res.text();
-          }),
-        ]);
-        return { ...meta, patch };
-      } catch (err) {
-        if (err instanceof LoaderResponseError && err.status === 404) {
-          // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
-          throw notFound();
-        }
-        throw err;
-      }
-    },
+    loader: ({ params, deps, context }) =>
+      loadDiffPage<Omit<RepoCommitPage, "patch">>(
+        (context as RouterContext).queryClient,
+        params.owner,
+        params.repo,
+        `/commit/${params.sha}`,
+        deps.whitespace,
+      ),
     component: RepoCommit,
+  });
+
+  // Comparing two full commit IDs shows the changes between them, the same as
+  // the server route in `web.go`. Comparing branches, written as
+  // "<base>...[<owner>:]<head>", opens a pull request.
+  const repoCompareRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/compare/$",
+    validateSearch: validateRepoCommitSearch,
+    loaderDeps: ({ search }: { search: RepoCommitSearch }) => ({ whitespace: search.whitespace }),
+    loader: async ({
+      params,
+      deps,
+      context,
+    }): Promise<
+      | { kind: "commits"; data: RepoCompareData & { patch: string } }
+      | { kind: "pull"; range: string; data: RepoNewPullData; patch: string | null }
+    > => {
+      const queryClient = (context as RouterContext).queryClient;
+      const range = params._splat ?? "";
+      if (COMPARE_RANGE_RE.test(range)) {
+        const data = await loadDiffPage<RepoCompareData>(
+          queryClient,
+          params.owner,
+          params.repo,
+          `/compare/${range}`,
+          deps.whitespace,
+        );
+        return { kind: "commits" as const, data };
+      }
+      return loadRepoPage(queryClient, params.owner, params.repo, async () => {
+        const data = await fetchRepoNewPull(params.owner, params.repo, range);
+        let patch: string | null = null;
+        if (data.diff) {
+          // The changes are fetched as raw text from the repository of the
+          // head branch, like on the commit page, see `loadDiffPage`.
+          const { owner, name, base, head } = data.diff;
+          const rawBase = subUrl(`/${owner}/${name}/compare/${base}...${head}.diff`);
+          const res = await fetch(
+            deps.whitespace ? `${rawBase}?whitespace=${encodeURIComponent(deps.whitespace)}` : rawBase,
+            { credentials: "same-origin" },
+          );
+          if (!res.ok) throw await loaderResponseError(res);
+          patch = await res.text();
+        }
+        return { kind: "pull" as const, range, data, patch };
+      });
+    },
+    component: function Compare() {
+      const { owner, repo } = repoCompareRoute.useParams();
+      const loaded = repoCompareRoute.useLoaderData();
+      const search: RepoCommitSearch = repoCompareRoute.useSearch();
+      return loaded.kind === "commits" ? (
+        <RepoCompare owner={owner} name={repo} data={loaded.data} search={search} />
+      ) : (
+        <RepoNewPull
+          key={`${owner}/${repo}/${loaded.range}`}
+          owner={owner}
+          name={repo}
+          data={loaded.data}
+          patch={loaded.patch}
+          search={search}
+        />
+      );
+    },
   });
 
   // loadRepoPage loads the header of a repository along with the data of the
@@ -262,7 +395,101 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     component: function Settings() {
       const { owner, repo } = repoSettingsRoute.useParams();
       // Start over when the repository changes, e.g., after renaming it.
-      return <RepoOptions key={`${owner}/${repo}`} owner={owner} name={repo} />;
+      return <RepoGeneral key={`${owner}/${repo}`} owner={owner} name={repo} />;
+    },
+  });
+
+  const repoMirrorRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/settings/mirror",
+    loader: ({ params, context }) =>
+      loadSettingsPage((context as RouterContext).queryClient, params.owner, params.repo, () => Promise.resolve()),
+    component: function Mirror() {
+      const { owner, repo } = repoMirrorRoute.useParams();
+      return <RepoMirror owner={owner} name={repo} />;
+    },
+  });
+
+  const repoDangerZoneRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/settings/danger",
+    loader: ({ params, context }) =>
+      loadSettingsPage((context as RouterContext).queryClient, params.owner, params.repo, () => Promise.resolve()),
+    component: function DangerZone() {
+      const { owner, repo } = repoDangerZoneRoute.useParams();
+      return <RepoDangerZone owner={owner} name={repo} />;
+    },
+  });
+
+  const repoBranchSettingsRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/settings/branches",
+    loader: ({ params, context }) =>
+      loadSettingsPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoBranchSettings(params.owner, params.repo),
+      ),
+    component: function BranchSettings() {
+      const { owner, repo } = repoBranchSettingsRoute.useParams();
+      const settings = repoBranchSettingsRoute.useLoaderData();
+      // Start over once the default branch is saved, so the choice shows it.
+      return <RepoBranchSettings key={settings.defaultBranch} owner={owner} name={repo} settings={settings} />;
+    },
+  });
+
+  // Branch names can contain slashes, so the branch is the rest of the path.
+  const repoBranchProtectionRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/settings/branches/$",
+    // Without a branch the path is the branch settings, which a splat would
+    // otherwise take over.
+    params: { parse: (params) => (params._splat ? params : false) },
+    loader: ({ params, context }) =>
+      loadSettingsPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoProtectedBranch(params.owner, params.repo, params._splat ?? ""),
+      ),
+    component: function BranchProtection() {
+      const { owner, repo, _splat: branch } = repoBranchProtectionRoute.useParams();
+      return (
+        <RepoBranchProtection
+          key={`${owner}/${repo}@${branch}`}
+          owner={owner}
+          name={repo}
+          branch={repoBranchProtectionRoute.useLoaderData()}
+        />
+      );
+    },
+  });
+
+  const repoGitHooksRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/settings/hooks/git",
+    loader: ({ params, context }) =>
+      loadSettingsPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoGitHooks(params.owner, params.repo),
+      ),
+    component: function GitHooks() {
+      const { owner, repo } = repoGitHooksRoute.useParams();
+      return <RepoGitHooks owner={owner} name={repo} hooks={repoGitHooksRoute.useLoaderData()} />;
+    },
+  });
+
+  const repoGitHookRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/settings/hooks/git/$name",
+    loader: ({ params, context }) =>
+      loadSettingsPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoGitHook(params.owner, params.repo, params.name),
+      ),
+    component: function GitHook() {
+      const { owner, repo, name } = repoGitHookRoute.useParams();
+      return (
+        <RepoGitHookEdit
+          key={`${owner}/${repo}@${name}`}
+          owner={owner}
+          name={repo}
+          hook={repoGitHookRoute.useLoaderData()}
+        />
+      );
     },
   });
 
@@ -441,24 +668,133 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
   const repoIssuesRoute = createIssueListRoute("issues");
   const repoPullsRoute = createIssueListRoute("pulls");
 
+  const repoNewIssueRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/issues/new",
+    validateSearch: validateRepoNewIssueSearch,
+    loaderDeps: ({ search }: { search: RepoNewIssueSearch }) => ({ template: search.template }),
+    loader: ({ params, context, deps }) =>
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoNewIssue(params.owner, params.repo, deps.template),
+      ),
+    component: function NewIssue() {
+      const { owner, repo } = repoNewIssueRoute.useParams();
+      const search: RepoNewIssueSearch = repoNewIssueRoute.useSearch();
+      return (
+        <RepoNewIssue
+          key={`${owner}/${repo}/${search.template ?? ""}/${search.blank ?? ""}`}
+          owner={owner}
+          name={repo}
+          options={repoNewIssueRoute.useLoaderData()}
+          search={search}
+        />
+      );
+    },
+  });
+
+  // issueIndex is the index of the issue or pull request in the path, or throws
+  // `notFound()` when it cannot be one.
+  function issueIndex(raw: string) {
+    const index = Number(raw);
+    if (!Number.isInteger(index) || index <= 0) {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+      throw notFound();
+    }
+    return index;
+  }
+
   const repoIssueRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/$owner/$repo/issues/$index",
-    loader: ({ params, context }) => {
-      const index = Number(params.index);
-      if (!Number.isInteger(index) || index <= 0) {
-        // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
-        throw notFound();
-      }
-      return loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
-        fetchRepoIssue(params.owner, params.repo, index),
-      );
-    },
+    loader: ({ params, context }) =>
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoIssue(params.owner, params.repo, issueIndex(params.index)),
+      ),
     component: function Issue() {
       const { owner, repo } = repoIssueRoute.useParams();
       const data = repoIssueRoute.useLoaderData();
       // Start over on another issue, e.g., after following a reference.
       return <RepoIssue key={`${owner}/${repo}#${data.index}`} owner={owner} name={repo} data={data} />;
+    },
+  });
+
+  const repoPullRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/pulls/$index",
+    loader: ({ params, context }) =>
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoPull(params.owner, params.repo, issueIndex(params.index)),
+      ),
+    component: function Pull() {
+      const { owner, repo } = repoPullRoute.useParams();
+      const data = repoPullRoute.useLoaderData();
+      return (
+        <RepoPull key={`${owner}/${repo}#${data.index}`} owner={owner} name={repo} data={data} tab="conversation" />
+      );
+    },
+  });
+
+  const repoPullCommitsRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/pulls/$index/commits",
+    loader: ({ params, context }) => {
+      const index = issueIndex(params.index);
+      return loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, async () => {
+        const [data, { commits }] = await Promise.all([
+          fetchRepoPull(params.owner, params.repo, index),
+          fetchRepoPullCommits(params.owner, params.repo, index).catch((err: unknown) => {
+            // A broken pull request has no commits to list.
+            if (err instanceof LoaderResponseError && err.status === 404) return { commits: [] };
+            throw err;
+          }),
+        ]);
+        return { data, commits };
+      });
+    },
+    component: function PullCommits() {
+      const { owner, repo } = repoPullCommitsRoute.useParams();
+      const { data, commits } = repoPullCommitsRoute.useLoaderData();
+      return <RepoPull owner={owner} name={repo} data={data} tab="commits" commits={commits} />;
+    },
+  });
+
+  const repoPullFilesRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/pulls/$index/files",
+    validateSearch: validateRepoCommitSearch,
+    loaderDeps: ({ search }: { search: RepoCommitSearch }) => ({ whitespace: search.whitespace }),
+    loader: ({ params, deps, context }) => {
+      const index = issueIndex(params.index);
+      // The changes are fetched as raw text, like on the commit page, see
+      // `loadDiffPage`.
+      const rawBase = subUrl(`/${params.owner}/${params.repo}/pulls/${index}.diff`);
+      const rawURL = deps.whitespace ? `${rawBase}?whitespace=${encodeURIComponent(deps.whitespace)}` : rawBase;
+      return loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, async () => {
+        const [data, patch] = await Promise.all([
+          fetchRepoPull(params.owner, params.repo, index),
+          fetch(rawURL, { credentials: "same-origin" }).then(async (res) => {
+            // A broken pull request has no changes to show.
+            if (res.status === 404) return null;
+            if (!res.ok) throw await loaderResponseError(res);
+            return res.text();
+          }),
+        ]);
+        return { data, patch };
+      });
+    },
+    component: function PullFiles() {
+      const { owner, repo } = repoPullFilesRoute.useParams();
+      const { data, patch } = repoPullFilesRoute.useLoaderData();
+      return (
+        <RepoPull
+          owner={owner}
+          name={repo}
+          data={data}
+          tab="files"
+          patch={patch}
+          search={repoPullFilesRoute.useSearch()}
+        />
+      );
     },
   });
 
@@ -475,14 +811,406 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     },
   });
 
+  // Each view of the branches page has its own path, e.g., `/branches/stale`,
+  // and the overview is `/branches`.
+  const branchesRoute = (view: RepoBranchesView) => {
+    const route = createRoute({
+      getParentRoute: () => rootRoute,
+      path: view === "overview" ? "/$owner/$repo/branches" : `/$owner/$repo/branches/${view}`,
+      validateSearch: validateBranchesSearch,
+      loaderDeps: ({ search }: { search: BranchesSearch }) => ({ query: search.query, page: search.page }),
+      loader: ({ params, deps, context }) =>
+        loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+          fetchRepoBranches(params.owner, params.repo, { view, query: deps.query, page: deps.page }),
+        ),
+      component: function Branches() {
+        const { owner, repo } = route.useParams();
+        const { query }: BranchesSearch = route.useSearch();
+        const data: RepoBranchesData = route.useLoaderData();
+        return <RepoBranches owner={owner} name={repo} query={query} data={data} />;
+      },
+    });
+    return route;
+  };
+  const repoBranchesRoutes = (["overview", "yours", "active", "stale", "all"] as const).map(branchesRoute);
+
+  // The ref is followed by the path whose history to list, or by "search" to
+  // search the commit messages.
+  const repoCommitsRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/commits/$",
+    validateSearch: validateListSearch,
+    loaderDeps: ({ search }: { search: ListSearch }) => ({ page: search.page, q: search.q }),
+    loader: async ({ params, deps, context }) => {
+      const data = await loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoCommits(params.owner, params.repo, params._splat ?? "", deps),
+      );
+      if (data.search && !data.keyword) {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
+        throw redirect({
+          to: "/$owner/$repo/commits/$",
+          params: { owner: params.owner, repo: params.repo, _splat: data.ref },
+        });
+      }
+      return data;
+    },
+    component: function Commits() {
+      const { owner, repo } = repoCommitsRoute.useParams();
+      const data = repoCommitsRoute.useLoaderData();
+      return (
+        <RepoCommits
+          key={`${owner}/${repo}@${data.ref}/${data.path}?${data.keyword}`}
+          owner={owner}
+          name={repo}
+          data={data}
+        />
+      );
+    },
+  });
+
+  function RepoCodePage({
+    owner,
+    repo,
+    data,
+    search,
+  }: {
+    owner: string;
+    repo: string;
+    data: RepoSrcData;
+    search: RepoCodeSearch;
+  }) {
+    return (
+      <RepoCode
+        key={`${owner}/${repo}@${data.ref}/${data.path}`}
+        owner={owner}
+        name={repo}
+        data={data}
+        overviewTab={search.tab}
+      />
+    );
+  }
+
+  const repoHomeRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo",
+    validateSearch: validateRepoCodeSearch,
+    loader: ({ params, context }) =>
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoSrc(params.owner, params.repo, ""),
+      ),
+    component: function Home() {
+      const { owner, repo } = repoHomeRoute.useParams();
+      return (
+        <RepoCodePage
+          owner={owner}
+          repo={repo}
+          data={repoHomeRoute.useLoaderData()}
+          search={repoHomeRoute.useSearch()}
+        />
+      );
+    },
+  });
+
+  const repoSrcRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/src/$",
+    // plain shows the source of a file that is otherwise rendered, e.g.,
+    // Markdown, like GitHub's "?plain=1".
+    validateSearch: (search: Record<string, unknown>): RepoCodeSearch & { plain?: true } => ({
+      ...validateRepoCodeSearch(search),
+      plain: search.plain === 1 || search.plain === "1" || search.plain === true ? true : undefined,
+    }),
+    loader: ({ params, context }) =>
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoSrc(params.owner, params.repo, params._splat ?? ""),
+      ),
+    component: function Src() {
+      const { owner, repo } = repoSrcRoute.useParams();
+      return (
+        <RepoCodePage owner={owner} repo={repo} data={repoSrcRoute.useLoaderData()} search={repoSrcRoute.useSearch()} />
+      );
+    },
+  });
+
+  const repoReleasesRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/releases",
+    validateSearch: validateRepoReleasesSearch,
+    loaderDeps: ({ search }: { search: RepoReleasesSearch }) => ({ after: search.after }),
+    loader: ({ params, deps, context }) =>
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoReleases(params.owner, params.repo, deps.after),
+      ),
+    component: function Releases() {
+      const { owner, repo } = repoReleasesRoute.useParams();
+      return <RepoReleases owner={owner} name={repo} data={repoReleasesRoute.useLoaderData()} />;
+    },
+  });
+
+  const repoReleaseNewRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/releases/new",
+    loader: ({ params, context }) =>
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoNewRelease(params.owner, params.repo),
+      ),
+    component: function ReleaseNew() {
+      const { owner, repo } = repoReleaseNewRoute.useParams();
+      return (
+        <RepoReleaseEditor
+          key={`${owner}/${repo}`}
+          owner={owner}
+          name={repo}
+          options={repoReleaseNewRoute.useLoaderData()}
+        />
+      );
+    },
+  });
+
+  // Tag names can contain slashes, so the tag is the rest of the path.
+  const repoReleaseEditRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/releases/edit/$",
+    loader: ({ params, context }) =>
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoRelease(params.owner, params.repo, params._splat ?? ""),
+      ),
+    component: function ReleaseEdit() {
+      const { owner, repo, _splat: tag } = repoReleaseEditRoute.useParams();
+      return (
+        <RepoReleaseEditor
+          key={`${owner}/${repo}@${tag}`}
+          owner={owner}
+          name={repo}
+          release={repoReleaseEditRoute.useLoaderData()}
+        />
+      );
+    },
+  });
+
+  // The editor pages take the branch followed by the path, and are not found
+  // when nothing of the kind they change is at the path.
+  async function loadEditorTarget(
+    queryClient: QueryClient,
+    params: { owner: string; repo: string; _splat?: string },
+    kind: "file" | "dir",
+  ) {
+    const target = await loadRepoPage(queryClient, params.owner, params.repo, () =>
+      fetchRepoEditorTarget(params.owner, params.repo, params._splat ?? ""),
+    );
+    if (target.kind !== kind) {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+      throw notFound();
+    }
+    return target;
+  }
+
+  const repoFileEditRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/_edit/$",
+    loader: async ({ params, context }) => {
+      const target = await loadEditorTarget((context as RouterContext).queryClient, params, "file");
+      // Only text files can be edited.
+      if (target.content === undefined) {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+        throw notFound();
+      }
+      return target;
+    },
+    component: function FileEdit() {
+      const { owner, repo } = repoFileEditRoute.useParams();
+      const target = repoFileEditRoute.useLoaderData();
+      return (
+        <RepoFileEditor
+          key={`${owner}/${repo}@${target.branch}/${target.path}`}
+          owner={owner}
+          name={repo}
+          target={target}
+          isNew={false}
+        />
+      );
+    },
+  });
+
+  const repoFileNewRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/_new/$",
+    loader: ({ params, context }) => loadEditorTarget((context as RouterContext).queryClient, params, "dir"),
+    component: function FileNew() {
+      const { owner, repo } = repoFileNewRoute.useParams();
+      const target = repoFileNewRoute.useLoaderData();
+      return (
+        <RepoFileEditor
+          key={`${owner}/${repo}@${target.branch}/${target.path}`}
+          owner={owner}
+          name={repo}
+          target={target}
+          isNew
+        />
+      );
+    },
+  });
+
+  const repoFileDeleteRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/_delete/$",
+    loader: ({ params, context }) => loadEditorTarget((context as RouterContext).queryClient, params, "file"),
+    component: function FileDelete() {
+      const { owner, repo } = repoFileDeleteRoute.useParams();
+      const target = repoFileDeleteRoute.useLoaderData();
+      return (
+        <RepoFileDelete
+          key={`${owner}/${repo}@${target.branch}/${target.path}`}
+          owner={owner}
+          name={repo}
+          target={target}
+        />
+      );
+    },
+  });
+
+  const repoFileUploadRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/_upload/$",
+    loader: async ({ params, context }) => {
+      const target = await loadEditorTarget((context as RouterContext).queryClient, params, "dir");
+      if (!target.upload) {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+        throw notFound();
+      }
+      return target;
+    },
+    component: function FileUpload() {
+      const { owner, repo } = repoFileUploadRoute.useParams();
+      const target = repoFileUploadRoute.useLoaderData();
+      return (
+        <RepoFileUpload
+          key={`${owner}/${repo}@${target.branch}/${target.path}`}
+          owner={owner}
+          name={repo}
+          target={target}
+        />
+      );
+    },
+  });
+
+  // A link to a missing page leads to the list of pages.
+  async function fetchWikiPage(owner: string, repo: string, page: string) {
+    try {
+      return await fetchRepoWiki(owner, repo, page);
+    } catch (err) {
+      if (err instanceof LoaderResponseError && err.errorField === "page does not exist") {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
+        throw redirect({ to: "/$owner/$repo/wiki/_pages", params: { owner, repo } });
+      }
+      throw err;
+    }
+  }
+
+  const repoWikiRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/wiki",
+    loader: ({ params, context }) =>
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchWikiPage(params.owner, params.repo, "Home"),
+      ),
+    component: function Wiki() {
+      const { owner, repo } = repoWikiRoute.useParams();
+      return <RepoWiki owner={owner} name={repo} data={repoWikiRoute.useLoaderData()} />;
+    },
+  });
+
+  const repoWikiPageRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/wiki/$page",
+    loader: ({ params, context, location }) =>
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchWikiPage(params.owner, params.repo, wikiPageName(location.pathname, 0)),
+      ),
+    component: function WikiPage() {
+      const { owner, repo } = repoWikiPageRoute.useParams();
+      const data = repoWikiPageRoute.useLoaderData();
+      return <RepoWiki key={data.page?.name} owner={owner} name={repo} data={data} />;
+    },
+  });
+
+  const repoWikiPagesRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/wiki/_pages",
+    loader: ({ params, context }) =>
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoWikiPages(params.owner, params.repo),
+      ),
+    component: function WikiPages() {
+      const { owner, repo } = repoWikiPagesRoute.useParams();
+      return <RepoWikiPages owner={owner} name={repo} data={repoWikiPagesRoute.useLoaderData()} />;
+    },
+  });
+
+  const repoWikiNewRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/wiki/_new",
+    loader: async ({ params, context }) => {
+      const data = await loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoWikiPages(params.owner, params.repo),
+      );
+      if (!data.viewerCanWrite) {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+        throw notFound();
+      }
+      return data;
+    },
+    component: function WikiNew() {
+      const { owner, repo } = repoWikiNewRoute.useParams();
+      // The first page is the home page of the wiki.
+      const defaultTitle = repoWikiNewRoute.useLoaderData().pages.length ? "" : "Home";
+      return <RepoWikiEditor key={`${owner}/${repo}`} owner={owner} name={repo} defaultTitle={defaultTitle} />;
+    },
+  });
+
+  const repoWikiEditRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/wiki/$page/_edit",
+    loader: ({ params, context, location }) =>
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoWikiPageSource(params.owner, params.repo, wikiPageName(location.pathname, 1)),
+      ),
+    component: function WikiEdit() {
+      const { owner, repo } = repoWikiEditRoute.useParams();
+      const page = repoWikiEditRoute.useLoaderData();
+      return <RepoWikiEditor key={page.name} owner={owner} name={repo} page={page} />;
+    },
+  });
+
   return [
     repoCommitRoute,
+    repoCompareRoute,
+    repoHomeRoute,
+    repoSrcRoute,
+    repoCommitsRoute,
     repoStargazersRoute,
     repoWatchersRoute,
     repoIssuesRoute,
     repoPullsRoute,
+    repoNewIssueRoute,
     repoIssueRoute,
+    repoPullRoute,
+    repoPullCommitsRoute,
+    repoPullFilesRoute,
     repoForksRoute,
+    ...repoBranchesRoutes,
+    repoReleasesRoute,
+    repoReleaseNewRoute,
+    repoReleaseEditRoute,
+    repoWikiRoute,
+    repoWikiPagesRoute,
+    repoWikiNewRoute,
+    repoWikiPageRoute,
+    repoWikiEditRoute,
+    repoFileEditRoute,
+    repoFileNewRoute,
+    repoFileDeleteRoute,
+    repoFileUploadRoute,
     repoLabelsRoute,
     repoMilestonesRoute,
     repoMilestoneNewRoute,
@@ -491,7 +1219,13 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     repoMigrateRoute,
     repoForkRoute,
     repoSettingsRoute,
+    repoMirrorRoute,
+    repoDangerZoneRoute,
     repoCollaborationRoute,
+    repoBranchSettingsRoute,
+    repoBranchProtectionRoute,
+    repoGitHooksRoute,
+    repoGitHookRoute,
     repoDeployKeysRoute,
     repoWebhooksRoute,
     repoWebhookNewRoute,

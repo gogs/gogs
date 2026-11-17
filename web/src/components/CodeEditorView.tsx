@@ -1,13 +1,24 @@
+import { acceptCompletion, autocompletion } from "@codemirror/autocomplete";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
-import { Language, StreamLanguage, defineLanguageFacet, syntaxHighlighting } from "@codemirror/language";
-import { shell } from "@codemirror/legacy-modes/mode/shell";
-import { Compartment, EditorState } from "@codemirror/state";
+import {
+  Language,
+  StreamLanguage,
+  type StreamParser,
+  defineLanguageFacet,
+  indentOnInput,
+  indentUnit as indentUnitFacet,
+  syntaxHighlighting,
+} from "@codemirror/language";
+import { Compartment, EditorState, type Extension, Prec } from "@codemirror/state";
 import { EditorView, keymap, lineNumbers } from "@codemirror/view";
 import { classHighlighter, tagHighlighter, tags } from "@lezer/highlight";
 import { GFM, parser as markdownParser } from "@lezer/markdown";
-import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useImperativeHandle, useRef, useState } from "react";
 
 import type { CodeEditorProps } from "@/components/CodeEditor";
+import type { CodeLanguage } from "@/lib/code-language";
+import { emojiCompletion } from "@/lib/emoji-completion";
+import { type RepoRef, referenceCompletions, renderReferenceIcon } from "@/lib/reference-completion";
 
 // MARKDOWN_HIGHLIGHTER marks what classHighlighter leaves out of Markdown:
 // inline code, quotes, and the characters of the markup.
@@ -21,9 +32,44 @@ const MARKDOWN_HIGHLIGHTER = tagHighlighter([
 // CSS and JavaScript languages too, which triples the size of the editor.
 const markdownLanguage = new Language(defineLanguageFacet(), markdownParser.configure(GFM), [], "markdown");
 
-const LANGUAGES = {
-  markdown: () => markdownLanguage,
-  shell: () => StreamLanguage.define(shell),
+// Each mode loads on demand, so a page only fetches the languages it shows.
+const MODES: Record<Exclude<CodeLanguage, "markdown" | "plain">, () => Promise<StreamParser<unknown>>> = {
+  shell: async () => (await import("@codemirror/legacy-modes/mode/shell")).shell,
+  go: async () => (await import("@codemirror/legacy-modes/mode/go")).go,
+  javascript: async () => (await import("@codemirror/legacy-modes/mode/javascript")).javascript,
+  typescript: async () => (await import("@codemirror/legacy-modes/mode/javascript")).typescript,
+  json: async () => (await import("@codemirror/legacy-modes/mode/javascript")).json,
+  python: async () => (await import("@codemirror/legacy-modes/mode/python")).python,
+  yaml: async () => (await import("@codemirror/legacy-modes/mode/yaml")).yaml,
+  toml: async () => (await import("@codemirror/legacy-modes/mode/toml")).toml,
+  css: async () => (await import("@codemirror/legacy-modes/mode/css")).css,
+  scss: async () => (await import("@codemirror/legacy-modes/mode/css")).sCSS,
+  less: async () => (await import("@codemirror/legacy-modes/mode/css")).less,
+  xml: async () => (await import("@codemirror/legacy-modes/mode/xml")).xml,
+  html: async () => (await import("@codemirror/legacy-modes/mode/xml")).html,
+  rust: async () => (await import("@codemirror/legacy-modes/mode/rust")).rust,
+  sql: async () => (await import("@codemirror/legacy-modes/mode/sql")).standardSQL,
+  ruby: async () => (await import("@codemirror/legacy-modes/mode/ruby")).ruby,
+  c: async () => (await import("@codemirror/legacy-modes/mode/clike")).c,
+  cpp: async () => (await import("@codemirror/legacy-modes/mode/clike")).cpp,
+  java: async () => (await import("@codemirror/legacy-modes/mode/clike")).java,
+  csharp: async () => (await import("@codemirror/legacy-modes/mode/clike")).csharp,
+  kotlin: async () => (await import("@codemirror/legacy-modes/mode/clike")).kotlin,
+  scala: async () => (await import("@codemirror/legacy-modes/mode/clike")).scala,
+  swift: async () => (await import("@codemirror/legacy-modes/mode/swift")).swift,
+  dockerfile: async () => (await import("@codemirror/legacy-modes/mode/dockerfile")).dockerFile,
+  properties: async () => (await import("@codemirror/legacy-modes/mode/properties")).properties,
+  diff: async () => (await import("@codemirror/legacy-modes/mode/diff")).diff,
+  lua: async () => (await import("@codemirror/legacy-modes/mode/lua")).lua,
+  perl: async () => (await import("@codemirror/legacy-modes/mode/perl")).perl,
+  nginx: async () => (await import("@codemirror/legacy-modes/mode/nginx")).nginx,
+  protobuf: async () => (await import("@codemirror/legacy-modes/mode/protobuf")).protobuf,
+  powershell: async () => (await import("@codemirror/legacy-modes/mode/powershell")).powerShell,
+  cmake: async () => (await import("@codemirror/legacy-modes/mode/cmake")).cmake,
+  haskell: async () => (await import("@codemirror/legacy-modes/mode/haskell")).haskell,
+  erlang: async () => (await import("@codemirror/legacy-modes/mode/erlang")).erlang,
+  r: async () => (await import("@codemirror/legacy-modes/mode/r")).r,
+  groovy: async () => (await import("@codemirror/legacy-modes/mode/groovy")).groovy,
 };
 
 // The token colors live in index.css as the .tok-* classes, so they follow the
@@ -41,21 +87,93 @@ const THEME = EditorView.theme({
     borderRight: "1px solid var(--color-border)",
   },
   ".cm-lineNumbers .cm-gutterElement": { padding: "0 0.5rem 0 0.75rem" },
+  ".cm-tooltip.cm-tooltip-autocomplete": {
+    backgroundColor: "var(--color-popover)",
+    color: "var(--color-popover-foreground)",
+    border: "1px solid var(--color-border)",
+    borderRadius: "0.375rem",
+    boxShadow: "0 4px 12px rgb(0 0 0 / 0.12)",
+    overflow: "hidden",
+  },
+  ".cm-tooltip.cm-tooltip-autocomplete > ul": {
+    fontFamily: "var(--font-sans)",
+    maxHeight: "15rem",
+    minWidth: "12rem",
+    maxWidth: "min(20rem, calc(100vw - 2rem))",
+  },
+  ".cm-tooltip.cm-tooltip-autocomplete > ul > li": {
+    padding: "0.375rem 0.5rem",
+    lineHeight: "1.25rem",
+    cursor: "pointer",
+  },
+  ".cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected]": {
+    backgroundColor: "var(--color-primary)",
+    color: "var(--color-primary-foreground)",
+  },
+  ".cm-referenceIcon": {
+    display: "inline-block",
+    width: "1rem",
+    height: "1rem",
+    marginRight: "0.5rem",
+    verticalAlign: "-0.1875rem",
+  },
+  ".cm-referenceAvatar": { borderRadius: "9999px" },
+  ".cm-referenceIcon svg": { display: "block" },
+  ".cm-referenceOpen": { color: "var(--color-success)" },
+  ".cm-referenceClosed": { color: "var(--color-muted-foreground)" },
+  "li[aria-selected] .cm-referenceIcon": { color: "inherit" },
+  ".cm-completionDetail": {
+    marginLeft: "0.5rem",
+    fontStyle: "normal",
+    color: "var(--color-muted-foreground)",
+  },
+  "li[aria-selected] .cm-completionDetail": { color: "inherit", opacity: "0.85" },
 });
 
+// markdownCompletion completes emoji shortcodes, and mentions and issue
+// references when the Markdown belongs to a repository. Enter or Tab inserts
+// the selected one. Without a completion open, Tab still leaves the editor.
+function markdownCompletion(repo?: RepoRef) {
+  return [
+    autocompletion({
+      override: [emojiCompletion, ...(repo ? referenceCompletions(repo) : [])],
+      icons: false,
+      addToOptions: [{ render: renderReferenceIcon, position: 20 }],
+    }),
+    Prec.highest(keymap.of([{ key: "Tab", run: acceptCompletion }])),
+  ];
+}
+
+// layoutOf lays the text out as source code or as prose.
+function layoutOf(code: boolean, wrap: boolean): Extension {
+  return [
+    code ? keymap.of([indentWithTab]) : [],
+    code ? lineNumbers() : [],
+    wrap ? EditorView.lineWrapping : [],
+    EditorView.contentAttributes.of(
+      code ? { spellcheck: "false", autocorrect: "off", autocapitalize: "off" } : { spellcheck: "true" },
+    ),
+  ];
+}
+
 // CodeEditorView is the CodeMirror half of CodeEditor, loaded on demand. The
-// language and the layout are fixed once it mounts.
+// height of the empty editor is fixed once it mounts.
 export default function CodeEditorView({
   id,
   label,
   value,
   onChange,
   lang,
+  repo,
   code = false,
+  wrap = !code,
+  indentUnit = "  ",
+  tabSize = 4,
   minLines = 6,
   disabled = false,
   autoFocus = false,
   onFiles,
+  editorRef,
   "aria-invalid": invalid,
   "aria-describedby": describedBy,
 }: CodeEditorProps) {
@@ -63,7 +181,12 @@ export default function CodeEditorView({
   const view = useRef<EditorView | null>(null);
   const [attrs] = useState(() => new Compartment());
   const [editable] = useState(() => new Compartment());
-  const [initial] = useState(() => ({ value, lang, code, minLines, autoFocus }));
+  const [language] = useState(() => new Compartment());
+  const [layout] = useState(() => new Compartment());
+  const [indentation] = useState(() => new Compartment());
+  const [initial] = useState(() => ({ value, minLines, autoFocus }));
+  // The repository is fixed once the editor mounts.
+  const [completion] = useState(() => markdownCompletion(repo));
   const emitChange = useEffectEvent((text: string) => onChange(text));
   // takeFiles hands over pasted or dropped files, and tells whether anyone
   // took them.
@@ -79,16 +202,16 @@ export default function CodeEditorView({
         doc: initial.value,
         extensions: [
           history(),
-          keymap.of([...defaultKeymap, ...historyKeymap, ...(initial.code ? [indentWithTab] : [])]),
-          LANGUAGES[initial.lang](),
+          layout.of([]),
+          indentation.of([]),
+          keymap.of([...defaultKeymap, ...historyKeymap]),
+          language.of([]),
+          // Closing a block, e.g., typing "}", moves the line back to its indentation.
+          indentOnInput(),
           syntaxHighlighting(classHighlighter),
           syntaxHighlighting(MARKDOWN_HIGHLIGHTER),
           THEME,
           EditorView.theme({ ".cm-content": { minHeight: `${initial.minLines * 1.5}em` } }),
-          initial.code ? lineNumbers() : EditorView.lineWrapping,
-          EditorView.contentAttributes.of(
-            initial.code ? { spellcheck: "false", autocorrect: "off", autocapitalize: "off" } : { spellcheck: "true" },
-          ),
           EditorView.domEventHandlers({
             // Dropping a file would otherwise insert its bytes as text.
             drop: (e) => {
@@ -117,7 +240,61 @@ export default function CodeEditorView({
       v.destroy();
       view.current = null;
     };
-  }, [initial, attrs, editable]);
+  }, [initial, attrs, editable, language, layout, indentation]);
+
+  // The language follows the name of the file being edited.
+  useEffect(() => {
+    const v = view.current;
+    if (!v) return;
+    if (lang === "markdown" || lang === "plain") {
+      v.dispatch({ effects: language.reconfigure(lang === "markdown" ? [markdownLanguage, completion] : []) });
+      return;
+    }
+    let current = true;
+    void MODES[lang]().then((mode) => {
+      if (current && view.current === v) v.dispatch({ effects: language.reconfigure(StreamLanguage.define(mode)) });
+    });
+    return () => {
+      current = false;
+    };
+  }, [language, completion, lang]);
+
+  useEffect(() => {
+    view.current?.dispatch({ effects: layout.reconfigure(layoutOf(code, wrap)) });
+  }, [layout, code, wrap]);
+
+  useEffect(() => {
+    view.current?.dispatch({
+      effects: indentation.reconfigure([indentUnitFacet.of(indentUnit), EditorState.tabSize.of(tabSize)]),
+    });
+  }, [indentation, indentUnit, tabSize]);
+
+  useImperativeHandle(
+    editorRef,
+    () => ({
+      insert: (text) => {
+        const v = view.current;
+        if (!v) return;
+        const { from, to } = v.state.selection.main;
+        const line = v.state.doc.lineAt(from);
+        const before = from > line.from ? "\n" : "";
+        const insert = `${before}${text}\n`;
+        v.dispatch({
+          changes: { from, to, insert },
+          selection: { anchor: from + insert.length },
+          scrollIntoView: true,
+        });
+      },
+      replace: (search, text) => {
+        const v = view.current;
+        const from = v ? v.state.doc.toString().indexOf(search) : -1;
+        if (!v || from < 0) return false;
+        v.dispatch({ changes: { from, to: from + search.length, insert: text } });
+        return true;
+      },
+    }),
+    [],
+  );
 
   // Take the value from outside when it changes there, e.g., cleared after
   // submitting.

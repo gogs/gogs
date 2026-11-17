@@ -3,11 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"reflect"
-	"runtime"
+	"os"
 
 	"github.com/cockroachdb/errors"
 	"github.com/urfave/cli/v3"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
@@ -48,7 +48,7 @@ to make automatic initialization process more smoothly`,
 		Name:  "delete-inactive-users",
 		Usage: "Delete all inactive accounts",
 		Action: adminDashboardOperation(
-			func() error { return database.Handle.Users().DeleteInactivated() },
+			func(*logx.Logger) error { return database.Handle.Users().DeleteInactivated() },
 			"All inactivated accounts have been deleted successfully",
 		),
 		Flags: []cli.Flag{
@@ -60,7 +60,7 @@ to make automatic initialization process more smoothly`,
 		Name:  "delete-repository-archives",
 		Usage: "Delete all repositories archives",
 		Action: adminDashboardOperation(
-			database.DeleteRepositoryArchives,
+			func(*logx.Logger) error { return database.DeleteRepositoryArchives() },
 			"All repositories archives have been deleted successfully",
 		),
 		Flags: []cli.Flag{
@@ -84,7 +84,7 @@ to make automatic initialization process more smoothly`,
 		Name:  "collect-garbage",
 		Usage: "Do garbage collection on repositories",
 		Action: adminDashboardOperation(
-			database.GitGcRepos,
+			func(*logx.Logger) error { return database.GitGcRepos() },
 			"All repositories have done garbage collection successfully",
 		),
 		Flags: []cli.Flag{
@@ -108,7 +108,7 @@ to make automatic initialization process more smoothly`,
 		Name:  "resync-hooks",
 		Usage: "Resync pre-receive, update and post-receive hooks",
 		Action: adminDashboardOperation(
-			database.SyncRepositoryHooks,
+			func(*logx.Logger) error { return database.SyncRepositoryHooks() },
 			"All repositories' pre-receive, update and post-receive hooks have been resynced successfully",
 		),
 		Flags: []cli.Flag{
@@ -130,6 +130,7 @@ to make automatic initialization process more smoothly`,
 )
 
 func runCreateUser(ctx context.Context, cmd *cli.Command) error {
+	logger := conf.NewConsoleLogger(os.Stdout)
 	if !cmd.IsSet("name") {
 		return errors.New("Username is not specified")
 	} else if !cmd.IsSet("password") {
@@ -138,13 +139,15 @@ func runCreateUser(ctx context.Context, cmd *cli.Command) error {
 		return errors.New("Email is not specified")
 	}
 
-	err := conf.Init(configFromLineage(cmd))
+	err := conf.Init(logger, configFromLineage(cmd))
 	if err != nil {
 		return errors.Wrap(err, "init configuration")
 	}
-	conf.InitLogging(true)
+	if _, err = conf.InitLogging(logger, true); err != nil {
+		return errors.Wrap(err, "init logging")
+	}
 
-	if _, err = database.SetEngine(); err != nil {
+	if _, err = database.SetEngine(logger, false); err != nil {
 		return errors.Wrap(err, "set engine")
 	}
 
@@ -166,21 +169,23 @@ func runCreateUser(ctx context.Context, cmd *cli.Command) error {
 	return nil
 }
 
-func adminDashboardOperation(operation func() error, successMessage string) func(context.Context, *cli.Command) error {
+func adminDashboardOperation(operation func(*logx.Logger) error, successMessage string) func(context.Context, *cli.Command) error {
 	return func(_ context.Context, cmd *cli.Command) error {
-		err := conf.Init(configFromLineage(cmd))
+		logger := conf.NewConsoleLogger(os.Stdout)
+		err := conf.Init(logger, configFromLineage(cmd))
 		if err != nil {
 			return errors.Wrap(err, "init configuration")
 		}
-		conf.InitLogging(true)
+		if _, err = conf.InitLogging(logger, true); err != nil {
+			return errors.Wrap(err, "init logging")
+		}
 
-		if _, err = database.SetEngine(); err != nil {
+		if _, err = database.SetEngine(logger, false); err != nil {
 			return errors.Wrap(err, "set engine")
 		}
 
-		if err := operation(); err != nil {
-			functionName := runtime.FuncForPC(reflect.ValueOf(operation).Pointer()).Name()
-			return errors.Newf("%s: %v", functionName, err)
+		if err := operation(logger); err != nil {
+			return errors.Wrap(err, cmd.Name)
 		}
 
 		fmt.Printf("%s\n", successMessage)

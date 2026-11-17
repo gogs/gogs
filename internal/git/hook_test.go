@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHook(t *testing.T) {
@@ -43,4 +44,20 @@ func TestHook_Update(t *testing.T) {
 		t.Fatal(err)
 	}
 	assert.Equal(t, "test content", string(p))
+
+}
+
+func TestHook_Delete(t *testing.T) {
+	path := tempPath()
+	h := &Hook{name: HookPreReceive, path: path}
+	require.NoError(t, h.Update("test content"))
+
+	require.NoError(t, h.Delete())
+	_, err := os.Stat(path)
+	assert.True(t, os.IsNotExist(err))
+	assert.True(t, h.IsSample())
+	assert.Equal(t, serverSideHookSamples[HookPreReceive], h.Content())
+
+	// Deleting a hook that does not exist is not an error.
+	require.NoError(t, h.Delete())
 }

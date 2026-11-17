@@ -103,12 +103,14 @@ export interface UserFollowResult {
 export function followUser(username: string) {
   return fetchJSON<UserFollowResult>(subUrl(`/api/web/users/${encodeURIComponent(username)}/follow`), {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
   });
 }
 
 export function unfollowUser(username: string) {
   return fetchJSON<UserFollowResult>(subUrl(`/api/web/users/${encodeURIComponent(username)}/follow`), {
     method: "DELETE",
+    headers: { "Content-Type": "application/json" },
   });
 }
 

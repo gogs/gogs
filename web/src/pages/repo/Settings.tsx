@@ -1,16 +1,29 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
+import {
+  GitBranch,
+  KeyRound,
+  Pencil,
+  RefreshCw,
+  Settings,
+  ShieldCheck,
+  SquareTerminal,
+  TriangleAlert,
+  Users,
+  Webhook,
+} from "lucide-react";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { AvatarForm } from "@/components/AvatarForm";
+import { CodeEditor } from "@/components/CodeEditor";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { CredentialRow, ROW_CLASS } from "@/components/CredentialRow";
 import { CheckboxField, FormAlert, FormField, RadioField } from "@/components/FormField";
 import { RepoHeader } from "@/components/RepoHeader";
 import { RichText } from "@/components/RichText";
-import { SettingsLayout, SettingsNavItem } from "@/components/SettingsLayout";
+import { SettingsLayout, SettingsNavDivider, SettingsNavGroup, SettingsNavItem } from "@/components/SettingsLayout";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -28,9 +41,14 @@ import { webContext } from "@/lib/context";
 import { usePageTitle } from "@/lib/page-title";
 import {
   type RepoAdvancedSettings,
+  type RepoBranchSettingsData,
   type RepoCollaborator,
   type RepoCollaboratorMode,
+  type RepoGitHook,
+  type RepoGitHookContent,
   type RepoMirrorSettings,
+  type RepoProtectedBranch,
+  type RepoProtectedBranchForm,
   type RepoSettingsData,
   type RepoSettingsForm,
   addRepoCollaborator,
@@ -40,6 +58,7 @@ import {
   deleteRepo,
   deleteRepoAvatar,
   deleteRepoDeployKey,
+  deleteRepoGitHook,
   deleteRepoWiki,
   removeRepoCollaborator,
   repoHeaderQuery,
@@ -47,13 +66,17 @@ import {
   syncRepoMirror,
   transferRepo,
   updateRepoAdvanced,
+  updateRepoDefaultBranch,
+  updateRepoGitHook,
   updateRepoMirror,
+  updateRepoProtectedBranch,
   updateRepoSettings,
   uploadRepoAvatar,
 } from "@/lib/queries/repo";
 import { formErrors } from "@/lib/queries/request";
 import type { SSHKey } from "@/lib/queries/settings";
 import { subUrl } from "@/lib/url";
+import { cn } from "@/lib/utils";
 import { DescriptionField } from "@/pages/repo/New";
 
 const TEXTAREA_CLASS =
@@ -61,7 +84,7 @@ const TEXTAREA_CLASS =
 const DATE_TIME_FMT = new Intl.DateTimeFormat(webContext.lang, { dateStyle: "medium", timeStyle: "short" });
 const MODES: RepoCollaboratorMode[] = ["admin", "write", "read"];
 
-type SettingsPage = "options" | "collaboration" | "hooks" | "keys";
+type SettingsPage = "general" | "mirror" | "danger" | "collaboration" | "branches" | "hooks" | "githooks" | "keys";
 
 // focusOnError moves focus to the first field of a failed form that has an
 // error.
@@ -109,11 +132,14 @@ export function RepoSettingsLayout({
   const { data: settings } = useSuspenseQuery(repoSettingsQuery(owner, name));
   usePageTitle(`${t("repo.settings")} - ${repo.owner}/${repo.name}`);
   const params = { owner: repo.owner, repo: repo.name };
-  const legacyLink = (path: string) => subUrl(`/${repo.owner}/${repo.name}/settings${path}`);
   const titles: Record<SettingsPage, string> = {
-    options: t("repo.settings.options"),
+    general: t("repo.settings.general"),
+    mirror: t("repo.settings.mirror"),
+    danger: t("repo.settings.danger_zone"),
     collaboration: t("repo.settings.collaboration"),
+    branches: t("repo.settings.branches"),
     hooks: t("repo.settings.hooks"),
+    githooks: t("repo.settings.githooks"),
     keys: t("repo.settings.deploy_keys"),
   };
 
@@ -127,37 +153,65 @@ export function RepoSettingsLayout({
           className="max-w-7xl"
           nav={
             <>
-              <SettingsNavItem active={active === "options"}>
-                <Link to="/$owner/$repo/settings" params={params} activeOptions={{ exact: true }}>
-                  {titles.options}
-                </Link>
-              </SettingsNavItem>
-              <SettingsNavItem active={active === "collaboration"}>
-                <Link to="/$owner/$repo/settings/collaboration" params={params} activeOptions={{ exact: true }}>
-                  {titles.collaboration}
-                </Link>
-              </SettingsNavItem>
-              {/* Branches and Git hooks are still served by the server-rendered pages. */}
-              {settings.mirror ? null : (
-                <SettingsNavItem active={false}>
-                  <a href={legacyLink("/branches")}>{t("repo.settings.branches")}</a>
+              <SettingsNavGroup>
+                <SettingsNavItem active={active === "general"} icon={Settings}>
+                  <Link to="/$owner/$repo/settings" params={params} activeOptions={{ exact: true }}>
+                    {titles.general}
+                  </Link>
                 </SettingsNavItem>
-              )}
-              <SettingsNavItem active={active === "hooks"}>
-                <Link to="/$owner/$repo/settings/hooks" params={params}>
-                  {titles.hooks}
-                </Link>
-              </SettingsNavItem>
-              {settings.viewerCanEditGitHooks ? (
-                <SettingsNavItem active={false}>
-                  <a href={legacyLink("/hooks/git")}>{t("repo.settings.githooks")}</a>
+              </SettingsNavGroup>
+              <SettingsNavGroup title={t("settings.group_access")}>
+                <SettingsNavItem active={active === "collaboration"} icon={Users}>
+                  <Link to="/$owner/$repo/settings/collaboration" params={params} activeOptions={{ exact: true }}>
+                    {titles.collaboration}
+                  </Link>
                 </SettingsNavItem>
+              </SettingsNavGroup>
+              <SettingsNavGroup title={t("repo.settings.group_code")}>
+                {/* Mirrors take their branches from the source repository. */}
+                {settings.mirror ? (
+                  <SettingsNavItem active={active === "mirror"} icon={RefreshCw}>
+                    <Link to="/$owner/$repo/settings/mirror" params={params} activeOptions={{ exact: true }}>
+                      {titles.mirror}
+                    </Link>
+                  </SettingsNavItem>
+                ) : (
+                  <SettingsNavItem active={active === "branches"} icon={GitBranch}>
+                    <Link to="/$owner/$repo/settings/branches" params={params}>
+                      {titles.branches}
+                    </Link>
+                  </SettingsNavItem>
+                )}
+                <SettingsNavItem active={active === "hooks"} icon={Webhook}>
+                  <Link to="/$owner/$repo/settings/hooks" params={params} activeOptions={{ exact: true }}>
+                    {titles.hooks}
+                  </Link>
+                </SettingsNavItem>
+                {settings.viewerCanEditGitHooks ? (
+                  <SettingsNavItem active={active === "githooks"} icon={SquareTerminal}>
+                    <Link to="/$owner/$repo/settings/hooks/git" params={params}>
+                      {titles.githooks}
+                    </Link>
+                  </SettingsNavItem>
+                ) : null}
+              </SettingsNavGroup>
+              <SettingsNavGroup title={t("repo.settings.group_security")}>
+                <SettingsNavItem active={active === "keys"} icon={KeyRound}>
+                  <Link to="/$owner/$repo/settings/keys" params={params} activeOptions={{ exact: true }}>
+                    {titles.keys}
+                  </Link>
+                </SettingsNavItem>
+              </SettingsNavGroup>
+              {hasDangerZone(settings) ? (
+                <>
+                  <SettingsNavDivider />
+                  <SettingsNavItem active={active === "danger"} icon={TriangleAlert} destructive>
+                    <Link to="/$owner/$repo/settings/danger" params={params} activeOptions={{ exact: true }}>
+                      {titles.danger}
+                    </Link>
+                  </SettingsNavItem>
+                </>
               ) : null}
-              <SettingsNavItem active={active === "keys"}>
-                <Link to="/$owner/$repo/settings/keys" params={params} activeOptions={{ exact: true }}>
-                  {titles.keys}
-                </Link>
-              </SettingsNavItem>
             </>
           }
         >
@@ -170,22 +224,21 @@ export function RepoSettingsLayout({
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="mt-8 border-t border-(--color-border) pt-6 first:mt-0 first:border-t-0 first:pt-0">
-      <h2 className="mb-4 text-xl font-semibold">{title}</h2>
+    <section className="mt-8 border-t border-(--color-border) pt-6 first-of-type:mt-0 first-of-type:border-t-0 first-of-type:pt-0">
+      <h2 className="mb-4 text-lg font-semibold">{title}</h2>
       {children}
     </section>
   );
 }
 
-// RepoOptions changes the name, the visibility, the avatar, the mirroring and
-// the features of a repository, and holds the actions that cannot be taken
-// back.
-export function RepoOptions({ owner, name }: { owner: string; name: string }) {
+// RepoGeneral changes the name, the avatar and the features of a repository.
+export function RepoGeneral({ owner, name }: { owner: string; name: string }) {
   const { t } = useTranslation();
   const { data: settings } = useSuspenseQuery(repoSettingsQuery(owner, name));
   const refresh = useRefresh(owner, name);
   return (
-    <RepoSettingsLayout owner={owner} name={name} active="options">
+    <RepoSettingsLayout owner={owner} name={name} active="general">
+      <h1 className="mb-4 text-xl font-semibold">{t("repo.settings.general")}</h1>
       <Section title={t("repo.settings.basic_settings")}>
         <BasicSettings owner={owner} name={name} settings={settings} />
         <div className="mt-8">
@@ -201,19 +254,41 @@ export function RepoOptions({ owner, name }: { owner: string; name: string }) {
           />
         </div>
       </Section>
-      {settings.mirror ? (
-        <Section title={t("repo.settings.mirror_settings")}>
-          <MirrorSettings owner={owner} name={name} mirror={settings.mirror} />
-        </Section>
-      ) : null}
       <Section title={t("repo.settings.advanced_settings")}>
         <AdvancedSettings owner={owner} name={name} settings={settings} />
       </Section>
-      {settings.viewerIsOwner ? (
-        <Section title={t("repo.settings.danger_zone")}>
-          <DangerZone owner={owner} name={name} settings={settings} />
-        </Section>
-      ) : null}
+    </RepoSettingsLayout>
+  );
+}
+
+// RepoMirror changes how a mirror syncs from its source. Only mirrors get here.
+export function RepoMirror({ owner, name }: { owner: string; name: string }) {
+  const { t } = useTranslation();
+  const { data: settings } = useSuspenseQuery(repoSettingsQuery(owner, name));
+  return (
+    <RepoSettingsLayout owner={owner} name={name} active="mirror">
+      <h1 className="mb-4 text-xl font-semibold">{t("repo.settings.mirror_settings")}</h1>
+      {settings.mirror ? <MirrorSettings owner={owner} name={name} mirror={settings.mirror} /> : null}
+    </RepoSettingsLayout>
+  );
+}
+
+// hasDangerZone tells whether the viewer has anything to do in the danger zone.
+// Admins can change the visibility, and only the owner can do the rest. Forks
+// keep the visibility of their base repository.
+function hasDangerZone(settings: RepoSettingsData) {
+  return settings.viewerIsOwner || !settings.isFork;
+}
+
+// RepoDangerZone holds the actions on a repository that are hard or impossible
+// to take back.
+export function RepoDangerZone({ owner, name }: { owner: string; name: string }) {
+  const { t } = useTranslation();
+  const { data: settings } = useSuspenseQuery(repoSettingsQuery(owner, name));
+  return (
+    <RepoSettingsLayout owner={owner} name={name} active="danger">
+      <h1 className="mb-4 text-xl font-semibold">{t("repo.settings.danger_zone")}</h1>
+      <DangerZone owner={owner} name={name} settings={settings} />
     </RepoSettingsLayout>
   );
 }
@@ -293,36 +368,8 @@ function BasicSettings({ owner, name, settings }: { owner: string; name: string;
               onChange={(e) => setForm({ ...form, website: e.target.value })}
             />
           </FormField>
-          {/* Forks keep the visibility of their base repository. */}
-          {settings.isFork ? null : (
-            <fieldset
-              className="flex flex-col gap-3"
-              aria-describedby={settings.forkCount ? "visibility-helper" : undefined}
-            >
-              <legend className="mb-3 text-sm font-medium">{t("repo.visibility")}</legend>
-              <CheckboxField
-                id="private"
-                label={<RichText text={t("repo.visiblity_helper")} />}
-                checked={form.private}
-                onChange={(checked) => setForm({ ...form, private: checked })}
-              />
-              <CheckboxField
-                id="unlisted"
-                label={<RichText text={t("repo.unlisted_helper")} />}
-                checked={form.unlisted}
-                onChange={(checked) => setForm({ ...form, unlisted: checked })}
-              />
-              {settings.forkCount ? (
-                <p id="visibility-helper" className="text-sm text-(--color-muted-foreground)">
-                  {t("repo.visiblity_fork_helper")}
-                </p>
-              ) : null}
-            </fieldset>
-          )}
           <div>
-            <Button type="submit" variant="outline">
-              {t("repo.settings.update_settings")}
-            </Button>
+            <Button type="submit">{t("repo.settings.update_settings")}</Button>
           </div>
         </div>
       </fieldset>
@@ -410,9 +457,7 @@ function MirrorSettings({ owner, name, mirror }: { owner: string; name: string; 
               />
             </FormField>
             <div>
-              <Button type="submit" variant="outline">
-                {t("repo.settings.update_settings")}
-              </Button>
+              <Button type="submit">{t("repo.settings.update_settings")}</Button>
             </div>
           </div>
         </fieldset>
@@ -472,6 +517,7 @@ function AdvancedSettings({ owner, name, settings }: { owner: string; name: stri
   });
   const { formError } = formErrors(save.error);
   const set = (change: Partial<RepoAdvancedSettings>) => setForm({ ...form, ...change });
+  const noMergeMethod = form.enablePulls && !form.pullsAllowMerge && !form.pullsAllowSquash && !form.pullsAllowRebase;
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -633,22 +679,76 @@ function AdvancedSettings({ owner, name, settings }: { owner: string; name: stri
               checked={form.enablePulls}
               onChange={(enablePulls) => set({ enablePulls })}
             >
+              <p className="text-sm">{t("repo.settings.pulls.merge_methods_desc")}</p>
+              <div className="divide-y divide-(--color-border) rounded-md border border-(--color-border)">
+                <div className="flex flex-col gap-3 px-4 py-3">
+                  <CheckboxField
+                    id="pullsAllowMerge"
+                    label={t("repo.settings.pulls.allow_merge_commit")}
+                    description={t("repo.settings.pulls.allow_merge_commit_desc")}
+                    checked={form.pullsAllowMerge}
+                    onChange={(pullsAllowMerge) => set({ pullsAllowMerge })}
+                  />
+                  {form.pullsAllowMerge ? (
+                    <MessagePresetField
+                      id="pullsMergeMessage"
+                      description={t("repo.settings.pulls.default_merge_message_desc")}
+                      presets={["", "title", "title_description"]}
+                      value={form.pullsMergeMessage}
+                      onChange={(pullsMergeMessage) => set({ pullsMergeMessage })}
+                    />
+                  ) : null}
+                </div>
+                <div className="flex flex-col gap-3 px-4 py-3">
+                  <CheckboxField
+                    id="pullsAllowSquash"
+                    label={t("repo.settings.pulls.allow_squash_merge")}
+                    description={t("repo.settings.pulls.allow_squash_merge_desc")}
+                    checked={form.pullsAllowSquash}
+                    onChange={(pullsAllowSquash) => set({ pullsAllowSquash })}
+                  />
+                  {form.pullsAllowSquash ? (
+                    <MessagePresetField
+                      id="pullsSquashMessage"
+                      description={t("repo.settings.pulls.default_squash_message_desc")}
+                      presets={["", "title", "title_commits", "title_description"]}
+                      value={form.pullsSquashMessage}
+                      onChange={(pullsSquashMessage) => set({ pullsSquashMessage })}
+                    />
+                  ) : null}
+                </div>
+                <div className="px-4 py-3">
+                  <CheckboxField
+                    id="pullsAllowRebase"
+                    label={t("repo.settings.pulls.allow_rebase_merge")}
+                    description={t("repo.settings.pulls.allow_rebase_merge_desc")}
+                    checked={form.pullsAllowRebase}
+                    onChange={(pullsAllowRebase) => set({ pullsAllowRebase })}
+                  />
+                </div>
+              </div>
+              {noMergeMethod ? (
+                <p role="alert" className="text-sm text-(--color-destructive)">
+                  {t("repo.settings.pulls.no_merge_method")}
+                </p>
+              ) : null}
+              <CheckboxField
+                id="pullsDeleteBranch"
+                label={t("repo.settings.pulls.delete_branch")}
+                description={t("repo.settings.pulls.delete_branch_desc")}
+                checked={form.pullsDeleteBranch}
+                onChange={(pullsDeleteBranch) => set({ pullsDeleteBranch })}
+              />
               <CheckboxField
                 id="pullsIgnoreWhitespace"
                 label={t("repo.settings.pulls.ignore_whitespace")}
                 checked={form.pullsIgnoreWhitespace}
                 onChange={(pullsIgnoreWhitespace) => set({ pullsIgnoreWhitespace })}
               />
-              <CheckboxField
-                id="pullsAllowRebase"
-                label={t("repo.settings.pulls.allow_rebase_merge")}
-                checked={form.pullsAllowRebase}
-                onChange={(pullsAllowRebase) => set({ pullsAllowRebase })}
-              />
             </FeatureGroup>
           ) : null}
           <div>
-            <Button type="submit" variant="outline">
+            <Button type="submit" disabled={noMergeMethod}>
               {t("repo.settings.update_settings")}
             </Button>
           </div>
@@ -658,8 +758,56 @@ function AdvancedSettings({ owner, name, settings }: { owner: string; name: stri
   );
 }
 
-// DangerZone converts, transfers or deletes the repository, or erases its
-// wiki, once the viewer types its name.
+// MessagePresetField picks the message a merge style starts with, where the
+// empty preset is the default message.
+function MessagePresetField<P extends string>({
+  id,
+  description,
+  presets,
+  value,
+  onChange,
+}: {
+  id: string;
+  description: string;
+  presets: P[];
+  value: P;
+  onChange: (value: P) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="ml-6.5 flex flex-col gap-1">
+      <span id={`${id}-label`} className="text-sm font-medium">
+        {t("repo.settings.pulls.default_commit_message")}
+      </span>
+      <span id={`${id}-description`} className="text-sm text-(--color-muted-foreground)">
+        {description}
+      </span>
+      {/* Radix Select does not allow an empty value, so the default preset
+          is "default" here. */}
+      <Select value={value || "default"} onValueChange={(v) => onChange((v === "default" ? "" : v) as P)}>
+        <SelectTrigger
+          id={id}
+          aria-labelledby={`${id}-label`}
+          aria-describedby={`${id}-description`}
+          className="mt-1 h-8 w-auto max-w-full gap-2"
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {presets.map((preset) => (
+            <SelectItem key={preset || "default"} value={preset || "default"}>
+              {t(`repo.settings.pulls.message_${preset || "default"}`)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+// DangerZone changes the visibility of the repository. For its owner, it also
+// converts, transfers or deletes the repository, or erases its wiki, once the
+// owner types its name.
 function DangerZone({ owner, name, settings }: { owner: string; name: string; settings: RepoSettingsData }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -671,69 +819,184 @@ function DangerZone({ owner, name, settings }: { owner: string; name: string; se
 
   return (
     <div className="rounded-md border border-(--color-destructive)">
-      {settings.mirror ? (
-        <DangerAction
-          id="convert"
-          name={settings.name}
-          title={t("repo.settings.convert")}
-          description={t("repo.settings.convert_desc")}
-          notices={[t("repo.settings.convert_notices_1")]}
-          confirmLabel={t("repo.settings.convert_confirm")}
-          action={(form) => convertRepo(owner, name, form.repoName)}
-          onDone={() => repoHome(owner, name)}
-        />
+      {settings.isFork ? null : <VisibilityAction owner={owner} name={name} settings={settings} />}
+      {settings.viewerIsOwner ? (
+        <>
+          {settings.mirror ? (
+            <DangerAction
+              id="convert"
+              name={settings.name}
+              title={t("repo.settings.convert")}
+              description={t("repo.settings.convert_desc")}
+              notices={[t("repo.settings.convert_notices_1")]}
+              confirmLabel={t("repo.settings.convert_confirm")}
+              action={(form) => convertRepo(owner, name, form.repoName)}
+              onDone={() => repoHome(owner, name)}
+            />
+          ) : null}
+          <DangerAction
+            id="transfer"
+            name={settings.name}
+            title={t("repo.settings.transfer")}
+            description={t("repo.settings.transfer_desc")}
+            notices={[t("repo.settings.transfer_notices_1"), t("repo.settings.transfer_notices_2")]}
+            confirmLabel={t("repo.settings.make_transfer")}
+            askNewOwner
+            action={(form) => transferRepo(owner, name, form)}
+            onDone={(repo) => repoHome(repo.owner, repo.name)}
+          />
+          {settings.advanced.enableWiki ? (
+            <DangerAction
+              id="deleteWiki"
+              name={settings.name}
+              title={t("repo.settings.wiki_delete")}
+              description={t("repo.settings.wiki_delete_desc")}
+              notices={[
+                t("repo.settings.delete_notices_1"),
+                t("repo.settings.wiki_delete_notices_1").replace(/%(?:\[1\])?s/, settings.name),
+              ]}
+              confirmLabel={t("repo.settings.confirm_delete")}
+              action={(form) => deleteRepoWiki(owner, name, form.repoName)}
+              onDone={async () => {
+                toast.success(t("repo.settings.wiki_deletion_success"));
+                await refresh();
+              }}
+            />
+          ) : null}
+          <DangerAction
+            id="delete"
+            name={settings.name}
+            title={t("repo.settings.delete")}
+            description={t("repo.settings.delete_desc")}
+            notices={[
+              t("repo.settings.delete_notices_1"),
+              t("repo.settings.delete_notices_2"),
+              ...(settings.forkCount ? [t("repo.settings.delete_notices_fork_1")] : []),
+            ]}
+            confirmLabel={t("repo.settings.confirm_delete")}
+            action={(form) => deleteRepo(owner, name, form.repoName)}
+            onDone={async () => {
+              toast.success(t("repo.settings.deletion_success"));
+              if (settings.ownerIsOrganization) {
+                await navigate({ to: "/org/$org/dashboard", params: { org: owner } });
+              } else {
+                await navigate({ to: "/" });
+              }
+              queryClient.removeQueries({ queryKey: ["repo", owner, name] });
+            }}
+          />
+        </>
       ) : null}
-      <DangerAction
-        id="transfer"
-        name={settings.name}
-        title={t("repo.settings.transfer")}
-        description={t("repo.settings.transfer_desc")}
-        notices={[t("repo.settings.transfer_notices_1"), t("repo.settings.transfer_notices_2")]}
-        confirmLabel={t("repo.settings.make_transfer")}
-        askNewOwner
-        action={(form) => transferRepo(owner, name, form)}
-        onDone={(repo) => repoHome(repo.owner, repo.name)}
-      />
-      {settings.advanced.enableWiki ? (
-        <DangerAction
-          id="deleteWiki"
-          name={settings.name}
-          title={t("repo.settings.wiki_delete")}
-          description={t("repo.settings.wiki_delete_desc")}
-          notices={[
-            t("repo.settings.delete_notices_1"),
-            t("repo.settings.wiki_delete_notices_1").replace(/%(?:\[1\])?s/, settings.name),
-          ]}
-          confirmLabel={t("repo.settings.confirm_delete")}
-          action={(form) => deleteRepoWiki(owner, name, form.repoName)}
-          onDone={async () => {
-            toast.success(t("repo.settings.wiki_deletion_success"));
-            await refresh();
-          }}
-        />
-      ) : null}
-      <DangerAction
-        id="delete"
-        name={settings.name}
-        title={t("repo.settings.delete")}
-        description={t("repo.settings.delete_desc")}
-        notices={[
-          t("repo.settings.delete_notices_1"),
-          t("repo.settings.delete_notices_2"),
-          ...(settings.forkCount ? [t("repo.settings.delete_notices_fork_1")] : []),
-        ]}
-        confirmLabel={t("repo.settings.confirm_delete")}
-        action={(form) => deleteRepo(owner, name, form.repoName)}
-        onDone={async () => {
-          toast.success(t("repo.settings.deletion_success"));
-          if (settings.ownerIsOrganization) {
-            await navigate({ to: "/org/$org/dashboard", params: { org: owner } });
-          } else {
-            await navigate({ to: "/" });
-          }
-          queryClient.removeQueries({ queryKey: ["repo", owner, name] });
-        }}
-      />
+    </div>
+  );
+}
+
+// VisibilityAction makes the repository private or unlisted, or public again.
+function VisibilityAction({ owner, name, settings }: { owner: string; name: string; settings: RepoSettingsData }) {
+  const { t } = useTranslation();
+  const refresh = useRefresh(owner, name);
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({ private: settings.private, unlisted: settings.unlisted });
+  const mutation = useMutation({
+    // The settings are saved together, so the rest stays as it is.
+    mutationFn: () =>
+      updateRepoSettings(owner, name, {
+        name: settings.name,
+        description: settings.description,
+        website: settings.website,
+        ...form,
+      }),
+    onSuccess: async () => {
+      setOpen(false);
+      toast.success(t("repo.settings.update_settings_success"));
+      await refresh();
+    },
+  });
+  const { formError } = formErrors(mutation.error);
+  const changed = form.private !== settings.private || form.unlisted !== settings.unlisted;
+  const title = t("repo.settings.change_visibility");
+  const description = [
+    t(settings.private ? "repo.settings.visibility_private" : "repo.settings.visibility_public"),
+    settings.unlisted ? t("repo.settings.visibility_unlisted") : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const onOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (!next) {
+      setForm({ private: settings.private, unlisted: settings.unlisted });
+      mutation.reset();
+    }
+  };
+  const onSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (changed) mutation.mutate();
+  };
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-t border-(--color-border) px-4 py-3 first:border-t-0">
+      <div className="min-w-0 flex-1 basis-56">
+        <p className="text-sm font-semibold">{title}</p>
+        <p className="text-sm text-(--color-muted-foreground)">{description}</p>
+      </div>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogTrigger asChild>
+          <Button type="button" variant="outline" size="sm" className="shrink-0 text-(--color-destructive)">
+            {title}
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <form onSubmit={onSubmit} noValidate className="flex min-h-0 flex-1 flex-col">
+            <fieldset disabled={mutation.isPending} className="contents">
+              <DialogHeader>
+                <DialogTitle>{title}</DialogTitle>
+                <DialogDescription>{description}</DialogDescription>
+              </DialogHeader>
+              <DialogBody>
+                <FormAlert message={formError} />
+                <fieldset
+                  className="flex flex-col gap-3"
+                  aria-describedby={settings.forkCount ? "visibility-helper" : undefined}
+                >
+                  <legend className="mb-3 text-sm font-medium">{t("repo.visibility")}</legend>
+                  <CheckboxField
+                    id="private"
+                    label={<RichText text={t("repo.visiblity_helper")} />}
+                    checked={form.private}
+                    onChange={(checked) => setForm((f) => ({ ...f, private: checked }))}
+                  />
+                  <CheckboxField
+                    id="unlisted"
+                    label={<RichText text={t("repo.unlisted_helper")} />}
+                    checked={form.unlisted}
+                    onChange={(checked) => setForm((f) => ({ ...f, unlisted: checked }))}
+                  />
+                  {settings.forkCount ? (
+                    <p id="visibility-helper" className="text-sm text-(--color-muted-foreground)">
+                      {t("repo.visiblity_fork_helper")}
+                    </p>
+                  ) : null}
+                </fieldset>
+              </DialogBody>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                  {t("cancel")}
+                </Button>
+                <Button
+                  type="submit"
+                  variant="destructive"
+                  // A long label wraps on narrow screens, so the button grows with it.
+                  className="h-auto min-h-10"
+                  disabled={!changed}
+                >
+                  {t("repo.settings.change_visibility_confirm")}
+                </Button>
+              </DialogFooter>
+            </fieldset>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -941,9 +1204,7 @@ export function RepoCollaboration({
                 aria-describedby={fields.username ? "username-error" : undefined}
                 className="min-w-0 flex-1 basis-56"
               />
-              <Button type="submit" variant="outline">
-                {t("repo.settings.add_collaborator")}
-              </Button>
+              <Button type="submit">{t("repo.settings.add_collaborator")}</Button>
             </div>
             {fields.username ? (
               <p id="username-error" className="text-sm text-(--color-destructive)">
@@ -1105,9 +1366,7 @@ export function RepoDeployKeys({ owner, name, keys }: { owner: string; name: str
               />
             </FormField>
             <div>
-              <Button type="submit" variant="outline">
-                {t("repo.settings.add_deploy_key")}
-              </Button>
+              <Button type="submit">{t("repo.settings.add_deploy_key")}</Button>
             </div>
           </div>
         </fieldset>
@@ -1115,6 +1374,403 @@ export function RepoDeployKeys({ owner, name, keys }: { owner: string; name: str
       <p className="mt-8 text-sm text-(--color-muted-foreground)">
         <RichText text={t("repo.settings.deploy_keys_helper")} links={["/user/settings/ssh"]} />
       </p>
+    </RepoSettingsLayout>
+  );
+}
+
+// RepoBranchSettings changes the default branch of a repository and leads to
+// the protection of its branches.
+export function RepoBranchSettings({
+  owner,
+  name,
+  settings,
+}: {
+  owner: string;
+  name: string;
+  settings: RepoBranchSettingsData;
+}) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const refresh = useRefresh(owner, name);
+  const [branch, setBranch] = useState(settings.defaultBranch);
+  const update = useMutation({
+    mutationFn: () => updateRepoDefaultBranch(owner, name, branch),
+    onSuccess: async () => {
+      toast.success(t("repo.settings.update_default_branch_success"));
+      await refresh();
+    },
+  });
+  const { fields, formError } = formErrors(update.error);
+
+  const onSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    update.mutate();
+  };
+
+  return (
+    <RepoSettingsLayout owner={owner} name={name} active="branches">
+      <h1 className="sr-only">{t("repo.settings.branches")}</h1>
+      {settings.isEmpty ? (
+        <p className="rounded-md border border-(--color-border) px-4 py-3 text-sm text-(--color-muted-foreground)">
+          {t("repo.settings.branches_empty")}
+        </p>
+      ) : (
+        <div>
+          <Section title={t("repo.settings.default_branch")}>
+            <p className="mb-4 text-sm text-(--color-muted-foreground)">{t("repo.settings.default_branch_desc")}</p>
+            <form onSubmit={onSubmit} noValidate>
+              <fieldset disabled={update.isPending} className="contents">
+                <FormAlert message={formError} />
+                <div className="flex flex-wrap gap-2">
+                  <Select value={branch} onValueChange={setBranch}>
+                    <SelectTrigger
+                      id="branch"
+                      aria-label={t("repo.settings.default_branch")}
+                      aria-invalid={"branch" in fields ? true : undefined}
+                      aria-describedby={fields.branch ? "branch-error" : undefined}
+                      className="w-auto max-w-full min-w-48 gap-2 font-mono"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {settings.branches.map((b) => (
+                        <SelectItem key={b} value={b} className="font-mono">
+                          {b}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button type="submit">{t("repo.settings.update")}</Button>
+                </div>
+                {fields.branch ? (
+                  <p id="branch-error" className="mt-1.5 text-sm text-(--color-destructive)">
+                    {fields.branch}
+                  </p>
+                ) : null}
+              </fieldset>
+            </form>
+          </Section>
+          <Section title={t("repo.settings.protected_branches")}>
+            <p className="mb-4 text-sm text-(--color-muted-foreground)">{t("repo.settings.protected_branches_desc")}</p>
+            <Select
+              value=""
+              onValueChange={(b) =>
+                void navigate({ to: "/$owner/$repo/settings/branches/$", params: { owner, repo: name, _splat: b } })
+              }
+            >
+              <SelectTrigger
+                aria-label={t("repo.settings.choose_a_branch")}
+                className="w-auto max-w-full min-w-48 gap-2"
+              >
+                <SelectValue placeholder={t("repo.settings.choose_a_branch")} />
+              </SelectTrigger>
+              <SelectContent>
+                {settings.branches.map((b) => (
+                  <SelectItem key={b} value={b} className="font-mono">
+                    {b}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {settings.protectedBranches.length ? (
+              <ul className="mt-4 rounded-md border border-(--color-border)">
+                {settings.protectedBranches.map((b) => (
+                  <li key={b} className="border-b border-(--color-border) last:border-b-0">
+                    <Link
+                      to="/$owner/$repo/settings/branches/$"
+                      params={{ owner, repo: name, _splat: b }}
+                      className="flex items-center gap-2 px-4 py-2.5 font-mono text-sm wrap-anywhere text-(--color-primary) hover:bg-(--color-surface) hover:underline"
+                    >
+                      <ShieldCheck className="size-4 shrink-0" aria-hidden />
+                      {b}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </Section>
+        </div>
+      )}
+    </RepoSettingsLayout>
+  );
+}
+
+// RepoBranchProtection changes how a branch is protected. Only repositories
+// of organizations can let people and teams push past the protection.
+export function RepoBranchProtection({
+  owner,
+  name,
+  branch,
+}: {
+  owner: string;
+  name: string;
+  branch: RepoProtectedBranch;
+}) {
+  const { t } = useTranslation();
+  const router = useRouter();
+  const [form, setForm] = useState<RepoProtectedBranchForm>({
+    protected: branch.protected,
+    requirePullRequest: branch.requirePullRequest,
+    enableWhitelist: branch.enableWhitelist,
+    whitelistUserIDs: branch.whitelistUserIDs,
+    whitelistTeamIDs: branch.whitelistTeamIDs,
+  });
+  const set = (patch: Partial<RepoProtectedBranchForm>) => setForm({ ...form, ...patch });
+  const toggle = (ids: number[], id: number, on: boolean) => (on ? [...ids, id] : ids.filter((x) => x !== id));
+  const update = useMutation({
+    mutationFn: () => updateRepoProtectedBranch(owner, name, branch.name, form),
+    onSuccess: async () => {
+      toast.success(t("repo.settings.update_protect_branch_success"));
+      await router.invalidate();
+    },
+  });
+  const { formError } = formErrors(update.error);
+  const [before, after = ""] = t("repo.settings.branch_protection_desc").split(/<b>%s<\/b>|%s/);
+  const isOrg = branch.userOptions !== undefined;
+
+  const onSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    update.mutate();
+  };
+
+  return (
+    <RepoSettingsLayout owner={owner} name={name} active="branches">
+      <h1 className="mb-2 text-xl font-semibold">{t("repo.settings.branch_protection")}</h1>
+      <p className="mb-6 text-sm text-(--color-muted-foreground)">
+        {before}
+        <code className="rounded bg-(--color-surface) px-1 font-mono text-[0.9em] font-semibold wrap-anywhere text-(--color-foreground)">
+          {branch.name}
+        </code>
+        {after}
+      </p>
+      <form onSubmit={onSubmit} noValidate>
+        <fieldset disabled={update.isPending} className="contents">
+          <FormAlert message={formError} />
+          <div className="flex flex-col gap-5">
+            <CheckboxField
+              id="protected"
+              checked={form.protected}
+              onChange={(on) => set({ protected: on })}
+              label={
+                <OptionLabel
+                  title={t("repo.settings.protect_this_branch")}
+                  desc={t("repo.settings.protect_this_branch_desc")}
+                />
+              }
+            />
+            {form.protected ? (
+              <div className="ml-2 flex flex-col gap-5 border-l-2 border-(--color-border) pl-4">
+                <CheckboxField
+                  id="requirePullRequest"
+                  checked={form.requirePullRequest}
+                  onChange={(on) => set({ requirePullRequest: on })}
+                  label={
+                    <OptionLabel
+                      title={t("repo.settings.protect_require_pull_request")}
+                      desc={t("repo.settings.protect_require_pull_request_desc")}
+                    />
+                  }
+                />
+                {isOrg ? (
+                  <CheckboxField
+                    id="enableWhitelist"
+                    checked={form.enableWhitelist}
+                    onChange={(on) => set({ enableWhitelist: on })}
+                    label={
+                      <OptionLabel
+                        title={t("repo.settings.protect_whitelist_committers")}
+                        desc={t("repo.settings.protect_whitelist_committers_desc")}
+                      />
+                    }
+                  />
+                ) : null}
+                {isOrg && form.enableWhitelist ? (
+                  <div className="ml-2 flex flex-col gap-5 border-l-2 border-(--color-border) pl-4">
+                    {branch.userOptions?.length ? (
+                      <fieldset className="flex flex-col gap-2.5">
+                        <legend className="mb-2.5 text-sm font-medium">
+                          {t("repo.settings.protect_whitelist_users")}
+                        </legend>
+                        {branch.userOptions.map((u) => (
+                          <CheckboxField
+                            key={u.id}
+                            id={`whitelist-user-${u.id}`}
+                            checked={form.whitelistUserIDs.includes(u.id)}
+                            onChange={(on) => set({ whitelistUserIDs: toggle(form.whitelistUserIDs, u.id, on) })}
+                            label={
+                              <span className="inline-flex items-center gap-2">
+                                <img src={u.avatarURL} alt="" className="size-5 rounded-full" />
+                                {u.name}
+                              </span>
+                            }
+                          />
+                        ))}
+                      </fieldset>
+                    ) : null}
+                    {branch.teamOptions?.length ? (
+                      <fieldset className="flex flex-col gap-2.5">
+                        <legend className="mb-2.5 text-sm font-medium">
+                          {t("repo.settings.protect_whitelist_teams")}
+                        </legend>
+                        {branch.teamOptions.map((team) => (
+                          <CheckboxField
+                            key={team.id}
+                            id={`whitelist-team-${team.id}`}
+                            checked={form.whitelistTeamIDs.includes(team.id)}
+                            onChange={(on) => set({ whitelistTeamIDs: toggle(form.whitelistTeamIDs, team.id, on) })}
+                            label={
+                              <span className="inline-flex items-center gap-2">
+                                <Users className="size-4 text-(--color-muted-foreground)" aria-hidden />
+                                {team.name}
+                              </span>
+                            }
+                          />
+                        ))}
+                      </fieldset>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+            <div className="flex flex-wrap items-center gap-2 border-t border-(--color-border) pt-5">
+              <Button type="submit">{t("repo.settings.update_settings")}</Button>
+              <Button asChild variant="outline">
+                <Link to="/$owner/$repo/settings/branches" params={{ owner, repo: name }}>
+                  {t("cancel")}
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </fieldset>
+      </form>
+    </RepoSettingsLayout>
+  );
+}
+
+function OptionLabel({ title, desc }: { title: string; desc: string }) {
+  return (
+    <>
+      <span className="font-medium">{title}</span>
+      <span className="block text-(--color-muted-foreground)">{desc}</span>
+    </>
+  );
+}
+
+function HookState({ isActive }: { isActive: boolean }) {
+  const { t } = useTranslation();
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-(--color-border) px-2 text-xs leading-5 font-medium text-(--color-muted-foreground)">
+      <span
+        aria-hidden
+        className={cn("size-2 rounded-full", isActive ? "bg-(--color-success)" : "bg-(--color-muted-foreground)")}
+      />
+      {isActive ? t("repo.settings.active") : t("repo.settings.githook_inactive")}
+    </span>
+  );
+}
+
+// RepoGitHooks lists the server-side Git hooks of a repository. Only site
+// admins and the users they allow can edit them, since hooks run on the
+// server.
+export function RepoGitHooks({ owner, name, hooks }: { owner: string; name: string; hooks: RepoGitHook[] }) {
+  const { t } = useTranslation();
+  return (
+    <RepoSettingsLayout owner={owner} name={name} active="githooks">
+      <h1 className="mb-2 text-xl font-semibold">{t("repo.settings.githooks")}</h1>
+      <p className="mb-4 text-sm text-(--color-muted-foreground)">{t("repo.settings.githooks_desc")}</p>
+      <ul className="rounded-md border border-(--color-border)">
+        {hooks.map((hook) => (
+          <li key={hook.name} className="border-b border-(--color-border) last:border-b-0">
+            <Link
+              to="/$owner/$repo/settings/hooks/git/$name"
+              params={{ owner, repo: name, name: hook.name }}
+              className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 hover:bg-(--color-surface)"
+            >
+              <span className="font-mono text-sm text-(--color-primary) hover:underline">{hook.name}</span>
+              <HookState isActive={hook.isActive} />
+              <Pencil className="ml-auto size-4 text-(--color-muted-foreground)" aria-hidden />
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </RepoSettingsLayout>
+  );
+}
+
+// RepoGitHookEdit changes the content of a Git hook. An inactive hook shows
+// its sample, and an active one can be deleted to make it inactive again.
+export function RepoGitHookEdit({ owner, name, hook }: { owner: string; name: string; hook: RepoGitHookContent }) {
+  const { t } = useTranslation();
+  const router = useRouter();
+  const navigate = useNavigate();
+  const [content, setContent] = useState(hook.content);
+  const update = useMutation({
+    mutationFn: () => updateRepoGitHook(owner, name, hook.name, content),
+    onSuccess: async () => {
+      toast.success(t("repo.settings.update_githook_success"));
+      await router.invalidate();
+    },
+  });
+  const { fields, formError } = formErrors(update.error);
+
+  const onSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    update.mutate();
+  };
+
+  return (
+    <RepoSettingsLayout owner={owner} name={name} active="githooks">
+      <div className="mb-2 flex flex-wrap items-center gap-3">
+        <h1 className="font-mono text-xl font-semibold">{hook.name}</h1>
+        <HookState isActive={hook.isActive} />
+      </div>
+      <p className="mb-6 text-sm text-(--color-muted-foreground)">{t("repo.settings.githook_edit_desc")}</p>
+      <form onSubmit={onSubmit} noValidate>
+        <fieldset disabled={update.isPending} className="contents">
+          <FormAlert message={formError} />
+          <div className="flex flex-col gap-5">
+            <FormField
+              id="content"
+              label={t("repo.settings.githook_content")}
+              error={fields.content}
+              invalid={"content" in fields}
+            >
+              <CodeEditor
+                id="content"
+                label={t("repo.settings.githook_content")}
+                lang="shell"
+                code
+                minLines={20}
+                disabled={update.isPending}
+                value={content}
+                onChange={setContent}
+              />
+            </FormField>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="submit">{t("repo.settings.update_githook")}</Button>
+              <Button asChild variant="outline">
+                <Link to="/$owner/$repo/settings/hooks/git" params={{ owner, repo: name }}>
+                  {t("cancel")}
+                </Link>
+              </Button>
+              {hook.isActive && (
+                <div className="ml-auto">
+                  <ConfirmButton
+                    label={t("repo.settings.delete_githook")}
+                    title={t("repo.settings.delete_githook")}
+                    description={t("repo.settings.githook_deletion_desc")}
+                    action={() => deleteRepoGitHook(owner, name, hook.name)}
+                    onDone={async () => {
+                      toast.success(t("repo.settings.delete_githook_success"));
+                      await navigate({ to: "/$owner/$repo/settings/hooks/git", params: { owner, repo: name } });
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </fieldset>
+      </form>
     </RepoSettingsLayout>
   );
 }

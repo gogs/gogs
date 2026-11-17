@@ -8,10 +8,19 @@ All notable changes to Gogs are documented in this file.
 
 - Markdown supports GitHub alerts (`> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]` and `> [!CAUTION]`) and footnotes. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Headings in rendered Markdown have stable ids like GitHub's, e.g., `user-content-getting-started`, so links to sections also work in API output and outside the web interface. [#8519](https://github.com/gogs/gogs/pull/8519)
+- Markdown renders `<kbd>` keys as keycaps, like GitHub, e.g., `<kbd>Ctrl</kbd>+<kbd>C</kbd>`. [#8598](https://github.com/gogs/gogs/pull/8598)
+- Markdown renders emoji shortcodes as emoji, e.g., `:tada:` as 🎉, and Markdown editors suggest them as you type, e.g., `:ta` lists 🎉 tada. [#8600](https://github.com/gogs/gogs/pull/8600) [#8601](https://github.com/gogs/gogs/pull/8601)
+- Markdown editors suggest people to mention and issues or pull requests to reference as you type, e.g., `@al` lists `@alice` and `#12` or `#login` lists the matching issues. [#8610](https://github.com/gogs/gogs/pull/8610)
+- Markdown files on commit and compare pages can show a rich diff, like GitHub, with the rendered blocks that were removed or added marked. [#8621](https://github.com/gogs/gogs/pull/8621)
+- The README box below the file list of a repository also shows the code of conduct, contributing guide, license and security policy in tabs, as on GitHub, and lists the headings of the shown document in an outline with a filter. [#8615](https://github.com/gogs/gogs/pull/8615)
 - Task list items in Markdown show their checkbox in place of the list bullet, as on GitHub. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Git protocol v2 for clones and fetches over HTTP and SSH. With your own OpenSSH server, add `AcceptEnv GIT_PROTOCOL` to `sshd_config` to enable it over SSH. [#8485](https://github.com/gogs/gogs/pull/8485)
 - Tracing of HTTP requests and Git operations, exported over OTLP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. [#8487](https://github.com/gogs/gogs/pull/8487)
 - Repositories with SHA-256 object IDs, chosen when creating a repository or with `object_format` in the API. [#8496](https://github.com/gogs/gogs/pull/8496)
+- Issue templates, issue forms and pull request templates in the same formats as on GitHub, read from the repository root, `.gogs` or `.github`, e.g., `.github/ISSUE_TEMPLATE/bug.yml` and `.github/pull_request_template.md`. Opening an issue offers a template chooser when the repository has templates. [#8588](https://github.com/gogs/gogs/pull/8588)
+- Passkeys. Users add them on the security settings page and then sign in without a password or a two-factor passcode. The sign-in page asks for a passkey first, and offers to try again or to sign in with a password after three failed attempts, a timeout, or a cancelled prompt. [#8512](https://github.com/gogs/gogs/pull/8512)
+- The repository branches page has Overview, Yours, Active, Stale and All tabs, and a field to search branches by name. Yours lists the branches whose last commit uses one of your activated email addresses. The overview shows up to 5 branches per group with a link to the rest, and the other tabs show 20 branches a page. [#8590](https://github.com/gogs/gogs/pull/8590)
+- Pull requests can be merged with "Squash and merge", which adds their changes to the base branch as a single commit. Repository admins choose which merge methods to allow in the repository settings, including turning off merge commits.
 
 ### Changed
 
@@ -22,8 +31,10 @@ All notable changes to Gogs are documented in this file.
 - Self-registration is now disabled by default. New instances must set `[auth] DISABLE_REGISTRATION = false` to allow sign-ups. [#8350](https://github.com/gogs/gogs/pull/8350)
 - New repositories now use `main` as the default branch. Existing repositories keep their current default branch. Set `[repository] DEFAULT_BRANCH = master` to keep the previous behavior. [#8497](https://github.com/gogs/gogs/pull/8497)
 - Markdown is now rendered like GitHub renders it, e.g., bare `www.` links and email addresses become links, and list items separated by blank lines are rendered as paragraphs. [#8519](https://github.com/gogs/gogs/pull/8519)
+- Issues, comments, release notes and milestone descriptions keep their line breaks. `[markdown] ENABLE_HARD_LINE_BREAK` now only applies to Markdown files, e.g., READMEs and wiki pages. [#8607](https://github.com/gogs/gogs/pull/8607)
 - Markdown renders up to five times faster. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Markdown and Org-mode documents larger than `[ui] MAX_DISPLAY_FILE_SIZE` are shown as plain text instead of being rendered. [#8519](https://github.com/gogs/gogs/pull/8519)
+- Logs are written through the standard logger. Logs are JSON in production and in the Docker images, and `[log] FORMAT` can choose text or JSON instead. JSON puts the subsystem of a message, such as `gorm`, in its `component` field. Database logs no longer have their own files. `[log] LEVEL` now applies to a mode that does not set its own level. The default `[log] LEVEL` is now `Debug`, and `Trace` is the same as `Debug`. Errors that happen before the configuration is loaded are printed to standard error. [#8529](https://github.com/gogs/gogs/pull/8529)
 
 ### Fixed
 
@@ -35,7 +46,6 @@ All notable changes to Gogs are documented in this file.
 - Protocol-relative links in Markdown, e.g., `//example.com/page`, now point to that site instead of a path in the repository. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Mentions in code, link text and URLs of issues and comments no longer notify the mentioned users, as on GitHub. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Mentions and issue references are now linked where they appear, e.g., in `@alice @alicia` both names are linked, and a reference that also appears earlier as part of a word is still linked. [#8519](https://github.com/gogs/gogs/pull/8519)
-- Viewing a diff that renames a file whose name contains special characters (e.g., a double quote) no longer crashes the server. [#8437](https://github.com/gogs/gogs/pull/8437)
 - Migrating an empty repository no longer fails. [#8440](https://github.com/gogs/gogs/pull/8440)
 - Previewing changes to a file in the web editor no longer fails when a tag has the same name as the file. [#8440](https://github.com/gogs/gogs/pull/8440)
 - Files whose names start with a double quote are no longer listed with a wrong name. [#8441](https://github.com/gogs/gogs/pull/8441)
@@ -49,16 +59,24 @@ All notable changes to Gogs are documented in this file.
 - The compare link in the news feed for a branch created by a mirror sync no longer leads to an error page. It now shows the commits of the branch since it forked from the default branch, or all of its commits when it adds none or they share no history, and the news feed counts the same commits when the branch is created. Comparing against a commit that does not exist now shows a not found page. [#8510](https://github.com/gogs/gogs/pull/8510)
 - _Security:_ Open redirect on the `/redirect` endpoint and post-action flows via a backslash in the redirect target. [#8391](https://github.com/gogs/gogs/pull/8391) - [GHSA-3g28-2vwg-gxq6](https://github.com/gogs/gogs/security/advisories/GHSA-3g28-2vwg-gxq6)
 - _Security:_ The "remember me" auto-login cookie was derived from database columns, so an attacker with a database dump could forge a valid cookie for any user. The auto-login cookie path has been removed entirely. Persistence is now provided by the server-issued session cookie. [#8289](https://github.com/gogs/gogs/pull/8289) - [GHSA-4pph-25p3-pw73](https://github.com/gogs/gogs/security/advisories/GHSA-4pph-25p3-pw73)
+- _Security:_ Session fixation. Signing in kept the session ID from before, so an attacker who planted a session ID in a user's browser was signed in as that user once they signed in. [#8618](https://github.com/gogs/gogs/pull/8618) - [GHSA-h48f-pxp7-c4mj](https://github.com/gogs/gogs/security/advisories/GHSA-h48f-pxp7-c4mj)
+- _Security:_ Opening or closing a milestone and emptying system notices accepted GET requests, so a link on another site could make a signed-in user do them. [#8462](https://github.com/gogs/gogs/pull/8462) [#8473](https://github.com/gogs/gogs/pull/8473) - [GHSA-vghx-gp7m-xpx2](https://github.com/gogs/gogs/security/advisories/GHSA-vghx-gp7m-xpx2)
+- _Security:_ Viewing a diff that renames a file whose name contains special characters (e.g., a double quote) crashed the server, so anyone who could push such a commit could take it down. [#8437](https://github.com/gogs/gogs/pull/8437) - [GHSA-p27c-f9fr-4jmw](https://github.com/gogs/gogs/security/advisories/GHSA-p27c-f9fr-4jmw)
+- _Security:_ A user with write access could create directories anywhere on the server by uploading files in the web editor through a symbolic link committed to the repository. [#8446](https://github.com/gogs/gogs/pull/8446) - [GHSA-9r5j-qjmc-r5wc](https://github.com/gogs/gogs/security/advisories/GHSA-9r5j-qjmc-r5wc)
+- _Security:_ A user with read access could push to a repository over HTTP by changing the letter case of the Git service in the URL, e.g., `git-RECEIVE-pack`. [#8276](https://github.com/gogs/gogs/pull/8276) - [GHSA-r7jg-q9g4-h8j5](https://github.com/gogs/gogs/security/advisories/GHSA-r7jg-q9g4-h8j5)
 - `gogs restore` no longer replaces the database before failing when an earlier restore left its `.bak` directories behind. [#8453](https://github.com/gogs/gogs/pull/8453)
 - `gogs restore` keeps the existing database when restoring custom files, including from the Docker image. A restore that stops while moving files onto another filesystem puts the previous custom directory back. [#7684](https://github.com/gogs/gogs/issues/7684)
 - Mirrors of an empty repository now show their content once the source repository receives commits. [#8497](https://github.com/gogs/gogs/pull/8497)
 - When the first branch pushed to an empty repository has a different name than the repository's default branch, it now becomes the default branch, so cloning checks it out instead of producing an empty working tree. Mirrors whose default branch no longer exists now follow the default branch of the source repository. [#8497](https://github.com/gogs/gogs/pull/8497)
 - The API response for creating a repository now reports the correct default branch, empty state, creation and update times, and watcher count instead of blank or zero values. [#8497](https://github.com/gogs/gogs/pull/8497)
 - Quoted values in authentication source files under `custom/conf/auth.d` are now read in full when they contain `#` or `;`, e.g., `bind_password = "p#ss"`. Previously they were cut at the first `#` or `;`. [#8489](https://github.com/gogs/gogs/pull/8489)
+- With `[log] MODE` set to console only, Gogs no longer creates the log directory, and starts when `[log] ROOT_PATH` is not writable. [#8596](https://github.com/gogs/gogs/pull/8596)
+- Gogs commands, including Git over SSH, no longer fail to start when another process holds or rotates the same log file. [#8616](https://github.com/gogs/gogs/pull/8616)
+- Getting the `.editorconfig` definition of an empty repository through the API responded with 500 instead of 404. [#8454](https://github.com/gogs/gogs/pull/8454)
 
 ### Removed
 
-- GitHub authentication sources, which could no longer sign anyone in since GitHub stopped accepting passwords for its API. Existing GitHub sources and `custom/conf/auth.d` files with `type = github` are ignored. [#8466](https://github.com/gogs/gogs/pull/8466)
+- _Security:_ GitHub authentication sources, which let anyone with a GitHub account sign in as any user of the source with their own GitHub token. Existing GitHub sources and `custom/conf/auth.d` files with `type = github` are ignored. [#8466](https://github.com/gogs/gogs/pull/8466) - [GHSA-v5w5-6j48-6jv2](https://github.com/gogs/gogs/security/advisories/GHSA-v5w5-6j48-6jv2)
 - The web-based first-time install page at `/install`, along with the `[security] INSTALL_LOCK` configuration option. A working `custom/conf/app.ini` is now always required. [#8350](https://github.com/gogs/gogs/pull/8350)
 - Support for overriding full page templates (e.g., `custom/templates/home.tmpl`), as the web interface no longer renders pages from server-side templates. Content injection through `custom/templates/inject/head.tmpl` and `custom/templates/inject/footer.tmpl`, static file overrides under `custom/public/`, and email template overrides remain supported. [#8392](https://github.com/gogs/gogs/pull/8392)
 - Support for MSSQL as the database backend. [#8173](https://github.com/gogs/gogs/pull/8173)

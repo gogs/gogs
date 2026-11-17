@@ -60,6 +60,9 @@ func NewSanitizer() {
 		sanitizer.policy.AllowAttrs("class").Matching(lazyregexp.New(`^markdown-alert markdown-alert-(note|tip|important|warning|caution)$`).Regexp()).OnElements("div")
 		sanitizer.policy.AllowAttrs("class").Matching(lazyregexp.New(`^markdown-alert-title$`).Regexp()).OnElements("p")
 
+		// Keyboard keys, e.g., <kbd>Ctrl</kbd>
+		sanitizer.policy.AllowElements("kbd")
+
 		// Start numbers of ordered lists
 		sanitizer.policy.AllowAttrs("start").Matching(lazyregexp.New(`^[0-9]+$`).Regexp()).OnElements("ol")
 

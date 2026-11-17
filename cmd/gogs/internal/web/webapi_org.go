@@ -8,7 +8,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
 	"github.com/go-macaron/i18n"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/markup"
@@ -25,12 +25,12 @@ type orgMembership struct {
 // withOrgMembership maps the organization named by the `org` path parameter
 // as *orgMembership. Like the server-rendered pages, only members see the
 // pages of an organization.
-func withOrgMembership(c flamego.Context, viewer *database.User) {
+func withOrgMembership(logger *logx.Logger, c flamego.Context, viewer *database.User) {
 	w := c.ResponseWriter()
 	name := c.Param("org")
 	org, err := database.Handle.Users().GetByUsername(c.Request().Context(), name)
 	if err != nil && !database.IsErrUserNotExist(err) {
-		log.Error("withOrgMembership: get user by username %q: %v", name, err)
+		logger.Error("Failed to get organization by name", "orgName", name, "error", err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "get organization"))
 		return
 	}
@@ -69,10 +69,10 @@ type orgMembers struct {
 	Items []orgMember `json:"items"`
 }
 
-func getOrgMembers(m *orgMembership) (statusCode int, resp *orgMembers, err error) {
+func getOrgMembers(logger *logx.Logger, m *orgMembership) (statusCode int, resp *orgMembers, err error) {
 	org := m.Org
 	if err = org.GetMembers(0); err != nil {
-		log.Error("getOrgMembers: get members of organization %d: %v", org.ID, err)
+		logger.Error("Failed to get members of organization", "orgID", org.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get members")
 	}
 	resp = &orgMembers{Items: make([]orgMember, 0, len(org.Members))}
@@ -104,11 +104,11 @@ func getUserByParam(ctx context.Context, l i18n.Locale, name string) (*database.
 
 // setOrgMemberPublic makes the membership of a user public or private. Members
 // can change their own, owners anyone's.
-func setOrgMemberPublic(c flamego.Context, l i18n.Locale, viewer *database.User, m *orgMembership, public bool) (statusCode int, resp any, err error) {
+func setOrgMemberPublic(logger *logx.Logger, c flamego.Context, l i18n.Locale, viewer *database.User, m *orgMembership, public bool) (statusCode int, resp any, err error) {
 	member, code, err := getUserByParam(c.Request().Context(), l, c.Param("username"))
 	if err != nil {
 		if code == http.StatusInternalServerError {
-			log.Error("setOrgMemberPublic: %v", err)
+			logger.Error("Failed to get user by username", "username", c.Param("username"), "error", err)
 		}
 		return code, nil, err
 	}
@@ -116,27 +116,27 @@ func setOrgMemberPublic(c flamego.Context, l i18n.Locale, viewer *database.User,
 		return http.StatusForbidden, nil, errors.New("organization owner required")
 	}
 	if err = database.ChangeOrgUserStatus(m.Org.ID, member.ID, public); err != nil {
-		log.Error("setOrgMemberPublic: set public=%t for user %d in organization %d: %v", public, member.ID, m.Org.ID, err)
+		logger.Error("Failed to change membership visibility", "public", public, "userID", member.ID, "orgID", m.Org.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "change membership visibility")
 	}
 	return http.StatusNoContent, nil, nil
 }
 
-func putOrgMemberPublic(c flamego.Context, l i18n.Locale, viewer *database.User, m *orgMembership) (statusCode int, resp any, err error) {
-	return setOrgMemberPublic(c, l, viewer, m, true)
+func putOrgMemberPublic(logger *logx.Logger, c flamego.Context, l i18n.Locale, viewer *database.User, m *orgMembership) (statusCode int, resp any, err error) {
+	return setOrgMemberPublic(logger, c, l, viewer, m, true)
 }
 
-func deleteOrgMemberPublic(c flamego.Context, l i18n.Locale, viewer *database.User, m *orgMembership) (statusCode int, resp any, err error) {
-	return setOrgMemberPublic(c, l, viewer, m, false)
+func deleteOrgMemberPublic(logger *logx.Logger, c flamego.Context, l i18n.Locale, viewer *database.User, m *orgMembership) (statusCode int, resp any, err error) {
+	return setOrgMemberPublic(logger, c, l, viewer, m, false)
 }
 
 // deleteOrgMember removes a user from the organization. Members can leave,
 // owners can remove anyone, except the last owner.
-func deleteOrgMember(c flamego.Context, l i18n.Locale, viewer *database.User, m *orgMembership) (statusCode int, resp any, err error) {
+func deleteOrgMember(logger *logx.Logger, c flamego.Context, l i18n.Locale, viewer *database.User, m *orgMembership) (statusCode int, resp any, err error) {
 	member, code, err := getUserByParam(c.Request().Context(), l, c.Param("username"))
 	if err != nil {
 		if code == http.StatusInternalServerError {
-			log.Error("deleteOrgMember: %v", err)
+			logger.Error("Failed to get user by username", "username", c.Param("username"), "error", err)
 		}
 		return code, nil, err
 	}
@@ -147,21 +147,21 @@ func deleteOrgMember(c flamego.Context, l i18n.Locale, viewer *database.User, m 
 		if database.IsErrLastOrgOwner(err) {
 			return http.StatusConflict, nil, errors.New(l.Tr("form.last_org_owner"))
 		}
-		log.Error("deleteOrgMember: remove user %d from organization %d: %v", member.ID, m.Org.ID, err)
+		logger.Error("Failed to remove member from organization", "userID", member.ID, "orgID", m.Org.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "remove member")
 	}
 	return http.StatusNoContent, nil, nil
 }
 
 // putOrgMember adds a user to the organization. Only owners can invite.
-func putOrgMember(c flamego.Context, l i18n.Locale, m *orgMembership) (statusCode int, resp any, err error) {
+func putOrgMember(logger *logx.Logger, c flamego.Context, l i18n.Locale, m *orgMembership) (statusCode int, resp any, err error) {
 	if !m.IsOwner {
 		return http.StatusForbidden, nil, errors.New("organization owner required")
 	}
 	member, code, err := getUserByParam(c.Request().Context(), l, c.Param("username"))
 	if err != nil {
 		if code == http.StatusInternalServerError {
-			log.Error("putOrgMember: %v", err)
+			logger.Error("Failed to get user by username", "username", c.Param("username"), "error", err)
 		}
 		return code, nil, err
 	}
@@ -169,7 +169,7 @@ func putOrgMember(c flamego.Context, l i18n.Locale, m *orgMembership) (statusCod
 		return http.StatusNotFound, nil, errors.New(l.Tr("form.user_not_exist"))
 	}
 	if err = m.Org.AddMember(member.ID); err != nil {
-		log.Error("putOrgMember: add user %d to organization %d: %v", member.ID, m.Org.ID, err)
+		logger.Error("Failed to add member to organization", "userID", member.ID, "orgID", m.Org.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "add member")
 	}
 	return http.StatusNoContent, nil, nil
@@ -204,16 +204,16 @@ func toOrgTeamMembers(users []*database.User) []orgTeamMember {
 	return items
 }
 
-func getOrgTeams(viewer *database.User, m *orgMembership) (statusCode int, resp *orgTeams, err error) {
+func getOrgTeams(logger *logx.Logger, viewer *database.User, m *orgMembership) (statusCode int, resp *orgTeams, err error) {
 	teams, err := m.visibleTeams(viewer.ID)
 	if err != nil {
-		log.Error("getOrgTeams: get teams of organization %d: %v", m.Org.ID, err)
+		logger.Error("Failed to get teams of organization", "orgID", m.Org.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get teams")
 	}
 	resp = &orgTeams{Items: make([]orgTeamSummary, 0, len(teams))}
 	for _, t := range teams {
 		if err = t.GetMembers(); err != nil {
-			log.Error("getOrgTeams: get members of team %d: %v", t.ID, err)
+			logger.Error("Failed to get members of team", "teamID", t.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "get team members")
 		}
 		resp.Items = append(resp.Items, orgTeamSummary{
@@ -236,11 +236,11 @@ type orgTeam struct {
 // withOrgTeam maps the team named by the `team` path parameter as *orgTeam.
 // Like the server-rendered pages, members other than owners only see their
 // own teams.
-func withOrgTeam(c flamego.Context, viewer *database.User, m *orgMembership) {
+func withOrgTeam(logger *logx.Logger, c flamego.Context, viewer *database.User, m *orgMembership) {
 	w := c.ResponseWriter()
 	teams, err := m.visibleTeams(viewer.ID)
 	if err != nil {
-		log.Error("withOrgTeam: get teams of organization %d: %v", m.Org.ID, err)
+		logger.Error("Failed to get teams of organization", "orgID", m.Org.ID, "error", err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "get teams"))
 		return
 	}
@@ -302,9 +302,9 @@ type orgTeamMembers struct {
 	Items []orgTeamMember `json:"items"`
 }
 
-func getOrgTeamMembers(team *orgTeam) (statusCode int, resp *orgTeamMembers, err error) {
+func getOrgTeamMembers(logger *logx.Logger, team *orgTeam) (statusCode int, resp *orgTeamMembers, err error) {
 	if err = team.GetMembers(); err != nil {
-		log.Error("getOrgTeamMembers: get members of team %d: %v", team.ID, err)
+		logger.Error("Failed to get members of team", "teamID", team.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get team members")
 	}
 	return http.StatusOK, &orgTeamMembers{Items: toOrgTeamMembers(team.Members)}, nil
@@ -312,14 +312,14 @@ func getOrgTeamMembers(team *orgTeam) (statusCode int, resp *orgTeamMembers, err
 
 // putOrgTeamMember adds a user to the team, which also makes them a member of
 // the organization. Only owners can add anyone, themselves included.
-func putOrgTeamMember(c flamego.Context, l i18n.Locale, m *orgMembership, team *orgTeam) (statusCode int, resp any, err error) {
+func putOrgTeamMember(logger *logx.Logger, c flamego.Context, l i18n.Locale, m *orgMembership, team *orgTeam) (statusCode int, resp any, err error) {
 	if !m.IsOwner {
 		return http.StatusForbidden, nil, errors.New("organization owner required")
 	}
 	member, code, err := getUserByParam(c.Request().Context(), l, c.Param("username"))
 	if err != nil {
 		if code == http.StatusInternalServerError {
-			log.Error("putOrgTeamMember: %v", err)
+			logger.Error("Failed to get user by username", "username", c.Param("username"), "error", err)
 		}
 		return code, nil, err
 	}
@@ -327,7 +327,7 @@ func putOrgTeamMember(c flamego.Context, l i18n.Locale, m *orgMembership, team *
 		return http.StatusNotFound, nil, errors.New(l.Tr("form.user_not_exist"))
 	}
 	if err = team.AddMember(member.ID); err != nil {
-		log.Error("putOrgTeamMember: add user %d to team %d: %v", member.ID, team.ID, err)
+		logger.Error("Failed to add member to team", "userID", member.ID, "teamID", team.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "add team member")
 	}
 	return http.StatusNoContent, nil, nil
@@ -335,11 +335,11 @@ func putOrgTeamMember(c flamego.Context, l i18n.Locale, m *orgMembership, team *
 
 // deleteOrgTeamMember removes a user from the team. Members can leave, owners
 // can remove anyone, except the last member of the owners team.
-func deleteOrgTeamMember(c flamego.Context, l i18n.Locale, viewer *database.User, m *orgMembership, team *orgTeam) (statusCode int, resp any, err error) {
+func deleteOrgTeamMember(logger *logx.Logger, c flamego.Context, l i18n.Locale, viewer *database.User, m *orgMembership, team *orgTeam) (statusCode int, resp any, err error) {
 	member, code, err := getUserByParam(c.Request().Context(), l, c.Param("username"))
 	if err != nil {
 		if code == http.StatusInternalServerError {
-			log.Error("deleteOrgTeamMember: %v", err)
+			logger.Error("Failed to get user by username", "username", c.Param("username"), "error", err)
 		}
 		return code, nil, err
 	}
@@ -350,7 +350,7 @@ func deleteOrgTeamMember(c flamego.Context, l i18n.Locale, viewer *database.User
 		if database.IsErrLastOrgOwner(err) {
 			return http.StatusConflict, nil, errors.New(l.Tr("form.last_org_owner"))
 		}
-		log.Error("deleteOrgTeamMember: remove user %d from team %d: %v", member.ID, team.ID, err)
+		logger.Error("Failed to remove member from team", "userID", member.ID, "teamID", team.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "remove team member")
 	}
 	return http.StatusNoContent, nil, nil
@@ -367,9 +367,9 @@ type orgTeamRepos struct {
 	Items []orgTeamRepo `json:"items"`
 }
 
-func getOrgTeamRepos(team *orgTeam) (statusCode int, resp *orgTeamRepos, err error) {
+func getOrgTeamRepos(logger *logx.Logger, team *orgTeam) (statusCode int, resp *orgTeamRepos, err error) {
 	if err = team.GetRepositories(); err != nil {
-		log.Error("getOrgTeamRepos: get repositories of team %d: %v", team.ID, err)
+		logger.Error("Failed to get repositories of team", "teamID", team.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get team repositories")
 	}
 	resp = &orgTeamRepos{Items: make([]orgTeamRepo, 0, len(team.Repos))}
@@ -397,7 +397,7 @@ func teamRepoChangeAllowed(m *orgMembership, team *orgTeam) (int, error) {
 	return 0, nil
 }
 
-func putOrgTeamRepo(c flamego.Context, l i18n.Locale, m *orgMembership, team *orgTeam) (statusCode int, resp any, err error) {
+func putOrgTeamRepo(logger *logx.Logger, c flamego.Context, l i18n.Locale, m *orgMembership, team *orgTeam) (statusCode int, resp any, err error) {
 	if code, err := teamRepoChangeAllowed(m, team); err != nil {
 		return code, nil, err
 	}
@@ -406,17 +406,17 @@ func putOrgTeamRepo(c flamego.Context, l i18n.Locale, m *orgMembership, team *or
 		if database.IsErrRepoNotExist(err) {
 			return http.StatusNotFound, nil, errors.New(l.Tr("org.teams.add_nonexistent_repo"))
 		}
-		log.Error("putOrgTeamRepo: get repository %q of organization %d: %v", c.Param("repo"), m.Org.ID, err)
+		logger.Error("Failed to get repository of organization", "repoName", c.Param("repo"), "orgID", m.Org.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get repository")
 	}
 	if err = team.AddRepository(repo); err != nil {
-		log.Error("putOrgTeamRepo: add repository %d to team %d: %v", repo.ID, team.ID, err)
+		logger.Error("Failed to add repository to team", "repoID", repo.ID, "teamID", team.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "add team repository")
 	}
 	return http.StatusNoContent, nil, nil
 }
 
-func deleteOrgTeamRepo(c flamego.Context, l i18n.Locale, m *orgMembership, team *orgTeam) (statusCode int, resp any, err error) {
+func deleteOrgTeamRepo(logger *logx.Logger, c flamego.Context, l i18n.Locale, m *orgMembership, team *orgTeam) (statusCode int, resp any, err error) {
 	if code, err := teamRepoChangeAllowed(m, team); err != nil {
 		return code, nil, err
 	}
@@ -425,11 +425,11 @@ func deleteOrgTeamRepo(c flamego.Context, l i18n.Locale, m *orgMembership, team 
 		if database.IsErrRepoNotExist(err) {
 			return http.StatusNotFound, nil, errors.New("repository does not exist")
 		}
-		log.Error("deleteOrgTeamRepo: get repository %q of organization %d: %v", c.Param("repo"), m.Org.ID, err)
+		logger.Error("Failed to get repository of organization", "repoName", c.Param("repo"), "orgID", m.Org.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get repository")
 	}
 	if err = team.RemoveRepository(repo.ID); err != nil {
-		log.Error("deleteOrgTeamRepo: remove repository %d from team %d: %v", repo.ID, team.ID, err)
+		logger.Error("Failed to remove repository from team", "repoID", repo.ID, "teamID", team.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "remove team repository")
 	}
 	return http.StatusNoContent, nil, nil
@@ -470,7 +470,7 @@ func teamNameError(l i18n.Locale, err error) (int, *bindingErrorResponse) {
 	return code, &bindingErrorResponse{Fields: fieldErrors{"teamName": &msg}}
 }
 
-func postOrgTeam(l i18n.Locale, m *orgMembership, req orgTeamRequest) (statusCode int, resp any, err error) {
+func postOrgTeam(logger *logx.Logger, l i18n.Locale, m *orgMembership, req orgTeamRequest) (statusCode int, resp any, err error) {
 	if !m.IsOwner {
 		return http.StatusForbidden, nil, errors.New("organization owner required")
 	}
@@ -488,7 +488,7 @@ func postOrgTeam(l i18n.Locale, m *orgMembership, req orgTeamRequest) (statusCod
 		if code, resp := teamNameError(l, err); resp != nil {
 			return code, resp, nil
 		}
-		log.Error("postOrgTeam: create team %q in organization %d: %v", req.TeamName, m.Org.ID, err)
+		logger.Error("Failed to create team", "teamName", req.TeamName, "orgID", m.Org.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "create team")
 	}
 	return http.StatusCreated, &orgTeamResponse{LowerName: t.LowerName}, nil
@@ -496,7 +496,7 @@ func postOrgTeam(l i18n.Locale, m *orgMembership, req orgTeamRequest) (statusCod
 
 // patchOrgTeam changes the name, the description and the permission of a
 // team. The owners team keeps its name and permission.
-func patchOrgTeam(l i18n.Locale, m *orgMembership, team *orgTeam, req orgTeamRequest) (statusCode int, resp any, err error) {
+func patchOrgTeam(logger *logx.Logger, l i18n.Locale, m *orgMembership, team *orgTeam, req orgTeamRequest) (statusCode int, resp any, err error) {
 	if !m.IsOwner {
 		return http.StatusForbidden, nil, errors.New("organization owner required")
 	}
@@ -521,13 +521,13 @@ func patchOrgTeam(l i18n.Locale, m *orgMembership, team *orgTeam, req orgTeamReq
 		if code, resp := teamNameError(l, err); resp != nil {
 			return code, resp, nil
 		}
-		log.Error("patchOrgTeam: update team %d: %v", t.ID, err)
+		logger.Error("Failed to update team", "teamID", t.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update team")
 	}
 	return http.StatusOK, &orgTeamResponse{LowerName: t.LowerName}, nil
 }
 
-func deleteOrgTeam(m *orgMembership, team *orgTeam) (statusCode int, resp any, err error) {
+func deleteOrgTeam(logger *logx.Logger, m *orgMembership, team *orgTeam) (statusCode int, resp any, err error) {
 	if !m.IsOwner {
 		return http.StatusForbidden, nil, errors.New("organization owner required")
 	}
@@ -536,7 +536,7 @@ func deleteOrgTeam(m *orgMembership, team *orgTeam) (statusCode int, resp any, e
 		return http.StatusForbidden, nil, errors.New("the owners team cannot be deleted")
 	}
 	if err = database.DeleteTeam(team.Team); err != nil {
-		log.Error("deleteOrgTeam: delete team %d: %v", team.ID, err)
+		logger.Error("Failed to delete team", "teamID", team.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete team")
 	}
 	return http.StatusNoContent, nil, nil

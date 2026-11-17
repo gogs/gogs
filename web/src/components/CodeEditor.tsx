@@ -1,5 +1,7 @@
-import { type AriaAttributes, Suspense, lazy } from "react";
+import { type AriaAttributes, type Ref, Suspense, lazy } from "react";
 
+import type { CodeLanguage } from "@/lib/code-language";
+import type { RepoRef } from "@/lib/reference-completion";
 import { cn } from "@/lib/utils";
 
 const CodeEditorView = lazy(() => import("@/components/CodeEditorView"));
@@ -12,10 +14,19 @@ export interface CodeEditorProps extends Pick<AriaAttributes, "aria-invalid" | "
   label: string;
   value: string;
   onChange: (value: string) => void;
-  lang: "markdown" | "shell";
+  lang: CodeLanguage;
+  // repo is the repository the Markdown belongs to, whose users and issues
+  // are suggested when mentioning or referencing one.
+  repo?: RepoRef;
   // code lays the text out as source code: line numbers, long lines scroll
   // instead of wrapping, and Tab indents. Escape then Tab leaves the editor.
   code?: boolean;
+  // wrap wraps long lines, by default unless the text is code.
+  wrap?: boolean;
+  // indentUnit is what one level of indentation inserts, a tab or spaces,
+  // two spaces by default. tabSize is how wide a tab shows, 4 by default.
+  indentUnit?: string;
+  tabSize?: number;
   // minLines is the height of the empty editor. It grows with its content.
   minLines?: number;
   disabled?: boolean;
@@ -23,6 +34,17 @@ export interface CodeEditorProps extends Pick<AriaAttributes, "aria-invalid" | "
   // onFiles takes the files pasted or dropped into the editor, e.g., to
   // attach them. Without it, dropped files are ignored.
   onFiles?: (files: FileList) => void;
+  // editorRef edits the text in place, keeping the cursor where it is.
+  editorRef?: Ref<CodeEditorHandle>;
+}
+
+export interface CodeEditorHandle {
+  // insert puts the text on its own line at the cursor, and moves the cursor
+  // to the next line.
+  insert: (text: string) => void;
+  // replace replaces the first occurrence of the text, and tells whether it
+  // was found.
+  replace: (search: string, text: string) => boolean;
 }
 
 // CodeEditor is the editor for every Markdown and source code field. Its

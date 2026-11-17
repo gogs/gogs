@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"strings"
+	"time"
 
 	"github.com/cockroachdb/errors"
 )
@@ -252,6 +253,67 @@ func RepoBranches(ctx context.Context, repoPath string) ([]string, error) {
 		return nil, err
 	}
 	return r.Branches(ctx)
+}
+
+// Branch is a branch with the latest commit on it.
+type Branch struct {
+	// The short name, e.g., "master".
+	Name     string
+	CommitID string
+	// The committer of the latest commit.
+	Committer *Signature
+}
+
+// BranchesByCommitterDate returns all branches in the repository, the most
+// recently committed first, with a single Git command.
+func (r *Repository) BranchesByCommitterDate(ctx context.Context) ([]*Branch, error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.BranchesByCommitterDate")
+	defer span.End()
+
+	// Branch names and identities cannot contain NUL or newline characters.
+	const format = "--format=%(refname)%00%(objectname)%00%(committerdate:iso-strict)%00%(committername)%00%(committeremail)"
+	stdout, err := exec(ctx, r.path, []string{"for-each-ref", "--sort=-committerdate", format, "--end-of-options", RefsHeads}, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	lines := strings.Split(strings.TrimSuffix(string(stdout), "\n"), "\n")
+	branches := make([]*Branch, 0, len(lines))
+	for _, line := range lines {
+		fields := strings.Split(line, "\x00")
+		if len(fields) != 5 {
+			continue
+		}
+		// A branch that points to an object other than a commit has no
+		// committer date.
+		var when time.Time
+		if fields[2] != "" {
+			when, err = time.Parse(time.RFC3339, fields[2])
+			if err != nil {
+				return nil, errors.Wrapf(err, "parse committer date of %q", fields[0])
+			}
+		}
+		branches = append(branches, &Branch{
+			Name:     strings.TrimPrefix(fields[0], RefsHeads),
+			CommitID: fields[1],
+			Committer: &Signature{
+				Name:  fields[3],
+				Email: strings.TrimSuffix(strings.TrimPrefix(fields[4], "<"), ">"),
+				When:  when,
+			},
+		})
+	}
+	return branches, nil
+}
+
+// CreateBranch creates the branch at the revision. It fails when the branch
+// exists.
+func (r *Repository) CreateBranch(ctx context.Context, name, rev string) error {
+	ctx, span := tracer.Start(ctx, "git.Repository.CreateBranch")
+	defer span.End()
+
+	_, err := exec(ctx, r.path, []string{"branch", "--no-track", "--end-of-options", name, rev}, nil)
+	return err
 }
 
 // DeleteBranchOptions contains optional arguments for deleting a branch.

@@ -54,6 +54,7 @@
   --color-destructive: initial;
   --color-destructive-foreground: initial;
   --color-success: initial;
+  --color-merged: initial;
   --color-diff-added: initial;
   --color-diff-removed: initial;
   --color-border: initial;
@@ -82,6 +83,7 @@
   --color-destructive: #d52c36;
   --color-destructive-foreground: #ffffff;
   --color-success: #15803d;
+  --color-merged: #6f42c1;
   --color-diff-added: #16a34a;
   --color-diff-removed: #dc2626;
   --color-border: #d4d4d4;
@@ -117,6 +119,7 @@
   --color-destructive: #ff6762;
   --color-destructive-foreground: #ffffff;
   --color-success: #4ade80;
+  --color-merged: #b392f0;
   --color-diff-added: #4ade80;
   --color-diff-removed: #f87171;
   --color-border: #2e2e2e;
@@ -140,6 +143,11 @@
   }
   body {
     -webkit-font-smoothing: antialiased;
+  }
+  /* Links to an anchor, e.g., a comment or a footnote, scroll it into view
+     below the sticky navbar instead of under it. */
+  html {
+    scroll-padding-top: 4rem;
   }
 }
 
@@ -356,6 +364,20 @@ diffs-container {
     font-size: 0.9em;
     box-decoration-break: clone;
   }
+  /* Keyboard keys look like keycaps, like GitHub draws them. */
+  .markdown :where(kbd) {
+    display: inline-block;
+    border: 1px solid var(--color-border);
+    border-radius: 0.375rem;
+    box-shadow: inset 0 -1px 0 var(--color-border);
+    background-color: var(--color-surface);
+    padding: 0.1875rem 0.3125rem;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    line-height: 0.625rem;
+    color: var(--color-foreground);
+    vertical-align: middle;
+  }
   .markdown :where(pre) {
     overflow-x: auto;
     border: 1px solid var(--color-border);
@@ -388,6 +410,11 @@ diffs-container {
   .markdown :where(img) {
     display: inline-block;
     max-width: 100%;
+  }
+  /* GitHub's convention for images that only fit one theme. */
+  :root:not(.dark) .markdown img[src$="#gh-dark-mode-only"],
+  :root.dark .markdown img[src$="#gh-light-mode-only"] {
+    display: none;
   }
   .markdown :where(hr) {
     border-color: var(--color-border);
@@ -447,23 +474,40 @@ diffs-container {
   .markdown :where(.footnote-backref) {
     text-decoration: none;
   }
-  .markdown :where(h1, h2, h3, h4, h5, h6):has(> .heading-anchor) {
+
+  /* The blocks a rich diff marks as removed or added. The bar and its sign
+     carry the change along with the tint. */
+  .rich-diff :where(del, ins) {
+    display: block;
+  }
+  .rich-diff :where(.rich-diff-removed, .rich-diff-added) {
     position: relative;
-  }
-  .markdown :where(.heading-anchor) {
-    margin-left: 0.375rem;
-    color: var(--color-muted-foreground);
-    font-weight: 400;
+    border-left: 3px solid;
+    border-radius: 0.25rem;
+    padding: 0.25rem 0.75rem 0.25rem 1.5rem;
     text-decoration: none;
-    opacity: 0;
   }
-  .markdown :where(h1, h2, h3, h4, h5, h6):hover > .heading-anchor,
-  .markdown .heading-anchor:focus-visible {
-    opacity: 1;
+  .rich-diff :where(.rich-diff-removed, .rich-diff-added)::before {
+    position: absolute;
+    top: 0.25rem;
+    left: 0.375rem;
+    font-family: var(--font-mono);
+    font-weight: 600;
   }
-  @media (hover: none) {
-    .markdown .heading-anchor {
-      opacity: 1;
-    }
+  .rich-diff :where(.rich-diff-removed) {
+    border-color: var(--color-diff-removed);
+    background-color: color-mix(in oklab, var(--color-diff-removed) 10%, transparent);
+  }
+  .rich-diff :where(.rich-diff-removed)::before {
+    content: "-";
+    color: var(--color-diff-removed);
+  }
+  .rich-diff :where(.rich-diff-added) {
+    border-color: var(--color-diff-added);
+    background-color: color-mix(in oklab, var(--color-diff-added) 10%, transparent);
+  }
+  .rich-diff :where(.rich-diff-added)::before {
+    content: "+";
+    color: var(--color-diff-added);
   }
 }

@@ -465,7 +465,7 @@ function TabLink({ href, icon: Icon, active, badge, children }: TabLinkProps) {
     <a
       href={href}
       className={cn(
-        "flex items-center gap-2 border-b-2 px-3 py-2 text-sm whitespace-nowrap",
+        "flex items-center gap-2 border-b-2 px-2 py-2 text-sm whitespace-nowrap",
         active
           ? "border-(--color-primary) font-semibold text-(--color-foreground)"
           : "border-transparent text-(--color-muted-foreground) hover:border-(--color-border) hover:text-(--color-foreground)",

@@ -7,7 +7,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
 	"github.com/go-macaron/i18n"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/database"
 )
@@ -16,14 +16,14 @@ var errForkBaseNotFound = errors.New("repository not found")
 
 // forkBaseRepo returns the repository to fork. Like the server-rendered page,
 // repositories that are empty or that the viewer cannot read are not found.
-func forkBaseRepo(viewer *database.User, id int64) (*database.Repository, error) {
+func forkBaseRepo(logger *logx.Logger, viewer *database.User, id int64) (*database.Repository, error) {
 	repo, err := database.GetRepositoryByID(id)
 	if database.IsErrRepoNotExist(err) {
 		return nil, errForkBaseNotFound
 	} else if err != nil {
 		return nil, errors.Wrap(err, "get repository")
 	}
-	if !repo.CanBeForked() || !repo.HasAccess(viewer.ID) {
+	if !repo.CanBeForked() || !repo.HasAccess(logger, viewer.ID) {
 		return nil, errForkBaseNotFound
 	}
 	if err = repo.GetOwner(); err != nil {
@@ -39,14 +39,14 @@ type forkBase struct {
 
 // withForkBaseRepo maps the repository named by the `id` path parameter as
 // *forkBase.
-func withForkBaseRepo(c flamego.Context, viewer *database.User) {
+func withForkBaseRepo(c flamego.Context, logger *logx.Logger, viewer *database.User) {
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
-	repo, err := forkBaseRepo(viewer, id)
+	repo, err := forkBaseRepo(logger, viewer, id)
 	if errors.Is(err, errForkBaseNotFound) {
 		writeErrorResponse(c.ResponseWriter(), http.StatusNotFound, err)
 		return
 	} else if err != nil {
-		log.Error("withForkBaseRepo: get repository %d: %v", id, err)
+		logger.Error("Failed to get repository to fork", "repoID", id, "error", err)
 		writeErrorResponse(c.ResponseWriter(), http.StatusInternalServerError, err)
 		return
 	}
@@ -67,10 +67,10 @@ type repoForkOptions struct {
 	Owners []repoNewOwner `json:"owners"`
 }
 
-func getRepoFork(viewer *database.User, base *forkBase) (statusCode int, resp any, err error) {
+func getRepoFork(logger *logx.Logger, viewer *database.User, base *forkBase) (statusCode int, resp any, err error) {
 	owners, err := repoNewOwners(viewer, viewer)
 	if err != nil {
-		log.Error("getRepoFork: list owners for user %d: %v", viewer.ID, err)
+		logger.Error("Failed to list owners", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, err
 	}
 	return http.StatusOK, &repoForkOptions{
@@ -91,20 +91,20 @@ type repoForkRequest struct {
 	Description string `json:"description" validate:"max=512"`
 }
 
-func postRepoFork(c flamego.Context, l i18n.Locale, viewer *database.User, base *forkBase, req repoForkRequest) (statusCode int, resp any, err error) {
+func postRepoFork(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, base *forkBase, req repoForkRequest) (statusCode int, resp any, err error) {
 	owner, err := repoOwner(c.Request().Context(), viewer, req.OwnerID)
 	// Unlike creating a repository, forking to an organization takes owning
 	// it, even for site admins.
 	if errors.Is(err, errRepoOwnerNotAllowed) || (err == nil && owner.IsOrganization() && !owner.IsOwnedBy(viewer.ID)) {
 		return http.StatusForbidden, repoOwnerError(l), nil
 	} else if err != nil {
-		log.Error("postRepoFork: get owner %d: %v", req.OwnerID, err)
+		logger.Error("Failed to get owner", "ownerID", req.OwnerID, "error", err)
 		return http.StatusInternalServerError, nil, err
 	}
 
 	fork, has, err := database.HasForkedRepo(owner.ID, base.ID)
 	if err != nil {
-		log.Error("postRepoFork: check fork of repository %d by owner %d: %v", base.ID, owner.ID, err)
+		logger.Error("Failed to check forked repository", "repoID", base.ID, "ownerID", owner.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "check forked repository")
 	} else if has {
 		// The owner already has a fork, which the viewer is sent to instead.
@@ -115,7 +115,7 @@ func postRepoFork(c flamego.Context, l i18n.Locale, viewer *database.User, base 
 		return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"ownerID": &msg}}, nil
 	}
 
-	fork, err = database.ForkRepository(c.Request().Context(), viewer, owner, base.Repository, req.RepoName, req.Description)
+	fork, err = database.ForkRepository(c.Request().Context(), logger, viewer, owner, base.Repository, req.RepoName, req.Description)
 	if err != nil {
 		if database.IsErrRepoAlreadyExist(err) {
 			msg := l.Tr("repo.settings.new_owner_has_same_repo")
@@ -124,7 +124,7 @@ func postRepoFork(c flamego.Context, l i18n.Locale, viewer *database.User, base 
 		if code, resp := repoCreateError(l, err); resp != nil {
 			return code, resp, nil
 		}
-		log.Error("postRepoFork: fork repository %d to %s/%s: %v", base.ID, owner.Name, req.RepoName, err)
+		logger.Error("Failed to fork repository", "baseRepoID", base.ID, "ownerName", owner.Name, "repoName", req.RepoName, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "fork repository")
 	}
 	return http.StatusCreated, &repoCreated{Owner: owner.Name, Name: fork.Name}, nil

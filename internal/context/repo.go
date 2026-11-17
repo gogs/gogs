@@ -1,17 +1,13 @@
 package context
 
 import (
-	"bytes"
-	"context"
 	"fmt"
 	"net/url"
 	"strings"
 
-	"github.com/cockroachdb/errors"
-	"github.com/editorconfig/editorconfig-core-go/v2"
 	"gopkg.in/macaron.v1"
+	"unknwon.dev/x/logx"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/repox"
@@ -72,25 +68,6 @@ func (r *Repository) CanEnableEditor() bool {
 	return r.Repository.CanEnableEditor() && r.IsViewBranch && r.IsWriter() && !r.Repository.IsBranchRequirePullRequest(r.BranchName)
 }
 
-// Editorconfig returns the ".editorconfig" definition if found in the HEAD of the default branch.
-func (r *Repository) Editorconfig(ctx context.Context) (*editorconfig.Editorconfig, error) {
-	commit, err := r.GitRepo.BranchCommit(ctx, r.Repository.DefaultBranch)
-	if err != nil {
-		return nil, errors.Wrapf(err, "get commit of branch %q ", r.Repository.DefaultBranch)
-	}
-
-	entry, err := commit.TreeEntry(ctx, ".editorconfig")
-	if err != nil {
-		return nil, errors.Wrap(err, "get .editorconfig")
-	}
-
-	p, err := entry.Blob().Bytes(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "read .editorconfig")
-	}
-	return editorconfig.Parse(bytes.NewReader(p))
-}
-
 // MakeURL accepts a string or url.URL as argument and returns escaped URL prepended with repository URL.
 func (r *Repository) MakeURL(location any) string {
 	switch location := location.(type) {
@@ -118,7 +95,7 @@ func (r *Repository) PullRequestURL(baseBranch, headBranch string) string {
 }
 
 // [0]: issues, [1]: wiki
-func RepoAssignment(pages ...bool) macaron.Handler {
+func RepoAssignment(logger *logx.Logger, pages ...bool) macaron.Handler {
 	return func(c *Context) {
 		var (
 			owner        *database.User
@@ -148,7 +125,6 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 			}
 		}
 		c.Repo.Owner = owner
-		c.Data["Username"] = c.Repo.Owner.Name
 
 		repo, err := database.GetRepositoryByName(owner.ID, repoName)
 		if err != nil {
@@ -157,16 +133,13 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		}
 
 		c.Repo.Repository = repo
-		c.Data["RepoName"] = c.Repo.Repository.Name
 		c.Repo.RepoLink = repo.Link()
-		c.Data["RepoLink"] = c.Repo.RepoLink
-		c.Data["RepoRelPath"] = c.Repo.Owner.Name + "/" + c.Repo.Repository.Name
 
 		// Admin has super access
 		if c.IsLogged && c.User.IsAdmin {
 			c.Repo.AccessMode = database.AccessModeOwner
 		} else {
-			c.Repo.AccessMode = database.Handle.Permissions().AccessMode(c.Req.Context(), c.UserID(), repo.ID,
+			c.Repo.AccessMode = database.Handle.Permissions().AccessMode(c.Req.Context(), logger, c.UserID(), repo.ID,
 				database.AccessModeOptions{
 					OwnerID: repo.OwnerID,
 					Private: repo.IsPrivate,
@@ -179,7 +152,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		if c.Repo.AccessMode == database.AccessModeNone && repo.BaseRepo != nil {
 			mode := min(
 				// Users shouldn't have indirect access level higher than write.
-				database.Handle.Permissions().AccessMode(c.Req.Context(), c.UserID(), repo.BaseRepo.ID,
+				database.Handle.Permissions().AccessMode(c.Req.Context(), logger, c.UserID(), repo.BaseRepo.ID,
 					database.AccessModeOptions{
 						OwnerID: repo.BaseRepo.OwnerID,
 						Private: repo.BaseRepo.IsPrivate,
@@ -226,9 +199,6 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 				c.Error(err, "get mirror by repository ID")
 				return
 			}
-			c.Data["MirrorEnablePrune"] = c.Repo.Mirror.EnablePrune
-			c.Data["MirrorInterval"] = c.Repo.Mirror.Interval
-			c.Data["Mirror"] = c.Repo.Mirror
 		}
 
 		gitRepo, err := git.Open(database.RepoPath(ownerName, repoName))
@@ -243,39 +213,18 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 			c.Error(err, "get tags")
 			return
 		}
-		c.Data["Tags"] = tags
 		c.Repo.Repository.NumTags = len(tags)
-
-		c.Data["Title"] = owner.Name + "/" + repo.Name
-		c.Data["Repository"] = repo
-		c.Data["Owner"] = c.Repo.Repository.Owner
-		c.Data["IsRepositoryOwner"] = c.Repo.IsOwner()
-		c.Data["IsRepositoryAdmin"] = c.Repo.IsAdmin()
-		c.Data["IsRepositoryWriter"] = c.Repo.IsWriter()
-
-		c.Data["DisableSSH"] = conf.SSH.Disabled
-		c.Data["DisableHTTP"] = conf.Repository.DisableHTTPGit
-		c.Data["CloneLink"] = repo.CloneLink()
-		c.Data["WikiCloneLink"] = repo.WikiCloneLink()
-
-		if c.IsLogged {
-			c.Data["IsWatchingRepo"] = database.IsWatching(c.User.ID, repo.ID)
-			c.Data["IsStaringRepo"] = database.IsStarring(c.User.ID, repo.ID)
-		}
 
 		// An empty repository has no branches to load.
 		if c.Repo.Repository.IsEmpty {
 			return
 		}
 
-		c.Data["TagName"] = c.Repo.TagName
 		branches, err := c.Repo.GitRepo.Branches(c.Req.Context())
 		if err != nil {
 			c.Error(err, "get branches")
 			return
 		}
-		c.Data["Branches"] = branches
-		c.Data["BranchCount"] = len(branches)
 
 		// If not branch selected, try default one.
 		// If default branch doesn't exists, fall back to some other branch.
@@ -286,10 +235,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 				c.Repo.BranchName = branches[0]
 			}
 		}
-		c.Data["BranchName"] = c.Repo.BranchName
-		c.Data["CommitID"] = c.Repo.CommitID
 
-		c.Data["IsGuest"] = !c.Repo.HasAccess()
 	}
 }
 
@@ -389,12 +335,6 @@ func RepoRef() macaron.Handler {
 		}
 
 		c.Repo.BranchName = refName
-		c.Data["BranchName"] = c.Repo.BranchName
-		c.Data["CommitID"] = c.Repo.CommitID
-		c.Data["TreePath"] = c.Repo.TreePath
-		c.Data["IsViewBranch"] = c.Repo.IsViewBranch
-		c.Data["IsViewTag"] = c.Repo.IsViewTag
-		c.Data["IsViewCommit"] = c.Repo.IsViewCommit
 
 		// People who have push access or have forked repository can propose a new pull request.
 		if c.Repo.IsWriter() || (c.IsLogged && database.Handle.Repositories().HasForkedBy(c.Req.Context(), c.Repo.Repository.ID, c.User.ID)) {
@@ -406,11 +346,9 @@ func RepoRef() macaron.Handler {
 					// In-repository pull requests has higher priority than cross-repository if user is viewing
 					// base repository and 1) has write access to it 2) has forked it.
 					if c.Repo.IsWriter() {
-						c.Data["BaseRepo"] = c.Repo.Repository.BaseRepo
 						c.Repo.PullRequest.BaseRepo = c.Repo.Repository.BaseRepo
 						c.Repo.PullRequest.HeadInfo = c.Repo.Owner.Name + ":" + c.Repo.BranchName
 					} else {
-						c.Data["BaseRepo"] = c.Repo.Repository
 						c.Repo.PullRequest.BaseRepo = c.Repo.Repository
 						c.Repo.PullRequest.HeadInfo = c.User.Name + ":" + c.Repo.BranchName
 					}
@@ -418,7 +356,6 @@ func RepoRef() macaron.Handler {
 			} else {
 				// Or, this is repository accepts pull requests between branches.
 				if c.Repo.Repository.AllowsPulls() {
-					c.Data["BaseRepo"] = c.Repo.Repository
 					c.Repo.PullRequest.BaseRepo = c.Repo.Repository
 					c.Repo.PullRequest.Allowed = true
 					c.Repo.PullRequest.SameRepo = true
@@ -426,7 +363,6 @@ func RepoRef() macaron.Handler {
 				}
 			}
 		}
-		c.Data["PullRequestCtx"] = c.Repo.PullRequest
 	}
 }
 

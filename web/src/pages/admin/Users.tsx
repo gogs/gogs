@@ -147,9 +147,7 @@ export function AdminUserNew({ options }: { options: AdminUserOptions }) {
               />
             ) : null}
             <FormActions>
-              <Button type="submit" variant="outline">
-                {t("admin.users.new_account")}
-              </Button>
+              <Button type="submit">{t("admin.users.new_account")}</Button>
             </FormActions>
           </div>
         </fieldset>
@@ -313,9 +311,7 @@ export function AdminUserEdit({ user, options }: { user: AdminUserDetail; option
               ) : null}
             </div>
             <FormActions>
-              <Button type="submit" variant="outline">
-                {t("admin.users.update_profile")}
-              </Button>
+              <Button type="submit">{t("admin.users.update_profile")}</Button>
               <ConfirmButton
                 label={t("admin.users.delete_account")}
                 title={t("settings.delete_account_title")}

@@ -7,7 +7,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
 	"github.com/go-macaron/i18n"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/database"
@@ -38,7 +38,7 @@ func orgNameError(l i18n.Locale, field string, err error) (int, *bindingErrorRes
 	return code, &bindingErrorResponse{Fields: fieldErrors{field: &msg}}
 }
 
-func postOrg(l i18n.Locale, viewer *database.User, req orgCreateRequest) (statusCode int, resp any, err error) {
+func postOrg(logger *logx.Logger, l i18n.Locale, viewer *database.User, req orgCreateRequest) (statusCode int, resp any, err error) {
 	if !viewer.CanCreateOrganization() {
 		return http.StatusForbidden, nil, errors.New("not allowed to create organizations")
 	}
@@ -51,7 +51,7 @@ func postOrg(l i18n.Locale, viewer *database.User, req orgCreateRequest) (status
 		if code, resp := orgNameError(l, "orgName", err); resp != nil {
 			return code, resp, nil
 		}
-		log.Error("postOrg: create organization %q: %v", req.OrgName, err)
+		logger.Error("Failed to create organization", "orgName", req.OrgName, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "create organization")
 	}
 	return http.StatusCreated, &orgNameResponse{Name: org.Name}, nil
@@ -103,7 +103,7 @@ type orgSettingsRequest struct {
 
 // patchOrgSettings changes the name and the profile of the organization, and
 // for site admins, how many repositories it can create.
-func patchOrgSettings(c flamego.Context, l i18n.Locale, viewer *database.User, m *orgMembership, req orgSettingsRequest) (statusCode int, resp any, err error) {
+func patchOrgSettings(logger *logx.Logger, c flamego.Context, l i18n.Locale, viewer *database.User, m *orgMembership, req orgSettingsRequest) (statusCode int, resp any, err error) {
 	if !m.IsOwner {
 		return http.StatusForbidden, nil, errors.New("organization owner required")
 	}
@@ -114,7 +114,7 @@ func patchOrgSettings(c flamego.Context, l i18n.Locale, viewer *database.User, m
 			if code, resp := orgNameError(l, "name", err); resp != nil {
 				return code, resp, nil
 			}
-			log.Error("patchOrgSettings: rename organization %d to %q: %v", org.ID, req.OrgName, err)
+			logger.Error("Failed to rename organization", "orgID", org.ID, "newName", req.OrgName, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "rename organization")
 		}
 	}
@@ -129,7 +129,7 @@ func patchOrgSettings(c flamego.Context, l i18n.Locale, viewer *database.User, m
 		opts.MaxRepoCreation = &req.MaxRepoCreation
 	}
 	if err = database.Handle.Users().Update(ctx, org.ID, opts); err != nil {
-		log.Error("patchOrgSettings: update organization %d: %v", org.ID, err)
+		logger.Error("Failed to update organization", "orgID", org.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update organization")
 	}
 	return http.StatusOK, &orgNameResponse{Name: req.OrgName}, nil
@@ -172,7 +172,7 @@ func readAvatarUpload(r *http.Request, l i18n.Locale) (data []byte, statusCode i
 	return data, http.StatusOK, nil
 }
 
-func putOrgAvatar(c flamego.Context, l i18n.Locale, m *orgMembership) (statusCode int, resp any, err error) {
+func putOrgAvatar(logger *logx.Logger, c flamego.Context, l i18n.Locale, m *orgMembership) (statusCode int, resp any, err error) {
 	if !m.IsOwner {
 		return http.StatusForbidden, nil, errors.New("organization owner required")
 	}
@@ -180,23 +180,23 @@ func putOrgAvatar(c flamego.Context, l i18n.Locale, m *orgMembership) (statusCod
 	data, code, err := readAvatarUpload(r, l)
 	if err != nil {
 		if code == http.StatusInternalServerError {
-			log.Error("putOrgAvatar: organization %d: %v", m.Org.ID, err)
+			logger.Error("Failed to read avatar upload", "orgID", m.Org.ID, "error", err)
 		}
 		return code, nil, err
 	}
 	if err = database.Handle.Users().UseCustomAvatar(r.Context(), m.Org.ID, data); err != nil {
-		log.Error("putOrgAvatar: save avatar of organization %d: %v", m.Org.ID, err)
+		logger.Error("Failed to save avatar of organization", "orgID", m.Org.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "save avatar")
 	}
 	return http.StatusNoContent, nil, nil
 }
 
-func deleteOrgAvatar(c flamego.Context, m *orgMembership) (statusCode int, resp any, err error) {
+func deleteOrgAvatar(logger *logx.Logger, c flamego.Context, m *orgMembership) (statusCode int, resp any, err error) {
 	if !m.IsOwner {
 		return http.StatusForbidden, nil, errors.New("organization owner required")
 	}
 	if err = database.Handle.Users().DeleteCustomAvatar(c.Request().Context(), m.Org.ID); err != nil {
-		log.Error("deleteOrgAvatar: delete avatar of organization %d: %v", m.Org.ID, err)
+		logger.Error("Failed to delete avatar of organization", "orgID", m.Org.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete avatar")
 	}
 	return http.StatusNoContent, nil, nil
@@ -208,24 +208,24 @@ type orgDeleteRequest struct {
 
 // deleteOrg deletes the organization once the owner confirms their password.
 // Organizations that still own repositories cannot be deleted.
-func deleteOrg(c flamego.Context, l i18n.Locale, viewer *database.User, m *orgMembership, req orgDeleteRequest) (statusCode int, resp any, err error) {
+func deleteOrg(logger *logx.Logger, c flamego.Context, l i18n.Locale, viewer *database.User, m *orgMembership, req orgDeleteRequest) (statusCode int, resp any, err error) {
 	if !m.IsOwner {
 		return http.StatusForbidden, nil, errors.New("organization owner required")
 	}
-	_, err = database.Handle.Users().Authenticate(c.Request().Context(), viewer.Name, req.Password, viewer.LoginSource)
+	_, err = database.Handle.Users().Authenticate(c.Request().Context(), logger, viewer.Name, req.Password, viewer.LoginSource)
 	if err != nil {
 		if auth.IsErrBadCredentials(err) {
 			msg := l.Tr("form.enterred_invalid_password")
 			return http.StatusUnauthorized, &bindingErrorResponse{Fields: fieldErrors{"password": &msg}}, nil
 		}
-		log.Error("deleteOrg: authenticate user %d: %v", viewer.ID, err)
+		logger.Error("Failed to authenticate user", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "authenticate user")
 	}
 	if err = database.DeleteOrganization(m.Org); err != nil {
 		if database.IsErrUserOwnRepos(err) {
 			return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("form.org_still_own_repo")}, nil
 		}
-		log.Error("deleteOrg: delete organization %d: %v", m.Org.ID, err)
+		logger.Error("Failed to delete organization", "orgID", m.Org.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete organization")
 	}
 	return http.StatusNoContent, nil, nil

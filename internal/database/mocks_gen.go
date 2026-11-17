@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	auth "gogs.io/gogs/internal/auth"
+	logx "unknwon.dev/x/logx"
 )
 
 // MockProvider is a mock implementation of the Provider interface (from the
@@ -37,7 +38,7 @@ type MockProvider struct {
 func NewMockProvider() *MockProvider {
 	return &MockProvider{
 		AuthenticateFunc: &ProviderAuthenticateFunc{
-			defaultHook: func(string, string) (r0 *auth.ExternalAccount, r1 error) {
+			defaultHook: func(*logx.Logger, string, string) (r0 *auth.ExternalAccount, r1 error) {
 				return
 			},
 		},
@@ -69,7 +70,7 @@ func NewMockProvider() *MockProvider {
 func NewStrictMockProvider() *MockProvider {
 	return &MockProvider{
 		AuthenticateFunc: &ProviderAuthenticateFunc{
-			defaultHook: func(string, string) (*auth.ExternalAccount, error) {
+			defaultHook: func(*logx.Logger, string, string) (*auth.ExternalAccount, error) {
 				panic("unexpected invocation of MockProvider.Authenticate")
 			},
 		},
@@ -121,24 +122,24 @@ func NewMockProviderFrom(i auth.Provider) *MockProvider {
 // ProviderAuthenticateFunc describes the behavior when the Authenticate
 // method of the parent MockProvider instance is invoked.
 type ProviderAuthenticateFunc struct {
-	defaultHook func(string, string) (*auth.ExternalAccount, error)
-	hooks       []func(string, string) (*auth.ExternalAccount, error)
+	defaultHook func(*logx.Logger, string, string) (*auth.ExternalAccount, error)
+	hooks       []func(*logx.Logger, string, string) (*auth.ExternalAccount, error)
 	history     []ProviderAuthenticateFuncCall
 	mutex       sync.Mutex
 }
 
 // Authenticate delegates to the next hook function in the queue and stores
 // the parameter and result values of this invocation.
-func (m *MockProvider) Authenticate(v0 string, v1 string) (*auth.ExternalAccount, error) {
-	r0, r1 := m.AuthenticateFunc.nextHook()(v0, v1)
-	m.AuthenticateFunc.appendCall(ProviderAuthenticateFuncCall{v0, v1, r0, r1})
+func (m *MockProvider) Authenticate(v0 *logx.Logger, v1 string, v2 string) (*auth.ExternalAccount, error) {
+	r0, r1 := m.AuthenticateFunc.nextHook()(v0, v1, v2)
+	m.AuthenticateFunc.appendCall(ProviderAuthenticateFuncCall{v0, v1, v2, r0, r1})
 	return r0, r1
 }
 
 // SetDefaultHook sets function that is called when the Authenticate method
 // of the parent MockProvider instance is invoked and the hook queue is
 // empty.
-func (f *ProviderAuthenticateFunc) SetDefaultHook(hook func(string, string) (*auth.ExternalAccount, error)) {
+func (f *ProviderAuthenticateFunc) SetDefaultHook(hook func(*logx.Logger, string, string) (*auth.ExternalAccount, error)) {
 	f.defaultHook = hook
 }
 
@@ -146,7 +147,7 @@ func (f *ProviderAuthenticateFunc) SetDefaultHook(hook func(string, string) (*au
 // Authenticate method of the parent MockProvider instance invokes the hook
 // at the front of the queue and discards it. After the queue is empty, the
 // default hook function is invoked for any future action.
-func (f *ProviderAuthenticateFunc) PushHook(hook func(string, string) (*auth.ExternalAccount, error)) {
+func (f *ProviderAuthenticateFunc) PushHook(hook func(*logx.Logger, string, string) (*auth.ExternalAccount, error)) {
 	f.mutex.Lock()
 	f.hooks = append(f.hooks, hook)
 	f.mutex.Unlock()
@@ -155,19 +156,19 @@ func (f *ProviderAuthenticateFunc) PushHook(hook func(string, string) (*auth.Ext
 // SetDefaultReturn calls SetDefaultHook with a function that returns the
 // given values.
 func (f *ProviderAuthenticateFunc) SetDefaultReturn(r0 *auth.ExternalAccount, r1 error) {
-	f.SetDefaultHook(func(string, string) (*auth.ExternalAccount, error) {
+	f.SetDefaultHook(func(*logx.Logger, string, string) (*auth.ExternalAccount, error) {
 		return r0, r1
 	})
 }
 
 // PushReturn calls PushHook with a function that returns the given values.
 func (f *ProviderAuthenticateFunc) PushReturn(r0 *auth.ExternalAccount, r1 error) {
-	f.PushHook(func(string, string) (*auth.ExternalAccount, error) {
+	f.PushHook(func(*logx.Logger, string, string) (*auth.ExternalAccount, error) {
 		return r0, r1
 	})
 }
 
-func (f *ProviderAuthenticateFunc) nextHook() func(string, string) (*auth.ExternalAccount, error) {
+func (f *ProviderAuthenticateFunc) nextHook() func(*logx.Logger, string, string) (*auth.ExternalAccount, error) {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 
@@ -202,10 +203,13 @@ func (f *ProviderAuthenticateFunc) History() []ProviderAuthenticateFuncCall {
 type ProviderAuthenticateFuncCall struct {
 	// Arg0 is the value of the 1st argument passed to this method
 	// invocation.
-	Arg0 string
+	Arg0 *logx.Logger
 	// Arg1 is the value of the 2nd argument passed to this method
 	// invocation.
 	Arg1 string
+	// Arg2 is the value of the 3rd argument passed to this method
+	// invocation.
+	Arg2 string
 	// Result0 is the value of the 1st result returned from this method
 	// invocation.
 	Result0 *auth.ExternalAccount
@@ -217,7 +221,7 @@ type ProviderAuthenticateFuncCall struct {
 // Args returns an interface slice containing the arguments of this
 // invocation.
 func (c ProviderAuthenticateFuncCall) Args() []interface{} {
-	return []interface{}{c.Arg0, c.Arg1}
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2}
 }
 
 // Results returns an interface slice containing the results of this

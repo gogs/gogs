@@ -69,7 +69,7 @@ export function AvatarForm({
               />
             </FormField>
             <div className="flex flex-wrap gap-2">
-              <Button type="submit" variant="outline" size="sm" disabled={!file || pending}>
+              <Button type="submit" size="sm" disabled={!file || pending}>
                 {t("settings.update_avatar")}
               </Button>
               {hasCustomAvatar ? (

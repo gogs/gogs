@@ -39,6 +39,7 @@ RUN apk --no-cache --no-progress add \
   "openssl>3.5.7-r0"
 
 ENV GOGS_CUSTOM=/data/gogs
+ENV GOGS_LOG_FORMAT=json
 
 # Configure LibC Name Service
 COPY docker/nsswitch.conf /etc/nsswitch.conf

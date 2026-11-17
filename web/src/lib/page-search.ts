@@ -28,3 +28,14 @@ export function validateListSearch(search: Record<string, unknown>): ListSearch 
   const q = rawQ === undefined ? "" : typeof rawQ === "string" ? rawQ : JSON.stringify(rawQ);
   return { q: q || undefined, ...validatePageSearch(search) };
 }
+
+// Search-param schema for the branches page, which GitHub searches through
+// `query` rather than `q`.
+export interface BranchesSearch extends PageSearch {
+  query?: string;
+}
+
+export function validateBranchesSearch(search: Record<string, unknown>): BranchesSearch {
+  const { q, page } = validateListSearch({ q: search.query, page: search.page });
+  return { query: q, page };
+}

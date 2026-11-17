@@ -7,7 +7,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
 	"github.com/go-macaron/i18n"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
@@ -63,7 +63,7 @@ type userNameResponse struct {
 
 // patchUserSettings changes the profile of the authenticated user, and the
 // username of local users.
-func patchUserSettings(c flamego.Context, l i18n.Locale, viewer *database.User, req userSettingsRequest) (statusCode int, resp any, err error) {
+func patchUserSettings(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, req userSettingsRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	name := viewer.Name
 	// Users from an external authentication source keep the name it gives them.
@@ -78,7 +78,7 @@ func patchUserSettings(c flamego.Context, l i18n.Locale, viewer *database.User, 
 				msg = l.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value())
 				return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"name": &msg}}, nil
 			}
-			log.Error("patchUserSettings: rename user %d to %q: %v", viewer.ID, req.UserName, err)
+			logger.Error("Failed to rename user", "userID", viewer.ID, "newName", req.UserName, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "rename user")
 		}
 		name = req.UserName
@@ -90,31 +90,31 @@ func patchUserSettings(c flamego.Context, l i18n.Locale, viewer *database.User, 
 		Location: &req.Location,
 	})
 	if err != nil {
-		log.Error("patchUserSettings: update user %d: %v", viewer.ID, err)
+		logger.Error("Failed to update user", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update user")
 	}
 	return http.StatusOK, &userNameResponse{Name: name}, nil
 }
 
-func putUserAvatar(c flamego.Context, l i18n.Locale, viewer *database.User) (statusCode int, resp any, err error) {
+func putUserAvatar(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User) (statusCode int, resp any, err error) {
 	r := c.Request().Request
 	data, code, err := readAvatarUpload(r, l)
 	if err != nil {
 		if code == http.StatusInternalServerError {
-			log.Error("putUserAvatar: user %d: %v", viewer.ID, err)
+			logger.Error("Failed to read avatar upload", "userID", viewer.ID, "error", err)
 		}
 		return code, nil, err
 	}
 	if err = database.Handle.Users().UseCustomAvatar(r.Context(), viewer.ID, data); err != nil {
-		log.Error("putUserAvatar: save avatar of user %d: %v", viewer.ID, err)
+		logger.Error("Failed to save avatar", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "save avatar")
 	}
 	return http.StatusNoContent, nil, nil
 }
 
-func deleteUserAvatar(c flamego.Context, viewer *database.User) (statusCode int, resp any, err error) {
+func deleteUserAvatar(c flamego.Context, logger *logx.Logger, viewer *database.User) (statusCode int, resp any, err error) {
 	if err = database.Handle.Users().DeleteCustomAvatar(c.Request().Context(), viewer.ID); err != nil {
-		log.Error("deleteUserAvatar: delete avatar of user %d: %v", viewer.ID, err)
+		logger.Error("Failed to delete avatar", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete avatar")
 	}
 	return http.StatusNoContent, nil, nil
@@ -126,7 +126,7 @@ type userGravatarRequest struct {
 
 // putUserGravatar shows the Gravatar of the given email as the avatar of the
 // authenticated user, in place of any uploaded avatar.
-func putUserGravatar(c flamego.Context, viewer *database.User, req userGravatarRequest) (statusCode int, resp any, err error) {
+func putUserGravatar(c flamego.Context, logger *logx.Logger, viewer *database.User, req userGravatarRequest) (statusCode int, resp any, err error) {
 	if conf.Picture.DisableGravatar {
 		return http.StatusNotFound, nil, errors.New("gravatar is disabled")
 	}
@@ -137,11 +137,11 @@ func putUserGravatar(c flamego.Context, viewer *database.User, req userGravatarR
 		AvatarEmail: &req.AvatarEmail,
 	})
 	if err != nil {
-		log.Error("putUserGravatar: update user %d: %v", viewer.ID, err)
+		logger.Error("Failed to update user", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update user")
 	}
 	if err = database.Handle.Users().DeleteCustomAvatar(ctx, viewer.ID); err != nil {
-		log.Error("putUserGravatar: delete avatar of user %d: %v", viewer.ID, err)
+		logger.Error("Failed to delete avatar", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete avatar")
 	}
 	return http.StatusNoContent, nil, nil
@@ -153,7 +153,7 @@ type userPasswordRequest struct {
 	Retype      string `json:"retype"`
 }
 
-func putUserPassword(c flamego.Context, l i18n.Locale, viewer *database.User, req userPasswordRequest) (statusCode int, resp any, err error) {
+func putUserPassword(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, req userPasswordRequest) (statusCode int, resp any, err error) {
 	if !viewer.IsLocal() {
 		return http.StatusForbidden, nil, errors.New(l.Tr("settings.password_change_disabled"))
 	}
@@ -167,7 +167,7 @@ func putUserPassword(c flamego.Context, l i18n.Locale, viewer *database.User, re
 	}
 	err = database.Handle.Users().Update(c.Request().Context(), viewer.ID, database.UpdateUserOptions{Password: &req.Password})
 	if err != nil {
-		log.Error("putUserPassword: update user %d: %v", viewer.ID, err)
+		logger.Error("Failed to update user", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update user")
 	}
 	return http.StatusNoContent, nil, nil
@@ -191,14 +191,14 @@ type userSettingsRepos struct {
 
 // getUserSettingsRepos lists the repositories of the authenticated user and the
 // ones they collaborate on.
-func getUserSettingsRepos(viewer *database.User) (statusCode int, resp *userSettingsRepos, err error) {
+func getUserSettingsRepos(logger *logx.Logger, viewer *database.User) (statusCode int, resp *userSettingsRepos, err error) {
 	repos, err := database.GetUserAndCollaborativeRepositories(viewer.ID)
 	if err != nil {
-		log.Error("getUserSettingsRepos: list repositories of user %d: %v", viewer.ID, err)
+		logger.Error("Failed to list repositories", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list repositories")
 	}
 	if err = database.RepositoryList(repos).LoadAttributes(); err != nil {
-		log.Error("getUserSettingsRepos: load attributes: %v", err)
+		logger.Error("Failed to load repository attributes", "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "load attributes")
 	}
 	items := make([]userSettingsRepo, 0, len(repos))
@@ -219,23 +219,23 @@ func getUserSettingsRepos(viewer *database.User) (statusCode int, resp *userSett
 
 // deleteUserSettingsRepo makes the authenticated user leave a repository they
 // collaborate on.
-func deleteUserSettingsRepo(c flamego.Context, viewer *database.User) (statusCode int, resp any, err error) {
+func deleteUserSettingsRepo(c flamego.Context, logger *logx.Logger, viewer *database.User) (statusCode int, resp any, err error) {
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	repo, err := database.GetRepositoryByID(id)
 	if err != nil {
 		if database.IsErrRepoNotExist(err) {
 			return http.StatusNotFound, nil, errors.New("repository not found")
 		}
-		log.Error("deleteUserSettingsRepo: get repository %d: %v", id, err)
+		logger.Error("Failed to get repository", "repoID", id, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get repository")
 	}
 	// Answer the same for repositories the user does not collaborate on, so
 	// the IDs of private repositories cannot be probed.
-	if !database.IsCollaborator(repo.ID, viewer.ID) {
+	if !database.IsCollaborator(logger, repo.ID, viewer.ID) {
 		return http.StatusNotFound, nil, errors.New("repository not found")
 	}
-	if err = repo.DeleteCollaboration(viewer.ID); err != nil {
-		log.Error("deleteUserSettingsRepo: remove user %d from repository %d: %v", viewer.ID, repo.ID, err)
+	if err = repo.DeleteCollaboration(logger, viewer.ID); err != nil {
+		logger.Error("Failed to delete collaboration", "userID", viewer.ID, "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete collaboration")
 	}
 	return http.StatusNoContent, nil, nil
@@ -252,10 +252,10 @@ type userSettingsOrgs struct {
 
 // getUserSettingsOrgs lists every organization the authenticated user is a
 // member of, including the ones their membership is private in.
-func getUserSettingsOrgs(viewer *database.User) (statusCode int, resp *userSettingsOrgs, err error) {
+func getUserSettingsOrgs(logger *logx.Logger, viewer *database.User) (statusCode int, resp *userSettingsOrgs, err error) {
 	orgs, err := database.GetOrgsByUserID(viewer.ID, true)
 	if err != nil {
-		log.Error("getUserSettingsOrgs: list organizations of user %d: %v", viewer.ID, err)
+		logger.Error("Failed to list organizations", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list organizations")
 	}
 	items := make([]userSettingsOrg, 0, len(orgs))
@@ -272,15 +272,15 @@ type userDeleteRequest struct {
 // deleteUser deletes the account of the authenticated user once they confirm
 // their password. Users who still own repositories or belong to
 // organizations cannot be deleted.
-func deleteUser(c flamego.Context, l i18n.Locale, viewer *database.User, req userDeleteRequest) (statusCode int, resp any, err error) {
+func deleteUser(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, req userDeleteRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
-	_, err = database.Handle.Users().Authenticate(ctx, viewer.Name, req.Password, viewer.LoginSource)
+	_, err = database.Handle.Users().Authenticate(ctx, logger, viewer.Name, req.Password, viewer.LoginSource)
 	if err != nil {
 		if auth.IsErrBadCredentials(err) {
 			msg := l.Tr("form.enterred_invalid_password")
 			return http.StatusUnauthorized, &bindingErrorResponse{Fields: fieldErrors{"password": &msg}}, nil
 		}
-		log.Error("deleteUser: authenticate user %d: %v", viewer.ID, err)
+		logger.Error("Failed to authenticate user", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "authenticate user")
 	}
 	if err = database.Handle.Users().DeleteByID(ctx, viewer.ID, false); err != nil {
@@ -290,9 +290,9 @@ func deleteUser(c flamego.Context, l i18n.Locale, viewer *database.User, req use
 		case database.IsErrUserHasOrgs(err):
 			return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("form.still_has_org")}, nil
 		}
-		log.Error("deleteUser: delete user %d: %v", viewer.ID, err)
+		logger.Error("Failed to delete user", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete user")
 	}
-	log.Trace("Account deleted: %s", viewer.Name)
+	logger.Debug("Account deleted", "userName", viewer.Name)
 	return http.StatusNoContent, nil, nil
 }

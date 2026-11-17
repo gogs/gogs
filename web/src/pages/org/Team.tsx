@@ -248,7 +248,7 @@ function AddForm({
           required
           className="h-8 min-w-0 flex-1 basis-48 py-1"
         />
-        <Button type="submit" variant="outline" size="sm">
+        <Button type="submit" size="sm">
           {label}
         </Button>
       </fieldset>

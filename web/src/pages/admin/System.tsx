@@ -53,16 +53,22 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+function InlineCode({ children }: { children: ReactNode }) {
+  return (
+    // Cloned decoration keeps the chip's padding and corners on every line a
+    // long value wraps to.
+    <code className="rounded border border-(--color-border) box-decoration-clone bg-(--color-surface) px-1.5 font-mono text-[0.8125rem] text-(--color-foreground)">
+      {children}
+    </code>
+  );
+}
+
 function ReportValue({ row }: { row: AdminReportRow }) {
   switch (row.kind) {
     case "code":
       return row.value ? (
         <>
-          {/* Cloned decoration keeps the chip's padding and corners on every
-              line a long value wraps to. */}
-          <code className="rounded border border-(--color-border) box-decoration-clone bg-(--color-surface) px-1.5 font-mono text-[0.8125rem] text-(--color-foreground)">
-            {row.value}
-          </code>
+          <InlineCode>{row.value}</InlineCode>
           {row.unit && ` ${row.unit}`}
         </>
       ) : null;
@@ -133,26 +139,34 @@ export function AdminDashboard({ dashboard }: { dashboard: AdminDashboardData })
   const { t } = useTranslation();
   return (
     <AdminLayout active="dashboard">
-      <h1 className="mb-4 text-xl font-semibold">{t("admin.dashboard")}</h1>
+      <h1 className="mb-4 text-xl font-semibold">{t("admin.overview")}</h1>
       <Section id="build-info" title={t("admin.dashboard.build_info")}>
         <Facts>
-          <Fact label={t("admin.dashboard.app_ver")}>{dashboard.appVersion}</Fact>
-          <Fact label={t("admin.dashboard.git_version")}>{dashboard.gitVersion}</Fact>
-          <Fact label={t("admin.dashboard.go_version")}>{dashboard.goVersion}</Fact>
-          <Fact label={t("admin.dashboard.build_time")}>{dashboard.buildTime || "N/A"}</Fact>
+          <Fact label={t("admin.dashboard.app_ver")}>
+            <InlineCode>{dashboard.appVersion}</InlineCode>
+          </Fact>
+          <Fact label={t("admin.dashboard.git_version")}>
+            <InlineCode>{dashboard.gitVersion}</InlineCode>
+          </Fact>
+          <Fact label={t("admin.dashboard.go_version")}>
+            <InlineCode>{dashboard.goVersion}</InlineCode>
+          </Fact>
+          <Fact label={t("admin.dashboard.build_time")}>
+            <InlineCode>{dashboard.buildTime || "N/A"}</InlineCode>
+          </Fact>
           <Fact label={t("admin.dashboard.build_commit")}>
             {dashboard.buildCommit ? (
               <a
                 href={`https://github.com/gogs/gogs/commit/${dashboard.buildCommit}`}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1 font-mono text-(--color-primary) hover:underline"
+                className="inline-flex items-center gap-1 text-(--color-primary) hover:underline"
               >
-                {dashboard.buildCommit}
+                <InlineCode>{dashboard.buildCommit}</InlineCode>
                 <ExternalLink className="size-3.5 shrink-0" aria-hidden />
               </a>
             ) : (
-              "N/A"
+              <InlineCode>N/A</InlineCode>
             )}
           </Fact>
         </Facts>
@@ -206,7 +220,7 @@ function TestMailForm() {
             </FormField>
           </div>
           {/* Lines the button up with the input below the label. */}
-          <Button type="submit" variant="outline" className="sm:mt-[1.625rem]">
+          <Button type="submit" className="sm:mt-[1.625rem]">
             {t("admin.config.email.send_test_mail")}
           </Button>
         </div>
@@ -303,57 +317,63 @@ function Empty() {
   );
 }
 
-// AdminMonitor lists the scheduled tasks and the Git processes running now.
-export function AdminMonitor({ monitor }: { monitor: AdminMonitorData }) {
+// AdminCron lists the scheduled tasks of the server.
+export function AdminCron({ monitor }: { monitor: AdminMonitorData }) {
   const { t } = useTranslation();
   return (
-    <AdminLayout active="monitor">
-      <h1 className="mb-4 text-xl font-semibold">{t("admin.monitor")}</h1>
-      <Section id="cron" title={t("admin.monitor.cron")}>
-        {monitor.cronTasks.length > 0 ? (
-          <ul className="border-t border-(--color-border)">
-            {monitor.cronTasks.map((task) => (
-              <li key={task.description} className={ROW_CLASS}>
-                <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <span className="font-semibold wrap-anywhere">{task.description}</span>
-                  <code className="rounded border border-(--color-border) bg-(--color-surface) px-1.5 font-mono text-xs">
-                    {task.schedule}
-                  </code>
-                </p>
-                <Details>
-                  <Detail label={t("admin.monitor.next")}>
-                    {task.next ? formatAbsoluteTime(task.next) : <NotAvailable />}
-                  </Detail>
-                  <Detail label={t("admin.monitor.previous")}>
-                    {task.prev ? formatAbsoluteTime(task.prev) : <NotAvailable />}
-                  </Detail>
-                  <Detail label={t("admin.monitor.execute_times")}>{task.execTimes}</Detail>
-                </Details>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <Empty />
-        )}
-      </Section>
-      <Section id="processes" title={t("admin.monitor.process")}>
-        {monitor.processes.length > 0 ? (
-          <ul className="border-t border-(--color-border)">
-            {monitor.processes.map((proc) => (
-              <li key={proc.pid} className={ROW_CLASS}>
-                <p className="font-mono text-sm wrap-anywhere">{proc.description}</p>
-                <Details>
-                  <Detail label="PID">{proc.pid}</Detail>
-                  <Detail label={t("admin.monitor.start")}>{formatAbsoluteTime(proc.start)}</Detail>
-                  <Detail label={t("admin.monitor.execute_time")}>{formatRelativeTime(t, proc.start)}</Detail>
-                </Details>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <Empty />
-        )}
-      </Section>
+    <AdminLayout active="cron">
+      <h1 className="mb-4 text-xl font-semibold">{t("admin.monitor.cron")}</h1>
+      {monitor.cronTasks.length > 0 ? (
+        <ul className="border-t border-(--color-border)">
+          {monitor.cronTasks.map((task) => (
+            <li key={task.description} className={ROW_CLASS}>
+              <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <span className="font-semibold wrap-anywhere">{task.description}</span>
+                <code className="rounded border border-(--color-border) bg-(--color-surface) px-1.5 font-mono text-xs">
+                  {task.schedule}
+                </code>
+              </p>
+              <Details>
+                <Detail label={t("admin.monitor.next")}>
+                  {task.next ? formatAbsoluteTime(task.next) : <NotAvailable />}
+                </Detail>
+                <Detail label={t("admin.monitor.previous")}>
+                  {task.prev ? formatAbsoluteTime(task.prev) : <NotAvailable />}
+                </Detail>
+                <Detail label={t("admin.monitor.execute_times")}>{task.execTimes}</Detail>
+              </Details>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <Empty />
+      )}
+    </AdminLayout>
+  );
+}
+
+// AdminProcesses lists the Git processes running now.
+export function AdminProcesses({ monitor }: { monitor: AdminMonitorData }) {
+  const { t } = useTranslation();
+  return (
+    <AdminLayout active="processes">
+      <h1 className="mb-4 text-xl font-semibold">{t("admin.processes")}</h1>
+      {monitor.processes.length > 0 ? (
+        <ul className="border-t border-(--color-border)">
+          {monitor.processes.map((proc) => (
+            <li key={proc.pid} className={ROW_CLASS}>
+              <p className="font-mono text-sm wrap-anywhere">{proc.description}</p>
+              <Details>
+                <Detail label="PID">{proc.pid}</Detail>
+                <Detail label={t("admin.monitor.start")}>{formatAbsoluteTime(proc.start)}</Detail>
+                <Detail label={t("admin.monitor.execute_time")}>{formatRelativeTime(t, proc.start)}</Detail>
+              </Details>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <Empty />
+      )}
     </AdminLayout>
   );
 }

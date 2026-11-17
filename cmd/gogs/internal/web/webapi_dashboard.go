@@ -3,13 +3,14 @@ package web
 import (
 	"context"
 	"net/http"
+	"slices"
 	"strconv"
 	"time"
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
 	"github.com/go-macaron/i18n"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
@@ -24,7 +25,7 @@ type dashboardOwner struct {
 // as *dashboardOwner, or the authenticated user when there is none. Like the
 // server-rendered dashboard, only members see the dashboard of an
 // organization.
-func withDashboardOwner(c flamego.Context, viewer *database.User) {
+func withDashboardOwner(logger *logx.Logger, c flamego.Context, viewer *database.User) {
 	w := c.ResponseWriter()
 	name := c.Param("org")
 	if name == "" {
@@ -34,7 +35,7 @@ func withDashboardOwner(c flamego.Context, viewer *database.User) {
 
 	org, err := database.Handle.Users().GetByUsername(c.Request().Context(), name)
 	if err != nil && !database.IsErrUserNotExist(err) {
-		log.Error("withDashboardOwner: get user by username %q: %v", name, err)
+		logger.Error("Failed to get user by username", "username", name, "error", err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "get organization"))
 		return
 	}
@@ -133,11 +134,11 @@ func toDashboardRepos(repos []*database.Repository) []dashboardRepo {
 	return items
 }
 
-func getDashboard(c flamego.Context, viewer *database.User, owner *dashboardOwner) (statusCode int, resp *dashboard, err error) {
+func getDashboard(logger *logx.Logger, c flamego.Context, viewer *database.User, owner *dashboardOwner) (statusCode int, resp *dashboard, err error) {
 	ctx := c.Request().Context()
 	dc, err := newDashboardContext(ctx, viewer, owner)
 	if err != nil {
-		log.Error("getDashboard: get context of user %d: %v", owner.ID, err)
+		logger.Error("Failed to get dashboard context of user", "userID", owner.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get context")
 	}
 
@@ -163,7 +164,7 @@ func getDashboard(c flamego.Context, viewer *database.User, owner *dashboardOwne
 		}
 	}
 	if err != nil {
-		log.Error("getDashboard: get repositories of user %d: %v", owner.ID, err)
+		logger.Error("Failed to get repositories of user", "userID", owner.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get repositories")
 	}
 	for _, repo := range repos {
@@ -178,7 +179,7 @@ func getDashboard(c flamego.Context, viewer *database.User, owner *dashboardOwne
 		Mirrors:          make([]dashboardMirror, 0, len(mirrors)),
 	}
 	if err = database.MirrorRepositoryList(mirrors).LoadAttributes(); err != nil {
-		log.Error("getDashboard: load attributes of mirrors of user %d: %v", owner.ID, err)
+		logger.Error("Failed to load attributes of mirrors", "userID", owner.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "load mirror attributes")
 	}
 	for _, repo := range mirrors {
@@ -197,14 +198,14 @@ func getDashboard(c flamego.Context, viewer *database.User, owner *dashboardOwne
 		err = database.RepositoryList(collaborativeRepos).LoadAttributes()
 	}
 	if err != nil {
-		log.Error("getDashboard: get collaborative repositories of user %d: %v", viewer.ID, err)
+		logger.Error("Failed to get collaborative repositories of user", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get collaborative repositories")
 	}
 	resp.CollaborativeRepos = toDashboardRepos(collaborativeRepos)
 	return http.StatusOK, resp, nil
 }
 
-func getDashboardActivity(c flamego.Context, l i18n.Locale, viewer *database.User, owner *dashboardOwner) (statusCode int, resp *activityFeed, err error) {
+func getDashboardActivity(logger *logx.Logger, c flamego.Context, l i18n.Locale, viewer *database.User, owner *dashboardOwner) (statusCode int, resp *activityFeed, err error) {
 	ctx := c.Request().Context()
 	afterID, _ := strconv.ParseInt(c.Query("afterID"), 10, 64)
 	var actions []*database.Action
@@ -214,12 +215,12 @@ func getDashboardActivity(c flamego.Context, l i18n.Locale, viewer *database.Use
 		actions, err = database.Handle.Actions().ListByUser(ctx, owner.ID, viewer.ID, afterID, false)
 	}
 	if err != nil {
-		log.Error("getDashboardActivity: list actions of user %d: %v", owner.ID, err)
+		logger.Error("Failed to list actions of user", "userID", owner.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list actions")
 	}
-	feed, err := toActivityFeed(ctx, l, actions)
+	feed, err := toActivityFeed(ctx, logger, l, actions)
 	if err != nil {
-		log.Error("getDashboardActivity: convert actions of user %d: %v", owner.ID, err)
+		logger.Error("Failed to convert actions of user", "userID", owner.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "convert actions")
 	}
 	return http.StatusOK, feed, nil
@@ -278,18 +279,18 @@ type dashboardIssues struct {
 	Repos []dashboardIssueRepo `json:"repos"`
 }
 
-func getDashboardIssues(c flamego.Context, viewer *database.User, owner *dashboardOwner) (statusCode int, resp *dashboardIssues, err error) {
-	return listDashboardIssues(c, viewer, owner, false)
+func getDashboardIssues(logger *logx.Logger, c flamego.Context, viewer *database.User, owner *dashboardOwner) (statusCode int, resp *dashboardIssues, err error) {
+	return listDashboardIssues(logger, c, viewer, owner, false)
 }
 
-func getDashboardPulls(c flamego.Context, viewer *database.User, owner *dashboardOwner) (statusCode int, resp *dashboardIssues, err error) {
-	return listDashboardIssues(c, viewer, owner, true)
+func getDashboardPulls(logger *logx.Logger, c flamego.Context, viewer *database.User, owner *dashboardOwner) (statusCode int, resp *dashboardIssues, err error) {
+	return listDashboardIssues(logger, c, viewer, owner, true)
 }
 
 // listDashboardIssues lists the issues or pull requests of the dashboard owner,
 // filtered and sorted like the server-rendered page by the `type`, `repo`,
 // `state`, `sort` and `page` query parameters.
-func listDashboardIssues(c flamego.Context, viewer *database.User, owner *dashboardOwner, isPull bool) (statusCode int, resp *dashboardIssues, err error) {
+func listDashboardIssues(logger *logx.Logger, c flamego.Context, viewer *database.User, owner *dashboardOwner, isPull bool) (statusCode int, resp *dashboardIssues, err error) {
 	filterMode := database.FilterModeYourRepos
 	if !owner.IsOrganization() {
 		switch mode := database.FilterMode(c.Query("type")); mode {
@@ -304,10 +305,10 @@ func listDashboardIssues(c flamego.Context, viewer *database.User, owner *dashbo
 	if repoID > 0 {
 		repo, err := database.GetRepositoryByID(repoID)
 		if err != nil && !database.IsErrRepoNotExist(err) {
-			log.Error("listDashboardIssues: get repository %d: %v", repoID, err)
+			logger.Error("Failed to get repository", "repoID", repoID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "get repository")
 		}
-		if err != nil || (!repo.IsOwnedBy(owner.ID) && !repo.HasAccess(owner.ID)) {
+		if err != nil || (!repo.IsOwnedBy(owner.ID) && !repo.HasAccess(logger, owner.ID)) {
 			return http.StatusNotFound, nil, errors.New("repository does not exist")
 		}
 	}
@@ -324,13 +325,18 @@ func listDashboardIssues(c flamego.Context, viewer *database.User, owner *dashbo
 		})
 	}
 	if err != nil {
-		log.Error("listDashboardIssues: get repositories of user %d: %v", owner.ID, err)
+		logger.Error("Failed to get repositories of user", "userID", owner.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get repositories")
+	}
+	// A member of an organization only sees the repositories of the teams they
+	// are on, not every repository the organization owns.
+	if repoID > 0 && owner.IsOrganization() && !slices.ContainsFunc(repos, func(r *database.Repository) bool { return r.ID == repoID }) {
+		return http.StatusNotFound, nil, errors.New("repository does not exist")
 	}
 
 	dc, err := newDashboardContext(c.Request().Context(), viewer, owner)
 	if err != nil {
-		log.Error("listDashboardIssues: get context of user %d: %v", owner.ID, err)
+		logger.Error("Failed to get dashboard context of user", "userID", owner.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get context")
 	}
 	resp = &dashboardIssues{
@@ -368,7 +374,7 @@ func listDashboardIssues(c flamego.Context, viewer *database.User, owner *dashbo
 	if !isPull {
 		repoIDs, err = database.FilterRepositoryWithIssues(repoIDs)
 		if err != nil {
-			log.Error("listDashboardIssues: filter repositories with issues: %v", err)
+			logger.Error("Failed to filter repositories with issues", "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "filter repositories")
 		}
 	}
@@ -394,7 +400,7 @@ func listDashboardIssues(c flamego.Context, viewer *database.User, owner *dashbo
 	}
 	issues, err := database.Issues(opts)
 	if err != nil {
-		log.Error("listDashboardIssues: list issues of user %d: %v", owner.ID, err)
+		logger.Error("Failed to list issues of user", "userID", owner.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list issues")
 	}
 

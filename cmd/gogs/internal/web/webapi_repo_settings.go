@@ -9,7 +9,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
 	"github.com/go-macaron/i18n"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
@@ -45,7 +45,7 @@ func (rc *repoAdminContext) viewerCanManage(viewer *database.User, allowSiteAdmi
 // withRepoAdmin injects the repoAdminContext of the repository, which only its
 // admins and site admins can see. Like the server-rendered pages, the settings
 // of the repository are not found for others.
-func withRepoAdmin(c flamego.Context, repoCtx *repoContext) {
+func withRepoAdmin(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) {
 	w := c.ResponseWriter()
 	if !repoCtx.Viewer.CanAdminister() {
 		writeErrorResponse(w, http.StatusNotFound, errors.New("repository does not exist"))
@@ -53,7 +53,7 @@ func withRepoAdmin(c flamego.Context, repoCtx *repoContext) {
 	}
 	repo, err := database.GetRepositoryByID(repoCtx.Repo.ID)
 	if err != nil {
-		log.Error("withRepoAdmin: get repository %d: %v", repoCtx.Repo.ID, err)
+		logger.Error("Failed to get repository", "repoID", repoCtx.Repo.ID, "error", err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "get repository"))
 		return
 	}
@@ -84,7 +84,15 @@ type repoAdvancedSettings struct {
 	ExternalTrackerStyle  string `json:"externalTrackerStyle" validate:"omitempty,oneof=numeric alphanumeric"`
 	EnablePulls           bool   `json:"enablePulls"`
 	PullsIgnoreWhitespace bool   `json:"pullsIgnoreWhitespace"`
+	PullsAllowMerge       bool   `json:"pullsAllowMerge"`
 	PullsAllowRebase      bool   `json:"pullsAllowRebase"`
+	PullsAllowSquash      bool   `json:"pullsAllowSquash"`
+	PullsDeleteBranch     bool   `json:"pullsDeleteBranch"`
+	// PullsMergeMessage and PullsSquashMessage are the presets of the
+	// messages merge commits and squashing start with, empty for the
+	// default message.
+	PullsMergeMessage  string `json:"pullsMergeMessage" validate:"omitempty,oneof=title title_description"`
+	PullsSquashMessage string `json:"pullsSquashMessage" validate:"omitempty,oneof=title title_description title_commits"`
 }
 
 type repoSettings struct {
@@ -114,7 +122,7 @@ type repoSettings struct {
 	ViewerCanEditGitHooks bool `json:"viewerCanEditGitHooks"`
 }
 
-func getRepoSettings(viewer *database.User, rc *repoAdminContext) (statusCode int, resp any, err error) {
+func getRepoSettings(logger *logx.Logger, viewer *database.User, rc *repoAdminContext) (statusCode int, resp any, err error) {
 	repo := rc.Repo
 	avatarURL := repo.RelAvatarLink()
 	settings := &repoSettings{
@@ -140,7 +148,12 @@ func getRepoSettings(viewer *database.User, rc *repoAdminContext) (statusCode in
 			ExternalTrackerStyle:  repo.ExternalTrackerStyle,
 			EnablePulls:           repo.EnablePulls,
 			PullsIgnoreWhitespace: repo.PullsIgnoreWhitespace,
+			PullsAllowMerge:       repo.PullsAllowMerge,
 			PullsAllowRebase:      repo.PullsAllowRebase,
+			PullsAllowSquash:      repo.PullsAllowSquash,
+			PullsDeleteBranch:     repo.PullsDeleteBranch,
+			PullsMergeMessage:     repo.PullsMergeMessage,
+			PullsSquashMessage:    repo.PullsSquashMessage,
 		},
 		CanEnablePulls:        repo.CanEnablePulls(),
 		OwnerIsOrganization:   rc.Owner.IsOrganization(),
@@ -154,7 +167,7 @@ func getRepoSettings(viewer *database.User, rc *repoAdminContext) (statusCode in
 	if repo.IsMirror {
 		mirror, err := database.GetMirrorByRepoID(repo.ID)
 		if err != nil {
-			log.Error("getRepoSettings: get mirror of repository %d: %v", repo.ID, err)
+			logger.Error("Failed to get mirror", "repoID", repo.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "get mirror")
 		}
 		settings.Mirror = &repoMirrorSettings{
@@ -184,7 +197,7 @@ type repoNameResponse struct {
 
 // patchRepoSettings renames the repository and changes its description,
 // website and visibility.
-func patchRepoSettings(c flamego.Context, l i18n.Locale, viewer *database.User, rc *repoAdminContext, req repoSettingsRequest) (statusCode int, resp any, err error) {
+func patchRepoSettings(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, rc *repoAdminContext, req repoSettingsRequest) (statusCode int, resp any, err error) {
 	repo := rc.Repo
 	oldName := repo.Name
 	renamed := repo.LowerName != strings.ToLower(req.RepoName)
@@ -199,7 +212,7 @@ func patchRepoSettings(c flamego.Context, l i18n.Locale, viewer *database.User, 
 				msg = l.Tr("repo.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value())
 				return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"name": &msg}}, nil
 			}
-			log.Error("patchRepoSettings: rename repository %d to %q: %v", repo.ID, req.RepoName, err)
+			logger.Error("Failed to rename repository", "repoID", repo.ID, "newName", req.RepoName, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "rename repository")
 		}
 	}
@@ -214,45 +227,45 @@ func patchRepoSettings(c flamego.Context, l i18n.Locale, viewer *database.User, 
 	}
 	visibilityChanged := repo.IsPrivate != private || repo.IsUnlisted != unlisted
 	repo.IsPrivate, repo.IsUnlisted = private, unlisted
-	if err = database.UpdateRepository(repo, visibilityChanged); err != nil {
-		log.Error("patchRepoSettings: update repository %d: %v", repo.ID, err)
+	if err = database.UpdateRepository(logger, repo, visibilityChanged); err != nil {
+		logger.Error("Failed to update repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update repository")
 	}
 
 	if renamed {
 		if err := database.Handle.Actions().RenameRepo(c.Request().Context(), viewer, rc.Owner, oldName, repo); err != nil {
-			log.Error("patchRepoSettings: create rename action of repository %d: %v", repo.ID, err)
+			logger.Error("Failed to create rename action", "repoID", repo.ID, "error", err)
 		}
 	}
 	return http.StatusOK, &repoNameResponse{Owner: rc.Owner.Name, Name: repo.Name}, nil
 }
 
-func putRepoAvatar(c flamego.Context, l i18n.Locale, rc *repoAdminContext) (statusCode int, resp any, err error) {
+func putRepoAvatar(c flamego.Context, logger *logx.Logger, l i18n.Locale, rc *repoAdminContext) (statusCode int, resp any, err error) {
 	data, code, err := readAvatarUpload(c.Request().Request, l)
 	if err != nil {
 		if code == http.StatusInternalServerError {
-			log.Error("putRepoAvatar: repository %d: %v", rc.Repo.ID, err)
+			logger.Error("Failed to read avatar upload", "repoID", rc.Repo.ID, "error", err)
 		}
 		return code, nil, err
 	}
 	if err = rc.Repo.UploadAvatar(data); err != nil {
-		log.Error("putRepoAvatar: save avatar of repository %d: %v", rc.Repo.ID, err)
+		logger.Error("Failed to save avatar", "repoID", rc.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "save avatar")
 	}
 	rc.Repo.UseCustomAvatar = true
-	if err = database.UpdateRepository(rc.Repo, false); err != nil {
-		log.Error("putRepoAvatar: update repository %d: %v", rc.Repo.ID, err)
+	if err = database.UpdateRepository(logger, rc.Repo, false); err != nil {
+		logger.Error("Failed to update repository", "repoID", rc.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update repository")
 	}
 	return http.StatusNoContent, nil, nil
 }
 
-func deleteRepoAvatar(rc *repoAdminContext) (statusCode int, resp any, err error) {
+func deleteRepoAvatar(logger *logx.Logger, rc *repoAdminContext) (statusCode int, resp any, err error) {
 	if rc.Repo.RelAvatarLink() == "" {
 		return http.StatusNoContent, nil, nil
 	}
-	if err = rc.Repo.DeleteAvatar(); err != nil {
-		log.Error("deleteRepoAvatar: delete avatar of repository %d: %v", rc.Repo.ID, err)
+	if err = rc.Repo.DeleteAvatar(logger); err != nil {
+		logger.Error("Failed to delete avatar", "repoID", rc.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete avatar")
 	}
 	return http.StatusNoContent, nil, nil
@@ -265,14 +278,14 @@ type repoMirrorRequest struct {
 }
 
 // putRepoMirror changes where and how often a mirror syncs from.
-func putRepoMirror(r *http.Request, l i18n.Locale, viewer *database.User, rc *repoAdminContext, req repoMirrorRequest) (statusCode int, resp any, err error) {
+func putRepoMirror(r *http.Request, logger *logx.Logger, l i18n.Locale, viewer *database.User, rc *repoAdminContext, req repoMirrorRequest) (statusCode int, resp any, err error) {
 	repo := rc.Repo
 	if !repo.IsMirror {
 		return http.StatusNotFound, nil, errors.New("repository is not a mirror")
 	}
 	mirror, err := database.GetMirrorByRepoID(repo.ID)
 	if err != nil {
-		log.Error("putRepoMirror: get mirror of repository %d: %v", repo.ID, err)
+		logger.Error("Failed to get mirror", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get mirror")
 	}
 
@@ -283,7 +296,7 @@ func putRepoMirror(r *http.Request, l i18n.Locale, viewer *database.User, rc *re
 		mirror.Interval = req.Interval
 		mirror.NextSync = time.Now().Add(time.Duration(req.Interval) * time.Hour)
 		if err = database.UpdateMirror(mirror); err != nil {
-			log.Error("putRepoMirror: update mirror of repository %d: %v", repo.ID, err)
+			logger.Error("Failed to update mirror", "repoID", repo.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "update mirror")
 		}
 	}
@@ -295,13 +308,13 @@ func putRepoMirror(r *http.Request, l i18n.Locale, viewer *database.User, rc *re
 	if err != nil {
 		code, msg, ok := cloneAddrError(l, l.Tr("repo.mirror_address"), err)
 		if !ok {
-			log.Error("putRepoMirror: parse remote address: %v", err)
+			logger.Error("Failed to parse remote address", "repoID", repo.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "parse remote address")
 		}
 		return code, &bindingErrorResponse{Fields: fieldErrors{"address": &msg}}, nil
 	}
 	if err = mirror.SaveAddress(r.Context(), remoteAddr); err != nil {
-		log.Error("putRepoMirror: save address of mirror %d: %v", repo.ID, err)
+		logger.Error("Failed to save mirror address", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "save address")
 	}
 	return http.StatusNoContent, nil, nil
@@ -319,7 +332,10 @@ func postRepoMirrorSync(rc *repoAdminContext) (statusCode int, resp any, err err
 
 // putRepoAdvanced turns the wiki, the issues and the pull requests of the
 // repository on or off.
-func putRepoAdvanced(rc *repoAdminContext, req repoAdvancedSettings) (statusCode int, resp any, err error) {
+func putRepoAdvanced(logger *logx.Logger, l i18n.Locale, rc *repoAdminContext, req repoAdvancedSettings) (statusCode int, resp any, err error) {
+	if req.EnablePulls && !req.PullsAllowMerge && !req.PullsAllowSquash && !req.PullsAllowRebase {
+		return http.StatusUnprocessableEntity, &bindingErrorResponse{Error: l.Tr("repo.settings.pulls.no_merge_method")}, nil
+	}
 	repo := rc.Repo
 	repo.EnableWiki = req.EnableWiki
 	repo.AllowPublicWiki = req.AllowPublicWiki && req.EnableWiki && !req.EnableExternalWiki
@@ -333,9 +349,14 @@ func putRepoAdvanced(rc *repoAdminContext, req repoAdvancedSettings) (statusCode
 	repo.ExternalTrackerStyle = req.ExternalTrackerStyle
 	repo.EnablePulls = req.EnablePulls
 	repo.PullsIgnoreWhitespace = req.PullsIgnoreWhitespace
+	repo.PullsAllowMerge = req.PullsAllowMerge
 	repo.PullsAllowRebase = req.PullsAllowRebase
-	if err = database.UpdateRepository(repo, false); err != nil {
-		log.Error("putRepoAdvanced: update repository %d: %v", repo.ID, err)
+	repo.PullsAllowSquash = req.PullsAllowSquash
+	repo.PullsDeleteBranch = req.PullsDeleteBranch
+	repo.PullsMergeMessage = req.PullsMergeMessage
+	repo.PullsSquashMessage = req.PullsSquashMessage
+	if err = database.UpdateRepository(logger, repo, false); err != nil {
+		logger.Error("Failed to update repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update repository")
 	}
 	return http.StatusNoContent, nil, nil
@@ -358,7 +379,7 @@ func confirmRepoName(l i18n.Locale, repo *database.Repository, name string) *bin
 }
 
 // postRepoConvert turns a mirror into a regular repository.
-func postRepoConvert(l i18n.Locale, viewer *database.User, rc *repoAdminContext, req repoConfirmRequest) (statusCode int, resp any, err error) {
+func postRepoConvert(logger *logx.Logger, l i18n.Locale, viewer *database.User, rc *repoAdminContext, req repoConfirmRequest) (statusCode int, resp any, err error) {
 	repo := rc.Repo
 	if !rc.viewerCanManage(viewer, false) || !repo.IsMirror {
 		return http.StatusNotFound, nil, errors.New("repository does not exist")
@@ -368,12 +389,12 @@ func postRepoConvert(l i18n.Locale, viewer *database.User, rc *repoAdminContext,
 	}
 
 	repo.IsMirror = false
-	if _, err = database.CleanUpMigrateInfo(repo); err != nil {
-		log.Error("postRepoConvert: clean up migration of repository %d: %v", repo.ID, err)
+	if _, err = database.CleanUpMigrateInfo(logger, repo); err != nil {
+		logger.Error("Failed to clean up migrate info", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "clean up migrate info")
 	}
 	if err = database.DeleteMirrorByRepoID(repo.ID); err != nil {
-		log.Error("postRepoConvert: delete mirror of repository %d: %v", repo.ID, err)
+		logger.Error("Failed to delete mirror", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete mirror")
 	}
 	return http.StatusNoContent, nil, nil
@@ -385,7 +406,7 @@ type repoTransferRequest struct {
 }
 
 // postRepoTransfer gives the repository to another user or organization.
-func postRepoTransfer(c flamego.Context, l i18n.Locale, viewer *database.User, rc *repoAdminContext, req repoTransferRequest) (statusCode int, resp any, err error) {
+func postRepoTransfer(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, rc *repoAdminContext, req repoTransferRequest) (statusCode int, resp any, err error) {
 	repo := rc.Repo
 	if !rc.viewerCanManage(viewer, true) {
 		return http.StatusNotFound, nil, errors.New("repository does not exist")
@@ -403,14 +424,14 @@ func postRepoTransfer(c flamego.Context, l i18n.Locale, viewer *database.User, r
 			msg := l.Tr("repo.settings.new_owner_has_same_repo")
 			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"newOwner": &msg}}, nil
 		}
-		log.Error("postRepoTransfer: transfer repository %d to %q: %v", repo.ID, req.NewOwner, err)
+		logger.Error("Failed to transfer repository", "repoID", repo.ID, "newOwnerName", req.NewOwner, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "transfer ownership")
 	}
 	return http.StatusOK, &repoNameResponse{Owner: repo.Owner.Name, Name: repo.Name}, nil
 }
 
 // deleteRepo deletes the repository with everything in it.
-func deleteRepo(l i18n.Locale, viewer *database.User, rc *repoAdminContext, req repoConfirmRequest) (statusCode int, resp any, err error) {
+func deleteRepo(logger *logx.Logger, l i18n.Locale, viewer *database.User, rc *repoAdminContext, req repoConfirmRequest) (statusCode int, resp any, err error) {
 	repo := rc.Repo
 	if !rc.viewerCanManage(viewer, true) {
 		return http.StatusNotFound, nil, errors.New("repository does not exist")
@@ -418,15 +439,15 @@ func deleteRepo(l i18n.Locale, viewer *database.User, rc *repoAdminContext, req 
 	if resp := confirmRepoName(l, repo, req.RepoName); resp != nil {
 		return http.StatusBadRequest, resp, nil
 	}
-	if err = database.DeleteRepository(rc.Owner.ID, repo.ID); err != nil {
-		log.Error("deleteRepo: delete repository %d: %v", repo.ID, err)
+	if err = database.DeleteRepository(logger, rc.Owner.ID, repo.ID); err != nil {
+		logger.Error("Failed to delete repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete repository")
 	}
 	return http.StatusNoContent, nil, nil
 }
 
 // deleteRepoWiki erases the wiki of the repository and turns it off.
-func deleteRepoWiki(l i18n.Locale, viewer *database.User, rc *repoAdminContext, req repoConfirmRequest) (statusCode int, resp any, err error) {
+func deleteRepoWiki(logger *logx.Logger, l i18n.Locale, viewer *database.User, rc *repoAdminContext, req repoConfirmRequest) (statusCode int, resp any, err error) {
 	repo := rc.Repo
 	if !rc.viewerCanManage(viewer, true) {
 		return http.StatusNotFound, nil, errors.New("repository does not exist")
@@ -434,10 +455,10 @@ func deleteRepoWiki(l i18n.Locale, viewer *database.User, rc *repoAdminContext, 
 	if resp := confirmRepoName(l, repo, req.RepoName); resp != nil {
 		return http.StatusBadRequest, resp, nil
 	}
-	repo.DeleteWiki()
+	repo.DeleteWiki(logger)
 	repo.EnableWiki = false
-	if err = database.UpdateRepository(repo, false); err != nil {
-		log.Error("deleteRepoWiki: update repository %d: %v", repo.ID, err)
+	if err = database.UpdateRepository(logger, repo, false); err != nil {
+		logger.Error("Failed to update repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update repository")
 	}
 	return http.StatusNoContent, nil, nil
@@ -455,10 +476,10 @@ type repoCollaborators struct {
 	Items []repoCollaborator `json:"items"`
 }
 
-func getRepoCollaborators(rc *repoAdminContext) (statusCode int, resp any, err error) {
+func getRepoCollaborators(logger *logx.Logger, rc *repoAdminContext) (statusCode int, resp any, err error) {
 	collaborators, err := rc.Repo.GetCollaborators()
 	if err != nil {
-		log.Error("getRepoCollaborators: list collaborators of repository %d: %v", rc.Repo.ID, err)
+		logger.Error("Failed to list collaborators", "repoID", rc.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get collaborators")
 	}
 	items := make([]repoCollaborator, 0, len(collaborators))
@@ -479,7 +500,7 @@ type repoCollaboratorRequest struct {
 
 // postRepoCollaborator gives a user write access to the repository. Adding the
 // owner or an existing collaborator changes nothing.
-func postRepoCollaborator(c flamego.Context, l i18n.Locale, viewer *database.User, rc *repoAdminContext, req repoCollaboratorRequest) (statusCode int, resp any, err error) {
+func postRepoCollaborator(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, rc *repoAdminContext, req repoCollaboratorRequest) (statusCode int, resp any, err error) {
 	if strings.EqualFold(req.Username, rc.Owner.Name) {
 		return http.StatusNoContent, nil, nil
 	}
@@ -489,7 +510,7 @@ func postRepoCollaborator(c flamego.Context, l i18n.Locale, viewer *database.Use
 			msg := l.Tr("form.user_not_exist")
 			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"username": &msg}}, nil
 		}
-		log.Error("postRepoCollaborator: get user %q: %v", req.Username, err)
+		logger.Error("Failed to get user", "userName", req.Username, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user")
 	}
 	if u.IsOrganization() {
@@ -498,12 +519,12 @@ func postRepoCollaborator(c flamego.Context, l i18n.Locale, viewer *database.Use
 	}
 
 	if err = rc.Repo.AddCollaborator(u); err != nil {
-		log.Error("postRepoCollaborator: add user %d to repository %d: %v", u.ID, rc.Repo.ID, err)
+		logger.Error("Failed to add collaborator", "collaboratorID", u.ID, "repoID", rc.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "add collaborator")
 	}
 	if conf.User.EnableEmailNotification {
-		if err := email.SendCollaboratorMail(database.NewMailerUser(u), database.NewMailerUser(viewer), database.NewMailerRepo(rc.Repo)); err != nil {
-			log.Error("postRepoCollaborator: send collaborator mail to user %d: %v", u.ID, err)
+		if err := email.SendCollaboratorMail(logger, database.NewMailerUser(u), database.NewMailerUser(viewer), database.NewMailerRepo(rc.Repo)); err != nil {
+			logger.Error("Failed to send collaborator mail", "collaboratorID", u.ID, "error", err)
 		}
 	}
 	return http.StatusCreated, nil, nil
@@ -511,13 +532,13 @@ func postRepoCollaborator(c flamego.Context, l i18n.Locale, viewer *database.Use
 
 // repoCollaboratorUser returns the user named in the route, or the status
 // code and the error to answer with.
-func repoCollaboratorUser(c flamego.Context, caller string) (_ *database.User, statusCode int, err error) {
+func repoCollaboratorUser(c flamego.Context, logger *logx.Logger) (_ *database.User, statusCode int, err error) {
 	u, err := database.Handle.Users().GetByUsername(c.Request().Context(), c.Param("username"))
 	if err != nil {
 		if database.IsErrUserNotExist(err) {
 			return nil, http.StatusNotFound, errors.New("user does not exist")
 		}
-		log.Error("%s: get user %q: %v", caller, c.Param("username"), err)
+		logger.Error("Failed to get user", "userName", c.Param("username"), "error", err)
 		return nil, http.StatusInternalServerError, errors.Wrap(err, "get user")
 	}
 	return u, http.StatusOK, nil
@@ -529,34 +550,34 @@ type repoCollaboratorModeRequest struct {
 
 // patchRepoCollaborator changes the access of a collaborator, up to the access
 // of the viewer.
-func patchRepoCollaborator(c flamego.Context, rc *repoAdminContext, req repoCollaboratorModeRequest) (statusCode int, resp any, err error) {
-	u, code, err := repoCollaboratorUser(c, "patchRepoCollaborator")
+func patchRepoCollaborator(c flamego.Context, logger *logx.Logger, rc *repoAdminContext, req repoCollaboratorModeRequest) (statusCode int, resp any, err error) {
+	u, code, err := repoCollaboratorUser(c, logger)
 	if err != nil {
 		return code, nil, err
 	}
 	if err = rc.Repo.ChangeCollaborationAccessMode(rc.viewerAccess, u.ID, database.ParseAccessMode(req.Mode)); err != nil {
-		log.Error("patchRepoCollaborator: change access of user %d to repository %d: %v", u.ID, rc.Repo.ID, err)
+		logger.Error("Failed to change collaboration access mode", "collaboratorID", u.ID, "repoID", rc.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "change collaboration access mode")
 	}
 	return http.StatusNoContent, nil, nil
 }
 
-func deleteRepoCollaborator(c flamego.Context, rc *repoAdminContext) (statusCode int, resp any, err error) {
-	u, code, err := repoCollaboratorUser(c, "deleteRepoCollaborator")
+func deleteRepoCollaborator(c flamego.Context, logger *logx.Logger, rc *repoAdminContext) (statusCode int, resp any, err error) {
+	u, code, err := repoCollaboratorUser(c, logger)
 	if err != nil {
 		return code, nil, err
 	}
-	if err = rc.Repo.DeleteCollaboration(u.ID); err != nil {
-		log.Error("deleteRepoCollaborator: remove user %d from repository %d: %v", u.ID, rc.Repo.ID, err)
+	if err = rc.Repo.DeleteCollaboration(logger, u.ID); err != nil {
+		logger.Error("Failed to delete collaboration", "collaboratorID", u.ID, "repoID", rc.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete collaboration")
 	}
 	return http.StatusNoContent, nil, nil
 }
 
-func getRepoDeployKeys(rc *repoAdminContext) (statusCode int, resp any, err error) {
+func getRepoDeployKeys(logger *logx.Logger, rc *repoAdminContext) (statusCode int, resp any, err error) {
 	keys, err := database.ListDeployKeys(rc.Repo.ID)
 	if err != nil {
-		log.Error("getRepoDeployKeys: list deploy keys of repository %d: %v", rc.Repo.ID, err)
+		logger.Error("Failed to list deploy keys", "repoID", rc.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list deploy keys")
 	}
 	items := make([]userSSHKey, 0, len(keys))
@@ -571,13 +592,13 @@ func getRepoDeployKeys(rc *repoAdminContext) (statusCode int, resp any, err erro
 }
 
 // postRepoDeployKey gives an SSH key read access to the repository.
-func postRepoDeployKey(l i18n.Locale, rc *repoAdminContext, req userSSHKeyRequest) (statusCode int, resp any, err error) {
-	content, err := database.CheckPublicKeyString(req.Content)
+func postRepoDeployKey(logger *logx.Logger, l i18n.Locale, rc *repoAdminContext, req userSSHKeyRequest) (statusCode int, resp any, err error) {
+	content, err := database.CheckPublicKeyString(logger, req.Content)
 	if err != nil {
 		msg := l.Tr("form.invalid_ssh_key", err.Error())
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
 	}
-	if _, err = database.AddDeployKey(rc.Repo.ID, req.SSHTitle, content); err != nil {
+	if _, err = database.AddDeployKey(logger, rc.Repo.ID, req.SSHTitle, content); err != nil {
 		var msg string
 		switch {
 		case database.IsErrKeyAlreadyExist(err), database.IsErrDeployKeyAlreadyExist(err):
@@ -587,7 +608,7 @@ func postRepoDeployKey(l i18n.Locale, rc *repoAdminContext, req userSSHKeyReques
 			msg = l.Tr("repo.settings.key_name_used")
 			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"title": &msg}}, nil
 		}
-		log.Error("postRepoDeployKey: add deploy key to repository %d: %v", rc.Repo.ID, err)
+		logger.Error("Failed to add deploy key", "repoID", rc.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "add deploy key")
 	}
 	return http.StatusCreated, nil, nil
@@ -595,21 +616,21 @@ func postRepoDeployKey(l i18n.Locale, rc *repoAdminContext, req userSSHKeyReques
 
 // deleteRepoDeployKey deletes a deploy key of the repository. Keys of other
 // repositories are not found.
-func deleteRepoDeployKey(c flamego.Context, viewer *database.User, rc *repoAdminContext) (statusCode int, resp any, err error) {
+func deleteRepoDeployKey(c flamego.Context, logger *logx.Logger, viewer *database.User, rc *repoAdminContext) (statusCode int, resp any, err error) {
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	key, err := database.GetDeployKeyByID(id)
 	if err != nil {
 		if database.IsErrDeployKeyNotExist(err) {
 			return http.StatusNotFound, nil, errors.New("key not found")
 		}
-		log.Error("deleteRepoDeployKey: get deploy key %d: %v", id, err)
+		logger.Error("Failed to get deploy key", "keyID", id, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get deploy key")
 	}
 	if key.RepoID != rc.Repo.ID {
 		return http.StatusNotFound, nil, errors.New("key not found")
 	}
-	if err = database.DeleteDeployKey(viewer, key.ID); err != nil {
-		log.Error("deleteRepoDeployKey: delete deploy key %d: %v", key.ID, err)
+	if err = database.DeleteDeployKey(logger, viewer, key.ID); err != nil {
+		logger.Error("Failed to delete deploy key", "keyID", key.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete deploy key")
 	}
 	return http.StatusNoContent, nil, nil

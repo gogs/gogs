@@ -321,6 +321,7 @@ export function RepoMilestoneEditor({
                 id="description"
                 label={t("repo.milestones.desc")}
                 lang="markdown"
+                repo={{ owner, name }}
                 disabled={save.isPending}
                 value={form.description}
                 onChange={(description) => setForm({ ...form, description })}
@@ -346,9 +347,7 @@ export function RepoMilestoneEditor({
               </div>
             ) : null}
             <div className="flex flex-wrap gap-2">
-              <Button type="submit" variant="outline">
-                {id ? t("repo.milestones.modify") : t("repo.milestones.create")}
-              </Button>
+              <Button type="submit">{id ? t("repo.milestones.modify") : t("repo.milestones.create")}</Button>
               <Button asChild variant="ghost">
                 <Link
                   to="/$owner/$repo/milestones"

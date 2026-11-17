@@ -415,9 +415,7 @@ function WebhookForm({ scope, type, hook }: { scope: WebhookScope; type: Webhook
           </div>
 
           <div className="flex flex-wrap items-center gap-2 border-t border-(--color-border) pt-5">
-            <Button type="submit" variant="outline">
-              {hook ? t("repo.settings.update_webhook") : t("repo.settings.add_webhook")}
-            </Button>
+            <Button type="submit">{hook ? t("repo.settings.update_webhook") : t("repo.settings.add_webhook")}</Button>
             {hook ? (
               <ConfirmButton
                 label={t("repo.settings.delete_webhook")}

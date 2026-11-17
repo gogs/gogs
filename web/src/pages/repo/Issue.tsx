@@ -1,40 +1,28 @@
-import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import { Link, useRouter } from "@tanstack/react-router";
-import {
-  Check,
-  CircleCheck,
-  CircleDot,
-  Download,
-  GitCommitHorizontal,
-  Paperclip,
-  Pencil,
-  Plus,
-  Settings,
-  Trash2,
-  X,
-} from "lucide-react";
-import { type FormEvent, type ReactNode, useEffect, useId, useRef, useState } from "react";
+import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
+import { Link, useRouter, useRouterState } from "@tanstack/react-router";
+import { CircleCheck, CircleDot, Download, GitCommitHorizontal, GitMerge, Pencil, Plus, Trash2 } from "lucide-react";
+import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { CodeEditor } from "@/components/CodeEditor";
 import { ConfirmButton } from "@/components/ConfirmButton";
+import { AttachFilesButton, IssueMeta, MarkdownEditor, SidebarSection } from "@/components/IssueForm";
 import { OpenedBy } from "@/components/IssueListItem";
 import { Markdown } from "@/components/Markdown";
 import { RepoHeader } from "@/components/RepoHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePageTitle } from "@/lib/page-title";
 import {
   type IssueAttachment,
+  type IssueAttachmentSettings,
   type IssueComment,
+  type IssueRef,
   type IssueUser,
   type RepoIssueData,
   createRepoIssueComment,
   deleteRepoIssueComment,
-  renderRepoMarkdown,
   repoHeaderQuery,
   setRepoIssueAssignee,
   setRepoIssueClosed,
@@ -42,21 +30,15 @@ import {
   setRepoIssueMilestone,
   updateRepoIssue,
   updateRepoIssueComment,
-  uploadRepoIssueAttachment,
 } from "@/lib/queries/repo";
 import { formErrors } from "@/lib/queries/request";
 import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
 import { subUrl } from "@/lib/url";
+import { linkedUploads, useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { useUserInfo } from "@/lib/use-user-info";
 import { cn } from "@/lib/utils";
 
 const LINK_CLASS = "hover:text-(--color-primary) hover:underline";
-
-interface IssueRef {
-  owner: string;
-  name: string;
-  index: number;
-}
 
 // useIssueChange makes a change to the issue and loads the page again.
 function useIssueChange<T>(change: (input: T) => Promise<unknown>) {
@@ -74,91 +56,150 @@ export function RepoIssue({ owner, name, data }: { owner: string; name: string; 
   const { t } = useTranslation();
   const { data: repo } = useSuspenseQuery(repoHeaderQuery(owner, name));
   usePageTitle(`${data.title} - ${t("issues")} - ${repo.owner}/${repo.name}`);
-  const ref = { owner: repo.owner, name: repo.name, index: data.index };
+  const ref: IssueRef = { owner: repo.owner, name: repo.name, kind: "issues", index: data.index };
   const commentCount = data.comments.filter((c) => c.type === "comment").length;
-  // The browser looks for the anchor of a link, e.g., to a comment, before
-  // the page renders, so scroll to it once it does.
-  useEffect(() => {
-    if (window.location.hash) document.getElementById(window.location.hash.slice(1))?.scrollIntoView();
-  }, []);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <RepoHeader repo={repo} activeTab="issues" />
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6">
-        <IssueTitle issueRef={ref} data={data} />
-        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-(--color-border) pb-4 text-sm text-(--color-muted-foreground)">
-          <span
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium",
-              data.isClosed
-                ? "bg-(--color-secondary) text-(--color-foreground)"
-                : "bg-(--color-success)/15 text-(--color-success)",
-            )}
-          >
-            {data.isClosed ? (
-              <CircleCheck className="size-4" aria-hidden />
-            ) : (
-              <CircleDot className="size-4" aria-hidden />
-            )}
-            {data.isClosed ? t("repo.issues.closed_title") : t("repo.issues.open_title")}
-          </span>
-          <span>
-            <OpenedBy issue={data} />
-            {" · "}
-            {t("repo.issues.num_comments").replace(/%(?:\[1\])?d/, String(commentCount))}
-          </span>
+        <div className="border-b border-(--color-border) pb-4">
+          <IssueHeader
+            issueRef={ref}
+            data={data}
+            state={data.isClosed ? "closed" : "open"}
+            summary={
+              <>
+                <OpenedBy issue={data} />
+                {" · "}
+                {t("repo.issues.num_comments").replace(/%(?:\[1\])?d/, String(commentCount))}
+              </>
+            }
+          />
         </div>
+        <IssueConversation issueRef={ref} data={data} className="mt-6" />
+      </main>
+    </div>
+  );
+}
 
-        <div className="mt-6 grid content-start gap-8 md:grid-cols-[minmax(0,1fr)_16rem]">
-          <div className="flex min-w-0 flex-col gap-4">
+const STATE_PILLS = {
+  open: {
+    icon: CircleDot,
+    label: "repo.issues.open_title",
+    className: "bg-(--color-success)/15 text-(--color-success)",
+  },
+  closed: {
+    icon: CircleCheck,
+    label: "repo.issues.closed_title",
+    className: "bg-(--color-secondary) text-(--color-foreground)",
+  },
+  merged: { icon: GitMerge, label: "repo.pulls.merged", className: "bg-(--color-merged)/15 text-(--color-merged)" },
+};
+
+// IssueHeader shows the title of an issue or a pull request, its state, and a
+// summary of it.
+export function IssueHeader({
+  issueRef,
+  data,
+  state,
+  summary,
+}: {
+  issueRef: IssueRef;
+  data: RepoIssueData;
+  state: keyof typeof STATE_PILLS;
+  summary: ReactNode;
+}) {
+  const { t } = useTranslation();
+  const pill = STATE_PILLS[state];
+  const Icon = pill.icon;
+  return (
+    <>
+      <IssueTitle issueRef={issueRef} data={data} />
+      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-(--color-muted-foreground)">
+        <span className={cn("inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium", pill.className)}>
+          <Icon className="size-4" aria-hidden />
+          {t(pill.label)}
+        </span>
+        <span className="min-w-0 wrap-anywhere">{summary}</span>
+      </div>
+    </>
+  );
+}
+
+// IssueConversation shows the content and the comments of an issue or a pull
+// request with the form to comment, and its sidebar. A pull request shows its
+// merge box before the form, and cannot be closed or reopened once merged.
+export function IssueConversation({
+  issueRef,
+  data,
+  mergeBox,
+  canChangeState = data.viewerCanEdit,
+  className,
+}: {
+  issueRef: IssueRef;
+  data: RepoIssueData;
+  mergeBox?: ReactNode;
+  canChangeState?: boolean;
+  className?: string;
+}) {
+  // The browser looks for the anchor of a link, e.g., to a comment, before
+  // the page renders, so scroll to it once it does.
+  useEffect(() => {
+    if (window.location.hash) document.getElementById(window.location.hash.slice(1))?.scrollIntoView();
+  }, []);
+  const ref = issueRef;
+
+  return (
+    <div className={cn("grid content-start gap-8 md:grid-cols-[minmax(0,1fr)_16rem]", className)}>
+      <div className="flex min-w-0 flex-col gap-4">
+        <CommentCard
+          issueRef={ref}
+          anchor={`issue-${data.index}`}
+          poster={data.poster}
+          createdAt={data.createdAt}
+          html={data.contentHTML}
+          attachments={data.attachments}
+          attachment={data.attachment}
+          edit={
+            data.viewerCanEdit
+              ? {
+                  content: data.content,
+                  save: (content, attachments) => updateRepoIssue(ref, { content, attachments }),
+                }
+              : undefined
+          }
+        />
+        {data.comments.map((comment) =>
+          comment.type === "comment" ? (
             <CommentCard
+              key={comment.id}
               issueRef={ref}
-              anchor={`issue-${data.index}`}
-              poster={data.poster}
-              createdAt={data.createdAt}
-              html={data.contentHTML}
-              attachments={data.attachments}
+              anchor={`issuecomment-${comment.id}`}
+              poster={comment.poster}
+              createdAt={comment.createdAt}
+              html={comment.contentHTML ?? ""}
+              tag={comment.tag}
+              attachments={comment.attachments ?? []}
+              attachment={data.attachment}
               edit={
-                data.viewerCanEdit
+                comment.viewerCanEdit
                   ? {
-                      content: data.content,
-                      save: (content) => updateRepoIssue(ref.owner, ref.name, ref.index, { content }),
+                      content: comment.content ?? "",
+                      save: (content, attachments) => updateRepoIssueComment(ref, comment.id, content, attachments),
+                      remove: () => deleteRepoIssueComment(ref, comment.id),
                     }
                   : undefined
               }
             />
-            {data.comments.map((comment) =>
-              comment.type === "comment" ? (
-                <CommentCard
-                  key={comment.id}
-                  issueRef={ref}
-                  anchor={`issuecomment-${comment.id}`}
-                  poster={comment.poster}
-                  createdAt={comment.createdAt}
-                  html={comment.contentHTML ?? ""}
-                  tag={comment.tag}
-                  attachments={comment.attachments ?? []}
-                  edit={
-                    comment.viewerCanEdit
-                      ? {
-                          content: comment.content ?? "",
-                          save: (content) =>
-                            updateRepoIssueComment(ref.owner, ref.name, ref.index, comment.id, content),
-                          remove: () => deleteRepoIssueComment(ref.owner, ref.name, ref.index, comment.id),
-                        }
-                      : undefined
-                  }
-                />
-              ) : (
-                <TimelineEvent key={comment.id} comment={comment} />
-              ),
-            )}
-            <NewComment issueRef={ref} data={data} />
-          </div>
-          <IssueSidebar issueRef={ref} data={data} />
-        </div>
-      </main>
+          ) : (
+            <TimelineEvent key={comment.id} comment={comment} />
+          ),
+        )}
+        {mergeBox}
+        <NewComment issueRef={ref} data={data} canChangeState={canChangeState} />
+      </div>
+      <IssueSidebar issueRef={ref} data={data} />
     </div>
   );
 }
@@ -171,7 +212,7 @@ function IssueTitle({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueDat
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(data.title);
   const mutation = useMutation({
-    mutationFn: () => updateRepoIssue(issueRef.owner, issueRef.name, issueRef.index, { title }),
+    mutationFn: () => updateRepoIssue(issueRef, { title }),
     onSuccess: async () => {
       await router.invalidate();
       setEditing(false);
@@ -243,26 +284,33 @@ function IssueTitle({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueDat
             {t("repo.issues.edit")}
           </Button>
         ) : null}
-        {/* Opening an issue is still served by the server-rendered pages. */}
-        <Button asChild size="sm">
-          <a href={subUrl(`/${issueRef.owner}/${issueRef.name}/issues/new`)}>
-            <Plus className="size-4" aria-hidden />
-            {t("repo.issues.new")}
-          </a>
-        </Button>
+        {issueRef.kind === "issues" ? (
+          <Button asChild size="sm">
+            <Link to="/$owner/$repo/issues/new" params={{ owner: issueRef.owner, repo: issueRef.name }}>
+              <Plus className="size-4" aria-hidden />
+              {t("repo.issues.new")}
+            </Link>
+          </Button>
+        ) : null}
       </div>
     </div>
   );
 }
 
 // UserLink links to the profile of a user, except for deleted users.
-function UserLink({ user, className, children }: { user: IssueUser; className?: string; children: ReactNode }) {
+export function UserLink({ user, className, children }: { user: IssueUser; className?: string; children: ReactNode }) {
   if (user.isGhost) return <span className={className}>{children}</span>;
   return (
     <Link to="/$username" params={{ username: user.name }} className={className}>
       {children}
     </Link>
   );
+}
+
+// useIsLinked reports whether the URL links to the anchor, e.g., to a comment,
+// which is then highlighted like on GitHub.
+function useIsLinked(anchor: string) {
+  return useRouterState({ select: (state) => state.location.hash === anchor });
 }
 
 // EventSentence renders a translated sentence about something that happened,
@@ -300,6 +348,7 @@ function CommentCard({
   html,
   tag,
   attachments,
+  attachment,
   edit,
 }: {
   issueRef: IssueRef;
@@ -308,14 +357,22 @@ function CommentCard({
   createdAt: string;
   html: string;
   tag?: IssueComment["tag"];
+  // attachments are the files the content does not link to, listed after it.
   attachments: IssueAttachment[];
-  // edit saves the content, and remove deletes the comment, for viewers who
-  // can change it.
-  edit?: { content: string; save: (content: string) => Promise<void>; remove?: () => Promise<void> };
+  // attachment is how files are added while editing.
+  attachment?: IssueAttachmentSettings;
+  // edit saves the content with the files uploaded while editing, and remove
+  // deletes the comment, for viewers who can change it.
+  edit?: {
+    content: string;
+    save: (content: string, attachments: string[]) => Promise<void>;
+    remove?: () => Promise<void>;
+  };
 }) {
   const { t } = useTranslation();
   const router = useRouter();
   const [editing, setEditing] = useState(false);
+  const linked = useIsLinked(anchor);
   const tagLabel = {
     owner: t("repo.issues.owner"),
     writer: t("repo.issues.collaborator"),
@@ -327,7 +384,12 @@ function CommentCard({
       <UserLink user={poster} className="hidden shrink-0 sm:block">
         <img src={poster.avatarURL} alt="" className="size-10 rounded-full border border-(--color-border)" />
       </UserLink>
-      <div className="min-w-0 flex-1 rounded-md border border-(--color-border)">
+      <div
+        className={cn(
+          "min-w-0 flex-1 rounded-md border",
+          linked ? "border-(--color-primary) ring-2 ring-(--color-primary)/30" : "border-(--color-border)",
+        )}
+      >
         <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 rounded-t-md border-b border-(--color-border) bg-(--color-surface) py-1 pr-1 pl-3 text-sm">
           <p className="min-w-0 py-1 text-(--color-muted-foreground) wrap-anywhere">
             <UserLink user={poster} className="font-semibold text-(--color-foreground) hover:underline">
@@ -373,6 +435,7 @@ function CommentCard({
         {editing && edit ? (
           <ContentEditor
             issueRef={issueRef}
+            attachment={attachment}
             initial={edit.content}
             save={edit.save}
             onClose={() => setEditing(false)}
@@ -431,20 +494,23 @@ function AttachmentList({ attachments, className }: { attachments: IssueAttachme
 // ContentEditor edits the content of the issue or a comment in place.
 function ContentEditor({
   issueRef,
+  attachment,
   initial,
   save,
   onClose,
 }: {
   issueRef: IssueRef;
+  attachment?: IssueAttachmentSettings;
   initial: string;
-  save: (content: string) => Promise<void>;
+  save: (content: string, attachments: string[]) => Promise<void>;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
   const router = useRouter();
   const [content, setContent] = useState(initial);
+  const uploads = useAttachmentUploads(issueRef.owner, issueRef.name, attachment);
   const mutation = useMutation({
-    mutationFn: () => save(content),
+    mutationFn: () => save(content, linkedUploads(uploads.uploaded, content)),
     onSuccess: async () => {
       await router.invalidate();
       onClose();
@@ -460,126 +526,29 @@ function ContentEditor({
     <form onSubmit={onSubmit} className="p-3">
       <fieldset disabled={mutation.isPending} className="contents">
         <MarkdownEditor
-          issueRef={issueRef}
+          repo={issueRef}
           label={t("repo.issues.edit")}
           value={content}
           onChange={setContent}
           error={fields.content ?? formError}
           autoFocus
           disabled={mutation.isPending}
+          uploads={uploads}
+          linkFiles
         />
-        <div className="mt-3 flex justify-end gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={onClose}>
-            {t("repo.issues.cancel")}
-          </Button>
-          <Button type="submit" size="sm">
-            {t("repo.issues.save")}
-          </Button>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+          <AttachFilesButton uploads={uploads} />
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={onClose}>
+              {t("repo.issues.cancel")}
+            </Button>
+            <Button type="submit" size="sm" disabled={uploads.uploading}>
+              {t("repo.issues.save")}
+            </Button>
+          </div>
         </div>
       </fieldset>
     </form>
-  );
-}
-
-// MarkdownEditor is a text area for Markdown with a tab that previews it the
-// way the server renders it.
-function MarkdownEditor({
-  issueRef,
-  label,
-  value,
-  onChange,
-  error,
-  autoFocus,
-  disabled,
-  onFiles,
-}: {
-  issueRef: IssueRef;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  error?: string | null;
-  autoFocus?: boolean;
-  disabled?: boolean;
-  // onFiles attaches the files pasted or dropped into the editor.
-  onFiles?: (files: FileList) => void;
-}) {
-  const { t } = useTranslation();
-  const id = useId();
-  const [tab, setTab] = useState<"write" | "preview">("write");
-  const preview = useQuery({
-    queryKey: ["markdown", issueRef.owner, issueRef.name, value],
-    queryFn: () => renderRepoMarkdown(issueRef.owner, issueRef.name, value),
-    enabled: tab === "preview" && value.trim() !== "",
-    staleTime: Infinity,
-  });
-  const tabs = [
-    { key: "write", label: t("repo.release.write") },
-    { key: "preview", label: t("repo.release.preview") },
-  ] as const;
-
-  return (
-    <div>
-      <div role="tablist" aria-label={label} className="mb-2 flex gap-1">
-        {tabs.map((item) => (
-          <button
-            key={item.key}
-            type="button"
-            role="tab"
-            id={`${id}-${item.key}-tab`}
-            aria-selected={tab === item.key}
-            aria-controls={`${id}-${item.key}`}
-            onClick={() => setTab(item.key)}
-            className={cn(
-              "cursor-pointer rounded-md px-3 py-1.5 text-sm",
-              tab === item.key
-                ? "bg-(--color-surface) font-semibold text-(--color-foreground)"
-                : "text-(--color-muted-foreground) hover:text-(--color-foreground)",
-            )}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-      {tab === "write" ? (
-        <div role="tabpanel" id={`${id}-write`} aria-labelledby={`${id}-write-tab`}>
-          <CodeEditor
-            id={`${id}-input`}
-            label={label}
-            lang="markdown"
-            value={value}
-            onChange={onChange}
-            autoFocus={autoFocus}
-            disabled={disabled}
-            onFiles={onFiles}
-            aria-invalid={Boolean(error) || undefined}
-            aria-describedby={error ? `${id}-error` : undefined}
-          />
-          {error ? (
-            <p id={`${id}-error`} className="mt-1.5 text-sm text-(--color-destructive)">
-              {error}
-            </p>
-          ) : null}
-        </div>
-      ) : (
-        <div
-          role="tabpanel"
-          id={`${id}-preview`}
-          aria-labelledby={`${id}-preview-tab`}
-          aria-busy={preview.isFetching}
-          className="min-h-32 rounded-md border border-(--color-border) px-4 py-3"
-        >
-          {value.trim() === "" ? (
-            <p className="text-sm text-(--color-muted-foreground) italic">{t("repo.issues.no_content")}</p>
-          ) : preview.data !== undefined ? (
-            <Markdown html={preview.data} />
-          ) : preview.isError ? (
-            <p className="text-sm text-(--color-destructive)">{preview.error.message}</p>
-          ) : (
-            <p className="text-sm text-(--color-muted-foreground)">{t("repo.release.loading")}</p>
-          )}
-        </div>
-      )}
-    </div>
   );
 }
 
@@ -588,6 +557,7 @@ function MarkdownEditor({
 function TimelineEvent({ comment }: { comment: IssueComment }) {
   const { t } = useTranslation();
   const anchor = `event-${comment.id}`;
+  const linked = useIsLinked(anchor);
   const event = {
     reopen: { icon: CircleDot, text: t("repo.issues.reopened_at"), className: "text-(--color-success)" },
     close: { icon: CircleCheck, text: t("repo.issues.closed_at"), className: "text-(--color-destructive)" },
@@ -602,7 +572,15 @@ function TimelineEvent({ comment }: { comment: IssueComment }) {
   const Icon = event.icon;
 
   return (
-    <div id={anchor} className="flex scroll-mt-4 gap-3 text-sm sm:pl-3">
+    <div
+      id={anchor}
+      className={cn(
+        // The padding leaves room inside the highlight. The negative margins
+        // keep the event where it is otherwise.
+        "-my-1 -ml-1 flex scroll-mt-4 gap-3 rounded-md py-1 pr-2 pl-1 text-sm sm:ml-0 sm:pl-3",
+        linked && "outline outline-(--color-primary) ring-2 ring-(--color-primary)/30",
+      )}
+    >
       <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-(--color-surface)">
         <Icon className={cn("size-4", event.className)} aria-hidden />
       </span>
@@ -630,21 +608,22 @@ function TimelineEvent({ comment }: { comment: IssueComment }) {
   );
 }
 
-interface PendingFile {
-  key: string;
-  name: string;
-  // uuid is set once the file is uploaded.
-  uuid?: string;
-}
-
 // NewComment is the form to comment on the issue, and to close or reopen it,
 // or asks unauthenticated visitors to sign in.
-function NewComment({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueData }) {
+function NewComment({
+  issueRef,
+  data,
+  canChangeState,
+}: {
+  issueRef: IssueRef;
+  data: RepoIssueData;
+  canChangeState: boolean;
+}) {
   const { t } = useTranslation();
   const router = useRouter();
   const user = useUserInfo();
   const [content, setContent] = useState("");
-  const [files, setFiles] = useState<PendingFile[]>([]);
+  const uploads = useAttachmentUploads(issueRef.owner, issueRef.name, data.attachment);
   // round starts the editor over after each comment, e.g., back on its write
   // tab.
   const [round, setRound] = useState(0);
@@ -657,26 +636,25 @@ function NewComment({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueDat
       newAnchor.current = null;
     }
   }, [data]);
-  const fileInput = useRef<HTMLInputElement>(null);
-  const uploaded = files.flatMap((f) => (f.uuid ? [f.uuid] : []));
-  const uploading = files.length !== uploaded.length;
-  const hasComment = content.trim() !== "" || uploaded.length > 0;
+  const { uploaded, uploading } = uploads;
+  // Files are linked in the content, so a comment is never only files.
+  const hasComment = content.trim() !== "";
 
   const mutation = useMutation({
     mutationFn: async (changeState: boolean) => {
       let id: number | undefined;
       if (hasComment) {
-        ({ id } = await createRepoIssueComment(issueRef.owner, issueRef.name, issueRef.index, {
+        ({ id } = await createRepoIssueComment(issueRef, {
           content,
-          attachments: uploaded,
+          attachments: linkedUploads(uploaded, content),
         }));
       }
-      if (changeState) await setRepoIssueClosed(issueRef.owner, issueRef.name, issueRef.index, !data.isClosed);
+      if (changeState) await setRepoIssueClosed(issueRef, !data.isClosed);
       return id;
     },
     onSuccess: async (id) => {
       setContent("");
-      setFiles([]);
+      uploads.clear();
       setRound((n) => n + 1);
       await router.invalidate();
       // Show the new comment, like the server-rendered page did.
@@ -709,31 +687,6 @@ function NewComment({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueDat
     );
   }
 
-  const attachment = data.attachment;
-  const addFiles = (list: FileList) => {
-    if (!attachment) return;
-    const room = attachment.maxFiles - files.length;
-    for (const file of Array.from(list).slice(0, Math.max(room, 0))) {
-      if (file.size > attachment.maxSize) {
-        toast.error(
-          t("dropzone.file_too_big", {
-            filesize: (file.size / (1 << 20)).toFixed(1),
-            maxFilesize: attachment.maxSize / (1 << 20),
-          }),
-        );
-        continue;
-      }
-      const key = crypto.randomUUID();
-      setFiles((prev) => [...prev, { key, name: file.name }]);
-      uploadRepoIssueAttachment(issueRef.owner, issueRef.name, file).then(
-        (uuid) => setFiles((prev) => prev.map((f) => (f.key === key ? { ...f, uuid } : f))),
-        (err: Error) => {
-          toast.error(`${file.name}: ${err.message}`);
-          setFiles((prev) => prev.filter((f) => f.key !== key));
-        },
-      );
-    }
-  };
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
     mutation.mutate(false);
@@ -757,71 +710,19 @@ function NewComment({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueDat
         <fieldset disabled={mutation.isPending} className="contents">
           <MarkdownEditor
             key={round}
-            issueRef={issueRef}
+            repo={issueRef}
             label={t("repo.issues.create_comment")}
             value={content}
             onChange={setContent}
             error={fields.content ?? formError}
             disabled={mutation.isPending}
-            onFiles={attachment ? addFiles : undefined}
+            uploads={uploads}
+            linkFiles
           />
-          {files.length ? (
-            <ul className="mt-2 flex flex-col gap-1">
-              {files.map((f) => (
-                <li key={f.key} className="flex items-center gap-2 text-sm">
-                  <Paperclip className="size-4 shrink-0 text-(--color-muted-foreground)" aria-hidden />
-                  <span className={cn("min-w-0 flex-1 truncate", !f.uuid && "text-(--color-muted-foreground)")}>
-                    {f.name}
-                  </span>
-                  {f.uuid ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      aria-label={`${t("dropzone.remove_file")}: ${f.name}`}
-                      className="size-7 text-(--color-muted-foreground)"
-                      onClick={() => setFiles((prev) => prev.filter((p) => p.key !== f.key))}
-                    >
-                      <X className="size-4" aria-hidden />
-                    </Button>
-                  ) : (
-                    <span className="text-xs text-(--color-muted-foreground)">{t("repo.release.loading")}</span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          ) : null}
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-            {attachment ? (
-              <>
-                <input
-                  ref={fileInput}
-                  type="file"
-                  multiple
-                  hidden
-                  accept={attachment.allowedTypes.includes("*/*") ? undefined : attachment.allowedTypes.join(",")}
-                  onChange={(e) => {
-                    if (e.target.files) addFiles(e.target.files);
-                    e.target.value = "";
-                  }}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="text-(--color-muted-foreground)"
-                  disabled={files.length >= attachment.maxFiles}
-                  onClick={() => fileInput.current?.click()}
-                >
-                  <Paperclip className="size-4" aria-hidden />
-                  {t("repo.issues.attach_files")}
-                </Button>
-              </>
-            ) : (
-              <span />
-            )}
+            <AttachFilesButton uploads={uploads} />
             <div className="flex flex-wrap justify-end gap-2">
-              {data.viewerCanEdit ? (
+              {canChangeState ? (
                 <Button
                   type="button"
                   variant="outline"
@@ -848,330 +749,24 @@ function NewComment({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueDat
   );
 }
 
-// SidebarSection is a part of the sidebar with a heading, which writers click
-// to change it in a popover.
-function SidebarSection({
-  title,
-  editor,
-  children,
-}: {
-  title: string;
-  editor?: (close: () => void) => ReactNode;
-  children: ReactNode;
-}) {
-  const [open, setOpen] = useState(false);
-  const heading = "text-xs font-semibold text-(--color-muted-foreground)";
-  return (
-    <section className="border-b border-(--color-border) py-4 first:pt-0 last:border-b-0">
-      {editor ? (
-        <Popover open={open} onOpenChange={setOpen}>
-          <h2 className="mb-1">
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                className={cn(
-                  heading,
-                  "-ml-2 flex min-h-8 w-[calc(100%+0.5rem)] cursor-pointer items-center justify-between gap-2 rounded-md px-2 hover:text-(--color-primary) focus-visible:outline-2 focus-visible:outline-(--color-ring)",
-                )}
-              >
-                {title}
-                <Settings className="size-4" aria-hidden />
-              </button>
-            </PopoverTrigger>
-          </h2>
-          <PopoverContent align="end" collisionPadding={16} className="w-75 max-w-[calc(100vw-2rem)] p-0">
-            {editor(() => setOpen(false))}
-          </PopoverContent>
-        </Popover>
-      ) : (
-        <h2 className={cn(heading, "mb-1 flex min-h-8 items-center")}>{title}</h2>
-      )}
-      {children}
-    </section>
-  );
-}
-
-// Picker is the popover of a sidebar section, like the ones of GitHub: a
-// heading, a filter, and the options in groups, each toggled on click.
-function Picker<T extends { id: number; name: string }>({
-  heading,
-  filterLabel,
-  groups,
-  checked,
-  disabled,
-  render,
-  onToggle,
-  footer,
-}: {
-  heading: string;
-  filterLabel: string;
-  groups: { label?: string; items: T[] }[];
-  checked: Set<number>;
-  disabled: boolean;
-  render: (item: T) => ReactNode;
-  onToggle: (id: number) => void;
-  // footer links to where the options are managed.
-  footer?: { label: string; to: "/$owner/$repo/labels" | "/$owner/$repo/milestones"; issueRef: IssueRef };
-}) {
-  const { t } = useTranslation();
-  const [filter, setFilter] = useState("");
-  // ordered puts the options checked when the picker opened first in each
-  // group, and keeps them in place while they are toggled.
-  const [ordered] = useState(() =>
-    groups.map((group) => ({
-      ...group,
-      items: [...group.items.filter((i) => checked.has(i.id)), ...group.items.filter((i) => !checked.has(i.id))],
-    })),
-  );
-  const query = filter.trim().toLowerCase();
-  const shown = ordered
-    .map((group) => ({
-      ...group,
-      items: query ? group.items.filter((i) => i.name.toLowerCase().includes(query)) : group.items,
-    }))
-    .filter((group) => group.items.length);
-  return (
-    <div className="flex flex-col text-sm">
-      <p className="border-b border-(--color-border) px-3 py-2 text-xs font-semibold">{heading}</p>
-      <div className="border-b border-(--color-border) p-2">
-        <Input
-          type="search"
-          autoFocus
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          placeholder={filterLabel}
-          aria-label={filterLabel}
-          className="h-8"
-        />
-      </div>
-      {/* -mb-px tucks the border of the last row under the edge of the popover. */}
-      <div className={cn("max-h-80 overflow-y-auto", !footer && "-mb-px")}>
-        {shown.length ? (
-          shown.map((group, i) => (
-            <div key={i} role="group" aria-label={group.label}>
-              {group.label ? (
-                <p className="border-b border-(--color-border) bg-(--color-surface) px-3 py-1.5 text-xs font-semibold text-(--color-muted-foreground)">
-                  {group.label}
-                </p>
-              ) : null}
-              {group.items.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  role="checkbox"
-                  aria-checked={checked.has(item.id)}
-                  disabled={disabled}
-                  onClick={() => onToggle(item.id)}
-                  className="flex w-full cursor-pointer items-center gap-2 border-b border-(--color-border) px-3 py-2 text-left hover:bg-(--color-surface) focus-visible:bg-(--color-surface) focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <Check className={cn("size-4 shrink-0", !checked.has(item.id) && "invisible")} aria-hidden />
-                  {render(item)}
-                </button>
-              ))}
-            </div>
-          ))
-        ) : (
-          <p className="border-b border-(--color-border) px-3 py-4 text-center text-(--color-muted-foreground)">
-            {t("repo.issues.picker_no_results")}
-          </p>
-        )}
-      </div>
-      {footer ? (
-        <Link
-          to={footer.to}
-          params={{ owner: footer.issueRef.owner, repo: footer.issueRef.name }}
-          className="-mt-px flex items-center gap-2 border-t border-(--color-border) px-3 py-2 text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-primary)"
-        >
-          <Pencil className="size-4" aria-hidden />
-          {footer.label}
-        </Link>
-      ) : null}
-    </div>
-  );
-}
-
 // IssueSidebar shows the labels, the milestone, the assignee and the
 // participants of the issue, and lets writers change the first three.
 function IssueSidebar({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueData }) {
   const { t } = useTranslation();
-  const { owner, name, index } = issueRef;
-  const params = { owner, repo: name };
-  const labels = useIssueChange((ids: number[]) => setRepoIssueLabels(owner, name, index, ids));
-  const milestone = useIssueChange((id: number) => setRepoIssueMilestone(owner, name, index, id));
-  const assignee = useIssueChange((id: number) => setRepoIssueAssignee(owner, name, index, id));
-  const checked = new Set(data.labels.map((l) => l.id));
-  const toggleLabel = (id: number) =>
-    labels.mutate(checked.has(id) ? [...checked].filter((l) => l !== id) : [...checked, id]);
-  const labelChip = (label: RepoIssueData["labels"][number]) => (
-    <span
-      className="inline-block max-w-full truncate rounded-full px-2 text-xs/5 font-medium"
-      style={{ backgroundColor: label.color, color: label.textColor }}
-    >
-      {label.name}
-    </span>
-  );
-  const emptyText = "text-sm text-(--color-muted-foreground)";
-  // self is the viewer when they can be assigned, for the shortcut to assign
-  // themselves.
-  const viewer = useUserInfo();
-  const self = viewer ? data.assigneeOptions?.find((u) => u.name === viewer.username) : undefined;
+  const labels = useIssueChange((ids: number[]) => setRepoIssueLabels(issueRef, ids));
+  const milestone = useIssueChange((id: number) => setRepoIssueMilestone(issueRef, id));
+  const assignee = useIssueChange((id: number) => setRepoIssueAssignee(issueRef, id));
 
   return (
-    <aside className="flex min-w-0 flex-col">
-      <SidebarSection
-        title={t("repo.issues.new.assignee")}
-        editor={
-          data.assigneeOptions
-            ? (close) => (
-                <Picker
-                  heading={t("repo.issues.assign_someone")}
-                  filterLabel={t("repo.issues.filter_assignees")}
-                  groups={[{ items: data.assigneeOptions ?? [] }]}
-                  checked={new Set(data.assignee ? [data.assignee.id] : [])}
-                  disabled={assignee.isPending}
-                  render={(u) => (
-                    <>
-                      <img src={u.avatarURL} alt="" className="size-5 shrink-0 rounded-full" />
-                      <span className="min-w-0 truncate font-medium">{u.name}</span>
-                    </>
-                  )}
-                  onToggle={(id) => assignee.mutate(id === data.assignee?.id ? 0 : id, { onSuccess: close })}
-                />
-              )
-            : undefined
-        }
-      >
-        {data.assignee ? (
-          <Link
-            to="/$username"
-            params={{ username: data.assignee.name }}
-            className="inline-flex max-w-full items-center gap-2 text-sm font-semibold hover:text-(--color-primary) hover:underline"
-          >
-            <img src={data.assignee.avatarURL} alt="" className="size-5 shrink-0 rounded-full" />
-            <span className="truncate">{data.assignee.name}</span>
-          </Link>
-        ) : (
-          <p className={emptyText}>
-            {t("repo.issues.new.no_assignee")}
-            {self ? (
-              <>
-                {", "}
-                <button
-                  type="button"
-                  className="cursor-pointer text-(--color-foreground) hover:text-(--color-primary) hover:underline disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={assignee.isPending}
-                  onClick={() => assignee.mutate(self.id)}
-                >
-                  {t("repo.issues.assign_yourself")}
-                </button>
-              </>
-            ) : null}
-          </p>
-        )}
-      </SidebarSection>
-
-      <SidebarSection
-        title={t("repo.issues.new.labels")}
-        editor={
-          data.labelOptions
-            ? () => (
-                <Picker
-                  heading={t("repo.issues.apply_labels")}
-                  filterLabel={t("repo.issues.filter_labels")}
-                  groups={[{ items: data.labelOptions ?? [] }]}
-                  checked={checked}
-                  disabled={labels.isPending}
-                  render={(label) => (
-                    <>
-                      <span
-                        className="size-3.5 shrink-0 rounded-full border border-black/10"
-                        style={{ backgroundColor: label.color }}
-                        aria-hidden
-                      />
-                      <span className="min-w-0 truncate font-medium">{label.name}</span>
-                    </>
-                  )}
-                  onToggle={toggleLabel}
-                  footer={{ label: t("repo.issues.edit_labels"), to: "/$owner/$repo/labels", issueRef }}
-                />
-              )
-            : undefined
-        }
-      >
-        {data.labels.length ? (
-          <ul className="flex flex-wrap gap-1">
-            {data.labels.map((label) => (
-              <li key={label.id} className="max-w-full">
-                <Link
-                  to="/$owner/$repo/issues"
-                  params={params}
-                  search={{ labels: label.id }}
-                  className="hover:opacity-80"
-                >
-                  {labelChip(label)}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className={emptyText}>{t("repo.issues.new.no_label")}</p>
-        )}
-      </SidebarSection>
-
-      <SidebarSection
-        title={t("repo.issues.new.milestone")}
-        editor={
-          data.milestoneOptions
-            ? (close) => (
-                <Picker
-                  heading={t("repo.issues.set_milestone")}
-                  filterLabel={t("repo.issues.filter_milestones")}
-                  groups={[
-                    {
-                      label: t("repo.issues.new.open_milestone"),
-                      items: data.milestoneOptions?.filter((m) => !m.isClosed) ?? [],
-                    },
-                    {
-                      label: t("repo.issues.new.closed_milestone"),
-                      items: data.milestoneOptions?.filter((m) => m.isClosed) ?? [],
-                    },
-                  ]}
-                  checked={new Set(data.milestone ? [data.milestone.id] : [])}
-                  disabled={milestone.isPending}
-                  render={(m) => <span className="min-w-0 truncate font-medium">{m.name}</span>}
-                  onToggle={(id) => milestone.mutate(id === data.milestone?.id ? 0 : id, { onSuccess: close })}
-                  footer={{ label: t("repo.issues.edit_milestones"), to: "/$owner/$repo/milestones", issueRef }}
-                />
-              )
-            : undefined
-        }
-      >
-        {data.milestone ? (
-          <div className="flex flex-col gap-2">
-            <div
-              role="progressbar"
-              aria-label={data.milestone.name}
-              aria-valuenow={data.milestone.completeness}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              className="h-2 overflow-hidden rounded-full bg-(--color-secondary)"
-            >
-              <div className="h-full bg-(--color-success)" style={{ width: `${data.milestone.completeness}%` }} />
-            </div>
-            <Link
-              to="/$owner/$repo/issues"
-              params={params}
-              search={{ milestone: data.milestone.id }}
-              className="text-sm font-semibold wrap-anywhere hover:text-(--color-primary) hover:underline"
-            >
-              {data.milestone.name}
-            </Link>
-          </div>
-        ) : (
-          <p className={emptyText}>{t("repo.issues.new.no_milestone")}</p>
-        )}
-      </SidebarSection>
-
+    <IssueMeta
+      repo={issueRef}
+      value={data}
+      options={data}
+      pending={labels.isPending || milestone.isPending || assignee.isPending}
+      onLabels={(ids) => labels.mutate(ids)}
+      onMilestone={milestone.mutateAsync}
+      onAssignee={assignee.mutateAsync}
+    >
       <SidebarSection
         title={t("repo.issues.num_participants").replace(/%(?:\[1\])?d/, String(data.participants.length))}
       >
@@ -1196,6 +791,6 @@ function IssueSidebar({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueD
           ))}
         </ul>
       </SidebarSection>
-    </aside>
+    </IssueMeta>
   );
 }

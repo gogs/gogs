@@ -51,22 +51,38 @@ export function FormAlert({ message }: { message: string | null }) {
   );
 }
 
-// CheckboxField is a checkbox with its label beside it.
+// CheckboxField is a checkbox with its label beside it, and an optional
+// description of what it does below the label.
 export function CheckboxField({
   id,
   label,
+  description,
   checked,
   onChange,
 }: {
   id: string;
   label: ReactNode;
+  description?: ReactNode;
   checked: boolean;
   onChange: (checked: boolean) => void;
 }) {
   return (
     <label htmlFor={id} className="flex cursor-pointer items-start gap-2.5 text-sm">
-      <Checkbox id={id} className="mt-0.5" checked={checked} onCheckedChange={(c) => onChange(c === true)} />
-      <span>{label}</span>
+      <Checkbox
+        id={id}
+        className="mt-0.5"
+        checked={checked}
+        onCheckedChange={(c) => onChange(c === true)}
+        aria-describedby={description ? `${id}-description` : undefined}
+      />
+      <span className="flex flex-col gap-0.5">
+        <span className={description ? "font-medium" : undefined}>{label}</span>
+        {description ? (
+          <span id={`${id}-description`} className="text-(--color-muted-foreground)">
+            {description}
+          </span>
+        ) : null}
+      </span>
     </label>
   );
 }

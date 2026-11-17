@@ -37,6 +37,10 @@ type sanitizeSink struct {
 	// verbatim is the depth inside a, code and pre elements, whose content
 	// postProcess leaves alone.
 	verbatim int
+	// code is the depth inside code and pre elements, whose text keeps its
+	// emoji shortcodes.
+	code  int
+	emoji emojiText
 	// dropped are the names of the dropped start tags whose end tags the
 	// sanitizer skips, see bluemonday's closingTagToSkipStack.
 	dropped []string
@@ -52,7 +56,7 @@ func (r *renderer) renderSanitized(render func()) ([]byte, bool) {
 		return nil, false
 	}
 	r.out.Grow(len(r.p.src) + len(r.p.src)/4)
-	s := &sanitizeSink{r: r, out: &r.out, san: r.opts.Sanitizer}
+	s := &sanitizeSink{r: r, out: &r.out, san: r.opts.Sanitizer, emoji: emojiText{names: r.opts.Emoji}}
 	r.s = s
 	r.sanitizing = true
 	render()
@@ -109,6 +113,9 @@ func (s *sanitizeSink) raw(b []byte) {
 
 // startTag handles a start tag as postProcess does.
 func (s *sanitizeSink) startTag(name string, attrs []html.Attribute) {
+	if name == "code" || name == "pre" {
+		s.code++
+	}
 	if s.verbatim > 0 {
 		if !isNoEndTag(name) {
 			s.verbatim++
@@ -128,6 +135,9 @@ func (s *sanitizeSink) startTag(name string, attrs []html.Attribute) {
 }
 
 func (s *sanitizeSink) endTag(name string) {
+	if name == "code" || name == "pre" {
+		s.code--
+	}
 	if s.verbatim > 0 {
 		s.verbatim--
 	}
@@ -145,7 +155,8 @@ func (s *sanitizeSink) wrapImage(attrs []html.Attribute) {
 }
 
 // flush handles the text since the last tag as postProcess does: outside
-// links, code and preformatted text, special references become links.
+// links, code and preformatted text, special references become links, and
+// outside code and preformatted text, emoji shortcodes become emoji.
 func (s *sanitizeSink) flush() {
 	if len(s.run) == 0 {
 		return
@@ -153,8 +164,13 @@ func (s *sanitizeSink) flush() {
 	s.run = []byte(convertNewlines(string(s.run)))
 	s.escaped = appendHTMLEscaped(s.escaped[:0], s.run)
 	s.run = s.run[:0]
-	if s.verbatim > 0 {
+	s.emoji.startNode()
+	if s.code > 0 {
 		s.out.Write(s.escaped)
+		return
+	}
+	if s.verbatim > 0 {
+		s.emoji.write(s.out, s.escaped)
 		return
 	}
 	text := s.escaped
@@ -197,16 +213,18 @@ func startsReference(c byte) bool {
 }
 
 // specialLinks writes the escaped text with special references rendered as
-// links, as the sanitizer would write the HTML of AppendSpecialLinks.
+// links, as the sanitizer would write the HTML of AppendSpecialLinks, and
+// emoji shortcodes replaced. The links split the text into text nodes.
 func (s *sanitizeSink) specialLinks(text []byte) {
 	f := s.r.opts.SpecialLinks
 	if f == nil {
-		s.out.Write(text)
+		s.emoji.write(s.out, text)
 		return
 	}
 	last := 0
 	for _, l := range f(text) {
-		s.out.Write(text[last:l.Start])
+		s.emoji.write(s.out, text[last:l.Start])
+		s.emoji.startNode()
 		last = l.End
 		s.attrs = append(s.attrs[:0], html.Attribute{Key: "href", Val: unescapeHTML(l.Href)})
 		s.emitStart("a", s.attrs)
@@ -219,7 +237,7 @@ func (s *sanitizeSink) specialLinks(text []byte) {
 		}
 		s.emitEnd("a")
 	}
-	s.out.Write(text[last:])
+	s.emoji.write(s.out, text[last:])
 }
 
 // unescapeHTML returns the text of the escaped HTML b.

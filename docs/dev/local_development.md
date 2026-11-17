@@ -167,9 +167,9 @@ Copy `.bin/gogs` to your server and follow the [installation guide](https://gogs
 
 ## Other nice things
 
-### Load HTML templates and static files from disk
+### Load email templates and static files from disk
 
-When you are actively working on HTML templates and static files during development, you may want to enable the following configuration to avoid recompiling and restarting Gogs every time you make a change to files under `template/` and `public/` directories:
+When you are actively working on email templates and static files during development, you may want to enable the following configuration to avoid recompiling and restarting Gogs every time you make a change to files under `templates/` and `public/` directories:
 
 ```ini
 RUN_MODE = dev

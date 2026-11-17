@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"unknwon.dev/ini/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/testx"
 )
@@ -28,7 +29,7 @@ func TestInitHelper(_ *testing.T) {
 		return
 	}
 
-	if err := Init(filepath.Join("testdata", "custom.ini")); err != nil {
+	if err := Init(logx.NewNoopLogger(), filepath.Join("testdata", "custom.ini")); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
-import { Copy, Lock, LockOpen } from "lucide-react";
+import { Copy, KeyRound, Lock, LockOpen } from "lucide-react";
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ import { RichText } from "@/components/RichText";
 import { UserSettingsLayout } from "@/components/UserSettingsLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { passkeysSupported } from "@/lib/passkey";
 import { formErrors } from "@/lib/queries/request";
 import {
   type Credential,
@@ -19,10 +20,12 @@ import {
   type SSHKey,
   type TwoFactorEnrollment,
   type UserEmail,
+  addPasskey,
   addSSHKey,
   addUserEmail,
   createAccessToken,
   deleteAccessToken,
+  deletePasskey,
   deleteSSHKey,
   deleteUserEmail,
   disableTwoFactor,
@@ -32,6 +35,7 @@ import {
 } from "@/lib/queries/settings";
 import { subUrl } from "@/lib/url";
 import { useUserInfo } from "@/lib/use-user-info";
+import { PasswordSection } from "@/pages/user/Settings";
 
 const TEXTAREA_CLASS =
   "block w-full rounded-md border border-(--color-input) bg-(--color-background) px-3 py-2 font-mono text-sm text-(--color-foreground) outline-none transition-colors focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-(--color-destructive)";
@@ -119,9 +123,7 @@ export function UserEmailSettings({ emails, activated }: { emails: UserEmail[]; 
               />
             </FormField>
             <div>
-              <Button type="submit" variant="outline">
-                {t("settings.add_email")}
-              </Button>
+              <Button type="submit">{t("settings.add_email")}</Button>
             </div>
           </div>
         </fieldset>
@@ -256,9 +258,7 @@ export function UserSSHKeySettings({ keys }: { keys: SSHKey[] }) {
               />
             </FormField>
             <div>
-              <Button type="submit" variant="outline">
-                {t("settings.add_key")}
-              </Button>
+              <Button type="submit">{t("settings.add_key")}</Button>
             </div>
           </div>
         </fieldset>
@@ -273,9 +273,17 @@ export function UserSSHKeySettings({ keys }: { keys: SSHKey[] }) {
   );
 }
 
-// UserSecuritySettings shows whether two-factor authentication is on, and
-// turns it on or off.
-export function UserSecuritySettings({ enabled }: { enabled: boolean }) {
+// UserSecuritySettings changes how the viewer signs in: their password, their
+// passkeys, and whether two-factor authentication is on.
+export function UserSecuritySettings({
+  isLocal,
+  passkeys,
+  enabled,
+}: {
+  isLocal: boolean;
+  passkeys: Credential[];
+  enabled: boolean;
+}) {
   const { t } = useTranslation();
   const router = useRouter();
   const user = useUserInfo();
@@ -283,7 +291,14 @@ export function UserSecuritySettings({ enabled }: { enabled: boolean }) {
   const cloneExample = `${cloneURL.protocol}//{token}:x-access-token@${cloneURL.host}${cloneURL.pathname}`;
   return (
     <UserSettingsLayout active="security">
-      <SectionHeading title={t("settings.two_factor")} />
+      <h1 className="mb-4 border-b border-(--color-border) pb-3 text-xl font-semibold">
+        {t("settings.authentication")}
+      </h1>
+      <PasswordSection isLocal={isLocal} />
+      <UserPasskeys passkeys={passkeys} />
+      <h2 className="mt-8 mb-4 border-t border-(--color-border) pt-6 text-base font-semibold">
+        {t("settings.two_factor")}
+      </h2>
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-(--color-border) px-4 py-3">
         <p className="flex items-center gap-2 text-sm">
           <span className="font-semibold">{t("settings.two_factor_status")}</span>
@@ -336,6 +351,94 @@ export function UserSecuritySettings({ enabled }: { enabled: boolean }) {
         </div>
       ) : null}
     </UserSettingsLayout>
+  );
+}
+
+// UserPasskeys lists the passkeys of the viewer, who signs in with one
+// without a password or a passcode, and adds new ones.
+function UserPasskeys({ passkeys }: { passkeys: Credential[] }) {
+  const { t } = useTranslation();
+  const router = useRouter();
+  const [name, setName] = useState("");
+  const supported = passkeysSupported();
+  const add = useMutation({
+    mutationFn: () => addPasskey(name),
+    onSuccess: async () => {
+      toast.success(t("settings.passkey_add_success", { name }));
+      setName("");
+      await router.invalidate();
+    },
+    onError: (err) => focusOnError(err, ["name"]),
+  });
+  const { fields, formError } = formErrors(add.error);
+  // The browser rejects with a DOMException when the viewer cancels the
+  // passkey prompt or no passkey could be created, and with a NotAllowedError
+  // only for the former, which needs no message.
+  const message =
+    add.error instanceof DOMException
+      ? add.error.name === "NotAllowedError"
+        ? null
+        : t("settings.passkey_add_failed")
+      : formError;
+
+  const onSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    add.mutate();
+  };
+
+  return (
+    <section aria-labelledby="passkeys-heading">
+      <h2 id="passkeys-heading" className="mt-8 mb-2 border-t border-(--color-border) pt-6 text-base font-semibold">
+        {t("settings.passkeys")}
+      </h2>
+      <p className="mb-4 text-sm text-(--color-muted-foreground)">{t("settings.passkeys_desc")}</p>
+      {passkeys.length > 0 ? (
+        <ul>
+          {passkeys.map((passkey) => (
+            <CredentialRow
+              key={passkey.id}
+              item={passkey}
+              recentLabel={t("settings.passkey_state_desc")}
+              deletion={{
+                label: t("settings.delete_passkey"),
+                title: t("settings.passkey_deletion"),
+                description: t("settings.passkey_deletion_desc"),
+                success: t("settings.passkey_deletion_success"),
+                action: () => deletePasskey(passkey.id),
+              }}
+            />
+          ))}
+        </ul>
+      ) : (
+        <p className="rounded-md border border-dashed border-(--color-border) px-4 py-3 text-sm text-(--color-muted-foreground)">
+          {t("settings.passkeys_none")}
+        </p>
+      )}
+      <form onSubmit={onSubmit} noValidate className="mt-6">
+        <fieldset disabled={!supported || add.isPending} className="contents">
+          <FormAlert message={supported ? message : t("settings.passkey_unsupported")} />
+          <div className="flex flex-col gap-3">
+            <FormField id="name" label={t("settings.passkey_name")} error={fields.name} invalid={"name" in fields}>
+              <Input
+                id="name"
+                name="name"
+                autoComplete="off"
+                required
+                placeholder={t("settings.passkey_name_placeholder")}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </FormField>
+            <div>
+              <Button type="submit" variant="outline">
+                <KeyRound className="size-4" aria-hidden />
+                {add.isPending ? t("settings.passkey_adding") : t("settings.passkey_add")}
+              </Button>
+            </div>
+          </div>
+        </fieldset>
+      </form>
+    </section>
   );
 }
 
@@ -401,9 +504,7 @@ export function UserTwoFactorEnable({ enrollment }: { enrollment: TwoFactorEnrol
               />
             </FormField>
             <div>
-              <Button type="submit" variant="outline">
-                {t("settings.two_factor_verify")}
-              </Button>
+              <Button type="submit">{t("settings.two_factor_verify")}</Button>
             </div>
           </div>
         </fieldset>
@@ -514,9 +615,7 @@ export function UserTokenSettings({ tokens }: { tokens: Credential[] }) {
               />
             </FormField>
             <div>
-              <Button type="submit" variant="outline">
-                {t("settings.generate_token")}
-              </Button>
+              <Button type="submit">{t("settings.generate_token")}</Button>
             </div>
           </div>
         </fieldset>

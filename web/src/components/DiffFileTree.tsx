@@ -66,7 +66,7 @@ export interface DiffFileTreeHandle {
 // Pierre's icon sets ship with file-type glyphs and chevrons. `standard`
 // covers most common file types. `colored` adds the semantic per-type tint
 // that makes 50+ files in a list scannable.
-const ICON_OPTIONS: FileTreeIcons = { set: "standard", colored: true };
+const ICON_OPTIONS: FileTreeIcons = { set: "complete", colored: true };
 
 // Map `@pierre/diffs` change types onto the tree's git status vocabulary.
 // `rename-pure` and `rename-changed` both surface as `renamed` (the tree only

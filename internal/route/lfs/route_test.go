@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/macaron.v1"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/database"
@@ -164,7 +165,7 @@ func TestAuthenticate(t *testing.T) {
 
 			m := macaron.New()
 			m.Use(macaron.Renderer())
-			m.Get("/", authenticate(test.mockStore()), func(w http.ResponseWriter, user *database.User) {
+			m.Get("/", authenticate(logx.NewNoopLogger(), test.mockStore()), func(w http.ResponseWriter, user *database.User) {
 				_, _ = fmt.Fprintf(w, "ID: %d, Name: %s", user.ID, user.Name)
 			})
 
@@ -274,7 +275,7 @@ func TestAuthorize(t *testing.T) {
 			})
 			m.Get(
 				"/:username/:reponame",
-				authorize(mockStore, test.accessMode),
+				authorize(logx.NewNoopLogger(), mockStore, test.accessMode),
 				func(w http.ResponseWriter, owner *database.User, repo *database.Repository) {
 					_, _ = fmt.Fprintf(w, "owner.Name: %s, repo.Name: %s", owner.Name, repo.Name)
 				},
@@ -309,13 +310,13 @@ func Test_verifyHeader(t *testing.T) {
 	}{
 		{
 			name:          "header not found",
-			verifyHeader:  verifyHeader("Accept", contentType, http.StatusNotAcceptable),
+			verifyHeader:  verifyHeader(logx.NewNoopLogger(), "Accept", contentType, http.StatusNotAcceptable),
 			expStatusCode: http.StatusNotAcceptable,
 		},
 
 		{
 			name:         "header found",
-			verifyHeader: verifyHeader("Accept", "application/vnd.git-lfs+json", http.StatusNotAcceptable),
+			verifyHeader: verifyHeader(logx.NewNoopLogger(), "Accept", "application/vnd.git-lfs+json", http.StatusNotAcceptable),
 			header: http.Header{
 				"Accept": []string{"application/vnd.git-lfs+json; charset=utf-8"},
 			},
@@ -345,7 +346,7 @@ func Test_verifyHeader(t *testing.T) {
 
 func Test_verifyOID(t *testing.T) {
 	m := macaron.New()
-	m.Get("/:oid", verifyOID(), func(w http.ResponseWriter, oid lfsx.OID) {
+	m.Get("/:oid", verifyOID(logx.NewNoopLogger()), func(w http.ResponseWriter, oid lfsx.OID) {
 		fmt.Fprintf(w, "oid: %s", oid)
 	})
 
@@ -393,7 +394,7 @@ func Test_verifyOID(t *testing.T) {
 
 func Test_internalServerError(t *testing.T) {
 	rr := httptest.NewRecorder()
-	internalServerError(rr)
+	internalServerError(logx.NewNoopLogger(), rr)
 
 	resp := rr.Result()
 	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)

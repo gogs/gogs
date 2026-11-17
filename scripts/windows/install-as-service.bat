@@ -21,5 +21,6 @@ nssm set gogs Description "A painless self-hosted Git service."
 nssm set gogs DisplayName "Gogs"
 nssm set gogs Start SERVICE_DELAYED_AUTO_START
 nssm set gogs AppStdout "%gogspath%\gogs.log"
+nssm set gogs AppStderr "%gogspath%\gogs.log"
 nssm start gogs
 pause

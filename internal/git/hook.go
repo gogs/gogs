@@ -1,9 +1,12 @@
 package git
 
 import (
+	"io/fs"
 	"os"
 	"path"
 	"strings"
+
+	"github.com/cockroachdb/errors"
 )
 
 // HookName is the name of a Git hook.
@@ -239,5 +242,16 @@ func (h *Hook) Update(content string) error {
 	}
 
 	h.isSample = false
+	return nil
+}
+
+// Delete removes the Git hook from filesystem, which makes it fall back to its
+// sample content. Deleting a hook that does not exist is not an error.
+func (h *Hook) Delete() error {
+	if err := os.Remove(h.path); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+	h.isSample = true
+	h.content = serverSideHookSamples[h.name]
 	return nil
 }

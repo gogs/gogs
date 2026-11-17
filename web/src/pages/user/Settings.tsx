@@ -29,17 +29,18 @@ import {
 } from "@/lib/queries/settings";
 import { userProfileQuery } from "@/lib/queries/user";
 import { subUrl } from "@/lib/url";
-import { useUserInfo } from "@/lib/use-user-info";
+import { useRefreshUserInfo, useUserInfo } from "@/lib/use-user-info";
 import { RepoIcon } from "@/pages/user/Dashboard";
 
 const PROFILE_FIELDS = ["name", "fullName", "website", "location"] as const;
 
-// UserProfileSettings changes the username and the public profile of the
-// viewer.
+// UserProfileSettings changes the username, the public profile and the avatar
+// of the viewer.
 export function UserProfileSettings({ settings }: { settings: UserSettingsData }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const router = useRouter();
+  const avatarChanged = useAvatarChanged();
   const [form, setForm] = useState<UserProfileForm>({
     name: settings.name,
     fullName: settings.fullName,
@@ -123,47 +124,54 @@ export function UserProfileSettings({ settings }: { settings: UserSettingsData }
               <Input autoComplete="off" {...field("location")} />
             </FormField>
             <div className="border-t border-(--color-border) pt-5">
-              <Button type="submit" variant="outline">
-                {t("settings.update_profile")}
-              </Button>
+              <Button type="submit">{t("settings.update_profile")}</Button>
             </div>
           </div>
         </fieldset>
       </form>
+      <section className="mt-8 border-t border-(--color-border) pt-6">
+        <h2 className="mb-4 text-base font-semibold">{t("settings.avatar")}</h2>
+        <AvatarForm
+          avatarURL={settings.avatarURL}
+          hasCustomAvatar={settings.hasCustomAvatar}
+          upload={uploadUserAvatar}
+          remove={deleteUserAvatar}
+          onChanged={avatarChanged}
+        />
+        {settings.avatarEmail !== undefined ? (
+          <GravatarForm email={settings.avatarEmail} onChanged={avatarChanged} />
+        ) : null}
+      </section>
     </UserSettingsLayout>
   );
 }
 
-// The navigation bar shows the avatar too, so load the page again after a
-// change.
-const reloadPage = () => window.location.reload();
-
-// UserAvatarSettings uploads or deletes the avatar of the viewer, or looks it
-// up by email on sites that use Gravatar.
-export function UserAvatarSettings({ settings }: { settings: UserSettingsData }) {
+// useAvatarChanged reloads the avatar of the viewer wherever it shows, e.g.,
+// in the navigation bar, after a change. It keeps the page, so unsaved edits
+// of the profile stay.
+function useAvatarChanged() {
   const { t } = useTranslation();
-  return (
-    <UserSettingsLayout active="avatar">
-      <h1 className="mb-4 text-xl font-semibold">{t("settings.avatar")}</h1>
-      <AvatarForm
-        avatarURL={settings.avatarURL}
-        hasCustomAvatar={settings.hasCustomAvatar}
-        upload={uploadUserAvatar}
-        remove={deleteUserAvatar}
-        onChanged={reloadPage}
-      />
-      {settings.avatarEmail !== undefined ? <GravatarForm email={settings.avatarEmail} /> : null}
-    </UserSettingsLayout>
-  );
+  const queryClient = useQueryClient();
+  const router = useRouter();
+  const refreshUserInfo = useRefreshUserInfo();
+  const user = useUserInfo();
+  return async () => {
+    toast.success(t("settings.update_avatar_success"));
+    await Promise.all([
+      refreshUserInfo(),
+      user ? queryClient.invalidateQueries({ queryKey: userProfileQuery(user.username).queryKey }) : null,
+      router.invalidate(),
+    ]);
+  };
 }
 
-function GravatarForm({ email: initialEmail }: { email: string }) {
+function GravatarForm({ email: initialEmail, onChanged }: { email: string; onChanged: () => Promise<void> }) {
   const { t } = useTranslation();
   const [email, setEmail] = useState(initialEmail);
   const inputRef = useRef<HTMLInputElement>(null);
   const save = useMutation({
     mutationFn: () => setGravatarEmail(email),
-    onSuccess: reloadPage,
+    onSuccess: onChanged,
     onError: () => requestAnimationFrame(() => inputRef.current?.focus()),
   });
   const { fields, formError } = formErrors(save.error);
@@ -196,7 +204,7 @@ function GravatarForm({ email: initialEmail }: { email: string }) {
             />
           </FormField>
           <div>
-            <Button type="submit" variant="outline" size="sm">
+            <Button type="submit" size="sm">
               {t("settings.lookup_avatar_by_mail")}
             </Button>
           </div>
@@ -209,8 +217,8 @@ function GravatarForm({ email: initialEmail }: { email: string }) {
 const PASSWORD_FIELDS = ["oldPassword", "password", "retype"] as const;
 const EMPTY_PASSWORD_FORM: UserPasswordForm = { oldPassword: "", password: "", retype: "" };
 
-// UserPasswordSettings changes the password of local users.
-export function UserPasswordSettings({ isLocal }: { isLocal: boolean }) {
+// PasswordSection changes the password of local users.
+export function PasswordSection({ isLocal }: { isLocal: boolean }) {
   const { t } = useTranslation();
   const [form, setForm] = useState<UserPasswordForm>(EMPTY_PASSWORD_FORM);
   const save = useMutation({
@@ -241,8 +249,8 @@ export function UserPasswordSettings({ isLocal }: { isLocal: boolean }) {
   });
 
   return (
-    <UserSettingsLayout active="password">
-      <h1 className="mb-4 text-xl font-semibold">{t("settings.change_password")}</h1>
+    <section>
+      <h2 className="mb-4 text-base font-semibold">{t("settings.change_password")}</h2>
       {isLocal ? (
         <form onSubmit={onSubmit} noValidate>
           <fieldset disabled={save.isPending} className="contents">
@@ -273,9 +281,7 @@ export function UserPasswordSettings({ isLocal }: { isLocal: boolean }) {
                 <Input autoComplete="new-password" {...field("retype")} />
               </FormField>
               <div className="border-t border-(--color-border) pt-5">
-                <Button type="submit" variant="outline">
-                  {t("settings.change_password")}
-                </Button>
+                <Button type="submit">{t("settings.change_password")}</Button>
               </div>
             </div>
           </fieldset>
@@ -285,7 +291,7 @@ export function UserPasswordSettings({ isLocal }: { isLocal: boolean }) {
           {t("settings.password_change_disabled")}
         </p>
       )}
-    </UserSettingsLayout>
+    </section>
   );
 }
 

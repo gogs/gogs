@@ -13,7 +13,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
 	"github.com/go-macaron/i18n"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cron"
@@ -65,7 +65,7 @@ func (r adminReport) withHint(row adminReportRow, hintKey string) adminReportRow
 	return row
 }
 
-// code is a value as it is set in the configuration.
+// code is a value shown as code, e.g., as it is set in the configuration.
 func (r adminReport) code(key string, value any) adminReportRow {
 	return adminReportRow{Label: r.l.Tr(key), Kind: "code", Value: fmt.Sprint(value)}
 }
@@ -114,12 +114,15 @@ type adminDashboard struct {
 	SystemStatus adminReportSection `json:"systemStatus"`
 }
 
-func getAdminDashboard(c flamego.Context, l i18n.Locale) (statusCode int, resp *adminDashboard, err error) {
-	s := database.GetStatistic(c.Request().Context()).Counter
+func getAdminDashboard(logger *logx.Logger, c flamego.Context, l i18n.Locale) (statusCode int, resp *adminDashboard, err error) {
+	s := database.GetStatistic(c.Request().Context(), logger).Counter
 	r := adminReport{l: l}
-	size := func(n uint64) string { return tool.FileSize(int64(n)) }
-	seconds := func(ns uint64, precision int) string {
-		return strconv.FormatFloat(float64(ns)/float64(time.Second), 'f', precision, 64) + "s"
+	// Measurements show the whole value, with its unit, as code.
+	size := func(key string, n uint64) adminReportRow {
+		return r.code(key, tool.FileSize(int64(n)))
+	}
+	seconds := func(key string, ns uint64, precision int) adminReportRow {
+		return r.code(key, strconv.FormatFloat(float64(ns)/float64(time.Second), 'f', precision, 64)+"s")
 	}
 
 	m := new(runtime.MemStats)
@@ -127,41 +130,41 @@ func getAdminDashboard(c flamego.Context, l i18n.Locale) (statusCode int, resp *
 	status := r.section("system-status", "admin.dashboard.system_status",
 		rows(
 			r.text("admin.dashboard.server_uptime", tool.TimeSincePro(initTime)),
-			r.text("admin.dashboard.current_goroutine", runtime.NumGoroutine()),
+			r.code("admin.dashboard.current_goroutine", runtime.NumGoroutine()),
 		),
 		rows(
-			r.text("admin.dashboard.current_memory_usage", size(m.Alloc)),
-			r.text("admin.dashboard.total_memory_allocated", size(m.TotalAlloc)),
-			r.text("admin.dashboard.memory_obtained", size(m.Sys)),
-			r.text("admin.dashboard.pointer_lookup_times", m.Lookups),
-			r.text("admin.dashboard.memory_allocate_times", m.Mallocs),
-			r.text("admin.dashboard.memory_free_times", m.Frees),
+			size("admin.dashboard.current_memory_usage", m.Alloc),
+			size("admin.dashboard.total_memory_allocated", m.TotalAlloc),
+			size("admin.dashboard.memory_obtained", m.Sys),
+			r.code("admin.dashboard.pointer_lookup_times", m.Lookups),
+			r.code("admin.dashboard.memory_allocate_times", m.Mallocs),
+			r.code("admin.dashboard.memory_free_times", m.Frees),
 		),
 		rows(
-			r.text("admin.dashboard.current_heap_usage", size(m.HeapAlloc)),
-			r.text("admin.dashboard.heap_memory_obtained", size(m.HeapSys)),
-			r.text("admin.dashboard.heap_memory_idle", size(m.HeapIdle)),
-			r.text("admin.dashboard.heap_memory_in_use", size(m.HeapInuse)),
-			r.text("admin.dashboard.heap_memory_released", size(m.HeapReleased)),
-			r.text("admin.dashboard.heap_objects", m.HeapObjects),
+			size("admin.dashboard.current_heap_usage", m.HeapAlloc),
+			size("admin.dashboard.heap_memory_obtained", m.HeapSys),
+			size("admin.dashboard.heap_memory_idle", m.HeapIdle),
+			size("admin.dashboard.heap_memory_in_use", m.HeapInuse),
+			size("admin.dashboard.heap_memory_released", m.HeapReleased),
+			r.code("admin.dashboard.heap_objects", m.HeapObjects),
 		),
 		rows(
-			r.text("admin.dashboard.bootstrap_stack_usage", size(m.StackInuse)),
-			r.text("admin.dashboard.stack_memory_obtained", size(m.StackSys)),
-			r.text("admin.dashboard.mspan_structures_usage", size(m.MSpanInuse)),
-			r.text("admin.dashboard.mspan_structures_obtained", size(m.MSpanSys)),
-			r.text("admin.dashboard.mcache_structures_usage", size(m.MCacheInuse)),
-			r.text("admin.dashboard.mcache_structures_obtained", size(m.MCacheSys)),
-			r.text("admin.dashboard.profiling_bucket_hash_table_obtained", size(m.BuckHashSys)),
-			r.text("admin.dashboard.gc_metadata_obtained", size(m.GCSys)),
-			r.text("admin.dashboard.other_system_allocation_obtained", size(m.OtherSys)),
+			size("admin.dashboard.bootstrap_stack_usage", m.StackInuse),
+			size("admin.dashboard.stack_memory_obtained", m.StackSys),
+			size("admin.dashboard.mspan_structures_usage", m.MSpanInuse),
+			size("admin.dashboard.mspan_structures_obtained", m.MSpanSys),
+			size("admin.dashboard.mcache_structures_usage", m.MCacheInuse),
+			size("admin.dashboard.mcache_structures_obtained", m.MCacheSys),
+			size("admin.dashboard.profiling_bucket_hash_table_obtained", m.BuckHashSys),
+			size("admin.dashboard.gc_metadata_obtained", m.GCSys),
+			size("admin.dashboard.other_system_allocation_obtained", m.OtherSys),
 		),
 		rows(
-			r.text("admin.dashboard.next_gc_recycle", size(m.NextGC)),
-			r.text("admin.dashboard.last_gc_time", seconds(uint64(time.Now().UnixNano())-m.LastGC, 1)),
-			r.text("admin.dashboard.total_gc_pause", seconds(m.PauseTotalNs, 1)),
-			r.text("admin.dashboard.last_gc_pause", seconds(m.PauseNs[(m.NumGC+255)%256], 3)),
-			r.text("admin.dashboard.gc_times", m.NumGC),
+			size("admin.dashboard.next_gc_recycle", m.NextGC),
+			seconds("admin.dashboard.last_gc_time", uint64(time.Now().UnixNano())-m.LastGC, 1),
+			seconds("admin.dashboard.total_gc_pause", m.PauseTotalNs, 1),
+			seconds("admin.dashboard.last_gc_pause", m.PauseNs[(m.NumGC+255)%256], 3),
+			r.code("admin.dashboard.gc_times", m.NumGC),
 		),
 	)
 
@@ -182,15 +185,15 @@ func getAdminDashboard(c flamego.Context, l i18n.Locale) (statusCode int, resp *
 // adminOperations are the maintenance tasks an admin can run from the
 // dashboard, by name, with the key of the message shown when one succeeds.
 var adminOperations = map[string]struct {
-	run        func() error
+	run        func(*logx.Logger) error
 	successKey string
 }{
-	"delete-inactive-users": {func() error { return database.Handle.Users().DeleteInactivated() }, "admin.dashboard.delete_inactivate_accounts_success"},
-	"delete-repo-archives":  {database.DeleteRepositoryArchives, "admin.dashboard.delete_repo_archives_success"},
+	"delete-inactive-users": {func(*logx.Logger) error { return database.Handle.Users().DeleteInactivated() }, "admin.dashboard.delete_inactivate_accounts_success"},
+	"delete-repo-archives":  {func(*logx.Logger) error { return database.DeleteRepositoryArchives() }, "admin.dashboard.delete_repo_archives_success"},
 	"delete-missing-repos":  {database.DeleteMissingRepositories, "admin.dashboard.delete_missing_repos_success"},
-	"git-gc-repos":          {database.GitGcRepos, "admin.dashboard.git_gc_repos_success"},
+	"git-gc-repos":          {func(*logx.Logger) error { return database.GitGcRepos() }, "admin.dashboard.git_gc_repos_success"},
 	"resync-ssh-keys":       {database.RewriteAuthorizedKeys, "admin.dashboard.resync_all_sshkeys_success"},
-	"resync-repo-hooks":     {database.SyncRepositoryHooks, "admin.dashboard.resync_all_hooks_success"},
+	"resync-repo-hooks":     {func(*logx.Logger) error { return database.SyncRepositoryHooks() }, "admin.dashboard.resync_all_hooks_success"},
 	"reinit-missing-repos":  {database.ReinitMissingRepositories, "admin.dashboard.reinit_missing_repos_success"},
 }
 
@@ -198,19 +201,19 @@ type adminMessage struct {
 	Message string `json:"message"`
 }
 
-func postAdminOperation(c flamego.Context, l i18n.Locale, admin *database.User) (statusCode int, resp any, err error) {
+func postAdminOperation(logger *logx.Logger, c flamego.Context, l i18n.Locale, admin *database.User) (statusCode int, resp any, err error) {
 	name := c.Param("name")
 	op, ok := adminOperations[name]
 	if !ok {
 		return http.StatusNotFound, nil, errors.New("operation not found")
 	}
-	if err = op.run(); err != nil {
-		log.Error("postAdminOperation: run %q: %v", name, err)
+	if err = op.run(logger); err != nil {
+		logger.Error("Failed to run admin operation", "operation", name, "error", err)
 		// Admins need the reason to fix what failed, e.g., the repository that
 		// could not be collected, as the server-rendered dashboard showed it.
 		return http.StatusInternalServerError, &bindingErrorResponse{Error: err.Error()}, nil
 	}
-	log.Trace("Admin operation %q run by %q", name, admin.Name)
+	logger.Debug("Admin operation run", "operation", name, "adminName", admin.Name)
 	return http.StatusOK, &adminMessage{Message: l.Tr(op.successKey)}, nil
 }
 
@@ -480,12 +483,12 @@ type adminTestMailRequest struct {
 	Email string `json:"email" validate:"required,email,max=254"`
 }
 
-func postAdminTestMail(l i18n.Locale, req adminTestMailRequest) (statusCode int, resp any, err error) {
+func postAdminTestMail(logger *logx.Logger, l i18n.Locale, req adminTestMailRequest) (statusCode int, resp any, err error) {
 	if !conf.Email.Enabled {
 		return http.StatusNotFound, nil, errors.New("email is not enabled")
 	}
-	if err = email.SendTestMail(req.Email); err != nil {
-		log.Error("postAdminTestMail: send to %q: %v", req.Email, err)
+	if err = email.SendTestMail(logger, req.Email); err != nil {
+		logger.Error("Failed to send test mail", "email", req.Email, "error", err)
 		// The mail server refused or could not be reached, and the reason helps
 		// the admin fix the settings.
 		return http.StatusBadGateway, &bindingErrorResponse{Error: l.Tr("admin.config.email.test_mail_failed", req.Email, err)}, nil

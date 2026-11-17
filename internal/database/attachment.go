@@ -23,7 +23,10 @@ type Attachment struct {
 	IssueID   int64  `xorm:"INDEX"`
 	CommentID int64
 	ReleaseID int64 `xorm:"INDEX"`
-	Name      string
+	// UploaderID is the user who uploaded the file, the only one who can
+	// download it before it is attached to an issue, a comment or a release.
+	UploaderID int64
+	Name       string
 
 	Created     time.Time `xorm:"-" json:"-" gorm:"-"`
 	CreatedUnix int64
@@ -51,10 +54,11 @@ func (a *Attachment) LocalPath() string {
 }
 
 // NewAttachment creates a new attachment object.
-func NewAttachment(name string, buf []byte, file multipart.File) (_ *Attachment, err error) {
+func NewAttachment(uploaderID int64, name string, buf []byte, file multipart.File) (_ *Attachment, err error) {
 	attach := &Attachment{
-		UUID: uuid.New().String(),
-		Name: name,
+		UUID:       uuid.New().String(),
+		UploaderID: uploaderID,
+		Name:       name,
 	}
 
 	localPath := attach.LocalPath()
@@ -126,6 +130,24 @@ func getUnboundAttachmentsByUUIDs(e Engine, uuids []string) ([]*Attachment, erro
 	return attachments, e.Where(unboundAttachmentCond).In("uuid", uuids).Find(&attachments)
 }
 
+// BindAttachments links the unbound attachments with the given UUIDs to the
+// issue, and to the comment when commentID is not 0, e.g., files added while
+// editing them.
+func BindAttachments(issueID, commentID int64, uuids []string) error {
+	attachments, err := getUnboundAttachmentsByUUIDs(x, uuids)
+	if err != nil {
+		return errors.Wrap(err, "get unbound attachments")
+	}
+	for _, a := range attachments {
+		a.IssueID = issueID
+		a.CommentID = commentID
+		if _, err = x.ID(a.ID).Cols("issue_id", "comment_id").Update(a); err != nil {
+			return errors.Wrapf(err, "update attachment %d", a.ID)
+		}
+	}
+	return nil
+}
+
 // GetAttachmentByUUID returns attachment by given UUID.
 func GetAttachmentByUUID(uuid string) (*Attachment, error) {
 	return getAttachmentByUUID(x, uuid)
@@ -171,12 +193,14 @@ func DeleteAttachment(a *Attachment, remove bool) error {
 func DeleteAttachments(attachments []*Attachment, remove bool) (int, error) {
 	for i, a := range attachments {
 		if remove {
-			if err := os.Remove(a.LocalPath()); err != nil {
+			if err := os.Remove(a.LocalPath()); err != nil && !os.IsNotExist(err) {
 				return i, err
 			}
 		}
 
-		if _, err := x.Delete(a); err != nil {
+		// Delete by ID alone, because the other fields may be stale, e.g., a release
+		// detaches its files before deleting those that were left out.
+		if _, err := x.ID(a.ID).Delete(new(Attachment)); err != nil {
 			return i, err
 		}
 	}

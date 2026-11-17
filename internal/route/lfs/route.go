@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"gopkg.in/macaron.v1"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/authx"
@@ -17,36 +17,37 @@ import (
 
 // RegisterRoutes registers LFS routes using given router, and inherits all
 // groups and middleware.
-func RegisterRoutes(r *macaron.Router) {
-	verifyAccept := verifyHeader("Accept", contentType, http.StatusNotAcceptable)
-	verifyContentTypeJSON := verifyHeader("Content-Type", contentType, http.StatusBadRequest)
-	verifyContentTypeStream := verifyHeader("Content-Type", "application/octet-stream", http.StatusBadRequest)
+func RegisterRoutes(logger *logx.Logger, r *macaron.Router) {
+	verifyAccept := verifyHeader(logger, "Accept", contentType, http.StatusNotAcceptable)
+	verifyContentTypeJSON := verifyHeader(logger, "Content-Type", contentType, http.StatusBadRequest)
+	verifyContentTypeStream := verifyHeader(logger, "Content-Type", "application/octet-stream", http.StatusBadRequest)
 
-	store := NewStore()
+	store := NewStore(logger)
 	r.Group("", func() {
-		r.Post("/objects/batch", authorize(store, database.AccessModeRead), verifyAccept, verifyContentTypeJSON, serveBatch(store))
+		r.Post("/objects/batch", authorize(logger, store, database.AccessModeRead), verifyAccept, verifyContentTypeJSON, serveBatch(logger, store))
 		r.Group("/objects/basic", func() {
 			basic := &basicHandler{
+				logger:         logger,
 				store:          store,
 				defaultStorage: lfsx.Storage(conf.LFS.Storage),
 				storagers: map[lfsx.Storage]lfsx.Storager{
 					lfsx.StorageLocal: &lfsx.LocalStorage{Root: conf.LFS.ObjectsPath, TempDir: conf.LFS.ObjectsTempPath},
 				},
 			}
-			r.Combo("/:oid", verifyOID()).
-				Get(authorize(store, database.AccessModeRead), basic.serveDownload).
-				Put(authorize(store, database.AccessModeWrite), verifyContentTypeStream, basic.serveUpload)
-			r.Post("/verify", authorize(store, database.AccessModeWrite), verifyAccept, verifyContentTypeJSON, basic.serveVerify)
+			r.Combo("/:oid", verifyOID(logger)).
+				Get(authorize(logger, store, database.AccessModeRead), basic.serveDownload).
+				Put(authorize(logger, store, database.AccessModeWrite), verifyContentTypeStream, basic.serveUpload)
+			r.Post("/verify", authorize(logger, store, database.AccessModeWrite), verifyAccept, verifyContentTypeJSON, basic.serveVerify)
 		})
-	}, authenticate(store))
+	}, authenticate(logger, store))
 }
 
 // authenticate tries to authenticate user via HTTP Basic Auth. It first tries to authenticate
 // as plain username and password, then use username as access token if previous step failed.
-func authenticate(store Store) macaron.Handler {
+func authenticate(logger *logx.Logger, store Store) macaron.Handler {
 	askCredentials := func(w http.ResponseWriter) {
 		w.Header().Set("Lfs-Authenticate", `Basic realm="Git LFS"`)
-		responseJSON(w, http.StatusUnauthorized, responseError{
+		responseJSON(logger, w, http.StatusUnauthorized, responseError{
 			Message: "Credentials needed",
 		})
 	}
@@ -60,8 +61,8 @@ func authenticate(store Store) macaron.Handler {
 
 		user, err := store.AuthenticateUser(c.Req.Context(), username, password, -1)
 		if err != nil && !auth.IsErrBadCredentials(err) {
-			internalServerError(c.Resp)
-			log.Error("Failed to authenticate user [name: %s]: %v", username, err)
+			internalServerError(logger, c.Resp)
+			logger.Error("Failed to authenticate user", "userName", username, "error", err)
 			return
 		}
 
@@ -73,20 +74,20 @@ func authenticate(store Store) macaron.Handler {
 		// If username and password combination failed, try again using either username
 		// or password as the token.
 		if auth.IsErrBadCredentials(err) {
-			user, err = context.AuthenticateByToken(store, c.Req.Context(), username)
+			user, err = context.AuthenticateByToken(c.Req.Context(), logger, store, username)
 			if err != nil && !database.IsErrAccessTokenNotExist(err) {
-				internalServerError(c.Resp)
-				log.Error("Failed to authenticate by access token via username: %v", err)
+				internalServerError(logger, c.Resp)
+				logger.Error("Failed to authenticate by access token via username", "error", err)
 				return
 			} else if database.IsErrAccessTokenNotExist(err) {
 				// Try again using the password field as the token.
-				user, err = context.AuthenticateByToken(store, c.Req.Context(), password)
+				user, err = context.AuthenticateByToken(c.Req.Context(), logger, store, password)
 				if err != nil {
 					if database.IsErrAccessTokenNotExist(err) {
 						askCredentials(c.Resp)
 					} else {
 						c.Status(http.StatusInternalServerError)
-						log.Error("Failed to authenticate by access token via password: %v", err)
+						logger.Error("Failed to authenticate by access token via password", "error", err)
 					}
 					return
 				}
@@ -94,20 +95,20 @@ func authenticate(store Store) macaron.Handler {
 		}
 
 		if user.IsDisabled() {
-			responseJSON(c.Resp, http.StatusForbidden, responseError{
+			responseJSON(logger, c.Resp, http.StatusForbidden, responseError{
 				Message: "User account is disabled",
 			})
 			return
 		}
 
-		log.Trace("[LFS] Authenticated user: %s", user.Name)
+		logger.Debug("Authenticated user", "userName", user.Name)
 
 		c.Map(user)
 	}
 }
 
 // authorize tries to authorize the user to the context repository with given access mode.
-func authorize(store Store, mode database.AccessMode) macaron.Handler {
+func authorize(logger *logx.Logger, store Store, mode database.AccessMode) macaron.Handler {
 	return func(c *macaron.Context, actor *database.User) {
 		username := c.Params(":username")
 		reponame := strings.TrimSuffix(c.Params(":reponame"), ".git")
@@ -117,8 +118,8 @@ func authorize(store Store, mode database.AccessMode) macaron.Handler {
 			if database.IsErrUserNotExist(err) {
 				c.Status(http.StatusNotFound)
 			} else {
-				internalServerError(c.Resp)
-				log.Error("Failed to get user [name: %s]: %v", username, err)
+				internalServerError(logger, c.Resp)
+				logger.Error("Failed to get user", "userName", username, "error", err)
 			}
 			return
 		}
@@ -128,8 +129,8 @@ func authorize(store Store, mode database.AccessMode) macaron.Handler {
 			if database.IsErrRepoNotExist(err) {
 				c.Status(http.StatusNotFound)
 			} else {
-				internalServerError(c.Resp)
-				log.Error("Failed to get repository [owner_id: %d, name: %s]: %v", owner.ID, reponame, err)
+				internalServerError(logger, c.Resp)
+				logger.Error("Failed to get repository", "ownerID", owner.ID, "repoName", reponame, "error", err)
 			}
 			return
 		}
@@ -144,7 +145,7 @@ func authorize(store Store, mode database.AccessMode) macaron.Handler {
 			return
 		}
 
-		log.Trace("[LFS] Authorized user %q to %q", actor.Name, username+"/"+reponame)
+		logger.Debug("Authorized user", "userName", actor.Name, "ownerName", username, "repoName", reponame)
 
 		c.Map(owner) // NOTE: Override actor
 		c.Map(repo)
@@ -153,7 +154,7 @@ func authorize(store Store, mode database.AccessMode) macaron.Handler {
 
 // verifyHeader checks if the HTTP header contains given value.
 // When not, response given "failCode" as status code.
-func verifyHeader(key, value string, failCode int) macaron.Handler {
+func verifyHeader(logger *logx.Logger, key, value string, failCode int) macaron.Handler {
 	return func(c *macaron.Context) {
 		vals := c.Req.Header.Values(key)
 		for _, val := range vals {
@@ -162,17 +163,17 @@ func verifyHeader(key, value string, failCode int) macaron.Handler {
 			}
 		}
 
-		log.Trace("[LFS] HTTP header %q does not contain value %q", key, value)
+		logger.Debug("HTTP header does not contain expected value", "header", key, "expectedValue", value)
 		c.Status(failCode)
 	}
 }
 
 // verifyOID checks if the ":oid" URL parameter is valid.
-func verifyOID() macaron.Handler {
+func verifyOID(logger *logx.Logger) macaron.Handler {
 	return func(c *macaron.Context) {
 		oid := lfsx.OID(c.Params(":oid"))
 		if !lfsx.ValidOID(oid) {
-			responseJSON(c.Resp, http.StatusBadRequest, responseError{
+			responseJSON(logger, c.Resp, http.StatusBadRequest, responseError{
 				Message: "Invalid oid",
 			})
 			return
@@ -182,8 +183,8 @@ func verifyOID() macaron.Handler {
 	}
 }
 
-func internalServerError(w http.ResponseWriter) {
-	responseJSON(w, http.StatusInternalServerError, responseError{
+func internalServerError(logger *logx.Logger, w http.ResponseWriter) {
+	responseJSON(logger, w, http.StatusInternalServerError, responseError{
 		Message: "Internal server error",
 	})
 }

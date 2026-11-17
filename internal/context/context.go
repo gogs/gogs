@@ -8,24 +8,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-macaron/cache"
 	"github.com/go-macaron/i18n"
 	"github.com/go-macaron/session"
 	"gopkg.in/macaron.v1"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/errx"
-	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/template"
 )
 
 // Context represents context of a request.
 type Context struct {
 	*macaron.Context
-	Cache   cache.Cache
-	Flash   *session.Flash
 	Session session.Store
 
 	Link        string // Current request URL
@@ -37,46 +33,9 @@ type Context struct {
 	Repo *Repository
 	Org  *Organization
 
+	Logger *logx.Logger
+
 	webHandler http.Handler
-}
-
-// RawTitle sets the "Title" field in template data.
-func (c *Context) RawTitle(title string) {
-	c.Data["Title"] = title
-}
-
-// Title localizes the "Title" field in template data.
-func (c *Context) Title(locale string) {
-	c.RawTitle(c.Tr(locale))
-}
-
-// PageIs sets "PageIsxxx" field in template data.
-func (c *Context) PageIs(name string) {
-	c.Data["PageIs"+name] = true
-}
-
-// Require sets "Requirexxx" field in template data.
-func (c *Context) Require(name string) {
-	c.Data["Require"+name] = true
-}
-
-func (c *Context) RequireHighlightJS() {
-	c.Require("HighlightJS")
-}
-
-func (c *Context) RequireSimpleMDE() {
-	c.Require("SimpleMDE")
-}
-
-func (c *Context) RequireDropzone() {
-	c.Require("Dropzone")
-}
-
-// FormErr sets "Err_xxx" field in template data.
-func (c *Context) FormErr(names ...string) {
-	for i := range names {
-		c.Data["Err_"+names[i]] = true
-	}
 }
 
 // UserID returns ID of current logged in user.
@@ -86,38 +45,6 @@ func (c *Context) UserID() int64 {
 		return 0
 	}
 	return c.User.ID
-}
-
-func (c *Context) GetErrMsg() string {
-	return c.Data["ErrorMsg"].(string)
-}
-
-// HasError returns true if error occurs in form validation.
-func (c *Context) HasError() bool {
-	hasErr, ok := c.Data["HasError"]
-	if !ok {
-		return false
-	}
-	c.Flash.ErrorMsg = c.Data["ErrorMsg"].(string)
-	c.Data["Flash"] = c.Flash
-	return hasErr.(bool)
-}
-
-// HasValue returns true if value of given name exists.
-func (c *Context) HasValue(name string) bool {
-	_, ok := c.Data[name]
-	return ok
-}
-
-// HTML responses template with given status.
-func (c *Context) HTML(status int, name string) {
-	log.Trace("Template: %s", name)
-	c.Context.HTML(status, name)
-}
-
-// Success responses template with status http.StatusOK.
-func (c *Context) Success(name string) {
-	c.HTML(http.StatusOK, name)
 }
 
 // JSONSuccess responses JSON with status http.StatusOK.
@@ -140,16 +67,6 @@ func (c *Context) Redirect(location string, status ...int) {
 // It prepends setting.Server.Subpath to the location string.
 func (c *Context) RedirectSubpath(location string, status ...int) {
 	c.Redirect(conf.Server.Subpath+location, status...)
-}
-
-// RenderWithErr used for page has form validation but need to prompt error to users.
-func (c *Context) RenderWithErr(msg string, status int, tpl string, f any) {
-	if f != nil {
-		form.Assign(f, c.Data)
-	}
-	c.Flash.ErrorMsg = msg
-	c.Data["Flash"] = c.Flash
-	c.HTML(status, tpl)
 }
 
 // WebContext carries per-request inputs into the web handler so it can
@@ -224,7 +141,7 @@ func (c *Context) serveWeb(wr WebContext) {
 
 // Error renders the 500 page.
 func (c *Context) Error(err error, msg string) {
-	log.ErrorDepth(4, "%s: %v", msg, err)
+	c.Logger.Error("Internal server error", "method", c.Req.Method, "path", c.Req.URL.Path, "operation", msg, "error", err)
 
 	wc := WebContext{
 		Lang:       c.Language(),
@@ -285,22 +202,19 @@ func (c *Context) ServeContent(name string, r io.ReadSeeker, params ...any) {
 
 // Contexter initializes a classic context for a request. webHandler
 // receives 404 responses so the React frontend can render its own 404 page.
-func Contexter(store Store, webHandler http.Handler) macaron.Handler {
-	return func(ctx *macaron.Context, l i18n.Locale, cache cache.Cache, sess session.Store, f *session.Flash) {
+func Contexter(logger *logx.Logger, store Store, webHandler http.Handler) macaron.Handler {
+	return func(ctx *macaron.Context, l i18n.Locale, sess session.Store) {
 		c := &Context{
 			Context:    ctx,
-			Cache:      cache,
-			Flash:      f,
 			Session:    sess,
 			Link:       conf.Server.Subpath + strings.TrimSuffix(ctx.Req.URL.Path, "/"),
+			Logger:     logger,
 			webHandler: webHandler,
 			Repo: &Repository{
 				PullRequest: &PullRequest{},
 			},
 			Org: &Organization{},
 		}
-		c.Data["Link"] = template.EscapePound(c.Link)
-		c.Data["PageStartTime"] = time.Now()
 
 		if len(conf.HTTP.AccessControlAllowOrigin) > 0 {
 			c.Header().Set("Access-Control-Allow-Origin", conf.HTTP.AccessControlAllowOrigin)
@@ -310,19 +224,9 @@ func Contexter(store Store, webHandler http.Handler) macaron.Handler {
 		}
 
 		// Get user from session or header when possible
-		c.User, c.IsBasicAuth, c.IsTokenAuth = authenticatedUser(store, c.Context, c.Session)
+		c.User, c.IsBasicAuth, c.IsTokenAuth = authenticatedUser(logger, store, c.Context, c.Session)
 
-		if c.User != nil {
-			c.IsLogged = true
-			c.Data["IsLogged"] = c.IsLogged
-			c.Data["LoggedUser"] = c.User
-			c.Data["LoggedUserID"] = c.User.ID
-			c.Data["LoggedUserName"] = c.User.Name
-			c.Data["IsAdmin"] = c.User.IsAdmin
-		} else {
-			c.Data["LoggedUserID"] = 0
-			c.Data["LoggedUserName"] = ""
-		}
+		c.IsLogged = c.User != nil
 
 		// If request sends files, parse them here otherwise the Query() can't be parsed.
 		if c.Req.Method == "POST" && strings.Contains(c.Req.Header.Get("Content-Type"), "multipart/form-data") {
@@ -332,11 +236,7 @@ func Contexter(store Store, webHandler http.Handler) macaron.Handler {
 			}
 		}
 
-		log.Trace("Session ID: %s", sess.ID())
-
-		c.Data["ShowRegistrationButton"] = !conf.Auth.DisableRegistration
-
-		c.renderNoticeBanner()
+		logger.Debug("Loaded session", "sessionID", sess.ID())
 
 		// 🚨 SECURITY: Prevent MIME type sniffing in some browsers,
 		// see https://github.com/gogs/gogs/issues/5397 for details.

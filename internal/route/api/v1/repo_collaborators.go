@@ -3,12 +3,11 @@ package v1
 import (
 	"net/http"
 
-	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/route/api/v1/types"
 )
 
-func listCollaborators(c *context.APIContext) {
+func listCollaborators(c *apiContext) {
 	collaborators, err := c.Repo.Repository.GetCollaborators()
 	if err != nil {
 		c.Error(err, "get collaborators")
@@ -26,8 +25,8 @@ type addCollaboratorRequest struct {
 	Permission *string `json:"permission"`
 }
 
-func addCollaborator(c *context.APIContext, form addCollaboratorRequest) {
-	collaborator, err := database.Handle.Users().GetByUsername(c.Req.Context(), c.Params(":collaborator"))
+func addCollaborator(c *apiContext, form addCollaboratorRequest) {
+	collaborator, err := database.Handle.Users().GetByUsername(c.Request().Context(), c.Param("collaborator"))
 	if err != nil {
 		if database.IsErrUserNotExist(err) {
 			c.Status(http.StatusUnprocessableEntity)
@@ -52,8 +51,8 @@ func addCollaborator(c *context.APIContext, form addCollaboratorRequest) {
 	c.NoContent()
 }
 
-func isCollaborator(c *context.APIContext) {
-	collaborator, err := database.Handle.Users().GetByUsername(c.Req.Context(), c.Params(":collaborator"))
+func isCollaborator(c *apiContext) {
+	collaborator, err := database.Handle.Users().GetByUsername(c.Request().Context(), c.Param("collaborator"))
 	if err != nil {
 		if database.IsErrUserNotExist(err) {
 			c.Status(http.StatusUnprocessableEntity)
@@ -63,15 +62,15 @@ func isCollaborator(c *context.APIContext) {
 		return
 	}
 
-	if !c.Repo.Repository.IsCollaborator(collaborator.ID) {
+	if !c.Repo.Repository.IsCollaborator(c.Logger, collaborator.ID) {
 		c.NotFound()
 	} else {
 		c.NoContent()
 	}
 }
 
-func deleteCollaborator(c *context.APIContext) {
-	collaborator, err := database.Handle.Users().GetByUsername(c.Req.Context(), c.Params(":collaborator"))
+func deleteCollaborator(c *apiContext) {
+	collaborator, err := database.Handle.Users().GetByUsername(c.Request().Context(), c.Param("collaborator"))
 	if err != nil {
 		if database.IsErrUserNotExist(err) {
 			c.Status(http.StatusUnprocessableEntity)
@@ -81,7 +80,7 @@ func deleteCollaborator(c *context.APIContext) {
 		return
 	}
 
-	if err := c.Repo.Repository.DeleteCollaboration(collaborator.ID); err != nil {
+	if err := c.Repo.Repository.DeleteCollaboration(c.Logger, collaborator.ID); err != nil {
 		c.Error(err, "delete collaboration")
 		return
 	}

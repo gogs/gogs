@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
+import { Settings, TriangleAlert, Webhook } from "lucide-react";
 import { type FormEvent, type ReactNode, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -8,7 +9,7 @@ import { AvatarForm } from "@/components/AvatarForm";
 import { DeleteForm } from "@/components/DeleteForm";
 import { FormField } from "@/components/FormField";
 import { OrgHeader } from "@/components/OrgHeader";
-import { SettingsLayout, SettingsNavItem } from "@/components/SettingsLayout";
+import { SettingsLayout, SettingsNavDivider, SettingsNavItem } from "@/components/SettingsLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { usePageTitle } from "@/lib/page-title";
@@ -41,9 +42,9 @@ export function OrgSettingsLayout({
   usePageTitle(`${t("org.settings")} - ${org.fullName || org.name}`);
   if (org.kind !== "organization") return null;
   const titles = {
-    options: t("org.settings.options"),
+    options: t("repo.settings.general"),
     hooks: t("repo.settings.hooks"),
-    delete: t("org.settings.delete"),
+    delete: t("repo.settings.danger_zone"),
   };
 
   return (
@@ -54,17 +55,18 @@ export function OrgSettingsLayout({
         current={titles[active]}
         nav={
           <>
-            <SettingsNavItem active={active === "options"}>
+            <SettingsNavItem active={active === "options"} icon={Settings}>
               <Link to="/org/$org/settings" params={{ org: org.name }} activeOptions={{ exact: true }}>
                 {titles.options}
               </Link>
             </SettingsNavItem>
-            <SettingsNavItem active={active === "hooks"}>
+            <SettingsNavItem active={active === "hooks"} icon={Webhook}>
               <Link to="/org/$org/settings/hooks" params={{ org: org.name }}>
                 {titles.hooks}
               </Link>
             </SettingsNavItem>
-            <SettingsNavItem active={active === "delete"} destructive>
+            <SettingsNavDivider />
+            <SettingsNavItem active={active === "delete"} icon={TriangleAlert} destructive>
               <Link to="/org/$org/settings/delete" params={{ org: org.name }}>
                 {titles.delete}
               </Link>
@@ -141,7 +143,7 @@ function OptionsForm({ org, settings }: { org: string; settings: OrgSettingsData
   return (
     <form onSubmit={onSubmit} noValidate>
       <fieldset disabled={save.isPending} className="contents">
-        <h2 className="mb-4 text-xl font-semibold">{t("org.settings.options")}</h2>
+        <h2 className="mb-4 text-xl font-semibold">{t("repo.settings.general")}</h2>
         {formError ? (
           <div
             role="alert"
@@ -249,9 +251,7 @@ function OptionsForm({ org, settings }: { org: string; settings: OrgSettingsData
             </FormField>
           ) : null}
           <div className="border-t border-(--color-border) pt-5">
-            <Button type="submit" variant="outline">
-              {t("org.settings.update_settings")}
-            </Button>
+            <Button type="submit">{t("org.settings.update_settings")}</Button>
           </div>
         </div>
       </fieldset>

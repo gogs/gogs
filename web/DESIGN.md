@@ -38,6 +38,7 @@ Use these tokens. Don't introduce raw hex values in components.
 - `--color-secondary` / `--color-secondary-foreground`: neutral support fill. Available for chips, tags, low-emphasis fills.
 - `--color-destructive` / `--color-destructive-foreground`: error and danger. The 404 page uses `text-(--color-destructive)` on the `fatal:` token, always paired with the word itself (color is never the sole signal).
 - `--color-success`: affirmative state for signature verification badges and copy-confirm checkmarks. Lighter in dark mode (`#4ade80`) than light (`#15803d`) so it reads on both backgrounds. Always pair with a label or icon, never color alone.
+- `--color-merged`: merged pull requests, for the Merged pill and the merge box icon. Purple like other forges, darker in light mode (`#6f42c1`) than dark (`#b392f0`) so it keeps 4.5:1 on its own 15% tint. Always pair with a label or icon.
 - `--color-diff-added` / `--color-diff-removed`: diff change markers (the +/- dots in the diff toolbar stats row, and any future per-line tints). Separate from `--color-success`/`--color-destructive` so the diff palette can drift toward the universal git green/red without dragging the success/error semantics along.
 - `--color-ring`: keyboard focus ring color. Don't override per-component. If a default ring looks wrong, fix it at the token level.
 
@@ -81,27 +82,39 @@ Swap the submit label to a present-continuous string ("Signing in…", "Verifyin
 
 ## Settings pages
 
-The settings pages of users, organizations and repositories, and the admin panel, use `SettingsLayout` from `@/components/SettingsLayout`: the links between the pages sit beside the page. Below the `md` breakpoint they move into a full-width dropdown above the page, named after the current page, since a row of ten links does not fit. Wrap each link in `SettingsNavItem`, and mark the link to a destructive page, e.g., deleting the account, with `destructive`. Pages still served by the server are plain `<a>` links. Give each `Link` `activeOptions={{ exact: true }}`, since TanStack Router otherwise marks a link as the current page on every page under its path.
+The settings pages of users, organizations and repositories, and the admin panel, use `SettingsLayout` from `@/components/SettingsLayout`: the links between the pages sit beside the page. Below the `md` breakpoint they move into a full-width dropdown above the page, named after the current page, since a row of ten links does not fit. Wrap each link in `SettingsNavItem` with a leading Lucide icon, and give every item of a menu one. The current page gets a bar in `--color-primary` beside its surface fill, so it shows in dark mode too. Menus with more than a few items put related links under a heading with `SettingsNavGroup`, as GitHub does, e.g., "Access" and "Code and automation", and leave the first group without one. Each page does one job. The destructive actions of a menu sit on their own page named "Danger zone", below a `SettingsNavDivider`, marked with `destructive`, along with changes that are hard to undo, e.g., the visibility of a repository. Pages still served by the server are plain `<a>` links. Give each `Link` `activeOptions={{ exact: true }}`, since TanStack Router otherwise marks a link as the current page on every page under its path.
 
-Actions that cannot be taken back, such as deleting a team or leaving a repository, ask first in a dialog with `ConfirmButton`. The dialog (`components/ui/dialog.tsx`) is a bottom sheet below `sm` and centered from `sm` up. Its body scrolls while the title and the actions stay in view, so the actions never get clipped on a short screen. After such an action empties the page of a paginated list, move to the previous page instead of showing an empty one. Deleting an account asks for the password instead, with `DeleteForm`, and the danger zone of a repository asks for its name in the same dialog.
+Actions that cannot be taken back, such as deleting a team or leaving a repository, ask first in a dialog with `ConfirmButton`. A destructive button on the page is an outline button with `--color-destructive` text, and only the button that confirms inside the dialog is solid `destructive`. The dialog (`components/ui/dialog.tsx`) is a bottom sheet below `sm` and centered from `sm` up. Its body scrolls while the title and the actions stay in view, so the actions never get clipped on a short screen. After such an action empties the page of a paginated list, move to the previous page instead of showing an empty one. Deleting an account asks for the password instead, with `DeleteForm`, and the danger zone of a repository asks for its name in the same dialog.
 
 ## Lists
 
 Lists that can be searched by keyword take `q` and `page` search params, validated with `validateListSearch` from `@/lib/page-search`, and search with `SearchForm` from `@/components/SearchForm`, which starts over from the first page.
 
+The branches page searches as you type instead, like GitHub: the URL follows the field after a short pause, through a `query` search param validated with `validateBranchesSearch`. The field sits to the right of the view switcher from `sm` up and below it on narrow screens. Searching from the overview moves to all branches.
+
 ## Reports
 
-Pages that show settings or measurements, e.g., the admin dashboard and configuration, list them as a `<dl>` with the label beside its value from the `sm` breakpoint up and above it below that. Divide long reports into groups with a gap rather than a rule. Show each setting value as inline code, as it is written in the configuration, and keep units, notes and Yes or No text outside the chip. Show a setting that has no value as "(not set)" instead of leaving it blank. When a report has more labels than the SPA should bundle in every locale, as the configuration page does, the server sends them already translated, and the page only renders them.
+Pages that show settings or measurements, e.g., the admin dashboard and configuration, list them as a `<dl>` with the label beside its value from the `sm` breakpoint up and above it below that. Divide long reports into groups with a gap rather than a rule. Show each setting value as inline code, as it is written in the configuration, and keep units, notes and Yes or No text outside the chip. Measurements, e.g., memory sizes and durations on the admin dashboard, show the whole value with its unit in the chip. Show a setting that has no value as "(not set)" instead of leaving it blank. When a report has more labels than the SPA should bundle in every locale, as the configuration page does, the server sends them already translated, and the page only renders them.
 
 ## Highlighted code
 
 Show code with syntax highlighting, e.g., the payload of a webhook delivery, with `CodeBlock` from `@/components/CodeBlock`. It renders through `@pierre/diffs` with the same themes and worker pool as the files of a commit, and follows the app theme.
 
-Edit Markdown and code with `CodeEditor` from `@/components/CodeEditor`, never a plain `<textarea>`. It is the one editor of the app, built on CodeMirror 6. Markdown wraps like prose and Tab moves focus. `code` lays out source code with line numbers and Tab indents, and Escape then Tab leaves it. Token colors are the `--code-*` variables in `index.css`. Plain text fields, such as descriptions and SSH keys, stay textareas.
+Show the changes between two commits, e.g., a commit and its parent or the range of a push, with `DiffWorkspace` from `@/components/DiffWorkspace`. It takes the raw diff and both commits, and brings the full-width layout, the file tree, the toolbar and line expansion, so a page only adds its own header above it.
+
+Edit Markdown and code with `CodeEditor` from `@/components/CodeEditor`, never a plain `<textarea>`. It is the one editor of the app, built on CodeMirror 6. Markdown wraps like prose and Tab moves focus. `code` lays out source code with line numbers and Tab indents, and Escape then Tab leaves it. Token colors are the `--code-*` variables in `index.css`. For a file, pass the `lang` that `codeLanguageOf` picks by its name, and the `indentUnit` and `tabSize` its `.editorconfig` sets, which can all change while the editor is open. Plain text fields, such as descriptions and SSH keys, stay textareas.
 
 ## Rendered Markdown
 
 Show Markdown that the server rendered and sanitized, e.g., the content of an issue and its comments, with `Markdown` from `@/components/Markdown`. It styles the HTML with the `markdown` class in `index.css`, and highlights fenced code blocks that name a language with `CodeBlock`. Previews of Markdown being written go through the same component, so they look like the result.
+
+Forms that open or change issues and releases share their parts from `@/components/IssueForm`: `MarkdownEditor` with its Write and Preview tabs, `AttachFilesButton` and `PendingFiles` with `useAttachmentUploads`, and `IssueMeta` for the labels, milestone and assignee that writers set on issues. `useAttachmentUploads` takes `"releases"` to upload under the release attachment limits.
+
+The issue and pull request pages share their parts from `pages/repo/Issue.tsx`: `IssueHeader` for the title, the state pill and a summary, and `IssueConversation` for the comments, the form to comment and the sidebar. The pull request page adds its tabs below the header and its merge box above the form to comment.
+
+## Repository refs and clone URLs
+
+Pages that show a repository at a branch, a tag or a commit, e.g., the code browser and the commit history, switch it with `RefPicker` from `@/components/RefPicker`, which links each ref to the same page through `renderLink`. Without `tags`, it picks only branches, under the `label` it is given, e.g., the base and the compared branch of a new pull request. Show the clone URL of a repository or a wiki with `CloneBox` from `@/components/CloneBox`. It remembers the protocol the viewer picked under the key the server-rendered pages use.
 
 ## Translated markup
 
@@ -113,13 +126,21 @@ Tailwind 4's preflight removes the browser default `cursor: pointer` on `<button
 
 When in doubt, hover-test the new control: if the cursor is still an I-beam or arrow, add `cursor-pointer`.
 
+## Linked items
+
+When the URL links to an item on the page, e.g., `#issuecomment-1` or `#event-2`, highlight it like GitHub does: a primary-colored 1px edge with a soft `ring-2 ring-(--color-primary)/30` halo. Read the hash from the router state, not `:target`, which doesn't match items that render after the page loads or links that update the URL through the router. The page's `scroll-padding-top` keeps the item clear of the sticky navbar.
+
 ## Tabs
 
-Page-level tabs (the repository header tabs, the explore tabs, the user profile tabs) are links in a row with a bottom border of `--color-border`. Each tab is `border-b-2 px-3 py-2 text-sm` with a leading `size-4` icon. The active tab gets `border-(--color-primary)`, `font-semibold`, foreground text, and `aria-current="page"`. Inactive tabs are muted and show a `--color-border` underline on hover. Below `sm`, never scroll the row horizontally. Keep only as many tabs inline as fit at 375px, always including the active one, and fold the rest into a trailing "More" popover menu (`Menu` icon, `aria-label` of `more_tabs`). From `sm` up, show the full row. Build these rows with `PageTabs`, which does this given how many tabs to keep inline. The repository header has its own row.
+Page-level tabs (the repository header tabs, the explore tabs, the user profile tabs) are links in a row with a bottom border of `--color-border`. Each tab is `border-b-2 px-3 py-2 text-sm` with a leading `size-4` icon. The active tab gets `border-(--color-primary)`, `font-semibold`, foreground text, and `aria-current="page"`. Inactive tabs are muted and show a `--color-border` underline on hover. Below `sm`, never scroll the row horizontally. Keep only as many tabs inline as fit at 375px, always including the active one, and fold the rest into a trailing "More" popover menu (`Menu` icon, `aria-label` of `more_tabs`). From `sm` up, show the full row. Build these rows with `PageTabs`, which does this given how many tabs to keep inline. The repository header has its own row. A tab that counts something (the organization tabs, the pull request tabs) sets `count`, which ends it with a `rounded-full bg-(--color-secondary) px-2 text-xs/5 font-medium tabular-nums` badge. When one tab's path is a prefix of another's, e.g., a pull request and its commits, give its TanStack `Link` `activeOptions={{ exact: true }}`, or it also gets `aria-current="page"` on the longer path.
+
+Switches between sibling views inside a page (labels and milestones, the branch overview and all branches) are a `<nav>` of links in one `rounded-md border border-(--color-input)` group, divided by `border-l`. Each link is `px-3 py-1.5 text-sm` with a leading `size-4` icon. The current one gets `bg-(--color-surface)`, `font-semibold`, foreground text, and `aria-current="page"`. The others are muted.
+
+A switcher with more links than fit at 375px, e.g., the five views of the branches page, scrolls sideways inside its own row, which runs to the edges of the screen below `sm`. The page itself stays 375px wide, and the current link scrolls into view when the page opens. Give each link `activeOptions={{ exact: true }}`, so that only one link is marked as the current page.
 
 ## Narrow screens
 
-Every page works at 375px wide. Only content that is meant to scroll does so sideways: code and diffs. Tab rows fold into a "More" menu instead (see Tabs).
+Every page works at 375px wide. Only content that is meant to scroll does so sideways: code, diffs, and a view switcher too long for the screen. Tab rows fold into a "More" menu instead (see Tabs).
 
 - **Wrap long text with `wrap-anywhere`, not `break-all`.** Names, URLs and emails break at hyphens and slashes first, and mid-word only when nothing else fits. `break-all` splits ordinary words, e.g., "Joined o / n". Terminal frames keep `break-all`, since real terminals wrap anywhere, but translated prose inside them does not.
 - **Keep a label and its value in one box.** Inside a flex row, wrap them in a single `<span>` so they wrap together as text instead of as two squeezed columns.

@@ -11,7 +11,7 @@ import (
 	"github.com/go-macaron/session"
 	"github.com/google/uuid"
 	"gopkg.in/macaron.v1"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
@@ -92,7 +92,6 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 				c.Status(http.StatusForbidden)
 				return
 			}
-			c.PageIs("Admin")
 		}
 	}
 }
@@ -157,9 +156,11 @@ type AuthStore interface {
 
 // authenticatedUserID returns the ID of the authenticated user, along with a bool value
 // which indicates whether the user uses token authentication.
-func authenticatedUserID(store AuthStore, c *macaron.Context, sess session.Store) (_ int64, isTokenAuth bool) {
-	// Check access token.
-	if isAPIPath(c.Req.URL.Path) {
+func authenticatedUserID(logger *logx.Logger, store AuthStore, c *macaron.Context, sess session.Store) (_ int64, isTokenAuth bool) {
+	// Access tokens are for API v1 only. The web API under "/api/web" serves the
+	// browser, including the routes that change the credentials and two-factor
+	// authentication of an account, which a leaked token must not reach.
+	if strings.HasPrefix(c.Req.URL.Path, "/api/v1/") {
 		var tokenSHA string
 		auHead := c.Req.Header.Get("Authorization")
 		if auHead != "" {
@@ -174,12 +175,12 @@ func authenticatedUserID(store AuthStore, c *macaron.Context, sess session.Store
 			t, err := store.GetAccessTokenBySHA1(c.Req.Context(), tokenSHA)
 			if err != nil {
 				if !database.IsErrAccessTokenNotExist(err) {
-					log.Error("GetAccessTokenBySHA: %v", err)
+					logger.Error("Failed to get access token by SHA1", "error", err)
 				}
 				return 0, false
 			}
 			if err = store.TouchAccessTokenByID(c.Req.Context(), t.ID); err != nil {
-				log.Error("Failed to touch access token: %v", err)
+				logger.Error("Failed to touch access token", "tokenID", t.ID, "error", err)
 			}
 			return t.UserID, true
 		}
@@ -193,7 +194,7 @@ func authenticatedUserID(store AuthStore, c *macaron.Context, sess session.Store
 		_, err := store.GetUserByID(c.Req.Context(), id)
 		if err != nil {
 			if !database.IsErrUserNotExist(err) {
-				log.Error("Failed to get user by ID: %v", err)
+				logger.Error("Failed to get user by ID", "userID", id, "error", err)
 			}
 			return 0, false
 		}
@@ -204,8 +205,8 @@ func authenticatedUserID(store AuthStore, c *macaron.Context, sess session.Store
 
 // authenticatedUser returns the user object of the authenticated user, along with two bool values
 // which indicate whether the user uses HTTP Basic Authentication or token authentication respectively.
-func authenticatedUser(store AuthStore, ctx *macaron.Context, sess session.Store) (_ *database.User, isBasicAuth, isTokenAuth bool) {
-	uid, isTokenAuth := authenticatedUserID(store, ctx, sess)
+func authenticatedUser(logger *logx.Logger, store AuthStore, ctx *macaron.Context, sess session.Store) (_ *database.User, isBasicAuth, isTokenAuth bool) {
+	uid, isTokenAuth := authenticatedUserID(logger, store, ctx, sess)
 
 	if uid <= 0 {
 		if conf.Auth.EnableReverseProxyAuthentication && isRequestFromTrustedProxy(ctx.Req.Request) {
@@ -214,7 +215,7 @@ func authenticatedUser(store AuthStore, ctx *macaron.Context, sess session.Store
 				user, err := store.GetUserByUsername(ctx.Req.Context(), webAuthUser)
 				if err != nil {
 					if !database.IsErrUserNotExist(err) {
-						log.Error("Failed to get user by name: %v", err)
+						logger.Error("Failed to get user by name", "username", webAuthUser, "error", err)
 						return nil, false, false
 					}
 
@@ -229,7 +230,7 @@ func authenticatedUser(store AuthStore, ctx *macaron.Context, sess session.Store
 							},
 						)
 						if err != nil {
-							log.Error("Failed to create user %q: %v", webAuthUser, err)
+							logger.Error("Failed to create user", "username", webAuthUser, "error", err)
 							return nil, false, false
 						}
 					}
@@ -238,9 +239,12 @@ func authenticatedUser(store AuthStore, ctx *macaron.Context, sess session.Store
 			}
 		}
 
-		// Check with basic auth.
+		// Check with basic auth. The web API under "/api/web" serves the browser,
+		// which signs in with the session, and includes the routes that change
+		// the credentials and two-factor authentication of an account. A password
+		// alone, without the second factor, must not reach them.
 		baHead := ctx.Req.Header.Get("Authorization")
-		if len(baHead) > 0 {
+		if len(baHead) > 0 && !strings.HasPrefix(ctx.Req.URL.Path, "/api/web/") {
 			auths := strings.Fields(baHead)
 			if len(auths) == 2 && auths[0] == "Basic" {
 				uname, passwd, _ := tool.BasicAuthDecode(auths[1])
@@ -248,7 +252,7 @@ func authenticatedUser(store AuthStore, ctx *macaron.Context, sess session.Store
 				u, err := store.AuthenticateUser(ctx.Req.Context(), uname, passwd, -1)
 				if err != nil {
 					if !auth.IsErrBadCredentials(err) {
-						log.Error("Failed to authenticate user: %v", err)
+						logger.Error("Failed to authenticate user", "error", err)
 					}
 					return nil, false, false
 				}
@@ -264,7 +268,7 @@ func authenticatedUser(store AuthStore, ctx *macaron.Context, sess session.Store
 
 	u, err := store.GetUserByID(ctx.Req.Context(), uid)
 	if err != nil {
-		log.Error("GetUserByID: %v", err)
+		logger.Error("Failed to get user by ID", "userID", uid, "error", err)
 		return nil, false, false
 	}
 	if isTokenAuth && u.IsDisabled() {
@@ -302,14 +306,14 @@ func isRequestFromTrustedProxy(req *http.Request) bool {
 // AuthenticateByToken attempts to authenticate a user by the given access
 // token. It returns database.ErrAccessTokenNotExist when the access token does not
 // exist.
-func AuthenticateByToken(store AuthStore, ctx context.Context, token string) (*database.User, error) {
+func AuthenticateByToken(ctx context.Context, logger *logx.Logger, store AuthStore, token string) (*database.User, error) {
 	t, err := store.GetAccessTokenBySHA1(ctx, token)
 	if err != nil {
 		return nil, errors.Wrap(err, "get access token by SHA1")
 	}
 	if err = store.TouchAccessTokenByID(ctx, t.ID); err != nil {
 		// NOTE: There is no need to fail the auth flow if we can't touch the token.
-		log.Error("Failed to touch access token [id: %d]: %v", t.ID, err)
+		logger.Error("Failed to touch access token", "tokenID", t.ID, "error", err)
 	}
 
 	user, err := store.GetUserByID(ctx, t.UserID)

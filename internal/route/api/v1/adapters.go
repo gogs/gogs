@@ -97,7 +97,7 @@ func toUserPublicKey(apiLink string, key *database.PublicKey) *types.UserPublicK
 	}
 }
 
-func toRepositoryHook(repoLink string, w *database.Webhook) *types.RepositoryHook {
+func toRepositoryHook(w *database.Webhook) *types.RepositoryHook {
 	config := map[string]string{
 		"url":          w.URL,
 		"content_type": w.ContentType.Name(),
@@ -111,9 +111,11 @@ func toRepositoryHook(repoLink string, w *database.Webhook) *types.RepositoryHoo
 	}
 
 	return &types.RepositoryHook{
-		ID:      w.ID,
-		Type:    w.HookTaskType.Name(),
-		URL:     fmt.Sprintf("%s/settings/hooks/%d", repoLink, w.ID),
+		ID:   w.ID,
+		Type: w.HookTaskType.Name(),
+		// The URL has always missed the repository link prefix, keep it as-is for
+		// compatibility.
+		URL:     fmt.Sprintf("/settings/hooks/%d", w.ID),
 		Active:  w.IsActive,
 		Config:  config,
 		Events:  w.EventsArray(),

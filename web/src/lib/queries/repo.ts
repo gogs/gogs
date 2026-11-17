@@ -53,6 +53,7 @@ async function repoAction<T>(method: "POST" | "DELETE", owner: string, name: str
   const res = await fetch(subUrl(`/api/web/${owner}/${name}/${action}`), {
     method,
     credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
   });
   if (!res.ok) throw await loaderResponseError(res);
   return (await res.json()) as T;
@@ -87,6 +88,7 @@ export async function removeRepoWatcher(owner: string, name: string, username: s
   const res = await fetch(subUrl(`/api/web/${owner}/${name}/watchers/${encodeURIComponent(username)}`), {
     method: "DELETE",
     credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
   });
   if (!res.ok) throw await loaderResponseError(res);
   return (await res.json()) as RepoWatchResult;
@@ -184,7 +186,14 @@ export interface RepoAdvancedSettings {
   externalTrackerStyle: string;
   enablePulls: boolean;
   pullsIgnoreWhitespace: boolean;
+  pullsAllowMerge: boolean;
   pullsAllowRebase: boolean;
+  pullsAllowSquash: boolean;
+  pullsDeleteBranch: boolean;
+  // The presets of the messages merge commits and squashing start with,
+  // empty for the default message.
+  pullsMergeMessage: "" | "title" | "title_description";
+  pullsSquashMessage: "" | "title" | "title_description" | "title_commits";
 }
 
 export interface RepoMirrorSettings {
@@ -320,8 +329,125 @@ export function deleteRepoDeployKey(owner: string, name: string, id: number) {
   return send("DELETE", repoSettingsURL(owner, name, `/keys/${id}`));
 }
 
+export interface RepoGitHook {
+  name: string;
+  // isActive is false when the hook only has its sample content.
+  isActive: boolean;
+}
+
+export async function fetchRepoGitHooks(owner: string, name: string) {
+  return (await fetchJSON<{ items: RepoGitHook[] }>(repoSettingsURL(owner, name, "/githooks"))).items;
+}
+
+export interface RepoGitHookContent extends RepoGitHook {
+  content: string;
+}
+
+export function fetchRepoGitHook(owner: string, name: string, hook: string) {
+  return fetchJSON<RepoGitHookContent>(repoSettingsURL(owner, name, `/githooks/${encodeURIComponent(hook)}`));
+}
+
+export function updateRepoGitHook(owner: string, name: string, hook: string, content: string) {
+  return submit<void>("PUT", repoSettingsURL(owner, name, `/githooks/${encodeURIComponent(hook)}`), { content });
+}
+
+export function deleteRepoGitHook(owner: string, name: string, hook: string) {
+  return send("DELETE", repoSettingsURL(owner, name, `/githooks/${encodeURIComponent(hook)}`));
+}
+
+export interface RepoBranchSettingsData {
+  // isEmpty is set for a repository without commits, which has no branches
+  // to manage yet.
+  isEmpty: boolean;
+  defaultBranch: string;
+  branches: string[];
+  protectedBranches: string[];
+}
+
+export function fetchRepoBranchSettings(owner: string, name: string) {
+  return fetchJSON<RepoBranchSettingsData>(repoSettingsURL(owner, name, "/branches"));
+}
+
+export function updateRepoDefaultBranch(owner: string, name: string, branch: string) {
+  return submit<void>("PUT", repoSettingsURL(owner, name, "/default-branch"), { branch });
+}
+
+export interface RepoProtectedBranchForm {
+  protected: boolean;
+  requirePullRequest: boolean;
+  enableWhitelist: boolean;
+  whitelistUserIDs: number[];
+  whitelistTeamIDs: number[];
+}
+
+export interface RepoProtectedBranch extends RepoProtectedBranchForm {
+  name: string;
+  // The options are only sent for repositories of organizations, which alone
+  // can let people and teams push past the protection.
+  userOptions?: { id: number; name: string; avatarURL: string }[];
+  teamOptions?: { id: number; name: string }[];
+}
+
+export function fetchRepoProtectedBranch(owner: string, name: string, branch: string) {
+  return fetchJSON<RepoProtectedBranch>(repoSettingsURL(owner, name, `/branches/${refPath(branch)}`));
+}
+
+export function updateRepoProtectedBranch(owner: string, name: string, branch: string, form: RepoProtectedBranchForm) {
+  return submit<void>("PUT", repoSettingsURL(owner, name, `/branches/${refPath(branch)}`), form);
+}
+
+// refPath encodes the name of a branch or a tag, which may contain slashes,
+// for a path.
+export function refPath(ref: string) {
+  return ref.split("/").map(encodeURIComponent).join("/");
+}
+
 function repoURL(owner: string, name: string, path: string) {
   return subUrl(`/api/web/${owner}/${name}${path}`);
+}
+
+export interface RepoBranch {
+  name: string;
+  isProtected: boolean;
+  commitID: string;
+  committedAt: string;
+  committerName: string;
+}
+
+// RepoBranchesView is a view of the branches page. Every view but the overview
+// is a paged list.
+export type RepoBranchesView = "overview" | "yours" | "active" | "stale" | "all";
+
+export interface RepoBranchSection {
+  kind: "default" | "yours" | "active" | "stale";
+  branches: RepoBranch[];
+  // hasMore is true when the section shows only the first of its branches.
+  hasMore: boolean;
+}
+
+export interface RepoBranchesData {
+  defaultBranch: string;
+  view: RepoBranchesView;
+  // sections are the groups of the overview, and empty for the other views.
+  sections: RepoBranchSection[];
+  // branches are the page of the other views, and empty for the overview.
+  branches: RepoBranch[];
+  page: number;
+  hasNext: boolean;
+  viewerCanWrite: boolean;
+  allowsPulls: boolean;
+  viewerCanChangeDefault: boolean;
+}
+
+export function fetchRepoBranches(
+  owner: string,
+  name: string,
+  { view, query, page }: { view: RepoBranchesView; query?: string; page?: number },
+) {
+  const params = new URLSearchParams({ view });
+  if (query) params.set("query", query);
+  if (page) params.set("page", String(page));
+  return fetchJSON<RepoBranchesData>(repoURL(owner, name, `/branches?${params.toString()}`));
 }
 
 export interface RepoLabel {
@@ -500,7 +626,22 @@ export interface IssueComment {
   viewerCanEdit?: boolean;
 }
 
-export interface RepoIssueData {
+export interface IssueAttachmentSettings {
+  allowedTypes: string[];
+  // maxSize is the largest file in bytes.
+  maxSize: number;
+  maxFiles: number;
+}
+
+// IssueMetaOptions are the labels, milestones and assignees that writers can
+// set on issues.
+export interface IssueMetaOptions {
+  labelOptions?: IssueLabel[];
+  milestoneOptions?: { id: number; name: string; isClosed: boolean }[];
+  assigneeOptions?: { id: number; name: string; avatarURL: string }[];
+}
+
+export interface RepoIssueData extends IssueMetaOptions {
   index: number;
   title: string;
   isClosed: boolean;
@@ -515,15 +656,10 @@ export interface RepoIssueData {
   // closed.
   milestone?: { id: number; name: string; completeness: number };
   assignee?: { id: number; name: string; avatarURL: string };
-  // labelOptions, milestoneOptions and assigneeOptions are what writers can
-  // set on the issue, and are only sent to them.
-  labelOptions?: IssueLabel[];
-  milestoneOptions?: { id: number; name: string; isClosed: boolean }[];
-  assigneeOptions?: { id: number; name: string; avatarURL: string }[];
   participants: IssueUser[];
   // attachment is how files can be attached to comments, only sent to
   // authenticated viewers when attachments are enabled.
-  attachment?: { allowedTypes: string[]; maxSize: number; maxFiles: number };
+  attachment?: IssueAttachmentSettings;
   viewerCanEdit: boolean;
   viewerCanWrite: boolean;
 }
@@ -532,66 +668,678 @@ export function fetchRepoIssue(owner: string, name: string, index: number) {
   return fetchJSON<RepoIssueData>(repoURL(owner, name, `/issues/${index}`));
 }
 
-export function updateRepoIssue(
-  owner: string,
-  name: string,
-  index: number,
-  form: { title?: string; content?: string },
-) {
-  return submit<void>("PATCH", repoURL(owner, name, `/issues/${index}`), form);
+export interface IssueTemplateSummary {
+  // file is the name of the template in the ISSUE_TEMPLATE directory.
+  file: string;
+  name: string;
+  about: string;
 }
 
-export function setRepoIssueClosed(owner: string, name: string, index: number, closed: boolean) {
-  return send(closed ? "PUT" : "DELETE", repoURL(owner, name, `/issues/${index}/closed`));
+export interface IssueTemplateField {
+  type: "markdown" | "textarea" | "input" | "dropdown" | "checkboxes" | "upload";
+  label?: string;
+  // descriptionHTML and html are rendered Markdown.
+  descriptionHTML?: string;
+  html?: string;
+  placeholder?: string;
+  value?: string;
+  render?: string;
+  multiple?: boolean;
+  // labelHTML is the rendered Markdown of the label of a checkbox.
+  options?: { label: string; labelHTML?: string; required?: boolean }[];
+  // default is the index of the option a dropdown starts with.
+  default?: number;
+  required?: boolean;
+  // accept is the comma-separated file extensions an upload takes.
+  accept?: string;
 }
 
-export function createRepoIssueComment(
-  owner: string,
-  name: string,
-  index: number,
-  form: { content: string; attachments: string[] },
-) {
-  return submit<{ id: number }>("POST", repoURL(owner, name, `/issues/${index}/comments`), form);
+export interface IssueTemplate extends IssueTemplateSummary {
+  title: string;
+  labels: string[];
+  assignees: string[];
+  // body is the content of a Markdown template, and form the fields of an
+  // issue form.
+  body: string;
+  form?: IssueTemplateField[];
 }
 
-export function updateRepoIssueComment(owner: string, name: string, index: number, id: number, content: string) {
-  return submit<void>("PATCH", repoURL(owner, name, `/issues/${index}/comments/${id}`), { content });
+export interface RepoNewIssueOptions extends IssueMetaOptions {
+  // The templates are only sent to viewers who can read the repository.
+  templates: IssueTemplateSummary[];
+  contactLinks: { name: string; url: string; about: string }[];
+  blankIssuesEnabled: boolean;
+  // template is the one asked for, if it exists.
+  template?: IssueTemplate;
+  // content is what a blank issue starts with.
+  content: string;
+  attachment?: IssueAttachmentSettings;
+  viewerCanWrite: boolean;
 }
 
-export function deleteRepoIssueComment(owner: string, name: string, index: number, id: number) {
-  return send("DELETE", repoURL(owner, name, `/issues/${index}/comments/${id}`));
+// fetchRepoNewIssue loads what the form to open an issue offers, along with
+// the issue templates of the repository and the chosen one, if any.
+export function fetchRepoNewIssue(owner: string, name: string, template?: string) {
+  const query = template ? `?template=${encodeURIComponent(template)}` : "";
+  return fetchJSON<RepoNewIssueOptions>(repoURL(owner, name, `/issues/new${query}`));
 }
 
-export function setRepoIssueLabels(owner: string, name: string, index: number, ids: number[]) {
-  return submit<void>("PUT", repoURL(owner, name, `/issues/${index}/labels`), { ids });
+export interface RepoNewIssueForm {
+  title: string;
+  content: string;
+  labelIDs: number[];
+  milestoneID: number;
+  assigneeID: number;
+  attachments: string[];
+  // template is the file of the chosen template. fields are the values of
+  // the elements of an issue form, in order.
+  template?: string;
+  fields?: string[][];
+}
+
+export function createRepoIssue(owner: string, name: string, form: RepoNewIssueForm) {
+  return submit<{ index: number }>("POST", repoURL(owner, name, "/issues"), form);
+}
+
+// IssueRef names an issue or a pull request, which take the same changes
+// under their own path.
+export interface IssueRef {
+  owner: string;
+  name: string;
+  kind: "issues" | "pulls";
+  index: number;
+}
+
+function issueURL(issue: IssueRef, path = "") {
+  return repoURL(issue.owner, issue.name, `/${issue.kind}/${issue.index}${path}`);
+}
+
+// attachments are the UUIDs of the files uploaded while editing the content.
+export function updateRepoIssue(issue: IssueRef, form: { title?: string; content?: string; attachments?: string[] }) {
+  return submit<void>("PATCH", issueURL(issue), form);
+}
+
+export function setRepoIssueClosed(issue: IssueRef, closed: boolean) {
+  return send(closed ? "PUT" : "DELETE", issueURL(issue, "/closed"));
+}
+
+export function createRepoIssueComment(issue: IssueRef, form: { content: string; attachments: string[] }) {
+  return submit<{ id: number }>("POST", issueURL(issue, "/comments"), form);
+}
+
+export function updateRepoIssueComment(issue: IssueRef, id: number, content: string, attachments: string[] = []) {
+  return submit<void>("PATCH", issueURL(issue, `/comments/${id}`), { content, attachments });
+}
+
+export function deleteRepoIssueComment(issue: IssueRef, id: number) {
+  return send("DELETE", issueURL(issue, `/comments/${id}`));
+}
+
+export function setRepoIssueLabels(issue: IssueRef, ids: number[]) {
+  return submit<void>("PUT", issueURL(issue, "/labels"), { ids });
 }
 
 // setRepoIssueMilestone sets the milestone of the issue, or clears it with 0.
-export function setRepoIssueMilestone(owner: string, name: string, index: number, id: number) {
-  return submit<void>("PUT", repoURL(owner, name, `/issues/${index}/milestone`), { id });
+export function setRepoIssueMilestone(issue: IssueRef, id: number) {
+  return submit<void>("PUT", issueURL(issue, "/milestone"), { id });
 }
 
 // setRepoIssueAssignee sets the assignee of the issue, or clears it with 0.
-export function setRepoIssueAssignee(owner: string, name: string, index: number, id: number) {
-  return submit<void>("PUT", repoURL(owner, name, `/issues/${index}/assignee`), { id });
+export function setRepoIssueAssignee(issue: IssueRef, id: number) {
+  return submit<void>("PUT", issueURL(issue, "/assignee"), { id });
+}
+
+export interface RepoPullInfo {
+  // state is "broken" when a branch or the fork is gone, and "checking"
+  // while conflicts are checked.
+  state: "merged" | "closed" | "broken" | "checking" | "mergeable" | "conflict";
+  headBranch: string;
+  baseBranch: string;
+  // headLabel and baseLabel name the branches after their owners, or are
+  // "deleted" for a branch that is gone.
+  headLabel: string;
+  baseLabel: string;
+  headRepoLink?: string;
+  commitCount: number;
+  fileCount: number;
+  merger?: IssueUser;
+  mergedAt?: string;
+  allowMerge: boolean;
+  allowRebase: boolean;
+  allowSquash: boolean;
+  viewerCanMerge: boolean;
+  // viewerID is the viewer who can merge, whose browser remembers the merge
+  // style they last used in the repository.
+  viewerID?: number;
+  // mergeMessages are the messages the commits of the merge styles that
+  // create one start with, for viewers who can merge.
+  mergeMessages?: Partial<Record<MergeStyle, MergeMessage>>;
+  viewerCanDeleteBranch: boolean;
+  // viewerCanRestoreBranch is whether the viewer can create the deleted head
+  // branch again at the commit that was merged.
+  viewerCanRestoreBranch: boolean;
+  // diff is the commits the changes are between, in the repository that has
+  // both, unless the pull request is broken.
+  // markdownExtensions are the extensions of files that show a rich diff.
+  diff?: { base: string; head: string; owner: string; name: string; markdownExtensions: string[] };
+}
+
+export interface RepoPullData extends RepoIssueData {
+  pull: RepoPullInfo;
+}
+
+export function fetchRepoPull(owner: string, name: string, index: number) {
+  return fetchJSON<RepoPullData>(repoURL(owner, name, `/pulls/${index}`));
+}
+
+export function fetchRepoPullCommits(owner: string, name: string, index: number) {
+  return fetchJSON<{ commits: RepoCommitListItem[] }>(repoURL(owner, name, `/pulls/${index}/commits`));
+}
+
+export type MergeStyle = "create_merge_commit" | "rebase_before_merging" | "squash_and_merge";
+
+export interface MergeMessage {
+  title: string;
+  body: string;
+}
+
+export function mergeRepoPull(issue: IssueRef, form: { style: MergeStyle } & MergeMessage) {
+  return submit<void>("POST", issueURL(issue, "/merge"), form);
+}
+
+// deleteRepoPullBranch deletes the head branch of the merged pull request.
+export function deleteRepoPullBranch(issue: IssueRef) {
+  return send("DELETE", issueURL(issue, "/branch"));
+}
+
+// restoreRepoPullBranch creates the deleted head branch of the merged pull
+// request again at the commit that was merged.
+export function restoreRepoPullBranch(issue: IssueRef) {
+  return send("POST", issueURL(issue, "/branch"));
+}
+
+export interface RepoNewPullData extends IssueMetaOptions {
+  baseBranch: string;
+  // head names the head branch as the URL of the comparison does, with its
+  // owner when it is in a fork.
+  head: string;
+  headOwner: string;
+  headName: string;
+  headBranch: string;
+  // branches are those of the repository to merge into, and headBranches
+  // those of the repository of the head branch.
+  branches: string[];
+  headBranches: string[];
+  // state is "unrelated" when the branches have no common history, "even"
+  // when the head branch has nothing to merge, and "exists" when an open
+  // pull request has the same branches.
+  state: "unrelated" | "even" | "exists" | "ready";
+  pullIndex?: number;
+  commits: RepoCommitListItem[];
+  // diff is what the pull request would change, unless there is nothing to
+  // merge, in the repository of the head branch.
+  diff?: { base: string; head: string; owner: string; name: string; markdownExtensions: string[] };
+  // title and template prefill the form from the templates of the default
+  // branch.
+  title: string;
+  template: string;
+  attachment?: IssueAttachmentSettings;
+  viewerCanWrite: boolean;
+}
+
+// fetchRepoNewPull compares the branches of the range, written as
+// "<base>...[<owner>:]<head>", to open a pull request from them.
+export function fetchRepoNewPull(owner: string, name: string, range: string) {
+  return fetchJSON<RepoNewPullData>(repoURL(owner, name, `/pulls/new/${refPath(range)}`));
+}
+
+export function createRepoPull(owner: string, name: string, form: RepoNewIssueForm & { base: string; head: string }) {
+  return submit<{ index: number }>("POST", repoURL(owner, name, "/pulls"), form);
 }
 
 // renderRepoMarkdown renders Markdown the way the issues of the repository
-// are.
-export async function renderRepoMarkdown(owner: string, name: string, text: string) {
-  return (await submit<{ html: string }>("POST", repoURL(owner, name, "/markdown"), { text })).html;
+// are. With wiki set, it renders the way its wiki pages are, and with branch
+// and path set, the way that file is.
+export async function renderRepoMarkdown(
+  owner: string,
+  name: string,
+  text: string,
+  as: { wiki?: boolean; branch?: string; path?: string } = {},
+) {
+  return (await submit<{ html: string }>("POST", repoURL(owner, name, "/markdown"), { text, ...as })).html;
 }
 
-// uploadRepoIssueAttachment uploads a file to attach to a comment, and returns
-// its UUID.
-export async function uploadRepoIssueAttachment(owner: string, name: string, file: File) {
+// uploadRepoAttachment uploads a file to attach to an issue, a comment or a
+// release, or to commit with the editor, and returns its UUID and, except for
+// the editor, the URL content links to it with.
+export async function uploadRepoAttachment(
+  owner: string,
+  name: string,
+  kind: "issues" | "releases" | "editor",
+  file: File,
+) {
   const body = new FormData();
   body.append("file", file);
-  const res = await fetch(repoURL(owner, name, "/issues/attachments"), {
+  const res = await fetch(repoURL(owner, name, kind === "editor" ? "/editor/uploads" : `/${kind}/attachments`), {
     method: "POST",
     credentials: "same-origin",
     body,
   });
   if (!res.ok) throw await loaderResponseError(res);
-  return ((await res.json()) as { uuid: string }).uuid;
+  return (await res.json()) as { uuid: string; url?: string };
+}
+
+export interface RepoReleaseAttachment {
+  uuid: string;
+  name: string;
+  url: string;
+}
+
+export interface RepoRelease {
+  tagName: string;
+  sha: string;
+  // The fields below are left out for a tag that has no release.
+  title?: string;
+  target?: string;
+  isDraft?: boolean;
+  isPrerelease?: boolean;
+  publisher?: { name: string; avatarURL: string; isGhost?: boolean };
+  createdAt?: string;
+  noteHTML?: string;
+  attachments?: RepoReleaseAttachment[];
+  // numCommitsBehind is how many commits the target branch is ahead of the
+  // release.
+  numCommitsBehind?: number;
+}
+
+export interface RepoReleasesData {
+  releases: RepoRelease[];
+  // previousAfter is the "after" of the previous page when hasPrevious is set.
+  hasPrevious: boolean;
+  previousAfter: string;
+  // nextAfter is left out on the last page.
+  nextAfter?: string;
+  viewerCanWrite: boolean;
+  isMirror: boolean;
+}
+
+export function fetchRepoReleases(owner: string, name: string, after?: string) {
+  const query = after ? `?${new URLSearchParams({ after }).toString()}` : "";
+  return fetchJSON<RepoReleasesData>(repoURL(owner, name, `/releases${query}`));
+}
+
+export interface RepoReleaseFormOptions {
+  branches: string[];
+  defaultBranch: string;
+  attachment?: IssueAttachmentSettings;
+}
+
+export function fetchRepoNewRelease(owner: string, name: string) {
+  return fetchJSON<RepoReleaseFormOptions>(repoURL(owner, name, "/releases/new"));
+}
+
+export interface RepoReleaseEdit {
+  tagName: string;
+  target: string;
+  title: string;
+  content: string;
+  isDraft: boolean;
+  isPrerelease: boolean;
+  attachments: RepoReleaseAttachment[];
+  attachment?: IssueAttachmentSettings;
+}
+
+export function fetchRepoRelease(owner: string, name: string, tag: string) {
+  return fetchJSON<RepoReleaseEdit>(repoURL(owner, name, `/releases/edit/${refPath(tag)}`));
+}
+
+export interface RepoReleaseForm {
+  // tagName and target are only read when a release is created.
+  tagName?: string;
+  target?: string;
+  title: string;
+  content: string;
+  isDraft: boolean;
+  isPrerelease: boolean;
+  attachments: string[];
+  // removedAttachments are the downloads removed in the editor, which are
+  // deleted.
+  removedAttachments?: string[];
+}
+
+export function createRepoRelease(owner: string, name: string, form: RepoReleaseForm) {
+  return submit<void>("POST", repoURL(owner, name, "/releases"), form);
+}
+
+export function updateRepoRelease(owner: string, name: string, tag: string, form: RepoReleaseForm) {
+  return submit<void>("PATCH", repoURL(owner, name, `/releases/edit/${refPath(tag)}`), form);
+}
+
+export function deleteRepoRelease(owner: string, name: string, tag: string) {
+  return send("DELETE", repoURL(owner, name, `/releases/edit/${refPath(tag)}`));
+}
+
+export interface RepoWikiPage {
+  name: string;
+  html: string;
+  author: { name: string; when: string };
+}
+
+export interface RepoWikiData {
+  // hasWiki is false until the first page is created, and the other fields
+  // are then left out.
+  hasWiki: boolean;
+  page?: RepoWikiPage;
+  pages?: string[];
+  cloneLinks?: { https?: string; ssh?: string };
+  viewerCanWrite: boolean;
+}
+
+function wikiPageQuery(page: string) {
+  return `?${new URLSearchParams({ page }).toString()}`;
+}
+
+export function fetchRepoWiki(owner: string, name: string, page: string) {
+  return fetchJSON<RepoWikiData>(repoURL(owner, name, `/wiki${wikiPageQuery(page)}`));
+}
+
+export interface RepoWikiPagesData {
+  pages: { name: string; updatedAt: string }[];
+  viewerCanWrite: boolean;
+}
+
+export function fetchRepoWikiPages(owner: string, name: string) {
+  return fetchJSON<RepoWikiPagesData>(repoURL(owner, name, "/wiki/pages"));
+}
+
+export function fetchRepoWikiPageSource(owner: string, name: string, page: string) {
+  return fetchJSON<{ name: string; content: string }>(repoURL(owner, name, `/wiki/source${wikiPageQuery(page)}`));
+}
+
+export interface RepoWikiPageForm {
+  // oldTitle is the page being changed, and is left out for a new page.
+  oldTitle?: string;
+  title: string;
+  content: string;
+  message: string;
+}
+
+// saveRepoWikiPage creates or changes a page, and returns the name it was
+// saved under.
+export async function saveRepoWikiPage(owner: string, name: string, form: RepoWikiPageForm) {
+  const { name: saved } = await submit<{ name: string }>(
+    form.oldTitle === undefined ? "POST" : "PATCH",
+    repoURL(owner, name, "/wiki"),
+    form,
+  );
+  return saved;
+}
+
+export function deleteRepoWikiPage(owner: string, name: string, page: string) {
+  return send("DELETE", repoURL(owner, name, `/wiki${wikiPageQuery(page)}`));
+}
+
+export interface RepoEditorTarget {
+  branch: string;
+  // path is the path in the branch, without the branch.
+  path: string;
+  lastCommit: string;
+  kind: "file" | "dir" | "symlink" | "none";
+  // content is only sent for a text file.
+  content?: string;
+  markdownExtensions: string[];
+  // previewMarkdown tells whether Markdown files can be previewed.
+  previewMarkdown: boolean;
+  lineWrapExtensions: string[];
+  // pullRequestsAllowed tells whether committing to a new branch starts a
+  // pull request.
+  pullRequestsAllowed: boolean;
+  upload?: IssueAttachmentSettings;
+}
+
+// fetchRepoEditorTarget describes the branch and the path in the editor
+// pages' path, which is the branch name followed by the path.
+export function fetchRepoEditorTarget(owner: string, name: string, splat: string) {
+  return fetchJSON<RepoEditorTarget>(repoURL(owner, name, `/editor/${refPath(splat)}`));
+}
+
+export interface RepoEditorIndent {
+  // style is left out when .editorconfig does not say.
+  style?: "tab" | "space";
+  size?: number;
+  tabWidth?: number;
+}
+
+// fetchRepoEditorIndent returns how the .editorconfig of the branch indents
+// the file at the path.
+export function fetchRepoEditorIndent(owner: string, name: string, branch: string, path: string) {
+  const query = new URLSearchParams({ branch, path }).toString();
+  return fetchJSON<RepoEditorIndent>(repoURL(owner, name, `/editor-indent?${query}`));
+}
+
+export interface RepoEditorCommit {
+  branch: string;
+  // newBranch is the branch to commit to instead, created from branch.
+  newBranch: string;
+  summary: string;
+  message: string;
+}
+
+// Each change answers with where to go next: the changed path, or the form to
+// open a pull request from the new branch.
+type RepoEditorResult = { location: string };
+
+export function commitRepoFile(
+  owner: string,
+  name: string,
+  form: RepoEditorCommit & { oldPath: string; path: string; content: string; lastCommit: string },
+) {
+  return submit<RepoEditorResult>("POST", repoURL(owner, name, "/editor/files"), form);
+}
+
+export function deleteRepoFile(owner: string, name: string, form: RepoEditorCommit & { path: string }) {
+  return submit<RepoEditorResult>("POST", repoURL(owner, name, "/editor/delete"), form);
+}
+
+export function uploadRepoFiles(
+  owner: string,
+  name: string,
+  form: RepoEditorCommit & { path: string; files: string[] },
+) {
+  return submit<RepoEditorResult>("POST", repoURL(owner, name, "/editor/upload"), form);
+}
+
+export function deleteRepoEditorUpload(owner: string, name: string, uuid: string) {
+  return send("DELETE", repoURL(owner, name, `/editor/uploads/${encodeURIComponent(uuid)}`));
+}
+
+export interface RepoCommitAuthor {
+  name: string;
+  email: string;
+  when: string;
+  avatarURL: string;
+  // profileURL is set when the email belongs to a user.
+  profileURL?: string;
+}
+
+export interface RepoCommitListItem {
+  sha: string;
+  // subjectHTML is the first line of the message, with links to the issues
+  // it mentions.
+  subjectHTML: string;
+  isMerge: boolean;
+  author: RepoCommitAuthor;
+  // coAuthors are the people the "Co-authored-by" trailers name.
+  coAuthors?: RepoCommitAuthor[];
+}
+
+export interface RepoCommitsData {
+  ref: string;
+  refType: "branch" | "tag" | "commit";
+  // path is the file or directory whose history is listed, empty for the
+  // whole repository.
+  path: string;
+  // search is set for a search of the commit messages, which lists every
+  // match instead of a page.
+  search: boolean;
+  keyword: string;
+  commits: RepoCommitListItem[];
+  page: number;
+  hasNext: boolean;
+  branches: string[];
+  tags: string[];
+}
+
+export interface RepoCloneLinks {
+  https?: string;
+  ssh?: string;
+}
+
+export interface RepoEntryCommit {
+  sha: string;
+  subjectHTML: string;
+  when: string;
+}
+
+export interface RepoTreeEntry {
+  name: string;
+  type: "dir" | "file" | "symlink" | "submodule";
+  // submoduleURL is where the repository of a submodule is, when it can be
+  // inferred.
+  submoduleURL?: string;
+  submoduleCommit?: string;
+  commit?: RepoEntryCommit;
+}
+
+export interface RepoFile {
+  name: string;
+  size: number;
+  // too_large is a text file too large to show.
+  kind: "text" | "markup" | "notebook" | "image" | "video" | "pdf" | "binary" | "too_large";
+  // content is set for a text file, including a notebook or a file in a markup
+  // language for their code view, and html for a file in a markup language.
+  content?: string;
+  html?: string;
+  isReadme: boolean;
+  // isSymlink is set for a symbolic link, whose content is its target.
+  isSymlink: boolean;
+  // tabWidth is the width of a tab that .editorconfig sets for the file.
+  tabWidth?: number;
+}
+
+export type RepoOverviewKind = "readme" | "code_of_conduct" | "contributing" | "license" | "security";
+
+// RepoOverviewFile is a file shown in a tab below the file list, e.g., the
+// README or the license. It has html in a markup language, and text otherwise.
+export interface RepoOverviewFile {
+  kind: RepoOverviewKind;
+  // path is relative to the directory being viewed, e.g., ".github/CONTRIBUTING.md".
+  path: string;
+  html?: string;
+  text?: string;
+}
+
+export interface RepoSrcData {
+  // empty is set for a repository without commits, which only has the fields
+  // of its quick guide.
+  empty: boolean;
+  defaultBranch: string;
+  isMirror: boolean;
+  viewerCanWrite: boolean;
+  cloneLinks?: RepoCloneLinks;
+  ref: string;
+  refType: "branch" | "tag" | "commit";
+  commitID: string;
+  path: string;
+  kind: "dir" | "file";
+  latestCommit?: RepoCommitListItem;
+  entries?: RepoTreeEntry[];
+  // overview lists the files shown in tabs below the file list, in the order
+  // of the tabs.
+  overview?: RepoOverviewFile[];
+  file?: RepoFile;
+  // summary is set for the root directory.
+  summary?: {
+    description: string;
+    website: string;
+    commitCount: number;
+    cloneLinks: RepoCloneLinks;
+    // latestRelease is the newest published release that is not a
+    // pre-release, or the newest tag without one. It is left out without tags.
+    latestRelease?: { tagName: string; title?: string; createdAt?: string };
+  };
+  // editor tells whether files can be changed in the browser, or why not. It
+  // is left out where files are never changed in the browser.
+  editor?: "ok" | "not_branch" | "no_write";
+  canUploadFile: boolean;
+  // pullRequest is where the changes of the branch can be proposed.
+  pullRequest?: { repoLink: string; baseBranch: string; head: string };
+  branches: string[];
+  tags: string[];
+}
+
+export interface RepoPathsData {
+  ref: string;
+  commitID: string;
+  paths: string[];
+  // truncated is set when the tree has more files than paths lists.
+  truncated: boolean;
+}
+
+// repoPathsQuery lists the paths of every file of the commit, for jumping to
+// a file.
+export function repoPathsQuery(owner: string, name: string, commitID: string) {
+  return queryOptions({
+    queryKey: ["repo", owner, name, "paths", commitID] as const,
+    queryFn: () => fetchJSON<RepoPathsData>(repoURL(owner, name, `/paths/${commitID}`)),
+    staleTime: Infinity,
+  });
+}
+
+// fetchRepoSrc describes the directory or the file at the path after the ref
+// at the start of the splat, or the default branch for an empty splat.
+export function fetchRepoSrc(owner: string, name: string, splat: string) {
+  return fetchJSON<RepoSrcData>(repoURL(owner, name, `/src/${refPath(splat)}`));
+}
+
+export interface RepoCompareData {
+  before: string;
+  after: string;
+  // base is the commit the changes are compared against: before, or where
+  // after forked from the default branch when before is the empty ID.
+  base: string;
+  // baseIsEmptyTree is true when base is the empty tree, so the comparison
+  // shows everything after has.
+  baseIsEmptyTree: boolean;
+  // commits are the newest commits after base up to after, at most 50 of
+  // them.
+  commits: RepoCommitListItem[];
+  // totalCommits is the number of commits after base up to after, which is
+  // more than commits.length when the list is cut off.
+  totalCommits: number;
+  // markdownExtensions are the extensions of files that show a rich diff.
+  markdownExtensions: string[];
+}
+
+// repoMarkdownFileQuery renders the Markdown file at the path in the commit
+// the way the file view does. Without a commit, the file is empty, e.g., the
+// old side of an added file.
+export function repoMarkdownFileQuery(owner: string, name: string, sha: string | undefined, path: string) {
+  return queryOptions({
+    queryKey: ["repo", owner, name, "markdown", sha, path] as const,
+    queryFn: async () =>
+      sha ? (await fetchJSON<{ html: string }>(repoURL(owner, name, `/markdown/${sha}/${refPath(path)}`))).html : "",
+    staleTime: Infinity,
+  });
+}
+
+// fetchRepoCommits lists the commits of the ref at the start of the path,
+// which is followed by the path whose history to list, or by "search" to
+// search the messages for the keyword.
+export function fetchRepoCommits(owner: string, name: string, splat: string, search: { page?: number; q?: string }) {
+  const query = new URLSearchParams();
+  if (search.page) query.set("page", String(search.page));
+  if (search.q) query.set("q", search.q);
+  const qs = query.size ? `?${query.toString()}` : "";
+  return fetchJSON<RepoCommitsData>(repoURL(owner, name, `/commits/${refPath(splat)}${qs}`));
 }

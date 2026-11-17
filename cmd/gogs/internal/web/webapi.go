@@ -3,26 +3,31 @@ package web
 import (
 	stdctx "context"
 	"encoding/json"
+	"mime"
 	"net/http"
+	"net/url"
 	"reflect"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/binding"
 	"github.com/flamego/flamego"
 	"github.com/flamego/session"
-	"github.com/flamego/validator"
 	"github.com/go-macaron/i18n"
 	macaronsession "github.com/go-macaron/session"
+	"github.com/go-playground/validator/v10"
 	"gopkg.in/macaron.v1"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
+	apiv1 "gogs.io/gogs/internal/route/api/v1"
 )
 
 type (
+	apiV1RequestKey  struct{}
 	webAPISessionKey struct{}
 	webAPIMacaronKey struct{}
 	webAPILocaleKey  struct{}
@@ -47,13 +52,53 @@ func flamegoBridger(webHandler http.Handler) func(c *context.Context, l i18n.Loc
 	}
 }
 
+// apiV1Bridger bridges API v1 requests to Flamego. Macaron trims the trailing
+// slash and unescapes each segment of the escaped path before matching, so an
+// encoded slash (%2F) stays within its segment. Flamego matches against the
+// path as-is, so the path is normalized here to keep routing unchanged.
+func apiV1Bridger(apiHandler http.Handler) func(c *context.Context, l i18n.Locale) {
+	bridge := flamegoBridger(apiHandler)
+	segmentEscaper := strings.NewReplacer("%", "%25", "/", "%2F")
+	return func(c *context.Context, l i18n.Locale) {
+		info := apiv1.RequestInfo{
+			IsBasicAuth: c.IsBasicAuth,
+			IsTokenAuth: c.IsTokenAuth,
+			Path:        c.Req.URL.Path,
+			WebNotFound: c.NotFound,
+			WebError:    c.Error,
+		}
+
+		u := *c.Req.URL
+		segments := strings.Split(strings.TrimSuffix(u.EscapedPath(), "/"), "/")
+		for i, segment := range segments {
+			unescaped, err := url.PathUnescape(segment)
+			if err == nil {
+				segments[i] = segmentEscaper.Replace(unescaped)
+			}
+		}
+		u.Path = strings.Join(segments, "/")
+		u.RawPath = ""
+
+		orig := c.Req.Request
+		r := orig.WithContext(stdctx.WithValue(orig.Context(), apiV1RequestKey{}, info))
+		r.URL = &u
+		c.Req.Request = r
+		bridge(c, l)
+		// The bridge copies the Flamego route to the request it was given, so
+		// hand it on to the request the tracing handler reads.
+		orig.Pattern = r.Pattern
+		c.Req.Request = orig
+	}
+}
+
 func flamegoInjector(c flamego.Context) {
 	ctx := c.Request().Context()
 	viewer, _ := ctx.Value(context.UserKey{}).(*database.User)
+	apiV1Request, _ := ctx.Value(apiV1RequestKey{}).(apiv1.RequestInfo)
 	sess, _ := ctx.Value(webAPISessionKey{}).(macaronsession.Store)
 	mc, _ := ctx.Value(webAPIMacaronKey{}).(*macaron.Context)
 	l, _ := ctx.Value(webAPILocaleKey{}).(i18n.Locale)
-	c.Map(viewer, sess, mc, l)
+	c.Map(viewer, apiV1Request, sess, mc, l)
 	c.MapTo(flamegoSessionAdapter{sess: sess}, (*session.Session)(nil))
 }
 
@@ -61,17 +106,28 @@ func flamegoInjector(c flamego.Context) {
 // session interface so the captcha middleware (and any future Flamego-native
 // session consumer) can read/write the same session store the rest of the app
 // uses.
+//
+// The Macaron session manager owns the session lifecycle and persistence, so
+// ID regeneration, deadlines, and change tracking are no-ops here.
 type flamegoSessionAdapter struct {
 	sess macaronsession.Store
 }
 
-func (s flamegoSessionAdapter) ID() string              { return s.sess.ID() }
-func (s flamegoSessionAdapter) Get(key any) any         { return s.sess.Get(key) }
-func (s flamegoSessionAdapter) Set(key, val any)        { _ = s.sess.Set(key, val) }
-func (s flamegoSessionAdapter) SetFlash(val any)        { _ = s.sess.Set("_flash", val) }
-func (s flamegoSessionAdapter) Delete(key any)          { _ = s.sess.Delete(key) }
-func (s flamegoSessionAdapter) Flush()                  { _ = s.sess.Flush() }
-func (s flamegoSessionAdapter) Encode() ([]byte, error) { return nil, nil }
+var _ session.Session = flamegoSessionAdapter{}
+
+func (s flamegoSessionAdapter) ID() string { return s.sess.ID() }
+func (flamegoSessionAdapter) RegenerateID(http.ResponseWriter, *http.Request) error {
+	return errors.New("regenerating session ID is not supported")
+}
+func (s flamegoSessionAdapter) Get(key any) any           { return s.sess.Get(key) }
+func (s flamegoSessionAdapter) Set(key, val any)          { _ = s.sess.Set(key, val) }
+func (s flamegoSessionAdapter) SetFlash(val any)          { _ = s.sess.Set("_flash", val) }
+func (s flamegoSessionAdapter) Delete(key any)            { _ = s.sess.Delete(key) }
+func (s flamegoSessionAdapter) Flush()                    { _ = s.sess.Flush() }
+func (flamegoSessionAdapter) SetDeadline(time.Time)       {}
+func (flamegoSessionAdapter) Deadline() (time.Time, bool) { return time.Time{}, false }
+func (flamegoSessionAdapter) Encode() ([]byte, error)     { return nil, nil }
+func (flamegoSessionAdapter) HasChanged() bool            { return false }
 
 // requireViewAccess turns away the same viewers as the sign-in toggle of the
 // server-rendered pages: disabled users and, when the site requires signing in
@@ -99,6 +155,25 @@ func requireAuthenticated(c flamego.Context, viewer *database.User) {
 		return
 	}
 	requireViewAccess(c, viewer)
+}
+
+// requireJSON turns away requests that change something unless they are sent
+// as JSON, the only content type the browser client sends them as. Browsers
+// let any site send a form or another simple request, e.g., text/plain or no
+// body at all, without asking first. Sending JSON from another site needs a
+// CORS preflight, which Gogs only grants to the origin set by
+// `[http] ACCESS_CONTROL_ALLOW_ORIGIN`, and the cross-origin protection turns
+// that origin away from these routes too.
+func requireJSON(c flamego.Context) {
+	r := c.Request()
+	switch r.Method {
+	case http.MethodGet, http.MethodHead, http.MethodOptions:
+		return
+	}
+	mediaType, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	if mediaType != "application/json" {
+		writeErrorResponse(c.ResponseWriter(), http.StatusUnsupportedMediaType, errors.New("content type must be application/json"))
+	}
 }
 
 func enforceWebAPIMaxBodySize(c flamego.Context) {
@@ -160,6 +235,8 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Combo("/sign-in").
 				Get(getUserSignIn).
 				Post(bindJSON(userSignInRequest{}), postUserSignIn)
+			f.Post("/sign-in/passkey/challenge", postUserSignInPasskeyChallenge)
+			f.Post("/sign-in/passkey", postUserSignInPasskey)
 			f.Group("/mfa", func() {
 				f.Combo("").
 					Get(getUserMFA).
@@ -191,6 +268,9 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 					f.Get("/enrollment", getUserTwoFactorEnrollment)
 					f.Combo("/recovery-codes").Get(getUserRecoveryCodes).Post(postUserRecoveryCodes)
 				})
+				f.Combo("/passkeys").Get(getUserPasskeys).Post(bindJSON(userPasskeyRequest{}), postUserPasskey)
+				f.Post("/passkeys/registration", bindJSON(userPasskeyRegistrationRequest{}), postUserPasskeyRegistration)
+				f.Delete("/passkeys/{id}", deleteUserPasskey)
 				f.Combo("/tokens").Get(getUserAccessTokens).Post(bindJSON(userAccessTokenRequest{}), postUserAccessToken)
 				f.Delete("/tokens/{id}", deleteUserAccessToken)
 			}, requireAuthenticated)
@@ -204,9 +284,26 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Get("/watchers", getRepoWatchers)
 			f.Delete("/watchers/{username}", deleteRepoWatcher)
 			f.Get("/issues", getRepoIssues)
-			f.Get("/issues/{index}", withRepoIssue, getRepoIssue)
+			f.Get("/issues/{index}", withRepoIssues, withRepoIssue, getRepoIssue)
+			f.Group("/pulls/{index}", func() {
+				f.Get("", getRepoPull)
+				f.Get("/commits", getRepoPullCommits)
+			}, withRepoPulls, withRepoPull)
 			f.Get("/pulls", getRepoPulls)
 			f.Get("/forks", getRepoForks)
+			f.Get("/releases", withRepoCode, getRepoReleases)
+			f.Get("/branches", withRepoCode, getRepoBranches)
+			f.Get("/src", getRepoSrc)
+			f.Get("/src/{path: **}", getRepoSrc)
+			f.Get("/commits/{path: **}", withRepoCode, getRepoCommits)
+			f.Get("/markdown/{sha: /[0-9a-f]{7,64}/}/{path: **}", withRepoCode, getRepoMarkdownFile)
+			f.Get("/paths", withRepoCode, getRepoPaths)
+			f.Get("/paths/{path: **}", withRepoCode, getRepoPaths)
+			f.Get("/compare/"+compareRangeRoute, withRepoCode, getRepoCompare)
+			f.Group("/wiki", func() {
+				f.Get("", getRepoWiki)
+				f.Get("/pages", getRepoWikiPages)
+			}, withRepoWiki)
 			f.Group("", func() {
 				f.Get("/labels", getRepoLabels)
 				f.Get("/milestones", getRepoMilestones)
@@ -224,7 +321,15 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 					Delete(deleteRepoMilestone)
 				f.Combo("/closed").Put(putRepoMilestoneClosed).Delete(deleteRepoMilestoneClosed)
 			}, withRepoMilestone)
+			f.Group("/releases", func() {
+				f.Get("/new", getRepoNewRelease)
+				f.Combo("/edit/{tag: **}", withRepoRelease).Get(getRepoRelease).Delete(deleteRepoRelease)
+			}, withRepoCode)
 		}, requireAuthenticated, withRepoContext, withRepoWriter)
+		f.Group("/{owner}/{repo}/wiki", func() {
+			f.Get("/source", getRepoWikiPageSource)
+			f.Delete("", deleteRepoWikiPage)
+		}, requireAuthenticated, withRepoContext, withRepoWiki, withWikiWriter)
 		f.Group("/{owner}/{repo}", func() {
 			f.Delete("", bindJSON(repoConfirmRequest{}), deleteRepo)
 			f.Group("/settings", func() {
@@ -241,6 +346,20 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 					Delete(deleteRepoCollaborator)
 				f.Combo("/keys").Get(getRepoDeployKeys).Post(bindJSON(userSSHKeyRequest{}), postRepoDeployKey)
 				f.Delete("/keys/{id}", deleteRepoDeployKey)
+				f.Group("", func() {
+					f.Get("/branches", getRepoBranchSettings)
+					f.Put("/default-branch", bindJSON(repoDefaultBranchRequest{}), putRepoDefaultBranch)
+					f.Combo("/branches/{branch: **}", withRepoProtectedBranch).
+						Get(getRepoProtectedBranch).
+						Put(bindJSON(repoProtectedBranchRequest{}), putRepoProtectedBranch)
+				}, withRepoBranchSettings)
+				f.Group("/githooks", func() {
+					f.Get("", getRepoGitHooks)
+					f.Combo("/{name}", withRepoGitHook).
+						Get(getRepoGitHook).
+						Put(bindJSON(repoGitHookRequest{}), putRepoGitHook).
+						Delete(deleteRepoGitHook)
+				}, withRepoGitHooks)
 				f.Group("/hooks", func() {
 					f.Combo("").Get(getWebhooks).Post(bindJSON(webhookRequest{}), postWebhook)
 					f.Group("/{id}", func() {
@@ -324,10 +443,17 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 				f.Combo("/repos/{repo}").Put(putOrgTeamRepo).Delete(deleteOrgTeamRepo)
 			}, withOrgTeam)
 		}, requireAuthenticated, withOrgMembership)
-	}, enforceWebAPIMaxBodySize)
+	}, requireJSON, enforceWebAPIMaxBodySize)
 	f.Group("/api/web/{owner}/{repo}", func() {
 		f.Post("/markdown", withIssueTracker, bindJSON(markdownRequest{}), postRepoMarkdown)
-		f.Group("/issues/{index}", func() {
+		f.Get("/suggestions/mentions", withIssueTracker, getRepoMentionSuggestions)
+		f.Get("/suggestions/issues", getRepoIssueSuggestions)
+		f.Group("/issues", func() {
+			f.Get("/new", getRepoNewIssue)
+			f.Post("", bindJSON(repoNewIssueRequest{}), postRepoIssue)
+		}, withRepoIssues)
+		// Issues and pull requests take the same changes.
+		issueChanges := func() {
 			f.Patch("", requireIssueEditor, bindJSON(repoIssueRequest{}), patchRepoIssue)
 			f.Combo("/closed", requireIssueEditor).Put(putRepoIssueClosed).Delete(deleteRepoIssueClosed)
 			f.Post("/comments", bindJSON(repoIssueCommentRequest{}), postRepoIssueComment)
@@ -339,9 +465,38 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 				f.Put("/milestone", bindJSON(repoIssueIDRequest{}), putRepoIssueMilestone)
 				f.Put("/assignee", bindJSON(repoIssueIDRequest{}), putRepoIssueAssignee)
 			}, withRepoWriter)
-		}, withRepoIssue)
-	}, limitIssueContent, requireAuthenticated, withRepoContext)
-	f.Post("/api/web/{owner}/{repo}/issues/attachments", limitAttachmentUpload, requireAuthenticated, withRepoContext, withIssueTracker, postRepoIssueAttachment)
+		}
+		f.Group("/issues/{index}", issueChanges, withRepoIssues, withRepoIssue)
+		f.Group("/pulls", func() {
+			f.Get("/new/{range: **}", getRepoNewPull)
+			f.Post("", bindJSON(repoNewPullRequest{}), postRepoPull)
+		}, withRepoPulls)
+		f.Group("/pulls/{index}", func() {
+			issueChanges()
+			f.Group("", func() {
+				f.Post("/merge", bindJSON(repoPullMergeRequest{}), postRepoPullMerge)
+				f.Combo("/branch").Post(postRepoPullBranch).Delete(deleteRepoPullBranch)
+			}, withRepoWriter)
+		}, withRepoPulls, withRepoPull)
+		f.Group("/releases", func() {
+			f.Post("", bindJSON(repoReleaseRequest{}), postRepoRelease)
+			f.Patch("/edit/{tag: **}", withRepoRelease, bindJSON(repoReleaseRequest{}), patchRepoRelease)
+		}, withRepoWriter, withRepoCode)
+		f.Combo("/wiki", withRepoWiki, withWikiWriter).
+			Post(bindJSON(repoWikiPageRequest{}), postRepoWikiPage).
+			Patch(bindJSON(repoWikiPageRequest{}), patchRepoWikiPage)
+	}, requireJSON, limitIssueContent, requireAuthenticated, withRepoContext)
+	f.Post("/api/web/{owner}/{repo}/issues/attachments", limitAttachmentUpload(issueAttachmentLimits()), requireAuthenticated, withRepoContext, withRepoIssuesOrPulls, postRepoIssueAttachment)
+	f.Group("/api/web/{owner}/{repo}/editor", func() {
+		f.Get("/{path: **}", getRepoEditorTarget)
+		f.Post("/files", requireJSON, limitEditorContent, bindJSON(repoEditorFileRequest{}), postRepoEditorFile)
+		f.Post("/delete", requireJSON, limitEditorContent, bindJSON(repoEditorDeleteRequest{}), postRepoEditorDelete)
+		f.Post("/upload", requireJSON, limitEditorContent, bindJSON(repoEditorUploadRequest{}), postRepoEditorUpload)
+		f.Post("/uploads", limitAttachmentUpload(repoUploadLimits()), postRepoEditorUploadFile)
+		f.Delete("/uploads/{uuid}", deleteRepoEditorUploadFile)
+	}, requireAuthenticated, withRepoContext, withRepoEditor)
+	f.Get("/api/web/{owner}/{repo}/editor-indent", requireAuthenticated, withRepoContext, withRepoEditor, getRepoEditorIndent)
+	f.Post("/api/web/{owner}/{repo}/releases/attachments", limitAttachmentUpload(releaseAttachmentLimits()), requireAuthenticated, withRepoContext, withRepoWriter, withRepoCode, postRepoReleaseAttachment)
 	f.Combo("/api/web/user/settings/avatar", limitAvatarUpload, requireAuthenticated).
 		Put(putUserAvatar).
 		Delete(deleteUserAvatar)

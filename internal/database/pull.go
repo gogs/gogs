@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
-	log "unknwon.dev/clog/v2"
+	"unknwon.dev/x/logx"
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/conf"
@@ -125,7 +127,7 @@ func (pr *PullRequest) LoadIssue() (err error) {
 // This method assumes following fields have been assigned with valid values:
 // Required - Issue, BaseRepo
 // Optional - HeadRepo, Merger
-func (pr *PullRequest) APIFormat() *apiv1types.PullRequest {
+func (pr *PullRequest) APIFormat(logger *logx.Logger) *apiv1types.PullRequest {
 	// In case of head repo has been deleted.
 	var apiHeadRepo *apiv1types.Repository
 	if pr.HeadRepo == nil {
@@ -133,7 +135,7 @@ func (pr *PullRequest) APIFormat() *apiv1types.PullRequest {
 			Name: "deleted",
 		}
 	} else {
-		apiHeadRepo = pr.HeadRepo.APIFormatLegacy(nil)
+		apiHeadRepo = pr.HeadRepo.APIFormatLegacy(logger, nil)
 	}
 
 	apiIssue := pr.Issue.APIFormat()
@@ -151,7 +153,7 @@ func (pr *PullRequest) APIFormat() *apiv1types.PullRequest {
 		HeadBranch: pr.HeadBranch,
 		HeadRepo:   apiHeadRepo,
 		BaseBranch: pr.BaseBranch,
-		BaseRepo:   pr.BaseRepo.APIFormatLegacy(nil),
+		BaseRepo:   pr.BaseRepo.APIFormatLegacy(logger, nil),
 		HTMLURL:    pr.Issue.HTMLURL(),
 		HasMerged:  pr.HasMerged,
 	}
@@ -185,18 +187,204 @@ type MergeStyle string
 const (
 	MergeStyleRegular MergeStyle = "create_merge_commit"
 	MergeStyleRebase  MergeStyle = "rebase_before_merging"
+	MergeStyleSquash  MergeStyle = "squash_and_merge"
 )
 
-// Merge merges pull request to base repository.
+// AllowsMergeStyle returns whether pull requests of the repository can be
+// merged with the style.
+func (repo *Repository) AllowsMergeStyle(style MergeStyle) bool {
+	switch style {
+	case MergeStyleRegular:
+		return repo.PullsAllowMerge
+	case MergeStyleRebase:
+		return repo.PullsAllowRebase
+	case MergeStyleSquash:
+		return repo.PullsAllowSquash
+	default:
+		return false
+	}
+}
+
+// The presets of the messages merge commits and squashing start with. The
+// empty preset is the default message, like on GitHub: "Merge pull request #N
+// from <head>" for merge commits, and for squashing, the message of the commit
+// when there is one, or the title of the pull request with the subjects of
+// its commits.
+const (
+	MergeMessageDefault          = ""
+	MergeMessageTitle            = "title"
+	MergeMessageTitleDescription = "title_description"
+	// MergeMessageTitleCommits is only for squashing.
+	MergeMessageTitleCommits = "title_commits"
+)
+
+// MergeMessage is the title and body of the commit that merges a pull
+// request.
+type MergeMessage struct {
+	Title string `json:"title"`
+	Body  string `json:"body"`
+}
+
+// DefaultMergeMessage returns the message the commit of the merge style starts
+// with, before the merger edits it, following the preset of the base
+// repository. The commits are those the pull request merges, newest first.
+// Rebasing keeps the messages of the commits, so it has none.
+func (pr *PullRequest) DefaultMergeMessage(mergeStyle MergeStyle, commits []*git.Commit) MergeMessage {
+	message := pr.presetMergeMessage(mergeStyle, commits)
+	// Squashing leaves only the author of the pull request on the commit, so
+	// the other authors are credited the way GitHub does. The trailers must
+	// end the message to count, so those the body copies from commit messages
+	// or the description move there, and each person is credited once.
+	if mergeStyle == MergeStyleSquash {
+		var credited []string
+		message.Body, credited = cutCoAuthorLines(message.Body)
+		if trailers := coAuthorTrailers(commits, credited, pr.Issue.Poster); trailers != "" {
+			if message.Body != "" {
+				message.Body += "\n\n"
+			}
+			message.Body += trailers
+		}
+	}
+	return message
+}
+
+// parseCoAuthorLine returns the name and email of a "Co-authored-by" trailer
+// line, matched case-insensitively.
+func parseCoAuthorLine(line string) (name, email string, ok bool) {
+	const prefix = "co-authored-by:"
+	line = strings.TrimSpace(line)
+	if len(line) <= len(prefix) || !strings.EqualFold(line[:len(prefix)], prefix) {
+		return "", "", false
+	}
+	name, email, ok = strings.Cut(line[len(prefix):], "<")
+	email, closed := strings.CutSuffix(email, ">")
+	return name, email, ok && closed
+}
+
+// cutCoAuthorLines removes the "Co-authored-by" lines from the text, and
+// returns the text left and the lines removed.
+func cutCoAuthorLines(text string) (rest string, lines []string) {
+	var kept strings.Builder
+	for line := range strings.Lines(text) {
+		if _, _, ok := parseCoAuthorLine(line); ok {
+			lines = append(lines, line)
+			continue
+		}
+		kept.WriteString(line)
+	}
+	if lines == nil {
+		return text, nil
+	}
+	// Removing the lines can leave runs of blank lines behind.
+	return strings.TrimSpace(blankLines.ReplaceAllString(kept.String(), "\n\n")), lines
+}
+
+var blankLines = regexp.MustCompile(`\n(?:[ \t]*\n){2,}`)
+
+// coAuthorTrailers returns a "Co-authored-by" trailer for each author of the
+// commits, oldest first, each co-author their messages already credit, and
+// then each co-author of the credited lines, except the poster of the pull
+// request.
+func coAuthorTrailers(commits []*git.Commit, credited []string, poster *User) string {
+	seen := map[string]bool{}
+	if poster != nil && poster.ID > 0 {
+		seen[strings.ToLower(poster.Email)] = true
+	}
+	var trailers []string
+	add := func(name, email string) {
+		key := strings.ToLower(strings.TrimSpace(email))
+		if key == "" || seen[key] {
+			return
+		}
+		seen[key] = true
+		trailers = append(trailers, fmt.Sprintf("Co-authored-by: %s <%s>", strings.TrimSpace(name), strings.TrimSpace(email)))
+	}
+	addLine := func(line string) {
+		if name, email, ok := parseCoAuthorLine(line); ok {
+			add(name, email)
+		}
+	}
+	for i := len(commits) - 1; i >= 0; i-- {
+		c := commits[i]
+		if c.Author != nil {
+			add(c.Author.Name, c.Author.Email)
+		}
+		for line := range strings.Lines(c.Message) {
+			addLine(line)
+		}
+	}
+	for _, line := range credited {
+		addLine(line)
+	}
+	return strings.Join(trailers, "\n")
+}
+
+// presetMergeMessage returns the message of the preset of the base repository
+// for the merge style.
+func (pr *PullRequest) presetMergeMessage(mergeStyle MergeStyle, commits []*git.Commit) MergeMessage {
+	titled := fmt.Sprintf("%s (#%d)", pr.Issue.Title, pr.Index)
+	switch mergeStyle {
+	case MergeStyleRegular:
+		switch pr.BaseRepo.PullsMergeMessage {
+		case MergeMessageTitle:
+			return MergeMessage{Title: titled}
+		case MergeMessageTitleDescription:
+			return MergeMessage{Title: titled, Body: pr.Issue.Content}
+		}
+		return MergeMessage{
+			Title: fmt.Sprintf("Merge pull request #%d from %s/%s", pr.Index, pr.HeadUserName, pr.HeadBranch),
+			Body:  pr.Issue.Title,
+		}
+
+	case MergeStyleSquash:
+		switch pr.BaseRepo.PullsSquashMessage {
+		case MergeMessageTitle:
+			return MergeMessage{Title: titled}
+		case MergeMessageTitleDescription:
+			return MergeMessage{Title: titled, Body: pr.Issue.Content}
+		case MergeMessageTitleCommits:
+			return MergeMessage{Title: titled, Body: commitList(commits, true)}
+		}
+		if len(commits) == 1 {
+			title, body, _ := strings.Cut(strings.TrimSpace(commits[0].Message), "\n")
+			return MergeMessage{Title: fmt.Sprintf("%s (#%d)", title, pr.Index), Body: strings.TrimSpace(body)}
+		}
+		return MergeMessage{Title: titled, Body: commitList(commits, false)}
+	}
+	return MergeMessage{}
+}
+
+// commitList lists the subjects of the commits, oldest first, with their
+// bodies when withBodies is true.
+func commitList(commits []*git.Commit, withBodies bool) string {
+	items := make([]string, 0, len(commits))
+	for i := len(commits) - 1; i >= 0; i-- {
+		subject, body, _ := strings.Cut(strings.TrimSpace(commits[i].Message), "\n")
+		item := "* " + subject
+		if body = strings.TrimSpace(body); withBodies && body != "" {
+			item += "\n\n" + body
+		}
+		items = append(items, item)
+	}
+	sep := "\n"
+	if withBodies {
+		sep = "\n\n"
+	}
+	return strings.Join(items, sep)
+}
+
+// Merge merges pull request to base repository. The message is used for the
+// commit that merge commits and squashing create, and its default is used
+// when its title is empty.
 // FIXME: add repoWorkingPull make sure two merges does not happen at same time.
-func (pr *PullRequest) Merge(ctx context.Context, doer *User, baseGitRepo *git.Repository, mergeStyle MergeStyle, commitDescription string) (err error) {
+func (pr *PullRequest) Merge(ctx context.Context, logger *logx.Logger, doer *User, baseGitRepo *git.Repository, mergeStyle MergeStyle, message MergeMessage) (err error) {
 	// Stopping midway, e.g., when the client disconnects, would leave a
 	// partial change behind.
 	ctx = context.WithoutCancel(ctx)
 
 	defer func() {
 		go HookQueue.Add(pr.BaseRepo.ID)
-		go AddTestPullRequestTask(doer, pr.BaseRepo.ID, pr.BaseBranch, false)
+		go AddTestPullRequestTask(logger, doer, pr.BaseRepo.ID, pr.BaseBranch, false)
 	}()
 
 	sess := x.NewSession()
@@ -205,7 +393,7 @@ func (pr *PullRequest) Merge(ctx context.Context, doer *User, baseGitRepo *git.R
 		return err
 	}
 
-	if err = pr.Issue.changeStatus(sess, doer, pr.Issue.Repo, true); err != nil {
+	if err = pr.Issue.changeStatus(logger, sess, doer, pr.Issue.Repo, true); err != nil {
 		return errors.Newf("Issue.changeStatus: %v", err)
 	}
 
@@ -232,10 +420,18 @@ func (pr *PullRequest) Merge(ctx context.Context, doer *User, baseGitRepo *git.R
 	}
 	defer cleanup()
 
-	// Check if merge style is allowed, reset to default style if not
-	if mergeStyle == MergeStyleRebase && !pr.BaseRepo.PullsAllowRebase {
-		mergeStyle = MergeStyleRegular
+	if !pr.BaseRepo.AllowsMergeStyle(mergeStyle) {
+		return errors.Newf("merge style %q is not allowed", mergeStyle)
 	}
+
+	if strings.TrimSpace(message.Title) == "" {
+		commits, err := tmpRepo.RevList(ctx, []string{baseCommitID + ".." + headCommitID})
+		if err != nil {
+			return errors.Newf("list commits: %v", err)
+		}
+		message = pr.DefaultMergeMessage(mergeStyle, commits)
+	}
+	commitMessage := git.CleanupMessage(message.Title + "\n\n" + message.Body)
 
 	committer := &git.Signature{Name: doer.DisplayName(), Email: doer.Email}
 	var mergedCommitID string
@@ -255,9 +451,7 @@ func (pr *PullRequest) Merge(ctx context.Context, doer *User, baseGitRepo *git.R
 			return errors.Newf("merge tree: %v", err)
 		}
 
-		// Create a merge commit for the base branch.
-		message := fmt.Sprintf("Merge branch '%s' of %s/%s into %s", pr.HeadBranch, pr.HeadUserName, pr.HeadRepo.Name, pr.BaseBranch) + "\n\n" + commitDescription
-		mergedCommitID, err = tmpRepo.CommitTree(ctx, tree, git.CleanupMessage(message), git.CommitTreeOptions{
+		mergedCommitID, err = tmpRepo.CommitTree(ctx, tree, commitMessage, git.CommitTreeOptions{
 			Parents:   []string{baseCommitID, headCommitID},
 			Author:    committer,
 			Committer: committer,
@@ -270,6 +464,35 @@ func (pr *PullRequest) Merge(ctx context.Context, doer *User, baseGitRepo *git.R
 		mergedCommitID, err = tmpRepo.Rebase(ctx, baseCommitID, headCommitID, committer)
 		if err != nil {
 			return errors.Newf("rebase [%s on %s]: %v", pr.HeadBranch, pr.BaseBranch, err)
+		}
+
+	case MergeStyleSquash: // Squash all changes into one commit on top of the base branch
+		merged, err := tmpRepo.IsAncestor(ctx, headCommitID, baseCommitID)
+		if err != nil {
+			return errors.Newf("check if head branch is merged: %v", err)
+		} else if merged {
+			mergedCommitID = baseCommitID
+			break
+		}
+
+		tree, err := tmpRepo.MergeTree(ctx, baseCommitID, headCommitID)
+		if err != nil {
+			return errors.Newf("merge tree: %v", err)
+		}
+
+		// The squashed changes are attributed to the author of the pull request,
+		// as on GitHub, unless that account no longer exists.
+		author := committer
+		if pr.Issue.Poster != nil && pr.Issue.Poster.ID > 0 {
+			author = &git.Signature{Name: pr.Issue.Poster.DisplayName(), Email: pr.Issue.Poster.Email}
+		}
+		mergedCommitID, err = tmpRepo.CommitTree(ctx, tree, commitMessage, git.CommitTreeOptions{
+			Parents:   []string{baseCommitID},
+			Author:    author,
+			Committer: committer,
+		})
+		if err != nil {
+			return errors.Newf("commit tree: %v", err)
 		}
 
 	default:
@@ -298,28 +521,28 @@ func (pr *PullRequest) Merge(ctx context.Context, doer *User, baseGitRepo *git.R
 	}
 
 	if err = Handle.Actions().MergePullRequest(ctx, doer, pr.Issue.Repo.Owner, pr.Issue.Repo, pr.Issue); err != nil {
-		log.Error("Failed to create action for merge pull request, pull_request_id: %d, error: %v", pr.ID, err)
+		logger.Error("Failed to create action for merging pull request", "pullRequestID", pr.ID, "error", err)
 	}
 
 	// Reload pull request information.
 	if err = pr.LoadAttributes(); err != nil {
-		log.Error("LoadAttributes: %v", err)
+		logger.Error("Failed to load pull request attributes", "pullRequestID", pr.ID, "error", err)
 		return nil
 	}
-	if err = PrepareWebhooks(pr.Issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
+	if err = PrepareWebhooks(logger, pr.Issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
 		Action:      apiv1types.WebhookIssueClosed,
 		Index:       pr.Index,
-		PullRequest: pr.APIFormat(),
-		Repository:  pr.Issue.Repo.APIFormatLegacy(nil),
+		PullRequest: pr.APIFormat(logger),
+		Repository:  pr.Issue.Repo.APIFormatLegacy(logger, nil),
 		Sender:      doer.APIFormat(),
 	}); err != nil {
-		log.Error("PrepareWebhooks: %v", err)
+		logger.Error("Failed to prepare webhooks", "error", err)
 		return nil
 	}
 
 	commits, err := headGitRepo.RevList(ctx, []string{pr.MergeBase + "..." + pr.MergedCommitID})
 	if err != nil {
-		log.Error("Failed to list commits [merge_base: %s, merged_commit_id: %s]: %v", pr.MergeBase, pr.MergedCommitID, err)
+		logger.Error("Failed to list commits", "mergeBase", pr.MergeBase, "mergedCommitID", pr.MergedCommitID, "error", err)
 		return nil
 	}
 
@@ -328,16 +551,20 @@ func (pr *PullRequest) Merge(ctx context.Context, doer *User, baseGitRepo *git.R
 	// commit manually to avoid strange diff commits produced.
 	mergeCommit, err := baseGitRepo.BranchCommit(ctx, pr.BaseBranch)
 	if err != nil {
-		log.Error("Failed to get base branch %q commit: %v", pr.BaseBranch, err)
+		logger.Error("Failed to get base branch commit", "baseBranch", pr.BaseBranch, "error", err)
 		return nil
 	}
-	if mergeStyle == MergeStyleRegular {
+	switch mergeStyle {
+	case MergeStyleRegular:
 		commits = append([]*git.Commit{mergeCommit}, commits...)
+	case MergeStyleSquash:
+		// Only the squashed commit lands on the base branch.
+		commits = []*git.Commit{mergeCommit}
 	}
 
 	pcs, err := CommitsToPushCommits(commits).APIFormat(ctx, Handle.Users(), pr.BaseRepo.RepoPath(), pr.BaseRepo.HTMLURL())
 	if err != nil {
-		log.Error("Failed to convert to API payload commits: %v", err)
+		logger.Error("Failed to convert to API payload commits", "error", err)
 		return nil
 	}
 
@@ -347,12 +574,12 @@ func (pr *PullRequest) Merge(ctx context.Context, doer *User, baseGitRepo *git.R
 		After:      mergeCommit.ID.String(),
 		CompareURL: conf.Server.ExternalURL + pr.BaseRepo.ComposeCompareURL(pr.MergeBase, pr.MergedCommitID),
 		Commits:    pcs,
-		Repo:       pr.BaseRepo.APIFormatLegacy(nil),
+		Repo:       pr.BaseRepo.APIFormatLegacy(logger, nil),
 		Pusher:     pr.HeadRepo.MustOwner().APIFormat(),
 		Sender:     doer.APIFormat(),
 	}
-	if err = PrepareWebhooks(pr.BaseRepo, HookEventTypePush, p); err != nil {
-		log.Error("Failed to prepare webhooks: %v", err)
+	if err = PrepareWebhooks(logger, pr.BaseRepo, HookEventTypePush, p); err != nil {
+		logger.Error("Failed to prepare webhooks", "error", err)
 		return nil
 	}
 	return nil
@@ -360,7 +587,7 @@ func (pr *PullRequest) Merge(ctx context.Context, doer *User, baseGitRepo *git.R
 
 // testPatch checks if patch can be merged to base repository without conflict.
 // FIXME: make a mechanism to clean up stable local copies.
-func (pr *PullRequest) testPatch(ctx context.Context) (err error) {
+func (pr *PullRequest) testPatch(ctx context.Context, logger *logx.Logger) (err error) {
 	if pr.BaseRepo == nil {
 		pr.BaseRepo, err = GetRepositoryByID(pr.BaseRepoID)
 		if err != nil {
@@ -375,11 +602,11 @@ func (pr *PullRequest) testPatch(ctx context.Context) (err error) {
 
 	// Fast fail if patch does not exist, this assumes data is corrupted.
 	if !osx.IsFile(patchPath) {
-		log.Trace("PullRequest[%d].testPatch: ignored corrupted data", pr.ID)
+		logger.Debug("Skipped testing patch because the patch file does not exist", "pullRequestID", pr.ID)
 		return nil
 	}
 
-	log.Trace("PullRequest[%d].testPatch (patchPath): %s", pr.ID, patchPath)
+	logger.Debug("Testing patch", "pullRequestID", pr.ID, "patchPath", patchPath)
 
 	baseCommitID, err := git.RepoBranchCommitID(ctx, pr.BaseRepo.RepoPath(), pr.BaseBranch)
 	if err != nil {
@@ -400,7 +627,7 @@ func (pr *PullRequest) testPatch(ctx context.Context) (err error) {
 		IgnoreWhitespace: pr.BaseRepo.PullsIgnoreWhitespace,
 	})
 	if err != nil {
-		log.Trace("PullRequest[%d].testPatch (apply): has conflict\n%v", pr.ID, err)
+		logger.Debug("Patch has conflicts", "pullRequestID", pr.ID, "error", err)
 		pr.Status = PullRequestStatusConflict
 		return nil
 	}
@@ -408,7 +635,7 @@ func (pr *PullRequest) testPatch(ctx context.Context) (err error) {
 }
 
 // NewPullRequest creates new pull request with labels for repository.
-func NewPullRequest(ctx context.Context, repo *Repository, pull *Issue, labelIDs []int64, uuids []string, pr *PullRequest, patch []byte) (err error) {
+func NewPullRequest(ctx context.Context, logger *logx.Logger, repo *Repository, pull *Issue, labelIDs []int64, uuids []string, pr *PullRequest, patch []byte) (err error) {
 	// Stopping midway, e.g., when the client disconnects, would leave a partial
 	// change behind.
 	ctx = context.WithoutCancel(ctx)
@@ -435,7 +662,7 @@ func NewPullRequest(ctx context.Context, repo *Repository, pull *Issue, labelIDs
 	}
 
 	pr.BaseRepo = repo
-	if err = pr.testPatch(ctx); err != nil {
+	if err = pr.testPatch(ctx, logger); err != nil {
 		return errors.Newf("testPatch: %v", err)
 	}
 	// No conflict appears after test means mergeable.
@@ -462,22 +689,22 @@ func NewPullRequest(ctx context.Context, repo *Repository, pull *Issue, labelIDs
 		RepoName:     repo.Name,
 		IsPrivate:    repo.IsPrivate,
 	}); err != nil {
-		log.Error("NotifyWatchers: %v", err)
+		logger.Error("Failed to notify watchers", "error", err)
 	}
-	if err = pull.MailParticipants(); err != nil {
-		log.Error("MailParticipants: %v", err)
+	if err = pull.MailParticipants(logger); err != nil {
+		logger.Error("Failed to mail participants", "error", err)
 	}
 
 	pr.Issue = pull
 	pull.PullRequest = pr
-	if err = PrepareWebhooks(repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
+	if err = PrepareWebhooks(logger, repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
 		Action:      apiv1types.WebhookIssueOpened,
 		Index:       pull.Index,
-		PullRequest: pr.APIFormat(),
-		Repository:  repo.APIFormatLegacy(nil),
+		PullRequest: pr.APIFormat(logger),
+		Repository:  repo.APIFormatLegacy(logger, nil),
 		Sender:      pull.Poster.APIFormat(),
 	}); err != nil {
-		log.Error("PrepareWebhooks: %v", err)
+		logger.Error("Failed to prepare webhooks", "error", err)
 	}
 
 	return nil
@@ -588,7 +815,7 @@ func (pr *PullRequest) UpdateCols(cols ...string) error {
 }
 
 // UpdatePatch generates and saves a new patch.
-func (pr *PullRequest) UpdatePatch(ctx context.Context) (err error) {
+func (pr *PullRequest) UpdatePatch(ctx context.Context, logger *logx.Logger) (err error) {
 	// Stopping midway, e.g., when the client disconnects, would leave a
 	// partial change behind.
 	ctx = context.WithoutCancel(ctx)
@@ -607,7 +834,7 @@ func (pr *PullRequest) UpdatePatch(ctx context.Context) (err error) {
 	}
 	defer func() {
 		if err := headGitRepo.RemoteRemove(ctx, tmpRemote); err != nil {
-			log.Error("Failed to remove remote %q [repo_id: %d]: %v", tmpRemote, pr.HeadRepoID, err)
+			logger.Error("Failed to remove temporary remote", "remote", tmpRemote, "repoID", pr.HeadRepoID, "error", err)
 		}
 	}()
 
@@ -628,19 +855,19 @@ func (pr *PullRequest) UpdatePatch(ctx context.Context) (err error) {
 		return errors.Newf("save patch: %v", err)
 	}
 
-	log.Trace("PullRequest[%d].UpdatePatch: patch saved", pr.ID)
+	logger.Debug("Patch saved", "pullRequestID", pr.ID)
 	return nil
 }
 
 // PushToBaseRepo pushes commits from branches of head repository to
 // corresponding branches of base repository.
 // FIXME: Only push branches that are actually updates?
-func (pr *PullRequest) PushToBaseRepo(ctx context.Context) (err error) {
+func (pr *PullRequest) PushToBaseRepo(ctx context.Context, logger *logx.Logger) (err error) {
 	// Stopping midway, e.g., when the client disconnects, would leave a
 	// partial change behind.
 	ctx = context.WithoutCancel(ctx)
 
-	log.Trace("PushToBaseRepo[%d]: pushing commits to base repo 'refs/pull/%d/head'", pr.BaseRepoID, pr.Index)
+	logger.Debug("Pushing commits to base repository", "baseRepoID", pr.BaseRepoID, "index", pr.Index)
 
 	headRepoPath := pr.HeadRepo.RepoPath()
 	headGitRepo, err := git.Open(headRepoPath)
@@ -656,7 +883,7 @@ func (pr *PullRequest) PushToBaseRepo(ctx context.Context) (err error) {
 	// Make sure to remove the remote even if the push fails
 	defer func() {
 		if err := headGitRepo.RemoteRemove(ctx, tmpRemote); err != nil {
-			log.Error("Failed to remove remote %q [repo_id: %d]: %v", tmpRemote, pr.HeadRepoID, err)
+			logger.Error("Failed to remove temporary remote", "remote", tmpRemote, "repoID", pr.HeadRepoID, "error", err)
 		}
 	}()
 
@@ -678,11 +905,11 @@ func (pr *PullRequest) PushToBaseRepo(ctx context.Context) (err error) {
 }
 
 // AddToTaskQueue adds itself to pull request test task queue.
-func (pr *PullRequest) AddToTaskQueue() {
+func (pr *PullRequest) AddToTaskQueue(logger *logx.Logger) {
 	go PullRequestQueue.AddFunc(pr.ID, func() {
 		pr.Status = PullRequestStatusChecking
 		if err := pr.UpdateCols("status"); err != nil {
-			log.Error("AddToTaskQueue.UpdateCols[%d].(add to queue): %v", pr.ID, err)
+			logger.Error("Failed to update pull request status", "pullRequestID", pr.ID, "error", err)
 		}
 	})
 }
@@ -728,78 +955,78 @@ func (prs PullRequestList) LoadAttributes() error {
 	return prs.loadAttributes(x)
 }
 
-func addHeadRepoTasks(prs []*PullRequest) {
+func addHeadRepoTasks(logger *logx.Logger, prs []*PullRequest) {
 	for _, pr := range prs {
 		if pr.HeadRepo == nil {
-			log.Trace("addHeadRepoTasks[%d]: missing head repository", pr.ID)
+			logger.Debug("Skipped pull request with missing head repository", "pullRequestID", pr.ID)
 			continue
 		}
 
-		log.Trace("addHeadRepoTasks[%d]: composing new test task", pr.ID)
-		if err := pr.UpdatePatch(context.Background()); err != nil {
-			log.Error("UpdatePatch: %v", err)
+		logger.Debug("Composing new test task", "pullRequestID", pr.ID)
+		if err := pr.UpdatePatch(context.Background(), logger); err != nil {
+			logger.Error("Failed to update patch", "error", err)
 			continue
-		} else if err := pr.PushToBaseRepo(context.Background()); err != nil {
-			log.Error("PushToBaseRepo: %v", err)
+		} else if err := pr.PushToBaseRepo(context.Background(), logger); err != nil {
+			logger.Error("Failed to push to base repository", "error", err)
 			continue
 		}
 
-		pr.AddToTaskQueue()
+		pr.AddToTaskQueue(logger)
 	}
 }
 
 // AddTestPullRequestTask adds new test tasks by given head/base repository and head/base branch,
 // and generate new patch for testing as needed.
-func AddTestPullRequestTask(doer *User, repoID int64, branch string, isSync bool) {
-	log.Trace("AddTestPullRequestTask [head_repo_id: %d, head_branch: %s]: finding pull requests", repoID, branch)
+func AddTestPullRequestTask(logger *logx.Logger, doer *User, repoID int64, branch string, isSync bool) {
+	logger.Debug("Finding pull requests by head branch", "headRepoID", repoID, "headBranch", branch)
 	prs, err := GetUnmergedPullRequestsByHeadInfo(repoID, branch)
 	if err != nil {
-		log.Error("Find pull requests [head_repo_id: %d, head_branch: %s]: %v", repoID, branch, err)
+		logger.Error("Failed to find pull requests", "headRepoID", repoID, "headBranch", branch, "error", err)
 		return
 	}
 
 	if isSync {
 		if err = PullRequestList(prs).LoadAttributes(); err != nil {
-			log.Error("PullRequestList.LoadAttributes: %v", err)
+			logger.Error("Failed to load pull request attributes", "error", err)
 		}
 
 		if err == nil {
 			for _, pr := range prs {
 				pr.Issue.PullRequest = pr
 				if err = pr.Issue.LoadAttributes(); err != nil {
-					log.Error("LoadAttributes: %v", err)
+					logger.Error("Failed to load issue attributes", "error", err)
 					continue
 				}
-				if err = PrepareWebhooks(pr.Issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
+				if err = PrepareWebhooks(logger, pr.Issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
 					Action:      apiv1types.WebhookIssueSynchronized,
 					Index:       pr.Issue.Index,
-					PullRequest: pr.Issue.PullRequest.APIFormat(),
-					Repository:  pr.Issue.Repo.APIFormatLegacy(nil),
+					PullRequest: pr.Issue.PullRequest.APIFormat(logger),
+					Repository:  pr.Issue.Repo.APIFormatLegacy(logger, nil),
 					Sender:      doer.APIFormat(),
 				}); err != nil {
-					log.Error("PrepareWebhooks [pull_id: %v]: %v", pr.ID, err)
+					logger.Error("Failed to prepare webhooks", "pullRequestID", pr.ID, "error", err)
 					continue
 				}
 			}
 		}
 	}
 
-	addHeadRepoTasks(prs)
+	addHeadRepoTasks(logger, prs)
 
-	log.Trace("AddTestPullRequestTask [base_repo_id: %d, base_branch: %s]: finding pull requests", repoID, branch)
+	logger.Debug("Finding pull requests by base branch", "baseRepoID", repoID, "baseBranch", branch)
 	prs, err = GetUnmergedPullRequestsByBaseInfo(repoID, branch)
 	if err != nil {
-		log.Error("Find pull requests [base_repo_id: %d, base_branch: %s]: %v", repoID, branch, err)
+		logger.Error("Failed to find pull requests", "baseRepoID", repoID, "baseBranch", branch, "error", err)
 		return
 	}
 	for _, pr := range prs {
-		pr.AddToTaskQueue()
+		pr.AddToTaskQueue(logger)
 	}
 }
 
 // checkAndUpdateStatus checks if pull request is possible to leaving checking status,
 // and set to be either conflict or mergeable.
-func (pr *PullRequest) checkAndUpdateStatus() {
+func (pr *PullRequest) checkAndUpdateStatus(logger *logx.Logger) {
 	// Status is not changed to conflict means mergeable.
 	if pr.Status == PullRequestStatusChecking {
 		pr.Status = PullRequestStatusMergeable
@@ -808,14 +1035,14 @@ func (pr *PullRequest) checkAndUpdateStatus() {
 	// Make sure there is no waiting test to process before leaving the checking status.
 	if !PullRequestQueue.Exist(pr.ID) {
 		if err := pr.UpdateCols("status"); err != nil {
-			log.Error("Update[%d]: %v", pr.ID, err)
+			logger.Error("Failed to update pull request status", "pullRequestID", pr.ID, "error", err)
 		}
 	}
 }
 
 // TestPullRequests checks and tests untested patches of pull requests.
 // TODO: test more pull requests at same time.
-func TestPullRequests() {
+func TestPullRequests(logger *logx.Logger) {
 	prs := make([]*PullRequest, 0, 10)
 	_ = x.Iterate(PullRequest{
 		Status: PullRequestStatusChecking,
@@ -824,12 +1051,12 @@ func TestPullRequests() {
 			pr := bean.(*PullRequest)
 
 			if err := pr.LoadAttributes(); err != nil {
-				log.Error("LoadAttributes: %v", err)
+				logger.Error("Failed to load pull request attributes", "error", err)
 				return nil
 			}
 
-			if err := pr.testPatch(context.Background()); err != nil {
-				log.Error("testPatch: %v", err)
+			if err := pr.testPatch(context.Background(), logger); err != nil {
+				logger.Error("Failed to test patch", "error", err)
 				return nil
 			}
 			prs = append(prs, pr)
@@ -838,28 +1065,28 @@ func TestPullRequests() {
 
 	// Update pull request status.
 	for _, pr := range prs {
-		pr.checkAndUpdateStatus()
+		pr.checkAndUpdateStatus(logger)
 	}
 
 	// Start listening on new test requests.
 	for prID := range PullRequestQueue.Queue() {
-		log.Trace("TestPullRequests[%v]: processing test task", prID)
+		logger.Debug("Processing test task", "pullRequestID", prID)
 		PullRequestQueue.Remove(prID)
 
 		id, _ := strconv.ParseInt(prID, 10, 64)
 		pr, err := GetPullRequestByID(id)
 		if err != nil {
-			log.Error("GetPullRequestByID[%s]: %v", prID, err)
+			logger.Error("Failed to get pull request", "pullRequestID", prID, "error", err)
 			continue
-		} else if err = pr.testPatch(context.Background()); err != nil {
-			log.Error("testPatch[%d]: %v", pr.ID, err)
+		} else if err = pr.testPatch(context.Background(), logger); err != nil {
+			logger.Error("Failed to test patch", "pullRequestID", pr.ID, "error", err)
 			continue
 		}
 
-		pr.checkAndUpdateStatus()
+		pr.checkAndUpdateStatus(logger)
 	}
 }
 
-func InitTestPullRequests() {
-	go TestPullRequests()
+func InitTestPullRequests(logger *logx.Logger) {
+	go TestPullRequests(logger)
 }

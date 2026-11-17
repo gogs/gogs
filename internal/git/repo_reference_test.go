@@ -3,6 +3,7 @@ package git
 import (
 	"context"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -282,6 +283,89 @@ func TestRepository_Branches(t *testing.T) {
 	if len(expBranches) > 0 {
 		t.Fatalf("expect to be empty but got %v", expBranches)
 	}
+}
+
+func TestRepository_BranchesByCommitterDate(t *testing.T) {
+	ctx := context.Background()
+	r := setupBareRepoWithAlternates(t)
+
+	got, err := r.BranchesByCommitterDate(ctx)
+	require.NoError(t, err)
+	assert.Empty(t, got)
+
+	commitAs := func(branch, name, email, date string) string {
+		t.Helper()
+		envs := []string{
+			"GIT_AUTHOR_NAME=Author",
+			"GIT_AUTHOR_EMAIL=author@example.com",
+			"GIT_AUTHOR_DATE=" + date,
+			"GIT_COMMITTER_NAME=" + name,
+			"GIT_COMMITTER_EMAIL=" + email,
+			"GIT_COMMITTER_DATE=" + date,
+		}
+		stdout, err := exec(ctx, r.Path(), []string{"commit-tree", "-m", branch, "0eedd79eba4394bbef888c804e899731644367fe^{tree}"}, envs)
+		require.NoError(t, err)
+		commitID := strings.TrimSpace(string(stdout))
+		_, err = exec(ctx, r.Path(), []string{"update-ref", "--end-of-options", RefsHeads + branch, commitID}, nil)
+		require.NoError(t, err)
+		return commitID
+	}
+	oldID := commitAs("old", "Old Committer", "old@example.com", "2001-02-03T04:05:06Z")
+	nestedID := commitAs("feature/search", "Alice Doe", "alice@example.com", "2030-01-02T03:04:05+08:00")
+	middleID := commitAs("main", "Bob", "bob@example.com", "2020-06-07T08:09:10Z")
+
+	got, err = r.BranchesByCommitterDate(ctx)
+	require.NoError(t, err)
+	want := []*Branch{
+		{
+			Name:     "feature/search",
+			CommitID: nestedID,
+			Committer: &Signature{
+				Name:  "Alice Doe",
+				Email: "alice@example.com",
+				When:  time.Date(2030, 1, 2, 3, 4, 5, 0, time.FixedZone("", 8*60*60)),
+			},
+		},
+		{
+			Name:      "main",
+			CommitID:  middleID,
+			Committer: &Signature{Name: "Bob", Email: "bob@example.com", When: time.Date(2020, 6, 7, 8, 9, 10, 0, time.UTC)},
+		},
+		{
+			Name:      "old",
+			CommitID:  oldID,
+			Committer: &Signature{Name: "Old Committer", Email: "old@example.com", When: time.Date(2001, 2, 3, 4, 5, 6, 0, time.UTC)},
+		},
+	}
+	require.Len(t, got, len(want))
+	for i := range want {
+		assert.Equal(t, want[i].Name, got[i].Name)
+		assert.Equal(t, want[i].CommitID, got[i].CommitID)
+		assert.Equal(t, want[i].Committer.Name, got[i].Committer.Name)
+		assert.Equal(t, want[i].Committer.Email, got[i].Committer.Email)
+		assert.True(t, want[i].Committer.When.Equal(got[i].Committer.When), "%s: want %v, got %v", want[i].Name, want[i].Committer.When, got[i].Committer.When)
+	}
+}
+
+func TestRepository_CreateBranch(t *testing.T) {
+	ctx := context.Background()
+	r, cleanup, err := setupTempRepo()
+	require.NoError(t, err)
+	defer cleanup()
+
+	// An older commit than the tip, so the branch must not just follow HEAD.
+	parent, err := r.RevParse(ctx, "master~1")
+	require.NoError(t, err)
+	require.NoError(t, r.CreateBranch(ctx, "restored", parent))
+	got, err := r.BranchCommitID(ctx, "restored")
+	require.NoError(t, err)
+	assert.Equal(t, parent, got)
+
+	// An existing branch is left where it is.
+	assert.Error(t, r.CreateBranch(ctx, "restored", "master"))
+	got, err = r.BranchCommitID(ctx, "restored")
+	require.NoError(t, err)
+	assert.Equal(t, parent, got)
 }
 
 func TestRepository_DeleteBranch(t *testing.T) {

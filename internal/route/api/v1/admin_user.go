@@ -3,20 +3,19 @@ package v1
 import (
 	"net/http"
 
-	log "unknwon.dev/clog/v2"
+	"github.com/go-macaron/i18n"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 )
 
-func parseLoginSource(c *context.APIContext, sourceID int64) {
+func parseLoginSource(c *apiContext, sourceID int64) {
 	if sourceID == 0 {
 		return
 	}
 
-	_, err := database.Handle.LoginSources().GetByID(c.Req.Context(), sourceID)
+	_, err := database.Handle.LoginSources().GetByID(c.Request().Context(), sourceID)
 	if err != nil {
 		if database.IsErrLoginSourceNotExist(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
@@ -37,14 +36,14 @@ type adminCreateUserRequest struct {
 	SendNotify bool   `json:"send_notify"`
 }
 
-func adminCreateUser(c *context.APIContext, form adminCreateUserRequest) {
+func adminCreateUser(c *apiContext, l i18n.Locale, form adminCreateUserRequest) {
 	parseLoginSource(c, form.SourceID)
 	if c.Written() {
 		return
 	}
 
 	u, err := database.Handle.Users().Create(
-		c.Req.Context(),
+		c.Request().Context(),
 		form.Username,
 		form.Email,
 		database.CreateUserOptions{
@@ -65,12 +64,12 @@ func adminCreateUser(c *context.APIContext, form adminCreateUserRequest) {
 		}
 		return
 	}
-	log.Trace("Account %q created by admin %q", u.Name, c.User.Name)
+	c.Logger.Debug("Account created by admin", "userName", u.Name, "adminName", c.User.Name)
 
 	// Send email notification.
 	if form.SendNotify && conf.Email.Enabled {
-		if err := email.SendRegisterNotifyMail(c.Context.Context, database.NewMailerUser(u)); err != nil {
-			log.Error("Failed to send register notify mail: %v", err)
+		if err := email.SendRegisterNotifyMail(c.Logger, l, database.NewMailerUser(u)); err != nil {
+			c.Logger.Error("Failed to send register notify mail", "error", err)
 		}
 	}
 
@@ -92,7 +91,7 @@ type adminEditUserRequest struct {
 	MaxRepoCreation  *int   `json:"max_repo_creation"`
 }
 
-func adminEditUser(c *context.APIContext, form adminEditUserRequest) {
+func adminEditUser(c *apiContext, form adminEditUserRequest) {
 	u := getUserByParams(c)
 	if c.Written() {
 		return
@@ -125,7 +124,7 @@ func adminEditUser(c *context.APIContext, form adminEditUserRequest) {
 		opts.Email = &form.Email
 	}
 
-	err := database.Handle.Users().Update(c.Req.Context(), u.ID, opts)
+	err := database.Handle.Users().Update(c.Request().Context(), u.ID, opts)
 	if err != nil {
 		if database.IsErrEmailAlreadyUsed(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
@@ -134,9 +133,9 @@ func adminEditUser(c *context.APIContext, form adminEditUserRequest) {
 		}
 		return
 	}
-	log.Trace("Account updated by admin %q: %s", c.User.Name, u.Name)
+	c.Logger.Debug("Account updated by admin", "userName", u.Name, "adminName", c.User.Name)
 
-	u, err = database.Handle.Users().GetByID(c.Req.Context(), u.ID)
+	u, err = database.Handle.Users().GetByID(c.Request().Context(), u.ID)
 	if err != nil {
 		c.Error(err, "get user")
 		return
@@ -144,13 +143,13 @@ func adminEditUser(c *context.APIContext, form adminEditUserRequest) {
 	c.JSONSuccess(toUser(u))
 }
 
-func adminDeleteUser(c *context.APIContext) {
+func adminDeleteUser(c *apiContext) {
 	u := getUserByParams(c)
 	if c.Written() {
 		return
 	}
 
-	if err := database.Handle.Users().DeleteByID(c.Req.Context(), u.ID, false); err != nil {
+	if err := database.Handle.Users().DeleteByID(c.Request().Context(), u.ID, false); err != nil {
 		if database.IsErrUserOwnRepos(err) ||
 			database.IsErrUserHasOrgs(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
@@ -159,12 +158,12 @@ func adminDeleteUser(c *context.APIContext) {
 		}
 		return
 	}
-	log.Trace("Account deleted by admin(%s): %s", c.User.Name, u.Name)
+	c.Logger.Debug("Account deleted by admin", "userName", u.Name, "adminName", c.User.Name)
 
 	c.NoContent()
 }
 
-func adminCreatePublicKey(c *context.APIContext, form createPublicKeyRequest) {
+func adminCreatePublicKey(c *apiContext, form createPublicKeyRequest) {
 	u := getUserByParams(c)
 	if c.Written() {
 		return
