@@ -7,7 +7,15 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"unknwon.dev/x/logx"
 )
+
+func TestHookTask_deliver(t *testing.T) {
+	// A redelivery that fails does not keep the success of an earlier delivery.
+	task := &HookTask{URL: "://bad", IsDelivered: true, IsSucceed: true}
+	task.deliver(context.Background(), logx.NewNoopLogger(), nil)
+	assert.False(t, task.IsSucceed)
+}
 
 func TestHookTasks(t *testing.T) {
 	if testing.Short() {

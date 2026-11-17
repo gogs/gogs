@@ -180,6 +180,9 @@ func (ErrHookTaskNotExist) NotFound() bool {
 }
 
 func (t *HookTask) deliver(ctx context.Context, logger *logx.Logger, webhooks *WebhooksStore) {
+	// A redelivery succeeds only when this attempt does.
+	t.IsSucceed = false
+
 	payloadURL, err := url.Parse(t.URL)
 	if err != nil {
 		t.ResponseContent = fmt.Sprintf(`{"body": "Cannot parse payload URL: %v"}`, err)
