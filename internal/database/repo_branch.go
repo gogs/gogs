@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
+	"gorm.io/gorm"
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/errx"
@@ -83,22 +84,20 @@ type ProtectBranch struct {
 	Protected          bool
 	RequirePullRequest bool
 	// The allowlist columns keep their legacy names.
-	EnableAllowlist  bool   `xorm:"'enable_whitelist'"`
-	AllowlistUserIDs string `xorm:"'whitelist_user_i_ds' TEXT"`
-	AllowlistTeamIDs string `xorm:"'whitelist_team_i_ds' TEXT"`
+	EnableAllowlist  bool   `xorm:"'enable_whitelist'" gorm:"column:enable_whitelist"`
+	AllowlistUserIDs string `xorm:"'whitelist_user_i_ds' TEXT" gorm:"column:whitelist_user_i_ds"`
+	AllowlistTeamIDs string `xorm:"'whitelist_team_i_ds' TEXT" gorm:"column:whitelist_team_i_ds"`
 }
 
 // GetProtectBranchOfRepoByName returns *ProtectBranch by branch name in given repository.
 func GetProtectBranchOfRepoByName(repoID int64, name string) (*ProtectBranch, error) {
-	protectBranch := &ProtectBranch{
-		RepoID: repoID,
-		Name:   name,
-	}
-	has, err := x.Get(protectBranch)
+	protectBranch := new(ProtectBranch)
+	err := Handle.db.Where("repo_id = ? AND name = ?", repoID, name).First(protectBranch).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrBranchNotExist{args: map[string]any{"name": name}}
+		}
 		return nil, err
-	} else if !has {
-		return nil, ErrBranchNotExist{args: map[string]any{"name": name}}
 	}
 	return protectBranch, nil
 }
@@ -113,7 +112,12 @@ func (pb *ProtectBranch) IsUserInAllowlist(userID int64) (bool, error) {
 		return true, nil
 	}
 	teamIDs := tool.StringsToInt64s(strings.Split(pb.AllowlistTeamIDs, ","))
-	return x.In("team_id", teamIDs).And("uid = ?", userID).Exist(new(TeamUser))
+	if len(teamIDs) == 0 {
+		return false, nil
+	}
+	var count int64
+	err := Handle.db.Model(new(TeamUser)).Where("team_id IN ? AND uid = ?", teamIDs, userID).Count(&count).Error
+	return count > 0, err
 }
 
 // IsBranchOfRepoRequirePullRequest returns true if branch requires pull request in given repository.
@@ -127,7 +131,7 @@ func IsBranchOfRepoRequirePullRequest(repoID int64, name string) bool {
 
 // UpdateProtectBranch saves branch protection options.
 // If ID is 0, it creates a new record. Otherwise, updates existing record.
-func UpdateProtectBranch(protectBranch *ProtectBranch) (err error) {
+func UpdateProtectBranch(protectBranch *ProtectBranch) error {
 	repo, err := GetRepositoryByID(protectBranch.RepoID)
 	if err != nil {
 		return errors.Wrap(err, "get repository")
@@ -136,23 +140,19 @@ func UpdateProtectBranch(protectBranch *ProtectBranch) (err error) {
 		return err
 	}
 
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	if protectBranch.ID == 0 {
-		if _, err = sess.Insert(protectBranch); err != nil {
-			return errors.Newf("insert: %v", err)
+	err = Handle.db.Transaction(func(tx *gorm.DB) error {
+		if protectBranch.ID == 0 {
+			if err := tx.Create(protectBranch).Error; err != nil {
+				return errors.Newf("insert: %v", err)
+			}
 		}
-	}
 
-	if _, err = sess.ID(protectBranch.ID).AllCols().Update(protectBranch); err != nil {
-		return errors.Newf("update: %v", err)
-	}
-
-	if err = sess.Commit(); err != nil {
+		if err := tx.Model(protectBranch).Select("*").Updates(protectBranch).Error; err != nil {
+			return errors.Newf("update: %v", err)
+		}
+		return nil
+	})
+	if err != nil {
 		return err
 	}
 	return repo.SyncDelegateHooks()
@@ -212,5 +212,5 @@ func UpdateOrgProtectBranch(logger *logx.Logger, repo *Repository, protectBranch
 // GetProtectBranchesByRepoID returns a list of *ProtectBranch in given repository.
 func GetProtectBranchesByRepoID(repoID int64) ([]*ProtectBranch, error) {
 	protectBranches := make([]*ProtectBranch, 0, 2)
-	return protectBranches, x.Where("repo_id = ? and protected = ?", repoID, true).Asc("name").Find(&protectBranches)
+	return protectBranches, Handle.db.Where("repo_id = ? AND protected = ?", repoID, true).Order("name ASC").Find(&protectBranches).Error
 }

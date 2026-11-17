@@ -26,6 +26,8 @@ var Tables = []any{
 	new(LFSObject), new(LoginSource),
 	new(Notice),
 	new(Passkey),
+	new(TwoFactor), new(TwoFactorRecoveryCode),
+	new(Upload),
 }
 
 // NewConnection returns a new database connection with the given logger. When

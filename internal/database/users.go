@@ -1549,15 +1549,15 @@ func isUsernameAllowed(name string) error {
 // EmailAddress is an email address of a user.
 type EmailAddress struct {
 	ID          int64  `gorm:"primaryKey"`
-	UserID      int64  `xorm:"uid INDEX NOT NULL" gorm:"column:uid;index;uniqueIndex:email_address_user_email_unique;not null"`
-	Email       string `xorm:"UNIQUE NOT NULL" gorm:"uniqueIndex:email_address_user_email_unique;not null;size:254"`
+	UserID      int64  `gorm:"column:uid;index;uniqueIndex:email_address_user_email_unique;not null"`
+	Email       string `gorm:"uniqueIndex:email_address_user_email_unique;not null;size:254"`
 	IsActivated bool   `gorm:"not null;default:FALSE"`
-	IsPrimary   bool   `xorm:"-" gorm:"-" json:"-"`
+	IsPrimary   bool   `gorm:"-" json:"-"`
 }
 
 // Follow represents relations of users and their followers.
 type Follow struct {
 	ID       int64 `gorm:"primaryKey"`
-	UserID   int64 `xorm:"UNIQUE(follow)" gorm:"uniqueIndex:follow_user_follow_unique;not null"`
-	FollowID int64 `xorm:"UNIQUE(follow)" gorm:"uniqueIndex:follow_user_follow_unique;not null"`
+	UserID   int64 `gorm:"uniqueIndex:follow_user_follow_unique;not null"`
+	FollowID int64 `gorm:"uniqueIndex:follow_user_follow_unique;not null"`
 }
