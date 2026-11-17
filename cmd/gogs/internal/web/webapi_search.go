@@ -368,7 +368,7 @@ func codeSearchRepos(ctx context.Context, logger *logx.Logger, viewer *database.
 			if err != nil {
 				return nil, errors.Wrap(err, "search repositories")
 			}
-			if err = database.RepositoryList(repos).LoadAttributes(); err != nil {
+			if err = database.Handle.Repositories().LoadAttributes(ctx, repos...); err != nil {
 				return nil, errors.Wrap(err, "load repository attributes")
 			}
 			candidates = append(candidates, repos...)
