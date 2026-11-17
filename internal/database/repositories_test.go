@@ -2,6 +2,8 @@ package database
 
 import (
 	"context"
+	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -9,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
 )
 
@@ -103,9 +106,13 @@ func TestRepos(t *testing.T) {
 		{"GetByName", reposGetByName},
 		{"LoadAttributes", reposLoadAttributes},
 		{"Star", reposStar},
+		{"Unstar", reposUnstar},
+		{"ListStargazersAndWatchers", reposListStargazersAndWatchers},
 		{"Touch", reposTouch},
 		{"ListByRepo", reposListWatches},
 		{"Watch", reposWatch},
+		{"Unwatch", reposUnwatch},
+		{"ConcurrentCounts", reposConcurrentCounts},
 		{"HasForkedBy", reposHasForkedBy},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -265,6 +272,86 @@ func reposStar(t *testing.T, ctx context.Context, s *RepositoriesStore) {
 	assert.Equal(t, 1, alice.NumStars)
 }
 
+func reposUnstar(t *testing.T, ctx context.Context, s *RepositoriesStore) {
+	repo1, err := s.Create(ctx, 9999, CreateRepoOptions{Name: "repo1"})
+	require.NoError(t, err)
+	repo2, err := s.Create(ctx, 9999, CreateRepoOptions{Name: "repo2"})
+	require.NoError(t, err)
+	usersStore := newUsersStore(s.db)
+	alice, err := usersStore.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+	bob, err := usersStore.Create(ctx, "bob", "bob@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+	for _, star := range [][2]int64{{alice.ID, repo1.ID}, {alice.ID, repo2.ID}, {bob.ID, repo1.ID}} {
+		require.NoError(t, s.Star(ctx, star[0], star[1]))
+	}
+
+	counts := func() []int {
+		t.Helper()
+		r1, err := s.GetByID(ctx, repo1.ID)
+		require.NoError(t, err)
+		r2, err := s.GetByID(ctx, repo2.ID)
+		require.NoError(t, err)
+		a, err := usersStore.GetByID(ctx, alice.ID)
+		require.NoError(t, err)
+		b, err := usersStore.GetByID(ctx, bob.ID)
+		require.NoError(t, err)
+		return []int{r1.NumStars, r2.NumStars, a.NumStars, b.NumStars}
+	}
+	assert.Equal(t, []int{2, 1, 2, 1}, counts())
+
+	err = s.Unstar(ctx, alice.ID, repo1.ID)
+	require.NoError(t, err)
+	assert.Equal(t, []int{1, 1, 1, 1}, counts())
+	assert.False(t, s.IsStarring(ctx, alice.ID, repo1.ID))
+	assert.True(t, s.IsStarring(ctx, alice.ID, repo2.ID))
+	assert.True(t, s.IsStarring(ctx, bob.ID, repo1.ID))
+
+	// Unstarring a repository that the user does not star is a no-op.
+	err = s.Unstar(ctx, alice.ID, repo1.ID)
+	require.NoError(t, err)
+	assert.Equal(t, []int{1, 1, 1, 1}, counts())
+
+	assert.False(t, s.IsStarring(ctx, 0, repo1.ID))
+}
+
+func reposListStargazersAndWatchers(t *testing.T, ctx context.Context, s *RepositoriesStore) {
+	repo1, err := s.Create(ctx, 9999, CreateRepoOptions{Name: "repo1"})
+	require.NoError(t, err)
+	repo2, err := s.Create(ctx, 9999, CreateRepoOptions{Name: "repo2"})
+	require.NoError(t, err)
+	usersStore := newUsersStore(s.db)
+	alice, err := usersStore.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+	bob, err := usersStore.Create(ctx, "bob", "bob@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+	carol, err := usersStore.Create(ctx, "carol", "carol@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+
+	require.NoError(t, s.Star(ctx, carol.ID, repo1.ID))
+	require.NoError(t, s.Star(ctx, alice.ID, repo1.ID))
+	require.NoError(t, s.Star(ctx, bob.ID, repo2.ID))
+	require.NoError(t, s.Watch(ctx, bob.ID, repo1.ID))
+	require.NoError(t, s.Watch(ctx, carol.ID, repo2.ID))
+
+	userIDs := func(users []*User, err error) []int64 {
+		t.Helper()
+		require.NoError(t, err)
+		ids := make([]int64, 0, len(users))
+		for _, u := range users {
+			ids = append(ids, u.ID)
+		}
+		return ids
+	}
+	got, err := s.ListStargazers(ctx, repo1.ID, 1)
+	assert.Equal(t, []int64{carol.ID, alice.ID}, userIDs(got, err))
+	require.NotEmpty(t, got)
+	assert.Equal(t, "carol", got[0].Name)
+	assert.Empty(t, userIDs(s.ListStargazers(ctx, repo1.ID, 2)))
+	assert.Equal(t, []int64{bob.ID}, userIDs(s.ListWatchers(ctx, repo1.ID, 1)))
+	assert.Equal(t, []int64{carol.ID}, userIDs(s.ListWatchers(ctx, repo2.ID, 0)))
+}
+
 func reposTouch(t *testing.T, ctx context.Context, s *RepositoriesStore) {
 	repo, err := s.Create(ctx, 1,
 		CreateRepoOptions{
@@ -326,6 +413,42 @@ func reposWatch(t *testing.T, ctx context.Context, s *RepositoriesStore) {
 	repo1, err = reposStore.GetByID(ctx, repo1.ID)
 	require.NoError(t, err)
 	assert.Equal(t, 2, repo1.NumWatches) // The owner is watching the repo by default.
+}
+
+func reposUnwatch(t *testing.T, ctx context.Context, s *RepositoriesStore) {
+	repo1, err := s.Create(ctx, 9999, CreateRepoOptions{Name: "repo1"})
+	require.NoError(t, err)
+	repo2, err := s.Create(ctx, 9999, CreateRepoOptions{Name: "repo2"})
+	require.NoError(t, err)
+	for _, repoID := range []int64{repo1.ID, repo2.ID} {
+		require.NoError(t, s.Watch(ctx, 2, repoID))
+		require.NoError(t, s.Watch(ctx, 3, repoID))
+	}
+
+	numWatches := func() []int {
+		t.Helper()
+		r1, err := s.GetByID(ctx, repo1.ID)
+		require.NoError(t, err)
+		r2, err := s.GetByID(ctx, repo2.ID)
+		require.NoError(t, err)
+		return []int{r1.NumWatches, r2.NumWatches}
+	}
+	// The owner watches the repository too.
+	assert.Equal(t, []int{3, 3}, numWatches())
+
+	err = s.Unwatch(ctx, 2, repo1.ID)
+	require.NoError(t, err)
+	assert.Equal(t, []int{2, 3}, numWatches())
+	assert.False(t, s.IsWatching(ctx, 2, repo1.ID))
+	assert.True(t, s.IsWatching(ctx, 2, repo2.ID))
+	assert.True(t, s.IsWatching(ctx, 3, repo1.ID))
+
+	// Unwatching a repository that the user does not watch is a no-op.
+	err = s.Unwatch(ctx, 2, repo1.ID)
+	require.NoError(t, err)
+	assert.Equal(t, []int{2, 3}, numWatches())
+
+	assert.False(t, s.IsWatching(ctx, 0, repo1.ID))
 }
 
 func reposHasForkedBy(t *testing.T, ctx context.Context, s *RepositoriesStore) {
@@ -424,4 +547,58 @@ func reposLoadAttributes(t *testing.T, ctx context.Context, s *RepositoriesStore
 		err = s.LoadAttributes(ctx, gone)
 		assert.True(t, IsErrUserNotExist(err), "got %v", err)
 	})
+}
+
+func reposConcurrentCounts(t *testing.T, ctx context.Context, s *RepositoriesStore) {
+	const n = 10
+	repo, err := s.Create(ctx, 1, CreateRepoOptions{Name: "repo"})
+	require.NoError(t, err)
+	repos := make([]*Repository, n)
+	for i := range repos {
+		repos[i], err = s.Create(ctx, 1, CreateRepoOptions{Name: fmt.Sprintf("repo%d", i)})
+		require.NoError(t, err)
+	}
+	usersStore := newUsersStore(s.db)
+	users := make([]*User, n)
+	for i := range users {
+		users[i], err = usersStore.Create(ctx, fmt.Sprintf("user%d", i), fmt.Sprintf("user%d@example.com", i), CreateUserOptions{})
+		require.NoError(t, err)
+		require.NoError(t, s.Watch(ctx, users[i].ID, repo.ID))
+		require.NoError(t, s.Star(ctx, users[i].ID, repo.ID))
+	}
+
+	concurrently := func(do func(i int) error) {
+		t.Helper()
+		errs := make([]error, n)
+		var wg sync.WaitGroup
+		for i := range n {
+			wg.Go(func() { errs[i] = do(i) })
+		}
+		wg.Wait()
+		for _, err := range errs {
+			require.NoError(t, err)
+		}
+	}
+	concurrently(func(i int) error { return s.Unwatch(ctx, users[i].ID, repo.ID) })
+	concurrently(func(i int) error { return s.Unstar(ctx, users[i].ID, repo.ID) })
+	// The counts match the rows.
+	assertCounts := func(r *Repository) {
+		t.Helper()
+		got, err := s.GetByID(ctx, r.ID)
+		require.NoError(t, err)
+		var watches, stars int64
+		require.NoError(t, s.db.Model(new(Watch)).Where("repo_id = ?", r.ID).Count(&watches).Error)
+		require.NoError(t, s.db.Model(new(Star)).Where("repo_id = ?", r.ID).Count(&stars).Error)
+		assert.Equal(t, []int{int(watches), int(stars)}, []int{got.NumWatches, got.NumStars}, "watches and stars of %s", r.Name)
+	}
+	assertCounts(repo)
+
+	// SQLite lets only one transaction write, and watching reads first.
+	if conf.UseSQLite3 {
+		return
+	}
+	concurrently(func(i int) error { return s.Watch(ctx, users[i].ID, repos[i].ID) })
+	for _, r := range repos {
+		assertCounts(r)
+	}
 }

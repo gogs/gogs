@@ -124,7 +124,7 @@ func (t *Team) addRepository(e Engine, repo *Repository) (err error) {
 		return errors.Newf("update team: %v", err)
 	}
 
-	if err = repo.recalculateTeamAccesses(legacyTx(e), 0); err != nil {
+	if err = newPermissionsStore(legacyTx(e)).recalculateTeamAccesses(context.TODO(), repo, 0); err != nil {
 		return errors.Newf("recalculateAccesses: %v", err)
 	}
 
@@ -132,7 +132,7 @@ func (t *Team) addRepository(e Engine, repo *Repository) (err error) {
 		return errors.Newf("getMembers: %v", err)
 	}
 	for _, u := range t.Members {
-		if err = watchRepo(legacyTx(e), u.ID, repo.ID, true); err != nil {
+		if err = newReposStore(legacyTx(e)).watch(context.TODO(), u.ID, repo.ID); err != nil {
 			return errors.Newf("watchRepo: %v", err)
 		}
 	}
@@ -172,7 +172,7 @@ func (t *Team) removeRepository(e Engine, repo *Repository, recalculate bool) (e
 
 	// No need to recalculate when deleting a repository from organization.
 	if recalculate {
-		if err = repo.recalculateTeamAccesses(legacyTx(e), t.ID); err != nil {
+		if err = newPermissionsStore(legacyTx(e)).recalculateTeamAccesses(context.TODO(), repo, t.ID); err != nil {
 			return err
 		}
 	}
@@ -220,7 +220,7 @@ func (t *Team) removeRepository(e Engine, repo *Repository, recalculate bool) (e
 			continue
 		}
 
-		if err = watchRepo(legacyTx(e), member.ID, repo.ID, false); err != nil {
+		if err = newReposStore(legacyTx(e)).unwatch(context.TODO(), member.ID, repo.ID); err != nil {
 			return err
 		}
 	}
@@ -402,7 +402,7 @@ func UpdateTeam(t *Team, authChanged bool) (err error) {
 		}
 
 		for _, repo := range t.Repos {
-			if err = repo.recalculateTeamAccesses(legacyTx(sess), 0); err != nil {
+			if err = newPermissionsStore(legacyTx(sess)).recalculateTeamAccesses(context.TODO(), repo, 0); err != nil {
 				return errors.Newf("recalculateTeamAccesses: %v", err)
 			}
 		}
@@ -431,7 +431,7 @@ func DeleteTeam(t *Team) error {
 
 	// Delete all accesses.
 	for _, repo := range t.Repos {
-		if err = repo.recalculateTeamAccesses(legacyTx(sess), t.ID); err != nil {
+		if err = newPermissionsStore(legacyTx(sess)).recalculateTeamAccesses(context.TODO(), repo, t.ID); err != nil {
 			return err
 		}
 	}
@@ -548,7 +548,7 @@ func AddTeamMember(orgID, teamID, userID int64) error {
 
 	// Give access to team repositories.
 	for _, repo := range t.Repos {
-		if err = repo.recalculateTeamAccesses(legacyTx(sess), 0); err != nil {
+		if err = newPermissionsStore(legacyTx(sess)).recalculateTeamAccesses(context.TODO(), repo, 0); err != nil {
 			return err
 		}
 	}
@@ -609,7 +609,7 @@ func removeTeamMember(e Engine, orgID, teamID, uid int64) error {
 
 	// Delete access to team repositories.
 	for _, repo := range t.Repos {
-		if err = repo.recalculateTeamAccesses(legacyTx(e), 0); err != nil {
+		if err = newPermissionsStore(legacyTx(e)).recalculateTeamAccesses(context.TODO(), repo, 0); err != nil {
 			return err
 		}
 	}

@@ -91,8 +91,8 @@ func getRepoHeader(c flamego.Context, logger *logx.Logger, repoCtx *repoContext)
 		ViewerCanRead:       repoCtx.Viewer.CanRead(),
 		ViewerCanAdminister: repoCtx.Viewer.CanAdminister(),
 		ViewerCanWrite:      repoCtx.Viewer.CanWrite(),
-		ViewerIsWatching:    database.IsWatching(repoCtx.Viewer.ID(), repo.ID),
-		ViewerIsStarring:    database.IsStarring(repoCtx.Viewer.ID(), repo.ID),
+		ViewerIsWatching:    database.Handle.Repositories().IsWatching(c.Request().Context(), repoCtx.Viewer.ID(), repo.ID),
+		ViewerIsStarring:    database.Handle.Repositories().IsStarring(c.Request().Context(), repoCtx.Viewer.ID(), repo.ID),
 	}
 	if repoCtx.Viewer.CanRead() {
 		resp.DefaultBranch = repo.DefaultBranch
@@ -261,7 +261,7 @@ func repoWatchAction(ctx context.Context, logger *logx.Logger, repoCtx *repoCont
 	if watching {
 		err = database.Handle.Repositories().Watch(ctx, repoCtx.Viewer.ID(), repo.ID)
 	} else {
-		err = database.WatchRepo(repoCtx.Viewer.ID(), repo.ID, false)
+		err = database.Handle.Repositories().Unwatch(ctx, repoCtx.Viewer.ID(), repo.ID)
 	}
 	if err != nil {
 		logger.Error("Failed to update repository watch status", "watching", watching, "userID", repoCtx.Viewer.ID(), "repoID", repo.ID, "error", err)
@@ -303,7 +303,7 @@ func repoStarAction(ctx context.Context, logger *logx.Logger, repoCtx *repoConte
 	if starring {
 		err = database.Handle.Repositories().Star(ctx, repoCtx.Viewer.ID(), repo.ID)
 	} else {
-		err = database.StarRepo(repoCtx.Viewer.ID(), repo.ID, false)
+		err = database.Handle.Repositories().Unstar(ctx, repoCtx.Viewer.ID(), repo.ID)
 	}
 	if err != nil {
 		logger.Error("Failed to update repository star status", "starred", starring, "userID", repoCtx.Viewer.ID(), "repoID", repo.ID, "error", err)

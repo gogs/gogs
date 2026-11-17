@@ -122,9 +122,9 @@ func mailIssueCommentToParticipants(logger *logx.Logger, tx *gorm.DB, issue *Iss
 		return nil
 	}
 
-	watchers, err := GetWatchers(issue.RepoID)
+	watchers, err := newReposStore(tx).ListWatches(ctx, issue.RepoID)
 	if err != nil {
-		return errors.Newf("GetWatchers [repo_id: %d]: %v", issue.RepoID, err)
+		return errors.Wrap(err, "list watches")
 	}
 	participants, err := newIssuesStore(tx).listParticipants(ctx, issue.ID)
 	if err != nil {

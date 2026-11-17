@@ -28,6 +28,7 @@ func TestPerms(t *testing.T) {
 		{"AccessModes", permsAccessModes},
 		{"Authorize", permsAuthorize},
 		{"SetRepoPerms", permsSetRepoPerms},
+		{"recalculateAccesses", permsRecalculateAccesses},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
@@ -347,4 +348,135 @@ func permsSetRepoPerms(t *testing.T, ctx context.Context, s *PermissionsStore) {
 		{UserID: 5, RepoID: 2, Mode: AccessModeWrite},
 	}
 	assert.Equal(t, wantAccesses, accesses)
+
+	t.Run("writes only the rows that differ", func(t *testing.T) {
+		require.NoError(t, s.SetRepoPerms(ctx, 3, map[int64]AccessMode{1: AccessModeRead, 2: AccessModeRead}))
+		before := map[int64]int64{}
+		var rows []*Access
+		require.NoError(t, s.db.Where("repo_id = 3").Find(&rows).Error)
+		for _, a := range rows {
+			before[a.UserID] = a.ID
+		}
+
+		require.NoError(t, s.SetRepoPerms(ctx, 3, map[int64]AccessMode{1: AccessModeRead, 2: AccessModeAdmin, 3: AccessModeWrite}))
+		rows = nil
+		require.NoError(t, s.db.Where("repo_id = 3").Find(&rows).Error)
+		for _, a := range rows {
+			if id, ok := before[a.UserID]; ok {
+				assert.Equal(t, id, a.ID, "the row of user %d is kept", a.UserID)
+			}
+		}
+		assert.Equal(t, map[int64]AccessMode{1: AccessModeRead, 2: AccessModeAdmin, 3: AccessModeWrite}, accessModes(t, ctx, s, 3))
+	})
+
+	t.Run("concurrent", func(t *testing.T) {
+		want := map[int64]AccessMode{1: AccessModeRead, 2: AccessModeWrite, 3: AccessModeAdmin}
+		concurrently(t, 8, func(int) error { return s.SetRepoPerms(ctx, 4, want) })
+		assert.Equal(t, want, accessModes(t, ctx, s, 4))
+	})
+
+	t.Run("more rows than a statement can bind", func(t *testing.T) {
+		want := make(map[int64]AccessMode, 25000)
+		for userID := range int64(25000) {
+			want[userID+1] = AccessModeRead
+		}
+		require.NoError(t, s.SetRepoPerms(ctx, 5, want))
+		assert.Equal(t, want, accessModes(t, ctx, s, 5))
+
+		require.NoError(t, s.SetRepoPerms(ctx, 5, map[int64]AccessMode{7: AccessModeWrite}))
+		assert.Equal(t, map[int64]AccessMode{7: AccessModeWrite}, accessModes(t, ctx, s, 5))
+	})
+}
+
+func permsRecalculateAccesses(t *testing.T, ctx context.Context, s *PermissionsStore) {
+	users := map[string]*User{}
+	for _, name := range []string{"pr-alice", "pr-bob", "pr-dave", "pr-erin", "pr-frank"} {
+		users[name] = newTestIssueUser(t, ctx, s.db, name)
+	}
+	addCollaborator := func(repo *Repository, name string, mode AccessMode) {
+		t.Helper()
+		err := s.db.Create(&Collaboration{RepoID: repo.ID, UserID: users[name].ID, Mode: mode}).Error
+		require.NoError(t, err)
+	}
+
+	t.Run("user", func(t *testing.T) {
+		repo := newTestIssueRepo(t, ctx, s.db, "pr-user")
+		other := newTestIssueRepo(t, ctx, s.db, "pr-user-other")
+		addCollaborator(repo, "pr-alice", AccessModeRead)
+		addCollaborator(repo, "pr-bob", AccessModeAdmin)
+		require.NoError(t, s.SetRepoPerms(ctx, repo.ID, map[int64]AccessMode{users["pr-dave"].ID: AccessModeWrite}))
+		require.NoError(t, s.SetRepoPerms(ctx, other.ID, map[int64]AccessMode{users["pr-dave"].ID: AccessModeWrite}))
+
+		err := s.recalculateAccesses(ctx, repo)
+		require.NoError(t, err)
+		assert.Equal(t, map[int64]AccessMode{
+			users["pr-alice"].ID: AccessModeRead,
+			users["pr-bob"].ID:   AccessModeAdmin,
+		}, accessModes(t, ctx, s, repo.ID))
+		assert.Equal(t, map[int64]AccessMode{users["pr-dave"].ID: AccessModeWrite}, accessModes(t, ctx, s, other.ID))
+
+		// A repository without collaborators has no accesses.
+		err = s.recalculateAccesses(ctx, other)
+		require.NoError(t, err)
+		assert.Empty(t, accessModes(t, ctx, s, other.ID))
+
+		err = s.recalculateTeamAccesses(ctx, repo, 0)
+		assert.Error(t, err, "the owner is not an organization")
+	})
+
+	t.Run("organization", func(t *testing.T) {
+		org := &User{Name: "pr-org", LowerName: "pr-org", Type: UserTypeOrganization}
+		require.NoError(t, s.db.Create(org).Error)
+		repo, err := newReposStore(s.db).Create(ctx, org.ID, CreateRepoOptions{Name: "repo1"})
+		require.NoError(t, err)
+		otherRepo, err := newReposStore(s.db).Create(ctx, org.ID, CreateRepoOptions{Name: "repo2"})
+		require.NoError(t, err)
+
+		newTeam := func(name string, authorize AccessMode, repos []*Repository, members ...string) *Team {
+			t.Helper()
+			team := &Team{OrgID: org.ID, Name: name, LowerName: name, Authorize: authorize}
+			require.NoError(t, s.db.Create(team).Error)
+			for _, r := range repos {
+				require.NoError(t, s.db.Create(&TeamRepo{OrgID: org.ID, TeamID: team.ID, RepoID: r.ID}).Error)
+			}
+			for _, name := range members {
+				require.NoError(t, s.db.Create(&TeamUser{OrgID: org.ID, TeamID: team.ID, UID: users[name].ID}).Error)
+			}
+			return team
+		}
+		// The owner team gets owner access, whatever mode it stores, without
+		// being given the repository.
+		newTeam(ownerTeamName, AccessModeRead, nil, "pr-dave")
+		dev := newTeam("dev", AccessModeWrite, []*Repository{repo}, "pr-alice", "pr-erin")
+		newTeam("readers", AccessModeRead, []*Repository{repo}, "pr-alice")
+		newTeam("other", AccessModeAdmin, []*Repository{otherRepo}, "pr-frank")
+		addCollaborator(repo, "pr-bob", AccessModeRead)
+		addCollaborator(repo, "pr-erin", AccessModeAdmin)
+
+		err = s.recalculateAccesses(ctx, repo)
+		require.NoError(t, err)
+		assert.Equal(t, map[int64]AccessMode{
+			users["pr-alice"].ID: AccessModeWrite,
+			users["pr-bob"].ID:   AccessModeRead,
+			users["pr-dave"].ID:  AccessModeOwner,
+			users["pr-erin"].ID:  AccessModeAdmin,
+		}, accessModes(t, ctx, s, repo.ID))
+
+		// The ignored team does not give access.
+		err = s.recalculateTeamAccesses(ctx, repo, dev.ID)
+		require.NoError(t, err)
+		assert.Equal(t, map[int64]AccessMode{
+			users["pr-alice"].ID: AccessModeRead,
+			users["pr-bob"].ID:   AccessModeRead,
+			users["pr-dave"].ID:  AccessModeOwner,
+			users["pr-erin"].ID:  AccessModeAdmin,
+		}, accessModes(t, ctx, s, repo.ID))
+
+		err = s.recalculateAccesses(ctx, otherRepo)
+		require.NoError(t, err)
+		assert.Equal(t, map[int64]AccessMode{
+			users["pr-dave"].ID:  AccessModeOwner,
+			users["pr-frank"].ID: AccessModeAdmin,
+		}, accessModes(t, ctx, s, otherRepo.ID))
+	})
 }

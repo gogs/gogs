@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"context"
 	"net/http"
 
 	"gogs.io/gogs/internal/database"
@@ -8,7 +9,7 @@ import (
 )
 
 func listCollaborators(c *apiContext) {
-	collaborators, err := c.Repo.Repository.GetCollaborators()
+	collaborators, err := database.Handle.Collaborations().List(c.Request().Context(), c.Repo.Repository.ID)
 	if err != nil {
 		c.Error(err, "get collaborators")
 		return
@@ -36,13 +37,16 @@ func addCollaborator(c *apiContext, form addCollaboratorRequest) {
 		return
 	}
 
-	if err := c.Repo.Repository.AddCollaborator(collaborator); err != nil {
+	// Keep going if the client disconnects, so the collaborator does not end
+	// up added without the requested mode.
+	ctx := context.WithoutCancel(c.Request().Context())
+	if err := database.Handle.Collaborations().Add(ctx, c.Repo.Repository, collaborator.ID); err != nil {
 		c.Error(err, "add collaborator")
 		return
 	}
 
 	if form.Permission != nil {
-		if err := c.Repo.Repository.ChangeCollaborationAccessMode(c.Repo.AccessMode, collaborator.ID, database.ParseAccessMode(*form.Permission)); err != nil {
+		if err := database.Handle.Collaborations().ChangeMode(ctx, c.Repo.Repository, c.Repo.AccessMode, collaborator.ID, database.ParseAccessMode(*form.Permission)); err != nil {
 			c.Error(err, "change collaboration access mode")
 			return
 		}
@@ -62,7 +66,7 @@ func isCollaborator(c *apiContext) {
 		return
 	}
 
-	if !c.Repo.Repository.IsCollaborator(c.Logger, collaborator.ID) {
+	if !database.Handle.Collaborations().IsCollaborator(c.Request().Context(), c.Logger, c.Repo.Repository.ID, collaborator.ID) {
 		c.NotFound()
 	} else {
 		c.NoContent()
@@ -80,7 +84,7 @@ func deleteCollaborator(c *apiContext) {
 		return
 	}
 
-	if err := c.Repo.Repository.DeleteCollaboration(c.Logger, collaborator.ID); err != nil {
+	if err := database.Handle.Collaborations().Delete(c.Request().Context(), c.Repo.Repository, collaborator.ID); err != nil {
 		c.Error(err, "delete collaboration")
 		return
 	}
