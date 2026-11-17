@@ -485,3 +485,92 @@ func TestDeepInlineNesting(t *testing.T) {
 		})
 	}
 }
+
+// testFrontMatter is a front matter hook for "key: value" lines, which it
+// returns as a mapping of scalars. "-" lines are not front matter, and other
+// lines are invalid.
+func testFrontMatter(yaml []byte) FrontMatterValue {
+	v := FrontMatterValue{Kind: FrontMatterMapping}
+	for _, line := range strings.Split(strings.TrimSuffix(string(yaml), "\n"), "\n") {
+		if strings.HasPrefix(line, "-") || line == "" {
+			return FrontMatterValue{}
+		}
+		key, value, ok := strings.Cut(line, ": ")
+		if !ok {
+			return FrontMatterValue{Kind: FrontMatterInvalid}
+		}
+		v.Keys = append(v.Keys, key)
+		v.Values = append(v.Values, FrontMatterValue{Kind: FrontMatterScalar, Text: value})
+	}
+	return v
+}
+
+func TestFrontMatter(t *testing.T) {
+	defer func(size int) { maxFrontMatterSize = size }(maxFrontMatterSize)
+	maxFrontMatterSize = 64
+
+	opts := postProcessTestOptions()
+	opts.FrontMatter = testFrontMatter
+	opts.SpecialLinks = func(text []byte) []SpecialLink {
+		i := bytes.Index(text, []byte("@x"))
+		if i < 0 {
+			return nil
+		}
+		return []SpecialLink{{Start: i, End: i + 2, Href: []byte("/x"), Text: []byte("@x")}}
+	}
+
+	// Front matter is text: it gets no special links, autolinks or
+	// typography, and quotes are escaped as the sanitizer escapes them.
+	const table = "<table>\n<tbody>\n<tr>\n<th>a</th>\n<td>@x -- http://a.b</td>\n</tr>\n" +
+		"<tr>\n<th>b</th>\n<td>&lt;script&gt;&#34;</td>\n</tr>\n</tbody>\n</table>\n"
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{name: "table", input: "---\na: @x -- http://a.b\nb: <script>\"\n---\n@x\n", want: table + "<p><a href=\"/x\" rel=\"nofollow\">@x</a></p>\n"},
+		{name: "CRLF and trailing spaces", input: "--- \t\r\na: @x -- http://a.b\r\nb: <script>\"\r\n---\t\r\n", want: table},
+		{name: "invalid", input: "---\n<b>\n---\nx\n", want: "<pre><code class=\"language-yaml\">---\n&lt;b&gt;\n---\n</code></pre>\n<p>x</p>\n"},
+		{name: "not front matter", input: "---\n- a\n---\n", want: "<hr>\n<ul>\n<li>a</li>\n</ul>\n<hr>\n"},
+		{name: "unclosed", input: "---\na: 1\n", want: "<hr>\n<p>a: 1</p>\n"},
+		{name: "closed by dots", input: "---\na: 1\n...\n", want: "<hr>\n<p>a: 1\n…</p>\n"},
+		{name: "not at the start", input: "\n---\na: 1\n---\n", want: "<hr>\n<h2>a: 1</h2>\n"},
+		{name: "longer delimiter", input: "----\na: 1\n---\n", want: "<hr>\n<h2>a: 1</h2>\n"},
+		{name: "past the size limit", input: "---\na: " + strings.Repeat("x", 54) + "\n---\n", want: "<hr>\n<h2>a: " + strings.Repeat("x", 54) + "</h2>\n"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			res := Render([]byte(test.input), opts)
+			assert.Equal(t, test.want, string(res.HTML))
+			assert.True(t, res.Sanitized, "takes the fast path")
+		})
+	}
+
+	t.Run("raw HTML", func(t *testing.T) {
+		res := Render([]byte("---\na: @x -- http://a.b\nb: <script>\"\n---\n<b>@x</b>\n"), opts)
+		assert.Equal(t, table+"<p><b><a href=\"/x\">@x</a></b></p>\n", string(res.HTML))
+		assert.False(t, res.Sanitized)
+		assert.Equal(t, len(table), res.FrontMatterSize)
+	})
+	t.Run("option off", func(t *testing.T) {
+		assert.Equal(t, "<hr>\n<h2>a: 1</h2>\n", string(HTML([]byte("---\na: 1\n---\n"), &Options{})))
+	})
+	t.Run("task list lines", func(t *testing.T) {
+		got := string(HTML([]byte("---\na: 1\n---\n- [ ] x\n- [x] y\n"), &Options{TaskLists: true, FrontMatter: testFrontMatter}))
+		assert.Contains(t, got, `data-source-lines="4-4"`)
+		assert.Contains(t, got, `data-source-lines="5-5"`)
+	})
+	t.Run("streaming", func(t *testing.T) {
+		defer func(size int) { streamMinSize = size }(streamMinSize)
+		for _, input := range []string{"---\na: @x\n---\n- [ ] x\n\n@x\n", "---\na: 1\n---", "---\n<b>\n---\n<b>@x</b>\n"} {
+			streamMinSize = len(input) + 1
+			want := Render([]byte(input), opts)
+			wantHTML := string(want.HTML)
+			streamMinSize = 0
+			got := Render([]byte(input), opts)
+			assert.Equal(t, wantHTML, string(got.HTML), "%q", input)
+			assert.Equal(t, want.Sanitized, got.Sanitized, "%q", input)
+			assert.Equal(t, want.FrontMatterSize, got.FrontMatterSize, "%q", input)
+		}
+	})
+}

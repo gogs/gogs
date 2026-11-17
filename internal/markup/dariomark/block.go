@@ -69,6 +69,10 @@ type parser struct {
 	// the document may render, see footnoteRef.
 	footnoteBudget int
 
+	// frontMatter is the value of the front matter, see
+	// Options.FrontMatter.
+	frontMatter FrontMatterValue
+
 	inl inlineParser
 	// r renders the document. It is part of the parser so that its
 	// buffers are reused.
@@ -115,6 +119,7 @@ func (p *parser) reset() {
 	}
 	p.footnotes.reset()
 	p.hasRawHTML = false
+	p.frontMatter = FrontMatterValue{}
 	p.inl.reset()
 }
 
@@ -163,7 +168,21 @@ func (p *parser) parse(src []byte, flush func() bool) *node {
 	p.lineNumber = 0
 	// The start of the input counts as a blank line.
 	p.curBlankIn = p.doc
-	for pos := 0; pos < len(src); {
+	pos := 0
+	if p.opts.FrontMatter != nil {
+		if yaml, size, lines := frontMatter(src); size > 0 {
+			if v := p.opts.FrontMatter(yaml); v.Kind != FrontMatterNone {
+				n := p.arena.new(kindFrontMatter)
+				n.text = src[:size]
+				n.startLine, n.lastLine = 1, int32(lines)
+				p.doc.appendChild(n)
+				p.frontMatter = v
+				p.lineNumber = lines
+				pos = size
+			}
+		}
+	}
+	for pos < len(src) {
 		end := bytes.IndexByte(src[pos:], '\n')
 		var eol int
 		if end < 0 {

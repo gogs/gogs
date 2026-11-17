@@ -48,6 +48,10 @@ type renderer struct {
 	// slugs counts the uses of heading slugs, see headingID.
 	slugs map[string]int
 
+	// frontMatterSize is the size of the HTML of front matter at the start of
+	// the output, see Result.FrontMatterSize.
+	frontMatterSize int
+
 	// sanitizing reports whether the sink sanitizes, which it cannot do for
 	// raw HTML. stop is set when rendering stopped because of raw HTML.
 	sanitizing, stop bool
@@ -64,6 +68,7 @@ func (r *renderer) init(p *parser, opts *Options) {
 	r.headings = r.headings[:0]
 	r.headingText = r.headingText[:0]
 	clear(r.slugs)
+	r.frontMatterSize = 0
 	r.sanitizing, r.stop = false, false
 	if r.stream == nil {
 		r.stream = r.renderChunk
@@ -301,6 +306,8 @@ func (r *renderer) block(n *node) {
 		r.nl()
 	case kindTable:
 		r.table(n)
+	case kindFrontMatter:
+		r.frontMatter(n)
 	}
 }
 

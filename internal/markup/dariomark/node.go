@@ -19,6 +19,10 @@ const (
 	// kindRefDefs is a paragraph that only contained link reference
 	// definitions. It is not rendered.
 	kindRefDefs
+	// kindFrontMatter is the YAML front matter at the start of the document,
+	// see Options.FrontMatter. Its text holds the front matter with its
+	// delimiter lines.
+	kindFrontMatter
 
 	kindText
 	kindSoftBreak

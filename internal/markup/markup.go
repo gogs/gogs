@@ -500,17 +500,17 @@ var utf8BOM = []byte("\ufeff")
 
 // Render takes a string or []byte and renders to sanitized HTML in given type of syntax with special links.
 // It renders files: Markdown keeps line breaks only with [markdown]
-// ENABLE_HARD_LINE_BREAK.
+// ENABLE_HARD_LINE_BREAK, and its YAML front matter renders as a table.
 //
 // A document larger than [ui] MAX_DISPLAY_FILE_SIZE is shown as escaped plain
 // text instead of being rendered.
 func Render(typ Type, input any, urlPrefix string, metas map[string]string) []byte {
-	return renderInput(typ, input, urlPrefix, metas, conf.Markdown.EnableHardLineBreak)
+	return renderInput(typ, input, urlPrefix, metas, conf.Markdown.EnableHardLineBreak, true)
 }
 
 // renderInput is Render, with hardWraps rendering every line break of
-// Markdown as written.
-func renderInput(typ Type, input any, urlPrefix string, metas map[string]string, hardWraps bool) []byte {
+// Markdown as written, and file rendering front matter of Markdown files.
+func renderInput(typ Type, input any, urlPrefix string, metas map[string]string, hardWraps, file bool) []byte {
 	var rawBytes []byte
 	switch v := input.(type) {
 	case []byte:
@@ -526,7 +526,7 @@ func renderInput(typ Type, input any, urlPrefix string, metas map[string]string,
 	}
 	rawBytes = bytes.TrimPrefix(rawBytes, utf8BOM)
 	return guardRender(rawBytes, func() []byte {
-		return render(typ, rawBytes, urlPrefix, metas, hardWraps)
+		return render(typ, rawBytes, urlPrefix, metas, hardWraps, file)
 	})
 }
 
@@ -545,16 +545,21 @@ func guardRender(body []byte, render func() []byte) []byte {
 	return render()
 }
 
-func render(typ Type, rawBytes []byte, urlPrefix string, metas map[string]string, hardWraps bool) []byte {
+func render(typ Type, rawBytes []byte, urlPrefix string, metas map[string]string, hardWraps, file bool) []byte {
 	urlPrefix = strings.TrimRight(strings.ReplaceAll(urlPrefix, " ", "%20"), "/")
 	var rawHTML []byte
 	switch typ {
 	case TypeMarkdown:
-		var sanitized bool
-		rawHTML, sanitized = renderMarkdown(rawBytes, urlPrefix, metas, hardWraps)
-		if sanitized {
-			return rawHTML
+		res := renderMarkdown(rawBytes, urlPrefix, metas, hardWraps, file)
+		if res.Sanitized {
+			return res.HTML
 		}
+		if n := res.FrontMatterSize; n > 0 {
+			// The HTML of front matter is safe, and sanitizing it would take
+			// more than rendering it.
+			return append(res.HTML[:n:n], SanitizeBytes(res.HTML[n:])...)
+		}
+		rawHTML = res.HTML
 	case TypeOrgMode:
 		rawHTML = RawOrgMode(rawBytes, urlPrefix)
 		rawHTML = postProcessHTML(rawHTML, urlPrefix, metas)
