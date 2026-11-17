@@ -1,5 +1,6 @@
 import {
   type CodeViewOptions,
+  type DiffLineAnnotation,
   type FileDiffContentsLoader,
   type FileDiffMetadata,
   parsePatchFiles,
@@ -27,6 +28,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { DiffFileTree, type DiffFileTreeHandle } from "@/components/DiffFileTree";
+import { DiffImage } from "@/components/DiffImage";
 import { DiffSearch } from "@/components/DiffSearch";
 import { DiffToolbar, type DiffToolbarSettings, type WhitespaceMode } from "@/components/DiffToolbar";
 import { FileHeaderMenu } from "@/components/FileHeaderMenu";
@@ -76,6 +78,11 @@ const DIFF_UNSAFE_CSS = `
   [data-additions-count],
   [data-deletions-count] {
     font-family: inherit;
+  }
+  /* Image diffs have no lines to count. Only they and rich diffs, which hide
+     their counts anyway, render a line 0 annotation. */
+  [data-diffs-header]:has(~ pre [data-line-annotation="-1,-1"]) :is([data-additions-count], [data-deletions-count]) {
+    display: none;
   }
   /* Skip the first header so it does not double the toolbar's bottom border. */
   * + [data-diffs-header] {
@@ -141,6 +148,26 @@ function richFileDiffOf(fileDiff: FileDiffMetadata): FileDiffMetadata {
     richFileDiffs.add(copy);
   }
   return copy;
+}
+
+// Extensions whose content type the raw file endpoint detects, so browsers
+// render them despite `X-Content-Type-Options: nosniff`.
+const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "webp", "bmp", "ico"]);
+
+function isImagePath(path: string): boolean {
+  const dot = path.lastIndexOf(".");
+  return dot >= 0 && IMAGE_EXTENSIONS.has(path.slice(dot + 1).toLowerCase());
+}
+
+// A binary image diff has no hunks. Pierre renders an annotation on line 0
+// above a file's lines, in the column of its side, and measures its height, so
+// one annotation per existing side shows the old and new images.
+function imageAnnotations(fileDiff: FileDiffMetadata): DiffLineAnnotation<undefined>[] | undefined {
+  if (fileDiff.hunks.length > 0 || !isImagePath(fileDiff.name)) return undefined;
+  const annotations: DiffLineAnnotation<undefined>[] = [];
+  if (fileDiff.type !== "new") annotations.push({ side: "deletions", lineNumber: 0 });
+  if (fileDiff.type !== "deleted") annotations.push({ side: "additions", lineNumber: 0 });
+  return annotations;
 }
 
 // DiffWorkspace shows the files a patch changes, between the old and the new
@@ -326,6 +353,7 @@ export function DiffWorkspace({
           id: `${patchIndex}:${fileIndex}:${fileDiff.name}`,
           type: "diff",
           fileDiff,
+          annotations: imageAnnotations(fileDiff),
         })),
       ),
     [patch],
@@ -753,14 +781,24 @@ export function DiffWorkspace({
     [repoLink, newRef, richById, lineCounts],
   );
 
-  // The file-level annotation of an item that shows its rich diff.
+  // A file-level annotation holds either the rich diff of an item that shows
+  // it, or one side of an image diff.
   const renderAnnotation = useCallback(
-    (...[, fileDiff]: CodeViewAnnotationArgs<undefined>) => {
+    (...[annotation, fileDiff]: CodeViewAnnotationArgs<undefined>) => {
       if (!("hunks" in fileDiff)) return null;
-      const [before, after] = richQueriesOf(fileDiff);
-      return <RichDiff queries={[before, after]} />;
+      if (richFileDiffs.has(fileDiff)) {
+        const [before, after] = richQueriesOf(fileDiff);
+        return <RichDiff queries={[before, after]} />;
+      }
+      if (!("side" in annotation)) return null;
+      const isOld = annotation.side === "deletions";
+      const ref = isOld ? oldRef : newRef;
+      const path = isOld ? (fileDiff.prevName ?? fileDiff.name) : fileDiff.name;
+      if (!ref) return null;
+      const encodedPath = path.split("/").map(encodeURIComponent).join("/");
+      return <DiffImage src={subUrl(`/${owner}/${repo}/raw/${ref}/${encodedPath}`)} side={annotation.side} />;
     },
-    [richQueriesOf],
+    [owner, repo, oldRef, newRef, richQueriesOf],
   );
 
   return (
