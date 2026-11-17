@@ -113,12 +113,12 @@ func runServ(ctx context.Context, cmd *cli.Command) error {
 
 	keyID, _ := strconv.ParseInt(strings.TrimPrefix(cmd.Args().Get(0), "key-"), 10, 64)
 	err := ssh.Serve(ctx, logger, ssh.ServeOptions{
-		KeyID:            keyID,
-		Command:          sshCmd,
-		Protocol:         os.Getenv("GIT_PROTOCOL"),
-		Stdin:            os.Stdin,
-		Stdout:           os.Stdout,
-		Stderr:           os.Stderr,
+		KeyID:    keyID,
+		Command:  sshCmd,
+		Protocol: os.Getenv("GIT_PROTOCOL"),
+		Stdin:    os.Stdin,
+		Stdout:   os.Stdout,
+		Stderr:   os.Stderr,
 		TriggerPushTasks: func(pusher *database.User, repo *database.Repository, branch string) {
 			triggerPushTasks(logger, pusher, repo, branch)
 		},

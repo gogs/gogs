@@ -13,8 +13,8 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
-	"unknwon.dev/x/logx"
 	"github.com/google/uuid"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cryptox"
