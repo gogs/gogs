@@ -191,13 +191,13 @@ type userSettingsRepos struct {
 
 // getUserSettingsRepos lists the repositories of the authenticated user and the
 // ones they collaborate on.
-func getUserSettingsRepos(logger *logx.Logger, viewer *database.User) (statusCode int, resp *userSettingsRepos, err error) {
+func getUserSettingsRepos(c flamego.Context, logger *logx.Logger, viewer *database.User) (statusCode int, resp *userSettingsRepos, err error) {
 	repos, err := database.GetUserAndCollaborativeRepositories(viewer.ID)
 	if err != nil {
 		logger.Error("Failed to list repositories", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list repositories")
 	}
-	if err = database.RepositoryList(repos).LoadAttributes(); err != nil {
+	if err = database.Handle.Repositories().LoadAttributes(c.Request().Context(), repos...); err != nil {
 		logger.Error("Failed to load repository attributes", "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "load attributes")
 	}
@@ -221,13 +221,18 @@ func getUserSettingsRepos(logger *logx.Logger, viewer *database.User) (statusCod
 // collaborate on.
 func deleteUserSettingsRepo(c flamego.Context, logger *logx.Logger, viewer *database.User) (statusCode int, resp any, err error) {
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
-	repo, err := database.GetRepositoryByID(id)
+	repos := database.Handle.Repositories()
+	repo, err := repos.GetByID(c.Request().Context(), id)
 	if err != nil {
 		if database.IsErrRepoNotExist(err) {
 			return http.StatusNotFound, nil, errors.New("repository not found")
 		}
 		logger.Error("Failed to get repository", "repoID", id, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get repository")
+	}
+	if err = repos.LoadAttributes(c.Request().Context(), repo); err != nil {
+		logger.Error("Failed to load repository attributes", "repoID", id, "error", err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "load repository attributes")
 	}
 	// Answer the same for repositories the user does not collaborate on, so
 	// the IDs of private repositories cannot be probed.

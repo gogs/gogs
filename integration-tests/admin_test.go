@@ -208,7 +208,7 @@ func TestAdminOperations(t *testing.T) {
 		assert.Equal(t, "All repository records that lost Git files have been reinitialized successfully.", msg)
 		_, err := os.Stat(filepath.Join(repoPath, "HEAD"))
 		assert.NoError(t, err, "repository not reinitialized")
-		_, err = database.GetRepositoryByID(repo.ID)
+		_, err = getRepository(t, repo.ID)
 		assert.NoError(t, err)
 	})
 
@@ -219,9 +219,9 @@ func TestAdminOperations(t *testing.T) {
 
 		msg := adminRunOperation(t, admin, nonAdmin, anonymous, "delete-missing-repos")
 		assert.Equal(t, "All repository records that lost Git files have been deleted successfully.", msg)
-		_, err := database.GetRepositoryByID(missing.ID)
+		_, err := getRepository(t, missing.ID)
 		assert.True(t, database.IsErrRepoNotExist(err), "repository not deleted: %v", err)
-		_, err = database.GetRepositoryByID(kept.ID)
+		_, err = getRepository(t, kept.ID)
 		assert.NoError(t, err)
 	})
 
@@ -373,12 +373,12 @@ func TestAdminRepos(t *testing.T) {
 	t.Run("delete", func(t *testing.T) {
 		path := "/api/web/admin/repos/" + strconv.FormatInt(repo.ID, 10)
 		adminAssertTurnedAway(t, nonAdmin, anonymous, http.MethodDelete, path, adminNoBody)
-		_, err := database.GetRepositoryByID(repo.ID)
+		_, err := getRepository(t, repo.ID)
 		require.NoError(t, err, "repository deleted by a request that was turned away")
 
 		status, body := admin.do(http.MethodDelete, path, adminNoBody)
 		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-		_, err = database.GetRepositoryByID(repo.ID)
+		_, err = getRepository(t, repo.ID)
 		assert.True(t, database.IsErrRepoNotExist(err), "repository not deleted: %v", err)
 		_, err = os.Stat(repoPath)
 		assert.True(t, os.IsNotExist(err), "Git directory not deleted: %v", err)

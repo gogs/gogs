@@ -195,7 +195,7 @@ func getDashboard(logger *logx.Logger, c flamego.Context, viewer *database.User,
 	}
 	collaborativeRepos, err := database.Handle.Repositories().GetByCollaboratorID(ctx, viewer.ID, conf.UI.User.RepoPagingNum, "updated_unix DESC")
 	if err == nil {
-		err = database.RepositoryList(collaborativeRepos).LoadAttributes()
+		err = database.Handle.Repositories().LoadAttributes(c.Request().Context(), collaborativeRepos...)
 	}
 	if err != nil {
 		logger.Error("Failed to get collaborative repositories of user", "userID", viewer.ID, "error", err)
@@ -303,7 +303,7 @@ func listDashboardIssues(logger *logx.Logger, c flamego.Context, viewer *databas
 
 	repoID, _ := strconv.ParseInt(c.Query("repo"), 10, 64)
 	if repoID > 0 {
-		repo, err := database.GetRepositoryByID(repoID)
+		repo, err := database.Handle.Repositories().GetByID(c.Request().Context(), repoID)
 		if err != nil && !database.IsErrRepoNotExist(err) {
 			logger.Error("Failed to get repository", "repoID", repoID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "get repository")

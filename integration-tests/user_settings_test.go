@@ -186,7 +186,7 @@ func TestUserSettingsRepositories(t *testing.T) {
 	own := seedRepository(t, u.ID, CreateRepositoryOptions{Private: true})
 	shared := seedRepository(t, owner.ID, CreateRepositoryOptions{})
 	unrelated := seedRepository(t, owner.ID, CreateRepositoryOptions{Private: true})
-	sharedRepo, err := database.GetRepositoryByID(shared.ID)
+	sharedRepo, err := getRepository(t, shared.ID)
 	require.NoError(t, err)
 	require.NoError(t, sharedRepo.AddCollaborator(userGet(t, u.ID)))
 

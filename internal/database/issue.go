@@ -14,7 +14,6 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
-	"gogs.io/gogs/internal/markup"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 	"gogs.io/gogs/internal/tool"
 )
@@ -76,31 +75,16 @@ func (issue *Issue) AfterSet(colName string, _ xorm.Cell) {
 	}
 }
 
-// Deprecated: Use Users.GetByID instead.
-func getUserByID(e Engine, id int64) (*User, error) {
-	u := new(User)
-	has, err := e.ID(id).Get(u)
-	if err != nil {
-		return nil, err
-	} else if !has {
-		return nil, ErrUserNotExist{args: errx.Args{"userID": id}}
-	}
-
-	// TODO(unknwon): Rely on AfterFind hook to sanitize user full name.
-	u.FullName = markup.Sanitize(u.FullName)
-	return u, nil
-}
-
 func (issue *Issue) loadAttributes(e Engine) (err error) {
 	if issue.Repo == nil {
-		issue.Repo, err = getRepositoryByID(e, issue.RepoID)
+		issue.Repo, err = getRepositoryByID(legacyTx(e), issue.RepoID)
 		if err != nil {
 			return errors.Newf("getRepositoryByID [%d]: %v", issue.RepoID, err)
 		}
 	}
 
 	if issue.Poster == nil {
-		issue.Poster, err = getUserByID(e, issue.PosterID)
+		issue.Poster, err = newUsersStore(legacyTx(e)).GetByID(context.TODO(), issue.PosterID)
 		if err != nil {
 			if IsErrUserNotExist(err) {
 				issue.PosterID = -1
@@ -126,7 +110,7 @@ func (issue *Issue) loadAttributes(e Engine) (err error) {
 	}
 
 	if issue.Assignee == nil && issue.AssigneeID > 0 {
-		issue.Assignee, err = getUserByID(e, issue.AssigneeID)
+		issue.Assignee, err = newUsersStore(legacyTx(e)).GetByID(context.TODO(), issue.AssigneeID)
 		if err != nil {
 			return errors.Newf("getUserByID.(assignee) [%d]: %v", issue.AssigneeID, err)
 		}
@@ -683,7 +667,7 @@ func newIssue(e *xorm.Session, opts NewIssueOptions) (err error) {
 	}
 
 	if opts.Issue.AssigneeID > 0 {
-		assignee, err := getUserByID(e, opts.Issue.AssigneeID)
+		assignee, err := newUsersStore(legacyTx(e)).GetByID(context.TODO(), opts.Issue.AssigneeID)
 		if err != nil && !IsErrUserNotExist(err) {
 			return errors.Newf("get user by ID: %v", err)
 		}

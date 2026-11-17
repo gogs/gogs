@@ -661,7 +661,7 @@ func prepareWebhooks(logger *logx.Logger, e Engine, repo *Repository, event Hook
 	}
 
 	// check if repo belongs to org and append additional webhooks
-	if repo.mustOwner(e).IsOrganization() {
+	if repo.mustOwner(legacyTx(e)).IsOrganization() {
 		// get hooks for org
 		orgws, err := getActiveWebhooksByOrgID(e, repo.OwnerID)
 		if err != nil {

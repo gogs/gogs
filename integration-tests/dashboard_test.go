@@ -33,7 +33,7 @@ func orgOpenIssue(t *testing.T, userID int64, owner, repo, title string) int64 {
 func orgOpenPullRequest(t *testing.T, c *client, owner, repo, title string) int64 {
 	t.Helper()
 
-	stored, err := database.GetRepositoryByName(orgOwnerID(t, owner), repo)
+	stored, err := getRepositoryByName(t, orgOwnerID(t, owner), repo)
 	require.NoError(t, err)
 	branch := UniqueName("feature-")
 	repoPath := "/api/web/" + owner + "/" + repo

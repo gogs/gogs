@@ -68,7 +68,7 @@ func (m *Mirror) AfterSet(colName string, _ xorm.Cell) {
 	var err error
 	switch colName {
 	case "repo_id":
-		m.Repo, err = GetRepositoryByID(m.RepoID)
+		m.Repo, err = getRepositoryByID(Handle.db, m.RepoID)
 		if err != nil {
 			handleLogger().Error("Failed to get mirror repository", "mirrorID", m.ID, "error", err)
 		}

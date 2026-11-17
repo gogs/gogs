@@ -164,7 +164,7 @@ func getAdminRepos(logger *logx.Logger, c flamego.Context) (statusCode int, resp
 		logger.Error("Failed to list repositories", "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list repositories")
 	}
-	if err = database.RepositoryList(repos).LoadAttributes(); err != nil {
+	if err = database.Handle.Repositories().LoadAttributes(c.Request().Context(), repos...); err != nil {
 		logger.Error("Failed to load repository attributes", "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "load repository attributes")
 	}
@@ -188,7 +188,7 @@ func getAdminRepos(logger *logx.Logger, c flamego.Context) (statusCode int, resp
 
 func deleteAdminRepo(logger *logx.Logger, c flamego.Context, viewer *database.User) (statusCode int, resp any, err error) {
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
-	repo, err := database.GetRepositoryByID(id)
+	repo, err := database.Handle.Repositories().GetByID(c.Request().Context(), id)
 	if err != nil {
 		if database.IsErrRepoNotExist(err) {
 			return http.StatusNotFound, nil, errors.New("repository not found")

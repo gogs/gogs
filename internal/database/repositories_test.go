@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
 )
 
@@ -66,10 +67,17 @@ func TestRepository_AfterFind(t *testing.T) {
 	}
 
 	repo := &Repository{
-		CreatedUnix: now.Unix(),
-		UpdatedUnix: now.Unix(),
+		NumIssues:       5,
+		NumClosedIssues: 2,
+		NumPulls:        3,
+		NumClosedPulls:  1,
+		CreatedUnix:     now.Unix(),
+		UpdatedUnix:     now.Unix(),
 	}
 	_ = repo.AfterFind(db)
+	assert.Equal(t, conf.Repository.DefaultBranch, repo.DefaultBranch)
+	assert.Equal(t, 3, repo.NumOpenIssues)
+	assert.Equal(t, 2, repo.NumOpenPulls)
 	assert.Equal(t, repo.CreatedUnix, repo.Created.Unix())
 	assert.Equal(t, repo.UpdatedUnix, repo.Updated.Unix())
 }
@@ -94,6 +102,7 @@ func TestRepos(t *testing.T) {
 		{"GetByCollaboratorIDWithAccessMode", reposGetByCollaboratorIDWithAccessMode},
 		{"GetByID", reposGetByID},
 		{"GetByName", reposGetByName},
+		{"LoadAttributes", reposLoadAttributes},
 		{"Star", reposStar},
 		{"Touch", reposTouch},
 		{"ListByRepo", reposListWatches},
@@ -337,4 +346,84 @@ func reposHasForkedBy(t *testing.T, ctx context.Context, s *RepositoriesStore) {
 
 	has = s.HasForkedBy(ctx, 1, 2)
 	assert.True(t, has)
+}
+
+func reposLoadAttributes(t *testing.T, ctx context.Context, s *RepositoriesStore) {
+	usersStore := newUsersStore(s.db)
+	alice, err := usersStore.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+	bob, err := usersStore.Create(ctx, "bob", "bob@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+	cindy, err := usersStore.Create(ctx, "cindy", "cindy@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+
+	root, err := s.Create(ctx, alice.ID, CreateRepoOptions{Name: "root"})
+	require.NoError(t, err)
+	fork, err := s.Create(ctx, bob.ID, CreateRepoOptions{Name: "fork", Fork: true, ForkID: root.ID})
+	require.NoError(t, err)
+	forkOfFork, err := s.Create(ctx, cindy.ID, CreateRepoOptions{Name: "fork-of-fork", Fork: true, ForkID: fork.ID})
+	require.NoError(t, err)
+	other, err := s.Create(ctx, alice.ID, CreateRepoOptions{Name: "other"})
+	require.NoError(t, err)
+
+	t.Run("fork chain", func(t *testing.T) {
+		got, err := s.GetByID(ctx, forkOfFork.ID)
+		require.NoError(t, err)
+		gotOther, err := s.GetByID(ctx, other.ID)
+		require.NoError(t, err)
+
+		err = s.LoadAttributes(ctx, got, gotOther)
+		require.NoError(t, err)
+		assert.Equal(t, "cindy", got.Owner.Name)
+		assert.Equal(t, "alice", gotOther.Owner.Name)
+		require.NotNil(t, got.BaseRepo)
+		assert.Equal(t, fork.ID, got.BaseRepo.ID)
+		assert.Equal(t, "bob", got.BaseRepo.Owner.Name)
+		require.NotNil(t, got.BaseRepo.BaseRepo)
+		assert.Equal(t, root.ID, got.BaseRepo.BaseRepo.ID)
+		assert.Equal(t, "alice", got.BaseRepo.BaseRepo.Owner.Name)
+		assert.Nil(t, got.BaseRepo.BaseRepo.BaseRepo)
+		assert.Nil(t, gotOther.BaseRepo)
+	})
+
+	t.Run("base repository in the same list", func(t *testing.T) {
+		gotFork, err := s.GetByID(ctx, fork.ID)
+		require.NoError(t, err)
+		gotRoot, err := s.GetByID(ctx, root.ID)
+		require.NoError(t, err)
+
+		err = s.LoadAttributes(ctx, gotFork, gotRoot)
+		require.NoError(t, err)
+		assert.Same(t, gotRoot, gotFork.BaseRepo)
+	})
+
+	t.Run("loaded attributes are kept", func(t *testing.T) {
+		got, err := s.GetByID(ctx, fork.ID)
+		require.NoError(t, err)
+		owner := &User{ID: bob.ID, Name: "preset"}
+		got.Owner = owner
+
+		err = s.LoadAttributes(ctx, got)
+		require.NoError(t, err)
+		assert.Same(t, owner, got.Owner)
+	})
+
+	t.Run("base repository is gone", func(t *testing.T) {
+		orphan, err := s.Create(ctx, bob.ID, CreateRepoOptions{Name: "orphan", Fork: true, ForkID: 404})
+		require.NoError(t, err)
+
+		err = s.LoadAttributes(ctx, orphan)
+		require.NoError(t, err)
+		assert.False(t, orphan.IsFork)
+		assert.Zero(t, orphan.ForkID)
+		assert.Nil(t, orphan.BaseRepo)
+	})
+
+	t.Run("owner is gone", func(t *testing.T) {
+		gone, err := s.Create(ctx, 404, CreateRepoOptions{Name: "gone"})
+		require.NoError(t, err)
+
+		err = s.LoadAttributes(ctx, gone)
+		assert.True(t, IsErrUserNotExist(err), "got %v", err)
+	})
 }

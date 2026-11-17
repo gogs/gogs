@@ -55,14 +55,14 @@ func (r *Release) AfterSet(colName string, _ xorm.Cell) {
 
 func (r *Release) loadAttributes(e Engine) (err error) {
 	if r.Repo == nil {
-		r.Repo, err = getRepositoryByID(e, r.RepoID)
+		r.Repo, err = getRepositoryByID(legacyTx(e), r.RepoID)
 		if err != nil {
 			return errors.Newf("getRepositoryByID [repo_id: %d]: %v", r.RepoID, err)
 		}
 	}
 
 	if r.Publisher == nil {
-		r.Publisher, err = getUserByID(e, r.PublisherID)
+		r.Publisher, err = newUsersStore(legacyTx(e)).GetByID(context.TODO(), r.PublisherID)
 		if err != nil {
 			if IsErrUserNotExist(err) {
 				r.PublisherID = -1
@@ -361,7 +361,7 @@ func DeleteReleaseOfRepoByID(ctx context.Context, repoID, id int64) error {
 		return nil
 	}
 
-	repo, err := GetRepositoryByID(rel.RepoID)
+	repo, err := getRepositoryByID(Handle.db, rel.RepoID)
 	if err != nil {
 		return errors.Newf("GetRepositoryByID: %v", err)
 	}

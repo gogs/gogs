@@ -9,7 +9,9 @@ import (
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
+	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/repox"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
@@ -30,6 +32,16 @@ func (r *Repository) BeforeUpdate(tx *gorm.DB) error {
 
 // AfterFind implements the GORM query hook.
 func (r *Repository) AfterFind(_ *gorm.DB) error {
+	// FIXME: use db migration to solve all at once.
+	if r.DefaultBranch == "" {
+		r.DefaultBranch = conf.Repository.DefaultBranch
+	}
+	if r.ExternalTrackerStyle == "" {
+		r.ExternalTrackerStyle = markup.IssueNameStyleNumeric
+	}
+	r.NumOpenIssues = r.NumIssues - r.NumClosedIssues
+	r.NumOpenPulls = r.NumPulls - r.NumClosedPulls
+	r.NumOpenMilestones = r.NumMilestones - r.NumClosedMilestones
 	r.Created = time.Unix(r.CreatedUnix, 0).Local()
 	r.Updated = time.Unix(r.UpdatedUnix, 0).Local()
 	return nil
@@ -253,6 +265,77 @@ func (s *RepositoriesStore) GetByID(ctx context.Context, id int64) (*Repository,
 		return nil, err
 	}
 	return repo, nil
+}
+
+// LoadAttributes loads the owners of given repositories, and the repositories
+// they are forked from with their owners, up to the root of each fork chain. A
+// fork whose base repository is gone is marked as not being a fork. Owners and
+// base repositories that are already set are kept. It returns ErrUserNotExist
+// when an owner is gone.
+func (s *RepositoriesStore) LoadAttributes(ctx context.Context, repos ...*Repository) error {
+	db := s.db.WithContext(ctx)
+
+	loaded := make(map[int64]*Repository, len(repos))
+	for _, repo := range repos {
+		loaded[repo.ID] = repo
+	}
+	for pending := repos; len(pending) > 0; {
+		ownerIDs := make([]int64, 0, len(pending))
+		for _, repo := range pending {
+			if repo.Owner == nil {
+				ownerIDs = append(ownerIDs, repo.OwnerID)
+			}
+		}
+		if len(ownerIDs) > 0 {
+			var owners []*User
+			err := db.Where("id IN ?", ownerIDs).Find(&owners).Error
+			if err != nil {
+				return errors.Wrap(err, "list owners")
+			}
+			ownersByID := make(map[int64]*User, len(owners))
+			for _, owner := range owners {
+				ownersByID[owner.ID] = owner
+			}
+			for _, repo := range pending {
+				if repo.Owner != nil {
+					continue
+				}
+				repo.Owner = ownersByID[repo.OwnerID]
+				if repo.Owner == nil {
+					return ErrUserNotExist{args: errx.Args{"userID": repo.OwnerID}}
+				}
+			}
+		}
+
+		var baseIDs []int64
+		for _, repo := range pending {
+			if repo.IsFork && repo.BaseRepo == nil && loaded[repo.ForkID] == nil {
+				baseIDs = append(baseIDs, repo.ForkID)
+			}
+		}
+		var bases []*Repository
+		if len(baseIDs) > 0 {
+			err := db.Where("id IN ?", baseIDs).Find(&bases).Error
+			if err != nil {
+				return errors.Wrap(err, "list base repositories")
+			}
+			for _, base := range bases {
+				loaded[base.ID] = base
+			}
+		}
+		for _, repo := range pending {
+			if !repo.IsFork || repo.BaseRepo != nil {
+				continue
+			}
+			repo.BaseRepo = loaded[repo.ForkID]
+			if repo.BaseRepo == nil {
+				repo.IsFork = false
+				repo.ForkID = 0
+			}
+		}
+		pending = bases
+	}
+	return nil
 }
 
 // GetByName returns the repository with given owner and name. It returns

@@ -5,9 +5,14 @@ import (
 )
 
 func getRepositoryByParams(c *apiContext) *database.Repository {
-	repo, err := database.GetRepositoryByName(c.Org.Team.OrgID, c.Param("reponame"))
+	repos := database.Handle.Repositories()
+	repo, err := repos.GetByName(c.Request().Context(), c.Org.Team.OrgID, c.Param("reponame"))
 	if err != nil {
 		c.NotFoundOrError(err, "get repository by name")
+		return nil
+	}
+	if err = repos.LoadAttributes(c.Request().Context(), repo); err != nil {
+		c.Error(err, "load repository attributes")
 		return nil
 	}
 	return repo

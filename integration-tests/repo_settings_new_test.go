@@ -36,7 +36,7 @@ func repoSettingsMigrate(t *testing.T, c *client, u *User, source *Repository, m
 	}, http.StatusCreated, &created)
 	require.Equal(t, u.Name, created.Owner)
 
-	got, err := database.Handle.Repositories().GetByName(t.Context(), u.ID, created.Name)
+	got, err := getRepositoryByName(t, u.ID, created.Name)
 	require.NoError(t, err)
 	return &Repository{ID: got.ID, Owner: created.Owner, Name: created.Name}, cloneAddr
 }
@@ -104,7 +104,7 @@ func TestRepoSettingsCreateRepository(t *testing.T) {
 	c.doJSON(http.MethodPost, "/api/web/repo/create", request, http.StatusCreated, &created)
 	assert.Equal(t, repoSettingsCreated{Owner: u.Name, Name: name}, created)
 
-	got, err := database.Handle.Repositories().GetByName(t.Context(), u.ID, name)
+	got, err := getRepositoryByName(t, u.ID, name)
 	require.NoError(t, err)
 	assert.Equal(t, "Created through the web API", got.Description)
 	assert.True(t, got.IsPrivate)
@@ -121,7 +121,7 @@ func TestRepoSettingsCreateRepository(t *testing.T) {
 	status, body = c.do(http.MethodPost, "/api/web/repo/create", request)
 	require.Equal(t, http.StatusBadRequest, status, "response: %s", body)
 	assert.NotEmpty(t, repoSettingsFieldError(t, body, "license"))
-	_, err = database.Handle.Repositories().GetByName(t.Context(), u.ID, request["name"].(string))
+	_, err = getRepositoryByName(t, u.ID, request["name"].(string))
 	assert.True(t, database.IsErrRepoNotExist(err), "repository created with an unknown license: %v", err)
 }
 
@@ -134,7 +134,7 @@ func TestRepoSettingsMigrateRepository(t *testing.T) {
 
 	repo, _ := repoSettingsMigrate(t, c, u, source, false)
 	assert.Equal(t, repoSettingsHead(t, source, branch), repoSettingsHead(t, repo, branch))
-	got, err := database.GetRepositoryByID(repo.ID)
+	got, err := getRepository(t, repo.ID)
 	require.NoError(t, err)
 	assert.False(t, got.IsMirror)
 	assert.Equal(t, "Migrated", got.Description)
@@ -148,7 +148,7 @@ func TestRepoSettingsMigrateRepository(t *testing.T) {
 	})
 	require.Equal(t, http.StatusForbidden, status, "response: %s", body)
 	assert.NotEmpty(t, repoSettingsFieldError(t, body, "cloneAddr"))
-	_, err = database.Handle.Repositories().GetByName(t.Context(), u.ID, name)
+	_, err = getRepositoryByName(t, u.ID, name)
 	assert.True(t, database.IsErrRepoNotExist(err), "repository migrated from a local path: %v", err)
 }
 
@@ -228,13 +228,13 @@ func TestRepoSettingsConvertMirror(t *testing.T) {
 	status, body = c.do(http.MethodPost, path, map[string]any{"repoName": mirror.Name + "x"})
 	require.Equal(t, http.StatusBadRequest, status, "response: %s", body)
 	assert.NotEmpty(t, repoSettingsFieldError(t, body, "repoName"))
-	got, err := database.GetRepositoryByID(mirror.ID)
+	got, err := getRepository(t, mirror.ID)
 	require.NoError(t, err)
 	require.True(t, got.IsMirror)
 
 	status, body = c.do(http.MethodPost, path, map[string]any{"repoName": mirror.Name})
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-	got, err = database.GetRepositoryByID(mirror.ID)
+	got, err = getRepository(t, mirror.ID)
 	require.NoError(t, err)
 	assert.False(t, got.IsMirror)
 	_, err = database.GetMirrorByRepoID(mirror.ID)
@@ -298,7 +298,7 @@ func TestRepoSettingsFork(t *testing.T) {
 	assert.Equal(t, "My fork", fork.Description)
 	branch := repoSettingsDefaultBranch(t, base)
 	assert.Equal(t, repoSettingsHead(t, base, branch), repoSettingsHead(t, &Repository{Owner: u.Name, Name: forkName}, branch))
-	gotBase, err := database.GetRepositoryByID(base.ID)
+	gotBase, err := getRepository(t, base.ID)
 	require.NoError(t, err)
 	assert.Equal(t, 1, gotBase.NumForks)
 

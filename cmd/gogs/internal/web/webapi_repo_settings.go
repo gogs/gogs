@@ -51,7 +51,11 @@ func withRepoAdmin(c flamego.Context, logger *logx.Logger, repoCtx *repoContext)
 		writeErrorResponse(w, http.StatusNotFound, errors.New("repository does not exist"))
 		return
 	}
-	repo, err := database.GetRepositoryByID(repoCtx.Repo.ID)
+	repos := database.Handle.Repositories()
+	repo, err := repos.GetByID(c.Request().Context(), repoCtx.Repo.ID)
+	if err == nil {
+		err = repos.LoadAttributes(c.Request().Context(), repo)
+	}
 	if err != nil {
 		logger.Error("Failed to get repository", "repoID", repoCtx.Repo.ID, "error", err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "get repository"))

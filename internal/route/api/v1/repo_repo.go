@@ -50,7 +50,7 @@ func searchRepos(c *apiContext) {
 		return
 	}
 
-	if err = database.RepositoryList(repos).LoadAttributes(); err != nil {
+	if err = database.Handle.Repositories().LoadAttributes(c.Request().Context(), repos...); err != nil {
 		c.JSON(http.StatusInternalServerError, map[string]any{
 			"ok":    false,
 			"error": err.Error(),
@@ -95,7 +95,7 @@ func listReposOfUser(c *apiContext, username string) {
 		return
 	}
 
-	if err = database.RepositoryList(ownRepos).LoadAttributes(); err != nil {
+	if err = database.Handle.Repositories().LoadAttributes(c.Request().Context(), ownRepos...); err != nil {
 		c.Error(err, "load attributes")
 		return
 	}
@@ -120,7 +120,7 @@ func listReposOfUser(c *apiContext, username string) {
 	for repo := range accessibleReposWithAccessMode {
 		accessibleRepos = append(accessibleRepos, repo)
 	}
-	if err = database.RepositoryList(accessibleRepos).LoadAttributes(); err != nil {
+	if err = database.Handle.Repositories().LoadAttributes(c.Request().Context(), accessibleRepos...); err != nil {
 		c.Error(err, "load attributes for accessible repositories")
 		return
 	}
@@ -336,9 +336,15 @@ func parseOwnerAndRepo(c *apiContext) (*database.User, *database.Repository) {
 		return nil, nil
 	}
 
-	repo, err := database.GetRepositoryByName(owner.ID, c.Param("reponame"))
+	repos := database.Handle.Repositories()
+	repo, err := repos.GetByName(c.Request().Context(), owner.ID, c.Param("reponame"))
 	if err != nil {
 		c.NotFoundOrError(err, "get repository by name")
+		return nil, nil
+	}
+	repo.Owner = owner
+	if err = repos.LoadAttributes(c.Request().Context(), repo); err != nil {
+		c.Error(err, "load repository attributes")
 		return nil, nil
 	}
 

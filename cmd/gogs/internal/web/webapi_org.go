@@ -401,7 +401,7 @@ func putOrgTeamRepo(logger *logx.Logger, c flamego.Context, l i18n.Locale, m *or
 	if code, err := teamRepoChangeAllowed(m, team); err != nil {
 		return code, nil, err
 	}
-	repo, err := database.GetRepositoryByName(m.Org.ID, c.Param("repo"))
+	repo, err := database.Handle.Repositories().GetByName(c.Request().Context(), m.Org.ID, c.Param("repo"))
 	if err != nil {
 		if database.IsErrRepoNotExist(err) {
 			return http.StatusNotFound, nil, errors.New(l.Tr("org.teams.add_nonexistent_repo"))
@@ -420,7 +420,7 @@ func deleteOrgTeamRepo(logger *logx.Logger, c flamego.Context, l i18n.Locale, m 
 	if code, err := teamRepoChangeAllowed(m, team); err != nil {
 		return code, nil, err
 	}
-	repo, err := database.GetRepositoryByName(m.Org.ID, c.Param("repo"))
+	repo, err := database.Handle.Repositories().GetByName(c.Request().Context(), m.Org.ID, c.Param("repo"))
 	if err != nil {
 		if database.IsErrRepoNotExist(err) {
 			return http.StatusNotFound, nil, errors.New("repository does not exist")

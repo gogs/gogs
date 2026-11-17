@@ -18,7 +18,7 @@ func protectedBranchTeam(t *testing.T, org *database.User, repo *Repository, mod
 
 	team := &database.Team{OrgID: org.ID, Name: UniqueName("team-"), Authorize: mode}
 	require.NoError(t, database.NewTeam(team))
-	r, err := database.GetRepositoryByID(repo.ID)
+	r, err := getRepository(t, repo.ID)
 	require.NoError(t, err)
 	require.NoError(t, team.AddRepository(r))
 	for _, id := range memberIDs {

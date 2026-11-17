@@ -60,7 +60,7 @@ func (t *Team) getRepositories(e Engine) (err error) {
 
 	t.Repos = make([]*Repository, 0, len(teamRepos))
 	for i := range teamRepos {
-		repo, err := getRepositoryByID(e, teamRepos[i].RepoID)
+		repo, err := getRepositoryByID(legacyTx(e), teamRepos[i].RepoID)
 		if err != nil {
 			return errors.Newf("getRepositoryById(%d): %v", teamRepos[i].RepoID, err)
 		}
@@ -224,7 +224,7 @@ func (t *Team) RemoveRepository(repoID int64) error {
 		return nil
 	}
 
-	repo, err := GetRepositoryByID(repoID)
+	repo, err := getRepositoryByID(Handle.db, repoID)
 	if err != nil {
 		return err
 	}
@@ -602,7 +602,7 @@ func removeTeamMember(e Engine, orgID, teamID, uid int64) error {
 	}
 
 	// Get organization.
-	org, err := getUserByID(e, orgID)
+	org, err := newUsersStore(legacyTx(e)).GetByID(context.TODO(), orgID)
 	if err != nil {
 		return err
 	}

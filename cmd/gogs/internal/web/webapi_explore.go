@@ -66,7 +66,7 @@ func getExploreRepos(logger *logx.Logger, c flamego.Context, viewer *database.Us
 		logger.Error("Failed to search repositories", "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "search repositories")
 	}
-	if err = database.RepositoryList(repos).LoadAttributes(); err != nil {
+	if err = database.Handle.Repositories().LoadAttributes(c.Request().Context(), repos...); err != nil {
 		logger.Error("Failed to load repository attributes", "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "load repository attributes")
 	}
