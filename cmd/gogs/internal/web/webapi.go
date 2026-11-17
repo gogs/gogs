@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
-	"regexp"
 	"strings"
 	"time"
 
@@ -23,6 +22,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/lazyregexp"
 	apiv1 "gogs.io/gogs/internal/route/api/v1"
 )
 
@@ -205,7 +205,7 @@ var webAPIValidator = func() *validator.Validate {
 	return v
 }()
 
-var alphaDashDotInvalid = regexp.MustCompile(`[^\d\w\-_\.]`)
+var alphaDashDotInvalid = lazyregexp.New(`[^\d\w\-_\.]`)
 
 // bindJSON binds the request body to T. On binding or validation failure it
 // short-circuits with a 400 carrying the standard renderBindingErrors payload,

@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"context"
 	"path"
-	"regexp"
 	"slices"
 	"strings"
 
@@ -15,6 +14,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"gogs.io/gogs/internal/git"
+	"gogs.io/gogs/internal/lazyregexp"
 )
 
 // locations are the directories templates are read from, in the order they
@@ -360,7 +360,7 @@ type header struct {
 
 // frontMatterDelimiter matches a line of "---", which editors may leave with
 // trailing whitespace.
-var frontMatterDelimiter = regexp.MustCompile(`(?m)^---[ \t]*(?:\n|$)`)
+var frontMatterDelimiter = lazyregexp.New(`(?m)^---[ \t]*(?:\n|$)`)
 
 // parseMarkdown parses a Markdown template, which needs front matter with a
 // name to be offered.
