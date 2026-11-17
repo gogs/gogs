@@ -343,8 +343,8 @@ export function deleteAdminAuthSource(id: number) {
 }
 
 // AdminSpanKind is what a span of a trace measures: the request itself, a Git
-// operation, or other Go code.
-export type AdminSpanKind = "request" | "git" | "other";
+// operation, a database query, or other Go code.
+export type AdminSpanKind = "request" | "git" | "db" | "other";
 
 // AdminTraceRoute is what the traces of a route are grouped under. A "route" is
 // a matched route pattern, e.g., "GET /api/web/{owner}/{repo}/header". "other"

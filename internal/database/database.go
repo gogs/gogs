@@ -59,6 +59,9 @@ func NewConnection(logger *logx.Logger, logQueries bool) (*gorm.DB, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "open database")
 	}
+	if err = db.Use(tracingPlugin{}); err != nil {
+		return nil, errors.Wrap(err, "use tracing plugin")
+	}
 
 	sqlDB, err := db.DB()
 	if err != nil {

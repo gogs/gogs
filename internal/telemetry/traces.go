@@ -38,6 +38,7 @@ type SpanKind string
 const (
 	SpanKindRequest SpanKind = "request"
 	SpanKindGit     SpanKind = "git"
+	SpanKindDB      SpanKind = "db"
 	SpanKindOther   SpanKind = "other"
 )
 
@@ -269,6 +270,8 @@ func copySpan(sp sdktrace.ReadOnlySpan) span {
 		out.kind = SpanKindRequest
 	case strings.HasPrefix(out.name, "git ") || strings.HasPrefix(out.name, "git."):
 		out.kind = SpanKindGit
+	case strings.HasPrefix(out.name, "db "):
+		out.kind = SpanKindDB
 	default:
 		out.kind = SpanKindOther
 	}

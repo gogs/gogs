@@ -260,6 +260,8 @@ func TestStore_Routes(t *testing.T) {
 	ctx, background := tracer.Start(context.Background(), "mirror sync", trace.WithTimestamp(testNow.Add(-time.Second)))
 	_, git := tracer.Start(ctx, "git remote update", trace.WithTimestamp(testNow.Add(-time.Second)))
 	git.End(trace.WithTimestamp(testNow))
+	_, query := tracer.Start(ctx, "db SELECT mirror", trace.WithTimestamp(testNow.Add(-time.Second)))
+	query.End(trace.WithTimestamp(testNow))
 	background.End(trace.WithTimestamp(testNow))
 
 	got, ok := store.Get(route)
@@ -273,8 +275,9 @@ func TestStore_Routes(t *testing.T) {
 	got, ok = store.Get(background.SpanContext().TraceID().String())
 	require.True(t, ok)
 	assert.Equal(t, Route{Name: "mirror sync", Kind: RouteKindBackground}, got.Route)
-	require.Len(t, got.Spans, 2)
+	require.Len(t, got.Spans, 3)
 	assert.Equal(t, SpanKindGit, got.Spans[1].Kind)
+	assert.Equal(t, SpanKindDB, got.Spans[2].Kind)
 
 	// Background work is not a request.
 	assert.Equal(t, 2, store.Overview(15, "15m").Requests)

@@ -23,13 +23,14 @@ import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
 import { cn } from "@/lib/utils";
 import { RangeLinks } from "@/pages/admin/Health";
 
-const KIND_CHIPS: Record<AdminSpanKind, string> = { request: "http", git: "git", other: "go" };
+const KIND_CHIPS: Record<AdminSpanKind, string> = { request: "http", git: "git", db: "db", other: "go" };
 
 // The fill of a span or operation in charts. Git gets the accent, since it is
 // where Gogs spends most of its time.
 const KIND_FILLS: Record<AdminSpanKind, string> = {
   request: "bg-(--color-muted-foreground)/50",
   git: "bg-(--color-primary)",
+  db: "bg-(--color-merged)",
   other: "bg-(--color-muted-foreground)/50",
 };
 
@@ -974,16 +975,18 @@ function Waterfall({ trace }: { trace: AdminTrace }) {
 
 function Breakdown({ trace }: { trace: AdminTrace }) {
   const { t } = useTranslation();
-  const totals = { go: 0, git: 0 };
+  const totals = { go: 0, git: 0, db: 0 };
   const visit = (node: SpanNode) => {
-    totals[node.span.kind === "git" ? "git" : "go"] += node.selfMs;
+    const kind = node.span.kind;
+    totals[kind === "git" || kind === "db" ? kind : "go"] += node.selfMs;
     node.children.forEach(visit);
   };
   buildTree(trace.spans).forEach(visit);
-  const sum = totals.go + totals.git || 1;
+  const sum = totals.go + totals.git + totals.db || 1;
   const parts = [
     { key: "go", label: t("admin.traces.go_code"), ms: totals.go, fill: KIND_FILLS.other },
     { key: "git", label: t("admin.traces.git"), ms: totals.git, fill: KIND_FILLS.git },
+    { key: "db", label: t("admin.traces.database"), ms: totals.db, fill: KIND_FILLS.db },
   ].filter((part) => part.ms > 0);
   return (
     <div className="mt-4">
