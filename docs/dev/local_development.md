@@ -168,7 +168,7 @@ Copy `.bin/gogs` to your server and follow the [installation guide](https://gogs
 
 ## Run integration tests
 
-The integration tests in `internal/integrationtest` build Gogs, start it with a configuration of their own, and call it over HTTP. They connect to the database of that server and read the sessions it stores, so they seed data and read secrets, e.g., captcha text and two-factor authentication secrets, without going through the server. They do not need the web frontend:
+The integration tests in `integration-tests` build Gogs, start it with a configuration of their own, and call it over HTTP. They connect to the database of that server and read the sessions it stores, so they seed data and read secrets, e.g., captcha text and two-factor authentication secrets, without going through the server. They do not need the web frontend:
 
 ```bash
 moon run gogs:test-integration

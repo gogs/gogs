@@ -60,7 +60,7 @@ tasks:
       - "install"
 
   test-integration:
-    command: "go test -count=1 -v ./internal/integrationtest/..."
+    command: "go test -count=1 -v ./integration-tests/..."
     env:
       GOGS_INTEGRATION_TEST: "1"
     options:

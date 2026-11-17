@@ -35,7 +35,7 @@ jobs:
         with:
           go-version: 1.27.x
       - name: Run integration tests
-        run: go test -count=1 -shuffle=on -v ./internal/integrationtest/...
+        run: go test -count=1 -shuffle=on -v ./integration-tests/...
         env:
           GOGS_INTEGRATION_TEST: 1
           PGHOST: localhost
