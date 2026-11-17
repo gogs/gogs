@@ -9,35 +9,14 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ssh"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
-	gogsssh "gogs.io/gogs/internal/ssh"
 )
-
-// sshServerPort starts the builtin SSH server in this process on first use and
-// returns its port. The server under test keeps writing the authorized_keys
-// file, which other tests read, so it does not start the builtin server
-// itself. Both share the database and run the same "gogs serv" for every Git
-// command.
-var sshServerPort = sync.OnceValues(func() (int, error) {
-	port, err := freePort()
-	if err != nil {
-		return 0, err
-	}
-	opts := conf.SSH
-	opts.ListenHost = "127.0.0.1"
-	opts.ListenPort = port
-	opts.ServerAlgorithms = []string{"ed25519"}
-	gogsssh.Listen(logger, opts, filepath.Join(filepath.Dir(conf.CustomConf), "ssh-server"))
-	return port, nil
-})
 
 // sshKey is the private key file of an SSH key whose public key is registered
 // with the server.
@@ -81,14 +60,10 @@ func sshDeployKey(t *testing.T, repo *Repository) *sshKey {
 	return key
 }
 
-// sshRemoteURL returns the SSH URL of the repository, in the form Gogs shows
-// for cloning on a port other than 22.
-func sshRemoteURL(t *testing.T, repo *Repository) string {
-	t.Helper()
-
-	port, err := sshServerPort()
-	require.NoError(t, err)
-	return fmt.Sprintf("ssh://git@127.0.0.1:%d/%s/%s.git", port, repo.Owner, repo.Name)
+// sshRemoteURL returns the SSH URL of the repository on the builtin SSH server,
+// in the form Gogs shows for cloning on a port other than 22.
+func sshRemoteURL(repo *Repository) string {
+	return fmt.Sprintf("ssh://git@127.0.0.1:%d/%s/%s.git", sshPort, repo.Owner, repo.Name)
 }
 
 // command returns a Git command that runs in the directory and connects over
@@ -114,7 +89,7 @@ func (k *sshKey) clone(t *testing.T, repo *Repository) string {
 	t.Helper()
 
 	dir := filepath.Join(t.TempDir(), "clone")
-	out, err := k.git(filepath.Dir(dir), "clone", sshRemoteURL(t, repo), dir)
+	out, err := k.git(filepath.Dir(dir), "clone", sshRemoteURL(repo), dir)
 	require.NoError(t, err, "clone: %s", out)
 	return dir
 }
@@ -124,7 +99,7 @@ func (k *sshKey) clone(t *testing.T, repo *Repository) string {
 func (k *sshKey) cloneFails(t *testing.T, repo *Repository) string {
 	t.Helper()
 
-	out, err := k.git(t.TempDir(), "clone", sshRemoteURL(t, repo), "clone")
+	out, err := k.git(t.TempDir(), "clone", sshRemoteURL(repo), "clone")
 	require.Error(t, err, "clone succeeded: %s", out)
 	return out
 }
@@ -160,13 +135,13 @@ func TestSSHCloneAndPush(t *testing.T) {
 	assert.Contains(t, pushed.Content, want)
 
 	t.Run("protocol version 2", func(t *testing.T) {
-		cmdOut, err := ownerKey.git(t.TempDir(), "-c", "protocol.version=2", "ls-remote", sshRemoteURL(t, repo), "refs/heads/main")
+		cmdOut, err := ownerKey.git(t.TempDir(), "-c", "protocol.version=2", "ls-remote", sshRemoteURL(repo), "refs/heads/main")
 		require.NoError(t, err, "ls-remote: %s", cmdOut)
 		assert.Equal(t, want+"\trefs/heads/main", cmdOut)
 
 		// The server answers in the version the client asks for through the
 		// GIT_PROTOCOL environment variable.
-		cmd := ownerKey.command(t.TempDir(), "-c", "protocol.version=2", "ls-remote", sshRemoteURL(t, repo))
+		cmd := ownerKey.command(t.TempDir(), "-c", "protocol.version=2", "ls-remote", sshRemoteURL(repo))
 		cmd.Env = append(cmd.Env, "GIT_TRACE_PACKET=1")
 		trace, err := cmd.CombinedOutput()
 		require.NoError(t, err, "ls-remote: %s", trace)

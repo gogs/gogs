@@ -9,8 +9,6 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -21,7 +19,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ssh"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 )
 
@@ -324,8 +321,6 @@ func userSeedSSHKey(t *testing.T, userID int64, name string) (*database.PublicKe
 	require.NoError(t, err)
 	sshPub, err := ssh.NewPublicKey(pub)
 	require.NoError(t, err)
-	// Adding a key appends it to the authorized_keys file in this directory.
-	require.NoError(t, os.MkdirAll(conf.SSH.RootPath, 0o700))
 	content := strings.TrimSpace(string(ssh.MarshalAuthorizedKey(sshPub)))
 	key, err := database.AddPublicKey(logger, userID, name, content+" "+name+"@example.com")
 	require.NoError(t, err)
@@ -340,11 +335,10 @@ func TestUserSettingsSSHKeys(t *testing.T) {
 	)
 
 	u, c := userSignedIn(t)
-	pub, _, err := ed25519.GenerateKey(rand.Reader)
+	repo := seedRepository(t, u.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
+	privateKey, content := sshNewKey(t)
+	sshPub, _, _, _, err := ssh.ParseAuthorizedKey([]byte(content))
 	require.NoError(t, err)
-	sshPub, err := ssh.NewPublicKey(pub)
-	require.NoError(t, err)
-	content := strings.TrimSpace(string(ssh.MarshalAuthorizedKey(sshPub)))
 	status, body := c.do(http.MethodPost, "/api/web/user/settings/ssh-keys", map[string]any{
 		"title":   "Laptop",
 		"content": content,
@@ -362,9 +356,8 @@ func TestUserSettingsSSHKeys(t *testing.T) {
 	require.Len(t, userKeys, 1)
 	key, fingerprint := userKeys[0], ssh.FingerprintSHA256(sshPub)
 	assert.Equal(t, content, strings.TrimSpace(key.Content))
-	authorizedKeys, err := os.ReadFile(filepath.Join(conf.SSH.RootPath, "authorized_keys"))
-	require.NoError(t, err)
-	assert.Contains(t, string(authorizedKeys), content)
+	// The key added signs in to the SSH server.
+	privateKey.clone(t, repo)
 	type sshKey struct {
 		ID          int64  `json:"id"`
 		Name        string `json:"name"`
@@ -391,6 +384,8 @@ func TestUserSettingsSSHKeys(t *testing.T) {
 	assert.Empty(t, list())
 	_, err = database.GetPublicKeyByID(key.ID)
 	assert.True(t, database.IsErrKeyNotExist(err), "key not deleted: %v", err)
+	out := privateKey.cloneFails(t, repo)
+	assert.Contains(t, out, "Permission denied (publickey)")
 }
 
 func TestUserSettingsTwoFactor(t *testing.T) {
