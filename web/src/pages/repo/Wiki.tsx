@@ -138,7 +138,7 @@ export function RepoWiki({ owner, name, data }: { owner: string; name: string; d
 
   return (
     <WikiLayout owner={owner} name={name} title={page.name}>
-      <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_16rem] lg:grid-cols-[minmax(0,1fr)_18rem]">
+      <div className="grid gap-8 glass-ui:gap-6 md:grid-cols-[minmax(0,1fr)_16rem] lg:grid-cols-[minmax(0,1fr)_18rem]">
         <article className="min-w-0">
           <header className="mb-6 border-b border-(--color-border) pb-4">
             <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">

@@ -252,7 +252,7 @@ export function RepoCode({
           <div className="mb-4 lg:hidden">
             <AboutText summary={summary} />
           </div>
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
+          <div className="grid gap-8 glass-ui:gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
             <div className="min-w-0">
               <div className="mb-4 flex flex-wrap items-center gap-2">
                 {refPicker}

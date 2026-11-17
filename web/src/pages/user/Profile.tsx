@@ -66,7 +66,7 @@ function UserProfile({ username, profile, data }: { username: string; profile: U
   return (
     <main className="mx-auto grid w-full max-w-6xl flex-1 content-start gap-6 px-4 py-6 sm:px-6 md:grid-cols-[256px_minmax(0,1fr)] lg:grid-cols-[296px_minmax(0,1fr)]">
       <ProfileSidebar profile={profile} />
-      <section className="min-w-0">
+      <section className="glass-section min-w-0 glass-ui:self-start">
         <PageTabs
           label={profile.fullName || profile.name}
           tabs={tabs}
@@ -83,7 +83,7 @@ function UserProfile({ username, profile, data }: { username: string; profile: U
         />
         {data.tab === "repos" ? (
           <>
-            <ul className="glass-list glass-ui:mt-4">
+            <ul className="glass-list">
               {data.repos.items.map((repo) => (
                 <RepoListItem key={repo.name} repo={repo} />
               ))}

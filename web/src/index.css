@@ -628,11 +628,15 @@ diffs-container {
   border-width: 1px;
   overflow: hidden;
 }
-:root.glass-ui .glass-section > :is(h2, h3):first-child {
+:root.glass-ui .glass-section > :is(h2, h3, nav):first-child {
   margin: 0;
   border-bottom: 1px solid var(--color-border);
   background-color: var(--color-surface);
   padding: 0.625rem 1rem;
+}
+/* Tabs carry their own padding and sit their underline on the header's edge. */
+:root.glass-ui .glass-section > nav:first-child {
+  padding: 0 0.5rem;
 }
 :root.glass-ui .glass-section :is(.glass, .glass-list) {
   border-width: 0;
@@ -657,8 +661,11 @@ diffs-container {
   -webkit-backdrop-filter: blur(16px) saturate(1.8);
   backdrop-filter: blur(16px) saturate(1.8);
 }
-/* Glass shadows keep Tailwind's ring layers so focus stays visible. */
+/* Dividers between the buttons of a group follow the glass edge, and the
+   shadow keeps Tailwind's ring layers so focus stays visible. */
 :root.glass-ui .glass-control {
+  --color-input: var(--glass-line);
+  --color-border: var(--glass-line);
   border-color: var(--glass-line);
   background-color: var(--glass-control);
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--glass-edge);
