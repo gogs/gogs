@@ -30,10 +30,13 @@ func getRawFile(c *apiContext) {
 	ctx := c.Request().Context()
 	gitRepo, err := git.Open(database.RepoPath(c.Repo.Owner.Name, c.Repo.Repository.Name))
 	if err != nil {
-		c.Error(err, "open repository")
+		c.webError(err, "open repository")
 		return
 	}
 
+	// Failing to resolve the reference responds with the web pages, as it did
+	// before migrating to Flamego.
+	//
 	// The shortest prefix of the path that names a branch or a tag is the
 	// reference, the rest is the tree path. Otherwise, the first segment must be
 	// a full commit SHA.
@@ -58,23 +61,23 @@ func getRawFile(c *apiContext) {
 	case gitRepo.HasBranch(ctx, refName):
 		commit, err = gitRepo.BranchCommit(ctx, refName)
 		if err != nil {
-			c.Error(err, "get branch commit")
+			c.webError(err, "get branch commit")
 			return
 		}
 	case gitRepo.HasTag(ctx, refName):
 		commit, err = gitRepo.TagCommit(ctx, refName)
 		if err != nil {
-			c.Error(err, "get tag commit")
+			c.webError(err, "get tag commit")
 			return
 		}
 	case len(refName) == 40 || len(refName) == 64:
 		commit, err = gitRepo.CatFileCommit(ctx, refName)
 		if err != nil {
-			c.NotFound()
+			c.webNotFound()
 			return
 		}
 	default:
-		c.NotFound()
+		c.webNotFound()
 		return
 	}
 
@@ -127,7 +130,8 @@ func getArchive(c *apiContext) {
 
 	archivePath, name, err := routerepo.PrepareArchive(c.Request().Context(), gitRepo, c.Repo.Repository.Name, c.Param("**"))
 	if err != nil {
-		c.NotFoundOrError(err, "prepare archive")
+		// Responds with the web pages, as it did before migrating to Flamego.
+		c.webNotFoundOrError(err, "prepare archive")
 		return
 	}
 
@@ -145,7 +149,7 @@ func getArchive(c *apiContext) {
 func getEditorconfig(c *apiContext) {
 	gitRepo, err := git.Open(database.RepoPath(c.Repo.Owner.Name, c.Repo.Repository.Name))
 	if err != nil {
-		c.Error(err, "open repository")
+		c.webError(err, "open repository")
 		return
 	}
 

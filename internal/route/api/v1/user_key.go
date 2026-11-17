@@ -67,8 +67,8 @@ func getPublicKey(c *apiContext) {
 }
 
 type createPublicKeyRequest struct {
-	Title string `json:"title" validate:"required"`
-	Key   string `json:"key" validate:"required"`
+	Title string `json:"title" binding:"Required"`
+	Key   string `json:"key" binding:"Required"`
 }
 
 func createUserPublicKey(c *apiContext, form createPublicKeyRequest, uid int64) {

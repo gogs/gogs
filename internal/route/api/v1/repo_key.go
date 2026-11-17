@@ -78,8 +78,8 @@ func handleAddKeyError(c *apiContext, err error) {
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories-Deploy-Keys#add-a-new-deploy-key
 type createDeployKeyRequest struct {
-	Title string `json:"title" validate:"required"`
-	Key   string `json:"key" validate:"required"`
+	Title string `json:"title" binding:"Required"`
+	Key   string `json:"key" binding:"Required"`
 }
 
 func createDeployKey(c *apiContext, form createDeployKeyRequest) {

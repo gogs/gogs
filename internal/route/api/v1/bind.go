@@ -6,52 +6,33 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
-	"regexp"
 	"strconv"
 	"strings"
 
-	"github.com/cockroachdb/errors"
-	"github.com/go-playground/validator/v10"
+	"github.com/go-macaron/binding"
 	"github.com/unknwon/com"
 	"gopkg.in/yaml.v3"
 )
 
-var (
-	alphaDashDotInvalid = regexp.MustCompile(`[^\d\w\-_\.]`)
-	// emailPattern is intentionally loose (unanchored) to accept the same input
-	// as the API did before migrating to Flamego.
-	emailPattern = regexp.MustCompile("[\\w!#$%&'*+/=?^_`{|}~-]+(?:\\.[\\w!#$%&'*+/=?^_`{|}~-]+)*@(?:[\\w](?:[\\w-]*[\\w])?\\.)+[a-zA-Z0-9](?:[\\w-]*[\\w])?")
-)
-
-var requestValidator = func() *validator.Validate {
-	v := validator.New()
-	_ = v.RegisterValidation("alphadashdot", func(fl validator.FieldLevel) bool {
-		return !alphaDashDotInvalid.MatchString(fl.Field().String())
-	})
-	_ = v.RegisterValidation("email", func(fl validator.FieldLevel) bool {
-		return emailPattern.MatchString(fl.Field().String())
-	})
-	return v
-}()
+// maxMultipartMemory is the maximum amount of memory used to parse a multipart
+// form.
+const maxMultipartMemory = 10 << 20 // 10 MiB
 
 // bind returns a handler that decodes the request body into a new instance of
 // the model based on the Content-Type of the request, validates it against the
-// "validate" struct tags, and maps it for subsequent handlers. It responds with
-// 415 for an unsupported Content-Type, 400 for a malformed body, and 422 for a
-// body that fails validation.
+// "binding" struct tags, and maps it for subsequent handlers.
+//
+// It mirrors how github.com/go-macaron/binding binds request bodies, which API
+// v1 used before migrating to Flamego, so that clients get the same responses:
+// a JSON list of binding errors with 415 for an unsupported Content-Type, 400
+// for a malformed body, and 422 for a body that fails validation.
 func bind(model any) func(c *apiContext) {
 	typ := reflect.TypeOf(model)
 	return func(c *apiContext) {
 		obj := reflect.New(typ)
-		status, err := decodeBody(c.Request().Request, obj)
-		if err != nil {
-			c.ErrorStatus(status, err)
-			return
-		}
-
-		err = requestValidator.Struct(obj.Interface())
-		if err != nil {
-			c.ErrorStatus(http.StatusUnprocessableEntity, err)
+		errs := decodeBody(c.Request().Request, obj)
+		if len(errs) > 0 {
+			writeBindingErrors(c.ResponseWriter(), errs)
 			return
 		}
 		c.Map(obj.Elem().Interface())
@@ -59,114 +40,167 @@ func bind(model any) func(c *apiContext) {
 }
 
 // decodeBody decodes the request body into obj, which must be a pointer to a
-// struct. It returns the HTTP status code to respond with alongside the error.
-func decodeBody(r *http.Request, obj reflect.Value) (int, error) {
+// struct, and validates it. It returns all errors found.
+func decodeBody(r *http.Request, obj reflect.Value) binding.Errors {
+	var errs binding.Errors
 	contentType := r.Header.Get("Content-Type")
 	switch {
 	case strings.Contains(contentType, "form-urlencoded"):
 		err := r.ParseForm()
 		if err != nil {
-			return http.StatusBadRequest, errors.Wrap(err, "parse form")
+			errs.Add([]string{}, binding.ERR_DESERIALIZATION, err.Error())
 		}
-		return http.StatusUnprocessableEntity, mapForm(obj.Elem(), r.Form)
+		errs = mapForm(obj.Elem(), r.Form, errs)
 
 	case strings.Contains(contentType, "multipart/form-data"):
 		if r.MultipartForm == nil {
-			err := r.ParseMultipartForm(10 << 20) // 10 MiB
+			reader, err := r.MultipartReader()
 			if err != nil {
-				return http.StatusBadRequest, errors.Wrap(err, "parse multipart form")
+				errs.Add([]string{}, binding.ERR_DESERIALIZATION, err.Error())
+				return errs
 			}
+			form, err := reader.ReadForm(maxMultipartMemory)
+			if err != nil {
+				errs.Add([]string{}, binding.ERR_DESERIALIZATION, err.Error())
+				return errs
+			}
+			r.MultipartForm = form
 		}
-		return http.StatusUnprocessableEntity, mapForm(obj.Elem(), r.MultipartForm.Value)
+		errs = mapForm(obj.Elem(), r.MultipartForm.Value, errs)
 
 	case strings.Contains(contentType, "json"):
-		if r.Body == nil {
-			return 0, nil
+		if r.Body != nil {
+			err := json.NewDecoder(r.Body).Decode(obj.Interface())
+			if err != nil && err != io.EOF {
+				errs.Add([]string{}, binding.ERR_DESERIALIZATION, err.Error())
+				return errs
+			}
 		}
-		err := json.NewDecoder(r.Body).Decode(obj.Interface())
-		if err != nil && err != io.EOF {
-			return http.StatusBadRequest, err
-		}
-		return 0, nil
 
 	case strings.Contains(contentType, "yaml"):
-		if r.Body == nil {
-			return 0, nil
+		if r.Body != nil {
+			err := yaml.NewDecoder(r.Body).Decode(obj.Interface())
+			if err != nil && err != io.EOF {
+				errs.Add([]string{}, binding.ERR_DESERIALIZATION, err.Error())
+				return errs
+			}
 		}
-		err := yaml.NewDecoder(r.Body).Decode(obj.Interface())
-		if err != nil && err != io.EOF {
-			return http.StatusBadRequest, err
-		}
-		return 0, nil
 
 	case contentType == "":
-		return http.StatusUnsupportedMediaType, errors.New("Empty Content-Type")
+		errs.Add([]string{}, binding.ERR_CONTENT_TYPE, "Empty Content-Type")
+		return errs
 	default:
-		return http.StatusUnsupportedMediaType, errors.New("Unsupported Content-Type")
+		errs.Add([]string{}, binding.ERR_CONTENT_TYPE, "Unsupported Content-Type")
+		return errs
 	}
+	return append(errs, binding.RawValidate(obj.Interface())...)
+}
+
+// writeBindingErrors responds with errs in the format of
+// github.com/go-macaron/binding.
+func writeBindingErrors(w http.ResponseWriter, errs binding.Errors) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	switch {
+	case errs.Has(binding.ERR_DESERIALIZATION):
+		w.WriteHeader(http.StatusBadRequest)
+	case errs.Has(binding.ERR_CONTENT_TYPE):
+		w.WriteHeader(http.StatusUnsupportedMediaType)
+	default:
+		w.WriteHeader(http.StatusUnprocessableEntity)
+	}
+	p, _ := json.Marshal(errs)
+	_, _ = w.Write(p)
 }
 
 // mapForm sets fields of the struct from form values, using the snake case of
-// the field name as the form key. Only string, bool and int fields, and slices
-// of them are supported.
-func mapForm(obj reflect.Value, form url.Values) error {
+// the field name as the form key, and returns errs with an error added for each
+// value that does not parse.
+func mapForm(obj reflect.Value, form url.Values, errs binding.Errors) binding.Errors {
 	typ := obj.Type()
 	for i := 0; i < typ.NumField(); i++ {
+		field := obj.Field(i)
+		if typ.Field(i).Type.Kind() == reflect.Struct {
+			errs = mapForm(field, form, errs)
+		}
+		if !field.CanSet() {
+			continue
+		}
+
 		name := com.ToSnakeCase(typ.Field(i).Name)
 		values, ok := form[name]
 		if !ok {
 			continue
 		}
 
-		field := obj.Field(i)
-		if field.Kind() != reflect.Slice {
-			err := setFormValue(field, values[0])
-			if err != nil {
-				return errors.Wrapf(err, "field %q", name)
+		if field.Kind() == reflect.Slice && len(values) > 0 {
+			slice := reflect.MakeSlice(field.Type(), len(values), len(values))
+			for j, value := range values {
+				errs = setFormValue(slice.Index(j), value, name, errs)
 			}
+			field.Set(slice)
 			continue
 		}
-
-		slice := reflect.MakeSlice(field.Type(), len(values), len(values))
-		for j, value := range values {
-			err := setFormValue(slice.Index(j), value)
-			if err != nil {
-				return errors.Wrapf(err, "field %q", name)
-			}
-		}
-		field.Set(slice)
+		errs = setFormValue(field, values[0], name, errs)
 	}
-	return nil
+	return errs
 }
 
-func setFormValue(field reflect.Value, value string) error {
+func setFormValue(field reflect.Value, value, name string, errs binding.Errors) binding.Errors {
 	switch field.Kind() {
-	case reflect.String:
-		field.SetString(value)
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		if value == "" {
+			value = "0"
+		}
+		v, err := strconv.ParseInt(value, 10, 64)
+		if err != nil {
+			errs.Add([]string{name}, binding.ERR_INTERGER_TYPE, "Value could not be parsed as integer")
+		} else {
+			field.SetInt(v)
+		}
+
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		if value == "" {
+			value = "0"
+		}
+		v, err := strconv.ParseUint(value, 10, 64)
+		if err != nil {
+			errs.Add([]string{name}, binding.ERR_INTERGER_TYPE, "Value could not be parsed as unsigned integer")
+		} else {
+			field.SetUint(v)
+		}
 
 	case reflect.Bool:
 		if value == "on" {
 			field.SetBool(true)
-			return nil
+			break
 		}
 		if value == "" {
-			return nil
+			value = "false"
 		}
 		v, err := strconv.ParseBool(value)
 		if err != nil {
-			return err
+			errs.Add([]string{name}, binding.ERR_BOOLEAN_TYPE, "Value could not be parsed as boolean")
+		} else if v {
+			field.SetBool(true)
 		}
-		field.SetBool(v)
 
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+	case reflect.Float32, reflect.Float64:
 		if value == "" {
-			return nil
+			value = "0.0"
 		}
-		v, err := strconv.ParseInt(value, 10, 64)
+		bitSize, class := 64, "Value could not be parsed as 64-bit float"
+		if field.Kind() == reflect.Float32 {
+			bitSize, class = 32, "Value could not be parsed as 32-bit float"
+		}
+		v, err := strconv.ParseFloat(value, bitSize)
 		if err != nil {
-			return err
+			errs.Add([]string{name}, binding.ERR_FLOAT_TYPE, class)
+		} else {
+			field.SetFloat(v)
 		}
-		field.SetInt(v)
+
+	case reflect.String:
+		field.SetString(value)
 	}
-	return nil
+	return errs
 }

@@ -168,8 +168,8 @@ func getContents(c *apiContext) {
 
 // putContentsRequest is the API message for creating or updating a file.
 type putContentsRequest struct {
-	Message string `json:"message" validate:"required"`
-	Content string `json:"content" validate:"required"`
+	Message string `json:"message" binding:"Required"`
+	Content string `json:"content" binding:"Required"`
 	Branch  string `json:"branch"`
 }
 

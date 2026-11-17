@@ -64,6 +64,8 @@ func apiV1Bridger(apiHandler http.Handler) func(c *context.Context, l i18n.Local
 			IsBasicAuth: c.IsBasicAuth,
 			IsTokenAuth: c.IsTokenAuth,
 			Path:        c.Req.URL.Path,
+			WebNotFound: c.NotFound,
+			WebError:    c.Error,
 		}
 
 		u := *c.Req.URL

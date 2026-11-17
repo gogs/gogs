@@ -26,6 +26,11 @@ type RequestInfo struct {
 	IsTokenAuth bool
 	// Path is the unescaped request path.
 	Path string
+	// WebNotFound and WebError respond with the 404 and 500 responses of web
+	// pages. Endpoints that responded through the web pages before migrating to
+	// Flamego, e.g., unknown routes, keep doing so.
+	WebNotFound func()
+	WebError    func(err error, msg string)
 }
 
 type apiRepository struct {
@@ -78,6 +83,9 @@ type apiContext struct {
 	// path is the unescaped request path.
 	path string
 
+	webNotFound func()
+	webError    func(err error, msg string)
+
 	Repo *apiRepository
 	Org  *apiOrganization
 }
@@ -93,6 +101,8 @@ func apiContexter(c flamego.Context, logger *logx.Logger, viewer *database.User,
 		BaseURL:     conf.Server.ExternalURL + "api/v1",
 		Link:        conf.Server.Subpath + strings.TrimSuffix(info.Path, "/"),
 		path:        info.Path,
+		webNotFound: info.WebNotFound,
+		webError:    info.WebError,
 		Repo:        &apiRepository{},
 	})
 }
@@ -194,6 +204,16 @@ func (c *apiContext) NotFoundOrError(err error, msg string) {
 		return
 	}
 	c.Error(err, msg)
+}
+
+// webNotFoundOrError is like NotFoundOrError but responds with the 404 and 500
+// responses of web pages.
+func (c *apiContext) webNotFoundOrError(err error, msg string) {
+	if errx.IsNotFound(err) {
+		c.webNotFound()
+		return
+	}
+	c.webError(err, msg)
 }
 
 // SetLinkHeader sets pagination link header by given total number and page size.

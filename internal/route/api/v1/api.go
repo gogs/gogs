@@ -418,7 +418,7 @@ func RegisterRoutes(f *flamego.Flame) {
 
 		// Preflight OPTIONS requests are handled above.
 		f.Routes("/{**}", "GET,HEAD,POST,PUT,PATCH,DELETE", func(c *apiContext) {
-			c.NotFound()
+			c.webNotFound()
 		})
 	}, apiContexter)
 }

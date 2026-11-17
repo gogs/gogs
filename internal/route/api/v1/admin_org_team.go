@@ -8,8 +8,8 @@ import (
 )
 
 type adminCreateTeamRequest struct {
-	Name        string `json:"name" validate:"required,alphadashdot,max=30"`
-	Description string `json:"description" validate:"max=255"`
+	Name        string `json:"name" binding:"Required;AlphaDashDot;MaxSize(30)"`
+	Description string `json:"description" binding:"MaxSize(255)"`
 	Permission  string `json:"permission"`
 }
 

@@ -157,14 +157,14 @@ func listOrgRepositories(c *apiContext) {
 }
 
 type createRepoRequest struct {
-	Name         string `json:"name" validate:"required,alphadashdot,max=100"`
-	Description  string `json:"description" validate:"max=255"`
+	Name         string `json:"name" binding:"Required;AlphaDashDot;MaxSize(100)"`
+	Description  string `json:"description" binding:"MaxSize(255)"`
 	Private      bool   `json:"private"`
 	AutoInit     bool   `json:"auto_init"`
 	Gitignores   string `json:"gitignores"`
 	License      string `json:"license"`
 	Readme       string `json:"readme"`
-	ObjectFormat string `json:"object_format" validate:"omitempty,oneof=sha1 sha256"`
+	ObjectFormat string `json:"object_format" binding:"OmitEmpty;In(sha1,sha256)"`
 }
 
 func createUserRepo(c *apiContext, owner *database.User, opt createRepoRequest) {
@@ -220,15 +220,15 @@ func createOrgRepo(c *apiContext, opt createRepoRequest) {
 }
 
 type migrateRepoRequest struct {
-	CloneAddr    string `json:"clone_addr" validate:"required"`
+	CloneAddr    string `json:"clone_addr" binding:"Required"`
 	AuthUsername string `json:"auth_username"`
 	AuthPassword string `json:"auth_password"`
-	UID          int64  `json:"uid" validate:"required"`
-	RepoName     string `json:"repo_name" validate:"required,alphadashdot,max=100"`
+	UID          int64  `json:"uid" binding:"Required"`
+	RepoName     string `json:"repo_name" binding:"Required;AlphaDashDot;MaxSize(100)"`
 	Mirror       bool   `json:"mirror"`
 	Private      bool   `json:"private"`
 	Unlisted     bool   `json:"unlisted"`
-	Description  string `json:"description" validate:"max=512"`
+	Description  string `json:"description" binding:"MaxSize(512)"`
 }
 
 func migrate(c *apiContext, f migrateRepoRequest) {

@@ -29,10 +29,10 @@ func parseLoginSource(c *apiContext, sourceID int64) {
 type adminCreateUserRequest struct {
 	SourceID   int64  `json:"source_id"`
 	LoginName  string `json:"login_name"`
-	Username   string `json:"username" validate:"required,alphadashdot,max=35"`
-	FullName   string `json:"full_name" validate:"max=100"`
-	Email      string `json:"email" validate:"required,email,max=254"`
-	Password   string `json:"password" validate:"max=255"`
+	Username   string `json:"username" binding:"Required;AlphaDashDot;MaxSize(35)"`
+	FullName   string `json:"full_name" binding:"MaxSize(100)"`
+	Email      string `json:"email" binding:"Required;Email;MaxSize(254)"`
+	Password   string `json:"password" binding:"MaxSize(255)"`
 	SendNotify bool   `json:"send_notify"`
 }
 
@@ -79,11 +79,11 @@ func adminCreateUser(c *apiContext, l i18n.Locale, form adminCreateUserRequest) 
 type adminEditUserRequest struct {
 	SourceID         int64  `json:"source_id"`
 	LoginName        string `json:"login_name"`
-	FullName         string `json:"full_name" validate:"max=100"`
-	Email            string `json:"email" validate:"required,email,max=254"`
-	Password         string `json:"password" validate:"max=255"`
-	Website          string `json:"website" validate:"max=50"`
-	Location         string `json:"location" validate:"max=50"`
+	FullName         string `json:"full_name" binding:"MaxSize(100)"`
+	Email            string `json:"email" binding:"Required;Email;MaxSize(254)"`
+	Password         string `json:"password" binding:"MaxSize(255)"`
+	Website          string `json:"website" binding:"MaxSize(50)"`
+	Location         string `json:"location" binding:"MaxSize(50)"`
 	Active           *bool  `json:"active"`
 	Admin            *bool  `json:"admin"`
 	AllowGitHook     *bool  `json:"allow_git_hook"`

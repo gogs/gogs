@@ -28,8 +28,8 @@ func listHooks(c *apiContext) {
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories#create-a-hook
 type createHookRequest struct {
-	Type   string            `json:"type" validate:"required"`
-	Config map[string]string `json:"config" validate:"required"`
+	Type   string            `json:"type" binding:"Required"`
+	Config map[string]string `json:"config" binding:"Required"`
 	Events []string          `json:"events"`
 	Active bool              `json:"active"`
 }

@@ -64,7 +64,7 @@ func listRepoIssueComments(c *apiContext) {
 }
 
 type createIssueCommentRequest struct {
-	Body string `json:"body" validate:"required"`
+	Body string `json:"body" binding:"Required"`
 }
 
 func createIssueComment(c *apiContext, form createIssueCommentRequest) {
@@ -84,7 +84,7 @@ func createIssueComment(c *apiContext, form createIssueCommentRequest) {
 }
 
 type editIssueCommentRequest struct {
-	Body string `json:"body" validate:"required"`
+	Body string `json:"body" binding:"Required"`
 }
 
 func editIssueComment(c *apiContext, form editIssueCommentRequest) {

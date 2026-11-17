@@ -68,7 +68,7 @@ func getIssue(c *apiContext) {
 }
 
 type createIssueRequest struct {
-	Title     string  `json:"title" validate:"required"`
+	Title     string  `json:"title" binding:"Required"`
 	Body      string  `json:"body"`
 	Assignee  string  `json:"assignee"`
 	Milestone int64   `json:"milestone"`

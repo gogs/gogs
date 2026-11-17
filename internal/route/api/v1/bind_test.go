@@ -36,6 +36,7 @@ func TestBind(t *testing.T) {
 			name:       "empty content type",
 			body:       `{"name":"r1"}`,
 			wantStatus: http.StatusUnsupportedMediaType,
+			wantBody:   `[{"classification":"ContentTypeError","message":"Empty Content-Type"}]`,
 		},
 		{
 			name:        "unsupported content type",
@@ -48,12 +49,14 @@ func TestBind(t *testing.T) {
 			contentType: "application/json",
 			body:        `{"name":`,
 			wantStatus:  http.StatusBadRequest,
+			wantBody:    `[{"classification":"DeserializationError","message":"unexpected EOF"}]`,
 		},
 		{
 			name:        "missing required field",
 			contentType: "application/json",
 			body:        `{"description":"d"}`,
 			wantStatus:  http.StatusUnprocessableEntity,
+			wantBody:    `[{"fieldNames":["Name"],"classification":"RequiredError","message":"Required"}]`,
 		},
 		{
 			name:        "invalid characters",
@@ -86,6 +89,7 @@ func TestBind(t *testing.T) {
 			contentType: "application/x-www-form-urlencoded",
 			body:        "name=r1&private=maybe",
 			wantStatus:  http.StatusUnprocessableEntity,
+			wantBody:    `[{"fieldNames":["private"],"classification":"BooleanTypeError","message":"Value could not be parsed as boolean"}]`,
 		},
 	}
 	for _, test := range tests {

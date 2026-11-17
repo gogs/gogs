@@ -43,7 +43,7 @@ func (h *accessTokensHandler) List() flamego.Handler {
 }
 
 type createAccessTokenRequest struct {
-	Name string `json:"name" validate:"required"`
+	Name string `json:"name" binding:"Required"`
 }
 
 func (h *accessTokensHandler) Create() flamego.Handler {

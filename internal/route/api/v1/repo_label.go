@@ -40,8 +40,8 @@ func getLabel(c *apiContext) {
 }
 
 type createLabelRequest struct {
-	Name  string `json:"name" validate:"required"`
-	Color string `json:"color" validate:"required,len=7"`
+	Name  string `json:"name" binding:"Required"`
+	Color string `json:"color" binding:"Required;Size(7)"`
 }
 
 func createLabel(c *apiContext, form createLabelRequest) {
