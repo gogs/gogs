@@ -44,6 +44,8 @@ func TestRepository_BeforeCreate(t *testing.T) {
 		repo := &Repository{}
 		_ = repo.BeforeCreate(db)
 		assert.Equal(t, db.NowFunc().Unix(), repo.CreatedUnix)
+		assert.Equal(t, db.NowFunc().Unix(), repo.Created.Unix())
+		assert.Equal(t, db.NowFunc().Unix(), repo.Updated.Unix())
 	})
 }
 
@@ -744,7 +746,7 @@ func reposSearch(t *testing.T, ctx context.Context, s *RepositoriesStore) {
 	private := newTestRepoOf(t, ctx, s, alice, "gopher-private", map[string]any{"is_private": true})
 	unlisted := newTestRepoOf(t, ctx, s, alice, "gopher-unlisted", map[string]any{"is_unlisted": true})
 	publicWiki := newTestRepoOf(t, ctx, s, alice, "gopher-wiki", map[string]any{"is_private": true, "allow_public_wiki": true})
-	bobRepo := newTestRepoOf(t, ctx, s, bob, "rust", map[string]any{"description": "not a gopher"})
+	bobRepo := newTestRepoOf(t, ctx, s, bob, "rust", map[string]any{"description": "Not a Gopher"})
 	bobPrivate := newTestRepoOf(t, ctx, s, bob, "gopher-bob", map[string]any{"is_private": true})
 	require.NoError(t, s.db.Create(&Access{RepoID: bobPrivate.ID, UserID: alice.ID, Mode: AccessModeRead}).Error)
 

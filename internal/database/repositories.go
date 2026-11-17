@@ -30,6 +30,9 @@ func (r *Repository) BeforeCreate(tx *gorm.DB) error {
 	if r.UpdatedUnix == 0 {
 		r.UpdatedUnix = r.CreatedUnix
 	}
+	// Webhook payloads and API responses use the repository just created.
+	r.Created = time.Unix(r.CreatedUnix, 0).Local()
+	r.Updated = time.Unix(r.UpdatedUnix, 0).Local()
 	return nil
 }
 
@@ -1461,7 +1464,7 @@ func (s *RepositoriesStore) Search(ctx context.Context, opts SearchRepoOptions) 
 		}
 	}
 	if len(opts.Keyword) > 0 {
-		query = query.Where("(repo.lower_name LIKE ? OR repo.description LIKE ?)", "%"+strings.ToLower(opts.Keyword)+"%", "%"+strings.ToLower(opts.Keyword)+"%")
+		query = query.Where("(repo.lower_name LIKE ? OR LOWER(repo.description) LIKE ?)", "%"+strings.ToLower(opts.Keyword)+"%", "%"+strings.ToLower(opts.Keyword)+"%")
 	}
 	if opts.OwnerID > 0 {
 		query = query.Where("repo.owner_id = ?", opts.OwnerID)
