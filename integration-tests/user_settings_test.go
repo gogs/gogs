@@ -315,8 +315,9 @@ func TestUserSettingsEmails(t *testing.T) {
 }
 
 // userSeedSSHKey adds an SSH key to the user, which the server under test
-// cannot do with SSH disabled.
-func userSeedSSHKey(t *testing.T, userID int64, name string) *database.PublicKey {
+// cannot do with SSH disabled. Like a key from ssh-keygen, it ends with a
+// comment. The key is also returned without the comment.
+func userSeedSSHKey(t *testing.T, userID int64, name string) (*database.PublicKey, string) {
 	t.Helper()
 
 	pub, _, err := ed25519.GenerateKey(rand.Reader)
@@ -325,9 +326,10 @@ func userSeedSSHKey(t *testing.T, userID int64, name string) *database.PublicKey
 	require.NoError(t, err)
 	// Adding a key appends it to the authorized_keys file in this directory.
 	require.NoError(t, os.MkdirAll(conf.SSH.RootPath, 0o700))
-	key, err := database.AddPublicKey(logger, userID, name, strings.TrimSpace(string(ssh.MarshalAuthorizedKey(sshPub))))
+	content := strings.TrimSpace(string(ssh.MarshalAuthorizedKey(sshPub)))
+	key, err := database.AddPublicKey(logger, userID, name, content+" "+name+"@example.com")
 	require.NoError(t, err)
-	return key
+	return key, content
 }
 
 func TestUserSettingsSSHKeys(t *testing.T) {
@@ -378,7 +380,7 @@ func TestUserSettingsSSHKeys(t *testing.T) {
 	assert.Equal(t, []sshKey{{ID: key.ID, Name: "Laptop", Fingerprint: fingerprint}}, list())
 
 	other := seedUser(t, CreateUserOptions{})
-	otherKey := userSeedSSHKey(t, other.ID, "Desktop")
+	otherKey, _ := userSeedSSHKey(t, other.ID, "Desktop")
 	status, body = c.do(http.MethodDelete, "/api/web/user/settings/ssh-keys/"+strconv.FormatInt(otherKey.ID, 10), map[string]any{})
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 	_, err = database.GetPublicKeyByID(otherKey.ID)

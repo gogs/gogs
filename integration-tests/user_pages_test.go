@@ -89,13 +89,14 @@ func TestUserEmail2User(t *testing.T) {
 
 func TestUserPublicKeys(t *testing.T) {
 	u := seedUser(t, CreateUserOptions{})
-	key := userSeedSSHKey(t, u.ID, "laptop")
+	_, content := userSeedSSHKey(t, u.ID, "laptop")
 
 	t.Run("keys", func(t *testing.T) {
 		status, header, body := newClient(t).doRaw(http.MethodGet, "/"+u.Name+".keys", "", nil)
 		require.Equal(t, http.StatusOK, status, "response: %s", body)
 		assert.Equal(t, "text/plain; charset=UTF-8", header.Get("Content-Type"))
-		assert.Equal(t, key.OmitEmail()+"\n", string(body))
+		// The comment of the key, often an email address, is left out.
+		assert.Equal(t, content+"\n", string(body))
 	})
 
 	t.Run("unknown user", func(t *testing.T) {
