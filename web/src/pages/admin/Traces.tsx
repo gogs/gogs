@@ -4,6 +4,7 @@ import { type FormEvent, Fragment, type ReactNode, useMemo, useState } from "rea
 import { useTranslation } from "react-i18next";
 
 import { AdminLayout } from "@/components/AdminLayout";
+import { InlineCode } from "@/components/InlineCode";
 import { PageTabs } from "@/components/PageTabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -156,12 +157,9 @@ function TracesLayout({
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold">{t("admin.traces")}</h1>
-          {/* Tracing that is off keeps nothing. */}
-          {maxAgeMinutes > 0 ? (
-            <p className="mt-1 text-sm text-(--color-muted-foreground)">
-              {fill(t("admin.traces.desc"), formatMinutes(maxAgeMinutes))}
-            </p>
-          ) : null}
+          <p className="mt-1 text-sm text-(--color-muted-foreground)">
+            {fill(t("admin.traces.desc"), formatMinutes(maxAgeMinutes))}
+          </p>
         </div>
         <TraceIDForm q={q} />
       </div>
@@ -182,9 +180,22 @@ function TracesLayout({
   );
 }
 
+// Disabled shows only the title and how to turn tracing on, since there is
+// nothing to find or look at.
 function Disabled() {
   const { t } = useTranslation();
-  return <Panel>{t("admin.traces.disabled")}</Panel>;
+  return (
+    <AdminLayout active="traces">
+      <h1 className="text-xl font-semibold">{t("admin.traces")}</h1>
+      <p className="mt-1 text-sm text-(--color-muted-foreground)">
+        {fillNodes(
+          t("admin.traces.disabled"),
+          <InlineCode>ENABLED = true</InlineCode>,
+          <InlineCode>[tracing]</InlineCode>,
+        )}
+      </p>
+    </AdminLayout>
+  );
 }
 
 function OverviewChart({ overview }: { overview: AdminTraceOverviewData }) {
@@ -326,11 +337,7 @@ export function AdminTraceOverview({ overview }: { overview: AdminTraceOverviewD
   const [allRoutes, setAllRoutes] = useState(false);
   const [allOperations, setAllOperations] = useState(false);
   if (!overview.enabled) {
-    return (
-      <TracesLayout view="overview" maxAgeMinutes={overview.maxAgeMinutes}>
-        <Disabled />
-      </TracesLayout>
-    );
+    return <Disabled />;
   }
   const errorRate = overview.requests > 0 ? overview.errors / overview.requests : 0;
   const percent = (share: number) =>
@@ -608,11 +615,7 @@ export function AdminTraceSearch({ result, search }: { result: AdminTraceSearchD
   const navigate = useNavigate();
   const now = Date.parse(result.now);
   if (!result.enabled) {
-    return (
-      <TracesLayout view="search" q={search.q} maxAgeMinutes={result.maxAgeMinutes}>
-        <Disabled />
-      </TracesLayout>
-    );
+    return <Disabled />;
   }
   const refine = (change: Partial<TraceSearch>) =>
     void navigate({ to: "/admin/traces", search: { ...search, view: "search", ...change } });

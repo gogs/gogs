@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { AdminLayout } from "@/components/AdminLayout";
 import { FormAlert, FormField } from "@/components/FormField";
+import { InlineCode } from "@/components/InlineCode";
 import { RichText } from "@/components/RichText";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,16 +51,6 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
       <dt className="font-medium">{label}</dt>
       <dd className="min-w-0 wrap-anywhere text-(--color-muted-foreground)">{children}</dd>
     </div>
-  );
-}
-
-function InlineCode({ children }: { children: ReactNode }) {
-  return (
-    // Cloned decoration keeps the chip's padding and corners on every line a
-    // long value wraps to.
-    <code className="rounded border border-(--color-border) box-decoration-clone bg-(--color-surface) px-1.5 font-mono text-[0.8125rem] text-(--color-foreground)">
-      {children}
-    </code>
   );
 }
 
