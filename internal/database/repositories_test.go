@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
 )
 
@@ -75,7 +74,7 @@ func TestRepository_AfterFind(t *testing.T) {
 		UpdatedUnix:     now.Unix(),
 	}
 	_ = repo.AfterFind(db)
-	assert.Equal(t, conf.Repository.DefaultBranch, repo.DefaultBranch)
+	assert.Empty(t, repo.DefaultBranch)
 	assert.Equal(t, 3, repo.NumOpenIssues)
 	assert.Equal(t, 2, repo.NumOpenPulls)
 	assert.Equal(t, repo.CreatedUnix, repo.Created.Unix())
