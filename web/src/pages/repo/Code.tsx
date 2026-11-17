@@ -23,6 +23,7 @@ import {
   Pencil,
   Plus,
   Scale,
+  Search,
   ShieldCheck,
   Tag,
   Trash2,
@@ -185,6 +186,21 @@ export function RepoCode({
       <TooltipContent>{t("repo.pulls.compare_changes")}</TooltipContent>
     </Tooltip>
   ) : null;
+  const searchCode = (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Link
+          to="/$owner/$repo/search/$"
+          params={{ ...params, _splat: data.ref }}
+          aria-label={t("repo.code_search")}
+          className="glass-control grid size-8 shrink-0 place-items-center rounded-md border border-(--color-border) text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
+        >
+          <Search className="size-4" aria-hidden />
+        </Link>
+      </TooltipTrigger>
+      <TooltipContent>{t("repo.code_search")}</TooltipContent>
+    </Tooltip>
+  );
   const goToFile = (className?: string) => (
     <GoToFile owner={repo.owner} name={repo.name} gitRef={data.ref} commitID={data.commitID} className={className} />
   );
@@ -294,6 +310,7 @@ export function RepoCode({
                 </span>
                 {goToFile("min-w-40 flex-1 sm:order-4 sm:ml-auto sm:max-w-64")}
                 <span className="order-5 flex items-center gap-2">
+                  {searchCode}
                   {addFile}
                   <CloneMenu links={summary.cloneLinks} archiveLink={`${repoLink}/archive/${refPath(data.ref)}`} />
                 </span>
@@ -480,6 +497,7 @@ export function RepoCode({
             </span>
             {breadcrumb}
             <div className="ml-auto flex items-center gap-2">
+              {searchCode}
               {data.kind === "dir" ? (
                 <>
                   {goToFile(cn("w-56", inMain))}

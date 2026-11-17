@@ -1,6 +1,8 @@
 import { type AnyRoute, createRoute, notFound } from "@tanstack/react-router";
 
 import { loaderResponseError } from "@/lib/loader-error";
+import { validateFlag, validateListSearch } from "@/lib/page-search";
+import type { CodeSearchData } from "@/lib/queries/repo";
 import { subUrl } from "@/lib/url";
 import { Explore, type ExplorePage } from "@/pages/explore/Explore";
 import {
@@ -9,6 +11,7 @@ import {
   isExploreKind,
   validateExploreSearch,
 } from "@/pages/explore/Explore.search";
+import { CodeSearch } from "@/pages/search/CodeSearch";
 
 export function createExploreRoutes(rootRoute: AnyRoute) {
   const exploreRoute = createRoute({
@@ -42,5 +45,30 @@ export function createExploreRoutes(rootRoute: AnyRoute) {
     component: Explore,
   });
 
-  return [exploreRoute];
+  const codeSearchRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/search",
+    validateSearch: (search: Record<string, unknown>): { q?: string; matchCase?: boolean } => ({
+      q: validateListSearch(search).q,
+      matchCase: validateFlag(search.matchCase),
+    }),
+    loaderDeps: ({ search }: { search: { q?: string; matchCase?: boolean } }) => ({
+      q: search.q,
+      matchCase: search.matchCase,
+    }),
+    loader: async ({ deps }): Promise<CodeSearchData> => {
+      const params = new URLSearchParams();
+      if (deps.q) params.set("q", deps.q);
+      if (deps.matchCase) params.set("matchCase", "true");
+      const qs = params.size ? `?${params.toString()}` : "";
+      const res = await fetch(subUrl(`/api/web/search/code${qs}`), { credentials: "same-origin" });
+      if (!res.ok) {
+        throw await loaderResponseError(res);
+      }
+      return (await res.json()) as CodeSearchData;
+    },
+    component: CodeSearch,
+  });
+
+  return [exploreRoute, codeSearchRoute];
 }

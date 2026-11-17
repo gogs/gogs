@@ -12,6 +12,7 @@ import {
   type ListSearch,
   type PageSearch,
   validateBranchesSearch,
+  validateFlag,
   validateListSearch,
   validatePageSearch,
 } from "@/lib/page-search";
@@ -46,6 +47,7 @@ import {
   fetchRepoPullCommits,
   fetchRepoRelease,
   fetchRepoReleases,
+  fetchRepoSearch,
   fetchRepoSrc,
   fetchRepoWiki,
   fetchRepoWikiPageSource,
@@ -79,6 +81,7 @@ import { RepoPeople } from "@/pages/repo/People";
 import { RepoPull } from "@/pages/repo/Pull";
 import { RepoReleaseEditor, RepoReleases } from "@/pages/repo/Releases";
 import { type RepoReleasesSearch, validateRepoReleasesSearch } from "@/pages/repo/Releases.search";
+import { RepoSearch, type RepoSearchSearch } from "@/pages/repo/Search";
 import {
   RepoBranchProtection,
   RepoBranchSettings,
@@ -890,6 +893,38 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     },
   });
 
+  // The ref is the whole route path, or the default branch when it is empty.
+  const repoSearchRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$owner/$repo/search/$",
+    validateSearch: (search: Record<string, unknown>): RepoSearchSearch => ({
+      q: validateListSearch(search).q,
+      exhaustive: validateFlag(search.exhaustive),
+      matchCase: validateFlag(search.matchCase),
+    }),
+    loaderDeps: ({ search }: { search: RepoSearchSearch }) => ({
+      q: search.q,
+      exhaustive: search.exhaustive,
+      matchCase: search.matchCase,
+    }),
+    loader: ({ params, deps, context }) =>
+      loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
+        fetchRepoSearch(params.owner, params.repo, params._splat ?? "", deps),
+      ),
+    component: function Search() {
+      const { owner, repo } = repoSearchRoute.useParams();
+      const data = repoSearchRoute.useLoaderData();
+      return (
+        <RepoSearch
+          key={`${owner}/${repo}@${data.ref}?${data.query}&${data.exhaustive}&${data.matchCase}`}
+          owner={owner}
+          name={repo}
+          data={data}
+        />
+      );
+    },
+  });
+
   function RepoCodePage({
     owner,
     repo,
@@ -1210,6 +1245,7 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     repoHomeRoute,
     repoSrcRoute,
     repoCommitsRoute,
+    repoSearchRoute,
     repoStargazersRoute,
     repoWatchersRoute,
     repoIssuesRoute,
