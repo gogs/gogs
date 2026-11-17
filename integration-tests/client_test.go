@@ -106,7 +106,7 @@ func (c *client) sessionID() string {
 func (c *client) sessionValue(key string) any {
 	c.t.Helper()
 
-	store, err := sessions.Read(c.sessionID())
+	store, err := sessions.Read(c.t.Context(), c.sessionID())
 	require.NoError(c.t, err)
 	return store.Get(key)
 }

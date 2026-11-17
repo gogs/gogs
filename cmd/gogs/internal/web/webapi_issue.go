@@ -15,11 +15,11 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
-	"github.com/go-macaron/i18n"
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/i18n"
 	"gogs.io/gogs/internal/issuetemplate"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/pathx"

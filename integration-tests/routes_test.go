@@ -5,7 +5,6 @@ import (
 	"go/parser"
 	"go/token"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -19,11 +18,8 @@ type route struct {
 	// Pattern is the path as registered, joined with the paths of the groups
 	// it is in.
 	Pattern string
-	// Macaron is true for a route of Macaron, which the server does not record
-	// the pattern of. Otherwise the route is of Flamego.
-	Macaron bool
-	// Bridge is true for a Macaron route that hands requests to Flamego, which
-	// is covered by the Flamego routes behind it.
+	// Bridge is true for a route that hands requests to the API v1 handler,
+	// which is covered by the API v1 routes behind it.
 	Bridge bool
 	// Page is true for a route that renders a page of the web app, which the
 	// tests leave out. They test what the web app gets from the server.
@@ -56,10 +52,7 @@ var routePackages = map[string]string{
 // the name of the router variable in each.
 var routeRoots = []struct {
 	fn, router string
-	macaron    bool
 }{
-	{fn: "Run", router: "m", macaron: true},
-	{fn: "newMacaron", router: "m", macaron: true},
 	{fn: "newRoutingHandler", router: "f"},
 	{fn: "newAPIV1Handler", router: "f"},
 }
@@ -101,7 +94,7 @@ func listRoutes() ([]route, error) {
 		if fn == nil {
 			return nil, errors.Newf("function %q not found", root.fn)
 		}
-		l.walkFunc(webPkg, fn.Body, root.router, "", root.macaron)
+		l.walkFunc(webPkg, fn.Body, root.router, "")
 	}
 	if len(l.errs) > 0 {
 		return nil, errors.Newf("list routes:\n%s", strings.Join(l.errs, "\n"))
@@ -166,7 +159,7 @@ func (l *routeLister) collect(pkgPath string, f *ast.File) {
 }
 
 // walkFunc records the routes registered on the router in the body.
-func (l *routeLister) walkFunc(pkgPath string, body *ast.BlockStmt, router, prefix string, macaron bool) {
+func (l *routeLister) walkFunc(pkgPath string, body *ast.BlockStmt, router, prefix string) {
 	// Groups may take a function from a local variable.
 	locals := make(map[string]*ast.FuncLit)
 	ast.Inspect(body, func(n ast.Node) bool {
@@ -195,18 +188,18 @@ func (l *routeLister) walkFunc(pkgPath string, body *ast.BlockStmt, router, pref
 		if !ok {
 			return true
 		}
-		return l.visitCall(pkgPath, call, router, prefix, macaron, locals)
+		return l.visitCall(pkgPath, call, router, prefix, locals)
 	})
 }
 
 // visitCall records the route of the call, if it is one, and returns whether
 // to look into its arguments.
-func (l *routeLister) visitCall(pkgPath string, call *ast.CallExpr, router, prefix string, macaron bool, locals map[string]*ast.FuncLit) bool {
+func (l *routeLister) visitCall(pkgPath string, call *ast.CallExpr, router, prefix string, locals map[string]*ast.FuncLit) bool {
 	sel, ok := call.Fun.(*ast.SelectorExpr)
 	if !ok {
 		// A function of the same package the router is passed to.
 		if id, ok := call.Fun.(*ast.Ident); ok {
-			l.follow(pkgPath, l.funcs[pkgPath][id.Name], call, router, prefix, macaron)
+			l.follow(pkgPath, l.funcs[pkgPath][id.Name], call, router, prefix)
 		}
 		return true
 	}
@@ -215,7 +208,7 @@ func (l *routeLister) visitCall(pkgPath string, call *ast.CallExpr, router, pref
 	if pkg, ok := sel.X.(*ast.Ident); ok && pkg.Name != router {
 		for name, path := range l.importsOf(pkgPath, call) {
 			if name == pkg.Name && l.funcs[path] != nil {
-				l.follow(path, l.funcs[path][sel.Sel.Name], call, router, prefix, macaron)
+				l.follow(path, l.funcs[path][sel.Sel.Name], call, router, prefix)
 			}
 		}
 		return true
@@ -262,12 +255,10 @@ func (l *routeLister) visitCall(pkgPath string, call *ast.CallExpr, router, pref
 		r := route{
 			Method:  method,
 			Pattern: prefix + p,
-			Macaron: macaron,
-			Bridge:  macaron && isBridge(handlers),
+			Bridge:  isBridge(handlers),
 			// The web app itself, which serves every page.
-			Page: !macaron && prefix+p == "/{**}" ||
-				macaron && l.servesPage(pkgPath, call, handlers),
-			Pos: pos,
+			Page: prefix+p == "/{**}",
+			Pos:  pos,
 		}
 		if dynamic {
 			r.PathRegexp = dynamicPath
@@ -294,7 +285,7 @@ func (l *routeLister) visitCall(pkgPath string, call *ast.CallExpr, router, pref
 			l.errs = append(l.errs, pos+": group function not found")
 			return false
 		}
-		l.walkFunc(pkgPath, fn, router, prefix+p, macaron)
+		l.walkFunc(pkgPath, fn, router, prefix+p)
 		return false
 	case "Combo":
 		p, ok := path()
@@ -338,26 +329,17 @@ func (l *routeLister) visitCall(pkgPath string, call *ast.CallExpr, router, pref
 }
 
 // follow walks the function the router is passed to in the call.
-func (l *routeLister) follow(pkgPath string, fn *ast.FuncDecl, call *ast.CallExpr, router, prefix string, macaron bool) {
+func (l *routeLister) follow(pkgPath string, fn *ast.FuncDecl, call *ast.CallExpr, router, prefix string) {
 	if fn == nil {
 		return
 	}
 	for i, arg := range call.Args {
-		var passed bool
-		switch a := arg.(type) {
-		case *ast.Ident:
-			passed = a.Name == router
-		case *ast.SelectorExpr:
-			// Macaron's router, e.g., `m.Router`.
-			id, ok := a.X.(*ast.Ident)
-			passed = ok && id.Name == router && a.Sel.Name == "Router"
-		}
-		if !passed {
+		if id, ok := arg.(*ast.Ident); !ok || id.Name != router {
 			continue
 		}
 		param := paramName(fn, i)
 		if param != "" {
-			l.walkFunc(pkgPath, fn.Body, param, prefix, macaron)
+			l.walkFunc(pkgPath, fn.Body, param, prefix)
 		}
 	}
 }
@@ -418,125 +400,15 @@ func (l *routeLister) constString(pkgPath string, e ast.Expr) (string, bool) {
 	return "", false
 }
 
-// servesPage returns true when a handler renders a page of the web app, i.e.,
-// calls ServeWeb, e.g., the local `serveWeb` function, a function literal or a
-// function of another package such as `repo.ServeIssue`.
-func (l *routeLister) servesPage(pkgPath string, call *ast.CallExpr, handlers []ast.Expr) bool {
-	for _, h := range handlers {
-		var body *ast.BlockStmt
-		switch h := h.(type) {
-		case *ast.Ident:
-			if h.Name == "serveWeb" {
-				return true
-			}
-			if fn := l.funcs[pkgPath][h.Name]; fn != nil {
-				body = fn.Body
-			}
-		case *ast.FuncLit:
-			body = h.Body
-		case *ast.SelectorExpr:
-			if pkg, ok := h.X.(*ast.Ident); ok {
-				path := l.importsOf(pkgPath, call)[pkg.Name]
-				if fn := l.funcs[path][h.Sel.Name]; fn != nil {
-					body = fn.Body
-				}
-			}
-		}
-		if body != nil && callsServeWeb(body) {
-			return true
-		}
-	}
-	return false
-}
-
-func callsServeWeb(body *ast.BlockStmt) bool {
-	found := false
-	ast.Inspect(body, func(n ast.Node) bool {
-		if call, ok := n.(*ast.CallExpr); ok {
-			if sel, ok := call.Fun.(*ast.SelectorExpr); ok && sel.Sel.Name == "ServeWeb" {
-				found = true
-			}
-		}
-		return !found
-	})
-	return found
-}
-
-// isBridge returns true when a handler hands the request to Flamego.
+// isBridge returns true when a handler hands the request to the API v1
+// handler.
 func isBridge(handlers []ast.Expr) bool {
 	for _, h := range handlers {
 		if call, ok := h.(*ast.CallExpr); ok {
-			if id, ok := call.Fun.(*ast.Ident); ok && (id.Name == "flamegoBridger" || id.Name == "apiV1Bridger") {
-				return true
-			}
-		}
-		// Git over HTTP and LFS go to Flamego directly, without the session that
-		// flamegoBridger needs.
-		if sel, ok := h.(*ast.SelectorExpr); ok && sel.Sel.Name == "ServeHTTP" {
-			if id, ok := sel.X.(*ast.Ident); ok && id.Name == "webHandler" {
+			if id, ok := call.Fun.(*ast.Ident); ok && id.Name == "apiV1Bridger" {
 				return true
 			}
 		}
 	}
 	return false
-}
-
-// macaronPathRegexp returns the regular expression that matches the paths of
-// requests to a Macaron route pattern, e.g., "/:username/:reponame/raw/*".
-func macaronPathRegexp(pattern string) (*regexp.Regexp, error) {
-	var b strings.Builder
-	b.WriteString("^")
-	for i := 0; i < len(pattern); {
-		c := pattern[i]
-		switch {
-		case c == '^' || c == '$':
-			i++
-		case c == '?' && i+1 < len(pattern) && pattern[i+1] == ':':
-			// An optional parameter, e.g., "/?:page", whose slash is part of
-			// what is optional.
-			i++
-		case c == ':':
-			j := i + 1
-			for j < len(pattern) && (pattern[j] == '_' || ('a' <= pattern[j] && pattern[j] <= 'z') || ('A' <= pattern[j] && pattern[j] <= 'Z') || ('0' <= pattern[j] && pattern[j] <= '9')) {
-				j++
-			}
-			optional := i > 0 && pattern[i-1] == '?'
-			expr := "[^/]+"
-			if j < len(pattern) && pattern[j] == '(' {
-				depth, k := 0, j
-				for ; k < len(pattern); k++ {
-					if pattern[k] == '(' {
-						depth++
-					} else if pattern[k] == ')' {
-						depth--
-						if depth == 0 {
-							break
-						}
-					}
-				}
-				expr = "(?:" + pattern[j+1:k] + ")"
-				j = k + 1
-			}
-			if optional {
-				// The slash before "?:" was already written.
-				s := strings.TrimSuffix(b.String(), "/")
-				b.Reset()
-				b.WriteString(s + "(?:/" + expr + ")?")
-			} else {
-				b.WriteString(expr)
-			}
-			i = j
-		case c == '*':
-			b.WriteString(".*")
-			i++
-		case c == '\\' && i+1 < len(pattern):
-			b.WriteString(pattern[i : i+2])
-			i += 2
-		default:
-			b.WriteString(regexp.QuoteMeta(string(c)))
-			i++
-		}
-	}
-	b.WriteString("/?$")
-	return regexp.Compile(b.String())
 }

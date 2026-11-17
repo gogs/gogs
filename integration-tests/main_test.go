@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"github.com/go-macaron/session"
+	"github.com/flamego/session"
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
@@ -31,7 +31,7 @@ var (
 	// sshPort is the port of the builtin SSH server of the server under test.
 	sshPort int
 	// sessions reads the sessions the server under test stores in files.
-	sessions *session.Manager
+	sessions session.Store
 	logger   = logx.NewNoopLogger()
 )
 
@@ -163,13 +163,16 @@ func run(m *testing.M, dir string) (int, error) {
 	if err = Init(logger, configPath); err != nil {
 		return 0, errors.Wrap(err, "init")
 	}
-	sessions, err = session.NewManager("file", session.Options{
-		ProviderConfig: conf.Session.ProviderConfig,
-		Maxlifetime:    conf.Session.MaxLifeTime,
-		IDLength:       16,
-	})
+	sessions, err = session.FileIniter()(context.Background(),
+		session.FileConfig{
+			RootDir:  conf.Session.ProviderConfig,
+			Lifetime: time.Duration(conf.Session.MaxLifeTime) * time.Second,
+		},
+		// Tests only read sessions, which never writes their IDs.
+		session.IDWriter(func(http.ResponseWriter, *http.Request, string) {}),
+	)
 	if err != nil {
-		return 0, errors.Wrap(err, "create session manager")
+		return 0, errors.Wrap(err, "create session store")
 	}
 	code := m.Run()
 	stopServer()

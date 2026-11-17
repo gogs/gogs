@@ -45,7 +45,7 @@ function CommitBody({ body }: { body: string }) {
 
   return (
     <div className="mt-2 max-w-3xl">
-      <pre className="text-sm whitespace-pre-wrap text-(--color-muted-foreground)">{visible}</pre>
+      <pre className="text-sm wrap-anywhere whitespace-pre-wrap text-(--color-muted-foreground)">{visible}</pre>
       {needsClamp ? (
         <button
           type="button"

@@ -3,11 +3,10 @@ package v1
 import (
 	"net/http"
 
-	"github.com/go-macaron/i18n"
-
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
+	"gogs.io/gogs/internal/i18n"
 )
 
 func parseLoginSource(c *apiContext, sourceID int64) {

@@ -11,14 +11,13 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
 	"github.com/flamego/session"
-	"github.com/go-macaron/i18n"
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
-	"gopkg.in/macaron.v1"
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/i18n"
 )
 
 // Session keys of the WebAuthn ceremonies in progress, each holding the JSON of
@@ -266,7 +265,7 @@ func postUserSignInPasskeyChallenge(logger *logx.Logger, sess session.Session) (
 // postUserSignInPasskey signs in the owner of the passkey that answered the
 // challenge in progress. The passkey verified the user, so neither a password
 // nor a second factor is asked for.
-func postUserSignInPasskey(c flamego.Context, logger *logx.Logger, sess session.Session, mc *macaron.Context, l i18n.Locale) (statusCode int, resp any, err error) {
+func postUserSignInPasskey(c flamego.Context, logger *logx.Logger, store session.Store, sess session.Session, l i18n.Locale) (statusCode int, resp any, err error) {
 	failed := &bindingErrorResponse{Error: l.Tr("auth.passkey_sign_in_failed")}
 	data, ok := takePasskeySession(sess, passkeySignInSessionKey)
 	if !ok {
@@ -333,7 +332,7 @@ func postUserSignInPasskey(c flamego.Context, logger *logx.Logger, sess session.
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "mark passkey used")
 	}
 
-	if err = completeSignIn(sess, mc, owner.User); err != nil {
+	if err = completeSignIn(c.ResponseWriter(), c.Request().Request, store, sess, owner.User); err != nil {
 		logger.Error("Failed to complete sign-in", "userID", owner.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "complete sign-in")
 	}

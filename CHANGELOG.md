@@ -6,6 +6,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Added
 
+- Mermaid diagrams render in wiki pages, issues, comments and release notes, not only in Markdown files. [#8620](https://github.com/gogs/gogs/pull/8620)
 - Markdown supports GitHub alerts (`> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]` and `> [!CAUTION]`) and footnotes. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Headings in rendered Markdown have stable ids like GitHub's, e.g., `user-content-getting-started`, so links to sections also work in API output and outside the web interface. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Markdown renders `<kbd>` keys as keycaps, like GitHub, e.g., `<kbd>Ctrl</kbd>+<kbd>C</kbd>`. [#8598](https://github.com/gogs/gogs/pull/8598)
@@ -86,6 +87,7 @@ All notable changes to Gogs are documented in this file.
 - Updating a file through the contents API on a branch other than the default branch no longer fails after the first update. [#8189](https://github.com/gogs/gogs/issues/8189)
 - Users outside the push allowlist of a protected branch can no longer merge pull requests into it. [#8619](https://github.com/gogs/gogs/pull/8619)
 - Members who join a team in the push allowlist of a protected branch can push to it right away, and members who leave the team lose access right away, without saving the branch protection again. [#8619](https://github.com/gogs/gogs/pull/8619)
+- A long word in a commit message body, e.g., a file path, no longer runs past the commit page. [#8606](https://github.com/gogs/gogs/pull/8606)
 
 ### Removed
 
