@@ -48,6 +48,7 @@ func newMigrations(logger *logx.Logger, db *gorm.DB) []*goose.Migration {
 		newMigration(logger, db, 20261116224400, "add repository.pulls_allow_merge and repository.pulls_allow_squash", addRepositoryPullsAllowMergeAndSquash),
 		newMigration(logger, db, 20261116224500, "add attachment.uploader_id", addAttachmentUploaderID),
 		newMigration(logger, db, 20261116225300, "add repository pull request merge settings", addRepositoryPullsMergeSettings),
+		newMigration(logger, db, 20261117073704, "drop protect_branch_whitelist table", dropProtectBranchWhitelistTable),
 	}
 }
 
