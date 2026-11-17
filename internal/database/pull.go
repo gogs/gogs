@@ -549,7 +549,7 @@ func (s *PullRequestsStore) Merge(ctx context.Context, logger *logx.Logger, doer
 // FIXME: make a mechanism to clean up stable local copies.
 func (s *PullRequestsStore) testPatch(ctx context.Context, logger *logx.Logger, pr *PullRequest) (err error) {
 	if pr.BaseRepo == nil {
-		pr.BaseRepo, err = getRepositoryByID(s.db.WithContext(ctx), pr.BaseRepoID)
+		pr.BaseRepo, err = newReposStore(s.db).getWithAttributes(ctx, pr.BaseRepoID)
 		if err != nil {
 			return errors.Wrap(err, "get base repository")
 		}

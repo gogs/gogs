@@ -245,7 +245,7 @@ func (s *CommentsStore) LoadAttributes(ctx context.Context, comments ...*Comment
 			}
 		}
 		if c.Issue.Repo == nil {
-			c.Issue.Repo, err = getRepositoryByID(s.db.WithContext(ctx), c.Issue.RepoID)
+			c.Issue.Repo, err = newReposStore(s.db).getWithAttributes(ctx, c.Issue.RepoID)
 			if err != nil {
 				return errors.Wrapf(err, "get repository %d", c.Issue.RepoID)
 			}

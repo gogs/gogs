@@ -110,13 +110,12 @@ type exploreUser struct {
 func toExploreUser(u *database.User) exploreUser {
 	user := exploreUser{
 		Name: u.Name,
-		// Users loaded through GORM carry an HTML-sanitized full name, while those
-		// loaded through XORM carry the raw one. Normalize both to plain text.
+		// Users are loaded with an HTML-sanitized full name. Turn it back into
+		// plain text.
 		FullName:  html.UnescapeString(markup.Sanitize(u.FullName)),
 		AvatarURL: u.AvatarURLPath(),
 		Location:  u.Location,
 	}
-	// Read the column directly because XORM-loaded users leave Created unset.
 	// Organizations created before their creation time was recorded have none.
 	if u.CreatedUnix > 0 {
 		created := time.Unix(u.CreatedUnix, 0).UTC()

@@ -182,14 +182,14 @@ func (s *PullRequestsStore) LoadAttributes(ctx context.Context, prs ...*PullRequ
 	db := s.db.WithContext(ctx)
 	for _, pr := range prs {
 		if pr.HeadRepo == nil {
-			pr.HeadRepo, err = getRepositoryByID(db, pr.HeadRepoID)
+			pr.HeadRepo, err = newReposStore(db).getWithAttributes(ctx, pr.HeadRepoID)
 			if err != nil && !IsErrRepoNotExist(err) {
 				return errors.Wrapf(err, "get head repository %d", pr.HeadRepoID)
 			}
 		}
 
 		if pr.BaseRepo == nil {
-			pr.BaseRepo, err = getRepositoryByID(db, pr.BaseRepoID)
+			pr.BaseRepo, err = newReposStore(db).getWithAttributes(ctx, pr.BaseRepoID)
 			if err != nil {
 				return errors.Wrapf(err, "get base repository %d", pr.BaseRepoID)
 			}

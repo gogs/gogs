@@ -330,7 +330,7 @@ func (s *TeamsStore) ListRepos(ctx context.Context, teamID int64) ([]*Repository
 
 	repos := make([]*Repository, 0, len(repoIDs))
 	for _, repoID := range repoIDs {
-		repo, err := getRepositoryByID(db, repoID)
+		repo, err := newReposStore(db).getWithAttributes(ctx, repoID)
 		if err != nil {
 			return nil, errors.Wrapf(err, "get repository %d", repoID)
 		}
@@ -394,7 +394,7 @@ func (s *TeamsStore) RemoveRepo(ctx context.Context, t *Team, repoID int64) erro
 	}
 
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		repo, err := getRepositoryByID(tx, repoID)
+		repo, err := newReposStore(tx).getWithAttributes(ctx, repoID)
 		if err != nil {
 			return errors.Wrap(err, "get repository")
 		}
