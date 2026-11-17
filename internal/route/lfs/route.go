@@ -57,49 +57,69 @@ func askCredentials(logger *logx.Logger, w http.ResponseWriter) {
 // unless signing in is required to view anything.
 func authenticate(logger *logx.Logger, store Store) flamego.Handler {
 	return func(c flamego.Context) {
-		username, password := authx.DecodeBasic(c.Request().Header)
-		if username == "" {
+		// Like Git over HTTP, a user named by a trusted reverse proxy goes before
+		// Basic authentication.
+		user, viaProxy, err := context.ReverseProxyUser(store, c.Request().Request)
+		if err != nil {
+			internalServerError(logger, c.ResponseWriter())
+			logger.Error("Failed to authenticate by reverse proxy header", "error", err)
+			return
+		} else if viaProxy && user == nil {
+			// Like Git over HTTP, which serves public repositories without
+			// authentication, the viewer may still download what anyone can.
 			if conf.Auth.RequireSigninView {
-				askCredentials(logger, c.ResponseWriter())
+				c.ResponseWriter().WriteHeader(http.StatusNotFound)
 				return
 			}
 			c.Map(&database.User{Name: "anonymous"})
 			return
 		}
 
-		user, err := store.AuthenticateUser(c.Request().Context(), username, password, -1)
-		if err != nil && !auth.IsErrBadCredentials(err) {
-			internalServerError(logger, c.ResponseWriter())
-			logger.Error("Failed to authenticate user", "userName", username, "error", err)
-			return
-		}
-
-		if err == nil && store.IsTwoFactorEnabled(c.Request().Context(), user.ID) {
-			w := c.ResponseWriter()
-			w.WriteHeader(http.StatusBadRequest)
-			_, _ = w.Write([]byte("Users with 2FA enabled are not allowed to authenticate via username and password."))
-			return
-		}
-
-		// If username and password combination failed, try again using either username
-		// or password as the token.
-		if auth.IsErrBadCredentials(err) {
-			user, err = context.AuthenticateByToken(c.Request().Context(), logger, store, username)
-			if err != nil && !database.IsErrAccessTokenNotExist(err) {
-				internalServerError(logger, c.ResponseWriter())
-				logger.Error("Failed to authenticate by access token via username", "error", err)
-				return
-			} else if database.IsErrAccessTokenNotExist(err) {
-				// Try again using the password field as the token.
-				user, err = context.AuthenticateByToken(c.Request().Context(), logger, store, password)
-				if err != nil {
-					if database.IsErrAccessTokenNotExist(err) {
-						askCredentials(logger, c.ResponseWriter())
-					} else {
-						c.ResponseWriter().WriteHeader(http.StatusInternalServerError)
-						logger.Error("Failed to authenticate by access token via password", "error", err)
-					}
+		if !viaProxy {
+			username, password := authx.DecodeBasic(c.Request().Header)
+			if username == "" {
+				if conf.Auth.RequireSigninView {
+					askCredentials(logger, c.ResponseWriter())
 					return
+				}
+				c.Map(&database.User{Name: "anonymous"})
+				return
+			}
+
+			user, err = store.AuthenticateUser(c.Request().Context(), username, password, -1)
+			if err != nil && !auth.IsErrBadCredentials(err) {
+				internalServerError(logger, c.ResponseWriter())
+				logger.Error("Failed to authenticate user", "userName", username, "error", err)
+				return
+			}
+
+			if err == nil && store.IsTwoFactorEnabled(c.Request().Context(), user.ID) {
+				w := c.ResponseWriter()
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = w.Write([]byte("Users with 2FA enabled are not allowed to authenticate via username and password."))
+				return
+			}
+
+			// If username and password combination failed, try again using either username
+			// or password as the token.
+			if auth.IsErrBadCredentials(err) {
+				user, err = context.AuthenticateByToken(c.Request().Context(), logger, store, username)
+				if err != nil && !database.IsErrAccessTokenNotExist(err) {
+					internalServerError(logger, c.ResponseWriter())
+					logger.Error("Failed to authenticate by access token via username", "error", err)
+					return
+				} else if database.IsErrAccessTokenNotExist(err) {
+					// Try again using the password field as the token.
+					user, err = context.AuthenticateByToken(c.Request().Context(), logger, store, password)
+					if err != nil {
+						if database.IsErrAccessTokenNotExist(err) {
+							askCredentials(logger, c.ResponseWriter())
+						} else {
+							c.ResponseWriter().WriteHeader(http.StatusInternalServerError)
+							logger.Error("Failed to authenticate by access token via password", "error", err)
+						}
+						return
+					}
 				}
 			}
 		}
@@ -151,8 +171,10 @@ func authorize(logger *logx.Logger, store Store, mode database.AccessMode) flame
 				Private: repo.IsPrivate,
 			},
 		) {
-			// An anonymous user may have access after signing in.
-			if actor.ID <= 0 {
+			// An anonymous user may have access after signing in, unless it is a
+			// user named by a trusted reverse proxy that has no account, which
+			// credentials cannot change.
+			if _, viaProxy := context.ReverseProxyUsername(c.Request().Request); actor.ID <= 0 && !viaProxy {
 				askCredentials(logger, c.ResponseWriter())
 				return
 			}

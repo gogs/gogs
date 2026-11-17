@@ -133,56 +133,74 @@ func HTTPContexter(logger *logx.Logger, store Store) flamego.Handler {
 			return
 		}
 
-		// Handle HTTP Basic Authentication
-		authHead := c.Request().Header.Get("Authorization")
-		if authHead == "" {
-			askCredentials(c, http.StatusUnauthorized, "")
-			return
-		}
-
-		auths := strings.Fields(authHead)
-		if len(auths) != 2 || auths[0] != "Basic" {
-			askCredentials(c, http.StatusUnauthorized, "")
-			return
-		}
-		authUsername, authPassword, err := tool.BasicAuthDecode(auths[1])
+		// A trusted reverse proxy that has authenticated the user names it in a
+		// header. Proxies doing Basic authentication themselves often pass the
+		// client's "Authorization" header along, so the header goes first.
+		authUser, viaProxy, err := context.ReverseProxyUser(store, c.Request().Request)
 		if err != nil {
-			askCredentials(c, http.StatusUnauthorized, "")
-			return
-		}
-
-		authUser, err := store.AuthenticateUser(c.Request().Context(), authUsername, authPassword, -1)
-		if err != nil && !auth.IsErrBadCredentials(err) {
 			c.ResponseWriter().WriteHeader(http.StatusInternalServerError)
-			logger.Error("Failed to authenticate user", "userName", authUsername, "error", err)
+			logger.Error("Failed to authenticate by reverse proxy header", "error", err)
+			return
+		} else if viaProxy && authUser == nil {
+			// The user has no account, so it sees what a user without access
+			// does. Credentials cannot change that, so the client must not be
+			// asked for them.
+			c.ResponseWriter().WriteHeader(http.StatusNotFound)
 			return
 		}
 
-		// If username and password combination failed, try again using either username
-		// or password as the token.
-		if authUser == nil {
-			authUser, err = context.AuthenticateByToken(c.Request().Context(), logger, store, authUsername)
-			if err != nil && !database.IsErrAccessTokenNotExist(err) {
-				c.ResponseWriter().WriteHeader(http.StatusInternalServerError)
-				logger.Error("Failed to authenticate by access token via username", "error", err)
+		if !viaProxy {
+			// Handle HTTP Basic Authentication
+			authHead := c.Request().Header.Get("Authorization")
+			if authHead == "" {
+				askCredentials(c, http.StatusUnauthorized, "")
 				return
-			} else if database.IsErrAccessTokenNotExist(err) {
-				// Try again using the password field as the token.
-				authUser, err = context.AuthenticateByToken(c.Request().Context(), logger, store, authPassword)
-				if err != nil {
-					if database.IsErrAccessTokenNotExist(err) {
-						askCredentials(c, http.StatusUnauthorized, "")
-					} else {
-						c.ResponseWriter().WriteHeader(http.StatusInternalServerError)
-						logger.Error("Failed to authenticate by access token via password", "error", err)
-					}
-					return
-				}
 			}
-		} else if store.IsTwoFactorEnabled(c.Request().Context(), authUser.ID) {
-			askCredentials(c, http.StatusUnauthorized, `User with two-factor authentication enabled cannot perform HTTP/HTTPS operations via plain username and password
+
+			auths := strings.Fields(authHead)
+			if len(auths) != 2 || auths[0] != "Basic" {
+				askCredentials(c, http.StatusUnauthorized, "")
+				return
+			}
+			authUsername, authPassword, err := tool.BasicAuthDecode(auths[1])
+			if err != nil {
+				askCredentials(c, http.StatusUnauthorized, "")
+				return
+			}
+
+			authUser, err = store.AuthenticateUser(c.Request().Context(), authUsername, authPassword, -1)
+			if err != nil && !auth.IsErrBadCredentials(err) {
+				c.ResponseWriter().WriteHeader(http.StatusInternalServerError)
+				logger.Error("Failed to authenticate user", "userName", authUsername, "error", err)
+				return
+			}
+
+			// If username and password combination failed, try again using either username
+			// or password as the token.
+			if authUser == nil {
+				authUser, err = context.AuthenticateByToken(c.Request().Context(), logger, store, authUsername)
+				if err != nil && !database.IsErrAccessTokenNotExist(err) {
+					c.ResponseWriter().WriteHeader(http.StatusInternalServerError)
+					logger.Error("Failed to authenticate by access token via username", "error", err)
+					return
+				} else if database.IsErrAccessTokenNotExist(err) {
+					// Try again using the password field as the token.
+					authUser, err = context.AuthenticateByToken(c.Request().Context(), logger, store, authPassword)
+					if err != nil {
+						if database.IsErrAccessTokenNotExist(err) {
+							askCredentials(c, http.StatusUnauthorized, "")
+						} else {
+							c.ResponseWriter().WriteHeader(http.StatusInternalServerError)
+							logger.Error("Failed to authenticate by access token via password", "error", err)
+						}
+						return
+					}
+				}
+			} else if store.IsTwoFactorEnabled(c.Request().Context(), authUser.ID) {
+				askCredentials(c, http.StatusUnauthorized, `User with two-factor authentication enabled cannot perform HTTP/HTTPS operations via plain username and password
 Please create and use personal access token on user settings page`)
-			return
+				return
+			}
 		}
 
 		if authUser.IsDisabled() {

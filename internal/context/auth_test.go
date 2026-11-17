@@ -141,3 +141,43 @@ func TestAuthenticatedUserBasicAuth(t *testing.T) {
 		})
 	}
 }
+
+// racingRegistrationStore acts as if another request registers the user
+// between the lookup and CreateUser.
+type racingRegistrationStore struct {
+	AuthStore
+	registered *bool
+}
+
+func (s racingRegistrationStore) GetUserByUsername(_ context.Context, username string) (*database.User, error) {
+	if !*s.registered {
+		return nil, database.ErrUserNotExist{}
+	}
+	return &database.User{ID: 7, Name: username}, nil
+}
+
+func (s racingRegistrationStore) CreateUser(context.Context, string, string, database.CreateUserOptions) (*database.User, error) {
+	*s.registered = true
+	return nil, database.ErrUserAlreadyExist{}
+}
+
+func TestReverseProxyUser_concurrentRegistration(t *testing.T) {
+	_, trusted, err := net.ParseCIDR("127.0.0.0/8")
+	require.NoError(t, err)
+	conf.SetMockAuth(t, conf.AuthOpts{
+		EnableReverseProxyAuthentication:   true,
+		EnableReverseProxyAutoRegistration: true,
+		ReverseProxyAuthenticationHeader:   "X-WEBAUTH-USER",
+		TrustedProxyCIDRs:                  []*net.IPNet{trusted},
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.RemoteAddr = "127.0.0.1:1234"
+	req.Header.Set("X-WEBAUTH-USER", "alice")
+
+	user, ok, err := ReverseProxyUser(racingRegistrationStore{registered: new(bool)}, req)
+	require.NoError(t, err)
+	assert.True(t, ok)
+	require.NotNil(t, user)
+	assert.Equal(t, int64(7), user.ID)
+}

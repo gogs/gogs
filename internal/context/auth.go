@@ -107,34 +107,12 @@ func AuthenticatedUser(logger *logx.Logger, store AuthStore, r *http.Request, se
 	uid, isTokenAuth := authenticatedUserID(logger, store, r, sess)
 
 	if uid <= 0 {
-		if conf.Auth.EnableReverseProxyAuthentication && isRequestFromTrustedProxy(r) {
-			webAuthUser := r.Header.Get(conf.Auth.ReverseProxyAuthenticationHeader)
-			if len(webAuthUser) > 0 {
-				user, err := store.GetUserByUsername(r.Context(), webAuthUser)
-				if err != nil {
-					if !database.IsErrUserNotExist(err) {
-						logger.Error("Failed to get user by name", "username", webAuthUser, "error", err)
-						return nil, false, false
-					}
-
-					// Check if enabled auto-registration.
-					if conf.Auth.EnableReverseProxyAutoRegistration {
-						user, err = store.CreateUser(
-							r.Context(),
-							webAuthUser,
-							uuid.New().String()+"@localhost",
-							database.CreateUserOptions{
-								Activated: true,
-							},
-						)
-						if err != nil {
-							logger.Error("Failed to create user", "username", webAuthUser, "error", err)
-							return nil, false, false
-						}
-					}
-				}
-				return user, false, false
-			}
+		user, ok, err := ReverseProxyUser(store, r)
+		if err != nil {
+			logger.Error("Failed to authenticate by reverse proxy header", "error", err)
+			return nil, false, false
+		} else if ok {
+			return user, false, false
 		}
 
 		// Check with basic auth. The web API under "/api/web" serves the browser,
@@ -173,6 +151,63 @@ func AuthenticatedUser(logger *logx.Logger, store AuthStore, r *http.Request, se
 		return nil, false, false
 	}
 	return u, false, isTokenAuth
+}
+
+// ReverseProxyUser returns the user named in the reverse proxy authentication
+// header (`[auth] REVERSE_PROXY_AUTHENTICATION_HEADER`), creating it when
+// auto-registration is enabled. The bool is false when the header does not
+// apply to the request: the feature is off, the request did not come from a
+// trusted proxy, or the header is empty. Otherwise the header decides who the
+// viewer is, and the user is nil when it names a user that does not exist or,
+// with auto-registration, a name that is not allowed.
+func ReverseProxyUser(store AuthStore, r *http.Request) (_ *database.User, ok bool, _ error) {
+	username, ok := ReverseProxyUsername(r)
+	if !ok {
+		return nil, false, nil
+	}
+
+	user, err := store.GetUserByUsername(r.Context(), username)
+	if err == nil {
+		return user, true, nil
+	} else if !database.IsErrUserNotExist(err) {
+		return nil, true, errors.Wrap(err, "get user by name")
+	}
+
+	if !conf.Auth.EnableReverseProxyAutoRegistration {
+		return nil, true, nil
+	}
+	user, err = store.CreateUser(
+		r.Context(),
+		username,
+		uuid.New().String()+"@localhost",
+		database.CreateUserOptions{
+			Activated: true,
+		},
+	)
+	if err == nil {
+		return user, true, nil
+	} else if database.IsErrNameNotAllowed(err) {
+		return nil, true, nil
+	} else if database.IsErrUserAlreadyExist(err) {
+		// Another request has just registered the same user.
+		user, err = store.GetUserByUsername(r.Context(), username)
+		if err != nil {
+			return nil, true, errors.Wrap(err, "get user by name after concurrent registration")
+		}
+		return user, true, nil
+	}
+	return nil, true, errors.Wrapf(err, "create user %q", username)
+}
+
+// ReverseProxyUsername returns the username in the reverse proxy
+// authentication header. The bool is false when the header does not apply to
+// the request, as described for ReverseProxyUser.
+func ReverseProxyUsername(r *http.Request) (string, bool) {
+	if !conf.Auth.EnableReverseProxyAuthentication || !isRequestFromTrustedProxy(r) {
+		return "", false
+	}
+	username := r.Header.Get(conf.Auth.ReverseProxyAuthenticationHeader)
+	return username, username != ""
 }
 
 // isRequestFromTrustedProxy reports whether the request's immediate remote

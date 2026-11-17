@@ -262,9 +262,14 @@ REVERSE_PROXY_AUTHENTICATION_HEADER = X-WEBAUTH-USER
 | `ENABLE_REVERSE_PROXY_AUTHENTICATION` | `false` | Enable reading the authenticated username from a request header. |
 | `REVERSE_PROXY_AUTHENTICATION_HEADER` | `X-WEBAUTH-USER` | The HTTP header containing the authenticated username. |
 | `ENABLE_REVERSE_PROXY_AUTO_REGISTRATION` | `false` | Automatically create a Gogs account for users that do not yet exist. |
+| `TRUSTED_PROXY_IPS` | `127.0.0.0/8,::1/128` | The IP addresses or CIDR ranges of the proxies allowed to set the header. Gogs ignores the header in requests from other addresses. |
+
+The header authenticates the user for the web, the API, and Git and Git LFS over HTTP. Requests without the header, e.g., from a Git client the proxy lets through, still use HTTP Basic authentication.
 
 When auto-registration is enabled, Gogs creates new accounts with an activated status and a placeholder email address. The user can update their email after first login.
 
 <Warning>
   Only enable this feature if Gogs is exclusively accessed through a trusted reverse proxy that sets the header. Exposing Gogs directly to the internet with this enabled would allow anyone to impersonate any user by setting the header themselves.
+
+  The proxy must remove or overwrite the header the client sends on every path, including paths it does not authenticate, such as the Git and Git LFS paths it lets through to Gogs. Otherwise a client can set the header on those paths and be authenticated as any user.
 </Warning>

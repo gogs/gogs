@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/flamego/flamego"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/auth"
@@ -200,10 +202,106 @@ func TestAuthenticate(t *testing.T) {
 	}
 }
 
+func TestAuthenticate_reverseProxy(t *testing.T) {
+	_, trusted, err := net.ParseCIDR("10.0.0.0/8")
+	require.NoError(t, err)
+
+	tests := []struct {
+		name              string
+		remoteAddr        string
+		proxyUser         string
+		requireSigninView bool
+		expStatusCode     int
+		expBody           string
+	}{
+		{
+			name:          "header from trusted proxy goes before Basic authentication",
+			remoteAddr:    "10.0.0.1:1234",
+			proxyUser:     "unknwon",
+			expStatusCode: http.StatusOK,
+			expBody:       "ID: 1, Name: unknwon",
+		},
+		{
+			name:          "header from trusted proxy names unknown user",
+			remoteAddr:    "10.0.0.1:1234",
+			proxyUser:     "ghost",
+			expStatusCode: http.StatusOK,
+			expBody:       "ID: 0, Name: anonymous",
+		},
+		{
+			name:              "header from trusted proxy names unknown user when signing in is required",
+			remoteAddr:        "10.0.0.1:1234",
+			proxyUser:         "ghost",
+			requireSigninView: true,
+			expStatusCode:     http.StatusNotFound,
+		},
+		{
+			name:          "empty header from trusted proxy falls back to Basic authentication",
+			remoteAddr:    "10.0.0.1:1234",
+			proxyUser:     "",
+			expStatusCode: http.StatusOK,
+			expBody:       "ID: 2, Name: username",
+		},
+		{
+			name:          "header from untrusted address is ignored",
+			remoteAddr:    "192.0.2.1:1234",
+			proxyUser:     "unknwon",
+			expStatusCode: http.StatusOK,
+			expBody:       "ID: 2, Name: username",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			conf.SetMockAuth(t, conf.AuthOpts{
+				EnableReverseProxyAuthentication: true,
+				ReverseProxyAuthenticationHeader: "X-WEBAUTH-USER",
+				TrustedProxyCIDRs:                []*net.IPNet{trusted},
+				RequireSigninView:                test.requireSigninView,
+			})
+
+			mockStore := NewMockStore()
+			mockStore.GetUserByUsernameFunc.SetDefaultHook(func(_ context.Context, username string) (*database.User, error) {
+				if username == "unknwon" {
+					return &database.User{ID: 1, Name: "unknwon"}, nil
+				}
+				return nil, database.ErrUserNotExist{}
+			})
+			// The Basic credentials name a different user, so the response shows
+			// which of the two authenticated the request.
+			mockStore.AuthenticateUserFunc.SetDefaultHook(func(_ context.Context, login, password string, _ int64) (*database.User, error) {
+				if login == "username" && password == "password" {
+					return &database.User{ID: 2, Name: "username"}, nil
+				}
+				return nil, auth.ErrBadCredentials{}
+			})
+
+			m := flamego.New()
+			m.Get("/", authenticate(logx.NewNoopLogger(), mockStore), func(w http.ResponseWriter, user *database.User) {
+				_, _ = fmt.Fprintf(w, "ID: %d, Name: %s", user.ID, user.Name)
+			})
+
+			r := httptest.NewRequest("GET", "/", nil)
+			r.RemoteAddr = test.remoteAddr
+			r.Header.Set("Authorization", "Basic dXNlcm5hbWU6cGFzc3dvcmQ=")
+			r.Header.Set("X-WEBAUTH-USER", test.proxyUser)
+
+			rr := httptest.NewRecorder()
+			m.ServeHTTP(rr, r)
+
+			resp := rr.Result()
+			assert.Equal(t, test.expStatusCode, resp.StatusCode)
+			body, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			assert.Equal(t, test.expBody, string(body))
+		})
+	}
+}
+
 func TestAuthorize(t *testing.T) {
 	tests := []struct {
 		name          string
 		anonymous     bool
+		proxyUser     string
 		accessMode    database.AccessMode
 		mockStore     func() *MockStore
 		expStatusCode int
@@ -276,6 +374,23 @@ func TestAuthorize(t *testing.T) {
 			expBody: `{"message":"Credentials needed"}` + "\n",
 		},
 		{
+			name:       "anonymous actor named by reverse proxy is not authorized",
+			anonymous:  true,
+			proxyUser:  "ghost",
+			accessMode: database.AccessModeRead,
+			mockStore: func() *MockStore {
+				mockStore := NewMockStore()
+				mockStore.GetRepositoryByNameFunc.SetDefaultHook(func(ctx context.Context, ownerID int64, name string) (*database.Repository, error) {
+					return &database.Repository{Name: name, IsPrivate: true}, nil
+				})
+				mockStore.GetUserByUsernameFunc.SetDefaultHook(func(ctx context.Context, username string) (*database.User, error) {
+					return &database.User{Name: username}, nil
+				})
+				return mockStore
+			},
+			expStatusCode: http.StatusNotFound,
+		},
+		{
 			name:       "actor is authorized",
 			accessMode: database.AccessModeRead,
 			mockStore: func() *MockStore {
@@ -321,6 +436,18 @@ func TestAuthorize(t *testing.T) {
 			r, err := http.NewRequest("GET", "/owner/repo", nil)
 			if err != nil {
 				t.Fatal(err)
+			}
+
+			if test.proxyUser != "" {
+				_, trusted, err := net.ParseCIDR("10.0.0.0/8")
+				require.NoError(t, err)
+				conf.SetMockAuth(t, conf.AuthOpts{
+					EnableReverseProxyAuthentication: true,
+					ReverseProxyAuthenticationHeader: "X-WEBAUTH-USER",
+					TrustedProxyCIDRs:                []*net.IPNet{trusted},
+				})
+				r.RemoteAddr = "10.0.0.1:1234"
+				r.Header.Set("X-WEBAUTH-USER", test.proxyUser)
 			}
 
 			rr := httptest.NewRecorder()
