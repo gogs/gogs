@@ -1,12 +1,14 @@
 import { type DiffsHighlighter, type ThemedToken, getFiletypeFromFileName, getSharedHighlighter } from "@pierre/diffs";
 import { useQuery } from "@tanstack/react-query";
-import { FileCode } from "lucide-react";
-import { type ReactNode, useMemo } from "react";
+import { FileCode, SlidersHorizontal } from "lucide-react";
+import { type ReactNode, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { CodeSearchInput } from "@/components/CodeSearchInput";
+import { MenuCheckbox } from "@/components/MenuCheckbox";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { RepoSearchFile, RepoSearchLine } from "@/lib/queries/repo";
 import { resolveTheme, useTheme } from "@/lib/theme-context";
 import { cn } from "@/lib/utils";
@@ -229,11 +231,14 @@ export function CodeSearchForm({
   onSearch,
   autoFocus,
   global,
+  options,
 }: {
   query: string;
   onSearch: (query: string) => void;
   autoFocus?: boolean;
   global?: boolean;
+  // options goes after the search button, e.g., CodeSearchOptions.
+  options?: ReactNode;
 }) {
   const { t } = useTranslation();
   return (
@@ -249,25 +254,56 @@ export function CodeSearchForm({
       <Button type="submit" variant="outline" size="sm" className="h-8">
         {t("explore.search")}
       </Button>
+      {options}
     </form>
   );
 }
 
-// CodeSearchOption is a checkbox that changes how the search is run.
-export function CodeSearchOption({
-  label,
-  checked,
-  onChange,
+// CodeSearchOptions is a menu of options that change how the search is run.
+// The button shows how many are on. Picking one closes the menu, since it
+// runs the search again.
+export function CodeSearchOptions({
+  options,
 }: {
-  label: string;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
+  options: { label: string; checked: boolean; onChange: (checked: boolean) => void }[];
 }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const on = options.filter((option) => option.checked).length;
   return (
-    <label className="flex min-h-8 cursor-pointer items-center gap-2 text-sm">
-      <Checkbox checked={checked} onCheckedChange={(value) => onChange(value === true)} />
-      {label}
-    </label>
+    <Popover open={open} onOpenChange={setOpen}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className={cn("h-8 gap-1 px-2", on && "text-(--color-primary)")}
+              aria-label={on ? t("repo.code_search.options_on", { count: on }) : t("repo.code_search.options")}
+            >
+              <SlidersHorizontal className="size-4" aria-hidden />
+              {on ? <span className="text-xs font-semibold tabular-nums">{on}</span> : null}
+            </Button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent>{t("repo.code_search.options")}</TooltipContent>
+      </Tooltip>
+      <PopoverContent align="end" className="w-56 p-1">
+        {options.map((option) => (
+          <MenuCheckbox
+            key={option.label}
+            checked={option.checked}
+            onSelect={() => {
+              setOpen(false);
+              option.onChange(!option.checked);
+            }}
+          >
+            {option.label}
+          </MenuCheckbox>
+        ))}
+      </PopoverContent>
+    </Popover>
   );
 }
 

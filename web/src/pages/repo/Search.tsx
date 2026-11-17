@@ -3,7 +3,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { CodeSearchForm, CodeSearchHelp, CodeSearchOption, CodeSearchResults } from "@/components/CodeSearchResults";
+import { CodeSearchForm, CodeSearchHelp, CodeSearchOptions, CodeSearchResults } from "@/components/CodeSearchResults";
 import { RefPicker } from "@/components/RefPicker";
 import { RepoHeader } from "@/components/RepoHeader";
 import { usePageTitle } from "@/lib/page-title";
@@ -64,19 +64,27 @@ export function RepoSearch({ owner, name, data }: { owner: string; name: string;
               </Link>
             )}
           />
-          <CodeSearchForm query={data.query} autoFocus={!data.query} onSearch={(q) => search(q)} />
-          <div className="flex flex-wrap items-center gap-x-4">
-            <CodeSearchOption
-              label={t("repo.code_search.match_case")}
-              checked={data.matchCase}
-              onChange={(matchCase) => search(data.query, { matchCase })}
-            />
-            <CodeSearchOption
-              label={t("repo.code_search.exhaustive")}
-              checked={data.exhaustive}
-              onChange={(exhaustive) => search(data.query, { exhaustive })}
-            />
-          </div>
+          <CodeSearchForm
+            query={data.query}
+            autoFocus={!data.query}
+            onSearch={(q) => search(q)}
+            options={
+              <CodeSearchOptions
+                options={[
+                  {
+                    label: t("repo.code_search.match_case"),
+                    checked: data.matchCase,
+                    onChange: (matchCase) => search(data.query, { matchCase }),
+                  },
+                  {
+                    label: t("repo.code_search.exhaustive"),
+                    checked: data.exhaustive,
+                    onChange: (exhaustive) => search(data.query, { exhaustive }),
+                  },
+                ]}
+              />
+            }
+          />
         </div>
 
         {!data.keyword ? (

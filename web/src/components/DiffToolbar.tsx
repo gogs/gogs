@@ -1,15 +1,8 @@
-import {
-  Check,
-  ChevronDown,
-  Maximize2,
-  Minimize2,
-  PanelLeftClose,
-  PanelLeftOpen,
-  SlidersHorizontal,
-} from "lucide-react";
+import { ChevronDown, Maximize2, Minimize2, PanelLeftClose, PanelLeftOpen, SlidersHorizontal } from "lucide-react";
 import { type ReactNode, type Ref } from "react";
 import { Trans, useTranslation } from "react-i18next";
 
+import { MenuCheckbox } from "@/components/MenuCheckbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -276,31 +269,6 @@ function MenuRadio({ checked, onSelect, children }: { checked: boolean; onSelect
         )}
       >
         {checked ? <span className="size-2 rounded-full bg-(--color-primary)" /> : null}
-      </span>
-      <span>{children}</span>
-    </button>
-  );
-}
-
-function MenuCheckbox({
-  checked,
-  onSelect,
-  children,
-}: {
-  checked: boolean;
-  onSelect: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      role="menuitemcheckbox"
-      aria-checked={checked}
-      onClick={onSelect}
-      className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-(--color-surface)"
-    >
-      <span className="grid size-4 place-items-center">
-        {checked ? <Check className="size-3.5 text-(--color-primary)" aria-hidden /> : null}
       </span>
       <span>{children}</span>
     </button>

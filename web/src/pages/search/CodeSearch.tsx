@@ -2,7 +2,7 @@ import { Link, getRouteApi, useNavigate } from "@tanstack/react-router";
 import { TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { CodeSearchForm, CodeSearchHelp, CodeSearchOption, CodeSearchResults } from "@/components/CodeSearchResults";
+import { CodeSearchForm, CodeSearchHelp, CodeSearchOptions, CodeSearchResults } from "@/components/CodeSearchResults";
 import { usePageTitle } from "@/lib/page-title";
 import { refPath } from "@/lib/queries/repo";
 import { subUrl } from "@/lib/url";
@@ -22,7 +22,7 @@ export function CodeSearch() {
   return (
     <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6">
       <h1 className="mb-3 text-xl font-semibold">{t("repo.code_search")}</h1>
-      <div className="mb-5 flex flex-wrap items-center gap-3">
+      <div className="mb-5 flex">
         <CodeSearchForm
           key={data.query}
           query={data.query}
@@ -31,12 +31,20 @@ export function CodeSearch() {
           onSearch={(q) =>
             void navigate({ to: "/search", search: { q: q || undefined, matchCase: data.matchCase || undefined } })
           }
-        />
-        <CodeSearchOption
-          label={t("repo.code_search.match_case")}
-          checked={data.matchCase}
-          onChange={(matchCase) =>
-            void navigate({ to: "/search", search: { q: data.query || undefined, matchCase: matchCase || undefined } })
+          options={
+            <CodeSearchOptions
+              options={[
+                {
+                  label: t("repo.code_search.match_case"),
+                  checked: data.matchCase,
+                  onChange: (matchCase) =>
+                    void navigate({
+                      to: "/search",
+                      search: { q: data.query || undefined, matchCase: matchCase || undefined },
+                    }),
+                },
+              ]}
+            />
           }
         />
       </div>
