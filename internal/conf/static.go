@@ -212,7 +212,7 @@ var (
 	// Tracing settings
 	Tracing struct {
 		Enabled                  bool
-		MaxMemory                int64 `ini:"MAX_MEMORY_MIB"`
+		MaxMemoryMiB             int64 `ini:"MAX_MEMORY_MIB"`
 		MaxAge                   time.Duration
 		SlowThreshold            time.Duration
 		SamplesPerRoutePerMinute int

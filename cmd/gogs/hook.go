@@ -267,7 +267,7 @@ func startProcessSpan(ctx context.Context, logger *logx.Logger, name string, exp
 		"tracestate":  os.Getenv("TRACESTATE"),
 	})
 	ctx, processSpan = otel.Tracer("gogs.io/gogs/cmd/gogs").Start(ctx, name)
-	// Gogs passes the repository and the pusher to Git, which passes them on
+	// Main process passes the repository and the pusher to Git, which passes them on
 	// to hooks.
 	if repoID, err := strconv.ParseInt(os.Getenv(database.EnvRepoID), 10, 64); err == nil {
 		telemetry.SetRepository(ctx, repoID)

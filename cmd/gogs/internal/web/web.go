@@ -74,7 +74,7 @@ func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOver
 	var spanProcessors []sdktrace.SpanProcessor
 	if conf.Tracing.Enabled {
 		traceStore = telemetry.NewStore(telemetry.Options{
-			MaxMemory:                conf.Tracing.MaxMemory << 20,
+			MaxMemory:                conf.Tracing.MaxMemoryMiB << 20,
 			MaxAge:                   conf.Tracing.MaxAge,
 			SlowThreshold:            conf.Tracing.SlowThreshold,
 			SamplesPerRoutePerMinute: conf.Tracing.SamplesPerRoutePerMinute,
