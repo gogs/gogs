@@ -55,6 +55,65 @@ Indexes:
 	"idx_action_user_id" (user_id)
 ```
 
+# Table "attachment"
+
+```
+    Field    |    Column    |  PostgreSQL  |         MySQL         |        SQLite3        
+-------------+--------------+--------------+-----------------------+-----------------------
+ ID          | id           | BIGSERIAL    | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ UUID        | uuid         | VARCHAR(40)  | VARCHAR(40)           | TEXT                  
+ IssueID     | issue_id     | BIGINT       | BIGINT                | INTEGER               
+ CommentID   | comment_id   | BIGINT       | BIGINT                | INTEGER               
+ ReleaseID   | release_id   | BIGINT       | BIGINT                | INTEGER               
+ UploaderID  | uploader_id  | BIGINT       | BIGINT                | INTEGER               
+ Name        | name         | VARCHAR(255) | VARCHAR(255)          | TEXT                  
+ CreatedUnix | created_unix | BIGINT       | BIGINT                | INTEGER               
+
+Primary keys: id
+Indexes: 
+	"IDX_attachment_issue_id" (issue_id)
+	"IDX_attachment_release_id" (release_id)
+	"UQE_attachment_uuid" UNIQUE (uuid)
+```
+
+# Table "collaboration"
+
+```
+ Field  | Column  |         PostgreSQL         |         MySQL          |          SQLite3           
+--------+---------+----------------------------+------------------------+----------------------------
+ ID     | id      | BIGSERIAL                  | BIGINT AUTO_INCREMENT  | INTEGER AUTOINCREMENT      
+ UserID | user_id | BIGINT NOT NULL            | BIGINT NOT NULL        | INTEGER NOT NULL           
+ RepoID | repo_id | BIGINT NOT NULL            | BIGINT NOT NULL        | INTEGER NOT NULL           
+ Mode   | mode    | INTEGER NOT NULL DEFAULT 2 | INT NOT NULL DEFAULT 2 | INTEGER NOT NULL DEFAULT 2 
+
+Primary keys: id
+Indexes: 
+	"IDX_collaboration_repo_id" (repo_id)
+	"IDX_collaboration_user_id" (user_id)
+	"UQE_collaboration_s" UNIQUE (user_id, repo_id)
+```
+
+# Table "comment"
+
+```
+    Field    |    Column    | PostgreSQL  |         MySQL         |        SQLite3        
+-------------+--------------+-------------+-----------------------+-----------------------
+ ID          | id           | BIGSERIAL   | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ Type        | type         | INTEGER     | INT                   | INTEGER               
+ PosterID    | poster_id    | BIGINT      | BIGINT                | INTEGER               
+ IssueID     | issue_id     | BIGINT      | BIGINT                | INTEGER               
+ CommitID    | commit_id    | BIGINT      | BIGINT                | INTEGER               
+ Line        | line         | BIGINT      | BIGINT                | INTEGER               
+ Content     | content      | TEXT        | TEXT                  | TEXT                  
+ CreatedUnix | created_unix | BIGINT      | BIGINT                | INTEGER               
+ UpdatedUnix | updated_unix | BIGINT      | BIGINT                | INTEGER               
+ CommitSHA   | commit_sha   | VARCHAR(64) | VARCHAR(64)           | TEXT                  
+
+Primary keys: id
+Indexes: 
+	"IDX_comment_issue_id" (issue_id)
+```
+
 # Table "deploy_key"
 
 ```
@@ -130,6 +189,33 @@ Indexes:
 Primary keys: id
 Indexes: 
 	"IDX_hook_task_repo_id" (repo_id)
+```
+
+# Table "issue"
+
+```
+    Field     |    Column     |  PostgreSQL  |         MySQL         |        SQLite3        
+--------------+---------------+--------------+-----------------------+-----------------------
+ ID           | id            | BIGSERIAL    | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ RepoID       | repo_id       | BIGINT       | BIGINT                | INTEGER               
+ Index        | index         | BIGINT       | BIGINT                | INTEGER               
+ PosterID     | poster_id     | BIGINT       | BIGINT                | INTEGER               
+ Title        | name          | VARCHAR(255) | VARCHAR(255)          | TEXT                  
+ Content      | content       | TEXT         | TEXT                  | TEXT                  
+ MilestoneID  | milestone_id  | BIGINT       | BIGINT                | INTEGER               
+ Priority     | priority      | INTEGER      | INT                   | INTEGER               
+ AssigneeID   | assignee_id   | BIGINT       | BIGINT                | INTEGER               
+ IsClosed     | is_closed     | BOOLEAN      | BOOLEAN               | NUMERIC               
+ IsPull       | is_pull       | BOOLEAN      | BOOLEAN               | NUMERIC               
+ NumComments  | num_comments  | INTEGER      | INT                   | INTEGER               
+ DeadlineUnix | deadline_unix | BIGINT       | BIGINT                | INTEGER               
+ CreatedUnix  | created_unix  | BIGINT       | BIGINT                | INTEGER               
+ UpdatedUnix  | updated_unix  | BIGINT       | BIGINT                | INTEGER               
+
+Primary keys: id
+Indexes: 
+	"IDX_issue_repo_id" (repo_id)
+	"UQE_issue_repo_index" UNIQUE (repo_id, index)
 ```
 
 # Table "issue_label"

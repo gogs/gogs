@@ -67,11 +67,11 @@ func comparePull(ctx context.Context, logger *logx.Logger, viewer *database.User
 				}
 				return nil, http.StatusInternalServerError, errors.Wrap(err, "get head owner")
 			}
-			var forked bool
-			if p.HeadRepo, forked, err = database.HasForkedRepo(p.HeadOwner.ID, repo.ID); err != nil {
+			if p.HeadRepo, err = database.Handle.Repositories().GetForkBy(ctx, repo.ID, p.HeadOwner.ID); err != nil {
+				if database.IsErrRepoNotExist(err) {
+					return nil, http.StatusNotFound, errNotExist
+				}
 				return nil, http.StatusInternalServerError, errors.Wrap(err, "get fork")
-			} else if !forked {
-				return nil, http.StatusNotFound, errNotExist
 			}
 			if p.HeadGitRepo, err = git.Open(p.HeadRepo.RepoPath()); err != nil {
 				return nil, http.StatusInternalServerError, errors.Wrap(err, "open head repository")

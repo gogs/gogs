@@ -203,11 +203,12 @@ type repoNameResponse struct {
 // patchRepoSettings renames the repository and changes its description,
 // website and visibility.
 func patchRepoSettings(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, rc *repoAdminContext, req repoSettingsRequest) (statusCode int, resp any, err error) {
+	ctx := c.Request().Context()
 	repo := rc.Repo
 	oldName := repo.Name
 	renamed := repo.LowerName != strings.ToLower(req.RepoName)
 	if renamed {
-		if err = database.ChangeRepositoryName(rc.Owner, repo.Name, req.RepoName); err != nil {
+		if err = database.Handle.Repositories().Rename(ctx, rc.Owner, repo.Name, req.RepoName); err != nil {
 			var msg string
 			switch {
 			case database.IsErrRepoAlreadyExist(err):
@@ -232,7 +233,7 @@ func patchRepoSettings(c flamego.Context, logger *logx.Logger, l i18n.Locale, vi
 	}
 	visibilityChanged := repo.IsPrivate != private || repo.IsUnlisted != unlisted
 	repo.IsPrivate, repo.IsUnlisted = private, unlisted
-	if err = database.UpdateRepository(logger, repo, visibilityChanged); err != nil {
+	if err = database.Handle.Repositories().Update(ctx, logger, repo, visibilityChanged); err != nil {
 		logger.Error("Failed to update repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update repository")
 	}
@@ -246,6 +247,7 @@ func patchRepoSettings(c flamego.Context, logger *logx.Logger, l i18n.Locale, vi
 }
 
 func putRepoAvatar(c flamego.Context, logger *logx.Logger, l i18n.Locale, rc *repoAdminContext) (statusCode int, resp any, err error) {
+	ctx := c.Request().Context()
 	data, code, err := readAvatarUpload(c.Request().Request, l)
 	if err != nil {
 		if code == http.StatusInternalServerError {
@@ -258,7 +260,7 @@ func putRepoAvatar(c flamego.Context, logger *logx.Logger, l i18n.Locale, rc *re
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "save avatar")
 	}
 	rc.Repo.UseCustomAvatar = true
-	if err = database.UpdateRepository(logger, rc.Repo, false); err != nil {
+	if err = database.Handle.Repositories().Update(ctx, logger, rc.Repo, false); err != nil {
 		logger.Error("Failed to update repository", "repoID", rc.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update repository")
 	}
@@ -337,7 +339,8 @@ func postRepoMirrorSync(rc *repoAdminContext) (statusCode int, resp any, err err
 
 // putRepoAdvanced turns the wiki, the issues and the pull requests of the
 // repository on or off.
-func putRepoAdvanced(logger *logx.Logger, l i18n.Locale, rc *repoAdminContext, req repoAdvancedSettings) (statusCode int, resp any, err error) {
+func putRepoAdvanced(c flamego.Context, logger *logx.Logger, l i18n.Locale, rc *repoAdminContext, req repoAdvancedSettings) (statusCode int, resp any, err error) {
+	ctx := c.Request().Context()
 	if req.EnablePulls && !req.PullsAllowMerge && !req.PullsAllowSquash && !req.PullsAllowRebase {
 		return http.StatusUnprocessableEntity, &bindingErrorResponse{Error: l.Tr("repo.settings.pulls.no_merge_method")}, nil
 	}
@@ -360,7 +363,7 @@ func putRepoAdvanced(logger *logx.Logger, l i18n.Locale, rc *repoAdminContext, r
 	repo.PullsDeleteBranch = req.PullsDeleteBranch
 	repo.PullsMergeMessage = req.PullsMergeMessage
 	repo.PullsSquashMessage = req.PullsSquashMessage
-	if err = database.UpdateRepository(logger, repo, false); err != nil {
+	if err = database.Handle.Repositories().Update(ctx, logger, repo, false); err != nil {
 		logger.Error("Failed to update repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update repository")
 	}
@@ -395,7 +398,7 @@ func postRepoConvert(c flamego.Context, logger *logx.Logger, l i18n.Locale, view
 	}
 
 	repo.IsMirror = false
-	if _, err = database.CleanUpMigrateInfo(logger, repo); err != nil {
+	if err = database.Handle.Repositories().CleanUpMigrateInfo(ctx, logger, repo); err != nil {
 		logger.Error("Failed to clean up migrate info", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "clean up migrate info")
 	}
@@ -426,7 +429,7 @@ func postRepoTransfer(c flamego.Context, logger *logx.Logger, l i18n.Locale, vie
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"newOwner": &msg}}, nil
 	}
 
-	if err = database.TransferOwnership(viewer, req.NewOwner, repo); err != nil {
+	if err = database.Handle.Repositories().Transfer(ctx, viewer, req.NewOwner, repo); err != nil {
 		if database.IsErrRepoAlreadyExist(err) {
 			msg := l.Tr("repo.settings.new_owner_has_same_repo")
 			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"newOwner": &msg}}, nil
@@ -447,7 +450,7 @@ func deleteRepo(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *d
 	if resp := confirmRepoName(l, repo, req.RepoName); resp != nil {
 		return http.StatusBadRequest, resp, nil
 	}
-	if err = database.DeleteRepository(logger, rc.Owner.ID, repo.ID); err != nil {
+	if err = database.Handle.Repositories().Delete(ctx, logger, rc.Owner.ID, repo.ID); err != nil {
 		logger.Error("Failed to delete repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete repository")
 	}
@@ -466,7 +469,7 @@ func deleteRepoWiki(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewe
 	}
 	repo.DeleteWiki(logger)
 	repo.EnableWiki = false
-	if err = database.UpdateRepository(logger, repo, false); err != nil {
+	if err = database.Handle.Repositories().Update(ctx, logger, repo, false); err != nil {
 		logger.Error("Failed to update repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update repository")
 	}

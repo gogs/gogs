@@ -312,7 +312,7 @@ func putRepoDefaultBranch(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 		return http.StatusInternalServerError, nil, errors.New(l.Tr("repo.settings.update_default_branch_unsupported"))
 	}
 	repo.DefaultBranch = req.Branch
-	if err = database.UpdateRepository(logger, repo, false); err != nil {
+	if err = database.Handle.Repositories().Update(ctx, logger, repo, false); err != nil {
 		logger.Error("Failed to update repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update repository")
 	}
@@ -400,7 +400,7 @@ func getRepoProtectedBranch(c flamego.Context, logger *logx.Logger, rc *repoAdmi
 		return http.StatusOK, resp, nil
 	}
 
-	writers, err := rc.Repo.GetWriters()
+	writers, err := database.Handle.Repositories().ListWriters(ctx, rc.Repo)
 	if err != nil {
 		logger.Error("Failed to list writers", "repoID", rc.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list writers")

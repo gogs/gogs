@@ -1037,7 +1037,7 @@ func TestRepoCodeForks(t *testing.T) {
 	forkerUser, err := database.Handle.Users().GetByID(t.Context(), forker.ID)
 	require.NoError(t, err)
 	forkName := UniqueName("fork-")
-	_, err = database.ForkRepository(t.Context(), logger, forkerUser, forkerUser, base, forkName, "")
+	_, err = database.Handle.Repositories().Fork(t.Context(), logger, forkerUser, forkerUser, base, forkName, "")
 	require.NoError(t, err)
 
 	type fork struct {

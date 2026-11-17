@@ -364,7 +364,7 @@ func codeSearchRepos(ctx context.Context, logger *logx.Logger, viewer *database.
 			opts.OwnerID = owner.ID
 		}
 		for opts.Page = 1; len(candidates) < codeSearchMaxRepos; opts.Page++ {
-			repos, _, err := database.SearchRepositoryByName(opts)
+			repos, _, err := database.Handle.Repositories().Search(ctx, *opts)
 			if err != nil {
 				return nil, errors.Wrap(err, "search repositories")
 			}

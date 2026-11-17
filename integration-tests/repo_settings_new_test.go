@@ -290,9 +290,8 @@ func TestRepoSettingsFork(t *testing.T) {
 	c.doJSON(http.MethodPost, "/api/web/repo/fork/"+baseID, map[string]any{"name": forkName, "description": "My fork"}, http.StatusCreated, &created)
 	assert.Equal(t, repoSettingsCreated{Owner: u.Name, Name: forkName}, created)
 
-	fork, has, err := database.HasForkedRepo(u.ID, base.ID)
+	fork, err := database.Handle.Repositories().GetForkBy(t.Context(), base.ID, u.ID)
 	require.NoError(t, err)
-	require.True(t, has)
 	assert.Equal(t, forkName, fork.Name)
 	assert.True(t, fork.IsFork)
 	assert.Equal(t, "My fork", fork.Description)

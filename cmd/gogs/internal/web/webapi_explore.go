@@ -54,8 +54,9 @@ type exploreRepo struct {
 }
 
 func getExploreRepos(logger *logx.Logger, c flamego.Context, viewer *database.User) (statusCode int, resp *listPage[exploreRepo], err error) {
+	ctx := c.Request().Context()
 	page := pageParam(c)
-	repos, total, err := database.SearchRepositoryByName(&database.SearchRepoOptions{
+	repos, total, err := database.Handle.Repositories().Search(ctx, database.SearchRepoOptions{
 		Keyword:  c.Query("q"),
 		UserID:   cmp.Or(viewer, &database.User{}).ID,
 		OrderBy:  "updated_unix DESC",

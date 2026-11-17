@@ -20,12 +20,13 @@ import (
 //
 // ⚠️ WARNING: This list is meant to be read-only.
 var Tables = []any{
-	new(Access), new(AccessToken), new(Action),
+	new(Access), new(AccessToken), new(Action), new(Attachment),
+	new(Collaboration), new(Comment),
 	new(DeployKey),
 	new(EmailAddress),
 	new(Follow),
 	new(HookTask),
-	new(IssueLabel), new(IssueUser),
+	new(Issue), new(IssueLabel), new(IssueUser),
 	new(Label), new(LFSObject), new(LoginSource),
 	new(Milestone),
 	new(Notice),
