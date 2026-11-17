@@ -3,6 +3,7 @@ package web
 import (
 	"bytes"
 	"cmp"
+	"context"
 	"html"
 	"io"
 	"net/http"
@@ -122,7 +123,7 @@ func getRepoEditorTarget(c flamego.Context, logger *logx.Logger, repoCtx *repoCo
 		MarkdownExtensions:  conf.Markdown.FileExtensions,
 		PreviewMarkdown:     slices.Contains(conf.Repository.Editor.PreviewableFileModes, "markdown"),
 		LineWrapExtensions:  conf.Repository.Editor.LineWrapExtensions,
-		PullRequestsAllowed: pullRequestBase(repoCtx) != nil,
+		PullRequestsAllowed: pullRequestBase(c.Request().Context(), repoCtx) != nil,
 		Upload:              attachmentSettings(repoUploadLimits()),
 	}
 	if treePath == "" {
@@ -204,10 +205,10 @@ func getRepoEditorIndent(c flamego.Context, logger *logx.Logger, repoCtx *repoCo
 // pullRequestBase returns the repository that takes the pull requests of
 // branches of the repository: its base when it is a fork, or itself. It is nil
 // when that repository does not take pull requests.
-func pullRequestBase(repoCtx *repoContext) *database.Repository {
+func pullRequestBase(ctx context.Context, repoCtx *repoContext) *database.Repository {
 	repo := repoCtx.Repo
 	if repo.IsFork {
-		base, err := database.GetRepositoryByID(repo.ForkID)
+		base, err := database.Handle.Repositories().GetByID(ctx, repo.ForkID)
 		if err != nil || !base.AllowsPulls() {
 			return nil
 		}
@@ -277,9 +278,9 @@ func commitMessage(req repoEditorCommitRequest, fallback string) string {
 
 // commitLocation returns where to go after committing to the request, with
 // target the path that changed in the branch.
-func commitLocation(repoCtx *repoContext, req repoEditorCommitRequest, target string) string {
+func commitLocation(ctx context.Context, repoCtx *repoContext, req repoEditorCommitRequest, target string) string {
 	if req.NewBranch != "" {
-		if base := pullRequestBase(repoCtx); base != nil {
+		if base := pullRequestBase(ctx, repoCtx); base != nil {
 			return base.Link() + "/compare/" + escapePath(req.Branch) + "..." + repoCtx.Owner.Name + ":" + escapePath(req.NewBranch)
 		}
 		return repoCtx.Repo.Link() + "/src/" + escapePath(req.NewBranch) + "/" + escapePath(target)
@@ -429,7 +430,7 @@ func postRepoEditorFile(c flamego.Context, logger *logx.Logger, l i18n.Locale, v
 		logger.Error("Failed to update file", "treePath", req.Path, "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update file")
 	}
-	return http.StatusOK, &repoEditorCommitResult{Location: commitLocation(repoCtx, req.repoEditorCommitRequest, req.Path)}, nil
+	return http.StatusOK, &repoEditorCommitResult{Location: commitLocation(ctx, repoCtx, req.repoEditorCommitRequest, req.Path)}, nil
 }
 
 type repoEditorDeleteRequest struct {
@@ -505,7 +506,7 @@ func postRepoEditorDelete(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 		logger.Error("Failed to delete file", "treePath", req.Path, "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete file")
 	}
-	return http.StatusOK, &repoEditorCommitResult{Location: commitLocation(repoCtx, req.repoEditorCommitRequest, dir)}, nil
+	return http.StatusOK, &repoEditorCommitResult{Location: commitLocation(ctx, repoCtx, req.repoEditorCommitRequest, dir)}, nil
 }
 
 type repoEditorUploadRequest struct {
@@ -583,7 +584,7 @@ func postRepoEditorUpload(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 		logger.Error("Failed to upload files", "treePath", req.Path, "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "upload files")
 	}
-	return http.StatusOK, &repoEditorCommitResult{Location: commitLocation(repoCtx, req.repoEditorCommitRequest, req.Path)}, nil
+	return http.StatusOK, &repoEditorCommitResult{Location: commitLocation(ctx, repoCtx, req.repoEditorCommitRequest, req.Path)}, nil
 }
 
 // postRepoEditorUploadFile stores a file to commit with the next upload.

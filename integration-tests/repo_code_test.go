@@ -1032,7 +1032,7 @@ func TestRepoCodeForks(t *testing.T) {
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	empty := seedRepository(t, owner.ID, CreateRepositoryOptions{})
 
-	base, err := database.GetRepositoryByID(repo.ID)
+	base, err := getRepository(t, repo.ID)
 	require.NoError(t, err)
 	forkerUser, err := database.Handle.Users().GetByID(t.Context(), forker.ID)
 	require.NoError(t, err)

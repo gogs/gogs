@@ -130,7 +130,7 @@ func TestAPIV1AdminCreateForUser(t *testing.T) {
 		admin.doJSON(http.MethodPost, "/api/v1/admin/users/"+u.Name+"/repos", map[string]any{"name": name, "private": true}, http.StatusCreated, &repo)
 		assert.Equal(t, u.Name+"/"+name, repo.FullName)
 		assert.True(t, repo.Private)
-		got, err := database.GetRepositoryByName(u.ID, name)
+		got, err := getRepositoryByName(t, u.ID, name)
 		require.NoError(t, err)
 		assert.Equal(t, repo.ID, got.ID)
 	})

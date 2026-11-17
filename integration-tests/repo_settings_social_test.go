@@ -31,7 +31,7 @@ func repoSettingsPeople(t *testing.T, c *client, path string) []string {
 func repoSettingsGetRepo(t *testing.T, id int64) *database.Repository {
 	t.Helper()
 
-	repo, err := database.GetRepositoryByID(id)
+	repo, err := getRepository(t, id)
 	require.NoError(t, err)
 	return repo
 }

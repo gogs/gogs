@@ -267,6 +267,77 @@ func (s *RepositoriesStore) GetByID(ctx context.Context, id int64) (*Repository,
 	return repo, nil
 }
 
+// LoadAttributes loads the owners of given repositories, and the repositories
+// they are forked from with their owners, up to the root of each fork chain. A
+// fork whose base repository is gone is marked as not being a fork. Owners and
+// base repositories that are already set are kept. It returns ErrUserNotExist
+// when an owner is gone.
+func (s *RepositoriesStore) LoadAttributes(ctx context.Context, repos ...*Repository) error {
+	db := s.db.WithContext(ctx)
+
+	loaded := make(map[int64]*Repository, len(repos))
+	for _, repo := range repos {
+		loaded[repo.ID] = repo
+	}
+	for pending := repos; len(pending) > 0; {
+		ownerIDs := make([]int64, 0, len(pending))
+		for _, repo := range pending {
+			if repo.Owner == nil {
+				ownerIDs = append(ownerIDs, repo.OwnerID)
+			}
+		}
+		if len(ownerIDs) > 0 {
+			var owners []*User
+			err := db.Where("id IN ?", ownerIDs).Find(&owners).Error
+			if err != nil {
+				return errors.Wrap(err, "list owners")
+			}
+			ownersByID := make(map[int64]*User, len(owners))
+			for _, owner := range owners {
+				ownersByID[owner.ID] = owner
+			}
+			for _, repo := range pending {
+				if repo.Owner != nil {
+					continue
+				}
+				repo.Owner = ownersByID[repo.OwnerID]
+				if repo.Owner == nil {
+					return ErrUserNotExist{args: errx.Args{"userID": repo.OwnerID}}
+				}
+			}
+		}
+
+		var baseIDs []int64
+		for _, repo := range pending {
+			if repo.IsFork && repo.BaseRepo == nil && loaded[repo.ForkID] == nil {
+				baseIDs = append(baseIDs, repo.ForkID)
+			}
+		}
+		var bases []*Repository
+		if len(baseIDs) > 0 {
+			err := db.Where("id IN ?", baseIDs).Find(&bases).Error
+			if err != nil {
+				return errors.Wrap(err, "list base repositories")
+			}
+			for _, base := range bases {
+				loaded[base.ID] = base
+			}
+		}
+		for _, repo := range pending {
+			if !repo.IsFork || repo.BaseRepo != nil {
+				continue
+			}
+			repo.BaseRepo = loaded[repo.ForkID]
+			if repo.BaseRepo == nil {
+				repo.IsFork = false
+				repo.ForkID = 0
+			}
+		}
+		pending = bases
+	}
+	return nil
+}
+
 // GetByName returns the repository with given owner and name. It returns
 // ErrRepoNotExist when not found.
 func (s *RepositoriesStore) GetByName(ctx context.Context, ownerID int64, name string) (*Repository, error) {

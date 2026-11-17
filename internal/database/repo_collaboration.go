@@ -1,6 +1,8 @@
 package database
 
 import (
+	"context"
+
 	"github.com/cockroachdb/errors"
 	"unknwon.dev/x/logx"
 
@@ -106,7 +108,7 @@ func (r *Repository) getCollaborators(e Engine) ([]*Collaborator, error) {
 
 	collaborators := make([]*Collaborator, len(collaborations))
 	for i, c := range collaborations {
-		user, err := getUserByID(legacyTx(e), c.UserID)
+		user, err := newUsersStore(legacyTx(e)).GetByID(context.TODO(), c.UserID)
 		if err != nil {
 			return nil, err
 		}

@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
@@ -16,12 +17,16 @@ var errForkBaseNotFound = errors.New("repository not found")
 
 // forkBaseRepo returns the repository to fork. Like the server-rendered page,
 // repositories that are empty or that the viewer cannot read are not found.
-func forkBaseRepo(logger *logx.Logger, viewer *database.User, id int64) (*database.Repository, error) {
-	repo, err := database.GetRepositoryByID(id)
+func forkBaseRepo(ctx context.Context, logger *logx.Logger, viewer *database.User, id int64) (*database.Repository, error) {
+	repos := database.Handle.Repositories()
+	repo, err := repos.GetByID(ctx, id)
 	if database.IsErrRepoNotExist(err) {
 		return nil, errForkBaseNotFound
 	} else if err != nil {
 		return nil, errors.Wrap(err, "get repository")
+	}
+	if err = repos.LoadAttributes(ctx, repo); err != nil {
+		return nil, errors.Wrap(err, "load repository attributes")
 	}
 	if !repo.CanBeForked() || !repo.HasAccess(logger, viewer.ID) {
 		return nil, errForkBaseNotFound
@@ -41,7 +46,7 @@ type forkBase struct {
 // *forkBase.
 func withForkBaseRepo(c flamego.Context, logger *logx.Logger, viewer *database.User) {
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
-	repo, err := forkBaseRepo(logger, viewer, id)
+	repo, err := forkBaseRepo(c.Request().Context(), logger, viewer, id)
 	if errors.Is(err, errForkBaseNotFound) {
 		writeErrorResponse(c.ResponseWriter(), http.StatusNotFound, err)
 		return

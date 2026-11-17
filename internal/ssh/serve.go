@@ -96,13 +96,14 @@ func Serve(ctx context.Context, logger *logx.Logger, opts ServeOptions) error {
 		return serveError("Internal error", "Failed to get repository owner '%s': %v", ownerName, err)
 	}
 
-	repo, err := database.GetRepositoryByName(owner.ID, repoName)
+	repo, err := database.Handle.Repositories().GetByName(ctx, owner.ID, repoName)
 	if err != nil {
 		if database.IsErrRepoNotExist(err) {
 			return serveError(accessDeniedMessage, "Repository does not exist: %s/%s", owner.Name, repoName)
 		}
 		return serveError("Internal error", "Failed to get repository: %v", err)
 	}
+	repo.Owner = owner
 	repo.Owner = owner
 
 	requestMode, ok := allowedCommands[verb]

@@ -221,7 +221,7 @@ func MilestoneStats(repoID int64) (open, closed int64) {
 // If milestone passes with changed values, those values will be
 // updated to database as well.
 func ChangeMilestoneStatus(m *Milestone, isClosed bool) (err error) {
-	repo, err := GetRepositoryByID(m.RepoID)
+	repo, err := getRepositoryByID(Handle.db, m.RepoID)
 	if err != nil {
 		return err
 	}
@@ -388,7 +388,7 @@ func DeleteMilestoneOfRepoByID(repoID, id int64) error {
 		return err
 	}
 
-	repo, err := GetRepositoryByID(m.RepoID)
+	repo, err := getRepositoryByID(Handle.db, m.RepoID)
 	if err != nil {
 		return err
 	}

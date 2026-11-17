@@ -13,6 +13,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"testing"
 
 	"github.com/cockroachdb/errors"
 	"github.com/pquerna/otp/totp"
@@ -166,4 +167,28 @@ func CreateRepository(ctx context.Context, logger *logx.Logger, ownerID int64, o
 		return nil, errors.Wrap(err, "create repository")
 	}
 	return &Repository{ID: repo.ID, Owner: owner.Name, Name: repo.Name}, nil
+}
+
+// getRepository returns the repository with given ID with its owner and the
+// repositories it is forked from.
+func getRepository(t *testing.T, id int64) (*database.Repository, error) {
+	t.Helper()
+
+	repo, err := database.Handle.Repositories().GetByID(t.Context(), id)
+	if err != nil {
+		return nil, err
+	}
+	return repo, database.Handle.Repositories().LoadAttributes(t.Context(), repo)
+}
+
+// getRepositoryByName returns the repository of given owner and name with its
+// owner and the repositories it is forked from.
+func getRepositoryByName(t *testing.T, ownerID int64, name string) (*database.Repository, error) {
+	t.Helper()
+
+	repo, err := database.Handle.Repositories().GetByName(t.Context(), ownerID, name)
+	if err != nil {
+		return nil, err
+	}
+	return repo, database.Handle.Repositories().LoadAttributes(t.Context(), repo)
 }

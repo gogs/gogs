@@ -90,9 +90,14 @@ func PushUpdate(ctx context.Context, logger *logx.Logger, opts PushUpdateOptions
 		return errors.Newf("GetUserByName: %v", err)
 	}
 
-	repo, err := GetRepositoryByName(owner.ID, opts.RepoName)
+	repos := Handle.Repositories()
+	repo, err := repos.GetByName(ctx, owner.ID, opts.RepoName)
 	if err != nil {
-		return errors.Newf("GetRepositoryByName: %v", err)
+		return errors.Wrap(err, "get repository")
+	}
+	repo.Owner = owner
+	if err = repos.LoadAttributes(ctx, repo); err != nil {
+		return errors.Wrap(err, "load repository attributes")
 	}
 
 	if err = repo.UpdateSize(ctx); err != nil {

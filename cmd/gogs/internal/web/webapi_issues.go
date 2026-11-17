@@ -237,7 +237,7 @@ func newPullRequestURL(c flamego.Context, viewer *database.User, repoCtx *repoCo
 	}
 	// Loading the base repository treats a fork of a deleted repository as no
 	// fork.
-	if err := repo.LoadAttributes(); err != nil {
+	if err := database.Handle.Repositories().LoadAttributes(c.Request().Context(), repo); err != nil {
 		return "", errors.Wrap(err, "load base repository")
 	}
 

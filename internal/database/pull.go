@@ -99,7 +99,7 @@ func (pr *PullRequest) loadAttributes(e Engine) (err error) {
 	}
 
 	if pr.HasMerged && pr.Merger == nil {
-		pr.Merger, err = getUserByID(legacyTx(e), pr.MergerID)
+		pr.Merger, err = newUsersStore(legacyTx(e)).GetByID(context.TODO(), pr.MergerID)
 		if IsErrUserNotExist(err) {
 			pr.MergerID = -1
 			pr.Merger = NewGhostUser()
@@ -589,7 +589,7 @@ func (pr *PullRequest) Merge(ctx context.Context, logger *logx.Logger, doer *Use
 // FIXME: make a mechanism to clean up stable local copies.
 func (pr *PullRequest) testPatch(ctx context.Context, logger *logx.Logger) (err error) {
 	if pr.BaseRepo == nil {
-		pr.BaseRepo, err = GetRepositoryByID(pr.BaseRepoID)
+		pr.BaseRepo, err = getRepositoryByID(Handle.db, pr.BaseRepoID)
 		if err != nil {
 			return errors.Newf("GetRepositoryByID: %v", err)
 		}

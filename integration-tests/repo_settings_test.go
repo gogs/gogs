@@ -81,7 +81,7 @@ func repoSettingsAddCommit(t *testing.T, repo *Repository, branch, message strin
 func repoSettingsAddCollaborator(t *testing.T, repo *Repository, u *User, mode database.AccessMode) {
 	t.Helper()
 
-	r, err := database.GetRepositoryByID(repo.ID)
+	r, err := getRepository(t, repo.ID)
 	require.NoError(t, err)
 	collaborator, err := database.Handle.Users().GetByID(t.Context(), u.ID)
 	require.NoError(t, err)
@@ -153,7 +153,7 @@ func TestRepoSettingsGeneral(t *testing.T) {
 	assert.Equal(t, owner.Name, renamed.Owner)
 	assert.Equal(t, newName, renamed.Name)
 
-	got, err := database.GetRepositoryByID(repo.ID)
+	got, err := getRepository(t, repo.ID)
 	require.NoError(t, err)
 	assert.Equal(t, newName, got.Name)
 	assert.Equal(t, "A renamed repository", got.Description)
@@ -195,7 +195,7 @@ func TestRepoSettingsAdvanced(t *testing.T) {
 	status, body := c.do(http.MethodPut, repoSettingsAPIPath(repo, "/settings/advanced"), advanced)
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 
-	got, err := database.GetRepositoryByID(repo.ID)
+	got, err := getRepository(t, repo.ID)
 	require.NoError(t, err)
 	assert.False(t, got.EnableWiki)
 	assert.True(t, got.EnableIssues)
@@ -223,7 +223,7 @@ func TestRepoSettingsAdvanced(t *testing.T) {
 	advanced["enableWiki"] = true
 	status, body = c.do(http.MethodPut, repoSettingsAPIPath(repo, "/settings/advanced"), advanced)
 	require.Equal(t, http.StatusUnprocessableEntity, status, "response: %s", body)
-	got, err = database.GetRepositoryByID(repo.ID)
+	got, err = getRepository(t, repo.ID)
 	require.NoError(t, err)
 	assert.False(t, got.EnableWiki, "settings changed by a refused request")
 }
@@ -255,7 +255,7 @@ func TestRepoSettingsAvatar(t *testing.T) {
 
 	status, body = upload(c, "avatar.png", img.Bytes())
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-	got, err := database.GetRepositoryByID(repo.ID)
+	got, err := getRepository(t, repo.ID)
 	require.NoError(t, err)
 	assert.True(t, got.UseCustomAvatar)
 	avatarPath := filepath.Join(conf.Picture.RepositoryAvatarUploadPath, strconv.FormatInt(repo.ID, 10))
@@ -295,12 +295,12 @@ func TestRepoSettingsDelete(t *testing.T) {
 	status, body = c.do(http.MethodDelete, path, map[string]any{"repoName": repo.Name + "x"})
 	require.Equal(t, http.StatusBadRequest, status, "response: %s", body)
 	assert.NotEmpty(t, repoSettingsFieldError(t, body, "repoName"))
-	_, err := database.GetRepositoryByID(repo.ID)
+	_, err := getRepository(t, repo.ID)
 	require.NoError(t, err, "deleted with the wrong name")
 
 	status, body = c.do(http.MethodDelete, path, map[string]any{"repoName": repo.Name})
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-	_, err = database.GetRepositoryByID(repo.ID)
+	_, err = getRepository(t, repo.ID)
 	assert.True(t, database.IsErrRepoNotExist(err), "repository not deleted: %v", err)
 	assert.NoDirExists(t, database.RepoPath(repo.Owner, repo.Name))
 }
@@ -329,7 +329,7 @@ func TestRepoSettingsTransfer(t *testing.T) {
 	assert.Equal(t, newOwner.Name, resp.Owner)
 	assert.Equal(t, repo.Name, resp.Name)
 
-	got, err := database.GetRepositoryByID(repo.ID)
+	got, err := getRepository(t, repo.ID)
 	require.NoError(t, err)
 	assert.Equal(t, newOwner.ID, got.OwnerID)
 	assert.DirExists(t, database.RepoPath(newOwner.Name, repo.Name))
@@ -341,7 +341,7 @@ func TestRepoSettingsDeleteWiki(t *testing.T) {
 	admin := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	repoSettingsAddCollaborator(t, repo, admin, database.AccessModeAdmin)
-	r, err := database.GetRepositoryByID(repo.ID)
+	r, err := getRepository(t, repo.ID)
 	require.NoError(t, err)
 	require.NoError(t, r.InitWiki(t.Context()))
 	require.True(t, r.EnableWiki)
@@ -354,7 +354,7 @@ func TestRepoSettingsDeleteWiki(t *testing.T) {
 	status, body = repoSettingsSignedIn(t, owner).do(http.MethodDelete, path, map[string]any{"repoName": repo.Name})
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 	assert.False(t, r.HasWiki())
-	got, err := database.GetRepositoryByID(repo.ID)
+	got, err := getRepository(t, repo.ID)
 	require.NoError(t, err)
 	assert.False(t, got.EnableWiki)
 }
@@ -399,7 +399,7 @@ func TestRepoSettingsCollaborators(t *testing.T) {
 	status, body = c.do(http.MethodPatch, path+"/"+collaborator.Name, map[string]any{"mode": "read"})
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 	assert.Equal(t, map[string]string{collaborator.Name: "read"}, modes())
-	r, err := database.GetRepositoryByID(repo.ID)
+	r, err := getRepository(t, repo.ID)
 	require.NoError(t, err)
 	got, err := r.GetCollaborators()
 	require.NoError(t, err)
@@ -561,7 +561,7 @@ func TestRepoSettingsBranches(t *testing.T) {
 		status, body = c.do(http.MethodPut, path, map[string]any{"branch": branch})
 		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 		assert.Equal(t, branch, repoSettingsDefaultBranch(t, repo))
-		got, err := database.GetRepositoryByID(repo.ID)
+		got, err := getRepository(t, repo.ID)
 		require.NoError(t, err)
 		assert.Equal(t, branch, got.DefaultBranch)
 	})

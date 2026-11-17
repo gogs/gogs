@@ -224,7 +224,7 @@ func (t *Team) RemoveRepository(repoID int64) error {
 		return nil
 	}
 
-	repo, err := GetRepositoryByID(repoID)
+	repo, err := getRepositoryByID(Handle.db, repoID)
 	if err != nil {
 		return err
 	}
@@ -602,7 +602,7 @@ func removeTeamMember(e Engine, orgID, teamID, uid int64) error {
 	}
 
 	// Get organization.
-	org, err := getUserByID(legacyTx(e), orgID)
+	org, err := newUsersStore(legacyTx(e)).GetByID(context.TODO(), orgID)
 	if err != nil {
 		return err
 	}

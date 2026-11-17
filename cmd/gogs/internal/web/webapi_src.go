@@ -614,7 +614,7 @@ func pullRequestTarget(ctx context.Context, logger *logx.Logger, repoCtx *repoCo
 		}
 		return &repoPullRequestTarget{RepoLink: repo.Link(), BaseBranch: repo.DefaultBranch, Head: branch}
 	}
-	base, err := database.GetRepositoryByID(repo.ForkID)
+	base, err := database.Handle.Repositories().GetByID(ctx, repo.ForkID)
 	if err != nil {
 		if !database.IsErrRepoNotExist(err) {
 			logger.Error("Failed to get base repository", "repoID", repo.ID, "error", err)

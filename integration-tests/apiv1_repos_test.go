@@ -115,7 +115,7 @@ func TestAPIV1DeleteRepository(t *testing.T) {
 
 	status, body = api.do(http.MethodGet, apiV1RepoPath(repo, ""), nil)
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
-	_, err := database.GetRepositoryByName(owner.ID, repo.Name)
+	_, err := getRepositoryByName(t, owner.ID, repo.Name)
 	assert.True(t, database.IsErrRepoNotExist(err), "repository not deleted: %v", err)
 }
 
@@ -168,7 +168,7 @@ func TestAPIV1ListForks(t *testing.T) {
 	ctx := context.WithoutCancel(t.Context())
 	forkOwner, err := database.Handle.Users().GetByID(ctx, forker.ID)
 	require.NoError(t, err)
-	baseRepo, err := database.GetRepositoryByID(repo.ID)
+	baseRepo, err := getRepository(t, repo.ID)
 	require.NoError(t, err)
 	forkName := UniqueName("fork-")
 	_, err = database.ForkRepository(ctx, logger, forkOwner, forkOwner, baseRepo, forkName, "")
@@ -242,7 +242,7 @@ func TestAPIV1RepositorySettings(t *testing.T) {
 		})
 		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 
-		got, err := database.GetRepositoryByID(repo.ID)
+		got, err := getRepository(t, repo.ID)
 		require.NoError(t, err)
 		assert.True(t, got.EnableExternalTracker)
 		assert.Equal(t, "https://tracker.example.com", got.ExternalTrackerURL)
@@ -266,7 +266,7 @@ func TestAPIV1RepositorySettings(t *testing.T) {
 		})
 		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 
-		got, err := database.GetRepositoryByID(repo.ID)
+		got, err := getRepository(t, repo.ID)
 		require.NoError(t, err)
 		assert.True(t, got.EnableWiki)
 		assert.True(t, got.AllowPublicWiki)
