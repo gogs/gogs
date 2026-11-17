@@ -415,7 +415,7 @@ func RemoveOrgUser(orgID, userID int64) error {
 	repoIDs := make([]int64, 0, len(repos))
 	for i := range repos {
 		repoIDs = append(repoIDs, repos[i].ID)
-		if err = watchRepo(legacyTx(sess), user.ID, repos[i].ID, false); err != nil {
+		if err = newReposStore(legacyTx(sess)).unwatch(context.TODO(), user.ID, repos[i].ID); err != nil {
 			return err
 		}
 	}

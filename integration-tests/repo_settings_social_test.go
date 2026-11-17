@@ -50,13 +50,13 @@ func TestRepoSettingsWatch(t *testing.T) {
 	}
 	c.doJSON(http.MethodPost, path, repoSettingsNoBody, http.StatusOK, &resp)
 	assert.Equal(t, before+1, resp.WatchCount)
-	assert.True(t, database.IsWatching(viewer.ID, repo.ID))
+	assert.True(t, database.Handle.Repositories().IsWatching(t.Context(), viewer.ID, repo.ID))
 	assert.Equal(t, before+1, repoSettingsGetRepo(t, repo.ID).NumWatches)
 	assert.Contains(t, repoSettingsPeople(t, newClient(t), repoSettingsAPIPath(repo, "/watchers")), viewer.Name)
 
 	c.doJSON(http.MethodDelete, path, repoSettingsNoBody, http.StatusOK, &resp)
 	assert.Equal(t, before, resp.WatchCount)
-	assert.False(t, database.IsWatching(viewer.ID, repo.ID))
+	assert.False(t, database.Handle.Repositories().IsWatching(t.Context(), viewer.ID, repo.ID))
 	assert.NotContains(t, repoSettingsPeople(t, c, repoSettingsAPIPath(repo, "/watchers")), viewer.Name)
 
 	status, body := newClient(t).do(http.MethodPost, path, repoSettingsNoBody)
@@ -70,7 +70,7 @@ func TestRepoSettingsWatch(t *testing.T) {
 		status, body = c.do(method, repoSettingsAPIPath(private, p), reqBody)
 		assert.Equal(t, http.StatusNotFound, status, "%s, response: %s", p, body)
 	}
-	assert.False(t, database.IsWatching(viewer.ID, private.ID))
+	assert.False(t, database.Handle.Repositories().IsWatching(t.Context(), viewer.ID, private.ID))
 }
 
 func TestRepoSettingsStar(t *testing.T) {
@@ -87,13 +87,13 @@ func TestRepoSettingsStar(t *testing.T) {
 	}
 	c.doJSON(http.MethodPost, path, repoSettingsNoBody, http.StatusOK, &resp)
 	assert.Equal(t, 1, resp.StarCount)
-	assert.True(t, database.IsStarring(viewer.ID, repo.ID))
+	assert.True(t, database.Handle.Repositories().IsStarring(t.Context(), viewer.ID, repo.ID))
 	assert.Equal(t, 1, repoSettingsGetRepo(t, repo.ID).NumStars)
 	assert.Equal(t, []string{viewer.Name}, repoSettingsPeople(t, newClient(t), repoSettingsAPIPath(repo, "/stargazers")))
 
 	c.doJSON(http.MethodDelete, path, repoSettingsNoBody, http.StatusOK, &resp)
 	assert.Equal(t, 0, resp.StarCount)
-	assert.False(t, database.IsStarring(viewer.ID, repo.ID))
+	assert.False(t, database.Handle.Repositories().IsStarring(t.Context(), viewer.ID, repo.ID))
 	assert.Empty(t, repoSettingsPeople(t, c, repoSettingsAPIPath(repo, "/stargazers")))
 
 	status, body := newClient(t).do(http.MethodPost, path, repoSettingsNoBody)
@@ -102,7 +102,7 @@ func TestRepoSettingsStar(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 	status, body = c.do(http.MethodGet, repoSettingsAPIPath(private, "/stargazers"), nil)
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
-	assert.False(t, database.IsStarring(viewer.ID, private.ID))
+	assert.False(t, database.Handle.Repositories().IsStarring(t.Context(), viewer.ID, private.ID))
 }
 
 func TestRepoSettingsRemoveWatcher(t *testing.T) {
@@ -117,7 +117,7 @@ func TestRepoSettingsRemoveWatcher(t *testing.T) {
 	// Only site admins make others stop watching, not even the owner.
 	status, body := repoSettingsSignedIn(t, owner).do(http.MethodDelete, path, repoSettingsNoBody)
 	require.Equal(t, http.StatusForbidden, status, "response: %s", body)
-	assert.True(t, database.IsWatching(watcher.ID, repo.ID))
+	assert.True(t, database.Handle.Repositories().IsWatching(t.Context(), watcher.ID, repo.ID))
 
 	c := repoSettingsSignedIn(t, admin)
 	var resp struct {
@@ -125,7 +125,7 @@ func TestRepoSettingsRemoveWatcher(t *testing.T) {
 	}
 	c.doJSON(http.MethodDelete, path, repoSettingsNoBody, http.StatusOK, &resp)
 	assert.Equal(t, before-1, resp.WatchCount)
-	assert.False(t, database.IsWatching(watcher.ID, repo.ID))
+	assert.False(t, database.Handle.Repositories().IsWatching(t.Context(), watcher.ID, repo.ID))
 	assert.NotContains(t, repoSettingsPeople(t, c, repoSettingsAPIPath(repo, "/watchers")), watcher.Name)
 
 	status, body = c.do(http.MethodDelete, repoSettingsAPIPath(repo, "/watchers/"+UniqueName("nobody-")), repoSettingsNoBody)
