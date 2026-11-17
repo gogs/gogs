@@ -1,18 +1,13 @@
 package database
 
 import (
-	"context"
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
-	"github.com/cockroachdb/errors"
-	"unknwon.dev/x/logx"
-	"xorm.io/xorm"
+	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/errx"
-	"gogs.io/gogs/internal/markup"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 
@@ -71,62 +66,26 @@ type Comment struct {
 	ShowTag CommentTag `xorm:"-" json:"-" gorm:"-"`
 }
 
-func (c *Comment) BeforeInsert() {
-	c.CreatedUnix = time.Now().Unix()
-	c.UpdatedUnix = c.CreatedUnix
-}
-
-func (c *Comment) BeforeUpdate() {
-	c.UpdatedUnix = time.Now().Unix()
-}
-
-func (c *Comment) AfterSet(colName string, _ xorm.Cell) {
-	switch colName {
-	case "created_unix":
-		c.Created = time.Unix(c.CreatedUnix, 0).Local()
-	case "updated_unix":
-		c.Updated = time.Unix(c.UpdatedUnix, 0).Local()
+// BeforeCreate implements the GORM create hook.
+func (c *Comment) BeforeCreate(tx *gorm.DB) error {
+	if c.CreatedUnix == 0 {
+		c.CreatedUnix = tx.NowFunc().Unix()
+		c.UpdatedUnix = c.CreatedUnix
 	}
-}
-
-func (c *Comment) loadAttributes(e Engine) (err error) {
-	if c.Poster == nil {
-		c.Poster, err = Handle.Users().GetByID(context.TODO(), c.PosterID)
-		if err != nil {
-			if IsErrUserNotExist(err) {
-				c.PosterID = -1
-				c.Poster = NewGhostUser()
-			} else {
-				return errors.Newf("getUserByID.(Poster) [%d]: %v", c.PosterID, err)
-			}
-		}
-	}
-
-	if c.Issue == nil {
-		c.Issue, err = getRawIssueByID(e, c.IssueID)
-		if err != nil {
-			return errors.Newf("getIssueByID [%d]: %v", c.IssueID, err)
-		}
-		if c.Issue.Repo == nil {
-			c.Issue.Repo, err = getRepositoryByID(legacyTx(e), c.Issue.RepoID)
-			if err != nil {
-				return errors.Newf("getRepositoryByID [%d]: %v", c.Issue.RepoID, err)
-			}
-		}
-	}
-
-	if c.Attachments == nil {
-		c.Attachments, err = newAttachmentsStore(legacyTx(e)).ListByCommentID(context.TODO(), c.ID)
-		if err != nil {
-			return errors.Wrap(err, "list attachments")
-		}
-	}
-
 	return nil
 }
 
-func (c *Comment) LoadAttributes() error {
-	return c.loadAttributes(x)
+// BeforeUpdate implements the GORM update hook.
+func (c *Comment) BeforeUpdate(tx *gorm.DB) error {
+	c.UpdatedUnix = tx.NowFunc().Unix()
+	return nil
+}
+
+// AfterFind implements the GORM query hook.
+func (c *Comment) AfterFind(_ *gorm.DB) error {
+	c.Created = time.Unix(c.CreatedUnix, 0).Local()
+	c.Updated = time.Unix(c.UpdatedUnix, 0).Local()
+	return nil
 }
 
 func (c *Comment) HTMLURL() string {
@@ -160,131 +119,6 @@ func (c *Comment) EventTag() string {
 	return "event-" + strconv.FormatInt(c.ID, 10)
 }
 
-// mailParticipants sends new comment emails to repository watchers
-// and mentioned people.
-func (c *Comment) mailParticipants(logger *logx.Logger, e Engine, opType ActionType, issue *Issue) (err error) {
-	mentions := markup.FindAllMentions(c.Content)
-	if err = updateIssueMentions(e, c.IssueID, mentions); err != nil {
-		return errors.Newf("UpdateIssueMentions [%d]: %v", c.IssueID, err)
-	}
-
-	switch opType {
-	case ActionCommentIssue:
-		issue.Content = c.Content
-	case ActionCloseIssue:
-		issue.Content = fmt.Sprintf("Closed #%d", issue.Index)
-	case ActionReopenIssue:
-		issue.Content = fmt.Sprintf("Reopened #%d", issue.Index)
-	}
-	if err = mailIssueCommentToParticipants(logger, e, issue, c.Poster, mentions); err != nil {
-		logger.Error("Failed to mail participants", "error", err)
-	}
-
-	return nil
-}
-
-func createComment(logger *logx.Logger, e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err error) {
-	comment := &Comment{
-		Type:      opts.Type,
-		PosterID:  opts.Doer.ID,
-		Poster:    opts.Doer,
-		IssueID:   opts.Issue.ID,
-		CommitID:  opts.CommitID,
-		CommitSHA: opts.CommitSHA,
-		Line:      opts.LineNum,
-		Content:   opts.Content,
-	}
-	if _, err = e.Insert(comment); err != nil {
-		return nil, err
-	}
-
-	// Compose comment action, could be plain comment, close or reopen issue/pull request.
-	// This object will be used to notify watchers in the end of function.
-	act := &Action{
-		ActUserID:    opts.Doer.ID,
-		ActUserName:  opts.Doer.Name,
-		Content:      fmt.Sprintf("%d|%s", opts.Issue.Index, strings.Split(opts.Content, "\n")[0]),
-		RepoID:       opts.Repo.ID,
-		RepoUserName: opts.Repo.Owner.Name,
-		RepoName:     opts.Repo.Name,
-		IsPrivate:    opts.Repo.IsPrivate,
-	}
-
-	// Check comment type.
-	switch opts.Type {
-	case CommentTypeComment:
-		act.OpType = ActionCommentIssue
-
-		if _, err = e.Exec("UPDATE `issue` SET num_comments=num_comments+1 WHERE id=?", opts.Issue.ID); err != nil {
-			return nil, err
-		}
-
-		err = newAttachmentsStore(legacyTx(e)).Bind(context.TODO(), opts.Issue.ID, comment.ID, opts.Attachments)
-		if err != nil {
-			return nil, errors.Wrap(err, "attach files")
-		}
-
-	case CommentTypeReopen:
-		act.OpType = ActionReopenIssue
-		if opts.Issue.IsPull {
-			act.OpType = ActionReopenPullRequest
-		}
-
-		if opts.Issue.IsPull {
-			_, err = e.Exec("UPDATE `repository` SET num_closed_pulls=num_closed_pulls-1 WHERE id=?", opts.Repo.ID)
-		} else {
-			_, err = e.Exec("UPDATE `repository` SET num_closed_issues=num_closed_issues-1 WHERE id=?", opts.Repo.ID)
-		}
-		if err != nil {
-			return nil, err
-		}
-
-	case CommentTypeClose:
-		act.OpType = ActionCloseIssue
-		if opts.Issue.IsPull {
-			act.OpType = ActionClosePullRequest
-		}
-
-		if opts.Issue.IsPull {
-			_, err = e.Exec("UPDATE `repository` SET num_closed_pulls=num_closed_pulls+1 WHERE id=?", opts.Repo.ID)
-		} else {
-			_, err = e.Exec("UPDATE `repository` SET num_closed_issues=num_closed_issues+1 WHERE id=?", opts.Repo.ID)
-		}
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if _, err = e.Exec("UPDATE `issue` SET updated_unix = ? WHERE id = ?", time.Now().Unix(), opts.Issue.ID); err != nil {
-		return nil, errors.Newf("update issue 'updated_unix': %v", err)
-	}
-
-	// Notify watchers for whatever action comes in, ignore if no action type.
-	if act.OpType > 0 {
-		if err = notifyWatchers(e, act); err != nil {
-			logger.Error("Failed to notify watchers", "error", err)
-		}
-		if err = comment.mailParticipants(logger, e, act.OpType, opts.Issue); err != nil {
-			logger.Error("Failed to mail participants", "error", err)
-		}
-	}
-
-	return comment, comment.loadAttributes(e)
-}
-
-func createStatusComment(logger *logx.Logger, e *xorm.Session, doer *User, repo *Repository, issue *Issue) (*Comment, error) {
-	cmtType := CommentTypeClose
-	if !issue.IsClosed {
-		cmtType = CommentTypeReopen
-	}
-	return createComment(logger, e, &CreateCommentOptions{
-		Type:  cmtType,
-		Doer:  doer,
-		Repo:  repo,
-		Issue: issue,
-	})
-}
-
 type CreateCommentOptions struct {
 	Type  CommentType
 	Doer  *User
@@ -296,79 +130,6 @@ type CreateCommentOptions struct {
 	LineNum     int64
 	Content     string
 	Attachments []string // UUIDs of attachments
-}
-
-// CreateComment creates comment of issue or commit.
-func CreateComment(logger *logx.Logger, opts *CreateCommentOptions) (comment *Comment, err error) {
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return nil, err
-	}
-
-	comment, err = createComment(logger, sess, opts)
-	if err != nil {
-		return nil, err
-	}
-
-	return comment, sess.Commit()
-}
-
-// CreateIssueComment creates a plain issue comment.
-func CreateIssueComment(logger *logx.Logger, doer *User, repo *Repository, issue *Issue, content string, attachments []string) (*Comment, error) {
-	comment, err := CreateComment(logger, &CreateCommentOptions{
-		Type:        CommentTypeComment,
-		Doer:        doer,
-		Repo:        repo,
-		Issue:       issue,
-		Content:     content,
-		Attachments: attachments,
-	})
-	if err != nil {
-		return nil, errors.Newf("CreateComment: %v", err)
-	}
-
-	comment.Issue = issue
-	if err = Handle.Webhooks().Prepare(context.TODO(), logger, repo, HookEventTypeIssueComment, &apiv1types.WebhookIssueCommentPayload{
-		Action:     apiv1types.WebhookIssueCommentCreated,
-		Issue:      issue.APIFormat(),
-		Comment:    comment.APIFormat(),
-		Repository: repo.APIFormatLegacy(logger, nil),
-		Sender:     doer.APIFormat(),
-	}); err != nil {
-		logger.Error("Failed to prepare webhooks", "commentID", comment.ID, "error", err)
-	}
-
-	return comment, nil
-}
-
-// CreateRefComment creates a commit reference comment to issue.
-func CreateRefComment(logger *logx.Logger, doer *User, repo *Repository, issue *Issue, content, commitSHA string) error {
-	if commitSHA == "" {
-		return errors.Newf("cannot create reference with empty commit SHA")
-	}
-
-	// Check if same reference from same commit has already existed.
-	has, err := x.Get(&Comment{
-		Type:      CommentTypeCommitRef,
-		IssueID:   issue.ID,
-		CommitSHA: commitSHA,
-	})
-	if err != nil {
-		return errors.Newf("check reference comment: %v", err)
-	} else if has {
-		return nil
-	}
-
-	_, err = CreateComment(logger, &CreateCommentOptions{
-		Type:      CommentTypeCommitRef,
-		Doer:      doer,
-		Repo:      repo,
-		Issue:     issue,
-		CommitSHA: commitSHA,
-		Content:   content,
-	})
-	return err
 }
 
 var _ errx.NotFound = (*ErrCommentNotExist)(nil)
@@ -388,146 +149,4 @@ func (err ErrCommentNotExist) Error() string {
 
 func (ErrCommentNotExist) NotFound() bool {
 	return true
-}
-
-// GetCommentByID returns the comment by given ID.
-func GetCommentByID(id int64) (*Comment, error) {
-	c := new(Comment)
-	has, err := x.Id(id).Get(c)
-	if err != nil {
-		return nil, err
-	} else if !has {
-		return nil, ErrCommentNotExist{args: map[string]any{"commentID": id}}
-	}
-	return c, c.LoadAttributes()
-}
-
-// FIXME: use CommentList to improve performance.
-func loadCommentsAttributes(e Engine, comments []*Comment) (err error) {
-	for i := range comments {
-		if err = comments[i].loadAttributes(e); err != nil {
-			return errors.Newf("loadAttributes [%d]: %v", comments[i].ID, err)
-		}
-	}
-
-	return nil
-}
-
-func getCommentsByIssueIDSince(e Engine, issueID, since int64) ([]*Comment, error) {
-	comments := make([]*Comment, 0, 10)
-	sess := e.Where("issue_id = ?", issueID).Asc("created_unix")
-	if since > 0 {
-		sess.And("updated_unix >= ?", since)
-	}
-
-	if err := sess.Find(&comments); err != nil {
-		return nil, err
-	}
-	return comments, loadCommentsAttributes(e, comments)
-}
-
-func getCommentsByRepoIDSince(e Engine, repoID, since int64) ([]*Comment, error) {
-	comments := make([]*Comment, 0, 10)
-	sess := e.Where("issue.repo_id = ?", repoID).Join("INNER", "issue", "issue.id = comment.issue_id").Asc("comment.created_unix")
-	if since > 0 {
-		sess.And("comment.updated_unix >= ?", since)
-	}
-	if err := sess.Find(&comments); err != nil {
-		return nil, err
-	}
-	return comments, loadCommentsAttributes(e, comments)
-}
-
-func getCommentsByIssueID(e Engine, issueID int64) ([]*Comment, error) {
-	return getCommentsByIssueIDSince(e, issueID, -1)
-}
-
-// GetCommentsByIssueID returns all comments of an issue.
-func GetCommentsByIssueID(issueID int64) ([]*Comment, error) {
-	return getCommentsByIssueID(x, issueID)
-}
-
-// GetCommentsByIssueIDSince returns a list of comments of an issue since a given time point.
-func GetCommentsByIssueIDSince(issueID, since int64) ([]*Comment, error) {
-	return getCommentsByIssueIDSince(x, issueID, since)
-}
-
-// GetCommentsByRepoIDSince returns a list of comments for all issues in a repo since a given time point.
-func GetCommentsByRepoIDSince(repoID, since int64) ([]*Comment, error) {
-	return getCommentsByRepoIDSince(x, repoID, since)
-}
-
-// UpdateComment updates information of comment.
-func UpdateComment(logger *logx.Logger, doer *User, c *Comment, oldContent string) (err error) {
-	if _, err = x.Id(c.ID).AllCols().Update(c); err != nil {
-		return err
-	}
-
-	if err = c.Issue.LoadAttributes(); err != nil {
-		logger.Error("Failed to load issue attributes", "issueID", c.IssueID, "error", err)
-	} else if err = Handle.Webhooks().Prepare(context.TODO(), logger, c.Issue.Repo, HookEventTypeIssueComment, &apiv1types.WebhookIssueCommentPayload{
-		Action:  apiv1types.WebhookIssueCommentEdited,
-		Issue:   c.Issue.APIFormat(),
-		Comment: c.APIFormat(),
-		Changes: &apiv1types.WebhookChangesPayload{
-			Body: &apiv1types.WebhookChangesFromPayload{
-				From: oldContent,
-			},
-		},
-		Repository: c.Issue.Repo.APIFormatLegacy(logger, nil),
-		Sender:     doer.APIFormat(),
-	}); err != nil {
-		logger.Error("Failed to prepare webhooks", "commentID", c.ID, "error", err)
-	}
-
-	return nil
-}
-
-// DeleteCommentByID deletes the comment by given ID.
-func DeleteCommentByID(logger *logx.Logger, doer *User, id int64) error {
-	comment, err := GetCommentByID(id)
-	if err != nil {
-		if IsErrCommentNotExist(err) {
-			return nil
-		}
-		return err
-	}
-
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	if _, err = sess.ID(comment.ID).Delete(new(Comment)); err != nil {
-		return err
-	}
-
-	if comment.Type == CommentTypeComment {
-		if _, err = sess.Exec("UPDATE `issue` SET num_comments = num_comments - 1 WHERE id = ?", comment.IssueID); err != nil {
-			return err
-		}
-	}
-
-	if err = sess.Commit(); err != nil {
-		return errors.Newf("commit: %v", err)
-	}
-
-	err = Handle.Attachments().DeleteByCommentID(context.TODO(), comment.ID, true)
-	if err != nil {
-		logger.Error("Failed to delete attachments of comment", "commentID", comment.ID, "error", err)
-	}
-
-	if err = comment.Issue.LoadAttributes(); err != nil {
-		logger.Error("Failed to load issue attributes", "issueID", comment.IssueID, "error", err)
-	} else if err = Handle.Webhooks().Prepare(context.TODO(), logger, comment.Issue.Repo, HookEventTypeIssueComment, &apiv1types.WebhookIssueCommentPayload{
-		Action:     apiv1types.WebhookIssueCommentDeleted,
-		Issue:      comment.Issue.APIFormat(),
-		Comment:    comment.APIFormat(),
-		Repository: comment.Issue.Repo.APIFormatLegacy(logger, nil),
-		Sender:     doer.APIFormat(),
-	}); err != nil {
-		logger.Error("Failed to prepare webhooks", "commentID", comment.ID, "error", err)
-	}
-	return nil
 }

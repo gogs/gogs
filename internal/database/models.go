@@ -84,7 +84,7 @@ func init() {
 		new(Repository), new(Collaboration),
 		new(Watch), new(Star),
 		new(Issue), new(PullRequest), new(Comment), new(Attachment), new(IssueUser),
-		new(Label), new(Milestone),
+		new(Milestone),
 		new(Mirror), new(Release), new(Webhook), new(HookTask),
 		new(ProtectBranch),
 		new(Team), new(OrgUser), new(TeamUser), new(TeamRepo),

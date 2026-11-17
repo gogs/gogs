@@ -223,7 +223,7 @@ func (s *MilestonesStore) assignIssue(ctx context.Context, issue *Issue, oldMile
 		issue.Milestone = m
 	}
 
-	return updateIssue(db, issue)
+	return newIssuesStore(s.db).Update(ctx, issue)
 }
 
 // AssignIssue moves the issue from the milestone with given ID, if any, to its
@@ -243,10 +243,7 @@ func (s *MilestonesStore) AssignIssue(ctx context.Context, logger *logx.Logger, 
 
 	webhooks := newWebhooksStore(s.db)
 	if issue.IsPull {
-		err = issue.PullRequest.LoadIssue()
-		if err != nil {
-			return errors.Wrap(err, "load issue of pull request")
-		}
+		issue.PullRequest.Issue = issue
 		err = webhooks.Prepare(ctx, logger, issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
 			Action:      hookAction,
 			Index:       issue.Index,

@@ -25,7 +25,7 @@ var Tables = []any{
 	new(EmailAddress),
 	new(Follow),
 	new(IssueLabel),
-	new(LFSObject), new(LoginSource),
+	new(Label), new(LFSObject), new(LoginSource),
 	new(Notice),
 	new(Passkey),
 	new(PublicKey),
@@ -134,12 +134,20 @@ func (db *DB) Attachments() *AttachmentsStore {
 	return newAttachmentsStore(db.db)
 }
 
+func (db *DB) Comments() *CommentsStore {
+	return newCommentsStore(db.db)
+}
+
 func (db *DB) DeployKeys() *DeployKeysStore {
 	return newDeployKeysStore(db.db)
 }
 
 func (db *DB) HookTasks() *HookTasksStore {
 	return newHookTasksStore(db.db)
+}
+
+func (db *DB) Issues() *IssuesStore {
+	return newIssuesStore(db.db)
 }
 
 func (db *DB) Labels() *LabelsStore {
@@ -188,6 +196,10 @@ func (db *DB) ProtectBranches() *ProtectBranchesStore {
 
 func (db *DB) PublicKeys() *PublicKeysStore {
 	return newPublicKeysStore(db.db)
+}
+
+func (db *DB) PullRequests() *PullRequestsStore {
+	return newPullRequestsStore(db.db)
 }
 
 func (db *DB) Releases() *ReleasesStore {
