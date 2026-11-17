@@ -58,7 +58,8 @@ jobs:
     strategy:
       matrix:
         go-version: [ 1.27.x ]
-        platform: [ ubuntu-latest, macos-latest ]
+        # Run macOS only on main. Pull requests and release branches test on Linux only.
+        platform: ${{ github.ref == 'refs/heads/main' && fromJSON('["ubuntu-latest", "macos-latest"]') || fromJSON('["ubuntu-latest"]') }}
     runs-on: ${{ matrix.platform }}
     steps:
       - name: Check out code
