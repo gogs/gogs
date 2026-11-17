@@ -93,7 +93,7 @@ All notable changes to Gogs are documented in this file.
 - Members who join a team in the push allowlist of a protected branch can push to it right away, and members who leave the team lose access right away, without saving the branch protection again. [#8619](https://github.com/gogs/gogs/pull/8619)
 - A long word in a commit message body, e.g., a file path, no longer runs past the commit page. [#8606](https://github.com/gogs/gogs/pull/8606)
 - Cloning a public repository without signing in now downloads its Git LFS files instead of asking for credentials. [#8573](https://github.com/gogs/gogs/pull/8573)
-- Reverse proxy authentication now also works for Git and Git LFS over HTTP, so users signed in by the proxy can clone and push. If your proxy lets Git or Git LFS requests through without authenticating them, make sure it removes or overwrites the header those requests carry, or clients can sign in as any user. [#8652](https://github.com/gogs/gogs/pull/8652)
+- Reverse proxy authentication now also works for Git and Git LFS over HTTP, so users authenticated by the proxy can clone and push. If your proxy lets Git or Git LFS requests through without authenticating them, make sure it removes or overwrites the header those requests carry, or clients can be authenticated as any user. [#8652](https://github.com/gogs/gogs/pull/8652)
 
 ### Removed
 
