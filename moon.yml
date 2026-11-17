@@ -59,6 +59,17 @@ tasks:
     deps:
       - "install"
 
+  test-integration:
+    command: "go test -count=1 -v ./internal/integrationtest/..."
+    env:
+      GOGS_INTEGRATION_TEST: "1"
+    options:
+      # The tests run against a server built from the current sources, which
+      # are not all inputs of this task, e.g., embedded configuration.
+      cache: false
+    deps:
+      - "install"
+
   build:
     script: |
       go build -v -trimpath \
