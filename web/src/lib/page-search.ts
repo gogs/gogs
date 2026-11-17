@@ -39,3 +39,9 @@ export function validateBranchesSearch(search: Record<string, unknown>): Branche
   const { q, page } = validateListSearch({ q: search.query, page: search.page });
   return { query: q, page };
 }
+
+// validateFlag reads an on/off search param, which only appears in the URL
+// when it is on, as `true`.
+export function validateFlag(value: unknown): true | undefined {
+  return value === true || value === "true" ? true : undefined;
+}

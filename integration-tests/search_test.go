@@ -62,6 +62,7 @@ func TestCodeSearch(t *testing.T) {
 		Query      string           `json:"query"`
 		Keyword    string           `json:"keyword"`
 		Exhaustive bool             `json:"exhaustive"`
+		MatchCase  bool             `json:"matchCase"`
 		Files      []codeSearchFile `json:"files"`
 		Truncated  bool             `json:"truncated"`
 		Branches   []string         `json:"branches"`
@@ -200,6 +201,37 @@ func TestCodeSearch(t *testing.T) {
 		})
 	})
 
+	t.Run("repository match case", func(t *testing.T) {
+		// A keyword of its own in three cases, so other searches do not find
+		// this file.
+		cased := UniqueName("Cased")
+		repoCodeNewFile(t, ownerClient, public, "case.txt", "1 "+cased+"\n2 "+strings.ToLower(cased)+"\n3 "+strings.ToUpper(cased)+"\n", "Add case")
+
+		resp := repoSearch(t, anonymous, public, "", strings.ToLower(cased))
+		assert.False(t, resp.MatchCase)
+		require.Equal(t, []string{"case.txt"}, codeSearchPaths(resp.Files))
+		assert.Len(t, resp.Files[0].Lines, 3, "case is ignored by default")
+
+		var matched repoSearchResponse
+		anonymous.doJSON(http.MethodGet, repoCodeAPI(public)+"/search?matchCase=true&q="+url.QueryEscape(cased), nil, http.StatusOK, &matched)
+		assert.True(t, matched.MatchCase)
+		require.Equal(t, []string{"case.txt"}, codeSearchPaths(matched.Files))
+		// The lines around the match contain the keyword in other cases, and
+		// are context.
+		assert.Equal(t, []codeSearchLine{
+			{Line: 1, Text: "1 " + cased, IsMatch: true},
+			{Line: 2, Text: "2 " + strings.ToLower(cased)},
+		}, matched.Files[0].Lines)
+
+		// Match case also applies to an exhaustive search.
+		anonymous.doJSON(http.MethodGet, repoCodeAPI(public)+"/search?matchCase=true&exhaustive=true&q="+url.QueryEscape(strings.ToUpper(cased)), nil, http.StatusOK, &matched)
+		require.Equal(t, []string{"case.txt"}, codeSearchPaths(matched.Files))
+		assert.Equal(t, []codeSearchLine{
+			{Line: 2, Text: "2 " + strings.ToLower(cased)},
+			{Line: 3, Text: "3 " + strings.ToUpper(cased), IsMatch: true},
+		}, matched.Files[0].Lines)
+	})
+
 	t.Run("repository without keyword", func(t *testing.T) {
 		resp := repoSearch(t, anonymous, public, "", "path:src")
 		assert.Empty(t, resp.Keyword)
@@ -221,6 +253,7 @@ func TestCodeSearch(t *testing.T) {
 	type codeSearchResponse struct {
 		Query         string           `json:"query"`
 		Keyword       string           `json:"keyword"`
+		MatchCase     bool             `json:"matchCase"`
 		Files         []codeSearchFile `json:"files"`
 		ReposSearched int              `json:"reposSearched"`
 	}
@@ -263,6 +296,16 @@ func TestCodeSearch(t *testing.T) {
 
 		resp = globalSearch(t, otherClient, "user:"+UniqueName("nobody-")+" "+keyword)
 		assert.Empty(t, resp.Files)
+	})
+
+	t.Run("all repositories match case", func(t *testing.T) {
+		var resp codeSearchResponse
+		anonymous.doJSON(http.MethodGet, "/api/web/search/code?matchCase=true&q="+url.QueryEscape(strings.ToUpper(keyword)), nil, http.StatusOK, &resp)
+		assert.True(t, resp.MatchCase)
+		assert.Empty(t, resp.Files)
+
+		anonymous.doJSON(http.MethodGet, "/api/web/search/code?matchCase=true&q="+url.QueryEscape(keyword), nil, http.StatusOK, &resp)
+		assert.Equal(t, []string{publicName + ":docs/notes.md", publicName + ":src/main.go"}, codeSearchPaths(resp.Files))
 	})
 
 	t.Run("all repositories without keyword", func(t *testing.T) {

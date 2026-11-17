@@ -12,6 +12,7 @@ import {
   type ListSearch,
   type PageSearch,
   validateBranchesSearch,
+  validateFlag,
   validateListSearch,
   validatePageSearch,
 } from "@/lib/page-search";
@@ -898,19 +899,24 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     path: "/$owner/$repo/search/$",
     validateSearch: (search: Record<string, unknown>): RepoSearchSearch => ({
       q: validateListSearch(search).q,
-      exhaustive: search.exhaustive === true || search.exhaustive === "true" ? true : undefined,
+      exhaustive: validateFlag(search.exhaustive),
+      matchCase: validateFlag(search.matchCase),
     }),
-    loaderDeps: ({ search }: { search: RepoSearchSearch }) => ({ q: search.q, exhaustive: search.exhaustive }),
+    loaderDeps: ({ search }: { search: RepoSearchSearch }) => ({
+      q: search.q,
+      exhaustive: search.exhaustive,
+      matchCase: search.matchCase,
+    }),
     loader: ({ params, deps, context }) =>
       loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
-        fetchRepoSearch(params.owner, params.repo, params._splat ?? "", deps.q, deps.exhaustive),
+        fetchRepoSearch(params.owner, params.repo, params._splat ?? "", deps),
       ),
     component: function Search() {
       const { owner, repo } = repoSearchRoute.useParams();
       const data = repoSearchRoute.useLoaderData();
       return (
         <RepoSearch
-          key={`${owner}/${repo}@${data.ref}?${data.query}&${data.exhaustive}`}
+          key={`${owner}/${repo}@${data.ref}?${data.query}&${data.exhaustive}&${data.matchCase}`}
           owner={owner}
           name={repo}
           data={data}

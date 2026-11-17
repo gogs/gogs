@@ -3,10 +3,9 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { CodeSearchForm, CodeSearchHelp, CodeSearchResults } from "@/components/CodeSearchResults";
+import { CodeSearchForm, CodeSearchHelp, CodeSearchOption, CodeSearchResults } from "@/components/CodeSearchResults";
 import { RefPicker } from "@/components/RefPicker";
 import { RepoHeader } from "@/components/RepoHeader";
-import { Checkbox } from "@/components/ui/checkbox";
 import { usePageTitle } from "@/lib/page-title";
 import { type RepoSearchData, refPath, repoHeaderQuery } from "@/lib/queries/repo";
 import { subUrl } from "@/lib/url";
@@ -14,6 +13,7 @@ import { subUrl } from "@/lib/url";
 export interface RepoSearchSearch {
   q?: string;
   exhaustive?: boolean;
+  matchCase?: boolean;
 }
 
 // RepoSearch searches the files of a branch, a tag or a commit for lines that
@@ -25,11 +25,17 @@ export function RepoSearch({ owner, name, data }: { owner: string; name: string;
   usePageTitle(`${data.query ? `${data.query} - ` : ""}${t("repo.code_search")} - ${repo.owner}/${repo.name}`);
   const params = { owner: repo.owner, repo: repo.name };
   const fullName = `${repo.owner}/${repo.name}`;
-  const search = (q: string, exhaustive: boolean) =>
+  // options are the search options as they are in the URL.
+  const options = { exhaustive: data.exhaustive || undefined, matchCase: data.matchCase || undefined };
+  const search = (q: string, change: Partial<Record<keyof typeof options, boolean>> = {}) =>
     void navigate({
       to: "/$owner/$repo/search/$",
       params: { ...params, _splat: data.ref },
-      search: { q: q || undefined, exhaustive: exhaustive || undefined },
+      search: {
+        q: q || undefined,
+        exhaustive: (change.exhaustive ?? data.exhaustive) || undefined,
+        matchCase: (change.matchCase ?? data.matchCase) || undefined,
+      },
     });
 
   let message: string | null = null;
@@ -51,18 +57,26 @@ export function RepoSearch({ owner, name, data }: { owner: string; name: string;
               <Link
                 to="/$owner/$repo/search/$"
                 params={{ ...params, _splat: ref }}
-                search={{ q: data.query || undefined, exhaustive: data.exhaustive || undefined }}
+                search={{ q: data.query || undefined, ...options }}
                 className={className}
               >
                 {children}
               </Link>
             )}
           />
-          <CodeSearchForm query={data.query} autoFocus={!data.query} onSearch={(q) => search(q, data.exhaustive)} />
-          <label className="flex min-h-8 cursor-pointer items-center gap-2 text-sm">
-            <Checkbox checked={data.exhaustive} onCheckedChange={(checked) => search(data.query, checked === true)} />
-            {t("repo.code_search.exhaustive")}
-          </label>
+          <CodeSearchForm query={data.query} autoFocus={!data.query} onSearch={(q) => search(q)} />
+          <div className="flex flex-wrap items-center gap-x-4">
+            <CodeSearchOption
+              label={t("repo.code_search.match_case")}
+              checked={data.matchCase}
+              onChange={(matchCase) => search(data.query, { matchCase })}
+            />
+            <CodeSearchOption
+              label={t("repo.code_search.exhaustive")}
+              checked={data.exhaustive}
+              onChange={(exhaustive) => search(data.query, { exhaustive })}
+            />
+          </div>
         </div>
 
         {!data.keyword ? (
@@ -77,6 +91,7 @@ export function RepoSearch({ owner, name, data }: { owner: string; name: string;
             <CodeSearchResults
               files={data.files}
               keyword={data.keyword}
+              matchCase={data.matchCase}
               urlOf={(file, line) =>
                 subUrl(`/${fullName}/src/${refPath(`${data.ref}/${file.path}`)}${line ? `#L${line}` : ""}`)
               }
@@ -90,7 +105,7 @@ export function RepoSearch({ owner, name, data }: { owner: string; name: string;
                   <Link
                     to="/$owner/$repo/search/$"
                     params={{ ...params, _splat: data.ref }}
-                    search={{ q: data.query, exhaustive: true }}
+                    search={{ q: data.query, ...options, exhaustive: true }}
                     className="text-(--color-primary) hover:underline"
                   >
                     {t("repo.code_search.run_exhaustive")}
@@ -103,7 +118,11 @@ export function RepoSearch({ owner, name, data }: { owner: string; name: string;
 
         {data.keyword ? (
           <p className="mt-6 text-center text-sm">
-            <Link to="/search" search={{ q: data.query }} className="text-(--color-primary) hover:underline">
+            <Link
+              to="/search"
+              search={{ q: data.query, matchCase: options.matchCase }}
+              className="text-(--color-primary) hover:underline"
+            >
               {t("repo.code_search.all_repos")}
             </Link>
           </p>

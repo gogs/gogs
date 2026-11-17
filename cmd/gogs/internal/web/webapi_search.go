@@ -112,7 +112,7 @@ type repoSearchFile struct {
 }
 
 // appendSearchFiles groups the results by file.
-func appendSearchFiles(files []repoSearchFile, repo, ref, keyword string, results []*git.GrepResult) []repoSearchFile {
+func appendSearchFiles(files []repoSearchFile, repo, ref, keyword string, matchCase bool, results []*git.GrepResult) []repoSearchFile {
 	start := len(files)
 	for _, result := range results {
 		if n := len(files); n == start || files[n-1].Path != result.Path {
@@ -121,7 +121,7 @@ func appendSearchFiles(files []repoSearchFile, repo, ref, keyword string, result
 		file := &files[len(files)-1]
 		file.Lines = append(file.Lines, repoSearchLine{
 			Line:    result.Line,
-			Text:    truncateLine(result.Text, keyword),
+			Text:    truncateLine(result.Text, keyword, matchCase),
 			IsMatch: result.IsMatch,
 		})
 	}
@@ -148,8 +148,10 @@ type repoSearchResponse struct {
 	Query   string `json:"query"`
 	Keyword string `json:"keyword"`
 	// Exhaustive is set for an exhaustive search, see getRepoSearch.
-	Exhaustive bool             `json:"exhaustive"`
-	Files      []repoSearchFile `json:"files"`
+	Exhaustive bool `json:"exhaustive"`
+	// MatchCase is set when letter case must match, rather than being ignored.
+	MatchCase bool             `json:"matchCase"`
+	Files     []repoSearchFile `json:"files"`
 	// Truncated is set when more lines matched than the response lists.
 	Truncated bool `json:"truncated"`
 	// TimedOut is set when the search took too long and listed nothing.
@@ -160,8 +162,9 @@ type repoSearchResponse struct {
 
 // getRepoSearch searches the files of the ref in the route, or of the default
 // branch when there is none, for lines that contain the "q" query. With
-// "exhaustive=true", it lists every matching line of a file rather than the
-// first few, and gets higher limits.
+// "matchCase=true", letter case must match. With "exhaustive=true", it lists
+// every matching line of a file rather than the first few, and gets higher
+// limits.
 func getRepoSearch(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoSearchResponse, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
@@ -185,6 +188,7 @@ func getRepoSearch(c flamego.Context, logger *logx.Logger, repoCtx *repoContext)
 		Query:      strings.TrimSpace(c.Query("q")),
 		Keyword:    query.Keyword,
 		Exhaustive: c.QueryBool("exhaustive"),
+		MatchCase:  c.QueryBool("matchCase"),
 		Files:      []repoSearchFile{},
 	}
 	if query.Keyword != "" {
@@ -199,6 +203,7 @@ func getRepoSearch(c flamego.Context, logger *logx.Logger, repoCtx *repoContext)
 			MaxResultsPerFile: codeSearchMaxResultsPerFile,
 			ContextLines:      codeSearchContextLines,
 			Pathspecs:         query.pathspecs(),
+			MatchCase:         resp.MatchCase,
 		}
 		if resp.Exhaustive {
 			timeout = codeSearchExhaustiveTimeout
@@ -217,7 +222,7 @@ func getRepoSearch(c flamego.Context, logger *logx.Logger, repoCtx *repoContext)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "search")
 		}
 		resp.Truncated = truncated
-		resp.Files = appendSearchFiles(resp.Files, "", "", query.Keyword, results)
+		resp.Files = appendSearchFiles(resp.Files, "", "", query.Keyword, resp.MatchCase, results)
 	}
 
 	if resp.Branches, err = gitRepo.Branches(ctx); err != nil {
@@ -232,9 +237,11 @@ func getRepoSearch(c flamego.Context, logger *logx.Logger, repoCtx *repoContext)
 }
 
 type codeSearchResponse struct {
-	Query   string           `json:"query"`
-	Keyword string           `json:"keyword"`
-	Files   []repoSearchFile `json:"files"`
+	Query   string `json:"query"`
+	Keyword string `json:"keyword"`
+	// MatchCase is set when letter case must match, rather than being ignored.
+	MatchCase bool             `json:"matchCase"`
+	Files     []repoSearchFile `json:"files"`
 	// ReposSearched is how many repositories were searched.
 	ReposSearched int `json:"reposSearched"`
 	// Truncated is set when more lines matched than the response lists.
@@ -246,14 +253,15 @@ type codeSearchResponse struct {
 
 // getCodeSearch searches the default branches of the repositories the viewer
 // can read for lines that contain the "q" query, narrowed down by its
-// qualifiers.
+// qualifiers. With "matchCase=true", letter case must match.
 func getCodeSearch(c flamego.Context, logger *logx.Logger, viewer *database.User) (statusCode int, resp *codeSearchResponse, err error) {
 	ctx := c.Request().Context()
 	query := parseCodeQuery(c.Query("q"))
 	resp = &codeSearchResponse{
-		Query:   strings.TrimSpace(c.Query("q")),
-		Keyword: query.Keyword,
-		Files:   []repoSearchFile{},
+		Query:     strings.TrimSpace(c.Query("q")),
+		Keyword:   query.Keyword,
+		MatchCase: c.QueryBool("matchCase"),
+		Files:     []repoSearchFile{},
 	}
 	if query.Keyword == "" {
 		return http.StatusOK, resp, nil
@@ -300,6 +308,7 @@ func getCodeSearch(c flamego.Context, logger *logx.Logger, viewer *database.User
 			MaxResultsPerFile: codeSearchMaxResultsPerFile,
 			ContextLines:      codeSearchContextLines,
 			Pathspecs:         query.pathspecs(),
+			MatchCase:         resp.MatchCase,
 		})
 		if errors.Is(err, git.ErrExecTimeout) {
 			resp.TimedOut = true
@@ -315,7 +324,7 @@ func getCodeSearch(c flamego.Context, logger *logx.Logger, viewer *database.User
 				matches++
 			}
 		}
-		resp.Files = appendSearchFiles(resp.Files, repo.Owner.Name+"/"+repo.Name, ref.Name, query.Keyword, results)
+		resp.Files = appendSearchFiles(resp.Files, repo.Owner.Name+"/"+repo.Name, ref.Name, query.Keyword, resp.MatchCase, results)
 	}
 	return http.StatusOK, resp, nil
 }
@@ -383,20 +392,23 @@ func codeSearchRepos(ctx context.Context, logger *logx.Logger, viewer *database.
 
 // truncateLine cuts a long line, e.g., of minified code, to the length shown,
 // keeping the first match of the keyword in view.
-func truncateLine(line, keyword string) string {
+func truncateLine(line, keyword string, matchCase bool) string {
 	runes := []rune(line)
 	if len(runes) <= codeSearchMaxLineLength {
 		return line
 	}
 
 	start := 0
-	lower := []rune(strings.ToLower(line))
+	searched, keywordSearched := line, keyword
+	if !matchCase {
+		searched, keywordSearched = strings.ToLower(line), strings.ToLower(keyword)
+	}
 	// Lowercasing changes the length of a few characters, and then the offsets
 	// no longer line up, so the line is cut from its start.
-	if len(lower) == len(runes) {
-		if i := strings.Index(string(lower), strings.ToLower(keyword)); i >= 0 {
+	if utf8.RuneCountInString(searched) == len(runes) {
+		if i := strings.Index(searched, keywordSearched); i >= 0 {
 			// Show some context before the match.
-			start = max(0, utf8.RuneCountInString(string(lower)[:i])-codeSearchMaxLineLength/5)
+			start = max(0, utf8.RuneCountInString(searched[:i])-codeSearchMaxLineLength/5)
 		}
 	}
 	end := min(len(runes), start+codeSearchMaxLineLength)

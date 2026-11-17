@@ -24,6 +24,8 @@ type GrepOptions struct {
 	// The pathspecs that limit which files are searched, e.g.,
 	// ":(glob)**/*.go". All files are searched when empty.
 	Pathspecs []string
+	// Whether letter case must match, rather than being ignored.
+	MatchCase bool
 }
 
 // GrepResult is a line that matches a search, or a line around one.
@@ -40,8 +42,8 @@ type GrepResult struct {
 }
 
 // Grep searches the text files in the tree of the given revision for lines
-// that contain the keyword, ignoring case. The keyword is matched literally,
-// not as a pattern. Binary files are skipped. Results are ordered by path, then
+// that contain the keyword, ignoring case unless opts.MatchCase is set. The
+// keyword is matched literally, not as a pattern. Binary files are skipped. Results are ordered by path, then
 // by line. The second return value reports whether matching lines were left
 // out because of opts.MaxResults.
 func (r *Repository) Grep(ctx context.Context, rev, keyword string, opts ...GrepOptions) ([]*GrepResult, bool, error) {
@@ -53,7 +55,10 @@ func (r *Repository) Grep(ctx context.Context, rev, keyword string, opts ...Grep
 		opt = opts[0]
 	}
 
-	args := []string{"grep", "--null", "--line-number", "--full-name", "-I", "--fixed-strings", "--ignore-case"}
+	args := []string{"grep", "--null", "--line-number", "--full-name", "-I", "--fixed-strings"}
+	if !opt.MatchCase {
+		args = append(args, "--ignore-case")
+	}
 	if opt.MaxResultsPerFile > 0 {
 		args = append(args, "--max-count="+strconv.Itoa(opt.MaxResultsPerFile))
 	}
@@ -67,9 +72,14 @@ func (r *Repository) Grep(ctx context.Context, rev, keyword string, opts ...Grep
 	// a common keyword in a large repository.
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
+	matchKeyword := keyword
+	if !opt.MatchCase {
+		matchKeyword = strings.ToLower(keyword)
+	}
 	w := &grepWriter{
 		prefix:     []byte(rev + ":"),
-		keyword:    strings.ToLower(keyword),
+		keyword:    matchKeyword,
+		matchCase:  opt.MatchCase,
 		max:        opt.MaxResults,
 		maxPerFile: opt.MaxResultsPerFile,
 		context:    opt.ContextLines,
@@ -94,8 +104,10 @@ func (r *Repository) Grep(ctx context.Context, rev, keyword string, opts ...Grep
 // arrives, where each line is "<rev>:<path>\0<line>\0<text>\n", and groups of
 // lines with context are separated by "--".
 type grepWriter struct {
-	prefix     []byte
+	prefix []byte
+	// keyword is lowercased unless matchCase is set.
 	keyword    string
+	matchCase  bool
 	max        int
 	maxPerFile int
 	context    int
@@ -139,7 +151,11 @@ func (w *grepWriter) Write(p []byte) (int, error) {
 		// lines around them alike, so tell them apart by their text. Lines after
 		// the last match Git counts for a file are context, even when they
 		// contain the keyword.
-		result.IsMatch = strings.Contains(strings.ToLower(result.Text), w.keyword) &&
+		text := result.Text
+		if !w.matchCase {
+			text = strings.ToLower(text)
+		}
+		result.IsMatch = strings.Contains(text, w.keyword) &&
 			(w.maxPerFile <= 0 || w.fileMatches < w.maxPerFile)
 		if result.IsMatch {
 			if w.max > 0 && w.matches == w.max {

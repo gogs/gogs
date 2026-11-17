@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 
 import { CodeSearchInput } from "@/components/CodeSearchInput";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { RepoSearchFile, RepoSearchLine } from "@/lib/queries/repo";
 import { resolveTheme, useTheme } from "@/lib/theme-context";
 import { cn } from "@/lib/utils";
@@ -28,12 +29,12 @@ function escapeRegExp(text: string) {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-// matchRanges returns where the keyword is in the text, ignoring case like the
-// search.
-function matchRanges(text: string, keyword: string) {
+// matchRanges returns where the keyword is in the text, ignoring case unless
+// it must match, like the search.
+function matchRanges(text: string, keyword: string, matchCase: boolean) {
   const ranges: [number, number][] = [];
   if (!keyword) return ranges;
-  for (const match of text.matchAll(new RegExp(escapeRegExp(keyword), "giu"))) {
+  for (const match of text.matchAll(new RegExp(escapeRegExp(keyword), matchCase ? "gu" : "giu"))) {
     ranges.push([match.index, match.index + match[0].length]);
   }
   return ranges;
@@ -48,8 +49,8 @@ interface Piece {
 
 // renderLine colors the pieces of a line and marks the parts that match the
 // keyword, splitting pieces where a match starts or ends.
-function renderLine(text: string, pieces: Piece[], keyword: string) {
-  const ranges = matchRanges(text, keyword);
+function renderLine(text: string, pieces: Piece[], keyword: string, matchCase: boolean) {
+  const ranges = matchRanges(text, keyword, matchCase);
   const out: ReactNode[] = [];
   for (const piece of pieces) {
     const cuts = new Set([0, piece.text.length]);
@@ -100,11 +101,13 @@ function snippetsOf(lines: RepoSearchLine[]) {
 export function CodeSearchResults({
   files,
   keyword,
+  matchCase,
   urlOf,
   headerOf,
 }: {
   files: RepoSearchFile[];
   keyword: string;
+  matchCase: boolean;
   // urlOf links a file, or a line of it.
   urlOf: (file: RepoSearchFile, line?: number) => string;
   // headerOf shows what goes before the path in the header of a file.
@@ -139,6 +142,7 @@ export function CodeSearchResults({
                 lines={snippet}
                 lang={langs[i]}
                 keyword={keyword}
+                matchCase={matchCase}
                 highlighter={highlighter}
                 themeName={themeName}
                 lineURL={(line) => urlOf(file, line)}
@@ -155,6 +159,7 @@ function Snippet({
   lines,
   lang,
   keyword,
+  matchCase,
   highlighter,
   themeName,
   lineURL,
@@ -162,6 +167,7 @@ function Snippet({
   lines: RepoSearchLine[];
   lang: string;
   keyword: string;
+  matchCase: boolean;
   highlighter: DiffsHighlighter | undefined;
   themeName: string;
   lineURL: (line: number) => string;
@@ -205,7 +211,9 @@ function Snippet({
               {line.line}
             </a>
             <span className="pr-4 whitespace-pre">
-              {line.isMatch ? renderLine(line.text, pieces, keyword) : renderLine(line.text, pieces, "")}
+              {line.isMatch
+                ? renderLine(line.text, pieces, keyword, matchCase)
+                : renderLine(line.text, pieces, "", matchCase)}
             </span>
           </li>
         );
@@ -242,6 +250,24 @@ export function CodeSearchForm({
         {t("explore.search")}
       </Button>
     </form>
+  );
+}
+
+// CodeSearchOption is a checkbox that changes how the search is run.
+export function CodeSearchOption({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label className="flex min-h-8 cursor-pointer items-center gap-2 text-sm">
+      <Checkbox checked={checked} onCheckedChange={(value) => onChange(value === true)} />
+      {label}
+    </label>
   );
 }
 

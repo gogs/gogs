@@ -1364,6 +1364,8 @@ export interface RepoSearchData {
   // exhaustive is set for a search that lists every matching line of a file,
   // with higher limits.
   exhaustive: boolean;
+  // matchCase is set when letter case must match, rather than being ignored.
+  matchCase: boolean;
   // files are ordered by path.
   files: RepoSearchFile[];
   // truncated is set when more lines matched than files lists.
@@ -1377,6 +1379,8 @@ export interface RepoSearchData {
 export interface CodeSearchData {
   query: string;
   keyword: string;
+  // matchCase is set when letter case must match, rather than being ignored.
+  matchCase: boolean;
   // files are grouped by repository, the most recently updated first.
   files: RepoSearchFile[];
   reposSearched: number;
@@ -1388,10 +1392,16 @@ export interface CodeSearchData {
 
 // fetchRepoSearch searches the files of the ref in the splat, or of the
 // default branch for an empty splat, for lines that contain the keyword.
-export function fetchRepoSearch(owner: string, name: string, splat: string, q?: string, exhaustive?: boolean) {
+export function fetchRepoSearch(
+  owner: string,
+  name: string,
+  splat: string,
+  { q, exhaustive, matchCase }: { q?: string; exhaustive?: boolean; matchCase?: boolean },
+) {
   const params = new URLSearchParams();
   if (q) params.set("q", q);
   if (exhaustive) params.set("exhaustive", "true");
+  if (matchCase) params.set("matchCase", "true");
   const qs = params.size ? `?${params.toString()}` : "";
   return fetchJSON<RepoSearchData>(repoURL(owner, name, `/search/${refPath(splat)}${qs}`));
 }

@@ -2,7 +2,7 @@ import { Link, getRouteApi, useNavigate } from "@tanstack/react-router";
 import { TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { CodeSearchForm, CodeSearchHelp, CodeSearchResults } from "@/components/CodeSearchResults";
+import { CodeSearchForm, CodeSearchHelp, CodeSearchOption, CodeSearchResults } from "@/components/CodeSearchResults";
 import { usePageTitle } from "@/lib/page-title";
 import { refPath } from "@/lib/queries/repo";
 import { subUrl } from "@/lib/url";
@@ -22,13 +22,22 @@ export function CodeSearch() {
   return (
     <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6">
       <h1 className="mb-3 text-xl font-semibold">{t("repo.code_search")}</h1>
-      <div className="mb-5 flex">
+      <div className="mb-5 flex flex-wrap items-center gap-3">
         <CodeSearchForm
           key={data.query}
           query={data.query}
           autoFocus={!data.query}
           global
-          onSearch={(q) => void navigate({ to: "/search", search: { q: q || undefined } })}
+          onSearch={(q) =>
+            void navigate({ to: "/search", search: { q: q || undefined, matchCase: data.matchCase || undefined } })
+          }
+        />
+        <CodeSearchOption
+          label={t("repo.code_search.match_case")}
+          checked={data.matchCase}
+          onChange={(matchCase) =>
+            void navigate({ to: "/search", search: { q: data.query || undefined, matchCase: matchCase || undefined } })
+          }
         />
       </div>
 
@@ -50,6 +59,7 @@ export function CodeSearch() {
             <CodeSearchResults
               files={data.files}
               keyword={data.keyword}
+              matchCase={data.matchCase}
               urlOf={(file, line) =>
                 subUrl(`/${file.repo}/src/${refPath(`${file.ref}/${file.path}`)}${line ? `#L${line}` : ""}`)
               }
