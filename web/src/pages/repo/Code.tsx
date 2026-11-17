@@ -1427,7 +1427,7 @@ function NotebookView({ rawURL }: { rawURL: string }) {
           loadNotebookScripts(),
         ]);
         const rendered = (window as unknown as NotebookGlobal).nb.parse(notebook).render();
-        const res = await fetch(subUrl("/api/web/sanitize-ipynb"), {
+        const res = await fetch(subUrl("/api/web/sanitize-html"), {
           method: "POST",
           credentials: "same-origin",
           body: rendered.outerHTML,

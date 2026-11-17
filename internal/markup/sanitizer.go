@@ -43,7 +43,7 @@ var urlSchemePolicies = map[string]func(*url.URL) bool{
 //
 // Dariomark sanitizes documents without raw HTML itself, with a copy of this
 // policy for the HTML it produces (see dariomark.Sanitizer). When changing the
-// elements, classes or attributes allowed here, update sanitizedElements,
+// elements, classes or attributes allowed here for that HTML, update sanitizedElements,
 // allowedClasses, allowedRoles and the attribute checks in
 // internal/markup/dariomark/sanitize.go to match, and markdownSanitizer in
 // markdown.go. URL schemes are not copied: Dariomark asks allowURLScheme.
@@ -75,6 +75,11 @@ func NewSanitizer() {
 		sanitizer.policy.AllowAttrs("class").Matching(lazyregexp.New(`^footnotes$`).Regexp()).OnElements("div")
 		sanitizer.policy.AllowAttrs("class").Matching(lazyregexp.New(`^footnote-(ref|backref)$`).Regexp()).OnElements("a")
 		sanitizer.policy.AllowAttrs("role").Matching(lazyregexp.New(`^doc-(endnotes|noteref|backlink)$`).Regexp()).OnElements("div", "a")
+
+		// Jupyter notebooks, which notebook.js renders in the browser with "nb-"
+		// classes, e.g., "nb-cell nb-code-cell", and the number of each cell.
+		sanitizer.policy.AllowAttrs("class").Matching(lazyregexp.New(`^nb-[a-z-]+( nb-[a-z-]+)?$`).Regexp()).OnElements("div", "img")
+		sanitizer.policy.AllowAttrs("data-prompt-number").Matching(lazyregexp.New(`^[0-9]+$`).Regexp()).OnElements("div")
 
 		for scheme, allow := range urlSchemePolicies {
 			sanitizer.policy.AllowURLSchemeWithCustomPolicy(scheme, allow)
