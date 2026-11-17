@@ -156,8 +156,9 @@ func getRepoAvatar(c flamego.Context, logger *logx.Logger, viewer *database.User
 		return
 	}
 
+	ctx := c.Request().Context()
 	id := c.ParamInt64("id")
-	repo, err := database.Handle.Repositories().GetByID(c.Request().Context(), id)
+	repo, err := database.Handle.Repositories().GetByID(ctx, id)
 	if err != nil {
 		if errx.IsNotFound(err) {
 			pages.NotFound(c)
@@ -167,11 +168,13 @@ func getRepoAvatar(c flamego.Context, logger *logx.Logger, viewer *database.User
 		writeErrorResponse(c.ResponseWriter(), http.StatusInternalServerError, errors.Wrap(err, "get repository"))
 		return
 	}
-	var viewerID int64
-	if viewer != nil {
-		viewerID = viewer.ID
+	owner, err := database.Handle.Users().GetByID(ctx, repo.OwnerID)
+	if err != nil {
+		logger.Error("Failed to get repository owner by ID", "repoID", id, "ownerID", repo.OwnerID, "error", err)
+		writeErrorResponse(c.ResponseWriter(), http.StatusInternalServerError, errors.Wrap(err, "get owner"))
+		return
 	}
-	if !repo.HasAccess(logger, viewerID) {
+	if !newViewer(ctx, logger, viewer, owner, repo).CanRead() {
 		pages.NotFound(c)
 		return
 	}
