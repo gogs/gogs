@@ -458,9 +458,6 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			}, withOrgTeam)
 		}, requireAuthenticated, withOrgMembership)
 	}, requireJSON, enforceWebAPIMaxBodySize)
-	// The HTML, e.g., of a notebook with images, is larger than the bodies of
-	// other requests.
-	f.Post("/api/web/sanitize-html", requireViewAccess, postSanitizeHTML)
 	f.Group("/api/web/{owner}/{repo}", func() {
 		f.Post("/markdown", withIssueTracker, bindJSON(markdownRequest{}), postRepoMarkdown)
 		f.Get("/suggestions/mentions", withIssueTracker, getRepoMentionSuggestions)

@@ -3,7 +3,6 @@ package web
 import (
 	"bytes"
 	"context"
-	"io"
 	"net/http"
 	"path"
 	"strconv"
@@ -81,11 +80,12 @@ type repoFile struct {
 	// "binary", or "too_large" for a text file too large to show.
 	Kind string `json:"kind"`
 	// Content is set for a text file, including a notebook or a file in a
-	// markup language for their code view, and HTML for a file in a markup
-	// language.
-	Content  *string `json:"content,omitempty"`
-	HTML     string  `json:"html,omitempty"`
-	IsReadme bool    `json:"isReadme"`
+	// markup language for their code view, HTML for a file in a markup
+	// language, and Notebook for a Jupyter notebook.
+	Content  *string       `json:"content,omitempty"`
+	HTML     string        `json:"html,omitempty"`
+	Notebook *repoNotebook `json:"notebook,omitempty"`
+	IsReadme bool          `json:"isReadme"`
 	// IsSymlink is set for a symbolic link, whose content is its target.
 	IsSymlink bool `json:"isSymlink"`
 	// TabWidth is the width of a tab that .editorconfig sets for the file.
@@ -521,7 +521,13 @@ func describeRepoFile(ctx context.Context, logger *logx.Logger, repo *database.R
 			file.Kind = "markup"
 			file.HTML = string(markup.OrgMode(p, dirLink, repo.ComposeMetas()))
 		case markup.TypeIPythonNotebook:
-			file.Kind = "notebook"
+			file.Notebook, err = parseNotebook(p, dirLink, repo.ComposeMetas())
+			if err == nil {
+				file.Kind = "notebook"
+				break
+			}
+			// A file that is not a valid notebook shows as text.
+			fallthrough
 		default:
 			file.Kind = "text"
 		}
@@ -671,21 +677,4 @@ func getRepoPaths(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) 
 		resp.Truncated = true
 	}
 	return http.StatusOK, resp, nil
-}
-
-// postSanitizeHTML sanitizes the HTML in the request body like rendered
-// Markdown, e.g., a Jupyter notebook that the web app renders in the browser
-// before showing it. The HTML is sent and returned as is, because a notebook
-// with images can be large.
-func postSanitizeHTML(c flamego.Context, logger *logx.Logger) {
-	w := c.ResponseWriter()
-	html, err := io.ReadAll(c.Request().Request.Body)
-	if err != nil {
-		logger.Error("Failed to read request body", "error", err)
-		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "read body"))
-		return
-	}
-	w.Header().Set("Cache-Control", "no-store")
-	w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
-	_, _ = w.Write(markup.SanitizeBytes(html))
 }

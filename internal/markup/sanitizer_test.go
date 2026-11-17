@@ -47,12 +47,6 @@ func TestSanitizer(t *testing.T) {
 		{input: `<a href="#user-content-fn:1" class="footnote-ref" role="doc-noteref">1</a>`, expVal: `<a href="#user-content-fn:1" class="footnote-ref" role="doc-noteref" rel="nofollow">1</a>`},
 		{input: `<a href="#x" class="footnotes" role="button">1</a>`, expVal: `<a href="#x" rel="nofollow">1</a>`},
 
-		// Jupyter notebooks
-		{input: `<div class="nb-cell nb-code-cell"><div class="nb-output" data-prompt-number="4"><img class="nb-image-output" src="data:image/png;base64,iVBORw0KGgoA"></div></div>`, expVal: `<div class="nb-cell nb-code-cell"><div class="nb-output" data-prompt-number="4"><img class="nb-image-output" src="data:image/png;base64,iVBORw0KGgoA"></div></div>`},
-		{input: `<div class="nb-output fixed inset-0" data-prompt-number="4; x"></div>`, expVal: `<div></div>`},
-		{input: `<div class="nb-html-output"><style>.x{}</style><script>alert(1)</script></div>`, expVal: `<div class="nb-html-output"></div>`},
-		{input: `<p class="nb-cell" data-prompt-number="1"></p>`, expVal: `<p></p>`},
-
 		// Data URIs: safe image types should be allowed
 		{input: `<img src="data:image/png;base64,abc">`, expVal: `<img src="data:image/png;base64,abc">`},
 		{input: `<img src="data:image/jpeg;base64,abc">`, expVal: `<img src="data:image/jpeg;base64,abc">`},

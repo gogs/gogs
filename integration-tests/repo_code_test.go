@@ -304,6 +304,126 @@ func TestRepoCodeBrowse(t *testing.T) {
 	})
 }
 
+// TestRepoCodeNotebookAndPDF checks what the code browser gets for a Jupyter
+// notebook and a PDF file, which it shows without vendored libraries.
+func TestRepoCodeNotebookAndPDF(t *testing.T) {
+	owner := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	ownerClient := newClient(t)
+	ownerClient.signIn(owner)
+	anonymous := newClient(t)
+	api := repoCodeAPI(repo)
+
+	notebook := `{
+ "nbformat": 4,
+ "nbformat_minor": 5,
+ "metadata": {"language_info": {"file_extension": ".py"}},
+ "cells": [
+  {"cell_type": "markdown", "source": ["# Report\n", "See the **[handbook](handbook.md)**."]},
+  {"cell_type": "code", "execution_count": 1, "source": "print(1)", "outputs": [
+   {"output_type": "stream", "name": "stdout", "text": ["1\n"]}
+  ]},
+  {"cell_type": "code", "execution_count": 2, "source": "df", "outputs": [
+   {"output_type": "execute_result", "execution_count": 2, "data": {
+    "text/plain": "table",
+    "text/html": "<table><tr><td>Q1</td></tr></table><script>alert(1)</script>"
+   }},
+   {"output_type": "display_data", "data": {"image/png": "iVBORw0KGgo=\n", "text/plain": "<Figure>"}},
+   {"output_type": "display_data", "data": {"application/javascript": "alert(2)"}},
+   {"output_type": "error", "ename": "KeyError", "evalue": "'x'", "traceback": ["KeyError: 'x'"]}
+  ]},
+  {"cell_type": "raw", "source": "raw text"}
+ ]
+}`
+	repoCodeNewFile(t, ownerClient, repo, "docs/report.ipynb", notebook, "Add notebook")
+	repoCodeNewFile(t, ownerClient, repo, "docs/broken.ipynb", `{"cells": [ not json`, "Add broken notebook")
+	repoCodeNewFile(t, ownerClient, repo, "docs/manual.pdf", "%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF\n", "Add manual")
+
+	type output struct {
+		Type           string `json:"type"`
+		ExecutionCount *int   `json:"executionCount"`
+		Text           string `json:"text"`
+		Src            string `json:"src"`
+		HTML           string `json:"html"`
+	}
+	type srcResponse struct {
+		File struct {
+			Kind     string  `json:"kind"`
+			Content  *string `json:"content"`
+			Notebook *struct {
+				FileExtension string `json:"fileExtension"`
+				Cells         []struct {
+					Type           string   `json:"type"`
+					HTML           string   `json:"html"`
+					Source         string   `json:"source"`
+					ExecutionCount *int     `json:"executionCount"`
+					Outputs        []output `json:"outputs"`
+				} `json:"cells"`
+			} `json:"notebook"`
+		} `json:"file"`
+	}
+
+	t.Run("notebook", func(t *testing.T) {
+		var resp srcResponse
+		anonymous.doJSON(http.MethodGet, api+"/src/main/docs/report.ipynb", nil, http.StatusOK, &resp)
+		assert.Equal(t, "notebook", resp.File.Kind)
+		// The code view of the notebook shows its JSON.
+		require.NotNil(t, resp.File.Content)
+		assert.Equal(t, notebook, *resp.File.Content)
+
+		nb := resp.File.Notebook
+		require.NotNil(t, nb)
+		assert.Equal(t, ".py", nb.FileExtension)
+		require.Len(t, nb.Cells, 4)
+
+		markdown := nb.Cells[0]
+		assert.Equal(t, "markdown", markdown.Type)
+		assert.Contains(t, markdown.HTML, "<h1")
+		assert.Contains(t, markdown.HTML, "<strong>")
+		assert.Contains(t, markdown.HTML, `href="/`+repo.Owner+"/"+repo.Name+`/src/main/docs/handbook.md"`)
+
+		assert.Equal(t, "code", nb.Cells[1].Type)
+		assert.Equal(t, "print(1)", nb.Cells[1].Source)
+		require.NotNil(t, nb.Cells[1].ExecutionCount)
+		assert.Equal(t, 1, *nb.Cells[1].ExecutionCount)
+		require.Len(t, nb.Cells[1].Outputs, 1)
+		assert.Equal(t, output{Type: "text", Text: "1\n"}, nb.Cells[1].Outputs[0])
+
+		// The JavaScript output has nothing a browser shows safely, so it is
+		// left out.
+		outputs := nb.Cells[2].Outputs
+		require.Len(t, outputs, 3)
+		assert.Equal(t, "html", outputs[0].Type)
+		require.NotNil(t, outputs[0].ExecutionCount)
+		assert.Equal(t, 2, *outputs[0].ExecutionCount)
+		assert.Contains(t, outputs[0].HTML, "<td>Q1</td>")
+		assert.NotContains(t, outputs[0].HTML, "<script")
+		assert.Equal(t, output{Type: "image", Src: "data:image/png;base64,iVBORw0KGgo="}, outputs[1])
+		assert.Equal(t, output{Type: "error", Text: "KeyError: 'x'"}, outputs[2])
+
+		assert.Equal(t, "raw", nb.Cells[3].Type)
+		assert.Equal(t, "raw text", nb.Cells[3].Source)
+	})
+
+	t.Run("invalid notebook shows as text", func(t *testing.T) {
+		var resp srcResponse
+		anonymous.doJSON(http.MethodGet, api+"/src/main/docs/broken.ipynb", nil, http.StatusOK, &resp)
+		assert.Equal(t, "text", resp.File.Kind)
+		assert.Nil(t, resp.File.Notebook)
+		require.NotNil(t, resp.File.Content)
+		assert.Equal(t, `{"cells": [ not json`, *resp.File.Content)
+	})
+
+	t.Run("pdf", func(t *testing.T) {
+		var resp srcResponse
+		anonymous.doJSON(http.MethodGet, api+"/src/main/docs/manual.pdf", nil, http.StatusOK, &resp)
+		assert.Equal(t, "pdf", resp.File.Kind)
+		assert.Nil(t, resp.File.Content)
+		raw := repoCodeGet(t, anonymous, repoCodePage(repo)+"/raw/main/docs/manual.pdf")
+		assert.True(t, strings.HasPrefix(raw, "%PDF-1.4"), raw)
+	})
+}
+
 func TestRepoCodeRawAndDiffs(t *testing.T) {
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
