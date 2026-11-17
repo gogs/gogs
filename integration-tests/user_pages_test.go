@@ -176,7 +176,7 @@ func TestUserSiteMetrics(t *testing.T) {
 func TestUserSiteSanitizeIpynb(t *testing.T) {
 	html := `<div class="output" data-prompt-number="1" onclick="alert(1)">Result<script>alert(2)</script>` +
 		`<img class="plot" src="data:image/png;base64,iVBORw0KGgo="><img src="data:text/html;base64,PHNjcmlwdD4="></div>`
-	status, _, body := newClient(t).doRaw(http.MethodPost, "/-/api/sanitize_ipynb", "text/html", strings.NewReader(html))
+	status, _, body := newClient(t).doRaw(http.MethodPost, "/api/web/sanitize-ipynb", "text/html", strings.NewReader(html))
 	require.Equal(t, http.StatusOK, status, "response: %s", body)
 	assert.Equal(t,
 		`<div class="output" data-prompt-number="1">Result<img class="plot" src="data:image/png;base64,iVBORw0KGgo="></div>`,

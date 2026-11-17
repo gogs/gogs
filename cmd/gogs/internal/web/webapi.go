@@ -449,6 +449,8 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			}, withOrgTeam)
 		}, requireAuthenticated, withOrgMembership)
 	}, requireJSON, enforceWebAPIMaxBodySize)
+	// Notebooks are larger than the bodies of other requests, and sent as HTML.
+	f.Post("/api/web/sanitize-ipynb", requireViewAccess, postSanitizeIpynb)
 	f.Group("/api/web/{owner}/{repo}", func() {
 		f.Post("/markdown", withIssueTracker, bindJSON(markdownRequest{}), postRepoMarkdown)
 		f.Get("/suggestions/mentions", withIssueTracker, getRepoMentionSuggestions)

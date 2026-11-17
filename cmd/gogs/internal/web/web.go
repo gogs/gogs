@@ -351,7 +351,6 @@ func newRoutingHandler(logger *logx.Logger) (http.Handler, error) {
 		)
 	})
 	f.Get("/-/metrics", app.MetricsFilter, promhttp.Handler().ServeHTTP)
-	f.Post("/-/api/sanitize_ipynb", app.SanitizeIpynb(logger))
 	return f, nil
 }
 
