@@ -100,11 +100,39 @@ interface RouterContext {
   queryClient: QueryClient;
 }
 
+// loadRepoPage loads the header of a repository along with the data of the
+// page. Visitors who only see the public issues or wiki of the repository
+// are sent to those from its other pages.
+async function loadRepoPage<T>(queryClient: QueryClient, owner: string, repo: string, load: () => Promise<T>) {
+  try {
+    const [, data] = await Promise.all([queryClient.ensureQueryData(repoHeaderQuery(owner, repo)), load()]);
+    return data;
+  } catch (err) {
+    if (err instanceof LoaderResponseError && err.status === 404) {
+      // The page may be found missing before the header arrives.
+      const header = await queryClient.ensureQueryData(repoHeaderQuery(owner, repo)).catch(() => undefined);
+      if (header && !header.viewerCanRead) {
+        if (header.issuesEnabled) {
+          // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
+          throw redirect({ to: "/$owner/$repo/issues", params: { owner, repo }, replace: true });
+        }
+        if (header.wikiEnabled) {
+          // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
+          throw redirect({ to: "/$owner/$repo/wiki", params: { owner, repo }, replace: true });
+        }
+      }
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+      throw notFound();
+    }
+    throw err;
+  }
+}
+
 // loadDiffPage loads the header of a repository, the metadata of a diff page
 // at the path and the diff itself. The diff is fetched as raw text from the
 // path with a ".diff" suffix, which skips JSON-string escaping and lets the
 // browser cache the (often large) diff separately from the metadata.
-async function loadDiffPage<T>(
+function loadDiffPage<T>(
   queryClient: QueryClient,
   owner: string,
   repo: string,
@@ -113,9 +141,8 @@ async function loadDiffPage<T>(
 ): Promise<T & { patch: string }> {
   const rawBase = subUrl(`/${owner}/${repo}${path}.diff`);
   const rawURL = whitespace ? `${rawBase}?whitespace=${encodeURIComponent(whitespace)}` : rawBase;
-  try {
-    const [, meta, patch] = await Promise.all([
-      queryClient.ensureQueryData(repoHeaderQuery(owner, repo)),
+  return loadRepoPage(queryClient, owner, repo, async () => {
+    const [meta, patch] = await Promise.all([
       fetch(subUrl(`/api/web/${owner}/${repo}${path}`), { credentials: "same-origin" }).then(async (res) => {
         if (!res.ok) throw await loaderResponseError(res);
         return (await res.json()) as T;
@@ -126,13 +153,7 @@ async function loadDiffPage<T>(
       }),
     ]);
     return { ...meta, patch };
-  } catch (err) {
-    if (err instanceof LoaderResponseError && err.status === 404) {
-      // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
-      throw notFound();
-    }
-    throw err;
-  }
+  });
 }
 
 export function createRepoRoutes(rootRoute: AnyRoute) {
@@ -229,34 +250,6 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
       );
     },
   });
-
-  // loadRepoPage loads the header of a repository along with the data of the
-  // page. Visitors who only see the public issues or wiki of the repository
-  // are sent to those from its other pages.
-  async function loadRepoPage<T>(queryClient: QueryClient, owner: string, repo: string, load: () => Promise<T>) {
-    try {
-      const [, data] = await Promise.all([queryClient.ensureQueryData(repoHeaderQuery(owner, repo)), load()]);
-      return data;
-    } catch (err) {
-      if (err instanceof LoaderResponseError && err.status === 404) {
-        // The page may be found missing before the header arrives.
-        const header = await queryClient.ensureQueryData(repoHeaderQuery(owner, repo)).catch(() => undefined);
-        if (header && !header.viewerCanRead) {
-          if (header.issuesEnabled) {
-            // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
-            throw redirect({ to: "/$owner/$repo/issues", params: { owner, repo }, replace: true });
-          }
-          if (header.wikiEnabled) {
-            // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
-            throw redirect({ to: "/$owner/$repo/wiki", params: { owner, repo }, replace: true });
-          }
-        }
-        // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
-        throw notFound();
-      }
-      throw err;
-    }
-  }
 
   const repoStargazersRoute = createRoute({
     getParentRoute: () => rootRoute,
