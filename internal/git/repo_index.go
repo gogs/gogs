@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -67,24 +69,37 @@ func (r *Repository) AddToIndex(ctx context.Context, files ...IndexFile) error {
 	ctx, span := tracer.Start(ctx, "git.Repository.AddToIndex")
 	defer span.End()
 
+	for _, f := range files {
+		if err := checkIndexPath(f.Path); err != nil {
+			return err
+		}
+		// 🚨 SECURITY: Prevent writing to special files, e.g., "NUL" on Windows.
+		if !filepath.IsLocal(filepath.FromSlash(f.Path)) {
+			return &BadPathError{Path: f.Path}
+		}
+	}
+
 	workTree, err := os.MkdirTemp(r.path, "worktree-")
 	if err != nil {
 		return errors.Wrap(err, "create working tree")
 	}
 	defer func() { _ = os.RemoveAll(workTree) }()
 
+	// 🚨 SECURITY: Prevent writing outside of the working tree, through relative
+	// path components and symlinks alike.
+	root, err := os.OpenRoot(workTree)
+	if err != nil {
+		return errors.Wrap(err, "open working tree")
+	}
+	defer func() { _ = root.Close() }()
+
 	var regularPaths, execPaths []byte
 	for _, f := range files {
 		localPath := filepath.FromSlash(f.Path)
-		// 🚨 SECURITY: Prevent writing outside of the working tree.
-		if !filepath.IsLocal(localPath) {
-			return errors.Newf("bad path %q", f.Path)
-		}
-		localPath = filepath.Join(workTree, localPath)
-		if err = os.MkdirAll(filepath.Dir(localPath), 0o755); err != nil {
+		if err = root.MkdirAll(filepath.Dir(localPath), 0o755); err != nil {
 			return errors.Wrapf(err, "create directory of %q", f.Path)
 		}
-		if err = writeFile(localPath, f.Content); err != nil {
+		if err = writeFile(root, localPath, f.Content); err != nil {
 			return errors.Wrapf(err, "write %q", f.Path)
 		}
 
@@ -109,8 +124,42 @@ func (r *Repository) AddToIndex(ctx context.Context, files ...IndexFile) error {
 	return nil
 }
 
-func writeFile(path string, content io.Reader) error {
-	f, err := os.Create(path)
+// checkIndexPath returns an error if the path is not one that Git accepts in a
+// tree, i.e., one that is not in its clean form, leaves the tree, or refers to
+// the ".git" directory. Git skips the files at paths in ".git" without failing,
+// which would silently leave them out of a commit.
+//
+// 🚨 SECURITY: This is the single check for paths that users choose for files
+// in a commit.
+func checkIndexPath(p string) error {
+	if p != path.Clean(p) || p == "." || p == ".." || path.IsAbs(p) || strings.HasPrefix(p, "../") ||
+		slices.ContainsFunc(strings.FieldsFunc(p, func(r rune) bool { return r == '/' || r == '\\' }), isDotGit) {
+		return &BadPathError{Path: p}
+	}
+	return nil
+}
+
+// isDotGit returns true if given path component may refer to ".git" on some
+// file system, following is_ntfs_dotgit of Git. Besides case-insensitive
+// matches, NTFS resolves the 8.3 short name "git~1", trailing dots and spaces,
+// and alternate data streams (e.g., ".git::$INDEX_ALLOCATION") to ".git".
+func isDotGit(component string) bool {
+	component = strings.ToLower(component)
+	var rest string
+	switch {
+	case strings.HasPrefix(component, ".git"):
+		rest = component[len(".git"):]
+	case strings.HasPrefix(component, "git~1"):
+		rest = component[len("git~1"):]
+	default:
+		return false
+	}
+	rest, _, _ = strings.Cut(rest, ":")
+	return strings.TrimRight(rest, ". ") == ""
+}
+
+func writeFile(root *os.Root, path string, content io.Reader) error {
+	f, err := root.Create(path)
 	if err != nil {
 		return err
 	}
@@ -126,6 +175,12 @@ func writeFile(path string, content io.Reader) error {
 func (r *Repository) RemoveFromIndex(ctx context.Context, paths ...string) error {
 	ctx, span := tracer.Start(ctx, "git.Repository.RemoveFromIndex")
 	defer span.End()
+
+	for _, p := range paths {
+		if err := checkIndexPath(p); err != nil {
+			return err
+		}
+	}
 
 	// The check for local changes is forced off, because a bare repository has
 	// no working tree to compare with and it would otherwise compare with files

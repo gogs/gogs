@@ -10,9 +10,11 @@ import (
 
 func TestRepository_Hooks(t *testing.T) {
 	t.Run("invalid hook", func(t *testing.T) {
-		h, err := testrepo.Hook("hooks", "bad_hook")
-		assert.Equal(t, os.ErrNotExist, err)
-		assert.Nil(t, h)
+		for _, name := range []HookName{"bad_hook", "../config", "pre-commit"} {
+			h, err := testrepo.Hook("hooks", name)
+			assert.Equal(t, os.ErrNotExist, err, name)
+			assert.Nil(t, h, name)
+		}
 	})
 
 	// Save "post-receive" hook with some content

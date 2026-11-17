@@ -207,6 +207,11 @@ func putContents(c *apiContext, r putContentsRequest) {
 		},
 	)
 	if err != nil {
+		var badPath *git.BadPathError
+		if errors.As(err, &badPath) {
+			c.ErrorStatus(http.StatusUnprocessableEntity, err)
+			return
+		}
 		c.Error(err, "updating repository file")
 		return
 	}

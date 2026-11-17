@@ -315,6 +315,10 @@ type repoEditorConflict struct {
 	LastCommit string `json:"lastCommit"`
 }
 
+func badPathMessage(l i18n.Locale, err *git.BadPathError) string {
+	return strings.ReplaceAll(l.Tr("repo.editor.bad_path"), "{path}", err.Path)
+}
+
 func pathError(msg string) *bindingErrorResponse {
 	return &bindingErrorResponse{Fields: fieldErrors{"path": &msg}}
 }
@@ -426,6 +430,10 @@ func postRepoEditorFile(c flamego.Context, logger *logx.Logger, l i18n.Locale, v
 	if err != nil {
 		if database.IsErrRepoFileAlreadyExist(err) {
 			return http.StatusUnprocessableEntity, pathError(l.Tr("repo.editor.file_already_exists", req.Path)), nil
+		}
+		var badPath *git.BadPathError
+		if errors.As(err, &badPath) {
+			return http.StatusUnprocessableEntity, pathError(badPathMessage(l, badPath)), nil
 		}
 		logger.Error("Failed to update file", "treePath", req.Path, "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update file")
@@ -581,6 +589,10 @@ func postRepoEditorUpload(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 		Files:        req.Files,
 	})
 	if err != nil {
+		var badPath *git.BadPathError
+		if errors.As(err, &badPath) {
+			return http.StatusUnprocessableEntity, nil, errors.New(badPathMessage(l, badPath))
+		}
 		logger.Error("Failed to upload files", "treePath", req.Path, "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "upload files")
 	}

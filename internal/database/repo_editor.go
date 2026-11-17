@@ -6,7 +6,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -17,7 +16,6 @@ import (
 	"gogs.io/gogs/internal/cryptox"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/osx"
-	"gogs.io/gogs/internal/pathx"
 )
 
 // BranchAlreadyExists represents an error when branch already exists.
@@ -303,11 +301,6 @@ type UpdateRepoFileOptions struct {
 
 // UpdateRepoFile adds or updates a file in repository.
 func (r *Repository) UpdateRepoFile(ctx context.Context, logger *logx.Logger, doer *User, opts UpdateRepoFileOptions) error {
-	// 🚨 SECURITY: Prevent uploading files into the ".git" directory.
-	if isRepositoryGitPath(opts.NewTreeName) {
-		return errors.Errorf("bad tree path %q", opts.NewTreeName)
-	}
-
 	repoWorkingPool.CheckIn(strconv.FormatInt(r.ID, 10))
 	defer repoWorkingPool.CheckOut(strconv.FormatInt(r.ID, 10))
 
@@ -378,11 +371,6 @@ type DeleteRepoFileOptions struct {
 }
 
 func (r *Repository) DeleteRepoFile(ctx context.Context, logger *logx.Logger, doer *User, opts DeleteRepoFileOptions) (err error) {
-	// 🚨 SECURITY: Prevent uploading files into the ".git" directory.
-	if isRepositoryGitPath(opts.TreePath) {
-		return errors.Errorf("bad tree path %q", opts.TreePath)
-	}
-
 	repoWorkingPool.CheckIn(strconv.FormatInt(r.ID, 10))
 	defer repoWorkingPool.CheckOut(strconv.FormatInt(r.ID, 10))
 
@@ -431,41 +419,9 @@ type UploadRepoFileOptions struct {
 	Files        []string // In UUID format
 }
 
-// isRepositoryGitPath returns true if given path is or resides inside ".git"
-// path of the repository.
-//
-// TODO(unknwon): Move to repox during refactoring for this file.
-func isRepositoryGitPath(path string) bool {
-	return slices.ContainsFunc(strings.FieldsFunc(path, func(r rune) bool { return r == '/' || r == '\\' }), isDotGit)
-}
-
-// isDotGit returns true if given path component may refer to ".git" on some file
-// system, following is_ntfs_dotgit of Git. Besides case-insensitive matches,
-// NTFS resolves the 8.3 short name "git~1", trailing dots and spaces, and
-// alternate data streams (e.g., ".git::$INDEX_ALLOCATION") to ".git".
-func isDotGit(component string) bool {
-	component = strings.ToLower(component)
-	var rest string
-	switch {
-	case strings.HasPrefix(component, ".git"):
-		rest = component[len(".git"):]
-	case strings.HasPrefix(component, "git~1"):
-		rest = component[len("git~1"):]
-	default:
-		return false
-	}
-	rest, _, _ = strings.Cut(rest, ":")
-	return strings.TrimRight(rest, ". ") == ""
-}
-
 func (r *Repository) UploadRepoFiles(ctx context.Context, logger *logx.Logger, doer *User, opts UploadRepoFileOptions) error {
 	if len(opts.Files) == 0 {
 		return nil
-	}
-
-	// 🚨 SECURITY: Prevent uploading files into the ".git" directory.
-	if isRepositoryGitPath(opts.TreePath) {
-		return errors.Errorf("bad tree path %q", opts.TreePath)
 	}
 
 	uploads, err := newUploadsStore(Handle.db).ListByUUIDs(ctx, opts.Files)
@@ -481,14 +437,6 @@ func (r *Repository) UploadRepoFiles(ctx context.Context, logger *logx.Logger, d
 		for _, upload := range uploads {
 			tmpPath := upload.LocalPath()
 			if !osx.IsFile(tmpPath) {
-				continue
-			}
-
-			// 🚨 SECURITY: Prevent path traversal.
-			upload.Name = pathx.Clean(upload.Name)
-
-			// 🚨 SECURITY: Prevent uploading files into the ".git" directory.
-			if isRepositoryGitPath(upload.Name) {
 				continue
 			}
 

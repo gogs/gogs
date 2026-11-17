@@ -39,6 +39,12 @@ func TestAPIV1Contents(t *testing.T) {
 	assert.Equal(t, "Add guide", put.Commit.Commit.Message)
 	assert.Equal(t, owner.Name, put.Commit.Author.UserName)
 
+	status, body := api.do(http.MethodPut, apiV1RepoPath(repo, "/contents/.git/config"), map[string]any{
+		"message": "Overwrite config",
+		"content": base64.StdEncoding.EncodeToString([]byte("x")),
+	})
+	assert.Equal(t, http.StatusUnprocessableEntity, status, "response: %s", body)
+
 	// The commit is recorded in the news feed like a push.
 	actions := gitRepoActions(t, owner.ID, repo.ID)
 	require.NotEmpty(t, actions)
@@ -97,7 +103,7 @@ func TestAPIV1Contents(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, status, "file only on another branch, response: %s", body)
 	})
 
-	status, body := api.do(http.MethodGet, apiV1RepoPath(repo, "/contents/missing.md"), nil)
+	status, body = api.do(http.MethodGet, apiV1RepoPath(repo, "/contents/missing.md"), nil)
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 
 	status, body = apiV1Client(t, seedUser(t, CreateUserOptions{})).do(http.MethodPut, apiV1RepoPath(repo, "/contents/other.md"), map[string]any{

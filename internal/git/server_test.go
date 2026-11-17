@@ -132,6 +132,15 @@ func TestRunService(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, stderr.String(), "does not appear to be a git repository")
 	})
+
+	t.Run("unsupported service", func(t *testing.T) {
+		for _, service := range []Service{"version", "--version", "rev-parse"} {
+			var stdout bytes.Buffer
+			err := RunService(ctx, service, repoPath, ServiceOptions{Stdout: &stdout})
+			assert.ErrorContains(t, err, "unsupported service", service)
+			assert.Empty(t, stdout.String(), service)
+		}
+	})
 }
 
 func TestRunReceivePack(t *testing.T) {
