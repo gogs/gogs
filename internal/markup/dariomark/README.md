@@ -17,7 +17,8 @@ Dariomark was written from scratch, from the specifications, for the Markdown th
 - **Editable task lists**: task list items carry their source lines, e.g., `<li class="task-list-item" data-source-lines="5-7">`, so a client can toggle or reorder items, e.g., by drag and drop, by editing those lines of the source.
 - **SmartyPants punctuation**: curly quotes, dashes, ellipses and fractions.
 - **Built-in sanitizing**: documents without raw HTML are sanitized while they are written, with the same result as [bluemonday](https://github.com/microcosm-cc/bluemonday)'s user content policy.
-- **Safe for concurrent use**, with no dependencies beyond the Go standard library, `golang.org/x/net/html` and `gopkg.in/yaml.v3`.
+- **Safe for concurrent use**: `Render` can be called from any number of goroutines at once.
+- **Few dependencies**: only the Go standard library, `golang.org/x/net/html` and `gopkg.in/yaml.v3`.
 
 ## Performance
 
