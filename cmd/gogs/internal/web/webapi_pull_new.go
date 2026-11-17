@@ -140,6 +140,10 @@ type repoNewPull struct {
 	HeadOwner  string `json:"headOwner"`
 	HeadName   string `json:"headName"`
 	HeadBranch string `json:"headBranch"`
+	// BaseRepos are the repositories the head branch can be merged into: the
+	// repository of the head branch and its base repository when it is a fork,
+	// each when it takes pull requests.
+	BaseRepos []repoNewPullBase `json:"baseRepos"`
 	// Branches are those of the repository to merge into, and HeadBranches
 	// those of the repository of the head branch.
 	Branches     []string `json:"branches"`
@@ -162,6 +166,40 @@ type repoNewPull struct {
 	issueMetaOptions
 	Attachment     *issueAttachmentSettings `json:"attachment,omitempty"`
 	ViewerCanWrite bool                     `json:"viewerCanWrite"`
+}
+
+type repoNewPullBase struct {
+	Owner         string `json:"owner"`
+	Name          string `json:"name"`
+	DefaultBranch string `json:"defaultBranch"`
+}
+
+// newPullBaseRepos returns the repositories the head branch of p can be
+// merged into and the viewer can read, see repoNewPull.BaseRepos.
+func newPullBaseRepos(ctx context.Context, logger *logx.Logger, viewer *database.User, p *pullCompare) ([]repoNewPullBase, error) {
+	head := p.HeadRepo
+	if err := database.Handle.Repositories().LoadAttributes(ctx, head); err != nil {
+		return nil, errors.Wrap(err, "load base repository")
+	}
+	candidates := []*database.Repository{head}
+	if head.IsFork {
+		candidates = append(candidates, head.BaseRepo)
+	}
+	bases := make([]repoNewPullBase, 0, len(candidates))
+	for _, repo := range candidates {
+		if !repo.AllowsPulls() {
+			continue
+		}
+		if !viewer.IsAdmin && !database.Handle.Permissions().Authorize(ctx, logger, viewer.ID, repo.ID, database.AccessModeRead,
+			database.AccessModeOptions{OwnerID: repo.OwnerID, Private: repo.IsPrivate}) {
+			continue
+		}
+		if err := repo.GetOwner(); err != nil {
+			return nil, errors.Wrap(err, "get owner")
+		}
+		bases = append(bases, repoNewPullBase{Owner: repo.Owner.Name, Name: repo.Name, DefaultBranch: repo.DefaultBranch})
+	}
+	return bases, nil
 }
 
 // getRepoNewPull compares the branches in the route, written as
@@ -189,6 +227,10 @@ func getRepoNewPull(c flamego.Context, logger *logx.Logger, viewer *database.Use
 		HeadBranch:     p.HeadBranch,
 		Commits:        []repoCommitListItem{},
 		ViewerCanWrite: repoCtx.Viewer.CanWrite(),
+	}
+	if resp.BaseRepos, err = newPullBaseRepos(ctx, logger, viewer, p); err != nil {
+		logger.Error("Failed to list repositories to merge into", "repoID", p.HeadRepo.ID, "error", err)
+		return http.StatusInternalServerError, nil, err
 	}
 	baseGitRepo, err := openRepoGit(repoCtx)
 	if err == nil {

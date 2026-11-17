@@ -1,14 +1,18 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, GitCompareArrows } from "lucide-react";
+import { ArrowLeft, BookMarked, Check, ChevronDown, GitCompareArrows } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { DiffWorkspace } from "@/components/DiffWorkspace";
 import { RefPicker } from "@/components/RefPicker";
 import { RepoHeader } from "@/components/RepoHeader";
 import { RichText } from "@/components/RichText";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { usePageTitle } from "@/lib/page-title";
 import { type RepoNewPullData, createRepoPull, repoHeaderQuery } from "@/lib/queries/repo";
+import { cn } from "@/lib/utils";
 
 import type { RepoCommitSearch } from "./Commit.search";
 import { CommitList } from "./Commits";
@@ -59,6 +63,9 @@ export function RepoNewPull({
 
         <div className="glass mt-4 flex flex-wrap items-center gap-2 rounded-md border border-(--color-border) bg-(--color-surface) p-2">
           <GitCompareArrows className="mx-1 size-4 shrink-0 text-(--color-muted-foreground)" aria-hidden />
+          {data.baseRepos.length > 1 ? (
+            <BaseRepoPicker owner={repo.owner} name={repo.name} data={data} search={search} />
+          ) : null}
           <RefPicker
             current={data.baseBranch}
             type="branch"
@@ -137,5 +144,64 @@ export function RepoNewPull({
         />
       ) : null}
     </div>
+  );
+}
+
+// BaseRepoPicker switches the repository to merge into, between the
+// repository of the head branch and its base repository. The comparison
+// starts from the default branch of the chosen repository.
+function BaseRepoPicker({
+  owner,
+  name,
+  data,
+  search,
+}: {
+  owner: string;
+  name: string;
+  data: RepoNewPullData;
+  search: RepoCommitSearch;
+}) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="max-w-full min-w-0">
+          <BookMarked className="size-4 shrink-0" aria-hidden />
+          <span className="text-(--color-muted-foreground)">{t("repo.pulls.compare_base_repo")}:</span>
+          <span className="min-w-0 truncate font-semibold">
+            {owner}/{name}
+          </span>
+          <ChevronDown className="size-4 shrink-0" aria-hidden />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" collisionPadding={16} className="w-80 max-w-[calc(100vw-2rem)] p-1">
+        <ul>
+          {data.baseRepos.map((base) => {
+            const isHead = base.owner === data.headOwner && base.name === data.headName;
+            const current = base.owner === owner && base.name === name;
+            return (
+              <li key={`${base.owner}/${base.name}`} onClick={() => setOpen(false)}>
+                <Link
+                  to="/$owner/$repo/compare/$"
+                  params={{
+                    owner: base.owner,
+                    repo: base.name,
+                    _splat: `${base.defaultBranch}...${isHead ? "" : `${data.headOwner}:`}${data.headBranch}`,
+                  }}
+                  search={search}
+                  className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-(--color-surface) focus-visible:bg-(--color-surface) focus-visible:outline-none"
+                >
+                  <Check className={cn("size-4 shrink-0", !current && "invisible")} aria-hidden />
+                  <span className="min-w-0 break-all">
+                    {base.owner}/{base.name}
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </PopoverContent>
+    </Popover>
   );
 }
