@@ -142,7 +142,10 @@ func HTTPContexter(logger *logx.Logger, store Store) flamego.Handler {
 			logger.Error("Failed to authenticate by reverse proxy header", "error", err)
 			return
 		} else if viaProxy && authUser == nil {
-			askCredentials(c, http.StatusForbidden, "User does not exist")
+			// The user has no account, so it sees what a user without access
+			// does. Credentials cannot change that, so the client must not be
+			// asked for them.
+			c.ResponseWriter().WriteHeader(http.StatusNotFound)
 			return
 		}
 

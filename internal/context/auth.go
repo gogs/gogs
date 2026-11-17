@@ -161,11 +161,8 @@ func AuthenticatedUser(logger *logx.Logger, store AuthStore, r *http.Request, se
 // viewer is, and the user is nil when it names a user that does not exist or,
 // with auto-registration, a name that is not allowed.
 func ReverseProxyUser(store AuthStore, r *http.Request) (_ *database.User, ok bool, _ error) {
-	if !conf.Auth.EnableReverseProxyAuthentication || !isRequestFromTrustedProxy(r) {
-		return nil, false, nil
-	}
-	username := r.Header.Get(conf.Auth.ReverseProxyAuthenticationHeader)
-	if username == "" {
+	username, ok := ReverseProxyUsername(r)
+	if !ok {
 		return nil, false, nil
 	}
 
@@ -200,6 +197,17 @@ func ReverseProxyUser(store AuthStore, r *http.Request) (_ *database.User, ok bo
 		return user, true, nil
 	}
 	return nil, true, errors.Wrapf(err, "create user %q", username)
+}
+
+// ReverseProxyUsername returns the username in the reverse proxy
+// authentication header. The bool is false when the header does not apply to
+// the request, as described for ReverseProxyUser.
+func ReverseProxyUsername(r *http.Request) (string, bool) {
+	if !conf.Auth.EnableReverseProxyAuthentication || !isRequestFromTrustedProxy(r) {
+		return "", false
+	}
+	username := r.Header.Get(conf.Auth.ReverseProxyAuthenticationHeader)
+	return username, username != ""
 }
 
 // isRequestFromTrustedProxy reports whether the request's immediate remote

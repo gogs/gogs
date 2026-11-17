@@ -233,8 +233,7 @@ func TestAuthenticate_reverseProxy(t *testing.T) {
 			remoteAddr:        "10.0.0.1:1234",
 			proxyUser:         "ghost",
 			requireSigninView: true,
-			expStatusCode:     http.StatusForbidden,
-			expBody:           `{"message":"User does not exist"}` + "\n",
+			expStatusCode:     http.StatusNotFound,
 		},
 		{
 			name:          "empty header from trusted proxy falls back to Basic authentication",
@@ -302,6 +301,7 @@ func TestAuthorize(t *testing.T) {
 	tests := []struct {
 		name          string
 		anonymous     bool
+		proxyUser     string
 		accessMode    database.AccessMode
 		mockStore     func() *MockStore
 		expStatusCode int
@@ -374,6 +374,23 @@ func TestAuthorize(t *testing.T) {
 			expBody: `{"message":"Credentials needed"}` + "\n",
 		},
 		{
+			name:       "anonymous actor named by reverse proxy is not authorized",
+			anonymous:  true,
+			proxyUser:  "ghost",
+			accessMode: database.AccessModeRead,
+			mockStore: func() *MockStore {
+				mockStore := NewMockStore()
+				mockStore.GetRepositoryByNameFunc.SetDefaultHook(func(ctx context.Context, ownerID int64, name string) (*database.Repository, error) {
+					return &database.Repository{Name: name, IsPrivate: true}, nil
+				})
+				mockStore.GetUserByUsernameFunc.SetDefaultHook(func(ctx context.Context, username string) (*database.User, error) {
+					return &database.User{Name: username}, nil
+				})
+				return mockStore
+			},
+			expStatusCode: http.StatusNotFound,
+		},
+		{
 			name:       "actor is authorized",
 			accessMode: database.AccessModeRead,
 			mockStore: func() *MockStore {
@@ -419,6 +436,18 @@ func TestAuthorize(t *testing.T) {
 			r, err := http.NewRequest("GET", "/owner/repo", nil)
 			if err != nil {
 				t.Fatal(err)
+			}
+
+			if test.proxyUser != "" {
+				_, trusted, err := net.ParseCIDR("10.0.0.0/8")
+				require.NoError(t, err)
+				conf.SetMockAuth(t, conf.AuthOpts{
+					EnableReverseProxyAuthentication: true,
+					ReverseProxyAuthenticationHeader: "X-WEBAUTH-USER",
+					TrustedProxyCIDRs:                []*net.IPNet{trusted},
+				})
+				r.RemoteAddr = "10.0.0.1:1234"
+				r.Header.Set("X-WEBAUTH-USER", test.proxyUser)
 			}
 
 			rr := httptest.NewRecorder()

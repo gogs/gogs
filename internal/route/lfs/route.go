@@ -68,9 +68,7 @@ func authenticate(logger *logx.Logger, store Store) flamego.Handler {
 			// Like Git over HTTP, which serves public repositories without
 			// authentication, the viewer may still download what anyone can.
 			if conf.Auth.RequireSigninView {
-				responseJSON(logger, c.ResponseWriter(), http.StatusForbidden, responseError{
-					Message: "User does not exist",
-				})
+				c.ResponseWriter().WriteHeader(http.StatusNotFound)
 				return
 			}
 			c.Map(&database.User{Name: "anonymous"})
@@ -173,8 +171,10 @@ func authorize(logger *logx.Logger, store Store, mode database.AccessMode) flame
 				Private: repo.IsPrivate,
 			},
 		) {
-			// An anonymous user may have access after signing in.
-			if actor.ID <= 0 {
+			// An anonymous user may have access after signing in, unless it is a
+			// user named by a trusted reverse proxy that has no account, which
+			// credentials cannot change.
+			if _, viaProxy := context.ReverseProxyUsername(c.Request().Request); actor.ID <= 0 && !viaProxy {
 				askCredentials(logger, c.ResponseWriter())
 				return
 			}

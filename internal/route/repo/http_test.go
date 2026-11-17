@@ -122,16 +122,14 @@ func TestHTTPContexter_reverseProxy(t *testing.T) {
 			name:          "header from trusted proxy names unknown user",
 			remoteAddr:    "10.0.0.1:1234",
 			proxyUser:     "ghost",
-			expStatusCode: http.StatusForbidden,
-			expBody:       "User does not exist",
+			expStatusCode: http.StatusNotFound,
 		},
 		{
 			name:             "header from trusted proxy names a user that cannot be registered",
 			remoteAddr:       "10.0.0.1:1234",
 			proxyUser:        "ghost",
 			autoRegistration: true,
-			expStatusCode:    http.StatusForbidden,
-			expBody:          "User does not exist",
+			expStatusCode:    http.StatusNotFound,
 		},
 		{
 			name:          "header from untrusted address is ignored",
