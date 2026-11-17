@@ -404,50 +404,55 @@ export function RepoCode({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <RepoHeader repo={repo} activeTab="code" />
-      <div className="flex min-h-0 w-full flex-1 gap-4 px-4 sm:px-6">
+      <div className="flex min-h-0 w-full gap-4 px-4 sm:px-6">
         {treeShown ? (
-          <ResizableSidebar
-            defaultWidth={300}
-            minWidth={220}
-            maxWidth={480}
-            className="glass hidden overflow-hidden rounded-md border border-(--color-border) lg:sticky lg:top-[calc(3.5rem+1px+1.5rem)] lg:my-6 lg:flex lg:max-h-[calc(100dvh-3.5rem-1px-3rem)] lg:self-start"
-          >
-            <div className="flex flex-col gap-2 p-3">
-              <div className="flex items-center gap-2">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={() => toggleTree(false)}
-                      aria-label={t("repo.hide_file_tree")}
-                      aria-expanded
-                      className={ICON_BUTTON_CLASS}
-                    >
-                      <PanelLeftClose className="size-4" aria-hidden />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t("repo.hide_file_tree")}</TooltipContent>
-                </Tooltip>
-                <h2 className="font-semibold">{t("repo.files")}</h2>
+          // The column stretches to the file view, so the sticky tree inside
+          // ends where the file view ends, or at the window bottom.
+          <div className="hidden shrink-0 lg:my-6 lg:block">
+            <ResizableSidebar
+              defaultWidth={300}
+              minWidth={220}
+              maxWidth={480}
+              className="glass overflow-hidden rounded-md border border-(--color-border) lg:sticky lg:top-[calc(3.5rem+1px+1.5rem)] lg:h-full lg:max-h-[calc(100dvh-3.5rem-1px-3rem)] lg:min-h-96"
+            >
+              <div className="flex flex-col gap-2 p-3">
+                <div className="flex items-center gap-2">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => toggleTree(false)}
+                        aria-label={t("repo.hide_file_tree")}
+                        aria-expanded
+                        className={ICON_BUTTON_CLASS}
+                      >
+                        <PanelLeftClose className="size-4" aria-hidden />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t("repo.hide_file_tree")}</TooltipContent>
+                  </Tooltip>
+                  <h2 className="font-semibold">{t("repo.files")}</h2>
+                </div>
+                <div className="flex min-w-0 items-center gap-2 [&>*:first-child]:min-w-0 [&>*:first-child]:flex-1 [&>*:first-child]:justify-start">
+                  {refPicker}
+                  {compareButton}
+                </div>
+                {goToFile()}
               </div>
-              <div className="flex min-w-0 items-center gap-2 [&>*:first-child]:min-w-0 [&>*:first-child]:flex-1 [&>*:first-child]:justify-start">
-                {refPicker}
-                {compareButton}
+              <div className="min-h-0 flex-1">
+                <RepoFileTree
+                  owner={repo.owner}
+                  name={repo.name}
+                  gitRef={data.ref}
+                  commitID={data.commitID}
+                  path={data.path}
+                />
               </div>
-              {goToFile()}
-            </div>
-            <div className="flex min-h-0 flex-col pb-2">
-              <RepoFileTree
-                owner={repo.owner}
-                name={repo.name}
-                gitRef={data.ref}
-                commitID={data.commitID}
-                path={data.path}
-              />
-            </div>
-          </ResizableSidebar>
+            </ResizableSidebar>
+          </div>
         ) : null}
-        <main className="min-w-0 flex-1 py-6">
+        {/* The last panel grows to the tree's minimum height, so the two always end together. */}
+        <main className="flex min-w-0 flex-1 flex-col py-6 [&>:last-child]:flex-1">
           <h1 className="sr-only">{data.path}</h1>
           <div className="mb-3 flex flex-wrap items-center gap-2 glass glass-ui:border glass-ui:px-3 glass-ui:py-2">
             {withTree && !treeOpen ? (

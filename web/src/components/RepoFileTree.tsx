@@ -2,7 +2,7 @@ import type { FileTreeDirectoryHandle, FileTreeIcons } from "@pierre/trees";
 import { FileTree, useFileTree } from "@pierre/trees/react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useEffect, useRef } from "react";
 
 import { repoPathsQuery } from "@/lib/queries/repo";
 import { TREE_THEME_STYLE } from "@/lib/tree-theme";
@@ -83,16 +83,5 @@ function Tree({
     if (item) model.scrollToPath(path, { offset: "nearest" });
   }, [model, path]);
 
-  // The tree is as tall as its open rows, so its box ends with the last entry.
-  // A shorter box from the caller scrolls it.
-  const rows = useSyncExternalStore(
-    (onChange) => model.subscribe(onChange),
-    () => model.getVisibleCount(),
-  );
-  return (
-    <FileTree
-      model={model}
-      style={{ ...TREE_THEME_STYLE, height: rows * model.getItemHeight(), minHeight: 0, flexShrink: 1 }}
-    />
-  );
+  return <FileTree model={model} style={{ ...TREE_THEME_STYLE, height: "100%" }} />;
 }
