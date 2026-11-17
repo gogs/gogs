@@ -76,6 +76,14 @@ func RunService(ctx context.Context, service Service, path string, opts ...Servi
 	ctx, span := tracer.Start(ctx, "git.RunService")
 	defer span.End()
 
+	// 🚨 SECURITY: Prevent running Git commands other than the services, because
+	// the service usually comes from the client.
+	switch service {
+	case ServiceUploadPack, ServiceUploadArchive, ServiceReceivePack:
+	default:
+		return errors.Newf("unsupported service %q", service)
+	}
+
 	var opt ServiceOptions
 	if len(opts) > 0 {
 		opt = opts[0]

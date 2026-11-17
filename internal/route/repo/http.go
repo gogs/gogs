@@ -6,9 +6,7 @@ import (
 	gocontext "context"
 	"fmt"
 	"net/http"
-	"os"
 	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -21,7 +19,7 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/lazyregexp"
-	"gogs.io/gogs/internal/pathx"
+	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -31,7 +29,10 @@ type HTTPContext struct {
 	OwnerSalt string
 	RepoID    int64
 	RepoName  string
-	AuthUser  *database.User
+	// RepoPath is the path of the Git repository the request is for, i.e., the
+	// repository or its wiki.
+	RepoPath string
+	AuthUser *database.User
 }
 
 // writeError writes the status and the text of an error response.
@@ -89,7 +90,7 @@ func HTTPContexter(logger *logx.Logger, store Store) flamego.Handler {
 
 		ownerName := c.Param("owner")
 		repoName := strings.TrimSuffix(c.Param("repo"), ".git")
-		repoName = strings.TrimSuffix(repoName, ".wiki")
+		repoName, isWiki := strings.CutSuffix(repoName, ".wiki")
 
 		action := gitHTTPAction(c)
 		isPull := gitHTTPIsPull(c, action)
@@ -116,10 +117,16 @@ func HTTPContexter(logger *logx.Logger, store Store) flamego.Handler {
 			return
 		}
 
+		repoPath := database.RepoPath(owner.Name, repo.Name)
+		if isWiki {
+			repoPath = database.WikiPath(owner.Name, repo.Name)
+		}
+
 		// Authentication is not required for pulling from public repositories.
 		if isPull && !repo.IsPrivate && !conf.Auth.RequireSigninView {
 			c.Map(&HTTPContext{
-				Context: c,
+				Context:  c,
+				RepoPath: repoPath,
 			})
 			return
 		}
@@ -235,6 +242,7 @@ Please create and use personal access token on user settings page`)
 			OwnerSalt: owner.Salt,
 			RepoID:    repo.ID,
 			RepoName:  repoName,
+			RepoPath:  repoPath,
 			AuthUser:  authUser,
 		})
 	}
@@ -353,14 +361,19 @@ func packetWrite(str string) []byte {
 
 func getInfoRefs(logger *logx.Logger, h serviceHandler) {
 	h.setHeaderNoCache()
-	service := getServiceType(h.r)
-	if service != "upload-pack" && service != "receive-pack" {
+	var service git.Service
+	switch getServiceType(h.r) {
+	case "upload-pack":
+		service = git.ServiceUploadPack
+	case "receive-pack":
+		service = git.ServiceReceivePack
+	default:
 		http.Error(h.w, "Missing or unsupported service", http.StatusBadRequest)
 		return
 	}
 
 	var refs, stderr bytes.Buffer
-	err := git.RunService(h.r.Context(), git.Service(service), h.dir, git.ServiceOptions{
+	err := git.RunService(h.r.Context(), service, h.dir, git.ServiceOptions{
 		StatelessRPC:  true,
 		AdvertiseRefs: true,
 		Stdout:        &refs,
@@ -372,7 +385,7 @@ func getInfoRefs(logger *logx.Logger, h serviceHandler) {
 	}
 	h.w.Header().Set("Content-Type", fmt.Sprintf("application/x-git-%s-advertisement", service))
 	h.w.WriteHeader(http.StatusOK)
-	_, _ = h.w.Write(packetWrite("# service=git-" + service + "\n"))
+	_, _ = h.w.Write(packetWrite("# service=git-" + string(service) + "\n"))
 	_, _ = h.w.Write([]byte("0000"))
 	_, _ = h.w.Write(refs.Bytes())
 }
@@ -382,29 +395,14 @@ var routes = []struct {
 	method  string
 	handler func(*logx.Logger, serviceHandler)
 }{
-	{lazyregexp.New("(.*?)/git-upload-pack$"), "POST", serviceUploadPack},
-	{lazyregexp.New("(.*?)/git-receive-pack$"), "POST", serviceReceivePack},
-	{lazyregexp.New("(.*?)/info/refs$"), "GET", getInfoRefs},
-}
-
-func getGitRepoPath(dir string) (string, error) {
-	if !strings.HasSuffix(dir, ".git") {
-		dir += ".git"
-	}
-
-	filename := filepath.Join(conf.Repository.Root, dir)
-	if _, err := os.Stat(filename); os.IsNotExist(err) {
-		return "", err
-	}
-
-	return filename, nil
+	{lazyregexp.New("/git-upload-pack$"), "POST", serviceUploadPack},
+	{lazyregexp.New("/git-receive-pack$"), "POST", serviceReceivePack},
+	{lazyregexp.New("/info/refs$"), "GET", getInfoRefs},
 }
 
 func HTTP(logger *logx.Logger, c *HTTPContext) {
 	for _, route := range routes {
-		reqPath := strings.ToLower(c.Request().URL.Path)
-		m := route.re.FindStringSubmatch(reqPath)
-		if m == nil {
+		if !route.re.MatchString(strings.ToLower(c.Request().URL.Path)) {
 			continue
 		}
 
@@ -418,16 +416,8 @@ func HTTP(logger *logx.Logger, c *HTTPContext) {
 			return
 		}
 
-		// 🚨 SECURITY: Prevent path traversal.
-		cleaned := pathx.Clean(m[1])
-		if m[1] != "/"+cleaned {
-			writeError(c.ResponseWriter(), http.StatusBadRequest, "Request path contains suspicious characters")
-			return
-		}
-
-		dir, err := getGitRepoPath(cleaned)
-		if err != nil {
-			logger.Warn("Failed to get Git repository path", "error", err)
+		// The wiki may not have been created yet.
+		if !osx.IsDir(c.RepoPath) {
 			c.ResponseWriter().WriteHeader(http.StatusNotFound)
 			return
 		}
@@ -435,7 +425,7 @@ func HTTP(logger *logx.Logger, c *HTTPContext) {
 		route.handler(logger, serviceHandler{
 			w:   c.ResponseWriter(),
 			r:   c.Request().Request,
-			dir: dir,
+			dir: c.RepoPath,
 
 			authUser:  c.AuthUser,
 			ownerName: c.OwnerName,

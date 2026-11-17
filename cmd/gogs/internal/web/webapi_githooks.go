@@ -2,7 +2,7 @@ package web
 
 import (
 	"net/http"
-	"slices"
+	"os"
 	"strings"
 
 	"github.com/cockroachdb/errors"
@@ -62,12 +62,12 @@ func getRepoGitHooks(logger *logx.Logger, gitRepo *git.Repository) (statusCode i
 func withRepoGitHook(c flamego.Context, logger *logx.Logger, gitRepo *git.Repository) {
 	w := c.ResponseWriter()
 	name := git.HookName(c.Param("name"))
-	if !slices.Contains(git.ServerSideHooks, name) {
-		writeErrorResponse(w, http.StatusNotFound, errors.New("hook does not exist"))
-		return
-	}
 	hook, err := gitRepo.Hook(gitHooksDir, name)
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			writeErrorResponse(w, http.StatusNotFound, errors.New("hook does not exist"))
+			return
+		}
 		logger.Error("Failed to get hook", "hookName", name, "repoPath", gitRepo.Path(), "error", err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "get hook"))
 		return

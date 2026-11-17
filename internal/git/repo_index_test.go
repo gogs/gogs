@@ -459,3 +459,95 @@ func TestRepository_RebaseRootCommit(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckIndexPath(t *testing.T) {
+	tests := []struct {
+		path    string
+		wantErr bool
+	}{
+		{path: "", wantErr: true},
+		{path: "/a", wantErr: true},
+		{path: "..", wantErr: true},
+		{path: "../a", wantErr: true},
+		{path: "a/../b", wantErr: true},
+		{path: "./a", wantErr: true},
+		{path: "a/", wantErr: true},
+		{path: "a//b", wantErr: true},
+		{path: "a/b", wantErr: false},
+
+		{path: ".git", wantErr: true},
+		{path: "./.git", wantErr: true},
+		{path: ".git/hooks/pre-commit", wantErr: true},
+		{path: ".git/hooks", wantErr: true},
+		{path: "dir/.git", wantErr: true},
+
+		// Case-insensitive file system
+		{path: ".Git", wantErr: true},
+		{path: "./.Git", wantErr: true},
+		{path: ".Git/hooks/pre-commit", wantErr: true},
+		{path: ".Git/hooks", wantErr: true},
+		{path: "dir/.Git", wantErr: true},
+
+		{path: ".gitignore", wantErr: false},
+		{path: "dir/.gitkeep", wantErr: false},
+
+		// Windows-specific
+		{path: `.git\`, wantErr: true},
+		{path: `.git\hooks\pre-commit`, wantErr: true},
+		{path: `.git\hooks`, wantErr: true},
+		{path: `dir\.git`, wantErr: true},
+
+		{path: `.\.git.`, wantErr: true},
+		{path: `.\.git.\`, wantErr: true},
+		{path: `.git.\hooks\pre-commit`, wantErr: true},
+		{path: `.git.\hooks`, wantErr: true},
+		{path: `dir\.git.`, wantErr: true},
+
+		{path: "./.git.", wantErr: true},
+		{path: "./.git./", wantErr: true},
+		{path: ".git./hooks/pre-commit", wantErr: true},
+		{path: ".git./hooks", wantErr: true},
+		{path: "dir/.git.", wantErr: true},
+
+		// Windows also strips trailing spaces from each path component
+		{path: ".git ", wantErr: true},
+		{path: ".git /hooks/pre-commit", wantErr: true},
+		{path: ".git /hooks", wantErr: true},
+		{path: `.git \hooks`, wantErr: true},
+		{path: "dir/.git ", wantErr: true},
+		{path: `dir\.git `, wantErr: true},
+		// Combinations of trailing dots and spaces
+		{path: ".git. ", wantErr: true},
+		{path: ".git .", wantErr: true},
+		{path: ".git. /hooks", wantErr: true},
+
+		// NTFS alternate data streams resolve to the stream owner
+		{path: ".git::$INDEX_ALLOCATION", wantErr: true},
+		{path: ".git::$INDEX_ALLOCATION/hooks/pre-commit", wantErr: true},
+		{path: `.git::$INDEX_ALLOCATION\hooks\pre-commit`, wantErr: true},
+		{path: ".Git:$I30:$INDEX_ALLOCATION/hooks", wantErr: true},
+		{path: ".git .::$INDEX_ALLOCATION/hooks", wantErr: true},
+		{path: "dir/.git::$INDEX_ALLOCATION", wantErr: true},
+
+		// NTFS 8.3 short name
+		{path: "GIT~1", wantErr: true},
+		{path: "git~1/hooks/pre-commit", wantErr: true},
+		{path: `GIT~1\hooks\pre-commit`, wantErr: true},
+		{path: "GIT~1./hooks", wantErr: true},
+		{path: "GIT~1::$INDEX_ALLOCATION/hooks/pre-commit", wantErr: true},
+		{path: "dir/git~1", wantErr: true},
+
+		{path: `dir\.gitkeep`, wantErr: false},
+		{path: ".gitignore ", wantErr: false},
+		{path: ".gitignore::$DATA", wantErr: false},
+		{path: "git", wantErr: false},
+		{path: "git~10", wantErr: false},
+		{path: "git~1x/hooks", wantErr: false},
+		{path: "git~2/hooks", wantErr: false},
+	}
+	for _, test := range tests {
+		t.Run(test.path, func(t *testing.T) {
+			assert.Equal(t, test.wantErr, checkIndexPath(test.path) != nil)
+		})
+	}
+}
