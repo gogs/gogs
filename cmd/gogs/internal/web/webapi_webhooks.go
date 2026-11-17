@@ -56,9 +56,9 @@ func withWebhook(c flamego.Context, logger *logx.Logger, scope *webhookScope) {
 	var w *database.Webhook
 	var err error
 	if scope.RepoID > 0 {
-		w, err = database.GetWebhookOfRepoByID(scope.RepoID, id)
+		w, err = database.Handle.Webhooks().GetOfRepo(c.Request().Context(), scope.RepoID, id)
 	} else {
-		w, err = database.GetWebhookByOrgID(scope.OrgID, id)
+		w, err = database.Handle.Webhooks().GetOfOrg(c.Request().Context(), scope.OrgID, id)
 	}
 	if err != nil {
 		if database.IsErrWebhookNotExist(err) {
@@ -98,12 +98,12 @@ func webhookLastStatus(s database.HookStatus) string {
 	return "none"
 }
 
-func getWebhooks(logger *logx.Logger, scope *webhookScope) (statusCode int, resp any, err error) {
+func getWebhooks(c flamego.Context, logger *logx.Logger, scope *webhookScope) (statusCode int, resp any, err error) {
 	var ws []*database.Webhook
 	if scope.RepoID > 0 {
-		ws, err = database.GetWebhooksByRepoID(scope.RepoID)
+		ws, err = database.Handle.Webhooks().ListByRepo(c.Request().Context(), scope.RepoID)
 	} else {
-		ws, err = database.GetWebhooksByOrgID(scope.OrgID)
+		ws, err = database.Handle.Webhooks().ListByOrg(c.Request().Context(), scope.OrgID)
 	}
 	if err != nil {
 		logger.Error("Failed to list webhooks", "repoID", scope.RepoID, "orgID", scope.OrgID, "error", err)
@@ -178,7 +178,7 @@ type webhookDetail struct {
 	Deliveries []webhookDelivery `json:"deliveries"`
 }
 
-func getWebhook(logger *logx.Logger, w *database.Webhook) (statusCode int, resp any, err error) {
+func getWebhook(c flamego.Context, logger *logx.Logger, w *database.Webhook) (statusCode int, resp any, err error) {
 	settings := webhookRequest{
 		Type:       w.HookTaskType.Name(),
 		PayloadURL: w.URL,
@@ -215,7 +215,7 @@ func getWebhook(logger *logx.Logger, w *database.Webhook) (statusCode int, resp 
 		}
 	}
 
-	tasks, err := w.History(1)
+	tasks, err := database.Handle.HookTasks().ListByWebhook(c.Request().Context(), w.ID, 1, conf.Webhook.PagingNum)
 	if err != nil {
 		logger.Error("Failed to list deliveries", "webhookID", w.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list deliveries")
@@ -319,7 +319,7 @@ type webhookIDResponse struct {
 	ID int64 `json:"id"`
 }
 
-func postWebhook(logger *logx.Logger, l i18n.Locale, scope *webhookScope, req webhookRequest) (statusCode int, resp any, err error) {
+func postWebhook(c flamego.Context, logger *logx.Logger, l i18n.Locale, scope *webhookScope, req webhookRequest) (statusCode int, resp any, err error) {
 	hookType := database.ToHookTaskType(req.Type)
 	if hookType == 0 || !slices.Contains(conf.Webhook.Types, req.Type) {
 		return http.StatusBadRequest, nil, errors.Newf("webhook type %q is not allowed", req.Type)
@@ -332,14 +332,14 @@ func postWebhook(logger *logx.Logger, l i18n.Locale, scope *webhookScope, req we
 	} else if errResp != nil {
 		return code, errResp, nil
 	}
-	if err = database.CreateWebhook(w); err != nil {
+	if err = database.Handle.Webhooks().Create(c.Request().Context(), w); err != nil {
 		logger.Error("Failed to create webhook", "repoID", scope.RepoID, "orgID", scope.OrgID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "create webhook")
 	}
 	return http.StatusCreated, &webhookIDResponse{ID: w.ID}, nil
 }
 
-func patchWebhook(logger *logx.Logger, l i18n.Locale, w *database.Webhook, req webhookRequest) (statusCode int, resp any, err error) {
+func patchWebhook(c flamego.Context, logger *logx.Logger, l i18n.Locale, w *database.Webhook, req webhookRequest) (statusCode int, resp any, err error) {
 	code, errResp, err := applyWebhookRequest(l, w, req)
 	if err != nil {
 		logger.Error("Failed to apply webhook settings", "webhookID", w.ID, "error", err)
@@ -347,18 +347,18 @@ func patchWebhook(logger *logx.Logger, l i18n.Locale, w *database.Webhook, req w
 	} else if errResp != nil {
 		return code, errResp, nil
 	}
-	if err = database.UpdateWebhook(w); err != nil {
+	if err = database.Handle.Webhooks().Update(c.Request().Context(), w); err != nil {
 		logger.Error("Failed to update webhook", "webhookID", w.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update webhook")
 	}
 	return http.StatusNoContent, nil, nil
 }
 
-func deleteWebhook(logger *logx.Logger, scope *webhookScope, w *database.Webhook) (statusCode int, resp any, err error) {
+func deleteWebhook(c flamego.Context, logger *logx.Logger, scope *webhookScope, w *database.Webhook) (statusCode int, resp any, err error) {
 	if scope.RepoID > 0 {
-		err = database.DeleteWebhookOfRepoByID(scope.RepoID, w.ID)
+		err = database.Handle.Webhooks().DeleteOfRepo(c.Request().Context(), scope.RepoID, w.ID)
 	} else {
-		err = database.DeleteWebhookOfOrgByID(scope.OrgID, w.ID)
+		err = database.Handle.Webhooks().DeleteOfOrg(c.Request().Context(), scope.OrgID, w.ID)
 	}
 	if err != nil {
 		logger.Error("Failed to delete webhook", "webhookID", w.ID, "error", err)
@@ -460,7 +460,7 @@ func postRepoWebhookTest(c flamego.Context, logger *logx.Logger, viewer *databas
 		logger.Error("Failed to build test payload", "repoID", rc.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, err
 	}
-	if err = database.TestWebhook(logger, rc.Repo, database.HookEventTypePush, p, w.ID); err != nil {
+	if err = database.Handle.Webhooks().Test(c.Request().Context(), logger, rc.Repo, database.HookEventTypePush, p, w.ID); err != nil {
 		logger.Error("Failed to queue test delivery", "webhookID", w.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "test webhook")
 	}
@@ -470,7 +470,7 @@ func postRepoWebhookTest(c flamego.Context, logger *logx.Logger, viewer *databas
 // postRepoWebhookRedelivery queues a past delivery of the webhook of a
 // repository again.
 func postRepoWebhookRedelivery(c flamego.Context, logger *logx.Logger, rc *repoAdminContext, w *database.Webhook) (statusCode int, resp any, err error) {
-	task, err := database.GetHookTaskOfWebhookByUUID(w.ID, c.Param("uuid"))
+	task, err := database.Handle.HookTasks().GetByUUID(c.Request().Context(), w.ID, c.Param("uuid"))
 	if err != nil {
 		if database.IsHookTaskNotExist(err) {
 			return http.StatusNotFound, nil, errors.New("delivery does not exist")
@@ -479,7 +479,7 @@ func postRepoWebhookRedelivery(c flamego.Context, logger *logx.Logger, rc *repoA
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get delivery")
 	}
 	task.IsDelivered = false
-	if err = database.UpdateHookTask(task); err != nil {
+	if err = database.Handle.HookTasks().Update(c.Request().Context(), task); err != nil {
 		logger.Error("Failed to update delivery", "hookTaskID", task.ID, "webhookID", w.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update delivery")
 	}

@@ -391,7 +391,7 @@ func postRepoPullBranch(c flamego.Context, logger *logx.Logger, viewer *database
 		logger.Error("Failed to create branch", "branch", pull.HeadBranch, "commitID", pull.MergedCommitID, "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "create branch")
 	}
-	if err = database.PrepareWebhooks(logger, repo, database.HookEventTypeCreate, &apiv1types.WebhookCreatePayload{
+	if err = database.Handle.Webhooks().Prepare(c.Request().Context(), logger, repo, database.HookEventTypeCreate, &apiv1types.WebhookCreatePayload{
 		Ref:           pull.HeadBranch,
 		RefType:       "branch",
 		DefaultBranch: repo.DefaultBranch,
@@ -444,7 +444,7 @@ func deleteHeadBranch(ctx context.Context, logger *logx.Logger, viewer *database
 	if err = gitRepo.DeleteBranch(ctx, pull.HeadBranch, git.DeleteBranchOptions{Force: true}); err != nil {
 		return false, errors.Wrap(err, "delete branch")
 	}
-	if err = database.PrepareWebhooks(logger, repo, database.HookEventTypeDelete, &apiv1types.WebhookDeletePayload{
+	if err = database.Handle.Webhooks().Prepare(ctx, logger, repo, database.HookEventTypeDelete, &apiv1types.WebhookDeletePayload{
 		Ref:        pull.HeadBranch,
 		RefType:    "branch",
 		PusherType: apiv1types.WebhookPusherTypeUser,

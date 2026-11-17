@@ -161,7 +161,7 @@ func TestRepoSettingsWebhooks(t *testing.T) {
 	assert.True(t, detail.Settings.ChosenEvents["push"])
 	assert.True(t, detail.Settings.ChosenEvents["issues"])
 	assert.False(t, detail.Settings.ChosenEvents["release"])
-	stored, err := database.GetWebhookOfRepoByID(repo.ID, id)
+	stored, err := database.Handle.Webhooks().GetOfRepo(t.Context(), repo.ID, id)
 	require.NoError(t, err)
 	assert.Equal(t, secret, stored.Secret)
 	assert.True(t, stored.ChooseEvents)
@@ -227,7 +227,7 @@ func TestRepoSettingsWebhooks(t *testing.T) {
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 	status, body = c.do(http.MethodGet, hookPath, nil)
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
-	_, err = database.GetWebhookOfRepoByID(repo.ID, id)
+	_, err = database.Handle.Webhooks().GetOfRepo(t.Context(), repo.ID, id)
 	assert.True(t, database.IsErrWebhookNotExist(err), "webhook not deleted: %v", err)
 }
 
@@ -248,11 +248,11 @@ func TestRepoSettingsTriggerTask(t *testing.T) {
 	var task *database.HookTask
 	require.Eventually(t, func() bool {
 		var err error
-		task, err = database.GetHookTaskOfWebhookByUUID(id, uuid)
+		task, err = database.Handle.HookTasks().GetByUUID(t.Context(), id, uuid)
 		return err == nil && task.IsDelivered && task.Delivered > 0
 	}, 30*time.Second, 200*time.Millisecond, "delivery not recorded")
 	task.IsDelivered = false
-	require.NoError(t, database.UpdateHookTask(task))
+	require.NoError(t, database.Handle.HookTasks().Update(t.Context(), task))
 
 	u, err := database.Handle.Users().GetByID(t.Context(), owner.ID)
 	require.NoError(t, err)

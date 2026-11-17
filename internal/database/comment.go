@@ -338,7 +338,7 @@ func CreateIssueComment(logger *logx.Logger, doer *User, repo *Repository, issue
 	}
 
 	comment.Issue = issue
-	if err = PrepareWebhooks(logger, repo, HookEventTypeIssueComment, &apiv1types.WebhookIssueCommentPayload{
+	if err = Handle.Webhooks().Prepare(context.TODO(), logger, repo, HookEventTypeIssueComment, &apiv1types.WebhookIssueCommentPayload{
 		Action:     apiv1types.WebhookIssueCommentCreated,
 		Issue:      issue.APIFormat(),
 		Comment:    comment.APIFormat(),
@@ -474,7 +474,7 @@ func UpdateComment(logger *logx.Logger, doer *User, c *Comment, oldContent strin
 
 	if err = c.Issue.LoadAttributes(); err != nil {
 		logger.Error("Failed to load issue attributes", "issueID", c.IssueID, "error", err)
-	} else if err = PrepareWebhooks(logger, c.Issue.Repo, HookEventTypeIssueComment, &apiv1types.WebhookIssueCommentPayload{
+	} else if err = Handle.Webhooks().Prepare(context.TODO(), logger, c.Issue.Repo, HookEventTypeIssueComment, &apiv1types.WebhookIssueCommentPayload{
 		Action:  apiv1types.WebhookIssueCommentEdited,
 		Issue:   c.Issue.APIFormat(),
 		Comment: c.APIFormat(),
@@ -529,7 +529,7 @@ func DeleteCommentByID(logger *logx.Logger, doer *User, id int64) error {
 
 	if err = comment.Issue.LoadAttributes(); err != nil {
 		logger.Error("Failed to load issue attributes", "issueID", comment.IssueID, "error", err)
-	} else if err = PrepareWebhooks(logger, comment.Issue.Repo, HookEventTypeIssueComment, &apiv1types.WebhookIssueCommentPayload{
+	} else if err = Handle.Webhooks().Prepare(context.TODO(), logger, comment.Issue.Repo, HookEventTypeIssueComment, &apiv1types.WebhookIssueCommentPayload{
 		Action:     apiv1types.WebhookIssueCommentDeleted,
 		Issue:      comment.Issue.APIFormat(),
 		Comment:    comment.APIFormat(),

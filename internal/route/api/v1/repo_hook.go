@@ -13,7 +13,7 @@ import (
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories#list-hooks
 func listHooks(c *apiContext) {
-	hooks, err := database.GetWebhooksByRepoID(c.Repo.Repository.ID)
+	hooks, err := database.Handle.Webhooks().ListByRepo(c.Request().Context(), c.Repo.Repository.ID)
 	if err != nil {
 		c.Errorf(err, "get webhooks by repository ID")
 		return
@@ -94,7 +94,7 @@ func createHook(c *apiContext, form createHookRequest) {
 	if err := w.UpdateEvent(); err != nil {
 		c.Errorf(err, "update event")
 		return
-	} else if err := database.CreateWebhook(w); err != nil {
+	} else if err := database.Handle.Webhooks().Create(c.Request().Context(), w); err != nil {
 		c.Errorf(err, "create webhook")
 		return
 	}
@@ -110,7 +110,7 @@ type editHookRequest struct {
 }
 
 func editHook(c *apiContext, form editHookRequest) {
-	w, err := database.GetWebhookOfRepoByID(c.Repo.Repository.ID, c.ParamInt64("id"))
+	w, err := database.Handle.Webhooks().GetOfRepo(c.Request().Context(), c.Repo.Repository.ID, c.ParamInt64("id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get webhook of repository by ID")
 		return
@@ -169,7 +169,7 @@ func editHook(c *apiContext, form editHookRequest) {
 		w.IsActive = *form.Active
 	}
 
-	if err := database.UpdateWebhook(w); err != nil {
+	if err := database.Handle.Webhooks().Update(c.Request().Context(), w); err != nil {
 		c.Errorf(err, "update webhook")
 		return
 	}
@@ -178,7 +178,7 @@ func editHook(c *apiContext, form editHookRequest) {
 }
 
 func deleteHook(c *apiContext) {
-	if err := database.DeleteWebhookOfRepoByID(c.Repo.Repository.ID, c.ParamInt64("id")); err != nil {
+	if err := database.Handle.Webhooks().DeleteOfRepo(c.Request().Context(), c.Repo.Repository.ID, c.ParamInt64("id")); err != nil {
 		c.Errorf(err, "delete webhook of repository by ID")
 		return
 	}
