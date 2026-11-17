@@ -162,7 +162,8 @@ func (s *DeployKeysStore) Delete(ctx context.Context, logger *logx.Logger, doer 
 		}
 	}
 
-	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	var publicKeyDeleted bool
+	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		err := tx.Where("id = ?", key.ID).Delete(new(DeployKey)).Error
 		if err != nil {
 			return errors.Wrap(err, "delete deploy key")
@@ -175,6 +176,19 @@ func (s *DeployKeysStore) Delete(ctx context.Context, logger *logx.Logger, doer 
 		} else if count > 0 {
 			return nil
 		}
-		return deletePublicKeys(tx, key.KeyID)
+		if err = deletePublicKeys(tx, key.KeyID); err != nil {
+			return err
+		}
+		publicKeyDeleted = true
+		return nil
 	})
+	if err != nil {
+		return err
+	}
+
+	// Other repositories still using the same key keep its "authorized_keys" line.
+	if !publicKeyDeleted {
+		return nil
+	}
+	return newPublicKeysStore(s.db).RewriteAuthorizedKeys()
 }

@@ -1891,6 +1891,36 @@ func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 		return errors.Newf("commit: %v", err)
 	}
 
+	publicKeyDeleted := false
+	err = Handle.db.Transaction(func(tx *gorm.DB) error {
+		var deployKeys []*DeployKey
+		if err := tx.Where("repo_id = ?", repoID).Find(&deployKeys).Error; err != nil {
+			return errors.Wrap(err, "list deploy keys")
+		}
+		if err := tx.Where("repo_id = ?", repoID).Delete(new(DeployKey)).Error; err != nil {
+			return errors.Wrap(err, "delete deploy keys")
+		}
+
+		// The public key behind a deploy key is shared by every repository that uses the same key.
+		for _, key := range deployKeys {
+			var count int64
+			if err := tx.Model(new(DeployKey)).Where("key_id = ?", key.KeyID).Count(&count).Error; err != nil {
+				return errors.Wrapf(err, "count deploy keys [key_id: %d]", key.KeyID)
+			} else if count > 0 {
+				continue
+			}
+
+			if err := deletePublicKeys(tx, key.KeyID); err != nil {
+				return errors.Wrapf(err, "delete public key [%d]", key.KeyID)
+			}
+			publicKeyDeleted = true
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
 	// Remove repository files.
 	repoPath := repo.RepoPath()
 	RemoveAllWithNotice(logger, "Delete repository files", repoPath)
@@ -1908,6 +1938,11 @@ func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 		}
 	}
 
+	if publicKeyDeleted {
+		if err = newPublicKeysStore(Handle.db).RewriteAuthorizedKeys(); err != nil {
+			return errors.Wrap(err, "rewrite authorized keys")
+		}
+	}
 	return nil
 }
 
