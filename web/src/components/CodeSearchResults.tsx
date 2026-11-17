@@ -1,13 +1,11 @@
 import { type DiffsHighlighter, type ThemedToken, getFiletypeFromFileName, getSharedHighlighter } from "@pierre/diffs";
 import { useQuery } from "@tanstack/react-query";
-import { FileCode, SlidersHorizontal } from "lucide-react";
-import { type ReactNode, useMemo, useState } from "react";
+import { FileCode, type LucideIcon } from "lucide-react";
+import { type ReactNode, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { CodeSearchInput } from "@/components/CodeSearchInput";
-import { MenuCheckbox } from "@/components/MenuCheckbox";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { RepoSearchFile, RepoSearchLine } from "@/lib/queries/repo";
 import { resolveTheme, useTheme } from "@/lib/theme-context";
@@ -224,6 +222,14 @@ function Snippet({
   );
 }
 
+export interface CodeSearchToggle {
+  icon: LucideIcon;
+  label: string;
+  pressed: boolean;
+  // onToggle gets the query in the box.
+  onToggle: (query: string) => void;
+}
+
 // CodeSearchForm searches for the query, with qualifiers such as path: shown
 // as chips. A global search also takes org:, user: and repo:.
 export function CodeSearchForm({
@@ -231,14 +237,15 @@ export function CodeSearchForm({
   onSearch,
   autoFocus,
   global,
-  options,
+  toggles = [],
 }: {
   query: string;
   onSearch: (query: string) => void;
   autoFocus?: boolean;
   global?: boolean;
-  // options goes after the search button, e.g., CodeSearchOptions.
-  options?: ReactNode;
+  // toggles are the search options at the end of the box. Turning one on or
+  // off runs the search of what is in the box again.
+  toggles?: CodeSearchToggle[];
 }) {
   const { t } = useTranslation();
   return (
@@ -250,60 +257,42 @@ export function CodeSearchForm({
       }}
       className="flex w-full items-start gap-2 sm:w-auto sm:flex-1"
     >
-      <CodeSearchInput query={query} global={global} autoFocus={autoFocus} />
+      <CodeSearchInput
+        query={query}
+        global={global}
+        autoFocus={autoFocus}
+        end={toggles.map(({ icon: Icon, label, pressed, onToggle }) => (
+          <Tooltip key={label}>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                aria-label={label}
+                aria-pressed={pressed}
+                onClick={(e) => {
+                  // The box focuses its input on a click, which would open the
+                  // suggestions.
+                  e.stopPropagation();
+                  const form = e.currentTarget.form;
+                  onToggle(((form ? new FormData(form).get("q") : null) as string | null)?.trim() ?? "");
+                }}
+                className={cn(
+                  "grid size-6 cursor-pointer place-items-center rounded border outline-none focus-visible:ring-1 focus-visible:ring-(--color-ring)",
+                  pressed
+                    ? "border-(--color-primary) bg-(--color-primary)/15 text-(--color-primary)"
+                    : "border-transparent text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)",
+                )}
+              >
+                <Icon className="size-4" aria-hidden />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{label}</TooltipContent>
+          </Tooltip>
+        ))}
+      />
       <Button type="submit" variant="outline" size="sm" className="h-8">
         {t("explore.search")}
       </Button>
-      {options}
     </form>
-  );
-}
-
-// CodeSearchOptions is a menu of options that change how the search is run.
-// The button shows how many are on. Picking one closes the menu, since it
-// runs the search again.
-export function CodeSearchOptions({
-  options,
-}: {
-  options: { label: string; checked: boolean; onChange: (checked: boolean) => void }[];
-}) {
-  const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
-  const on = options.filter((option) => option.checked).length;
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <PopoverTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className={cn("h-8 gap-1 px-2", on && "text-(--color-primary)")}
-              aria-label={on ? t("repo.code_search.options_on", { count: on }) : t("repo.code_search.options")}
-            >
-              <SlidersHorizontal className="size-4" aria-hidden />
-              {on ? <span className="text-xs font-semibold tabular-nums">{on}</span> : null}
-            </Button>
-          </PopoverTrigger>
-        </TooltipTrigger>
-        <TooltipContent>{t("repo.code_search.options")}</TooltipContent>
-      </Tooltip>
-      <PopoverContent align="end" className="w-56 p-1">
-        {options.map((option) => (
-          <MenuCheckbox
-            key={option.label}
-            checked={option.checked}
-            onSelect={() => {
-              setOpen(false);
-              option.onChange(!option.checked);
-            }}
-          >
-            {option.label}
-          </MenuCheckbox>
-        ))}
-      </PopoverContent>
-    </Popover>
   );
 }
 

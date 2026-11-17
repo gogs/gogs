@@ -104,6 +104,7 @@ export function CodeSearchInput({
   global,
   autoFocus,
   compact,
+  end,
 }: {
   query: string;
   // global is set for a search of all repositories, which takes org:, user:
@@ -112,6 +113,8 @@ export function CodeSearchInput({
   autoFocus?: boolean;
   // compact fits the box in the navbar.
   compact?: boolean;
+  // end goes at the end of the box, e.g., the toggles of search options.
+  end?: ReactNode;
 }) {
   const { t } = useTranslation();
   const listID = useId();
@@ -294,6 +297,7 @@ export function CodeSearchInput({
           onKeyDown={onKeyDown}
           className="h-7 min-w-24 flex-1 bg-transparent font-mono outline-none placeholder:font-sans placeholder:text-(--color-muted-foreground) [&::-webkit-search-cancel-button]:hidden"
         />
+        {end ? <div className="ml-auto flex shrink-0 items-center gap-0.5">{end}</div> : null}
       </div>
       <ul
         id={listID}

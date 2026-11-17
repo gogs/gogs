@@ -1,9 +1,9 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { TriangleAlert } from "lucide-react";
+import { CaseSensitive, ListChecks, TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { CodeSearchForm, CodeSearchHelp, CodeSearchOptions, CodeSearchResults } from "@/components/CodeSearchResults";
+import { CodeSearchForm, CodeSearchHelp, CodeSearchResults } from "@/components/CodeSearchResults";
 import { RefPicker } from "@/components/RefPicker";
 import { RepoHeader } from "@/components/RepoHeader";
 import { usePageTitle } from "@/lib/page-title";
@@ -68,22 +68,20 @@ export function RepoSearch({ owner, name, data }: { owner: string; name: string;
             query={data.query}
             autoFocus={!data.query}
             onSearch={(q) => search(q)}
-            options={
-              <CodeSearchOptions
-                options={[
-                  {
-                    label: t("repo.code_search.match_case"),
-                    checked: data.matchCase,
-                    onChange: (matchCase) => search(data.query, { matchCase }),
-                  },
-                  {
-                    label: t("repo.code_search.exhaustive"),
-                    checked: data.exhaustive,
-                    onChange: (exhaustive) => search(data.query, { exhaustive }),
-                  },
-                ]}
-              />
-            }
+            toggles={[
+              {
+                icon: CaseSensitive,
+                label: t("repo.code_search.match_case"),
+                pressed: data.matchCase,
+                onToggle: (q) => search(q, { matchCase: !data.matchCase }),
+              },
+              {
+                icon: ListChecks,
+                label: t("repo.code_search.exhaustive"),
+                pressed: data.exhaustive,
+                onToggle: (q) => search(q, { exhaustive: !data.exhaustive }),
+              },
+            ]}
           />
         </div>
 

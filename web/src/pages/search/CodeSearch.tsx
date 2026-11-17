@@ -1,8 +1,8 @@
 import { Link, getRouteApi, useNavigate } from "@tanstack/react-router";
-import { TriangleAlert } from "lucide-react";
+import { CaseSensitive, TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { CodeSearchForm, CodeSearchHelp, CodeSearchOptions, CodeSearchResults } from "@/components/CodeSearchResults";
+import { CodeSearchForm, CodeSearchHelp, CodeSearchResults } from "@/components/CodeSearchResults";
 import { usePageTitle } from "@/lib/page-title";
 import { refPath } from "@/lib/queries/repo";
 import { subUrl } from "@/lib/url";
@@ -31,21 +31,18 @@ export function CodeSearch() {
           onSearch={(q) =>
             void navigate({ to: "/search", search: { q: q || undefined, matchCase: data.matchCase || undefined } })
           }
-          options={
-            <CodeSearchOptions
-              options={[
-                {
-                  label: t("repo.code_search.match_case"),
-                  checked: data.matchCase,
-                  onChange: (matchCase) =>
-                    void navigate({
-                      to: "/search",
-                      search: { q: data.query || undefined, matchCase: matchCase || undefined },
-                    }),
-                },
-              ]}
-            />
-          }
+          toggles={[
+            {
+              icon: CaseSensitive,
+              label: t("repo.code_search.match_case"),
+              pressed: data.matchCase,
+              onToggle: (q) =>
+                void navigate({
+                  to: "/search",
+                  search: { q: q || undefined, matchCase: !data.matchCase || undefined },
+                }),
+            },
+          ]}
         />
       </div>
 
