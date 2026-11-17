@@ -33,17 +33,15 @@ import (
 func mountPageRoutes(logger *logx.Logger, f *flamego.Flame, webApp http.Handler) {
 	page := newPageContexter(webApp)
 	serveWeb := func(c *pageContext) { c.ServeWeb() }
-	reqSignIn := pageAccess(true)
-	ignSignIn := pageAccess(conf.Auth.RequireSigninView)
 
-	f.Get("/", page, ignSignIn, serveWeb)
+	f.Get("/", page, redirectToLanding, requirePageViewAccess, serveWeb)
 	f.Group("/explore", func() {
 		f.Get("", func(c flamego.Context) {
 			c.Redirect(conf.Server.Subpath + "/explore/repos")
 		})
 		f.Get("/{type: /(repos|users|organizations)/}", serveWeb)
-	}, page, ignSignIn)
-	f.Get("/{type: /(issues|pulls)/}", page, reqSignIn, serveWeb)
+	}, page, requirePageViewAccess)
+	f.Get("/{type: /(issues|pulls)/}", page, requirePageSignIn, serveWeb)
 
 	f.Group("/user", func() {
 		f.Group("/settings", func() {
@@ -65,7 +63,7 @@ func mountPageRoutes(logger *logx.Logger, f *flamego.Flame, webApp http.Handler)
 				}
 				c.ServeWeb()
 			})
-		}, reqSignIn)
+		}, requirePageSignIn)
 
 		f.Any("/activate_email", activateEmail)
 		f.Get("/email2user", email2User)
@@ -109,13 +107,13 @@ func mountPageRoutes(logger *logx.Logger, f *flamego.Flame, webApp http.Handler)
 			}
 			c.ServeWeb()
 		})
-	}, page, reqSignIn, requirePageAdmin)
+	}, page, requirePageSignIn, requirePageAdmin)
 
 	f.Group("/{owner}", func() {
 		f.Get("", serveUserProfile)
 		f.Get("/{type: /(followers|following)/}", withPageProfileUser, serveWeb)
-	}, page, ignSignIn)
-	f.Get("/attachments/{uuid}", page, ignSignIn, getAttachment)
+	}, page, requirePageViewAccess)
+	f.Get("/attachments/{uuid}", page, requirePageViewAccess, getAttachment)
 
 	// webhookPages mounts the webhook settings pages of a repository or an
 	// organization. Only the kinds of webhooks the site allows can be added, and
@@ -181,7 +179,7 @@ func mountPageRoutes(logger *logx.Logger, f *flamego.Flame, webApp http.Handler)
 			})
 			f.Get("/invitations/new", serveWeb)
 		}, withPageOrg(true))
-	}, page, reqSignIn)
+	}, page, requirePageSignIn)
 
 	f.Group("/repo", func() {
 		f.Get("/{page: /(create|migrate)/}", func(c *pageContext) {
@@ -208,7 +206,7 @@ func mountPageRoutes(logger *logx.Logger, f *flamego.Flame, webApp http.Handler)
 			}
 			c.ServeWeb()
 		})
-	}, page, reqSignIn)
+	}, page, requirePageSignIn)
 
 	f.Group("/{owner}/{repo}", func() {
 		f.Group("/settings", func() {
@@ -248,18 +246,18 @@ func mountPageRoutes(logger *logx.Logger, f *flamego.Flame, webApp http.Handler)
 			})
 			f.Get("/keys", serveWeb)
 		})
-	}, page, reqSignIn, withPageRepo(false, false), requirePageRepoAdmin)
+	}, page, requirePageSignIn, withPageRepo(false, false), requirePageRepoAdmin)
 
 	f.Group("/{owner}/{repo}", func() {
 		f.Get("/issues", requireIssues, serveIssueList)
 		f.Get("/issues/{index}", serveIssue)
 		f.Get("/{page: /(labels|milestones)/}", serveWeb)
-	}, page, ignSignIn, withPageRepo(true, false))
-	f.Get("/{owner}/{repo}/issues/new", page, reqSignIn, withPageRepo(true, false), requireIssues, serveWeb)
+	}, page, requirePageViewAccess, withPageRepo(true, false))
+	f.Get("/{owner}/{repo}/issues/new", page, requirePageSignIn, withPageRepo(true, false), requireIssues, serveWeb)
 	f.Group("/{owner}/{repo}/wiki", func() {
 		f.Get("/?{page}", serveWikiPage)
 		f.Get("/_pages", serveWeb)
-	}, page, ignSignIn, withPageRepo(false, true), requireWiki)
+	}, page, requirePageViewAccess, withPageRepo(false, true), requireWiki)
 
 	f.Group("/{owner}/{repo}", func() {
 		f.Group("/milestones", func() {
@@ -302,7 +300,7 @@ func mountPageRoutes(logger *logx.Logger, f *flamego.Flame, webApp http.Handler)
 			f.Get("/_new", serveWeb)
 			f.Get("/{page}/_edit", serveWeb)
 		}, requirePageRepoWriter, requireWiki)
-	}, page, reqSignIn, withPageRepo(false, false))
+	}, page, requirePageSignIn, withPageRepo(false, false))
 
 	f.Group("/{owner}/{repo}", func() {
 		f.Get("/releases", requireNonEmptyRepo, serveWeb)
@@ -322,11 +320,11 @@ func mountPageRoutes(logger *logx.Logger, f *flamego.Flame, webApp http.Handler)
 		f.Get("/commits/{**}", requireNonEmptyRepo, serveWeb)
 		f.Get("/commit/{sha: /[a-f0-9]{7,64}/}", requireNonEmptyRepo, serveWeb)
 		f.Get("/compare/"+compareRangeRoute, requireNonEmptyRepo, serveWeb)
-	}, page, ignSignIn, withPageRepo(false, false))
+	}, page, requirePageViewAccess, withPageRepo(false, false))
 	f.Group("/{owner}/{repo}", func() {
 		f.Get("", serveWeb)
 		f.Get("/{type: /(stars|watchers)/}", serveWeb)
-	}, serveGoGet, page, ignSignIn, withPageRepo(false, false))
+	}, serveGoGet, page, requirePageViewAccess, withPageRepo(false, false))
 
 	f.Group("/-", func() {
 		f.Get("/metrics", app.MetricsFilter, promhttp.Handler().ServeHTTP)

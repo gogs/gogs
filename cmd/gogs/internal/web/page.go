@@ -112,41 +112,50 @@ func (c *pageContext) redirectToSignIn() {
 	c.Context.Redirect(conf.Server.Subpath + "/user/sign-in?redirect_to=" + url.QueryEscape(conf.Server.Subpath+c.Request().URL.RequestURI()))
 }
 
-// pageAccess turns away the viewers a page is not for: users prohibited from
-// signing in, users who have not confirmed their email when that is required,
-// and, when signInRequired is true, anonymous visitors. Anonymous visitors of
-// the home page go to the landing page.
-func pageAccess(signInRequired bool) flamego.Handler {
-	return func(c *pageContext) {
-		// Frontend assets can match the page routes. Serve them to the viewers this
-		// turns away, because the pages they are sent to (sign-in, account
-		// activation) are built from them. Everyone else goes through the normal
-		// routes, which keeps repositories of owners named like an asset path
-		// reachable and missing assets a 404.
-		if isWebAssetPath(c.Request().URL.Path) && turnsAway(c, signInRequired) {
-			c.ServeWeb()
-			return
-		}
-
-		if c.IsLogged() && c.User.ProhibitLogin {
-			c.serveWeb(context.WebContext{Page: context.WebPageProhibitLogin})
-			return
-		}
-
+// requirePageViewAccess turns away the viewers who may not see site content:
+// users prohibited from signing in, users who have not confirmed their email
+// when that is required, and, when the site requires signing in to view any
+// content (`[auth] REQUIRE_SIGNIN_VIEW`), anonymous visitors.
+func requirePageViewAccess(c *pageContext) {
+	switch {
+	// Frontend assets can match the page routes. Serve them to the viewers this
+	// turns away, because the pages they are sent to (sign-in, account
+	// activation) are built from them. Everyone else goes through the normal
+	// routes, which keeps repositories of owners named like an asset path
+	// reachable and missing assets a 404.
+	case isWebAssetPath(c.Request().URL.Path) && (c.IsLogged() && c.User.IsDisabled() || !c.IsLogged() && conf.Auth.RequireSigninView):
+		c.ServeWeb()
+	case c.IsLogged() && c.User.ProhibitLogin:
+		c.serveWeb(context.WebContext{Page: context.WebPageProhibitLogin})
+	case c.IsLogged() && !c.User.IsActive && conf.Auth.RequireEmailConfirmation:
 		// The activation page offers to resend the email and shows the status.
-		if c.IsLogged() && !c.User.IsActive && conf.Auth.RequireEmailConfirmation {
-			c.Redirect(conf.Server.Subpath + "/user/activate")
-			return
-		}
+		c.Redirect(conf.Server.Subpath + "/user/activate")
+	case !c.IsLogged() && conf.Auth.RequireSigninView:
+		c.redirectToSignIn()
+	}
+}
 
-		if !c.IsLogged() && c.Request().RequestURI == "/" && conf.Server.LandingURL != "/" {
-			c.Redirect(conf.Server.Subpath + conf.Server.LandingURL)
-			return
-		}
+// requirePageSignIn is requirePageViewAccess for pages that also send
+// anonymous visitors to sign in on sites that do not require signing in to
+// view content.
+func requirePageSignIn(c *pageContext) {
+	if c.IsLogged() {
+		requirePageViewAccess(c)
+		return
+	}
+	if isWebAssetPath(c.Request().URL.Path) {
+		c.ServeWeb()
+		return
+	}
+	c.redirectToSignIn()
+}
 
-		if signInRequired && !c.IsLogged() {
-			c.redirectToSignIn()
-		}
+// redirectToLanding sends anonymous visitors of the home page to the landing
+// page (`[server] LANDING_URL`). Mount it before requirePageViewAccess, so the
+// landing page decides whether they need to sign in.
+func redirectToLanding(c *pageContext) {
+	if !c.IsLogged() && conf.Server.LandingURL != "/" {
+		c.Redirect(conf.Server.Subpath + conf.Server.LandingURL)
 	}
 }
 
@@ -160,16 +169,8 @@ func isWebAssetPath(p string) bool {
 		strings.HasPrefix(p, "/node_modules/")
 }
 
-// turnsAway returns true if pageAccess denies the viewer the requested page.
-func turnsAway(c *pageContext, signInRequired bool) bool {
-	if c.IsLogged() {
-		return c.User.IsDisabled()
-	}
-	return signInRequired
-}
-
 // requirePageAdmin turns away users who are not site admins. Mount it after
-// pageAccess(true).
+// requirePageSignIn.
 func requirePageAdmin(c *pageContext) {
 	if !c.User.IsAdmin {
 		c.ResponseWriter().WriteHeader(http.StatusForbidden)

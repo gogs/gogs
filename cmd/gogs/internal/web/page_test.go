@@ -34,7 +34,7 @@ func TestPageAccess(t *testing.T) {
 		f.Use(func(c flamego.Context) {
 			c.Map(user, i18n.Locale{Locale: unknwoni18n.Locale{Lang: "en-US"}})
 		})
-		f.Get("/{owner}/{repo}", newPageContexter(webApp), pageAccess(true), func(c flamego.Context) string {
+		f.Get("/{owner}/{repo}", newPageContexter(webApp), requirePageSignIn, func(c flamego.Context) string {
 			return "page"
 		})
 		resp := httptest.NewRecorder()
