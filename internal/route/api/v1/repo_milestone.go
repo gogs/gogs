@@ -9,7 +9,7 @@ import (
 )
 
 func listMilestones(c *apiContext) {
-	milestones, err := database.GetMilestonesByRepoID(c.Repo.Repository.ID)
+	milestones, err := database.Handle.Milestones().ListByRepoID(c.Request().Context(), c.Repo.Repository.ID)
 	if err != nil {
 		c.Error(err, "get milestones by repository ID")
 		return
@@ -23,7 +23,7 @@ func listMilestones(c *apiContext) {
 }
 
 func getMilestone(c *apiContext) {
-	milestone, err := database.GetMilestoneByRepoID(c.Repo.Repository.ID, c.ParamInt64("id"))
+	milestone, err := database.Handle.Milestones().GetByID(c.Request().Context(), c.Repo.Repository.ID, c.ParamInt64("id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get milestone by repository ID")
 		return
@@ -50,7 +50,7 @@ func createMilestone(c *apiContext, form createMilestoneRequest) {
 		Deadline: *form.Deadline,
 	}
 
-	if err := database.NewMilestone(milestone); err != nil {
+	if err := database.Handle.Milestones().Create(c.Request().Context(), milestone); err != nil {
 		c.Error(err, "new milestone")
 		return
 	}
@@ -65,7 +65,7 @@ type editMilestoneRequest struct {
 }
 
 func editMilestone(c *apiContext, form editMilestoneRequest) {
-	milestone, err := database.GetMilestoneByRepoID(c.Repo.Repository.ID, c.ParamInt64("id"))
+	milestone, err := database.Handle.Milestones().GetByID(c.Request().Context(), c.Repo.Repository.ID, c.ParamInt64("id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get milestone by repository ID")
 		return
@@ -82,11 +82,11 @@ func editMilestone(c *apiContext, form editMilestoneRequest) {
 	}
 
 	if form.State != nil {
-		if err = milestone.ChangeStatus(types.IssueStateClosed == types.IssueStateType(*form.State)); err != nil {
+		if err = database.Handle.Milestones().ChangeStatus(c.Request().Context(), milestone, types.IssueStateClosed == types.IssueStateType(*form.State)); err != nil {
 			c.Error(err, "change status")
 			return
 		}
-	} else if err = database.UpdateMilestone(milestone); err != nil {
+	} else if err = database.Handle.Milestones().Update(c.Request().Context(), milestone); err != nil {
 		c.Error(err, "update milestone")
 		return
 	}
@@ -95,7 +95,7 @@ func editMilestone(c *apiContext, form editMilestoneRequest) {
 }
 
 func deleteMilestone(c *apiContext) {
-	if err := database.DeleteMilestoneOfRepoByID(c.Repo.Repository.ID, c.ParamInt64("id")); err != nil {
+	if err := database.Handle.Milestones().DeleteByID(c.Request().Context(), c.Repo.Repository.ID, c.ParamInt64("id")); err != nil {
 		c.Error(err, "delete milestone of repository by ID")
 		return
 	}

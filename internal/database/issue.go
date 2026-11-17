@@ -99,16 +99,16 @@ func (issue *Issue) loadAttributes(e Engine) (err error) {
 	}
 
 	if issue.Labels == nil {
-		issue.Labels, err = getLabelsByIssueID(legacyTx(e), issue.ID)
+		issue.Labels, err = newLabelsStore(legacyTx(e)).ListByIssueID(context.TODO(), issue.ID)
 		if err != nil {
-			return errors.Newf("getLabelsByIssueID [%d]: %v", issue.ID, err)
+			return errors.Wrap(err, "list labels")
 		}
 	}
 
 	if issue.Milestone == nil && issue.MilestoneID > 0 {
-		issue.Milestone, err = getMilestoneByRepoID(legacyTx(e), issue.RepoID, issue.MilestoneID)
+		issue.Milestone, err = newMilestonesStore(legacyTx(e)).GetByID(context.TODO(), issue.RepoID, issue.MilestoneID)
 		if err != nil {
-			return errors.Newf("getMilestoneByRepoID [repo_id: %d, milestone_id: %d]: %v", issue.RepoID, issue.MilestoneID, err)
+			return errors.Wrapf(err, "get milestone %d", issue.MilestoneID)
 		}
 	}
 
@@ -216,15 +216,6 @@ func (issue *Issue) IsPoster(uid int64) bool {
 	return issue.PosterID == uid
 }
 
-func (issue *Issue) hasLabel(e Engine, labelID int64) bool {
-	return hasIssueLabel(legacyTx(e), issue.ID, labelID)
-}
-
-// HasLabel returns true if issue has been labeled by given ID.
-func (issue *Issue) HasLabel(labelID int64) bool {
-	return issue.hasLabel(x, labelID)
-}
-
 func (issue *Issue) sendLabelUpdatedWebhook(logger *logx.Logger, doer *User) {
 	var err error
 	if issue.IsPull {
@@ -254,27 +245,18 @@ func (issue *Issue) sendLabelUpdatedWebhook(logger *logx.Logger, doer *User) {
 	}
 }
 
-func (issue *Issue) addLabel(e *xorm.Session, label *Label) error {
-	return newIssueLabel(legacyTx(e), issue, label)
-}
-
-// AddLabel adds a new label to the issue.
+// AddLabel adds the label to the issue.
 func (issue *Issue) AddLabel(logger *logx.Logger, doer *User, label *Label) error {
-	if err := NewIssueLabel(issue, label); err != nil {
-		return err
-	}
-
-	issue.sendLabelUpdatedWebhook(logger, doer)
-	return nil
+	return issue.AddLabels(logger, doer, []*Label{label})
 }
 
 func (issue *Issue) addLabels(e *xorm.Session, labels []*Label) error {
-	return newIssueLabels(legacyTx(e), issue, labels)
+	return newLabelsStore(legacyTx(e)).addToIssue(context.TODO(), issue, labels...)
 }
 
 // AddLabels adds a list of new labels to the issue.
 func (issue *Issue) AddLabels(logger *logx.Logger, doer *User, labels []*Label) error {
-	if err := NewIssueLabels(issue, labels); err != nil {
+	if err := Handle.Labels().AddToIssue(context.TODO(), issue, labels...); err != nil {
 		return err
 	}
 
@@ -287,20 +269,16 @@ func (issue *Issue) getLabels(e Engine) (err error) {
 		return nil
 	}
 
-	issue.Labels, err = getLabelsByIssueID(legacyTx(e), issue.ID)
+	issue.Labels, err = newLabelsStore(legacyTx(e)).ListByIssueID(context.TODO(), issue.ID)
 	if err != nil {
-		return errors.Newf("getLabelsByIssueID: %v", err)
+		return errors.Wrap(err, "list labels")
 	}
 	return nil
 }
 
-func (issue *Issue) removeLabel(e *xorm.Session, label *Label) error {
-	return deleteIssueLabel(legacyTx(e), issue, label)
-}
-
 // RemoveLabel removes a label from issue by given ID.
 func (issue *Issue) RemoveLabel(logger *logx.Logger, doer *User, label *Label) error {
-	if err := DeleteIssueLabel(issue, label); err != nil {
+	if err := Handle.Labels().RemoveFromIssue(context.TODO(), issue, label); err != nil {
 		return err
 	}
 
@@ -313,12 +291,12 @@ func (issue *Issue) clearLabels(e *xorm.Session) (err error) {
 		return errors.Newf("getLabels: %v", err)
 	}
 
-	// NOTE: issue.removeLabel slices issue.Labels, so we need to create another slice to be unaffected.
+	// NOTE: Removing a label deletes it from issue.Labels in place, so iterate over a copy.
 	labels := make([]*Label, len(issue.Labels))
 	copy(labels, issue.Labels)
 	for i := range labels {
-		if err = issue.removeLabel(e, labels[i]); err != nil {
-			return errors.Newf("removeLabel: %v", err)
+		if err = newLabelsStore(legacyTx(e)).removeFromIssue(context.TODO(), issue, labels[i]); err != nil {
+			return errors.Wrapf(err, "remove label %d", labels[i].ID)
 		}
 	}
 
@@ -436,13 +414,13 @@ func (issue *Issue) changeStatus(logger *logx.Logger, e *xorm.Session, doer *Use
 		} else {
 			issue.Labels[idx].NumClosedIssues--
 		}
-		if err = updateLabel(legacyTx(e), issue.Labels[idx]); err != nil {
+		if err = newLabelsStore(legacyTx(e)).Update(context.TODO(), issue.Labels[idx]); err != nil {
 			return err
 		}
 	}
 
 	// Update issue count of milestone
-	if err = changeMilestoneIssueStats(legacyTx(e), issue); err != nil {
+	if err = newMilestonesStore(legacyTx(e)).updateIssueStats(context.TODO(), issue); err != nil {
 		return err
 	}
 
@@ -652,9 +630,10 @@ func newIssue(e *xorm.Session, opts NewIssueOptions) (err error) {
 	opts.Issue.Index = opts.Repo.NextIssueIndex()
 
 	if opts.Issue.MilestoneID > 0 {
-		milestone, err := getMilestoneByRepoID(legacyTx(e), opts.Issue.RepoID, opts.Issue.MilestoneID)
+		milestones := newMilestonesStore(legacyTx(e))
+		milestone, err := milestones.GetByID(context.TODO(), opts.Issue.RepoID, opts.Issue.MilestoneID)
 		if err != nil && !IsErrMilestoneNotExist(err) {
-			return errors.Newf("getMilestoneByID: %v", err)
+			return errors.Wrap(err, "get milestone")
 		}
 
 		// Assume milestone is invalid and drop silently.
@@ -662,7 +641,7 @@ func newIssue(e *xorm.Session, opts NewIssueOptions) (err error) {
 		if milestone != nil {
 			opts.Issue.MilestoneID = milestone.ID
 			opts.Issue.Milestone = milestone
-			if err = changeMilestoneAssign(legacyTx(e), opts.Issue, -1); err != nil {
+			if err = milestones.assignIssue(context.TODO(), opts.Issue, -1); err != nil {
 				return err
 			}
 		}
@@ -711,8 +690,8 @@ func newIssue(e *xorm.Session, opts NewIssueOptions) (err error) {
 				continue
 			}
 
-			if err = opts.Issue.addLabel(e, label); err != nil {
-				return errors.Newf("addLabel [id: %d]: %v", label.ID, err)
+			if err = newLabelsStore(legacyTx(e)).addToIssue(context.TODO(), opts.Issue, label); err != nil {
+				return errors.Wrapf(err, "add label %d", label.ID)
 			}
 		}
 	}
