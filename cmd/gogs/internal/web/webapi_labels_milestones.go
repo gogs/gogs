@@ -3,7 +3,6 @@ package web
 import (
 	"cmp"
 	"net/http"
-	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -17,6 +16,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/markup"
 )
 
@@ -96,7 +96,7 @@ type repoLabelRequest struct {
 	Color string `json:"color"`
 }
 
-var labelColor = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
+var labelColor = lazyregexp.New(`^#[0-9a-fA-F]{6}$`)
 
 func (req repoLabelRequest) validate(l i18n.Locale) *bindingErrorResponse {
 	if resp := textFieldError(l, "name", "repo.issues.label_title", req.Name, 50); resp != nil {

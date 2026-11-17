@@ -3,13 +3,14 @@ package dariomark
 import (
 	"bytes"
 	"path"
-	"regexp"
 	"strings"
+
+	"gogs.io/gogs/internal/lazyregexp"
 )
 
 var (
-	rawAnchorOpen  = regexp.MustCompile(`(?i)^<a[\s>]`)
-	rawAnchorClose = regexp.MustCompile(`(?i)^</a\s*>`)
+	rawAnchorOpen  = lazyregexp.New(`(?i)^<a[\s>]`)
+	rawAnchorClose = lazyregexp.New(`(?i)^</a\s*>`)
 )
 
 // specialChars returns the table of characters that start inline constructs.

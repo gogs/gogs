@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -17,6 +16,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/git"
+	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/osx"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 	"gogs.io/gogs/internal/sync"
@@ -279,7 +279,7 @@ func cutCoAuthorLines(text string) (rest string, lines []string) {
 	return strings.TrimSpace(blankLines.ReplaceAllString(kept.String(), "\n\n")), lines
 }
 
-var blankLines = regexp.MustCompile(`\n(?:[ \t]*\n){2,}`)
+var blankLines = lazyregexp.New(`\n(?:[ \t]*\n){2,}`)
 
 // coAuthorTrailers returns a "Co-authored-by" trailer for each author of the
 // commits, oldest first, each co-author their messages already credit, and

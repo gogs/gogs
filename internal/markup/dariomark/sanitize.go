@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"golang.org/x/net/html"
+
+	"gogs.io/gogs/internal/lazyregexp"
 )
 
 // Sanitizer describes the parts of the sanitizer policy that depend on the
@@ -413,11 +415,11 @@ func (s *sanitizeSink) validURL(raw string) (string, bool) {
 // bluemonday UGC policy when upgrading bluemonday, which supplies id, align,
 // title, alt and data URIs.
 var (
-	dataURIBase64Prefix = regexp.MustCompile(`^data:[^,]*;base64,`)
-	idPattern           = regexp.MustCompile(`[a-zA-Z0-9\:\-_\.]+`)
-	cellAlignPattern    = regexp.MustCompile(`(?i)^(center|justify|left|right|char)$`)
-	sourceLinesPattern  = regexp.MustCompile(`^[0-9]+-[0-9]+$`)
-	listStartPattern    = regexp.MustCompile(`^[0-9]+$`)
+	dataURIBase64Prefix = lazyregexp.New(`^data:[^,]*;base64,`)
+	idPattern           = lazyregexp.New(`[a-zA-Z0-9\:\-_\.]+`)
+	cellAlignPattern    = lazyregexp.New(`(?i)^(center|justify|left|right|char)$`)
+	sourceLinesPattern  = lazyregexp.New(`^[0-9]+-[0-9]+$`)
+	listStartPattern    = lazyregexp.New(`^[0-9]+$`)
 )
 
 // sanitizedElements are the elements that Render produces and the sanitizer

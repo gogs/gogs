@@ -3,7 +3,6 @@ package web
 import (
 	"context"
 	"net/http"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -14,12 +13,13 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
+	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/pathx"
 	"gogs.io/gogs/internal/template"
 	"gogs.io/gogs/internal/tool"
 )
 
-var commitIDPattern = regexp.MustCompile(`^[0-9a-f]{7,64}$`)
+var commitIDPattern = lazyregexp.New(`^[0-9a-f]{7,64}$`)
 
 // compareRangeRoute matches the "{before}...{after}" segment of compare routes
 // for SHA-1 and SHA-256 commit IDs. Flamego binds parameters by submatch
@@ -134,7 +134,7 @@ type repoCommitListItem struct {
 	CoAuthors []repoCommitSignature `json:"coAuthors,omitempty"`
 }
 
-var coAuthorTrailer = regexp.MustCompile(`(?im)^co-authored-by:[ \t]*([^<\r\n]*?)[ \t]*<([^>\r\n]+)>[ \t\r]*$`)
+var coAuthorTrailer = lazyregexp.New(`(?im)^co-authored-by:[ \t]*([^<\r\n]*?)[ \t]*<([^>\r\n]+)>[ \t\r]*$`)
 
 // coAuthorsOf returns the people the "Co-authored-by" trailers of the commit
 // message name, once per email and without the author.
