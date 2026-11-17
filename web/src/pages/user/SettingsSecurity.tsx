@@ -13,7 +13,7 @@ import { UserSettingsLayout } from "@/components/UserSettingsLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { fill } from "@/lib/format";
-import { passkeysSupported } from "@/lib/passkey";
+import { PasskeyWrongHostError, passkeysSupported } from "@/lib/passkey";
 import { formErrors } from "@/lib/queries/request";
 import {
   type Credential,
@@ -369,11 +369,13 @@ function UserPasskeys({ passkeys }: { passkeys: Credential[] }) {
   // passkey prompt or no passkey could be created, and with a NotAllowedError
   // only for the former, which needs no message.
   const message =
-    add.error instanceof DOMException
-      ? add.error.name === "NotAllowedError"
-        ? null
-        : t("settings.passkey_add_failed")
-      : formError;
+    add.error instanceof PasskeyWrongHostError
+      ? t("settings.passkey_wrong_host", { host: add.error.host })
+      : add.error instanceof DOMException
+        ? add.error.name === "NotAllowedError"
+          ? null
+          : t("settings.passkey_add_failed")
+        : formError;
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();

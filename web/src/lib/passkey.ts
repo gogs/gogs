@@ -23,6 +23,27 @@ export interface RequestOptionsJSON {
   };
 }
 
+// PasskeyWrongHostError reports that the browser refused a passkey because
+// the site is open at another address than host, the one in EXTERNAL_URL
+// that passkeys are for.
+export class PasskeyWrongHostError extends Error {
+  readonly host: string;
+  constructor(host: string) {
+    super(`passkeys are for ${host}`);
+    this.name = "PasskeyWrongHostError";
+    this.host = host;
+  }
+}
+
+// asWrongHost turns the SecurityError of the browser into a
+// PasskeyWrongHostError for host, and leaves other errors alone.
+function asWrongHost(err: unknown, host: string | undefined) {
+  if (err instanceof DOMException && err.name === "SecurityError") {
+    return new PasskeyWrongHostError(host ?? window.location.hostname);
+  }
+  return err;
+}
+
 export function passkeysSupported() {
   return typeof window.PublicKeyCredential === "function" && "credentials" in navigator;
 }
@@ -48,14 +69,19 @@ function toDescriptors(list?: CredentialDescriptorJSON[]): PublicKeyCredentialDe
 // createPasskey asks the browser to create a passkey with the options of the
 // server, and returns it as the server reads it.
 export async function createPasskey({ publicKey }: CreationOptionsJSON) {
-  const credential = (await navigator.credentials.create({
-    publicKey: {
-      ...publicKey,
-      challenge: fromBase64URL(publicKey.challenge),
-      user: { ...publicKey.user, id: fromBase64URL(publicKey.user.id) },
-      excludeCredentials: toDescriptors(publicKey.excludeCredentials),
-    },
-  })) as PublicKeyCredential;
+  let credential: PublicKeyCredential;
+  try {
+    credential = (await navigator.credentials.create({
+      publicKey: {
+        ...publicKey,
+        challenge: fromBase64URL(publicKey.challenge),
+        user: { ...publicKey.user, id: fromBase64URL(publicKey.user.id) },
+        excludeCredentials: toDescriptors(publicKey.excludeCredentials),
+      },
+    })) as PublicKeyCredential;
+  } catch (err) {
+    throw asWrongHost(err, publicKey.rp.id);
+  }
   const response = credential.response as AuthenticatorAttestationResponse;
   return {
     id: credential.id,
@@ -75,17 +101,22 @@ export async function createPasskey({ publicKey }: CreationOptionsJSON) {
 // server with, and returns the answer as the server reads it. The signal
 // cancels the request, which is then rejected with its reason.
 export async function getPasskey({ publicKey }: RequestOptionsJSON, signal: AbortSignal) {
-  const credential = (await navigator.credentials.get({
-    publicKey: {
-      ...publicKey,
-      challenge: fromBase64URL(publicKey.challenge),
-      allowCredentials: toDescriptors(publicKey.allowCredentials),
-      // The caller times the request out with the signal, so it can tell a
-      // timeout from the visitor cancelling, which browsers report the same way.
-      timeout: undefined,
-    },
-    signal,
-  })) as PublicKeyCredential;
+  let credential: PublicKeyCredential;
+  try {
+    credential = (await navigator.credentials.get({
+      publicKey: {
+        ...publicKey,
+        challenge: fromBase64URL(publicKey.challenge),
+        allowCredentials: toDescriptors(publicKey.allowCredentials),
+        // The caller times the request out with the signal, so it can tell a
+        // timeout from the visitor cancelling, which browsers report the same way.
+        timeout: undefined,
+      },
+      signal,
+    })) as PublicKeyCredential;
+  } catch (err) {
+    throw asWrongHost(err, publicKey.rpId);
+  }
   const response = credential.response as AuthenticatorAssertionResponse;
   return {
     id: credential.id,

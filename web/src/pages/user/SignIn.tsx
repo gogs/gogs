@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePageTitle } from "@/lib/page-title";
-import { type RequestOptionsJSON, getPasskey, passkeysSupported } from "@/lib/passkey";
+import { PasskeyWrongHostError, type RequestOptionsJSON, getPasskey, passkeysSupported } from "@/lib/passkey";
 import { subUrl } from "@/lib/url";
 
 export interface LoginSource {
@@ -41,11 +41,12 @@ const MAX_PASSKEY_ATTEMPTS = 3;
 // The server lets a passkey challenge expire after a minute.
 const DEFAULT_PASSKEY_TIMEOUT_MS = 60_000;
 
-type PasskeyResult = "signed-in" | "failed" | "timed-out" | "cancelled";
+type PasskeyResult = "signed-in" | "failed" | "timed-out" | "cancelled" | PasskeyWrongHostError;
 
 type PasskeyState =
   | { status: "waiting"; attempt: number }
-  | { status: "stopped"; reason: "attempts" | "timed-out" | "cancelled" };
+  | { status: "stopped"; reason: "attempts" | "timed-out" | "cancelled" }
+  | { status: "stopped"; reason: "wrong-host"; host: string };
 
 const route = getRouteApi("/user/sign-in");
 
@@ -85,6 +86,8 @@ async function signInWithPasskey(stop: AbortSignal): Promise<PasskeyResult> {
       credential = await getPasskey(options, request.signal);
     } catch (err) {
       if (timedOut) return "timed-out";
+      // Trying again cannot help: the site is open at the wrong address.
+      if (err instanceof PasskeyWrongHostError) return err;
       if (err instanceof DOMException && err.name === "NotAllowedError") return "cancelled";
       return "failed";
     } finally {
@@ -138,6 +141,10 @@ export function SignIn() {
         if (stop.signal.aborted) return;
         if (result === "signed-in") {
           redirectAfterSignIn();
+          return;
+        }
+        if (result instanceof PasskeyWrongHostError) {
+          setPasskey({ status: "stopped", reason: "wrong-host", host: result.host });
           return;
         }
         if (result !== "failed") {
@@ -417,6 +424,8 @@ function PasskeySignIn({
     problem = t("auth.passkey_failed_attempts", { max: MAX_PASSKEY_ATTEMPTS });
   } else if (state.status === "stopped" && state.reason === "timed-out") {
     problem = t("auth.passkey_timed_out");
+  } else if (state.status === "stopped" && state.reason === "wrong-host") {
+    problem = t("auth.passkey_wrong_host", { host: state.host });
   }
 
   return (
