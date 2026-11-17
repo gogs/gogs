@@ -264,6 +264,17 @@ export function DiffWorkspace({
     });
   }, []);
 
+  // Whether threads show below their lines. Like the file tree, it is kept
+  // only once changed.
+  const [commentsShown, setCommentsShown] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    return window.localStorage.getItem("gogs-diff-comments-shown") !== "false";
+  });
+  const changeCommentsShown = useCallback((next: boolean) => {
+    window.localStorage.setItem("gogs-diff-comments-shown", next ? "true" : "false");
+    setCommentsShown(next);
+  }, []);
+
   // Pierre's container swallows wheel events for its virtual scroller, which
   // traps the page on the content above the workspace until we forward them.
   useEffect(() => {
@@ -424,7 +435,7 @@ export function DiffWorkspace({
         });
       } else {
         annotations.push(...(item.annotations ?? []));
-        for (const thread of review?.threads ?? []) {
+        for (const thread of commentsShown ? (review?.threads ?? []) : []) {
           if (thread.path !== item.fileDiff.name) continue;
           annotations.push({
             side: toAnnotationSide(thread.side),
@@ -450,7 +461,7 @@ export function DiffWorkspace({
         annotations,
       };
     });
-  }, [allItems, collapsedById, richById, review?.threads, composer]);
+  }, [allItems, collapsedById, richById, review?.threads, commentsShown, composer]);
 
   // The gutter button starts a thread on the line it is on, or on the
   // selected lines.
@@ -924,6 +935,7 @@ export function DiffWorkspace({
           onToggleTreeDesktop={toggleDesktopTree}
           desktopTreeOpen={desktopTreeOpen}
           actions={review?.actions}
+          comments={review ? { shown: commentsShown, onChange: changeCommentsShown } : undefined}
         />
 
         <div className="glass flex min-h-0 min-w-0 flex-1 flex-col lg:flex-row glass-ui:mb-4 glass-ui:overflow-hidden glass-ui:border">

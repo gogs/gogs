@@ -104,7 +104,9 @@ export function PullTimelineItem({
         text={t(event.text)}
       />
       {comment.contentHTML || threads.length ? (
-        <div className="flex flex-col gap-3 sm:pl-11">
+        <div className="flex flex-col gap-3 sm:pl-13">
+          {/* The padding is the avatar column of comments, size-10 and gap-3,
+              so the review lines up with the comment cards around it. */}
           {comment.contentHTML ? (
             <div className="rounded-md border border-(--color-border) px-4 py-3">
               <Markdown html={comment.contentHTML} />
