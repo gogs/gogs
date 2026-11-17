@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/flamego/flamego"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/auth"
@@ -195,6 +197,80 @@ func TestAuthenticate(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			assert.Equal(t, test.expBody, string(body))
+		})
+	}
+}
+
+func TestAuthenticate_reverseProxy(t *testing.T) {
+	_, trusted, err := net.ParseCIDR("10.0.0.0/8")
+	require.NoError(t, err)
+	conf.SetMockAuth(t, conf.AuthOpts{
+		EnableReverseProxyAuthentication: true,
+		ReverseProxyAuthenticationHeader: "X-WEBAUTH-USER",
+		TrustedProxyCIDRs:                []*net.IPNet{trusted},
+	})
+
+	tests := []struct {
+		name          string
+		remoteAddr    string
+		proxyUser     string
+		expStatusCode int
+		expBody       string
+	}{
+		{
+			name:          "header from trusted proxy goes before Basic authentication",
+			remoteAddr:    "10.0.0.1:1234",
+			proxyUser:     "unknwon",
+			expStatusCode: http.StatusOK,
+			expBody:       "ID: 1, Name: unknwon",
+		},
+		{
+			name:          "header from trusted proxy names unknown user",
+			remoteAddr:    "10.0.0.1:1234",
+			proxyUser:     "ghost",
+			expStatusCode: http.StatusForbidden,
+			expBody:       `{"message":"User does not exist"}` + "\n",
+		},
+		{
+			name:          "header from untrusted address is ignored",
+			remoteAddr:    "192.0.2.1:1234",
+			proxyUser:     "unknwon",
+			expStatusCode: http.StatusUnauthorized,
+			expBody:       `{"message":"Credentials needed"}` + "\n",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mockStore := NewMockStore()
+			mockStore.GetUserByUsernameFunc.SetDefaultHook(func(_ context.Context, username string) (*database.User, error) {
+				if username == "unknwon" {
+					return &database.User{ID: 1, Name: "unknwon"}, nil
+				}
+				return nil, database.ErrUserNotExist{}
+			})
+			// The proxy passes along the credentials it checked itself, which
+			// Gogs does not know.
+			mockStore.AuthenticateUserFunc.SetDefaultReturn(nil, auth.ErrBadCredentials{})
+			mockStore.GetAccessTokenBySHA1Func.SetDefaultReturn(nil, database.ErrAccessTokenNotExist{})
+
+			m := flamego.New()
+			m.Get("/", authenticate(logx.NewNoopLogger(), mockStore), func(w http.ResponseWriter, user *database.User) {
+				_, _ = fmt.Fprintf(w, "ID: %d, Name: %s", user.ID, user.Name)
+			})
+
+			r := httptest.NewRequest("GET", "/", nil)
+			r.RemoteAddr = test.remoteAddr
+			r.Header.Set("Authorization", "Basic dXNlcm5hbWU6cGFzc3dvcmQ=")
+			r.Header.Set("X-WEBAUTH-USER", test.proxyUser)
+
+			rr := httptest.NewRecorder()
+			m.ServeHTTP(rr, r)
+
+			resp := rr.Result()
+			assert.Equal(t, test.expStatusCode, resp.StatusCode)
+			body, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
 			assert.Equal(t, test.expBody, string(body))
 		})
 	}
