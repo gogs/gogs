@@ -1,10 +1,12 @@
 import { Link } from "@tanstack/react-router";
 import {
+  Activity,
   Bell,
   BookMarked,
   Building2,
   Clock,
   Cpu,
+  HeartPulse,
   LayoutDashboard,
   type LucideIcon,
   Play,
@@ -28,7 +30,9 @@ export type AdminPage =
   | "config"
   | "notices"
   | "cron"
-  | "processes";
+  | "health"
+  | "processes"
+  | "traces";
 
 type NavItem = { page: AdminPage; path: string; label: string; icon: LucideIcon };
 
@@ -53,7 +57,9 @@ const NAV: { title?: string; items: NavItem[] }[] = [
   {
     title: "admin.group_monitoring",
     items: [
+      { page: "health", path: "/health", label: "admin.health", icon: HeartPulse },
       { page: "processes", path: "/processes", label: "admin.processes", icon: Cpu },
+      { page: "traces", path: "/traces", label: "admin.traces", icon: Activity },
       { page: "notices", path: "/notices", label: "admin.notices", icon: Bell },
     ],
   },

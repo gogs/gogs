@@ -6,6 +6,8 @@ import (
 	"slices"
 
 	"github.com/cockroachdb/errors"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"unknwon.dev/x/logx"
 )
 
@@ -19,9 +21,9 @@ type DiffOptions struct {
 }
 
 // Diff returns a parsed diff object between given commits of the repository.
-func (r *Repository) Diff(ctx context.Context, logger *logx.Logger, rev string, maxFiles, maxFileLines, maxLineChars int, opts ...DiffOptions) (*Diff, error) {
-	ctx, span := tracer.Start(ctx, "git.Repository.Diff")
-	defer span.End()
+func (r *Repository) Diff(ctx context.Context, logger *logx.Logger, rev string, maxFiles, maxFileLines, maxLineChars int, opts ...DiffOptions) (_ *Diff, err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.Diff", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.revision", rev), attribute.Int64("git.max_files", int64(maxFiles))))
+	defer func() { endSpan(span, err) }()
 
 	var opt DiffOptions
 	if len(opts) > 0 {
@@ -87,9 +89,9 @@ type RawDiffOptions struct {
 
 // RawDiff dumps diff of repository in given revision directly to given
 // io.Writer.
-func (r *Repository) RawDiff(ctx context.Context, rev string, diffType RawDiffFormat, w io.Writer, opts ...RawDiffOptions) error {
-	ctx, span := tracer.Start(ctx, "git.Repository.RawDiff")
-	defer span.End()
+func (r *Repository) RawDiff(ctx context.Context, rev string, diffType RawDiffFormat, w io.Writer, opts ...RawDiffOptions) (err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.RawDiff", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.revision", rev), attribute.String("git.diff.format", string(diffType))))
+	defer func() { endSpan(span, err) }()
 
 	var opt RawDiffOptions
 	if len(opts) > 0 {
@@ -141,9 +143,9 @@ func (r *Repository) RawDiff(ctx context.Context, rev string, diffType RawDiffFo
 
 // DiffBinary returns binary patch between base and head revisions that could be
 // used for git-apply.
-func (r *Repository) DiffBinary(ctx context.Context, base, head string) ([]byte, error) {
-	ctx, span := tracer.Start(ctx, "git.Repository.DiffBinary")
-	defer span.End()
+func (r *Repository) DiffBinary(ctx context.Context, base, head string) (_ []byte, err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.DiffBinary", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.base", base), attribute.String("git.head", head)))
+	defer func() { endSpan(span, err) }()
 
 	args := []string{"diff", "--full-index", "--binary", "--end-of-options", base, head}
 	return exec(ctx, r.path, args, nil)

@@ -5,6 +5,8 @@ import (
 	"context"
 
 	"github.com/cockroachdb/errors"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // unescapeChars reverses escaped characters in quoted output from Git.
@@ -42,9 +44,9 @@ func unescapeChars(in []byte) []byte {
 // TreePaths returns the paths of every file in the tree of the revision and
 // its subtrees, in the order Git lists them. Submodules are left out, since
 // they have no content in the tree.
-func (r *Repository) TreePaths(ctx context.Context, rev string) ([]string, error) {
-	ctx, span := tracer.Start(ctx, "git.Repository.TreePaths")
-	defer span.End()
+func (r *Repository) TreePaths(ctx context.Context, rev string) (_ []string, err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.TreePaths", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.revision", rev)))
+	defer func() { endSpan(span, err) }()
 
 	// Use NUL-terminated output so that file names are printed verbatim rather
 	// than quoted.
@@ -116,9 +118,9 @@ func parseTree(t *Tree, data []byte) ([]*TreeEntry, error) {
 // LsTree returns the tree object in the repository by given tree ID.
 //
 // Docs: https://git-scm.com/docs/git-ls-tree
-func (r *Repository) LsTree(ctx context.Context, treeID string) (*Tree, error) {
-	ctx, span := tracer.Start(ctx, "git.Repository.LsTree")
-	defer span.End()
+func (r *Repository) LsTree(ctx context.Context, treeID string) (_ *Tree, err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.LsTree", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.tree", treeID)))
+	defer func() { endSpan(span, err) }()
 
 	cache, ok := r.cachedTrees.Load(treeID)
 	if ok {
@@ -126,7 +128,6 @@ func (r *Repository) LsTree(ctx context.Context, treeID string) (*Tree, error) {
 		return cache.(*Tree), nil
 	}
 
-	var err error
 	treeID, err = r.RevParse(ctx, treeID) //nolint
 	if err != nil {
 		return nil, err

@@ -1,13 +1,18 @@
 package git
 
-import "context"
+import (
+	"context"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+)
 
 // CatFileBlob returns the blob corresponding to the given revision of the repository.
-func (r *Repository) CatFileBlob(ctx context.Context, rev string) (*Blob, error) {
-	ctx, span := tracer.Start(ctx, "git.Repository.CatFileBlob")
-	defer span.End()
+func (r *Repository) CatFileBlob(ctx context.Context, rev string) (_ *Blob, err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.CatFileBlob", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.revision", rev)))
+	defer func() { endSpan(span, err) }()
 
-	rev, err := r.RevParse(ctx, rev)
+	rev, err = r.RevParse(ctx, rev)
 	if err != nil {
 		return nil, err
 	}

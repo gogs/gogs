@@ -16,6 +16,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/sourcegraph/run"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"golang.org/x/crypto/ssh"
 	"unknwon.dev/x/logx"
@@ -100,6 +101,10 @@ func serve(logger *logx.Logger, keyID, command, protocol string, ch ssh.Channel)
 
 	verb, _, _ := strings.Cut(command, " ")
 	ctx, span := tracer.Start(context.Background(), "ssh "+verb)
+	// Clients only ask for a protocol version other than the first.
+	if protocol != "" {
+		span.SetAttributes(attribute.String("git.protocol", protocol))
+	}
 	defer span.End()
 
 	id, _ := strconv.ParseInt(keyID, 10, 64)

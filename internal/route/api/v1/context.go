@@ -14,6 +14,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/errx"
+	"gogs.io/gogs/internal/telemetry"
 )
 
 // docURL is the API documentation link included in every error response.
@@ -184,6 +185,7 @@ func (c *apiContext) ErrorStatus(status int, err error) {
 // Error renders the 500 response.
 func (c *apiContext) Error(err error, msg string) {
 	c.Logger.Error("Internal server error", "method", c.Request().Method, "path", c.path, "operation", msg, "error", err)
+	telemetry.RecordFailure(c.Request().Context(), errors.Wrap(err, msg))
 	c.ErrorStatus(
 		http.StatusInternalServerError,
 		errors.New("Something went wrong, please check the server logs for more information."),

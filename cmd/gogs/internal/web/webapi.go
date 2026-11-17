@@ -22,6 +22,7 @@ import (
 	"gogs.io/gogs/internal/i18n"
 	"gogs.io/gogs/internal/lazyregexp"
 	apiv1 "gogs.io/gogs/internal/route/api/v1"
+	"gogs.io/gogs/internal/telemetry"
 )
 
 // authMethod is how the authenticated user of a request authenticated.
@@ -37,6 +38,9 @@ type authMethod struct {
 func authenticator(store context.Store) flamego.Handler {
 	return func(c flamego.Context, logger *logx.Logger, sess session.Session) {
 		user, isBasicAuth, isTokenAuth := context.AuthenticatedUser(logger, store, c.Request().Request, sess)
+		if user != nil {
+			telemetry.SetUser(c.Request().Context(), user.ID)
+		}
 		c.Map(user, authMethod{basicAuth: isBasicAuth, tokenAuth: isTokenAuth})
 	}
 }
@@ -419,6 +423,10 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 				Get(getAdminAuthSource).
 				Patch(bindJSON(adminAuthSourceRequest{}), patchAdminAuthSource).
 				Delete(deleteAdminAuthSource)
+			f.Get("/health", getAdminHealth)
+			f.Get("/traces", getAdminTraces)
+			f.Get("/traces/overview", getAdminTraceOverview)
+			f.Get("/traces/{id}", getAdminTrace)
 			f.Combo("/users").Get(getAdminUsers).Post(bindJSON(adminUserCreateRequest{}), postAdminUser)
 			f.Get("/user-options", getAdminUserOptions)
 			f.Combo("/users/{id}", withAdminTargetUser).

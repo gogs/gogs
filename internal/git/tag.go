@@ -1,6 +1,11 @@
 package git
 
-import "context"
+import (
+	"context"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+)
 
 // Tag contains information of a Git tag.
 type Tag struct {
@@ -33,9 +38,9 @@ func (t *Tag) Message() string {
 }
 
 // Commit returns the underlying commit of the tag.
-func (t *Tag) Commit(ctx context.Context) (*Commit, error) {
-	ctx, span := tracer.Start(ctx, "git.Tag.Commit")
-	defer span.End()
+func (t *Tag) Commit(ctx context.Context) (_ *Commit, err error) {
+	ctx, span := tracer.Start(ctx, "git.Tag.Commit", trace.WithAttributes(attribute.String("git.tag", t.id.String())))
+	defer func() { endSpan(span, err) }()
 
 	return t.repo.CatFileCommit(ctx, t.commitID.String())
 }

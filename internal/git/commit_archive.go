@@ -4,6 +4,9 @@ import (
 	"context"
 	"path/filepath"
 	"strings"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // ArchiveFormat is the format of an archive.
@@ -16,12 +19,12 @@ const (
 )
 
 // Archive creates given format of archive to the destination.
-func (c *Commit) Archive(ctx context.Context, format ArchiveFormat, dst string) error {
-	ctx, span := tracer.Start(ctx, "git.Commit.Archive")
-	defer span.End()
+func (c *Commit) Archive(ctx context.Context, format ArchiveFormat, dst string) (err error) {
+	ctx, span := tracer.Start(ctx, "git.Commit.Archive", trace.WithAttributes(attribute.String("git.commit", c.ID.String()), attribute.String("git.archive.format", string(format))))
+	defer func() { endSpan(span, err) }()
 
 	prefix := filepath.Base(strings.TrimSuffix(c.repo.path, ".git")) + "/"
-	_, err := exec(ctx,
+	_, err = exec(ctx,
 		c.repo.path,
 		[]string{
 			"archive",

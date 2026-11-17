@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // GrepOptions contains optional arguments for searching file contents.
@@ -46,9 +48,9 @@ type GrepResult struct {
 // keyword is matched literally, not as a pattern. Binary files are skipped. Results are ordered by path, then
 // by line. The second return value reports whether matching lines were left
 // out because of opts.MaxResults.
-func (r *Repository) Grep(ctx context.Context, rev, keyword string, opts ...GrepOptions) ([]*GrepResult, bool, error) {
-	ctx, span := tracer.Start(ctx, "git.Repository.Grep")
-	defer span.End()
+func (r *Repository) Grep(ctx context.Context, rev, keyword string, opts ...GrepOptions) (_ []*GrepResult, _ bool, err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.Grep", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.revision", rev)))
+	defer func() { endSpan(span, err) }()
 
 	var opt GrepOptions
 	if len(opts) > 0 {
@@ -85,7 +87,7 @@ func (r *Repository) Grep(ctx context.Context, rev, keyword string, opts ...Grep
 		context:    opt.ContextLines,
 		cancel:     cancel,
 	}
-	err := pipe(ctx, r.path, args, nil, w)
+	err = pipe(ctx, r.path, args, nil, w)
 	switch {
 	case w.err != nil:
 		return nil, false, w.err

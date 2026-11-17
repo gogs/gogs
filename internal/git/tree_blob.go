@@ -4,12 +4,15 @@ import (
 	"context"
 	"path"
 	"strings"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // TreeEntry returns the TreeEntry by given subpath of the tree.
-func (t *Tree) TreeEntry(ctx context.Context, subpath string) (*TreeEntry, error) {
-	ctx, span := tracer.Start(ctx, "git.Tree.TreeEntry")
-	defer span.End()
+func (t *Tree) TreeEntry(ctx context.Context, subpath string) (_ *TreeEntry, err error) {
+	ctx, span := tracer.Start(ctx, "git.Tree.TreeEntry", trace.WithAttributes(attribute.String("git.tree", t.id.String())))
+	defer func() { endSpan(span, err) }()
 
 	if len(subpath) == 0 {
 		return &TreeEntry{
@@ -21,7 +24,6 @@ func (t *Tree) TreeEntry(ctx context.Context, subpath string) (*TreeEntry, error
 
 	subpath = path.Clean(subpath)
 	paths := strings.Split(subpath, "/")
-	var err error
 	tree := t
 	for i, name := range paths {
 		// Reached end of the loop
@@ -47,9 +49,9 @@ func (t *Tree) TreeEntry(ctx context.Context, subpath string) (*TreeEntry, error
 }
 
 // Blob returns the blob object by given subpath of the tree.
-func (t *Tree) Blob(ctx context.Context, subpath string) (*Blob, error) {
-	ctx, span := tracer.Start(ctx, "git.Tree.Blob")
-	defer span.End()
+func (t *Tree) Blob(ctx context.Context, subpath string) (_ *Blob, err error) {
+	ctx, span := tracer.Start(ctx, "git.Tree.Blob", trace.WithAttributes(attribute.String("git.tree", t.id.String())))
+	defer func() { endSpan(span, err) }()
 
 	e, err := t.TreeEntry(ctx, subpath)
 	if err != nil {

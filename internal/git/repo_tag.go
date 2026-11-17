@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // parseTag parses tag information from the (uncompressed) raw data of the tag
@@ -88,9 +90,9 @@ func (r *Repository) getTag(ctx context.Context, id OID) (*Tag, error) {
 }
 
 // Tag returns a Git tag by given name, e.g., "v1.0.0".
-func (r *Repository) Tag(ctx context.Context, name string) (*Tag, error) {
-	ctx, span := tracer.Start(ctx, "git.Repository.Tag")
-	defer span.End()
+func (r *Repository) Tag(ctx context.Context, name string) (_ *Tag, err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.Tag", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.name", name)))
+	defer func() { endSpan(span, err) }()
 
 	refspec := RefsTags + name
 	refs, err := r.showRef(ctx, showRefOptions{
@@ -116,9 +118,9 @@ func (r *Repository) Tag(ctx context.Context, name string) (*Tag, error) {
 }
 
 // Tags returns a list of tags of the repository.
-func (r *Repository) Tags(ctx context.Context) ([]string, error) {
-	ctx, span := tracer.Start(ctx, "git.Repository.Tags")
-	defer span.End()
+func (r *Repository) Tags(ctx context.Context) (_ []string, err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.Tags", trace.WithAttributes(attribute.String("git.dir", r.path)))
+	defer func() { endSpan(span, err) }()
 
 	args := []string{"tag", "--list", "--sort=-creatordate", "--end-of-options"}
 
@@ -143,22 +145,22 @@ func RepoTags(ctx context.Context, repoPath string) ([]string, error) {
 }
 
 // CreateTag creates a new lightweight tag on given revision.
-func (r *Repository) CreateTag(ctx context.Context, name, rev string) error {
-	ctx, span := tracer.Start(ctx, "git.Repository.CreateTag")
-	defer span.End()
+func (r *Repository) CreateTag(ctx context.Context, name, rev string) (err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.CreateTag", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.name", name), attribute.String("git.revision", rev)))
+	defer func() { endSpan(span, err) }()
 
 	args := []string{"tag", "--end-of-options", name, rev}
-	_, err := exec(ctx, r.path, args, nil)
+	_, err = exec(ctx, r.path, args, nil)
 	return err
 }
 
 // DeleteTag deletes a tag from the repository.
-func (r *Repository) DeleteTag(ctx context.Context, name string) error {
-	ctx, span := tracer.Start(ctx, "git.Repository.DeleteTag")
-	defer span.End()
+func (r *Repository) DeleteTag(ctx context.Context, name string) (err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.DeleteTag", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.name", name)))
+	defer func() { endSpan(span, err) }()
 
 	args := []string{"tag", "--delete", "--end-of-options", name}
-	_, err := exec(ctx, r.path, args, nil)
+	_, err = exec(ctx, r.path, args, nil)
 	return err
 }
 
@@ -185,9 +187,9 @@ type TagsPage struct {
 
 // TagsAfter returns a page of at most limit tags "after" (exclusive) the given
 // tag. A limit of 0 means no limit.
-func (r *Repository) TagsAfter(ctx context.Context, after string, limit int) (*TagsPage, error) {
-	ctx, span := tracer.Start(ctx, "git.Repository.TagsAfter")
-	defer span.End()
+func (r *Repository) TagsAfter(ctx context.Context, after string, limit int) (_ *TagsPage, err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.TagsAfter", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.after", after)))
+	defer func() { endSpan(span, err) }()
 
 	all, err := r.Tags(ctx)
 	if err != nil {

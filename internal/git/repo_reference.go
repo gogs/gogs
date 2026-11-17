@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -50,9 +52,9 @@ func (r *Repository) showRefVerify(ctx context.Context, ref string) (string, err
 
 // BranchCommitID returns the commit ID of given branch if it exists in the
 // repository. The branch must be given in short name, e.g., "master".
-func (r *Repository) BranchCommitID(ctx context.Context, branch string) (string, error) {
-	ctx, span := tracer.Start(ctx, "git.Repository.BranchCommitID")
-	defer span.End()
+func (r *Repository) BranchCommitID(ctx context.Context, branch string) (_ string, err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.BranchCommitID", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.branch", branch)))
+	defer func() { endSpan(span, err) }()
 
 	return r.showRefVerify(ctx, RefsHeads+branch)
 }
@@ -68,9 +70,9 @@ func RepoBranchCommitID(ctx context.Context, repoPath, branch string) (string, e
 
 // TagCommitID returns the commit ID of given tag if it exists in the
 // repository. The tag must be given in short name, e.g., "v1.0.0".
-func (r *Repository) TagCommitID(ctx context.Context, tag string) (string, error) {
-	ctx, span := tracer.Start(ctx, "git.Repository.TagCommitID")
-	defer span.End()
+func (r *Repository) TagCommitID(ctx context.Context, tag string) (_ string, err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.TagCommitID", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.tag", tag)))
+	defer func() { endSpan(span, err) }()
 
 	return r.showRefVerify(ctx, RefsTags+tag)
 }
@@ -85,7 +87,7 @@ func (r *Repository) hasReference(ctx context.Context, ref string) bool {
 // HasBranch returns true if given branch exists in the repository. The branch
 // must be given in short name, e.g., "master".
 func (r *Repository) HasBranch(ctx context.Context, branch string) bool {
-	ctx, span := tracer.Start(ctx, "git.Repository.HasBranch")
+	ctx, span := tracer.Start(ctx, "git.Repository.HasBranch", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.branch", branch)))
 	defer span.End()
 
 	return r.hasReference(ctx, RefsHeads+branch)
@@ -102,9 +104,9 @@ func RepoHasBranch(ctx context.Context, repoPath, branch string) bool {
 
 // HasBranches returns true if the repository has at least one branch, even when
 // HEAD points to a branch that does not exist.
-func (r *Repository) HasBranches(ctx context.Context) (bool, error) {
-	ctx, span := tracer.Start(ctx, "git.Repository.HasBranches")
-	defer span.End()
+func (r *Repository) HasBranches(ctx context.Context) (_ bool, err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.HasBranches", trace.WithAttributes(attribute.String("git.dir", r.path)))
+	defer func() { endSpan(span, err) }()
 
 	stdout, err := exec(ctx, r.path, []string{"for-each-ref", "--count=1", "--format=%(refname)", "--end-of-options", RefsHeads}, nil)
 	if err != nil {
@@ -126,7 +128,7 @@ func RepoHasBranches(ctx context.Context, repoPath string) (bool, error) {
 // HasTag returns true if given tag exists in the repository. The tag must be
 // given in short name, e.g., "v1.0.0".
 func (r *Repository) HasTag(ctx context.Context, tag string) bool {
-	ctx, span := tracer.Start(ctx, "git.Repository.HasTag")
+	ctx, span := tracer.Start(ctx, "git.Repository.HasTag", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.tag", tag)))
 	defer span.End()
 
 	return r.hasReference(ctx, RefsTags+tag)
@@ -144,9 +146,9 @@ type SymbolicRefOptions struct {
 // SymbolicRef returns the reference name (e.g., "refs/heads/master") pointed by
 // the symbolic ref. It returns an empty string and nil error when doing set
 // operation.
-func (r *Repository) SymbolicRef(ctx context.Context, opts ...SymbolicRefOptions) (string, error) {
-	ctx, span := tracer.Start(ctx, "git.Repository.SymbolicRef")
-	defer span.End()
+func (r *Repository) SymbolicRef(ctx context.Context, opts ...SymbolicRefOptions) (_ string, err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.SymbolicRef", trace.WithAttributes(attribute.String("git.dir", r.path)))
+	defer func() { endSpan(span, err) }()
 
 	var opt SymbolicRefOptions
 	if len(opts) > 0 {
@@ -230,9 +232,9 @@ func (r *Repository) showRef(ctx context.Context, opts ...showRefOptions) ([]*Re
 }
 
 // Branches returns a list of all branches in the repository.
-func (r *Repository) Branches(ctx context.Context) ([]string, error) {
-	ctx, span := tracer.Start(ctx, "git.Repository.Branches")
-	defer span.End()
+func (r *Repository) Branches(ctx context.Context) (_ []string, err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.Branches", trace.WithAttributes(attribute.String("git.dir", r.path)))
+	defer func() { endSpan(span, err) }()
 
 	heads, err := r.showRef(ctx, showRefOptions{Heads: true})
 	if err != nil {
@@ -266,9 +268,9 @@ type Branch struct {
 
 // BranchesByCommitterDate returns all branches in the repository, the most
 // recently committed first, with a single Git command.
-func (r *Repository) BranchesByCommitterDate(ctx context.Context) ([]*Branch, error) {
-	ctx, span := tracer.Start(ctx, "git.Repository.BranchesByCommitterDate")
-	defer span.End()
+func (r *Repository) BranchesByCommitterDate(ctx context.Context) (_ []*Branch, err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.BranchesByCommitterDate", trace.WithAttributes(attribute.String("git.dir", r.path)))
+	defer func() { endSpan(span, err) }()
 
 	// Branch names and identities cannot contain NUL or newline characters.
 	const format = "--format=%(refname)%00%(objectname)%00%(committerdate:iso-strict)%00%(committername)%00%(committeremail)"
@@ -308,11 +310,11 @@ func (r *Repository) BranchesByCommitterDate(ctx context.Context) ([]*Branch, er
 
 // CreateBranch creates the branch at the revision. It fails when the branch
 // exists.
-func (r *Repository) CreateBranch(ctx context.Context, name, rev string) error {
-	ctx, span := tracer.Start(ctx, "git.Repository.CreateBranch")
-	defer span.End()
+func (r *Repository) CreateBranch(ctx context.Context, name, rev string) (err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.CreateBranch", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.name", name), attribute.String("git.revision", rev)))
+	defer func() { endSpan(span, err) }()
 
-	_, err := exec(ctx, r.path, []string{"branch", "--no-track", "--end-of-options", name, rev}, nil)
+	_, err = exec(ctx, r.path, []string{"branch", "--no-track", "--end-of-options", name, rev}, nil)
 	return err
 }
 
@@ -325,9 +327,9 @@ type DeleteBranchOptions struct {
 }
 
 // DeleteBranch deletes the branch from the repository.
-func (r *Repository) DeleteBranch(ctx context.Context, name string, opts ...DeleteBranchOptions) error {
-	ctx, span := tracer.Start(ctx, "git.Repository.DeleteBranch")
-	defer span.End()
+func (r *Repository) DeleteBranch(ctx context.Context, name string, opts ...DeleteBranchOptions) (err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.DeleteBranch", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.name", name)))
+	defer func() { endSpan(span, err) }()
 
 	var opt DeleteBranchOptions
 	if len(opts) > 0 {
@@ -341,6 +343,6 @@ func (r *Repository) DeleteBranch(ctx context.Context, name string, opts ...Dele
 		args = append(args, "-d")
 	}
 	args = append(args, "--end-of-options", name)
-	_, err := exec(ctx, r.path, args, nil)
+	_, err = exec(ctx, r.path, args, nil)
 	return err
 }

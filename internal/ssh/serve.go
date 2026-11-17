@@ -8,11 +8,14 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
+	"gogs.io/gogs/internal/telemetry"
 )
 
 const accessDeniedMessage = "Repository does not exist or you do not have access"
@@ -105,6 +108,7 @@ func Serve(ctx context.Context, logger *logx.Logger, opts ServeOptions) error {
 	}
 	repo.Owner = owner
 	repo.Owner = owner
+	telemetry.SetRepository(ctx, repo.ID)
 
 	requestMode, ok := allowedCommands[verb]
 	if !ok {
@@ -123,6 +127,10 @@ func Serve(ctx context.Context, logger *logx.Logger, opts ServeOptions) error {
 	if err != nil {
 		return serveError("Invalid key ID", "Invalid key ID '%d': %v", opts.KeyID, err)
 	}
+	trace.SpanFromContext(ctx).SetAttributes(
+		attribute.Int64("ssh.key.id", key.ID),
+		attribute.Bool("ssh.key.deploy", key.IsDeployKey()),
+	)
 
 	if requestMode == database.AccessModeWrite || repo.IsPrivate {
 		// Check deploy key or user key.
@@ -138,6 +146,7 @@ func Serve(ctx context.Context, logger *logx.Logger, opts ServeOptions) error {
 			if err != nil {
 				return serveError("Internal error", "Failed to get user by key ID '%d': %v", key.ID, err)
 			}
+			telemetry.SetUser(ctx, user.ID)
 			if user.IsDisabled() {
 				return serveError(accessDeniedMessage, "User '%s' is disabled", user.Name)
 			}

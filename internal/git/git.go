@@ -9,6 +9,8 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // tracer creates the spans of the functions and methods of the package, and of
@@ -48,9 +50,9 @@ var (
 // BinVersion returns current Git binary version that is used by this package.
 // Successful results are cached. Failed attempts are not cached, allowing
 // retries with a fresh context.
-func BinVersion(ctx context.Context) (string, error) {
+func BinVersion(ctx context.Context) (_ string, err error) {
 	ctx, span := tracer.Start(ctx, "git.BinVersion")
-	defer span.End()
+	defer func() { endSpan(span, err) }()
 
 	gitVersionMu.Lock()
 	defer gitVersionMu.Unlock()
@@ -85,9 +87,9 @@ func BinVersion(ctx context.Context) (string, error) {
 // empty string when the key is not set.
 //
 // Docs: https://git-scm.com/docs/git-config
-func ConfigGet(ctx context.Context, key string) (string, error) {
-	ctx, span := tracer.Start(ctx, "git.ConfigGet")
-	defer span.End()
+func ConfigGet(ctx context.Context, key string) (_ string, err error) {
+	ctx, span := tracer.Start(ctx, "git.ConfigGet", trace.WithAttributes(attribute.String("git.config.key", key)))
+	defer func() { endSpan(span, err) }()
 
 	stdout, err := exec(ctx, "", []string{"config", "--get", "--end-of-options", key}, nil)
 	if err != nil {
@@ -103,10 +105,10 @@ func ConfigGet(ctx context.Context, key string) (string, error) {
 // of the current user.
 //
 // Docs: https://git-scm.com/docs/git-config
-func SetGlobalConfig(ctx context.Context, key, value string) error {
-	ctx, span := tracer.Start(ctx, "git.SetGlobalConfig")
-	defer span.End()
+func SetGlobalConfig(ctx context.Context, key, value string) (err error) {
+	ctx, span := tracer.Start(ctx, "git.SetGlobalConfig", trace.WithAttributes(attribute.String("git.config.key", key)))
+	defer func() { endSpan(span, err) }()
 
-	_, err := exec(ctx, "", []string{"config", "--global", "--end-of-options", key, value}, nil)
+	_, err = exec(ctx, "", []string{"config", "--global", "--end-of-options", key, value}, nil)
 	return err
 }

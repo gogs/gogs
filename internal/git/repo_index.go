@@ -13,6 +13,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/cockroachdb/errors"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // The functions in this file build commits through the index of the
@@ -20,9 +22,9 @@ import (
 // tree to check files out to.
 
 // ObjectFormat returns the hash algorithm of the repository.
-func (r *Repository) ObjectFormat(ctx context.Context) (ObjectFormat, error) {
-	ctx, span := tracer.Start(ctx, "git.Repository.ObjectFormat")
-	defer span.End()
+func (r *Repository) ObjectFormat(ctx context.Context) (_ ObjectFormat, err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.ObjectFormat", trace.WithAttributes(attribute.String("git.dir", r.path)))
+	defer func() { endSpan(span, err) }()
 
 	stdout, err := exec(ctx, r.path, []string{"rev-parse", "--show-object-format"}, nil)
 	if err != nil {
@@ -42,11 +44,11 @@ func RepoObjectFormat(ctx context.Context, repoPath string) (ObjectFormat, error
 
 // ReadTree replaces the index of the repository with the tree of given
 // tree-ish.
-func (r *Repository) ReadTree(ctx context.Context, treeish string) error {
-	ctx, span := tracer.Start(ctx, "git.Repository.ReadTree")
-	defer span.End()
+func (r *Repository) ReadTree(ctx context.Context, treeish string) (err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.ReadTree", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.revision", treeish)))
+	defer func() { endSpan(span, err) }()
 
-	_, err := exec(ctx, r.path, []string{"read-tree", "--end-of-options", treeish}, nil)
+	_, err = exec(ctx, r.path, []string{"read-tree", "--end-of-options", treeish}, nil)
 	return err
 }
 
@@ -65,9 +67,9 @@ type IndexFile struct {
 // with CRLF line endings in the index keeps them. It fails when a path is
 // invalid, e.g., inside ".git", or when a path or its parent directory already
 // exists in the index as the other kind of a file and a directory.
-func (r *Repository) AddToIndex(ctx context.Context, files ...IndexFile) error {
-	ctx, span := tracer.Start(ctx, "git.Repository.AddToIndex")
-	defer span.End()
+func (r *Repository) AddToIndex(ctx context.Context, files ...IndexFile) (err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.AddToIndex", trace.WithAttributes(attribute.String("git.dir", r.path)))
+	defer func() { endSpan(span, err) }()
 
 	for _, f := range files {
 		if err := checkIndexPath(f.Path); err != nil {
@@ -172,9 +174,9 @@ func writeFile(root *os.Root, path string, content io.Reader) error {
 
 // RemoveFromIndex removes the files at given paths from the index of the
 // repository. It fails when a path does not exist or is a directory.
-func (r *Repository) RemoveFromIndex(ctx context.Context, paths ...string) error {
-	ctx, span := tracer.Start(ctx, "git.Repository.RemoveFromIndex")
-	defer span.End()
+func (r *Repository) RemoveFromIndex(ctx context.Context, paths ...string) (err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.RemoveFromIndex", trace.WithAttributes(attribute.String("git.dir", r.path)))
+	defer func() { endSpan(span, err) }()
 
 	for _, p := range paths {
 		if err := checkIndexPath(p); err != nil {
@@ -187,15 +189,15 @@ func (r *Repository) RemoveFromIndex(ctx context.Context, paths ...string) error
 	// of the Git directory, e.g., "config".
 	args := []string{"--literal-pathspecs", "rm", "--cached", "--force", "--quiet", "--"}
 	args = append(args, paths...)
-	_, err := exec(ctx, r.path, args, nil)
+	_, err = exec(ctx, r.path, args, nil)
 	return err
 }
 
 // WriteTree writes the index of the repository as a tree object and returns
 // its ID.
-func (r *Repository) WriteTree(ctx context.Context) (string, error) {
-	ctx, span := tracer.Start(ctx, "git.Repository.WriteTree")
-	defer span.End()
+func (r *Repository) WriteTree(ctx context.Context) (_ string, err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.WriteTree", trace.WithAttributes(attribute.String("git.dir", r.path)))
+	defer func() { endSpan(span, err) }()
 
 	stdout, err := exec(ctx, r.path, []string{"write-tree"}, nil)
 	if err != nil {
@@ -220,9 +222,9 @@ type CommitTreeOptions struct {
 
 // CommitTree creates a commit object of the tree with given message as is, and
 // returns its ID.
-func (r *Repository) CommitTree(ctx context.Context, tree, message string, opts ...CommitTreeOptions) (string, error) {
-	ctx, span := tracer.Start(ctx, "git.Repository.CommitTree")
-	defer span.End()
+func (r *Repository) CommitTree(ctx context.Context, tree, message string, opts ...CommitTreeOptions) (_ string, err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.CommitTree", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.tree", tree)))
+	defer func() { endSpan(span, err) }()
 
 	var opt CommitTreeOptions
 	if len(opts) > 0 {
@@ -248,7 +250,7 @@ func (r *Repository) CommitTree(ctx context.Context, tree, message string, opts 
 
 // IsValidBranchName returns true if the name is allowed for a new branch.
 func (r *Repository) IsValidBranchName(ctx context.Context, name string) bool {
-	ctx, span := tracer.Start(ctx, "git.Repository.IsValidBranchName")
+	ctx, span := tracer.Start(ctx, "git.Repository.IsValidBranchName", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.name", name)))
 	defer span.End()
 
 	_, err := exec(ctx, r.path, []string{"check-ref-format", "--branch", name}, nil)
@@ -306,9 +308,9 @@ type MergeTreeOptions struct {
 // writes the tree of the result, whose ID it returns. Like "git merge" on a
 // checkout of ours, it follows the ".gitattributes" of ours. It returns
 // ErrMergeConflict when the merge has conflicts.
-func (r *Repository) MergeTree(ctx context.Context, ours, theirs string, opts ...MergeTreeOptions) (string, error) {
-	ctx, span := tracer.Start(ctx, "git.Repository.MergeTree")
-	defer span.End()
+func (r *Repository) MergeTree(ctx context.Context, ours, theirs string, opts ...MergeTreeOptions) (_ string, err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.MergeTree", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.ours", ours), attribute.String("git.theirs", theirs)))
+	defer func() { endSpan(span, err) }()
 
 	var opt MergeTreeOptions
 	if len(opts) > 0 {
@@ -332,12 +334,12 @@ func (r *Repository) MergeTree(ctx context.Context, ours, theirs string, opts ..
 
 // IsAncestor returns true if the commit is an ancestor of the descendant, or
 // the same commit.
-func (r *Repository) IsAncestor(ctx context.Context, commit, descendant string) (bool, error) {
-	ctx, span := tracer.Start(ctx, "git.Repository.IsAncestor")
-	defer span.End()
+func (r *Repository) IsAncestor(ctx context.Context, commit, descendant string) (_ bool, err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.IsAncestor", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.commit", commit), attribute.String("git.descendant", descendant)))
+	defer func() { endSpan(span, err) }()
 
 	args := []string{"merge-base", "--is-ancestor", "--end-of-options", commit, descendant}
-	_, err := exec(ctx, r.path, args, nil)
+	_, err = exec(ctx, r.path, args, nil)
 	if err != nil {
 		if isExitStatus(err, 1) {
 			return false, nil
@@ -355,9 +357,9 @@ func (r *Repository) IsAncestor(ctx context.Context, commit, descendant string) 
 // they are, and re-encodes them in UTF-8. The committer is required and is
 // recorded on the rewritten commits. It returns ErrMergeConflict when a commit
 // does not apply.
-func (r *Repository) Rebase(ctx context.Context, upstream, branch string, committer *Signature) (string, error) {
-	ctx, span := tracer.Start(ctx, "git.Repository.Rebase")
-	defer span.End()
+func (r *Repository) Rebase(ctx context.Context, upstream, branch string, committer *Signature) (_ string, err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.Rebase", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.upstream", upstream), attribute.String("git.branch", branch)))
+	defer func() { endSpan(span, err) }()
 
 	if committer == nil {
 		return "", errors.New("committer is required")

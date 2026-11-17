@@ -13,6 +13,8 @@ import (
 	"sync"
 
 	"github.com/cockroachdb/errors"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // Repository contains information of a Git repository.
@@ -83,16 +85,16 @@ type InitOptions struct {
 }
 
 // Init initializes a new Git repository.
-func Init(ctx context.Context, path string, opts ...InitOptions) error {
-	ctx, span := tracer.Start(ctx, "git.Init")
-	defer span.End()
+func Init(ctx context.Context, path string, opts ...InitOptions) (err error) {
+	ctx, span := tracer.Start(ctx, "git.Init", trace.WithAttributes(attribute.String("git.dir", path)))
+	defer func() { endSpan(span, err) }()
 
 	var opt InitOptions
 	if len(opts) > 0 {
 		opt = opts[0]
 	}
 
-	err := os.MkdirAll(path, os.ModePerm)
+	err = os.MkdirAll(path, os.ModePerm)
 	if err != nil {
 		return err
 	}
@@ -137,16 +139,16 @@ type CloneOptions struct {
 }
 
 // Clone clones the repository from remote URL to the destination.
-func Clone(ctx context.Context, url, dst string, opts ...CloneOptions) error {
-	ctx, span := tracer.Start(ctx, "git.Clone")
-	defer span.End()
+func Clone(ctx context.Context, url, dst string, opts ...CloneOptions) (err error) {
+	ctx, span := tracer.Start(ctx, "git.Clone", trace.WithAttributes(attribute.String("git.url", redactURL(url)), attribute.String("git.dir", dst)))
+	defer func() { endSpan(span, err) }()
 
 	var opt CloneOptions
 	if len(opts) > 0 {
 		opt = opts[0]
 	}
 
-	err := os.MkdirAll(path.Dir(dst), os.ModePerm)
+	err = os.MkdirAll(path.Dir(dst), os.ModePerm)
 	if err != nil {
 		return err
 	}
@@ -179,9 +181,9 @@ type PushOptions struct {
 }
 
 // Push pushes local changes to given remote and branch for the repository.
-func (r *Repository) Push(ctx context.Context, remote, branch string, opts ...PushOptions) error {
-	ctx, span := tracer.Start(ctx, "git.Repository.Push")
-	defer span.End()
+func (r *Repository) Push(ctx context.Context, remote, branch string, opts ...PushOptions) (err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.Push", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.remote", remote), attribute.String("git.branch", branch)))
+	defer func() { endSpan(span, err) }()
 
 	var opt PushOptions
 	if len(opts) > 0 {
@@ -198,7 +200,7 @@ func (r *Repository) Push(ctx context.Context, remote, branch string, opts ...Pu
 		args = append(args, "--force-with-lease="+dst+":"+expected)
 	}
 	args = append(args, "--end-of-options", remote, branch)
-	_, err := exec(ctx, r.path, args, opt.Envs)
+	_, err = exec(ctx, r.path, args, opt.Envs)
 	return err
 }
 
@@ -212,9 +214,9 @@ type ApplyCheckOptions struct {
 
 // ApplyCheck returns an error if the patch file in given path does not apply
 // cleanly to the index of the repository.
-func (r *Repository) ApplyCheck(ctx context.Context, patchPath string, opts ...ApplyCheckOptions) error {
-	ctx, span := tracer.Start(ctx, "git.Repository.ApplyCheck")
-	defer span.End()
+func (r *Repository) ApplyCheck(ctx context.Context, patchPath string, opts ...ApplyCheckOptions) (err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.ApplyCheck", trace.WithAttributes(attribute.String("git.dir", r.path)))
+	defer func() { endSpan(span, err) }()
 
 	var opt ApplyCheckOptions
 	if len(opts) > 0 {
@@ -226,7 +228,7 @@ func (r *Repository) ApplyCheck(ctx context.Context, patchPath string, opts ...A
 		args = append(args, "--ignore-whitespace")
 	}
 	args = append(args, "--end-of-options", patchPath)
-	_, err := exec(ctx, r.path, args, nil)
+	_, err = exec(ctx, r.path, args, nil)
 	return err
 }
 
@@ -238,9 +240,9 @@ type NameStatus struct {
 }
 
 // ShowNameStatus returns name status of given revision of the repository.
-func (r *Repository) ShowNameStatus(ctx context.Context, rev string) (*NameStatus, error) {
-	ctx, span := tracer.Start(ctx, "git.Repository.ShowNameStatus")
-	defer span.End()
+func (r *Repository) ShowNameStatus(ctx context.Context, rev string) (_ *NameStatus, err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.ShowNameStatus", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.revision", rev)))
+	defer func() { endSpan(span, err) }()
 
 	fileStatus := &NameStatus{}
 	stdout, w := io.Pipe()
@@ -267,7 +269,7 @@ func (r *Repository) ShowNameStatus(ctx context.Context, rev string) (*NameStatu
 
 	args := []string{"show", "--name-status", "--pretty=format:''", "--end-of-options", rev}
 
-	err := pipe(ctx, r.path, args, nil, w)
+	err = pipe(ctx, r.path, args, nil, w)
 	_ = w.Close() // Close writer to exit parsing goroutine
 	if err != nil {
 		return nil, err
@@ -288,9 +290,9 @@ func RepoShowNameStatus(ctx context.Context, repoPath, rev string) (*NameStatus,
 
 // RevParse returns the full length ID, i.e., 40 characters for SHA-1 or 64 for
 // SHA-256, by given revision in the repository.
-func (r *Repository) RevParse(ctx context.Context, rev string) (string, error) {
-	ctx, span := tracer.Start(ctx, "git.Repository.RevParse")
-	defer span.End()
+func (r *Repository) RevParse(ctx context.Context, rev string) (_ string, err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.RevParse", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.revision", rev)))
+	defer func() { endSpan(span, err) }()
 
 	// A revision that starts with a dash is never a valid object and would
 	// instead be interpreted by "git rev-parse" as a command-line option,
@@ -326,9 +328,9 @@ type CountObject struct {
 }
 
 // CountObjects returns disk usage report of the repository.
-func (r *Repository) CountObjects(ctx context.Context) (*CountObject, error) {
-	ctx, span := tracer.Start(ctx, "git.Repository.CountObjects")
-	defer span.End()
+func (r *Repository) CountObjects(ctx context.Context) (_ *CountObject, err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.CountObjects", trace.WithAttributes(attribute.String("git.dir", r.path)))
+	defer func() { endSpan(span, err) }()
 
 	args := []string{"count-objects", "-v", "--end-of-options"}
 
@@ -386,9 +388,9 @@ type FsckOptions struct {
 
 // Fsck verifies the connectivity and validity of the objects in the database
 // for the repository.
-func (r *Repository) Fsck(ctx context.Context, opts ...FsckOptions) error {
-	ctx, span := tracer.Start(ctx, "git.Repository.Fsck")
-	defer span.End()
+func (r *Repository) Fsck(ctx context.Context, opts ...FsckOptions) (err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.Fsck", trace.WithAttributes(attribute.String("git.dir", r.path)))
+	defer func() { endSpan(span, err) }()
 
 	var opt FsckOptions
 	if len(opts) > 0 {
@@ -398,7 +400,7 @@ func (r *Repository) Fsck(ctx context.Context, opts ...FsckOptions) error {
 	args := []string{"fsck"}
 	args = append(args, opt.Args...)
 	args = append(args, "--end-of-options")
-	_, err := exec(ctx, r.path, args, nil)
+	_, err = exec(ctx, r.path, args, nil)
 	return err
 }
 
@@ -420,9 +422,9 @@ type GCOptions struct {
 }
 
 // GC cleans up unnecessary files and optimizes the repository.
-func (r *Repository) GC(ctx context.Context, opts ...GCOptions) error {
-	ctx, span := tracer.Start(ctx, "git.Repository.GC")
-	defer span.End()
+func (r *Repository) GC(ctx context.Context, opts ...GCOptions) (err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.GC", trace.WithAttributes(attribute.String("git.dir", r.path)))
+	defer func() { endSpan(span, err) }()
 
 	var opt GCOptions
 	if len(opts) > 0 {
@@ -432,7 +434,7 @@ func (r *Repository) GC(ctx context.Context, opts ...GCOptions) error {
 	args := []string{"gc"}
 	args = append(args, opt.Args...)
 	args = append(args, "--end-of-options")
-	_, err := exec(ctx, r.path, args, nil)
+	_, err = exec(ctx, r.path, args, nil)
 	return err
 }
 

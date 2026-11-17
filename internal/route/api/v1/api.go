@@ -7,6 +7,7 @@ import (
 	"github.com/flamego/flamego"
 
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/telemetry"
 )
 
 // repoAssignment extracts information from URL parameters to retrieve the repository,
@@ -57,6 +58,7 @@ func repoAssignment() flamego.Handler {
 		}
 
 		c.Repo.Repository = repo
+		telemetry.SetRepository(c.Request().Context(), repo.ID)
 	}
 }
 

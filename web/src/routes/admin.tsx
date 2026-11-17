@@ -1,23 +1,39 @@
-import { type AnyRoute, createRoute } from "@tanstack/react-router";
+import { type AnyRoute, createRoute, redirect } from "@tanstack/react-router";
+import type { JSX } from "react";
 
-import { loadAuthenticatedPage } from "@/lib/loader-error";
-import { type ListSearch, type PageSearch, validateListSearch, validatePageSearch } from "@/lib/page-search";
+import { LoaderResponseError, loadAuthenticatedPage } from "@/lib/loader-error";
+import {
+  type HealthSearch,
+  type ListSearch,
+  type PageSearch,
+  type TraceSearch,
+  validateHealthSearch,
+  validateListSearch,
+  validatePageSearch,
+  validateTraceSearch,
+} from "@/lib/page-search";
 import {
   fetchAdminAuthSource,
   fetchAdminAuthSources,
   fetchAdminConfig,
   fetchAdminDashboard,
+  fetchAdminHealth,
   fetchAdminMonitor,
   fetchAdminNotices,
   fetchAdminOrgs,
   fetchAdminRepos,
+  fetchAdminTrace,
+  fetchAdminTraceOverview,
+  fetchAdminTraceSearch,
   fetchAdminUser,
   fetchAdminUserOptions,
   fetchAdminUsers,
 } from "@/lib/queries/admin";
 import { AdminAuthSourceEdit, AdminAuthSourceNew } from "@/pages/admin/Auths";
+import { AdminServerHealth } from "@/pages/admin/Health";
 import { AdminAuthSources, AdminNotices, AdminOrgs, AdminRepos, AdminUsers } from "@/pages/admin/Lists";
 import { AdminConfig, AdminCron, AdminDashboard, AdminOperations, AdminProcesses } from "@/pages/admin/System";
+import { AdminTraceOverview, AdminTraceSearch, AdminTraceView } from "@/pages/admin/Traces";
 import { AdminUserEdit, AdminUserNew } from "@/pages/admin/Users";
 
 export function createAdminRoutes(rootRoute: AnyRoute) {
@@ -60,6 +76,76 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
     loader: () => loadAuthenticatedPage(fetchAdminMonitor),
     component: function Processes() {
       return <AdminProcesses monitor={processesRoute.useLoaderData()} />;
+    },
+  });
+
+  const healthRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/admin/health",
+    validateSearch: validateHealthSearch,
+    loaderDeps: ({ search }: { search: HealthSearch }) => ({ health: search.health ?? ("1h" as const) }),
+    loader: ({ deps }) => loadAuthenticatedPage(() => fetchAdminHealth(deps.health)),
+    component: function Health() {
+      const health = healthRoute.useLoaderData();
+      // Remount on a range switch, so that a pinned moment does not outlive its range.
+      return <AdminServerHealth key={health.range} health={health} range={health.range} />;
+    },
+  });
+
+  const tracesRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/admin/traces",
+    validateSearch: validateTraceSearch,
+    loaderDeps: ({ search }: { search: TraceSearch }) => search,
+    loader: async ({ deps }) => {
+      if (deps.view !== "search") {
+        return {
+          view: "overview" as const,
+          overview: await loadAuthenticatedPage(() => fetchAdminTraceOverview(deps.range ?? "1h")),
+        };
+      }
+      const result = await loadAuthenticatedPage(() => fetchAdminTraceSearch(deps));
+      // A trace ID, or a prefix of one that only one trace has, opens the trace.
+      if (deps.q && result.total === 1) {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
+        throw redirect({ to: "/admin/traces/$id", params: { id: result.traces[0].id }, replace: true });
+      }
+      return { view: "search" as const, result };
+    },
+    // Without the declared return type, inferring it reads the loader data of this
+    // route while its type is still being inferred, which turns the loader data and
+    // search params of other routes into `any`.
+    component: function Traces(): JSX.Element {
+      const data = tracesRoute.useLoaderData();
+      const search: TraceSearch = tracesRoute.useSearch();
+      return data.view === "overview" ? (
+        <AdminTraceOverview overview={data.overview} />
+      ) : (
+        <AdminTraceSearch result={data.result} search={search} />
+      );
+    },
+  });
+
+  const traceRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/admin/traces/$id",
+    loader: ({ params }) =>
+      loadAuthenticatedPage(async () => {
+        try {
+          return await fetchAdminTrace(params.id);
+        } catch (err) {
+          // Search for the ID instead, which explains why the trace is missing.
+          if (err instanceof LoaderResponseError && err.status === 404) {
+            // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
+            throw redirect({ to: "/admin/traces", search: { view: "search", q: params.id }, replace: true });
+          }
+          throw err;
+        }
+      }),
+    component: function Trace() {
+      const trace = traceRoute.useLoaderData();
+      // Remount for another trace so expanded spans start closed.
+      return <AdminTraceView key={trace.id} trace={trace} />;
     },
   });
 
@@ -162,7 +248,10 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
     operationsRoute,
     configRoute,
     cronRoute,
+    healthRoute,
     processesRoute,
+    tracesRoute,
+    traceRoute,
     usersRoute,
     userNewRoute,
     userEditRoute,

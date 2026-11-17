@@ -404,6 +404,8 @@ func Init(logger *logx.Logger, customConf string) error {
 		return errors.Wrap(err, "mapping [ui] section")
 	} else if err = File.Section("prometheus").MapTo(&Prometheus); err != nil {
 		return errors.Wrap(err, "mapping [prometheus] section")
+	} else if err = File.Section("tracing").MapTo(&Tracing); err != nil {
+		return errors.Wrap(err, "mapping [tracing] section")
 	} else if err = File.Section("other").MapTo(&Other); err != nil {
 		return errors.Wrap(err, "mapping [other] section")
 	}

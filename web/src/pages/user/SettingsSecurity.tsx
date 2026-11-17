@@ -12,6 +12,7 @@ import { RichText } from "@/components/RichText";
 import { UserSettingsLayout } from "@/components/UserSettingsLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { fill } from "@/lib/format";
 import { passkeysSupported } from "@/lib/passkey";
 import { formErrors } from "@/lib/queries/request";
 import {
@@ -39,13 +40,6 @@ import { PasswordSection } from "@/pages/user/Settings";
 
 const TEXTAREA_CLASS =
   "block w-full rounded-md border border-(--color-input) bg-(--color-field) px-3 py-2 font-mono text-sm text-(--color-foreground) outline-none transition-colors focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-(--color-destructive)";
-
-// fill puts values into a translated message in the order its Go
-// placeholders, such as `%s`, `%d` or `%[1]s`, appear.
-function fill(message: string, ...values: (string | number)[]) {
-  let i = 0;
-  return message.replace(/%(?:\[\d+\])?[sdv]/g, () => String(values[i++] ?? ""));
-}
 
 // focusOnError moves focus to the first field of a failed form that has an
 // error.

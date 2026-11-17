@@ -209,6 +209,15 @@ var (
 		BasicAuthPassword string
 	}
 
+	// Tracing settings
+	Tracing struct {
+		Enabled                  bool
+		MaxMemoryMiB             int64 `ini:"MAX_MEMORY_MIB"`
+		MaxAge                   time.Duration
+		SlowThreshold            time.Duration
+		SamplesPerRoutePerMinute int
+	}
+
 	// Other settings
 	Other struct {
 		ShowFooterTemplateLoadTime bool

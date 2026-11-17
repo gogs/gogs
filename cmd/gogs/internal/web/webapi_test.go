@@ -36,7 +36,7 @@ func newTestRoutingHandler(t *testing.T) (http.Handler, error) {
 	return newRoutingHandler(logx.NewNoopLogger(), localizer, session.Sessioner(), func(c flamego.Context) {
 		user, _ := c.Request().Context().Value(testUserKey{}).(*database.User)
 		c.Map(user, authMethod{})
-	})
+	}, nil, nil)
 }
 
 func TestRequireViewAccess(t *testing.T) {
@@ -227,6 +227,10 @@ func TestRequireAdmin(t *testing.T) {
 		{http.MethodGet, "/api/web/admin/auths/1"},
 		{http.MethodPatch, "/api/web/admin/auths/1"},
 		{http.MethodDelete, "/api/web/admin/auths/1"},
+		{http.MethodGet, "/api/web/admin/health"},
+		{http.MethodGet, "/api/web/admin/traces"},
+		{http.MethodGet, "/api/web/admin/traces/overview"},
+		{http.MethodGet, "/api/web/admin/traces/0123456789abcdef0123456789abcdef"},
 		{http.MethodGet, "/api/web/admin/users"},
 		{http.MethodPost, "/api/web/admin/users"},
 		{http.MethodGet, "/api/web/admin/users/1"},
