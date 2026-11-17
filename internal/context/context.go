@@ -17,6 +17,8 @@ type WebContext struct {
 	Error string
 	// Version is the version of Gogs, for site admins on a server error.
 	Version string
+	// Notice is the HTML of the notice banner that every page shows.
+	Notice string
 }
 
 // Pages the server shows through the shell regardless of the path.

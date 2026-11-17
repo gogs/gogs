@@ -43,6 +43,7 @@ func mountWebAppRoutes(logger *logx.Logger, f *flamego.Flame) (http.Handler, err
 
 	webApp := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		wc := context.WebContextFrom(r)
+		wc.Notice = readNoticeBanner(logger, conf.CustomDir())
 		body, err := renderIndex(index, wc, inject)
 		if err != nil {
 			logger.Error("Failed to render index", "error", err)
