@@ -3,6 +3,7 @@ import {
   type DiffLineAnnotation,
   type FileDiffContentsLoader,
   type FileDiffMetadata,
+  type SelectedLineRange,
   parsePatchFiles,
 } from "@pierre/diffs";
 import { CodeView, type CodeViewAnnotationArgs, type CodeViewHandle, type CodeViewItem } from "@pierre/diffs/react";
@@ -23,7 +24,7 @@ import {
   UnfoldVertical,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -162,12 +163,48 @@ function isImagePath(path: string): boolean {
 // A binary image diff has no hunks. Pierre renders an annotation on line 0
 // above a file's lines, in the column of its side, and measures its height, so
 // one annotation per existing side shows the old and new images.
-function imageAnnotations(fileDiff: FileDiffMetadata): DiffLineAnnotation<undefined>[] | undefined {
+function imageAnnotations(fileDiff: FileDiffMetadata): DiffLineAnnotation<DiffAnnotation>[] | undefined {
   if (fileDiff.hunks.length > 0 || !isImagePath(fileDiff.name)) return undefined;
-  const annotations: DiffLineAnnotation<undefined>[] = [];
-  if (fileDiff.type !== "new") annotations.push({ side: "deletions", lineNumber: 0 });
-  if (fileDiff.type !== "deleted") annotations.push({ side: "additions", lineNumber: 0 });
+  const annotations: DiffLineAnnotation<DiffAnnotation>[] = [];
+  if (fileDiff.type !== "new") annotations.push({ side: "deletions", lineNumber: 0, metadata: { kind: "image" } });
+  if (fileDiff.type !== "deleted") annotations.push({ side: "additions", lineNumber: 0, metadata: { kind: "image" } });
   return annotations;
+}
+
+// DiffAnnotation is what shows below a line of a file: the rich diff of the
+// whole file, one side of an image diff, a thread of comments, or the form to
+// start one.
+type DiffAnnotation = { kind: "rich" } | { kind: "image" } | { kind: "thread"; id: number } | { kind: "composer" };
+
+// DiffLineTarget is the lines of a file that a new thread is on. Sides are
+// "old" or "new", and line is the last line of the range.
+export interface DiffLineTarget {
+  path: string;
+  side: "old" | "new";
+  startSide: "old" | "new";
+  startLine: number;
+  line: number;
+}
+
+// DiffReview shows threads of comments below the lines they are on, and lets
+// the viewer start new ones from the gutter.
+export interface DiffReview {
+  threads: { id: number; path: string; side: "old" | "new"; line: number }[];
+  renderThread: (id: number) => ReactNode;
+  // renderComposer is unset when the viewer cannot comment.
+  renderComposer?: (target: DiffLineTarget, onClose: () => void) => ReactNode;
+  // actions show in the toolbar, e.g., to finish a review.
+  actions?: ReactNode;
+}
+
+const toAnnotationSide = (side: "old" | "new") => (side === "old" ? "deletions" : "additions");
+
+// hashString returns a number that changes with the string, small enough to
+// leave room for flags below it.
+function hashString(s: string) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 0x7ffffff;
+  return h;
 }
 
 // DiffWorkspace shows the files a patch changes, between the old and the new
@@ -182,6 +219,7 @@ export function DiffWorkspace({
   newRef,
   markdownExtensions,
   search,
+  review,
 }: {
   owner: string;
   repo: string;
@@ -192,12 +230,14 @@ export function DiffWorkspace({
   // markdownExtensions are the extensions of files that can show a rich diff.
   markdownExtensions: string[];
   search: RepoCommitSearch;
+  review?: DiffReview;
 }) {
   const navigate = useNavigate();
+  const [composer, setComposer] = useState<{ itemId: string; target: DiffLineTarget } | null>(null);
   const { t } = useTranslation();
   const { theme } = useTheme();
   const resolvedTheme = resolveTheme(theme);
-  const viewRef = useRef<CodeViewHandle<undefined, undefined> | null>(null);
+  const viewRef = useRef<CodeViewHandle<DiffAnnotation, undefined> | null>(null);
   const treeRef = useRef<DiffFileTreeHandle | null>(null);
   const mobileTreeRef = useRef<DiffFileTreeHandle | null>(null);
   const stickyWorkspaceRef = useRef<HTMLDivElement | null>(null);
@@ -285,7 +325,7 @@ export function DiffWorkspace({
   // actions available, even when it reuses the same file IDs.
   const [fullyExpandedDiffs, setFullyExpandedDiffs] = useState<Set<FileDiffMetadata>>(() => new Set());
   const expansionCheckLine = useRef(new WeakMap<FileDiffMetadata, number>());
-  const onDiffPostRender = useCallback<NonNullable<CodeViewOptions<undefined, undefined>["onPostRender"]>>(
+  const onDiffPostRender = useCallback<NonNullable<CodeViewOptions<DiffAnnotation, undefined>["onPostRender"]>>(
     (node, _instance, _phase, context) => {
       node.toggleAttribute("data-rich-diff", context.type === "diff" && richFileDiffs.has(context.item.fileDiff));
       if (context.type !== "diff" || context.item.collapsed) return;
@@ -346,10 +386,10 @@ export function DiffWorkspace({
     [navigate],
   );
 
-  const allItems = useMemo<CodeViewItem<undefined>[]>(
+  const allItems = useMemo<CodeViewItem<DiffAnnotation>[]>(
     () =>
       parsePatchFiles(patch).flatMap((parsed, patchIndex) =>
-        parsed.files.map<CodeViewItem<undefined>>((fileDiff, fileIndex) => ({
+        parsed.files.map<CodeViewItem<DiffAnnotation>>((fileDiff, fileIndex) => ({
           id: `${patchIndex}:${fileIndex}:${fileDiff.name}`,
           type: "diff",
           fileDiff,
@@ -360,7 +400,7 @@ export function DiffWorkspace({
   );
 
   const isMarkdown = useCallback(
-    (item: CodeViewItem<undefined>) =>
+    (item: CodeViewItem<DiffAnnotation>) =>
       item.type === "diff" &&
       markdownExtensions.some((ext) => item.fileDiff.name.toLowerCase().endsWith(ext.toLowerCase())),
     [markdownExtensions],
@@ -370,21 +410,72 @@ export function DiffWorkspace({
   // increases. Line expansion is Pierre-owned after `loadDiffFiles` hydrates.
   // A rich diff replaces the lines with a file-level annotation, on the side
   // that has the file.
-  const items = useMemo<CodeViewItem<undefined>[]>(() => {
+  const items = useMemo<CodeViewItem<DiffAnnotation>[]>(() => {
     return allItems.map((item) => {
       const collapsed = collapsedById[item.id] ?? false;
       const rich = item.type === "diff" && richById[item.id] === true;
-      const version = (collapsed ? 1 : 0) + (rich ? 2 : 0);
-      if (!rich) return { ...item, collapsed, version };
+      if (item.type !== "diff") return item;
+      const annotations: DiffLineAnnotation<DiffAnnotation>[] = [];
+      if (rich) {
+        annotations.push({
+          side: item.fileDiff.type === "deleted" ? "deletions" : "additions",
+          lineNumber: 0,
+          metadata: { kind: "rich" },
+        });
+      } else {
+        annotations.push(...(item.annotations ?? []));
+        for (const thread of review?.threads ?? []) {
+          if (thread.path !== item.fileDiff.name) continue;
+          annotations.push({
+            side: toAnnotationSide(thread.side),
+            lineNumber: thread.line,
+            metadata: { kind: "thread", id: thread.id },
+          });
+        }
+        if (composer?.itemId === item.id) {
+          annotations.push({
+            side: toAnnotationSide(composer.target.side),
+            lineNumber: composer.target.line,
+            metadata: { kind: "composer" },
+          });
+        }
+      }
+      // Pierre re-reads the annotations of an item when its version changes.
+      const version = (collapsed ? 1 : 0) + (rich ? 2 : 0) + 4 * hashString(JSON.stringify(annotations));
       return {
         ...item,
         collapsed,
         version,
-        fileDiff: richFileDiffOf(item.fileDiff),
-        annotations: [{ side: item.fileDiff.type === "deleted" ? "deletions" : "additions", lineNumber: 0 }],
+        ...(rich ? { fileDiff: richFileDiffOf(item.fileDiff) } : {}),
+        annotations,
       };
     });
-  }, [allItems, collapsedById, richById]);
+  }, [allItems, collapsedById, richById, review?.threads, composer]);
+
+  // The gutter button starts a thread on the line it is on, or on the
+  // selected lines.
+  const onGutterUtilityClick = useCallback<
+    NonNullable<CodeViewOptions<DiffAnnotation, undefined>["onGutterUtilityClick"]>
+  >((range: SelectedLineRange, context?: { type: string; item: CodeViewItem<DiffAnnotation> }) => {
+    if (context?.item.type !== "diff") return;
+    const toSide = (side?: "deletions" | "additions"): "old" | "new" => (side === "deletions" ? "old" : "new");
+    let start = { side: toSide(range.side), line: range.start };
+    let end = { side: toSide(range.endSide ?? range.side), line: range.end };
+    // The old side shows first, and lines go down within a side.
+    if ((start.side === end.side && start.line > end.line) || (start.side === "new" && end.side === "old")) {
+      [start, end] = [end, start];
+    }
+    setComposer({
+      itemId: context.item.id,
+      target: {
+        path: context.item.fileDiff.name,
+        side: end.side,
+        startSide: start.side,
+        startLine: start.line,
+        line: end.line,
+      },
+    });
+  }, []);
 
   // Counted on the source diffs, so showing a rich diff leaves them unchanged.
   const lineCounts = useMemo(() => {
@@ -548,7 +639,7 @@ export function DiffWorkspace({
 
   // Pierre slot: `header-prefix`, left of the file-type icon.
   const renderHeaderPrefix = useCallback(
-    (item: CodeViewItem<undefined>) => {
+    (item: CodeViewItem<DiffAnnotation>) => {
       if (item.type !== "diff") return null;
       const collapsed = collapsedById[item.id] ?? false;
       const Icon = collapsed ? ChevronRight : ChevronDown;
@@ -585,7 +676,7 @@ export function DiffWorkspace({
   // `hunks.length`. Those regions read the `up` direction.
   // `Number.POSITIVE_INFINITY` is Pierre's "expand all" value. Re-expanding
   // an open gap is a no-op.
-  const expandAllLinesFor = useCallback((item: CodeViewItem<undefined>) => {
+  const expandAllLinesFor = useCallback((item: CodeViewItem<DiffAnnotation>) => {
     if (item.type !== "diff") return;
     const rendered = viewRef.current
       ?.getInstance()
@@ -621,7 +712,7 @@ export function DiffWorkspace({
   // Switching to a rich diff waits for it to render, so the file never shows
   // a short loading state between two tall views.
   const toggleRich = useCallback(
-    (item: CodeViewItem<undefined>) => {
+    (item: CodeViewItem<DiffAnnotation>) => {
       if (item.type !== "diff") return;
       if (richById[item.id]) {
         setRichById((prev) => ({ ...prev, [item.id]: false }));
@@ -638,7 +729,7 @@ export function DiffWorkspace({
 
   // Pierre slot: `header-filename-suffix`, immediately after the filename.
   const renderHeaderFilenameSuffix = useCallback(
-    (item: CodeViewItem<undefined>) => {
+    (item: CodeViewItem<DiffAnnotation>) => {
       if (item.type !== "diff") return null;
       const path = item.fileDiff.name;
       const justCopied = copiedPathById[item.id] === true;
@@ -744,7 +835,7 @@ export function DiffWorkspace({
   );
 
   const renderHeaderMetadata = useCallback(
-    (item: CodeViewItem<undefined>) => {
+    (item: CodeViewItem<DiffAnnotation>) => {
       if (item.type !== "diff") return null;
       const path = item.fileDiff.name;
       const prev = item.fileDiff.prevName;
@@ -781,9 +872,21 @@ export function DiffWorkspace({
   );
 
   // A file-level annotation holds either the rich diff of an item that shows
-  // it, or one side of an image diff.
+  // it, or one side of an image diff. The threads and the form to start one
+  // show below their lines.
   const renderAnnotation = useCallback(
-    (...[annotation, fileDiff]: CodeViewAnnotationArgs<undefined>) => {
+    (...[annotation, fileDiff]: CodeViewAnnotationArgs<DiffAnnotation>) => {
+      const metadata = annotation.metadata;
+      if (metadata?.kind === "thread")
+        return <div className="font-sans leading-normal whitespace-normal">{review?.renderThread(metadata.id)}</div>;
+      if (metadata?.kind === "composer") {
+        if (!composer || !review?.renderComposer) return null;
+        return (
+          <div className="font-sans leading-normal whitespace-normal">
+            {review.renderComposer(composer.target, () => setComposer(null))}
+          </div>
+        );
+      }
       if (!("hunks" in fileDiff)) return null;
       if (richFileDiffs.has(fileDiff)) {
         const [before, after] = richQueriesOf(fileDiff);
@@ -797,7 +900,7 @@ export function DiffWorkspace({
       const encodedPath = path.split("/").map(encodeURIComponent).join("/");
       return <DiffImage src={subUrl(`/${owner}/${repo}/raw/${ref}/${encodedPath}`)} side={annotation.side} />;
     },
-    [owner, repo, oldRef, newRef, richQueriesOf],
+    [owner, repo, oldRef, newRef, richQueriesOf, review, composer],
   );
 
   return (
@@ -820,6 +923,7 @@ export function DiffWorkspace({
           onShowTreeMobile={() => setMobileTreeOpen(true)}
           onToggleTreeDesktop={toggleDesktopTree}
           desktopTreeOpen={desktopTreeOpen}
+          actions={review?.actions}
         />
 
         <div className="glass flex min-h-0 min-w-0 flex-1 flex-col lg:flex-row glass-ui:mb-4 glass-ui:overflow-hidden glass-ui:border">
@@ -1008,6 +1112,9 @@ export function DiffWorkspace({
                 loadDiffFiles,
                 onPostRender: onDiffPostRender,
                 unsafeCSS: DIFF_UNSAFE_CSS,
+                enableGutterUtility: !!review?.renderComposer,
+                enableLineSelection: !!review?.renderComposer,
+                onGutterUtilityClick: review?.renderComposer ? onGutterUtilityClick : undefined,
               }}
             />
           </div>

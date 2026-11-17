@@ -51,6 +51,8 @@ export interface DiffToolbarProps {
   // one shows at each breakpoint.
   onToggleTreeDesktop?: () => void;
   desktopTreeOpen?: boolean;
+  // actions show after the view controls, e.g., to review a pull request.
+  actions?: ReactNode;
 }
 
 export function DiffToolbar({
@@ -65,6 +67,7 @@ export function DiffToolbar({
   onShowTreeMobile,
   onToggleTreeDesktop,
   desktopTreeOpen,
+  actions,
 }: DiffToolbarProps) {
   const { t } = useTranslation();
   const setStyle = (diffStyle: DiffStyle) => onSettingsChange({ ...settings, diffStyle });
@@ -190,6 +193,7 @@ export function DiffToolbar({
             icon={<Minimize2 className="size-3.5" aria-hidden />}
           />
         </div>
+        {actions}
       </div>
     </div>
   );

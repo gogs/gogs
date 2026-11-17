@@ -82,6 +82,15 @@ type ProtectBranch struct {
 	EnableAllowlist  bool   `gorm:"column:enable_whitelist"`
 	AllowlistUserIDs string `gorm:"column:whitelist_user_i_ds;type:TEXT"`
 	AllowlistTeamIDs string `gorm:"column:whitelist_team_i_ds;type:TEXT"`
+	// RequiredApprovals is how many approving reviews from writers a pull
+	// request needs to merge into the branch, or 0 when it needs none. When it
+	// needs some, a writer's request for changes also blocks the merge.
+	RequiredApprovals int `gorm:"not null;default:0"`
+	// DismissStaleApprovals stops counting approvals of older head commits.
+	DismissStaleApprovals bool `gorm:"not null;default:false"`
+	// RequireResolvedConversations blocks the merge while a review thread is
+	// unresolved.
+	RequireResolvedConversations bool `gorm:"not null;default:false"`
 }
 
 // BranchAlreadyExists represents an error when branch already exists.

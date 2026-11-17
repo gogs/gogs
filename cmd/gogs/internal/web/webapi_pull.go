@@ -97,6 +97,10 @@ type pullDiff struct {
 type repoPullView struct {
 	*repoIssueView
 	Pull *repoPullInfo `json:"pull"`
+	// Threads are the threads of code comments the viewer can see, oldest
+	// first.
+	Threads []issueComment `json:"threads"`
+	*pullReviewStatus
 }
 
 // pullRange is the commits a pull request merges, from Base to Head, and the
@@ -251,7 +255,36 @@ func getRepoPull(c flamego.Context, logger *logx.Logger, viewer *database.User, 
 		logger.Error("Failed to describe pull request", "issueID", issue.ID, "repoID", repoCtx.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, err
 	}
+	if resp.Threads, resp.pullReviewStatus, err = describePullReviews(ctx, logger, viewer, repoCtx, issue, rng); err != nil {
+		logger.Error("Failed to describe pull request reviews", "issueID", issue.ID, "repoID", repoCtx.Repo.ID, "error", err)
+		return http.StatusInternalServerError, nil, err
+	}
+	// Only merges the reviews allow are offered.
+	if len(resp.MergeBlockers) > 0 {
+		resp.Pull.ViewerCanMerge = false
+	}
 	return http.StatusOK, resp, nil
+}
+
+// describePullReviews describes the threads of code comments the viewer can
+// see in the commits of the pull request, and what its reviews decide. A
+// broken pull request has no commits, so its threads are all outdated.
+func describePullReviews(ctx context.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, issue *database.Issue, rng *pullRange) ([]issueComment, *pullReviewStatus, error) {
+	cv := newCommentViewer(ctx, logger, viewer, repoCtx, issue)
+	var gitRepo *git.Repository
+	var base, head string
+	if rng != nil {
+		gitRepo, base, head = rng.GitRepo, rng.Base, rng.Head
+	}
+	threads, err := describeThreads(ctx, cv, gitRepo, base, head)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "describe threads")
+	}
+	status, err := describeReviews(ctx, logger, viewer, repoCtx, issue, head, threads)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "describe reviews")
+	}
+	return threads, status, nil
 }
 
 type repoPullCommits struct {
@@ -326,6 +359,19 @@ func postRepoPullMerge(c flamego.Context, logger *logx.Logger, l i18n.Locale, vi
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "check push allowlist")
 	} else if !canPush {
 		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("repo::pulls.merge_not_in_allowlist")}, nil
+	}
+	// Nobody merges past the reviews the base branch requires, admins
+	// included.
+	_, rng, _, err := describePull(c.Request().Context(), repoCtx, issue)
+	if err != nil {
+		logger.Error("Failed to describe pull request", "issueID", issue.ID, "error", err)
+		return http.StatusInternalServerError, nil, err
+	}
+	if _, status, err := describePullReviews(c.Request().Context(), logger, viewer, repoCtx, issue, rng); err != nil {
+		logger.Error("Failed to describe pull request reviews", "issueID", issue.ID, "error", err)
+		return http.StatusInternalServerError, nil, err
+	} else if len(status.MergeBlockers) > 0 {
+		return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("repo.pulls.review.merge_blocked")}, nil
 	}
 	gitRepo, err := openRepoGit(repoCtx)
 	if err != nil {

@@ -1910,7 +1910,7 @@ func (s *RepositoriesStore) Delete(ctx context.Context, logger *logx.Logger, own
 			for _, uuid := range uuids {
 				attachmentPaths = append(attachmentPaths, AttachmentLocalPath(uuid))
 			}
-			if err := deleteByColumn(tx, "issue_id", issueID, "comment", "attachment", "issue_label"); err != nil {
+			if err := deleteByColumn(tx, "issue_id", issueID, "comment", "attachment", "issue_label", "review", "review_request"); err != nil {
 				return err
 			}
 		}

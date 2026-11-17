@@ -21,8 +21,8 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 
-interface Props {
-  items: readonly CodeViewItem<undefined>[];
+interface Props<L> {
+  items: readonly CodeViewItem<L>[];
   // Selecting a row in the tree fires this with the CodeViewItem id so the
   // page can drive the diff view's scroll. The callback abstraction lets us
   // avoid plumbing the diff view's `LAnnotation` generic through a ref.
@@ -125,7 +125,7 @@ function collectDirectoryPaths(paths: readonly string[]): string[] {
   return Array.from(dirs);
 }
 
-export function DiffFileTree({ items, onSelectItem, searchOpen = true, header, className, style, ref }: Props) {
+export function DiffFileTree<L>({ items, onSelectItem, searchOpen = true, header, className, style, ref }: Props<L>) {
   const { t } = useTranslation();
   const labels = useMemo<FileTreeLabelsOption>(
     () => ({

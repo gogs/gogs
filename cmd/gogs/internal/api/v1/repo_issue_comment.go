@@ -32,11 +32,7 @@ func listIssueComments(c *apiContext) {
 		return
 	}
 
-	apiComments := make([]*v1types.IssueComment, len(comments))
-	for i := range comments {
-		apiComments[i] = toIssueComment(comments[i])
-	}
-	c.JSONSuccess(&apiComments)
+	c.JSONSuccess(toIssueComments(comments))
 }
 
 func listRepoIssueComments(c *apiContext) {
@@ -56,11 +52,7 @@ func listRepoIssueComments(c *apiContext) {
 		return
 	}
 
-	apiComments := make([]*v1types.IssueComment, len(comments))
-	for i := range comments {
-		apiComments[i] = toIssueComment(comments[i])
-	}
-	c.JSONSuccess(&apiComments)
+	c.JSONSuccess(toIssueComments(comments))
 }
 
 type createIssueCommentRequest struct {
@@ -153,4 +145,19 @@ func deleteIssueComment(c *apiContext) {
 		return
 	}
 	c.NoContent()
+}
+
+// toIssueComments converts the comments, leaving out the reviews of pull
+// requests and their code comments, which are not issue comments.
+func toIssueComments(comments []*database.Comment) []*v1types.IssueComment {
+	apiComments := make([]*v1types.IssueComment, 0, len(comments))
+	for _, comment := range comments {
+		switch comment.Type {
+		case database.CommentTypeReview, database.CommentTypeCode,
+			database.CommentTypeReviewRequest, database.CommentTypeReviewRequestRemoved:
+			continue
+		}
+		apiComments = append(apiComments, toIssueComment(comment))
+	}
+	return apiComments
 }

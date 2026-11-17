@@ -18,7 +18,7 @@ import {
 import { type FormEvent, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { DiffWorkspace } from "@/components/DiffWorkspace";
+import { type DiffReview, DiffWorkspace } from "@/components/DiffWorkspace";
 import { PageTabs } from "@/components/PageTabs";
 import { RepoHeader } from "@/components/RepoHeader";
 import { RichText } from "@/components/RichText";
@@ -41,11 +41,20 @@ import {
 import { formErrors } from "@/lib/queries/request";
 import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
 import { toastError } from "@/lib/toast-error";
+import { useUserInfo } from "@/lib/use-user-info";
 import { cn } from "@/lib/utils";
 
 import type { RepoCommitSearch } from "./Commit.search";
 import { CommitList } from "./Commits";
 import { IssueConversation, IssueHeader, UserLink } from "./Issue";
+import {
+  CodeCommentForm,
+  PullTimelineItem,
+  ReviewChanges,
+  ReviewStatusRows,
+  ReviewThread,
+  ReviewersSection,
+} from "./PullReview";
 
 const TEXTAREA_CLASS =
   "block w-full rounded-md border border-(--color-input) bg-(--color-field) px-3 py-2 text-sm text-(--color-foreground) outline-none transition-colors focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-60";
@@ -76,6 +85,7 @@ export function RepoPull({
   const ref: IssueRef = { owner: repo.owner, name: repo.name, kind: "pulls", index: data.index };
   const { pull } = data;
   const merged = pull.state === "merged";
+  const review = usePullDiffReview(ref, data);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -96,6 +106,8 @@ export function RepoPull({
             data={data}
             mergeBox={<MergeBox issueRef={ref} data={data} />}
             canChangeState={data.viewerCanEdit && !merged}
+            renderItem={(comment) => <PullTimelineItem issueRef={ref} data={data} comment={comment} />}
+            sidebar={<ReviewersSection issueRef={ref} data={data} />}
           />
         </main>
       ) : null}
@@ -121,6 +133,7 @@ export function RepoPull({
               newRef={pull.diff.head}
               markdownExtensions={pull.diff.markdownExtensions}
               search={search}
+              review={review}
             />
           </div>
         ) : (
@@ -245,13 +258,15 @@ const MERGE_BOX_STATES: Record<RepoPullData["pull"]["state"], { icon: LucideIcon
   mergeable: { icon: CircleCheck, color: "text-(--color-success)", border: "!border-(--color-success)" },
   conflict: { icon: CircleAlert, color: "text-(--color-destructive)", border: "!border-(--color-destructive)" },
 };
+const MERGE_BOX_BLOCKED = { icon: CircleAlert, color: "text-(--color-muted-foreground)", border: "border-(--color-border)" };
 
 // MergeBox says whether the pull request can be merged, lets writers merge it
 // when it can, and lets them delete or restore its branch once it is merged.
 function MergeBox({ issueRef, data }: { issueRef: IssueRef; data: RepoPullData }) {
   const { t } = useTranslation();
   const { pull } = data;
-  const { icon: Icon, color, border } = MERGE_BOX_STATES[pull.state];
+  const blocked = pull.state === "mergeable" && data.mergeBlockers.length > 0;
+  const { icon: Icon, color, border } = blocked ? MERGE_BOX_BLOCKED : MERGE_BOX_STATES[pull.state];
   const message = {
     merged: t("repo.pulls.has_merged"),
     closed: t("repo.pulls.reopen_to_merge"),
@@ -297,6 +312,7 @@ function MergeBox({ issueRef, data }: { issueRef: IssueRef; data: RepoPullData }
         />
       </span>
       <div className={cn("min-w-0 flex-1 glass rounded-md border", border)}>
+        {pull.state === "merged" || pull.state === "closed" ? null : <ReviewStatusRows data={data} />}
         <div className="px-4 py-3 text-sm">
           <p className="font-medium">{message}</p>
           {pull.state === "conflict" ? (
@@ -305,6 +321,7 @@ function MergeBox({ issueRef, data }: { issueRef: IssueRef; data: RepoPullData }
           {pull.state === "mergeable" && pull.viewerNotInAllowlist ? (
             <p className="mt-1 text-(--color-muted-foreground)">{t("repo.pulls.merge_not_in_allowlist")}</p>
           ) : null}
+          {blocked ? <p className="mt-1 text-(--color-muted-foreground)">{t("repo.pulls.review.blocked")}</p> : null}
         </div>
         {body}
       </div>
@@ -528,4 +545,27 @@ function MergeForm({
       </fieldset>
     </form>
   );
+}
+
+// usePullDiffReview shows the threads of the pull request below their lines
+// in the diff, and lets signed-in viewers start threads and review it while
+// it is open.
+function usePullDiffReview(issueRef: IssueRef, data: RepoPullData): DiffReview {
+  const user = useUserInfo();
+  const open = !data.isClosed && data.pull.state !== "merged";
+  const byID = new Map(data.threads.map((th) => [th.id, th]));
+  return {
+    threads: data.threads
+      .filter((th) => th.thread && !th.thread.outdated)
+      .map((th) => ({ id: th.id, path: th.thread!.path, side: th.thread!.side, line: th.thread!.line })),
+    renderThread: (id) => {
+      const thread = byID.get(id);
+      return thread ? <ReviewThread issueRef={issueRef} data={data} thread={thread} inDiff /> : null;
+    },
+    renderComposer:
+      user && open
+        ? (target, onClose) => <CodeCommentForm issueRef={issueRef} data={data} target={target} onClose={onClose} />
+        : undefined,
+    actions: user && open ? <ReviewChanges issueRef={issueRef} data={data} /> : null,
+  };
 }
