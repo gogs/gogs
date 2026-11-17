@@ -150,7 +150,7 @@ func createTag(ctx context.Context, gitRepo *git.Repository, r *Release) error {
 }
 
 func (r *Release) preparePublishWebhooks(logger *logx.Logger) {
-	if err := PrepareWebhooks(logger, r.Repo, HookEventTypeRelease, &apiv1types.WebhookReleasePayload{
+	if err := Handle.Webhooks().Prepare(context.TODO(), logger, r.Repo, HookEventTypeRelease, &apiv1types.WebhookReleasePayload{
 		Action:     apiv1types.WebhookReleasePublished,
 		Release:    r.APIFormat(),
 		Repository: r.Repo.APIFormatLegacy(logger, nil),

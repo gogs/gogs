@@ -136,6 +136,10 @@ func (db *DB) DeployKeys() *DeployKeysStore {
 	return newDeployKeysStore(db.db)
 }
 
+func (db *DB) HookTasks() *HookTasksStore {
+	return newHookTasksStore(db.db)
+}
+
 func (db *DB) LFS() *LFSStore {
 	return newLFSStore(db.db)
 }
@@ -186,6 +190,10 @@ func (db *DB) Uploads() *UploadsStore {
 
 func (db *DB) Users() *UsersStore {
 	return newUsersStore(db.db)
+}
+
+func (db *DB) Webhooks() *WebhooksStore {
+	return newWebhooksStore(db.db)
 }
 
 // ConnectionsInUse returns how many database connections are in use, across

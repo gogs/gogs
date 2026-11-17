@@ -2560,7 +2560,7 @@ func ForkRepository(ctx context.Context, logger *logx.Logger, doer, owner *User,
 	if err = repo.UpdateSize(ctx); err != nil {
 		logger.Error("Failed to update repository size", "repoID", repo.ID, "error", err)
 	}
-	if err = PrepareWebhooks(logger, baseRepo, HookEventTypeFork, &apiv1types.WebhookForkPayload{
+	if err = Handle.Webhooks().Prepare(ctx, logger, baseRepo, HookEventTypeFork, &apiv1types.WebhookForkPayload{
 		Forkee: repo.APIFormatLegacy(logger, nil),
 		Repo:   baseRepo.APIFormatLegacy(logger, nil),
 		Sender: doer.APIFormat(),

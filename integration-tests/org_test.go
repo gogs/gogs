@@ -206,7 +206,7 @@ func TestOrgWebhooks(t *testing.T) {
 		ID int64 `json:"id"`
 	}
 	c.doJSON(http.MethodPost, path, hook, http.StatusCreated, &created)
-	stored, err := database.GetWebhookByOrgID(org.ID, created.ID)
+	stored, err := database.Handle.Webhooks().GetOfOrg(t.Context(), org.ID, created.ID)
 	require.NoError(t, err)
 	assert.Equal(t, "http://127.0.0.1:1/hook", stored.URL)
 	assert.Equal(t, "s3cret", stored.Secret)
@@ -255,7 +255,7 @@ func TestOrgWebhooks(t *testing.T) {
 
 	status, body = c.do(http.MethodDelete, hookPath, orgNoBody)
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-	_, err = database.GetWebhookByOrgID(org.ID, created.ID)
+	_, err = database.Handle.Webhooks().GetOfOrg(t.Context(), org.ID, created.ID)
 	assert.True(t, database.IsErrWebhookNotExist(err), "webhook still exists: %v", err)
 	status, body = c.do(http.MethodGet, hookPath, nil)
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)

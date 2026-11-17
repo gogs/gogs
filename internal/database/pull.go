@@ -529,7 +529,7 @@ func (pr *PullRequest) Merge(ctx context.Context, logger *logx.Logger, doer *Use
 		logger.Error("Failed to load pull request attributes", "pullRequestID", pr.ID, "error", err)
 		return nil
 	}
-	if err = PrepareWebhooks(logger, pr.Issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
+	if err = Handle.Webhooks().Prepare(ctx, logger, pr.Issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
 		Action:      apiv1types.WebhookIssueClosed,
 		Index:       pr.Index,
 		PullRequest: pr.APIFormat(logger),
@@ -578,7 +578,7 @@ func (pr *PullRequest) Merge(ctx context.Context, logger *logx.Logger, doer *Use
 		Pusher:     pr.HeadRepo.MustOwner().APIFormat(),
 		Sender:     doer.APIFormat(),
 	}
-	if err = PrepareWebhooks(logger, pr.BaseRepo, HookEventTypePush, p); err != nil {
+	if err = Handle.Webhooks().Prepare(ctx, logger, pr.BaseRepo, HookEventTypePush, p); err != nil {
 		logger.Error("Failed to prepare webhooks", "error", err)
 		return nil
 	}
@@ -697,7 +697,7 @@ func NewPullRequest(ctx context.Context, logger *logx.Logger, repo *Repository, 
 
 	pr.Issue = pull
 	pull.PullRequest = pr
-	if err = PrepareWebhooks(logger, repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
+	if err = Handle.Webhooks().Prepare(ctx, logger, repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
 		Action:      apiv1types.WebhookIssueOpened,
 		Index:       pull.Index,
 		PullRequest: pr.APIFormat(logger),
@@ -997,7 +997,7 @@ func AddTestPullRequestTask(logger *logx.Logger, doer *User, repoID int64, branc
 					logger.Error("Failed to load issue attributes", "error", err)
 					continue
 				}
-				if err = PrepareWebhooks(logger, pr.Issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
+				if err = Handle.Webhooks().Prepare(context.TODO(), logger, pr.Issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
 					Action:      apiv1types.WebhookIssueSynchronized,
 					Index:       pr.Issue.Index,
 					PullRequest: pr.Issue.PullRequest.APIFormat(logger),

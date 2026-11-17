@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -355,7 +356,7 @@ func ChangeMilestoneAssign(logger *logx.Logger, doer *User, issue *Issue, oldMil
 			logger.Error("Failed to load issue", "error", err)
 			return err
 		}
-		err = PrepareWebhooks(logger, issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
+		err = Handle.Webhooks().Prepare(context.TODO(), logger, issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
 			Action:      hookAction,
 			Index:       issue.Index,
 			PullRequest: issue.PullRequest.APIFormat(logger),
@@ -363,7 +364,7 @@ func ChangeMilestoneAssign(logger *logx.Logger, doer *User, issue *Issue, oldMil
 			Sender:      doer.APIFormat(),
 		})
 	} else {
-		err = PrepareWebhooks(logger, issue.Repo, HookEventTypeIssues, &apiv1types.WebhookIssuesPayload{
+		err = Handle.Webhooks().Prepare(context.TODO(), logger, issue.Repo, HookEventTypeIssues, &apiv1types.WebhookIssuesPayload{
 			Action:     hookAction,
 			Index:      issue.Index,
 			Issue:      issue.APIFormat(),
