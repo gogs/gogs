@@ -436,7 +436,7 @@ func TestIssueAttachments(t *testing.T) {
 
 	t.Run("public repository", func(t *testing.T) {
 		uuid, url := upload(public)
-		a, err := database.GetAttachmentByUUID(uuid)
+		a, err := database.Handle.Attachments().GetByUUID(t.Context(), uuid)
 		require.NoError(t, err)
 		assert.Equal(t, owner.ID, a.UploaderID)
 		assert.Equal(t, "screenshot.png", a.Name)
@@ -456,7 +456,7 @@ func TestIssueAttachments(t *testing.T) {
 			"content":     "![screenshot](" + url + ")",
 			"attachments": []string{uuid},
 		}, http.StatusCreated, &created)
-		a, err = database.GetAttachmentByUUID(uuid)
+		a, err = database.Handle.Attachments().GetByUUID(t.Context(), uuid)
 		require.NoError(t, err)
 		assert.Equal(t, created.ID, a.CommentID)
 
@@ -481,7 +481,7 @@ func TestIssueAttachments(t *testing.T) {
 			"title":       "Private screenshot",
 			"attachments": []string{uuid},
 		}, http.StatusCreated, &created)
-		a, err := database.GetAttachmentByUUID(uuid)
+		a, err := database.Handle.Attachments().GetByUUID(t.Context(), uuid)
 		require.NoError(t, err)
 		assert.Equal(t, issueFromDatabase(t, private, created.Index).ID, a.IssueID)
 

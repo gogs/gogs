@@ -1,7 +1,6 @@
 package integrationtests
 
 import (
-	"context"
 	"encoding/base64"
 	"net/http"
 	"path/filepath"
@@ -419,7 +418,7 @@ func TestAPIV1Tags(t *testing.T) {
 
 	gitRepo, err := git.Open(database.RepoPath(repo.Owner, repo.Name))
 	require.NoError(t, err)
-	err = database.NewRelease(context.WithoutCancel(t.Context()), logger, gitRepo, &database.Release{
+	err = database.Handle.Releases().Create(t.Context(), logger, gitRepo, &database.Release{
 		RepoID:      repo.ID,
 		PublisherID: owner.ID,
 		TagName:     "v1.0.0",

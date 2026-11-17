@@ -520,7 +520,7 @@ func mirrorSync(c *apiContext) {
 
 func releases(c *apiContext) {
 	_, repo := parseOwnerAndRepo(c)
-	releases, err := database.GetReleasesByRepoID(repo.ID)
+	releases, err := database.Handle.Releases().ListByRepoID(c.Request().Context(), repo.ID)
 	if err != nil {
 		c.Error(err, "get releases by repository ID")
 		return
