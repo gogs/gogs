@@ -315,8 +315,8 @@ func TestUserSettingsEmails(t *testing.T) {
 }
 
 // userSeedSSHKey adds an SSH key to the user, which the server under test
-// cannot do with SSH disabled, and returns its SHA256 fingerprint.
-func userSeedSSHKey(t *testing.T, userID int64, name string) (*database.PublicKey, string) {
+// cannot do with SSH disabled.
+func userSeedSSHKey(t *testing.T, userID int64, name string) *database.PublicKey {
 	t.Helper()
 
 	pub, _, err := ed25519.GenerateKey(rand.Reader)
@@ -327,7 +327,7 @@ func userSeedSSHKey(t *testing.T, userID int64, name string) (*database.PublicKe
 	require.NoError(t, os.MkdirAll(conf.SSH.RootPath, 0o700))
 	key, err := database.AddPublicKey(logger, userID, name, strings.TrimSpace(string(ssh.MarshalAuthorizedKey(sshPub))))
 	require.NoError(t, err)
-	return key, ssh.FingerprintSHA256(sshPub)
+	return key
 }
 
 func TestUserSettingsSSHKeys(t *testing.T) {
@@ -378,7 +378,7 @@ func TestUserSettingsSSHKeys(t *testing.T) {
 	assert.Equal(t, []sshKey{{ID: key.ID, Name: "Laptop", Fingerprint: fingerprint}}, list())
 
 	other := seedUser(t, CreateUserOptions{})
-	otherKey, _ := userSeedSSHKey(t, other.ID, "Desktop")
+	otherKey := userSeedSSHKey(t, other.ID, "Desktop")
 	status, body = c.do(http.MethodDelete, "/api/web/user/settings/ssh-keys/"+strconv.FormatInt(otherKey.ID, 10), map[string]any{})
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 	_, err = database.GetPublicKeyByID(otherKey.ID)

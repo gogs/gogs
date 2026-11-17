@@ -89,7 +89,7 @@ func TestUserEmail2User(t *testing.T) {
 
 func TestUserPublicKeys(t *testing.T) {
 	u := seedUser(t, CreateUserOptions{})
-	key, _ := userSeedSSHKey(t, u.ID, "laptop")
+	key := userSeedSSHKey(t, u.ID, "laptop")
 
 	t.Run("keys", func(t *testing.T) {
 		status, header, body := newClient(t).doRaw(http.MethodGet, "/"+u.Name+".keys", "", nil)
