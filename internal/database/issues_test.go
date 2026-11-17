@@ -150,6 +150,8 @@ func issuesCreate(t *testing.T, ctx context.Context, s *IssuesStore) {
 
 	got, err := s.GetByID(ctx, issue.ID)
 	require.NoError(t, err)
+	assert.Equal(t, got.CreatedUnix, issue.Created.Unix())
+	assert.Equal(t, got.CreatedUnix, issue.Updated.Unix())
 	assert.Equal(t, int64(1), got.Index)
 	assert.Equal(t, "Crash", got.Title)
 	assert.Equal(t, milestone.ID, got.MilestoneID)
@@ -182,6 +184,7 @@ func issuesCreate(t *testing.T, ctx context.Context, s *IssuesStore) {
 	var relations []relation
 	for _, iu := range ius {
 		assert.Equal(t, issue.ID, iu.IssueID)
+		assert.Equal(t, repo.ID, iu.RepoID)
 		relations = append(relations, relation{iu.UserID, iu.IsPoster, iu.IsAssigned, iu.IsMentioned})
 	}
 	assert.Equal(t, []relation{
@@ -193,6 +196,7 @@ func issuesCreate(t *testing.T, ctx context.Context, s *IssuesStore) {
 	payloads := hookPayloads(t, s.db)
 	require.Len(t, payloads, 1)
 	assert.Contains(t, payloads[0], `"action": "opened"`)
+	assert.NotContains(t, payloads[0], `"created_at": "0001-01-01`, "the issue has its creation time")
 
 	// A milestone and an assignee that do not exist are dropped, and a poster
 	// who cannot be assigned relates to the issue as its poster only.
@@ -321,7 +325,7 @@ func issuesList(t *testing.T, ctx context.Context, s *IssuesStore) {
 	assert.Zero(t, count(IssuesOptions{RepoIDs: []int64{}}))
 
 	// Mentions are listed for the user only.
-	err = s.updateMentions(ctx, i1.ID, []string{"is-list"})
+	err = s.updateMentions(ctx, repo.ID, i1.ID, []string{"is-list"})
 	require.NoError(t, err)
 	assert.Equal(t, []int64{i1.ID}, list(IssuesOptions{RepoID: repo.ID, IsMention: true, UserID: repo.OwnerID}))
 	assert.Empty(t, list(IssuesOptions{RepoID: repo.ID, IsMention: true, UserID: other.OwnerID}))
@@ -691,11 +695,11 @@ func issuesUpdateMentions(t *testing.T, ctx context.Context, s *IssuesStore) {
 		require.NoError(t, s.db.Create(&OrgUser{UID: uid, OrgID: org.ID}).Error)
 	}
 	// Alice already relates to the issue and keeps her other flags.
-	require.NoError(t, s.db.Create(&IssueUser{IssueID: 1, UserID: alice.ID, IsPoster: true}).Error)
+	require.NoError(t, s.db.Create(&IssueUser{IssueID: 1, RepoID: 7, UserID: alice.ID, IsPoster: true}).Error)
 
 	assert.Equal(t, []string{"is-mention-alice", "is-mention-org"}, findLowerMentions("Hi @Is-Mention-Alice and @IS-MENTION-ORG"))
 
-	err := s.updateMentions(ctx, 1, []string{"is-mention-alice", "is-mention-org", "is-mention-empty", "nobody"})
+	err := s.updateMentions(ctx, 7, 1, []string{"is-mention-alice", "is-mention-org", "is-mention-empty", "nobody"})
 	require.NoError(t, err)
 
 	var ius []*IssueUser
@@ -703,6 +707,7 @@ func issuesUpdateMentions(t *testing.T, ctx context.Context, s *IssuesStore) {
 	require.NoError(t, err)
 	got := map[int64][2]bool{}
 	for _, iu := range ius {
+		assert.Equal(t, int64(7), iu.RepoID)
 		got[iu.UserID] = [2]bool{iu.IsMentioned, iu.IsPoster}
 	}
 	assert.Equal(t, map[int64][2]bool{
@@ -713,7 +718,7 @@ func issuesUpdateMentions(t *testing.T, ctx context.Context, s *IssuesStore) {
 		emptyOrg.ID: {true, false},
 	}, got)
 
-	err = s.updateMentions(ctx, 1, nil)
+	err = s.updateMentions(ctx, 7, 1, nil)
 	require.NoError(t, err)
 	var count int64
 	require.NoError(t, s.db.Model(new(IssueUser)).Count(&count).Error)

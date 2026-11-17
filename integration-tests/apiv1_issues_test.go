@@ -183,6 +183,12 @@ func TestAPIV1IssueComments(t *testing.T) {
 	assert.Empty(t, listComments(issuePath+"/comments"))
 	_, err := database.Handle.Comments().GetByID(t.Context(), created.ID)
 	assert.True(t, database.IsErrCommentNotExist(err), "comment not deleted: %v", err)
+
+	missingPath := apiV1RepoPath(repo, "/issues/"+apiV1Itoa(index+1)+"/comments")
+	status, body = ownerAPI.do(http.MethodGet, missingPath, nil)
+	assert.Equal(t, http.StatusNotFound, status, "list of a missing issue, response: %s", body)
+	status, body = ownerAPI.do(http.MethodPost, missingPath, map[string]any{"body": "Lost"})
+	assert.Equal(t, http.StatusNotFound, status, "create on a missing issue, response: %s", body)
 }
 
 func TestAPIV1Labels(t *testing.T) {

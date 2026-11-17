@@ -22,7 +22,7 @@ func listIssueComments(c *apiContext) {
 	// comments,err:=db.GetCommentsByIssueIDSince(, since)
 	issue, err := database.Handle.Issues().GetByIndex(c.Request().Context(), c.Repo.Repository.ID, c.ParamInt64("index"))
 	if err != nil {
-		c.Error(err, "get raw issue by index")
+		c.NotFoundOrError(err, "get issue by index")
 		return
 	}
 
@@ -70,7 +70,7 @@ type createIssueCommentRequest struct {
 func createIssueComment(c *apiContext, form createIssueCommentRequest) {
 	issue, err := database.Handle.Issues().GetByIndex(c.Request().Context(), c.Repo.Repository.ID, c.ParamInt64("index"))
 	if err != nil {
-		c.Error(err, "get issue by index")
+		c.NotFoundOrError(err, "get issue by index")
 		return
 	}
 

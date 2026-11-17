@@ -316,6 +316,9 @@ func TestAPIV1Collaborators(t *testing.T) {
 
 	status, body = api.do(http.MethodPut, apiV1RepoPath(repo, "/collaborators/"+UniqueName("nobody-")), map[string]any{})
 	assert.Equal(t, http.StatusUnprocessableEntity, status, "response: %s", body)
+	org := orgSeed(t, owner.ID)
+	status, body = api.do(http.MethodPut, apiV1RepoPath(repo, "/collaborators/"+org.Name), map[string]any{})
+	assert.Equal(t, http.StatusUnprocessableEntity, status, "organization, response: %s", body)
 
 	status, body = api.do(http.MethodDelete, path, nil)
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)

@@ -260,6 +260,18 @@ func webhooksPrepare(t *testing.T, ctx context.Context, s *WebhooksStore) {
 	tasks = listTestHookTasks(t, s)
 	require.Len(t, tasks, 3)
 	assert.Equal(t, userRepo.ID, tasks[2].RepoID)
+
+	// A Discord webhook created through the API has no metadata.
+	discord := newTestWebhook(t, ctx, s, userRepo.ID, 0, HookEvents{})
+	discord.HookTaskType = DISCORD
+	require.NoError(t, s.Update(ctx, discord))
+	payload.Repo = &apiv1types.Repository{Name: "repo2"}
+	payload.Sender = &apiv1types.User{UserName: "alice"}
+	err = s.Prepare(ctx, logger, userRepo, HookEventTypePush, payload)
+	require.NoError(t, err)
+	tasks = listTestHookTasks(t, s)
+	require.Len(t, tasks, 5)
+	assert.Equal(t, discord.ID, tasks[4].HookID)
 }
 
 func webhooksTest(t *testing.T, ctx context.Context, s *WebhooksStore) {
