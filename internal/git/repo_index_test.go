@@ -473,7 +473,11 @@ func TestCheckIndexPath(t *testing.T) {
 		{path: "./a", wantErr: true},
 		{path: "a/", wantErr: true},
 		{path: "a//b", wantErr: true},
+		{path: ".", wantErr: true},
 		{path: "a/b", wantErr: false},
+		// Names that Windows reserves can still be in a tree, e.g., pushed from Linux.
+		{path: "aux", wantErr: false},
+		{path: "Note: setup.md", wantErr: false},
 
 		{path: ".git", wantErr: true},
 		{path: "./.git", wantErr: true},

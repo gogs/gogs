@@ -73,6 +73,10 @@ func (r *Repository) AddToIndex(ctx context.Context, files ...IndexFile) error {
 		if err := checkIndexPath(f.Path); err != nil {
 			return err
 		}
+		// 🚨 SECURITY: Prevent writing to special files, e.g., "NUL" on Windows.
+		if !filepath.IsLocal(filepath.FromSlash(f.Path)) {
+			return errors.Newf("bad path %q", f.Path)
+		}
 	}
 
 	workTree, err := os.MkdirTemp(r.path, "worktree-")
@@ -121,15 +125,14 @@ func (r *Repository) AddToIndex(ctx context.Context, files ...IndexFile) error {
 }
 
 // checkIndexPath returns an error if the path is not one that Git accepts in a
-// tree, i.e., one that is not in its clean form, leaves the working tree, or
-// refers to the ".git" directory. Git skips the files at such paths without
-// failing, which would silently leave them out of a commit.
+// tree, i.e., one that is not in its clean form, leaves the tree, or refers to
+// the ".git" directory. Git skips the files at paths in ".git" without failing,
+// which would silently leave them out of a commit.
 //
 // 🚨 SECURITY: This is the single check for paths that users choose for files
 // in a commit.
 func checkIndexPath(p string) error {
-	if p != path.Clean(p) ||
-		!filepath.IsLocal(filepath.FromSlash(p)) ||
+	if p != path.Clean(p) || p == "." || p == ".." || path.IsAbs(p) || strings.HasPrefix(p, "../") ||
 		slices.ContainsFunc(strings.FieldsFunc(p, func(r rune) bool { return r == '/' || r == '\\' }), isDotGit) {
 		return errors.Newf("bad path %q", p)
 	}
