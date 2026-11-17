@@ -175,8 +175,11 @@ function BaseRepoPicker({
           <ChevronDown className="size-4 shrink-0" aria-hidden />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" collisionPadding={16} className="w-80 max-w-[calc(100vw-2rem)] p-1">
-        <ul>
+      <PopoverContent align="start" collisionPadding={16} className="w-72 max-w-[calc(100vw-2rem)] p-0">
+        <p className="border-b border-(--color-border) px-3 py-2 text-sm font-semibold">
+          {t("repo.pulls.choose_base_repo")}
+        </p>
+        <ul className="p-1">
           {data.baseRepos.map((base) => {
             const isHead = base.owner === data.headOwner && base.name === data.headName;
             const current = base.owner === owner && base.name === name;
@@ -190,11 +193,16 @@ function BaseRepoPicker({
                     _splat: `${base.defaultBranch}...${isHead ? "" : `${data.headOwner}:`}${data.headBranch}`,
                   }}
                   search={search}
-                  className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-(--color-surface) focus-visible:bg-(--color-surface) focus-visible:outline-none"
+                  aria-current={current ? "page" : undefined}
+                  className="flex w-full items-center gap-2 rounded-sm px-2 py-2 text-left text-sm hover:bg-(--color-surface) focus-visible:bg-(--color-surface) focus-visible:outline-none"
                 >
                   <Check className={cn("size-4 shrink-0", !current && "invisible")} aria-hidden />
-                  <span className="min-w-0 break-all">
-                    {base.owner}/{base.name}
+                  <img src={base.ownerAvatarURL} alt="" className="size-5 shrink-0 rounded-full object-cover" />
+                  <span className="min-w-0 flex-1 truncate">
+                    {base.owner}/<span className="font-semibold">{base.name}</span>
+                  </span>
+                  <span className="shrink-0 rounded-full border border-(--color-border) px-2 py-0.5 text-xs text-(--color-muted-foreground)">
+                    {t(isHead ? "repo.pulls.base_repo_fork" : "repo.pulls.base_repo_upstream")}
                   </span>
                 </Link>
               </li>

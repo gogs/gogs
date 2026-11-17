@@ -893,7 +893,7 @@ export interface RepoNewPullData extends IssueMetaOptions {
   // baseRepos are the repositories the head branch can be merged into: the
   // repository of the head branch and its base repository when it is a fork,
   // each when it takes pull requests.
-  baseRepos: { owner: string; name: string; defaultBranch: string }[];
+  baseRepos: { owner: string; ownerAvatarURL: string; name: string; defaultBranch: string }[];
   // branches are those of the repository to merge into, and headBranches
   // those of the repository of the head branch.
   branches: string[];

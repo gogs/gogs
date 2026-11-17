@@ -169,9 +169,10 @@ type repoNewPull struct {
 }
 
 type repoNewPullBase struct {
-	Owner         string `json:"owner"`
-	Name          string `json:"name"`
-	DefaultBranch string `json:"defaultBranch"`
+	Owner          string `json:"owner"`
+	OwnerAvatarURL string `json:"ownerAvatarURL"`
+	Name           string `json:"name"`
+	DefaultBranch  string `json:"defaultBranch"`
 }
 
 // newPullBaseRepos returns the repositories the head branch of p can be
@@ -197,7 +198,12 @@ func newPullBaseRepos(ctx context.Context, logger *logx.Logger, viewer *database
 		if err := repo.GetOwner(); err != nil {
 			return nil, errors.Wrap(err, "get owner")
 		}
-		bases = append(bases, repoNewPullBase{Owner: repo.Owner.Name, Name: repo.Name, DefaultBranch: repo.DefaultBranch})
+		bases = append(bases, repoNewPullBase{
+			Owner:          repo.Owner.Name,
+			OwnerAvatarURL: repo.Owner.AvatarURLPath(),
+			Name:           repo.Name,
+			DefaultBranch:  repo.DefaultBranch,
+		})
 	}
 	return bases, nil
 }
