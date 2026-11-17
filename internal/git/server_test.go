@@ -214,7 +214,9 @@ func TestRunReceivePack(t *testing.T) {
 				args := []string{"push"}
 				if receivePack, ok := strings.CutPrefix(remote, "--receive-pack="); ok {
 					exe, remotePath, _ := strings.Cut(receivePack, " ")
-					args = append(args, "--receive-pack="+exe, remotePath)
+					// Git runs the receive-pack through a shell, which would drop the
+					// backslashes of a Windows path that is not quoted.
+					args = append(args, "--receive-pack='"+exe+"'", remotePath)
 				} else {
 					args = append(args, remote)
 				}
