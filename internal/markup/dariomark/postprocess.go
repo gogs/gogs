@@ -21,7 +21,7 @@ import (
 func (r *renderer) postProcess(b []byte) []byte {
 	var out bytes.Buffer
 	out.Grow(len(b) + len(b)/8)
-	// Front matter is text, which GitHub does not link.
+	// Front matter is text, which is not linked.
 	out.Write(b[:r.frontMatterSize])
 	b = b[r.frontMatterSize:]
 	var startTags []string

@@ -39,10 +39,10 @@ type frontMatterValue struct {
 // maxFrontMatterDepth is how deeply collections of front matter may nest.
 const maxFrontMatterDepth = 16
 
-// parseFrontMatter returns the value of the YAML of front matter. Like GitHub,
-// YAML that is empty or is not a mapping is not front matter, and YAML with
-// aliases is invalid, which also rules out aliases that multiply nodes, e.g.,
-// "billion laughs", or contain themselves.
+// parseFrontMatter returns the value of the YAML of front matter. YAML that is
+// empty or is not a mapping is not front matter, and YAML with aliases is
+// invalid, which rules out aliases that multiply nodes, e.g., "billion
+// laughs", or contain themselves.
 func parseFrontMatter(src []byte) frontMatterValue {
 	var doc yaml.Node
 	if err := yaml.Unmarshal(src, &doc); err != nil {
@@ -114,9 +114,8 @@ var maxFrontMatterSize = 64 << 10
 
 // frontMatter returns the YAML of the front matter at the start of src, the
 // size of the front matter with its delimiter lines, and its number of lines.
-// The size is 0 when there is no front matter. Like GitHub, the delimiter
-// lines are "---" with optional trailing spaces and tabs. src has normalized
-// line endings.
+// The size is 0 when there is no front matter. The delimiter lines are "---"
+// with optional trailing spaces and tabs. src has normalized line endings.
 func frontMatter(src []byte) (yaml []byte, size, lines int) {
 	start := frontMatterDelimiter(src)
 	if start == 0 {
@@ -157,9 +156,9 @@ func frontMatterDelimiter(b []byte) int {
 	return 0
 }
 
-// frontMatter renders the front matter n, which starts the document, as GitHub
-// does: a mapping as a table with a row for each key and its value, and
-// invalid YAML as a code block of n. The HTML goes to the output directly,
+// frontMatter renders the front matter n, which starts the document: a mapping
+// as a table with a row for each key and its value, and invalid YAML as a code
+// block of n. The HTML goes to the output directly,
 // escaped as the sanitizer escapes text, so that post-processing and
 // sanitizing skip it, see Result.FrontMatterSize.
 func (r *renderer) frontMatter(n *node) {
@@ -186,8 +185,8 @@ func (r *renderer) frontMatter(n *node) {
 
 // appendFrontMatterValue appends v, a value nested in front matter: a scalar
 // as text, a mapping as a table with the keys in its head and the values in
-// its body, and a sequence as a table of one row. Like GitHub, the cells of
-// nested tables wrap their content in a div.
+// its body, and a sequence as a table of one row. The cells of nested tables
+// wrap their content in a div.
 func (r *renderer) appendFrontMatterValue(out []byte, v *frontMatterValue) []byte {
 	switch v.kind {
 	case frontMatterMapping:

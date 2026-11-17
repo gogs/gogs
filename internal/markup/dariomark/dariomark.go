@@ -1,8 +1,8 @@
 // Package dariomark renders Markdown to HTML. Dariomark implements CommonMark
 // 0.31.2 and the GitHub Flavored Markdown extensions (tables, strikethrough,
-// task lists and extended autolinks), plus footnotes, GitHub alerts, YAML
-// front matter and special links, e.g., mentions and issue references. It is
-// safe for concurrent use and runs in linear time.
+// task lists and extended autolinks), plus footnotes, alerts, YAML front
+// matter and special links, e.g., mentions and issue references. It is safe
+// for concurrent use and runs in linear time.
 package dariomark
 
 import (
@@ -95,10 +95,10 @@ type Options struct {
 	// with PostProcess.
 	Sanitizer *Sanitizer
 
-	// FrontMatter renders YAML front matter as a table above the document, as
-	// GitHub does for Markdown files. Front matter is a first line "---"
-	// through the next line "---", which must end within the first 64 KB, and
-	// is a YAML mapping. Invalid YAML renders as a code block.
+	// FrontMatter renders YAML front matter as a table above the document,
+	// e.g., for Markdown files. Front matter is a first line "---" through the
+	// next line "---", which must end within the first 64 KB, and is a YAML
+	// mapping. Invalid YAML renders as a code block.
 	FrontMatter bool
 }
 

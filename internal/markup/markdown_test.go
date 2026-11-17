@@ -621,7 +621,7 @@ func TestMarkdownFile_FrontMatter(t *testing.T) {
 			want:  "<pre><code class=\"language-yaml\">---\na: [&lt;b&gt;\n---\n</code></pre>\n<p>b</p>\n",
 		},
 		{
-			// GitHub does not allow aliases, which could multiply nodes, e.g.,
+			// Aliases are not allowed, since they could multiply nodes, e.g.,
 			// "billion laughs", or contain themselves.
 			name:  "aliases",
 			input: "---\na: &a [x, x]\nb: [*a, *a]\n---\n",

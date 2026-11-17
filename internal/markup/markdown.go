@@ -235,8 +235,8 @@ func RawMarkdown(body []byte, urlPrefix string) []byte {
 }
 
 // renderMarkdown renders content in Markdown syntax to HTML with special
-// links, see dariomark.Render. file renders YAML front matter as a table, as
-// GitHub does for Markdown files.
+// links, see dariomark.Render. file renders YAML front matter as a table, for
+// Markdown files.
 func renderMarkdown(body []byte, urlPrefix string, metas map[string]string, hardWraps, file bool) dariomark.Result {
 	opts := markdownOptions(urlPrefix, hardWraps)
 	opts.FootnoteIDPrefix = footnoteIDPrefix(body)
