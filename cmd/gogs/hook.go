@@ -274,7 +274,7 @@ func startProcessSpan(ctx context.Context, logger *logx.Logger, name string, exp
 		telemetry.SetRepository(ctx, repoID)
 	}
 	if userID, err := strconv.ParseInt(os.Getenv(database.EnvAuthUserID), 10, 64); err == nil {
-		telemetry.SetUser(ctx, userID, os.Getenv(database.EnvAuthUserName))
+		telemetry.SetUser(ctx, userID)
 	}
 	endProcessSpan = func() {
 		processSpan.End()

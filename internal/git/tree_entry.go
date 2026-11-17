@@ -184,7 +184,6 @@ func (es Entries) CommitsInfo(ctx context.Context, commit *Commit, opts ...Commi
 	var opt CommitsInfoOptions
 	if len(opts) > 0 {
 		opt = opts[0]
-		setPath(span, opt.Path)
 	}
 
 	if opt.MaxConcurrency <= 0 {

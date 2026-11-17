@@ -49,7 +49,7 @@ type GrepResult struct {
 // by line. The second return value reports whether matching lines were left
 // out because of opts.MaxResults.
 func (r *Repository) Grep(ctx context.Context, rev, keyword string, opts ...GrepOptions) (_ []*GrepResult, _ bool, err error) {
-	ctx, span := tracer.Start(ctx, "git.Repository.Grep", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.revision", rev), attribute.String("git.pattern", keyword)))
+	ctx, span := tracer.Start(ctx, "git.Repository.Grep", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.revision", rev)))
 	defer func() { endSpan(span, err) }()
 
 	var opt GrepOptions

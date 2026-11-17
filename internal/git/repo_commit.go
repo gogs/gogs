@@ -204,7 +204,6 @@ func (r *Repository) Log(ctx context.Context, rev string, opts ...LogOptions) (_
 	var opt LogOptions
 	if len(opts) > 0 {
 		opt = opts[0]
-		setPath(span, opt.Path)
 	}
 
 	args := []string{"log", "--pretty=" + logFormatHashOnly}
@@ -289,7 +288,6 @@ func (r *Repository) CommitsByPage(ctx context.Context, rev string, page, size i
 	var opt CommitsByPageOptions
 	if len(opts) > 0 {
 		opt = opts[0]
-		setPath(span, opt.Path)
 	}
 
 	return r.Log(ctx, rev, LogOptions{
@@ -302,7 +300,7 @@ func (r *Repository) CommitsByPage(ctx context.Context, rev string, page, size i
 // SearchCommits searches commit message with given pattern in the state of
 // given revision. The returned list is in reverse chronological order.
 func (r *Repository) SearchCommits(ctx context.Context, rev, pattern string) (_ []*Commit, err error) {
-	ctx, span := tracer.Start(ctx, "git.Repository.SearchCommits", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.revision", rev), attribute.String("git.pattern", pattern)))
+	ctx, span := tracer.Start(ctx, "git.Repository.SearchCommits", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.revision", rev)))
 	defer func() { endSpan(span, err) }()
 
 	return r.Log(ctx, rev, LogOptions{

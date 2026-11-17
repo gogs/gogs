@@ -39,7 +39,7 @@ func authenticator(store context.Store) flamego.Handler {
 	return func(c flamego.Context, logger *logx.Logger, sess session.Session) {
 		user, isBasicAuth, isTokenAuth := context.AuthenticatedUser(logger, store, c.Request().Request, sess)
 		if user != nil {
-			telemetry.SetUser(c.Request().Context(), user.ID, user.Name)
+			telemetry.SetUser(c.Request().Context(), user.ID)
 		}
 		c.Map(user, authMethod{basicAuth: isBasicAuth, tokenAuth: isTokenAuth})
 	}

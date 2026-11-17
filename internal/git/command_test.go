@@ -155,11 +155,17 @@ func TestCommandArgs(t *testing.T) {
 		"-c", "http.extraHeader=Authorization: Basic c2VjcmV0",
 		"commit-tree", "-m", "private message", "--message=another one",
 		"fetch", "https://user:token@example.com/owner/repo.git", "refs/heads/main",
+		"grep", "-e", "secret", "--force-with-lease=refs/heads/main:abc123",
+		"rev-parse", "main:docs/private.md", "upload-pack", "/data/repos/owner/repo.git",
+		"--", "docs/private.md", "src",
 	})
 	want := []string{
 		"-c", "<redacted>",
 		"commit-tree", "-m", "<redacted>", "--message=<redacted>",
 		"fetch", "https://example.com/owner/repo.git", "refs/heads/main",
+		"grep", "-e", "<redacted>", "--force-with-lease=refs/heads/main:abc123",
+		"rev-parse", "main:<path>", "upload-pack", "/data/repos/owner/repo.git",
+		"--", "<path>", "<path>",
 	}
 	assert.Equal(t, want, got)
 }

@@ -9,11 +9,8 @@ import (
 )
 
 // SetUser records the signed-in user of a request on the span of the request.
-func SetUser(ctx context.Context, id int64, name string) {
-	trace.SpanFromContext(ctx).SetAttributes(
-		attribute.Int64("enduser.id", id),
-		attribute.String("enduser.name", name),
-	)
+func SetUser(ctx context.Context, id int64) {
+	trace.SpanFromContext(ctx).SetAttributes(attribute.Int64("enduser.id", id))
 }
 
 // SetRepository records the ID of the repository a request or a Git operation

@@ -2,6 +2,7 @@ package git
 
 import (
 	"net/url"
+	"path/filepath"
 	"strings"
 
 	"github.com/cockroachdb/errors"
@@ -41,14 +42,6 @@ func endSpan(span trace.Span, err error) {
 	span.SetStatus(codes.Error, err.Error())
 }
 
-// setPath records the path in the repository an operation is limited to, if
-// any.
-func setPath(span trace.Span, path string) {
-	if path != "" {
-		span.SetAttributes(attribute.String("git.path", path))
-	}
-}
-
 // redactURL removes the credentials from a remote URL, e.g., of a mirror.
 func redactURL(rawURL string) string {
 	u, err := url.Parse(rawURL)
@@ -60,15 +53,22 @@ func redactURL(rawURL string) string {
 }
 
 // commandArgs returns the arguments of a Git command to record on its span.
-// Values that may hold credentials or private text, i.e., of configuration
-// options and commit messages, are left out, and so are the credentials of
-// URLs.
+// Values that may hold credentials or private text are left out, i.e., of
+// configuration options, commit messages, search patterns and paths in the
+// repository, and so are the credentials of URLs.
 func commandArgs(args []string) []string {
 	out := make([]string, 0, len(args))
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 		switch {
-		case arg == "-c" || arg == "-m" || arg == "--message":
+		case arg == "--":
+			// Everything after it is a path in the repository.
+			out = append(out, arg)
+			for range args[i+1:] {
+				out = append(out, "<path>")
+			}
+			return out
+		case arg == "-c" || arg == "-m" || arg == "--message" || arg == "-e":
 			out = append(out, arg)
 			if i+1 < len(args) {
 				out = append(out, "<redacted>")
@@ -78,6 +78,12 @@ func commandArgs(args []string) []string {
 			out = append(out, "--message=<redacted>")
 		case strings.Contains(arg, "://"):
 			out = append(out, redactURL(arg))
+		case !strings.HasPrefix(arg, "-") && strings.Contains(arg, ":") && !filepath.IsAbs(arg):
+			// A revision and a path in it, e.g., "main:docs/README.md", since
+			// references cannot contain colons. Absolute paths on Windows,
+			// e.g., of the repository, have one after their drive letter.
+			rev, _, _ := strings.Cut(arg, ":")
+			out = append(out, rev+":<path>")
 		default:
 			out = append(out, arg)
 		}
