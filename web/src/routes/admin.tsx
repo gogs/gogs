@@ -3,13 +3,13 @@ import type { JSX } from "react";
 
 import { LoaderResponseError, loadAuthenticatedPage } from "@/lib/loader-error";
 import {
+  type HealthSearch,
   type ListSearch,
   type PageSearch,
-  type ProcessesSearch,
   type TraceSearch,
+  validateHealthSearch,
   validateListSearch,
   validatePageSearch,
-  validateProcessesSearch,
   validateTraceSearch,
 } from "@/lib/page-search";
 import {
@@ -30,6 +30,7 @@ import {
   fetchAdminUsers,
 } from "@/lib/queries/admin";
 import { AdminAuthSourceEdit, AdminAuthSourceNew } from "@/pages/admin/Auths";
+import { AdminServerHealth } from "@/pages/admin/Health";
 import { AdminAuthSources, AdminNotices, AdminOrgs, AdminRepos, AdminUsers } from "@/pages/admin/Lists";
 import { AdminConfig, AdminCron, AdminDashboard, AdminOperations, AdminProcesses } from "@/pages/admin/System";
 import { AdminTraceOverview, AdminTraceSearch, AdminTraceView } from "@/pages/admin/Traces";
@@ -72,13 +73,22 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
   const processesRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/admin/processes",
-    validateSearch: validateProcessesSearch,
-    loaderDeps: ({ search }: { search: ProcessesSearch }) => ({ health: search.health ?? ("1h" as const) }),
-    loader: ({ deps }) =>
-      loadAuthenticatedPage(() => Promise.all([fetchAdminMonitor(), fetchAdminHealth(deps.health)])),
+    loader: () => loadAuthenticatedPage(fetchAdminMonitor),
     component: function Processes() {
-      const [monitor, health] = processesRoute.useLoaderData();
-      return <AdminProcesses monitor={monitor} health={health} />;
+      return <AdminProcesses monitor={processesRoute.useLoaderData()} />;
+    },
+  });
+
+  const healthRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/admin/health",
+    validateSearch: validateHealthSearch,
+    loaderDeps: ({ search }: { search: HealthSearch }) => ({ health: search.health ?? ("1h" as const) }),
+    loader: ({ deps }) => loadAuthenticatedPage(() => fetchAdminHealth(deps.health)),
+    component: function Health() {
+      const health = healthRoute.useLoaderData();
+      // Remount on a range switch, so that a pinned moment does not outlive its range.
+      return <AdminServerHealth key={health.range} health={health} range={health.range} />;
     },
   });
 
@@ -238,6 +248,7 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
     operationsRoute,
     configRoute,
     cronRoute,
+    healthRoute,
     processesRoute,
     tracesRoute,
     traceRoute,

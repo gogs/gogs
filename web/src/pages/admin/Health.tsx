@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { type KeyboardEvent, type MouseEvent, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { AdminLayout } from "@/components/AdminLayout";
 import { fill, formatMs, formatNumber } from "@/lib/format";
 import type { AdminHealth, AdminHealthKey, AdminHealthRange, AdminHealthSeries } from "@/lib/queries/admin";
 import { formatAbsoluteTime } from "@/lib/relative-time";
@@ -188,10 +189,10 @@ function Sparkline({
   );
 }
 
-// ServerHealth shows how the server did over the last hour or day, one row per
-// measurement. Moving over a chart, or along it with the arrow keys, reads
+// AdminServerHealth shows how the server did over the last hour or day, one row
+// per measurement. Moving over a chart, or along it with the arrow keys, reads
 // every measurement at that moment, and links to the traces from then.
-export function ServerHealth({ health, range }: { health: AdminHealth; range: AdminHealthRange }) {
+export function AdminServerHealth({ health, range }: { health: AdminHealth; range: AdminHealthRange }) {
   const { t } = useTranslation();
   const [hover, setHover] = useState<number | null>(null);
   const [pinned, setPinned] = useState<number | null>(null);
@@ -261,11 +262,9 @@ export function ServerHealth({ health, range }: { health: AdminHealth; range: Ad
   }
 
   return (
-    <section aria-labelledby="server-health-title" className="mb-8">
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <h2 id="server-health-title" className="text-lg font-semibold">
-          {t("admin.health")}
-        </h2>
+    <AdminLayout active="health">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-xl font-semibold">{t("admin.health")}</h1>
         <RangeLinks
           label={t("admin.traces.range")}
           active={range}
@@ -273,7 +272,7 @@ export function ServerHealth({ health, range }: { health: AdminHealth; range: Ad
             { value: "1h", label: t("admin.traces.last_hour"), search: {} },
             { value: "24h", label: t("admin.health.last_24h"), search: { health: "24h" } },
           ]}
-          to="/admin/processes"
+          to="/admin/health"
         />
       </div>
       <p
@@ -342,7 +341,7 @@ export function ServerHealth({ health, range }: { health: AdminHealth; range: Ad
           </div>
         );
       })}
-    </section>
+    </AdminLayout>
   );
 }
 

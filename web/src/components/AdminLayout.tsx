@@ -6,6 +6,7 @@ import {
   Building2,
   Clock,
   Cpu,
+  HeartPulse,
   LayoutDashboard,
   type LucideIcon,
   Play,
@@ -29,6 +30,7 @@ export type AdminPage =
   | "config"
   | "notices"
   | "cron"
+  | "health"
   | "processes"
   | "traces";
 
@@ -55,6 +57,7 @@ const NAV: { title?: string; items: NavItem[] }[] = [
   {
     title: "admin.group_monitoring",
     items: [
+      { page: "health", path: "/health", label: "admin.health", icon: HeartPulse },
       { page: "processes", path: "/processes", label: "admin.processes", icon: Cpu },
       { page: "traces", path: "/traces", label: "admin.traces", icon: Activity },
       { page: "notices", path: "/notices", label: "admin.notices", icon: Bell },

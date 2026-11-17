@@ -13,7 +13,6 @@ import {
   ADMIN_OPERATIONS,
   type AdminConfig as AdminConfigData,
   type AdminDashboard as AdminDashboardData,
-  type AdminHealth,
   type AdminMonitor as AdminMonitorData,
   type AdminOperation,
   type AdminReportRow,
@@ -24,7 +23,6 @@ import {
 import { formErrors } from "@/lib/queries/request";
 import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
 import { cn } from "@/lib/utils";
-import { ServerHealth } from "@/pages/admin/Health";
 
 const ROW_CLASS = "border-b border-(--color-border) py-3";
 
@@ -354,33 +352,28 @@ export function AdminCron({ monitor }: { monitor: AdminMonitorData }) {
   );
 }
 
-// AdminProcesses shows the health of the server and lists the Git processes
-// running now.
-export function AdminProcesses({ monitor, health }: { monitor: AdminMonitorData; health: AdminHealth }) {
+// AdminProcesses lists the Git processes running now.
+export function AdminProcesses({ monitor }: { monitor: AdminMonitorData }) {
   const { t } = useTranslation();
   return (
     <AdminLayout active="processes">
       <h1 className="mb-4 text-xl font-semibold">{t("admin.processes")}</h1>
-      {/* Remount on a range switch, so that a pinned moment does not outlive its range. */}
-      <ServerHealth key={health.range} health={health} range={health.range} />
-      <Section id="processes" title={t("admin.monitor.process")}>
-        {monitor.processes.length > 0 ? (
-          <ul className="glass-list border-t border-(--color-border)">
-            {monitor.processes.map((proc) => (
-              <li key={proc.pid} className={ROW_CLASS}>
-                <p className="font-mono text-sm wrap-anywhere">{proc.description}</p>
-                <Details>
-                  <Detail label="PID">{proc.pid}</Detail>
-                  <Detail label={t("admin.monitor.start")}>{formatAbsoluteTime(proc.start)}</Detail>
-                  <Detail label={t("admin.monitor.execute_time")}>{formatRelativeTime(t, proc.start)}</Detail>
-                </Details>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <Empty />
-        )}
-      </Section>
+      {monitor.processes.length > 0 ? (
+        <ul className="glass-list border-t border-(--color-border)">
+          {monitor.processes.map((proc) => (
+            <li key={proc.pid} className={ROW_CLASS}>
+              <p className="font-mono text-sm wrap-anywhere">{proc.description}</p>
+              <Details>
+                <Detail label="PID">{proc.pid}</Detail>
+                <Detail label={t("admin.monitor.start")}>{formatAbsoluteTime(proc.start)}</Detail>
+                <Detail label={t("admin.monitor.execute_time")}>{formatRelativeTime(t, proc.start)}</Detail>
+              </Details>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <Empty />
+      )}
     </AdminLayout>
   );
 }

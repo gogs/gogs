@@ -46,13 +46,13 @@ export function validateFlag(value: unknown): true | undefined {
   return value === true || value === "true" ? true : undefined;
 }
 
-// Search params of the admin processes page. The last hour of server health
-// stays implicit.
-export interface ProcessesSearch {
+// Search params of the admin server health page. The last hour stays
+// implicit.
+export interface HealthSearch {
   health?: "24h";
 }
 
-export function validateProcessesSearch(search: Record<string, unknown>): ProcessesSearch {
+export function validateHealthSearch(search: Record<string, unknown>): HealthSearch {
   return { health: search.health === "24h" ? "24h" : undefined };
 }
 
