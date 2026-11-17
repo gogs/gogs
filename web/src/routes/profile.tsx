@@ -43,19 +43,6 @@ export function createProfileRoutes(rootRoute: AnyRoute) {
           // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
           throw notFound();
         }
-        if (err instanceof LoaderResponseError && (err.status === 401 || err.status === 403)) {
-          // The viewer is not allowed to see site content (unauthenticated, email
-          // not confirmed, or login prohibited). Reload the page so the server
-          // sends them to sign in, account activation, or the login prohibited
-          // page.
-          // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
-          throw redirect({
-            to: "/$username",
-            params: { username: params.username },
-            search: { tab: deps.tab, page: deps.page },
-            reloadDocument: true,
-          });
-        }
         throw err;
       }
     },
@@ -75,15 +62,10 @@ export function createProfileRoutes(rootRoute: AnyRoute) {
       ]);
       return data;
     } catch (err) {
-      // Organizations have no followers, and the viewer may not be allowed to
-      // see site content. Handle both like the profile.
+      // Organizations have no followers.
       if (err instanceof LoaderResponseError && err.status === 404) {
         // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
         throw notFound();
-      }
-      if (err instanceof LoaderResponseError && (err.status === 401 || err.status === 403)) {
-        // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
-        throw redirect({ href: window.location.href, reloadDocument: true });
       }
       throw err;
     }

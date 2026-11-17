@@ -12,6 +12,11 @@ export interface WebContext {
   error?: string;
   // The version of Gogs, for site admins on a server error.
   version?: string;
+  // Where visitors who are not signed in land instead of the home page, if
+  // anywhere else, e.g., "/explore/repos".
+  landingURL?: string;
+  // Whether visitors must sign in to view any content.
+  requireSignInView?: boolean;
 }
 
 declare global {
@@ -32,6 +37,8 @@ function read(): WebContext {
     page: ctx.page,
     error: ctx.error,
     version: ctx.version,
+    landingURL: ctx.landingURL,
+    requireSignInView: ctx.requireSignInView,
   };
 }
 

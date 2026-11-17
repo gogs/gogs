@@ -1,5 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { type AnyRoute, createRoute, notFound, redirect } from "@tanstack/react-router";
+import { type AnyRoute, createRoute, notFound } from "@tanstack/react-router";
 
 import { LoaderResponseError } from "@/lib/loader-error";
 import {
@@ -38,13 +38,6 @@ async function loadOrgPage<T>(queryClient: QueryClient, org: string, load: () =>
     if (err instanceof LoaderResponseError && err.status === 404) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
       throw notFound();
-    }
-    if (err instanceof LoaderResponseError && (err.status === 401 || err.status === 403)) {
-      // The viewer is unauthenticated, has not confirmed their email, or is
-      // prohibited from signing in. Reload the page so the server sends them to
-      // sign in, account activation, or the login prohibited page.
-      // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
-      throw redirect({ href: window.location.href, reloadDocument: true });
     }
     throw err;
   }

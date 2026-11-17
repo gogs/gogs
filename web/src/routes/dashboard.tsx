@@ -1,7 +1,8 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { type AnyRoute, createRoute, notFound, redirect } from "@tanstack/react-router";
 
-import { LoaderResponseError } from "@/lib/loader-error";
+import { webContext } from "@/lib/context";
+import { LoaderResponseError, signInRedirect } from "@/lib/loader-error";
 import { dashboardActivityQuery, dashboardQuery, fetchDashboardIssues } from "@/lib/queries/user";
 import { useUserInfo } from "@/lib/use-user-info";
 import type { UserInfo } from "@/lib/user-info";
@@ -24,19 +25,13 @@ function loadDashboard(queryClient: QueryClient, org?: string) {
 
 // withDashboardErrors maps the errors of loading a dashboard page to router
 // signals.
-async function withDashboardErrors<T>(load: Promise<T>, reload: () => unknown): Promise<T> {
+async function withDashboardErrors<T>(load: Promise<T>): Promise<T> {
   try {
     return await load;
   } catch (err) {
     if (err instanceof LoaderResponseError && err.status === 404) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
       throw notFound();
-    }
-    if (err instanceof LoaderResponseError && (err.status === 401 || err.status === 403)) {
-      // The viewer is unauthenticated, has not confirmed their email, or is
-      // prohibited from signing in. Reload the page so the server sends them to
-      // sign in, account activation, or the login prohibited page.
-      throw reload();
     }
     throw err;
   }
@@ -48,8 +43,19 @@ export function createDashboardRoutes(rootRoute: AnyRoute) {
     path: "/",
     loader: async ({ context }) => {
       const { user, queryClient } = context as RouterContext;
-      if (!user) return;
-      await withDashboardErrors(loadDashboard(queryClient), () => redirect({ to: "/", reloadDocument: true }));
+      if (!user) {
+        // The landing page decides whether visitors need to sign in.
+        if (webContext.landingURL) {
+          // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
+          throw redirect({ href: webContext.subURL + webContext.landingURL, replace: true, reloadDocument: true });
+        }
+        if (webContext.requireSignInView) {
+          // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
+          throw signInRedirect("/");
+        }
+        return;
+      }
+      await withDashboardErrors(loadDashboard(queryClient));
     },
     // Visitors get the landing page, authenticated users their dashboard.
     component: function Home() {
@@ -62,9 +68,7 @@ export function createDashboardRoutes(rootRoute: AnyRoute) {
     path: "/org/$org/dashboard",
     loader: async ({ params, context }) => {
       const { queryClient } = context as RouterContext;
-      await withDashboardErrors(loadDashboard(queryClient, params.org), () =>
-        redirect({ to: "/org/$org/dashboard", params: { org: params.org }, reloadDocument: true }),
-      );
+      await withDashboardErrors(loadDashboard(queryClient, params.org));
     },
     component: function OrgDashboard() {
       const { org } = orgDashboardRoute.useParams();
@@ -80,10 +84,7 @@ export function createDashboardRoutes(rootRoute: AnyRoute) {
     path: "/issues",
     validateSearch: validateDashboardIssuesSearch,
     loaderDeps: issuesLoaderDeps,
-    loader: ({ deps, location }) =>
-      withDashboardErrors(fetchDashboardIssues(undefined, "issues", { ...deps }), () =>
-        redirect({ href: location.href, reloadDocument: true }),
-      ),
+    loader: ({ deps }) => withDashboardErrors(fetchDashboardIssues(undefined, "issues", { ...deps })),
     component: function Issues() {
       return <DashboardIssues data={issuesRoute.useLoaderData()} search={issuesRoute.useSearch()} kind="issues" />;
     },
@@ -94,10 +95,7 @@ export function createDashboardRoutes(rootRoute: AnyRoute) {
     path: "/pulls",
     validateSearch: validateDashboardIssuesSearch,
     loaderDeps: issuesLoaderDeps,
-    loader: ({ deps, location }) =>
-      withDashboardErrors(fetchDashboardIssues(undefined, "pulls", { ...deps }), () =>
-        redirect({ href: location.href, reloadDocument: true }),
-      ),
+    loader: ({ deps }) => withDashboardErrors(fetchDashboardIssues(undefined, "pulls", { ...deps })),
     component: function Pulls() {
       return <DashboardIssues data={pullsRoute.useLoaderData()} search={pullsRoute.useSearch()} kind="pulls" />;
     },
@@ -108,10 +106,7 @@ export function createDashboardRoutes(rootRoute: AnyRoute) {
     path: "/org/$org/issues",
     validateSearch: validateDashboardIssuesSearch,
     loaderDeps: issuesLoaderDeps,
-    loader: ({ params, deps, location }) =>
-      withDashboardErrors(fetchDashboardIssues(params.org, "issues", { ...deps }), () =>
-        redirect({ href: location.href, reloadDocument: true }),
-      ),
+    loader: ({ params, deps }) => withDashboardErrors(fetchDashboardIssues(params.org, "issues", { ...deps })),
     component: function OrgIssues() {
       return (
         <DashboardIssues data={orgIssuesRoute.useLoaderData()} search={orgIssuesRoute.useSearch()} kind="issues" />
@@ -124,10 +119,7 @@ export function createDashboardRoutes(rootRoute: AnyRoute) {
     path: "/org/$org/pulls",
     validateSearch: validateDashboardIssuesSearch,
     loaderDeps: issuesLoaderDeps,
-    loader: ({ params, deps, location }) =>
-      withDashboardErrors(fetchDashboardIssues(params.org, "pulls", { ...deps }), () =>
-        redirect({ href: location.href, reloadDocument: true }),
-      ),
+    loader: ({ params, deps }) => withDashboardErrors(fetchDashboardIssues(params.org, "pulls", { ...deps })),
     component: function OrgPulls() {
       return <DashboardIssues data={orgPullsRoute.useLoaderData()} search={orgPullsRoute.useSearch()} kind="pulls" />;
     },

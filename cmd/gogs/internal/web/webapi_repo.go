@@ -36,6 +36,9 @@ type repoHeader struct {
 	OpenPullRequestCount int    `json:"openPullRequestCount"`
 	WikiEnabled          bool   `json:"wikiEnabled"`
 
+	// ViewerCanRead is false for visitors who only see the public issues or
+	// wiki of a repository.
+	ViewerCanRead       bool `json:"viewerCanRead"`
 	ViewerCanAdminister bool `json:"viewerCanAdminister"`
 	ViewerIsWatching    bool `json:"viewerIsWatching"`
 	ViewerIsStarring    bool `json:"viewerIsStarring"`
@@ -75,6 +78,7 @@ func getRepoHeader(logger *logx.Logger, repoCtx *repoContext) (statusCode int, r
 		OpenPullRequestCount: repo.NumPulls - repo.NumClosedPulls,
 		WikiEnabled:          wikiEnabled,
 
+		ViewerCanRead:       repoCtx.Viewer.CanRead(),
 		ViewerCanAdminister: repoCtx.Viewer.CanAdminister(),
 		ViewerIsWatching:    database.IsWatching(repoCtx.Viewer.ID(), repo.ID),
 		ViewerIsStarring:    database.IsStarring(repoCtx.Viewer.ID(), repo.ID),

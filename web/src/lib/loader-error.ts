@@ -1,5 +1,7 @@
 import { notFound, redirect } from "@tanstack/react-router";
 
+import { webContext } from "@/lib/context";
+
 // LoaderResponseError carries enough of a failed loader fetch for the route
 // error component to render a useful message: the HTTP status, the parsed
 // `error` field when the body is JSON-shaped like the webapi 4xx/5xx
@@ -35,19 +37,19 @@ export async function loaderResponseError(res: Response): Promise<LoaderResponse
   return new LoaderResponseError(res.status, body, errorField);
 }
 
-// loadAuthenticatedPage maps the errors of loading a page that needs an authenticated
-// user, e.g., a settings page, to router signals.
+// signInRedirect sends the viewer to sign in, and back to the page at href,
+// which is relative to the subpath, afterwards.
+export function signInRedirect(href: string) {
+  return redirect({ to: "/user/sign-in", search: { redirect_to: webContext.subURL + href }, replace: true });
+}
+
+// loadAuthenticatedPage maps the errors of loading a page that needs an
+// authenticated user, e.g., a settings page, to router signals. The viewers the
+// web API turns away reach the route error component, see `RouteError`.
 export async function loadAuthenticatedPage<T>(load: () => Promise<T>): Promise<T> {
   try {
     return await load();
   } catch (err) {
-    if (err instanceof LoaderResponseError && (err.status === 401 || err.status === 403)) {
-      // The viewer is unauthenticated, has not confirmed their email, or is
-      // prohibited from signing in. Reload the page so the server sends them to
-      // sign in, account activation, or the login prohibited page.
-      // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
-      throw redirect({ href: window.location.href, reloadDocument: true });
-    }
     if (err instanceof LoaderResponseError && err.status === 404) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
       throw notFound();

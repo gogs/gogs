@@ -23,12 +23,14 @@ import (
 	"github.com/go-macaron/gzip"
 	"github.com/go-macaron/i18n"
 	"github.com/go-macaron/session"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"gopkg.in/macaron.v1"
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/cmd/gogs/internal/tracing"
 	embedconf "gogs.io/gogs/conf"
+	"gogs.io/gogs/internal/app"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/cron"
@@ -334,7 +336,27 @@ func newRoutingHandler(logger *logx.Logger) (http.Handler, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "mount web app routes")
 	}
-	mountPageRoutes(logger, f, webApp)
+
+	// The web app renders every other path and asks the web API what the viewer
+	// may see. These routes serve the files and redirects next to its pages.
+	f.Get("/attachments/{uuid}", requireViewAccess, getAttachment)
+	f.Get("/{username}.keys", requireViewAccess, getUserPublicKeys)
+	f.Any("/user/activate_email", activateEmail)
+	f.Get("/user/email2user", email2User)
+	f.Group("/{owner}/{repo}", func() {
+		f.Get("", serveGoGet, webApp.ServeHTTP)
+		f.Get("/archive/{**}", requireViewAccess, withRepoContext, getRepoArchive)
+		f.Get("/wiki/{page}",
+			func(c flamego.Context) {
+				if isWikiPageName(c.Param("page")) {
+					webApp.ServeHTTP(c.ResponseWriter(), c.Request().Request)
+				}
+			},
+			requireViewAccess, withRepoContext, withRepoWiki, getRepoWikiFile, webApp.ServeHTTP,
+		)
+	})
+	f.Get("/-/metrics", app.MetricsFilter, promhttp.Handler().ServeHTTP)
+	f.Post("/-/api/sanitize_ipynb", app.SanitizeIpynb(logger))
 	return f, nil
 }
 
@@ -487,6 +509,10 @@ func readInjectContent() (injectContent, error) {
 // applied for the given WebContext. The inject argument supplies the custom
 // head and footer content to splice into the shell.
 func renderIndex(index []byte, wc context.WebContext, inject injectContent) ([]byte, error) {
+	var landingURL string
+	if conf.Server.LandingURL != "/" {
+		landingURL = conf.Server.LandingURL
+	}
 	// json.Marshal escapes <, >, and &, so the payload cannot break out of the surrounding <script>.
 	payload, err := json.Marshal(struct {
 		Lang      string `json:"lang"`
@@ -495,6 +521,9 @@ func renderIndex(index []byte, wc context.WebContext, inject injectContent) ([]b
 		Page      string `json:"page,omitempty"`
 		Error     string `json:"error,omitempty"`
 		Version   string `json:"version,omitempty"`
+		// The web app sends visitors who are not signed in to these pages.
+		LandingURL        string `json:"landingURL,omitempty"`
+		RequireSignInView bool   `json:"requireSignInView,omitempty"`
 	}{
 		Lang:      wc.Lang,
 		SubURL:    wc.SubURL,
@@ -502,6 +531,9 @@ func renderIndex(index []byte, wc context.WebContext, inject injectContent) ([]b
 		Page:      wc.Page,
 		Error:     wc.Error,
 		Version:   wc.Version,
+
+		LandingURL:        landingURL,
+		RequireSignInView: conf.Auth.RequireSigninView,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "marshal web context")

@@ -11,6 +11,15 @@ import {
 } from "@/pages/explore/Explore.search";
 
 export function createExploreRoutes(rootRoute: AnyRoute) {
+  const exploreIndexRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/explore",
+    beforeLoad: () => {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
+      throw redirect({ to: "/explore/$kind", params: { kind: "repos" }, replace: true });
+    },
+  });
+
   const exploreRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/explore/$kind",
@@ -34,19 +43,6 @@ export function createExploreRoutes(rootRoute: AnyRoute) {
       const res = await fetch(subUrl(`/api/web/explore/${params.kind}`) + (qs ? `?${qs}` : ""), {
         credentials: "same-origin",
       });
-      if (res.status === 401 || res.status === 403) {
-        // The viewer is not allowed to see site content (unauthenticated, email
-        // not confirmed, or login prohibited). Reload the page so the server
-        // sends them to sign in, account activation, or the login prohibited
-        // page.
-        // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
-        throw redirect({
-          to: "/explore/$kind",
-          params: { kind: params.kind },
-          search: { q: deps.q, page: deps.page },
-          reloadDocument: true,
-        });
-      }
       if (!res.ok) {
         throw await loaderResponseError(res);
       }
@@ -55,5 +51,5 @@ export function createExploreRoutes(rootRoute: AnyRoute) {
     component: Explore,
   });
 
-  return [exploreRoute];
+  return [exploreIndexRoute, exploreRoute];
 }
