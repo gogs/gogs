@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ssh"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 )
 
@@ -119,8 +120,8 @@ func TestSSHCloneAndPush(t *testing.T) {
 	require.NoError(t, err, "push: %s", out)
 	assert.Equal(t, want, gitMainOnDisk(t, repo))
 
-	// The post-receive hook records the push in the news feed of the owner, as
-	// a push over HTTP does.
+	// The server records the push in the news feed of the owner, as it does for
+	// a push over HTTP.
 	actions, err := database.Handle.Actions().ListByUser(t.Context(), owner.ID, owner.ID, 0, false)
 	require.NoError(t, err)
 	var pushed *database.Action
@@ -205,5 +206,56 @@ func TestSSHDeployKey(t *testing.T) {
 		otherRepo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
 		out := key.cloneFails(t, otherRepo)
 		assert.Contains(t, out, "Key access denied")
+	})
+}
+
+// servCommand returns a Git command that runs in the directory and connects
+// through "gogs serv" with the key of the ID, like OpenSSH does with the
+// command that Gogs writes to the authorized_keys file.
+func servCommand(t *testing.T, keyID int64, dir string, args ...string) *exec.Cmd {
+	t.Helper()
+
+	sshProgram := filepath.Join(t.TempDir(), "ssh")
+	script := fmt.Sprintf("#!/bin/sh\n# The command for the server is the last argument.\nfor command; do :; done\nSSH_ORIGINAL_COMMAND=\"$command\" exec '%s' serv key-%d --config='%s'\n",
+		os.Args[0], keyID, conf.CustomConf)
+	require.NoError(t, os.WriteFile(sshProgram, []byte(script), 0o700))
+	cmd := gitCommand(dir, args...)
+	cmd.Env = append(cmd.Env, "GIT_SSH="+sshProgram)
+	return cmd
+}
+
+func TestSSHServ(t *testing.T) {
+	owner := seedUser(t, CreateUserOptions{})
+	other := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	remoteURL := fmt.Sprintf("ssh://git@localhost/%s/%s.git", repo.Owner, repo.Name)
+	addKey := func(userID int64) int64 {
+		_, content := sshNewKey(t)
+		key, err := database.AddPublicKey(logger, userID, UniqueName("key-"), content)
+		require.NoError(t, err)
+		return key.ID
+	}
+	ownerKeyID := addKey(owner.ID)
+
+	dir := filepath.Join(t.TempDir(), "clone")
+	out, err := servCommand(t, ownerKeyID, filepath.Dir(dir), "clone", remoteURL, dir).CombinedOutput()
+	require.NoError(t, err, "clone: %s", out)
+	want := gitCommitFile(t, dir, UniqueName("file-")+".txt")
+	out, err = servCommand(t, ownerKeyID, dir, "push", "origin", "main").CombinedOutput()
+	require.NoError(t, err, "push: %s", out)
+	assert.Equal(t, want, gitMainOnDisk(t, repo))
+
+	actions := gitRepoActions(t, owner.ID, repo.ID)
+	require.NotEmpty(t, actions)
+	assert.Equal(t, database.ActionCommitRepo, actions[0].OpType)
+	assert.Equal(t, owner.ID, actions[0].ActUserID)
+	assert.Contains(t, actions[0].Content, want)
+
+	t.Run("user without write access", func(t *testing.T) {
+		gitCommitFile(t, dir, UniqueName("file-")+".txt")
+		out, err := servCommand(t, addKey(other.ID), dir, "push", "origin", "main").CombinedOutput()
+		require.Error(t, err, "push succeeded: %s", out)
+		assert.Contains(t, string(out), "Gogs: You do not have sufficient authorization for this action")
+		assert.Equal(t, want, gitMainOnDisk(t, repo))
 	})
 }

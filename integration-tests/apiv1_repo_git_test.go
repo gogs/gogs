@@ -39,6 +39,13 @@ func TestAPIV1Contents(t *testing.T) {
 	assert.Equal(t, "Add guide", put.Commit.Commit.Message)
 	assert.Equal(t, owner.Name, put.Commit.Author.UserName)
 
+	// The commit is recorded in the news feed like a push.
+	actions := gitRepoActions(t, owner.ID, repo.ID)
+	require.NotEmpty(t, actions)
+	assert.Equal(t, database.ActionCommitRepo, actions[0].OpType)
+	assert.Equal(t, "main", actions[0].RefName)
+	assert.Contains(t, actions[0].Content, put.Commit.SHA)
+
 	var file apiV1Content
 	api.doJSON(http.MethodGet, apiV1RepoPath(repo, "/contents/docs/guide.md"), nil, http.StatusOK, &file)
 	assert.Equal(t, "file", file.Type)
