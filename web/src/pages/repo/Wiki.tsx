@@ -182,7 +182,7 @@ export function RepoWiki({ owner, name, data }: { owner: string; name: string; d
             </p>
           </header>
           <div className="glass glass-ui:mt-4 glass-ui:border glass-ui:p-4 sm:glass-ui:p-6">
-            <Markdown html={page.html} />
+            <Markdown html={page.html} headingAnchors />
           </div>
         </article>
         <aside className="glass flex min-w-0 flex-col gap-6 max-md:border-t max-md:border-(--color-border) max-md:pt-6 glass-ui:self-start glass-ui:border glass-ui:p-4">

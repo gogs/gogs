@@ -832,7 +832,7 @@ function Overview({ files, activeTab }: { files: RepoOverviewFile[]; activeTab?:
         {outline.length ? <OutlineMenu headings={outline} /> : null}
       </div>
       {shown.html !== undefined ? (
-        <Markdown html={shown.html} className="p-4 sm:p-6" />
+        <Markdown html={shown.html} className="p-4 sm:p-6" headingAnchors />
       ) : (
         <pre className="p-4 font-mono text-sm wrap-anywhere whitespace-pre-wrap">{shown.text}</pre>
       )}
@@ -846,6 +846,9 @@ function OutlineMenu({ headings }: { headings: OutlineHeading[] }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState("");
+  // Focus goes back to the menu button when the menu closes, which would
+  // scroll the page back to the button after choosing a heading.
+  const choseHeading = useRef(false);
   const topLevel = Math.min(...headings.map((heading) => heading.level));
   const query = filter.trim().toLowerCase();
   const shown = query ? headings.filter((heading) => heading.text.toLowerCase().includes(query)) : headings;
@@ -869,7 +872,14 @@ function OutlineMenu({ headings }: { headings: OutlineHeading[] }) {
         </TooltipTrigger>
         <TooltipContent>{label}</TooltipContent>
       </Tooltip>
-      <PopoverContent align="end" className="w-80 max-w-[calc(100vw-2rem)] p-2">
+      <PopoverContent
+        align="end"
+        className="w-80 max-w-[calc(100vw-2rem)] p-2"
+        onCloseAutoFocus={(e) => {
+          if (choseHeading.current) e.preventDefault();
+          choseHeading.current = false;
+        }}
+      >
         <Input
           type="search"
           value={filter}
@@ -882,7 +892,10 @@ function OutlineMenu({ headings }: { headings: OutlineHeading[] }) {
             <li key={heading.slug}>
               <a
                 href={`#${encodeURIComponent(heading.slug)}`}
-                onClick={() => setOpen(false)}
+                onClick={() => {
+                  choseHeading.current = true;
+                  setOpen(false);
+                }}
                 className={cn(
                   "block rounded py-1.5 pr-2 text-sm wrap-anywhere text-(--color-foreground) hover:bg-(--color-surface)",
                   heading.level === topLevel && "font-semibold",
@@ -1275,7 +1288,7 @@ function FileBody({ file, rawURL }: { file: RepoFile; rawURL: string }) {
     case "text":
       return <SourceView file={file} />;
     case "markup":
-      return <Markdown html={file.html ?? ""} className="p-4 sm:p-6" />;
+      return <Markdown html={file.html ?? ""} className="p-4 sm:p-6" headingAnchors />;
     case "notebook":
       return file.notebook ? <NotebookView notebook={file.notebook} rawURL={rawURL} /> : null;
     case "image":

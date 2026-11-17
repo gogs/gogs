@@ -392,8 +392,8 @@ diffs-container {
     --diffs-line-height: calc(0.85rem * 1.45);
     overflow-wrap: anywhere;
   }
-  .markdown > * + *,
-  .markdown > div > * + * {
+  /* No more specific than the margins around headings below, so that they apply. */
+  :where(.markdown > * + *, .markdown > div > * + *) {
     margin-top: 0.75rem;
   }
   .markdown :where(h1, h2, h3, h4, h5, h6) {
@@ -422,13 +422,35 @@ diffs-container {
   .markdown :where(h6) {
     font-size: 0.85em;
   }
+  .markdown :where(:is(h1, h2, h3, h4, h5, h6) + *) {
+    margin-top: 1rem;
+  }
   .markdown :where(* + h1, * + h2, * + h3, * + h4, * + h5, * + h6) {
-    margin-top: 1.25rem;
+    margin-top: 1.5rem;
   }
   .markdown :where(a) {
     color: var(--color-primary);
     text-decoration: underline;
     text-underline-offset: 2px;
+  }
+  .markdown :where(.heading-anchor) {
+    display: inline-flex;
+    vertical-align: middle;
+    margin-left: 0.25rem;
+    border-radius: 0.25rem;
+    padding: 0.25rem;
+    color: var(--color-muted-foreground);
+    opacity: 0;
+  }
+  .markdown :where(h1, h2, h3, h4, h5, h6):hover .heading-anchor,
+  .markdown .heading-anchor:focus-visible {
+    opacity: 1;
+  }
+  /* Touch screens cannot hover, so the links stay visible there. */
+  @media (hover: none) {
+    .markdown .heading-anchor {
+      opacity: 1;
+    }
   }
   .markdown :where(ul) {
     list-style: disc;
