@@ -1,4 +1,4 @@
-import { Blend, Bug, Check, Monitor, Moon, Settings, Sun } from "lucide-react";
+import { Blend, Bug, Check, FlaskConical, Monitor, Moon, Settings, Sun } from "lucide-react";
 import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 
@@ -128,7 +128,13 @@ export function SettingsMenu() {
             className="mt-1 flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-(--color-foreground) outline-none hover:bg-(--color-surface) focus-visible:ring-1 focus-visible:ring-(--color-ring)"
           >
             <Blend className="size-4 text-(--color-muted-foreground)" aria-hidden />
-            <span className="flex-1">{t("glass_effect")}</span>
+            <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+              {t("glass_effect")}
+              <span className="inline-flex items-center gap-1 rounded-full border border-(--color-border) px-2 text-xs/5 font-medium text-(--color-muted-foreground)">
+                <FlaskConical className="size-3" aria-hidden />
+                {t("experiment")}
+              </span>
+            </span>
             <span
               aria-hidden
               className={cn(
