@@ -151,7 +151,7 @@ func describePull(ctx context.Context, repoCtx *repoContext, issue *database.Iss
 
 		if repoCtx.Viewer.CanWrite() && pull.HeadRepoID == pull.BaseRepoID {
 			if baseGitRepo.HasBranch(ctx, pull.HeadBranch) {
-				protected, err := database.GetProtectBranchOfRepoByName(repo.ID, pull.HeadBranch)
+				protected, err := database.Handle.ProtectBranches().GetByName(ctx, repo.ID, pull.HeadBranch)
 				if err != nil && !database.IsErrBranchNotExist(err) {
 					return nil, nil, nil, errors.Wrap(err, "get protected branch")
 				}
@@ -202,7 +202,7 @@ func describePull(ctx context.Context, repoCtx *repoContext, issue *database.Iss
 	case pull.CanAutoMerge():
 		info.State = "mergeable"
 		if repoCtx.Viewer.CanWrite() {
-			info.ViewerCanMerge, err = canPushTo(repoCtx, pull.BaseBranch)
+			info.ViewerCanMerge, err = canPushTo(ctx, repoCtx, pull.BaseBranch)
 			if err != nil {
 				return nil, nil, nil, errors.Wrap(err, "check push allowlist")
 			}
@@ -305,8 +305,8 @@ type repoPullMergeRequest struct {
 // protected and has one, lets in the viewer, who must already be a writer. A
 // merge pushes to its base branch, so it takes the same allowlist as the
 // pre-receive hook does for pushes.
-func canPushTo(repoCtx *repoContext, branch string) (bool, error) {
-	protectBranch, err := database.GetProtectBranchOfRepoByName(repoCtx.Repo.ID, branch)
+func canPushTo(ctx context.Context, repoCtx *repoContext, branch string) (bool, error) {
+	protectBranch, err := database.Handle.ProtectBranches().GetByName(ctx, repoCtx.Repo.ID, branch)
 	if err != nil {
 		if database.IsErrBranchNotExist(err) {
 			return true, nil
@@ -316,7 +316,7 @@ func canPushTo(repoCtx *repoContext, branch string) (bool, error) {
 	if !protectBranch.Protected || !protectBranch.EnableAllowlist {
 		return true, nil
 	}
-	return protectBranch.IsUserInAllowlist(repoCtx.Viewer.ID())
+	return database.Handle.ProtectBranches().IsUserInAllowlist(ctx, protectBranch, repoCtx.Viewer.ID())
 }
 
 // postRepoPullMerge merges the pull request into its base branch.
@@ -325,7 +325,7 @@ func postRepoPullMerge(c flamego.Context, logger *logx.Logger, l i18n.Locale, vi
 	if issue.IsClosed || pull.HasMerged || !pull.CanAutoMerge() {
 		return http.StatusNotFound, nil, errors.New("pull request cannot be merged")
 	}
-	canPush, err := canPushTo(repoCtx, pull.BaseBranch)
+	canPush, err := canPushTo(c.Request().Context(), repoCtx, pull.BaseBranch)
 	if err != nil {
 		logger.Error("Failed to check push allowlist", "pullID", pull.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "check push allowlist")

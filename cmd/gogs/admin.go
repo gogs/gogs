@@ -96,7 +96,7 @@ to make automatic initialization process more smoothly`,
 		Name:  "rewrite-authorized-keys",
 		Usage: "Rewrite '.ssh/authorized_keys' file (caution: non-Gogs keys will be lost)",
 		Action: adminDashboardOperation(
-			database.RewriteAuthorizedKeys,
+			func(*logx.Logger) error { return database.Handle.PublicKeys().RewriteAuthorizedKeys() },
 			"All public keys have been rewritten successfully",
 		),
 		Flags: []cli.Flag{

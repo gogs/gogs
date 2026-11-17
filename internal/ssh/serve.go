@@ -6,7 +6,6 @@ import (
 	"io"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/cockroachdb/errors"
 	"unknwon.dev/x/logx"
@@ -119,7 +118,7 @@ func Serve(ctx context.Context, logger *logx.Logger, opts ServeOptions) error {
 	// Allow anonymous (user is nil) clone for public repositories.
 	var user *database.User
 
-	key, err := database.GetPublicKeyByID(opts.KeyID)
+	key, err := database.Handle.PublicKeys().GetByID(ctx, opts.KeyID)
 	if err != nil {
 		return serveError("Invalid key ID", "Invalid key ID '%d': %v", opts.KeyID, err)
 	}
@@ -130,7 +129,7 @@ func Serve(ctx context.Context, logger *logx.Logger, opts ServeOptions) error {
 			if key.Mode < requestMode {
 				return serveError("Key permission denied", "Cannot push with deployment key: %d", key.ID)
 			}
-			if err = checkDeployKey(key, repo); err != nil {
+			if err = checkDeployKey(ctx, key, repo); err != nil {
 				return err
 			}
 		} else {
@@ -165,7 +164,7 @@ func Serve(ctx context.Context, logger *logx.Logger, opts ServeOptions) error {
 		// a server or system using an active deploy key can get read access to all repositories on a Gogs instance.
 		if conf.Auth.RequireSigninView {
 			if key.IsDeployKey() {
-				if err = checkDeployKey(key, repo); err != nil {
+				if err = checkDeployKey(ctx, key, repo); err != nil {
 					return err
 				}
 			} else {
@@ -182,14 +181,8 @@ func Serve(ctx context.Context, logger *logx.Logger, opts ServeOptions) error {
 
 	// Update user key activity.
 	if key.ID > 0 {
-		key, err := database.GetPublicKeyByID(key.ID)
-		if err != nil {
-			return serveError("Internal error", "GetPublicKeyByID: %v", err)
-		}
-
-		key.Updated = time.Now()
-		if err = database.UpdatePublicKey(key); err != nil {
-			return serveError("Internal error", "UpdatePublicKey: %v", err)
+		if err = database.Handle.PublicKeys().Touch(ctx, key.ID); err != nil {
+			return serveError("Internal error", "Touch public key: %v", err)
 		}
 	}
 
@@ -247,21 +240,17 @@ func parseCommand(cmd string) (verb, args string) {
 	return ss[0], strings.Replace(ss[1], "'/", "'", 1)
 }
 
-func checkDeployKey(key *database.PublicKey, repo *database.Repository) error {
-	// Check if this deploy key belongs to current repository.
-	if !database.HasDeployKey(key.ID, repo.ID) {
-		return serveError("Key access denied", "Deploy key access denied: [key_id: %d, repo_id: %d]", key.ID, repo.ID)
-	}
-
-	// Update deploy key activity.
-	deployKey, err := database.GetDeployKeyByRepo(key.ID, repo.ID)
+func checkDeployKey(ctx context.Context, key *database.PublicKey, repo *database.Repository) error {
+	deployKey, err := database.Handle.DeployKeys().GetByRepoAndKey(ctx, repo.ID, key.ID)
 	if err != nil {
-		return serveError("Internal error", "GetDeployKey: %v", err)
+		if database.IsErrDeployKeyNotExist(err) {
+			return serveError("Key access denied", "Deploy key access denied: [key_id: %d, repo_id: %d]", key.ID, repo.ID)
+		}
+		return serveError("Internal error", "Get deploy key: %v", err)
 	}
 
-	deployKey.Updated = time.Now()
-	if err = database.UpdateDeployKey(deployKey); err != nil {
-		return serveError("Internal error", "UpdateDeployKey: %v", err)
+	if err = database.Handle.DeployKeys().Touch(ctx, deployKey.ID); err != nil {
+		return serveError("Internal error", "Touch deploy key: %v", err)
 	}
 	return nil
 }

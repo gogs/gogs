@@ -188,7 +188,7 @@ func Listen(logger *logx.Logger, opts conf.SSHOpts, appDataPath string) {
 		Ciphers: opts.ServerCiphers,
 		MACs:    opts.ServerMACs,
 		PublicKeyCallback: func(conn ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
-			pkey, err := database.SearchPublicKeyByContent(strings.TrimSpace(string(ssh.MarshalAuthorizedKey(key))))
+			pkey, err := database.Handle.PublicKeys().GetByContent(context.Background(), strings.TrimSpace(string(ssh.MarshalAuthorizedKey(key))))
 			if err != nil {
 				if !database.IsErrKeyNotExist(err) {
 					logger.Error("Failed to search public key by content", "error", err)

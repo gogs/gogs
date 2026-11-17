@@ -322,7 +322,7 @@ func userSeedSSHKey(t *testing.T, userID int64, name string) (*database.PublicKe
 	sshPub, err := ssh.NewPublicKey(pub)
 	require.NoError(t, err)
 	content := strings.TrimSpace(string(ssh.MarshalAuthorizedKey(sshPub)))
-	key, err := database.AddPublicKey(logger, userID, name, content+" "+name+"@example.com")
+	key, err := database.Handle.PublicKeys().Add(t.Context(), logger, userID, name, content+" "+name+"@example.com")
 	require.NoError(t, err)
 	return key, content
 }
@@ -351,7 +351,7 @@ func TestUserSettingsSSHKeys(t *testing.T) {
 	})
 	assert.Equal(t, http.StatusUnprocessableEntity, status, "response: %s", body)
 
-	userKeys, err := database.ListPublicKeys(u.ID)
+	userKeys, err := database.Handle.PublicKeys().List(t.Context(), u.ID)
 	require.NoError(t, err)
 	require.Len(t, userKeys, 1)
 	key, fingerprint := userKeys[0], ssh.FingerprintSHA256(sshPub)
@@ -376,13 +376,13 @@ func TestUserSettingsSSHKeys(t *testing.T) {
 	otherKey, _ := userSeedSSHKey(t, other.ID, "Desktop")
 	status, body = c.do(http.MethodDelete, "/api/web/user/settings/ssh-keys/"+strconv.FormatInt(otherKey.ID, 10), map[string]any{})
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
-	_, err = database.GetPublicKeyByID(otherKey.ID)
+	_, err = database.Handle.PublicKeys().GetByID(t.Context(), otherKey.ID)
 	assert.NoError(t, err, "key of another user deleted")
 
 	status, body = c.do(http.MethodDelete, "/api/web/user/settings/ssh-keys/"+strconv.FormatInt(key.ID, 10), map[string]any{})
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 	assert.Empty(t, list())
-	_, err = database.GetPublicKeyByID(key.ID)
+	_, err = database.Handle.PublicKeys().GetByID(t.Context(), key.ID)
 	assert.True(t, database.IsErrKeyNotExist(err), "key not deleted: %v", err)
 	out := privateKey.cloneFails(t, repo)
 	assert.Contains(t, out, "Permission denied (publickey)")
@@ -453,7 +453,7 @@ func TestUserSettingsTwoFactor(t *testing.T) {
 		IsUsed bool   `json:"isUsed"`
 	}
 	storedCodes := func() []recoveryCode {
-		codes, err := database.GetRecoveryCodesByUserID(u.ID)
+		codes, err := database.Handle.TwoFactors().ListRecoveryCodes(t.Context(), u.ID)
 		require.NoError(t, err)
 		var items []recoveryCode
 		for _, rc := range codes {

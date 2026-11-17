@@ -166,7 +166,7 @@ func TestAdminOperations(t *testing.T) {
 		// protected branch, and loses the others.
 		unprotected := seedRepository(t, owner.ID, CreateRepositoryOptions{})
 		protected := seedRepository(t, owner.ID, CreateRepositoryOptions{})
-		require.NoError(t, database.UpdateProtectBranch(&database.ProtectBranch{RepoID: protected.ID, Name: "main", Protected: true}))
+		require.NoError(t, database.Handle.ProtectBranches().Save(t.Context(), &database.ProtectBranch{RepoID: protected.ID, Name: "main", Protected: true}))
 		hook := func(repo *Repository) string {
 			return filepath.Join(repox.RepositoryPath(repo.Owner, repo.Name), "hooks", "pre-receive")
 		}

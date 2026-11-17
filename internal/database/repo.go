@@ -20,6 +20,7 @@ import (
 	"github.com/unknwon/cae/zip"
 	"github.com/unknwon/com"
 	"golang.org/x/image/draw"
+	"gorm.io/gorm"
 	"unknwon.dev/ini/v2"
 	"unknwon.dev/x/logx"
 	"xorm.io/xorm"
@@ -639,10 +640,6 @@ func (r *Repository) AllowsPulls() bool {
 	return r.CanEnablePulls() && r.EnablePulls
 }
 
-func (r *Repository) IsBranchRequirePullRequest(name string) bool {
-	return IsBranchOfRepoRequirePullRequest(r.ID, name)
-}
-
 // CanEnableEditor returns true if repository meets the requirements of web editor.
 func (r *Repository) CanEnableEditor() bool {
 	return !r.IsMirror
@@ -994,9 +991,13 @@ func syncDelegateHooks(repoPath string, hasProtectedBranch func() (bool, error))
 // wiki need, and removes the others. It must be called whenever their custom
 // hooks or the protection of the branches of the repository change.
 func (r *Repository) SyncDelegateHooks() error {
+	return syncRepoDelegateHooks(Handle.db, r)
+}
+
+func syncRepoDelegateHooks(db *gorm.DB, r *Repository) error {
 	hasProtectedBranch := func() (bool, error) {
 		var count int64
-		err := Handle.db.Model(new(ProtectBranch)).Where("repo_id = ? AND protected = ?", r.ID, true).Count(&count).Error
+		err := db.Model(new(ProtectBranch)).Where("repo_id = ? AND protected = ?", r.ID, true).Count(&count).Error
 		if err != nil {
 			return false, errors.Wrap(err, "check protected branches")
 		}

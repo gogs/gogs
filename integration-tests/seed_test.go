@@ -122,7 +122,7 @@ func EnableTwoFactor(ctx context.Context, userID int64) (*TwoFactor, error) {
 		return nil, errors.Wrap(err, "create two factor")
 	}
 
-	codes, err := database.GetRecoveryCodesByUserID(userID)
+	codes, err := database.Handle.TwoFactors().ListRecoveryCodes(ctx, userID)
 	if err != nil {
 		return nil, errors.Wrap(err, "get recovery codes")
 	}

@@ -3,8 +3,6 @@ package database
 import (
 	"context"
 	"fmt"
-	"io"
-	"mime/multipart"
 	"os"
 	"path"
 	"path/filepath"
@@ -13,8 +11,6 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
-	"github.com/google/uuid"
-	"gorm.io/gorm"
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
@@ -426,113 +422,6 @@ func (upload *Upload) LocalPath() string {
 	return UploadLocalPath(upload.UUID)
 }
 
-// NewUpload creates a new upload object.
-func NewUpload(name string, buf []byte, file multipart.File) (_ *Upload, err error) {
-	// 🚨 SECURITY: Prevent path traversal.
-	name = pathx.Clean(name)
-	if name == "" {
-		return nil, errors.New("empty file name")
-	}
-
-	upload := &Upload{
-		UUID: uuid.New().String(),
-		Name: name,
-	}
-
-	localPath := upload.LocalPath()
-	if err = os.MkdirAll(path.Dir(localPath), os.ModePerm); err != nil {
-		return nil, errors.Newf("mkdir all: %v", err)
-	}
-
-	fw, err := os.Create(localPath)
-	if err != nil {
-		return nil, errors.Newf("create: %v", err)
-	}
-	defer func() { _ = fw.Close() }()
-
-	if _, err = fw.Write(buf); err != nil {
-		return nil, errors.Newf("write: %v", err)
-	} else if _, err = io.Copy(fw, file); err != nil {
-		return nil, errors.Newf("copy: %v", err)
-	}
-
-	if err := Handle.db.Create(upload).Error; err != nil {
-		return nil, err
-	}
-
-	return upload, nil
-}
-
-func GetUploadByUUID(uuid string) (*Upload, error) {
-	upload := new(Upload)
-	err := Handle.db.Where("uuid = ?", uuid).First(upload).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrUploadNotExist{0, uuid}
-		}
-		return nil, err
-	}
-	return upload, nil
-}
-
-func GetUploadsByUUIDs(uuids []string) ([]*Upload, error) {
-	if len(uuids) == 0 {
-		return []*Upload{}, nil
-	}
-
-	// Silently drop invalid uuids.
-	uploads := make([]*Upload, 0, len(uuids))
-	return uploads, Handle.db.Where("uuid IN ?", uuids).Find(&uploads).Error
-}
-
-func DeleteUploads(uploads ...*Upload) error {
-	if len(uploads) == 0 {
-		return nil
-	}
-
-	return Handle.db.Transaction(func(tx *gorm.DB) error {
-		ids := make([]int64, len(uploads))
-		for i := range uploads {
-			ids[i] = uploads[i].ID
-		}
-		if err := tx.Where("id IN ?", ids).Delete(new(Upload)).Error; err != nil {
-			return errors.Newf("delete uploads: %v", err)
-		}
-
-		for _, upload := range uploads {
-			localPath := upload.LocalPath()
-			if !osx.IsFile(localPath) {
-				continue
-			}
-
-			if err := os.Remove(localPath); err != nil {
-				return errors.Newf("remove upload: %v", err)
-			}
-		}
-		return nil
-	})
-}
-
-func DeleteUpload(u *Upload) error {
-	return DeleteUploads(u)
-}
-
-func DeleteUploadByUUID(uuid string) error {
-	upload, err := GetUploadByUUID(uuid)
-	if err != nil {
-		if IsErrUploadNotExist(err) {
-			return nil
-		}
-		return errors.Newf("get upload by UUID[%s]: %v", uuid, err)
-	}
-
-	if err := DeleteUpload(upload); err != nil {
-		return errors.Newf("delete upload: %v", err)
-	}
-
-	return nil
-}
-
 type UploadRepoFileOptions struct {
 	LastCommitID string
 	OldBranch    string
@@ -579,7 +468,7 @@ func (r *Repository) UploadRepoFiles(ctx context.Context, logger *logx.Logger, d
 		return errors.Errorf("bad tree path %q", opts.TreePath)
 	}
 
-	uploads, err := GetUploadsByUUIDs(opts.Files)
+	uploads, err := newUploadsStore(Handle.db).ListByUUIDs(ctx, opts.Files)
 	if err != nil {
 		return errors.Newf("get uploads by UUIDs[%v]: %v", opts.Files, err)
 	}
@@ -630,5 +519,5 @@ func (r *Repository) UploadRepoFiles(ctx context.Context, logger *logx.Logger, d
 		return err
 	}
 
-	return DeleteUploads(uploads...)
+	return newUploadsStore(Handle.db).Delete(ctx, uploads...)
 }

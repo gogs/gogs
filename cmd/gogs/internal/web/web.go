@@ -619,7 +619,7 @@ func initServices(logger *logx.Logger, customConf string) (*logx.Logger, error) 
 	}
 
 	if conf.SSH.RewriteAuthorizedKeysAtStart {
-		if err := database.RewriteAuthorizedKeys(logger); err != nil {
+		if err := database.Handle.PublicKeys().RewriteAuthorizedKeys(); err != nil {
 			logger.Warn("Failed to rewrite authorized_keys file", "error", err)
 		}
 	}

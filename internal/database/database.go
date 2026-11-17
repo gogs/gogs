@@ -21,11 +21,13 @@ import (
 // ⚠️ WARNING: This list is meant to be read-only.
 var Tables = []any{
 	new(Access), new(AccessToken), new(Action),
+	new(DeployKey),
 	new(EmailAddress),
 	new(Follow),
 	new(LFSObject), new(LoginSource),
 	new(Notice),
 	new(Passkey),
+	new(PublicKey),
 	new(TwoFactor), new(TwoFactorRecoveryCode),
 	new(Upload),
 }
@@ -127,6 +129,10 @@ func (db *DB) Actions() *ActionsStore {
 	return newActionsStore(db.db)
 }
 
+func (db *DB) DeployKeys() *DeployKeysStore {
+	return newDeployKeysStore(db.db)
+}
+
 func (db *DB) LFS() *LFSStore {
 	return newLFSStore(db.db)
 }
@@ -155,7 +161,11 @@ func (db *DB) Permissions() *PermissionsStore {
 	return newPermissionsStore(db.db)
 }
 
-func (db *DB) PublicKey() *PublicKeysStore {
+func (db *DB) ProtectBranches() *ProtectBranchesStore {
+	return newProtectBranchesStore(db.db)
+}
+
+func (db *DB) PublicKeys() *PublicKeysStore {
 	return newPublicKeysStore(db.db)
 }
 
@@ -165,6 +175,10 @@ func (db *DB) Repositories() *RepositoriesStore {
 
 func (db *DB) TwoFactors() *TwoFactorsStore {
 	return newTwoFactorsStore(db.db)
+}
+
+func (db *DB) Uploads() *UploadsStore {
+	return newUploadsStore(db.db)
 }
 
 func (db *DB) Users() *UsersStore {

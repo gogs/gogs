@@ -2,6 +2,7 @@ package web
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"image/png"
 	"net/http"
@@ -134,8 +135,8 @@ type userSSHKeys struct {
 	Items []userSSHKey `json:"items"`
 }
 
-func getUserSSHKeys(logger *logx.Logger, viewer *database.User) (statusCode int, resp *userSSHKeys, err error) {
-	keys, err := database.ListPublicKeys(viewer.ID)
+func getUserSSHKeys(c flamego.Context, logger *logx.Logger, viewer *database.User) (statusCode int, resp *userSSHKeys, err error) {
+	keys, err := database.Handle.PublicKeys().List(c.Request().Context(), viewer.ID)
 	if err != nil {
 		logger.Error("Failed to list public keys", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list public keys")
@@ -156,13 +157,13 @@ type userSSHKeyRequest struct {
 	Content  string `json:"content" validate:"required"`
 }
 
-func postUserSSHKey(logger *logx.Logger, l i18n.Locale, viewer *database.User, req userSSHKeyRequest) (statusCode int, resp any, err error) {
+func postUserSSHKey(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, req userSSHKeyRequest) (statusCode int, resp any, err error) {
 	content, err := database.CheckPublicKeyString(logger, req.Content)
 	if err != nil {
 		msg := l.Tr("form.invalid_ssh_key", err.Error())
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
 	}
-	if _, err = database.AddPublicKey(logger, viewer.ID, req.SSHTitle, content); err != nil {
+	if _, err = database.Handle.PublicKeys().Add(c.Request().Context(), logger, viewer.ID, req.SSHTitle, content); err != nil {
 		var msg string
 		switch {
 		case database.IsErrKeyAlreadyExist(err):
@@ -182,7 +183,7 @@ func postUserSSHKey(logger *logx.Logger, l i18n.Locale, viewer *database.User, r
 // users are not found, even for site admins.
 func deleteUserSSHKey(c flamego.Context, logger *logx.Logger, viewer *database.User) (statusCode int, resp any, err error) {
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
-	key, err := database.GetPublicKeyByID(id)
+	key, err := database.Handle.PublicKeys().GetByID(c.Request().Context(), id)
 	if err != nil {
 		if database.IsErrKeyNotExist(err) {
 			return http.StatusNotFound, nil, errors.New("key not found")
@@ -193,7 +194,7 @@ func deleteUserSSHKey(c flamego.Context, logger *logx.Logger, viewer *database.U
 	if key.OwnerID != viewer.ID {
 		return http.StatusNotFound, nil, errors.New("key not found")
 	}
-	if err = database.DeletePublicKey(logger, viewer, key.ID); err != nil {
+	if err = database.Handle.PublicKeys().Delete(c.Request().Context(), logger, viewer, key.ID); err != nil {
 		logger.Error("Failed to delete public key", "keyID", key.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete public key")
 	}
@@ -291,7 +292,7 @@ func deleteUserTwoFactor(c flamego.Context, logger *logx.Logger, viewer *databas
 	if !database.Handle.TwoFactors().IsEnabled(c.Request().Context(), logger, viewer.ID) {
 		return http.StatusNotFound, nil, errors.New("two-factor authentication is not enabled")
 	}
-	if err = database.DeleteTwoFactor(viewer.ID); err != nil {
+	if err = database.Handle.TwoFactors().DeleteByUserID(c.Request().Context(), viewer.ID); err != nil {
 		logger.Error("Failed to disable two-factor authentication", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete two factor")
 	}
@@ -307,8 +308,8 @@ type userRecoveryCodes struct {
 	Items []userRecoveryCode `json:"items"`
 }
 
-func listUserRecoveryCodes(logger *logx.Logger, viewer *database.User) (statusCode int, resp any, err error) {
-	codes, err := database.GetRecoveryCodesByUserID(viewer.ID)
+func listUserRecoveryCodes(ctx context.Context, logger *logx.Logger, viewer *database.User) (statusCode int, resp any, err error) {
+	codes, err := database.Handle.TwoFactors().ListRecoveryCodes(ctx, viewer.ID)
 	if err != nil {
 		logger.Error("Failed to get recovery codes", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get recovery codes")
@@ -324,7 +325,7 @@ func getUserRecoveryCodes(c flamego.Context, logger *logx.Logger, viewer *databa
 	if !database.Handle.TwoFactors().IsEnabled(c.Request().Context(), logger, viewer.ID) {
 		return http.StatusNotFound, nil, errors.New("two-factor authentication is not enabled")
 	}
-	return listUserRecoveryCodes(logger, viewer)
+	return listUserRecoveryCodes(c.Request().Context(), logger, viewer)
 }
 
 // postUserRecoveryCodes replaces the recovery codes of the user with new ones
@@ -333,11 +334,11 @@ func postUserRecoveryCodes(c flamego.Context, logger *logx.Logger, viewer *datab
 	if !database.Handle.TwoFactors().IsEnabled(c.Request().Context(), logger, viewer.ID) {
 		return http.StatusNotFound, nil, errors.New("two-factor authentication is not enabled")
 	}
-	if err = database.RegenerateRecoveryCodes(viewer.ID); err != nil {
+	if err = database.Handle.TwoFactors().RegenerateRecoveryCodes(c.Request().Context(), viewer.ID); err != nil {
 		logger.Error("Failed to regenerate recovery codes", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "regenerate recovery codes")
 	}
-	return listUserRecoveryCodes(logger, viewer)
+	return listUserRecoveryCodes(c.Request().Context(), logger, viewer)
 }
 
 type userAccessToken struct {

@@ -28,7 +28,7 @@ func composePublicKeysAPILink() string {
 }
 
 func listPublicKeysOfUser(c *apiContext, uid int64) {
-	keys, err := database.ListPublicKeys(uid)
+	keys, err := database.Handle.PublicKeys().List(c.Request().Context(), uid)
 	if err != nil {
 		c.Error(err, "list public keys")
 		return
@@ -56,7 +56,7 @@ func listPublicKeys(c *apiContext) {
 }
 
 func getPublicKey(c *apiContext) {
-	key, err := database.GetPublicKeyByID(c.ParamInt64("id"))
+	key, err := database.Handle.PublicKeys().GetByID(c.Request().Context(), c.ParamInt64("id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get public key by ID")
 		return
@@ -78,7 +78,7 @@ func createUserPublicKey(c *apiContext, form createPublicKeyRequest, uid int64) 
 		return
 	}
 
-	key, err := database.AddPublicKey(c.Logger, uid, form.Title, content)
+	key, err := database.Handle.PublicKeys().Add(c.Request().Context(), c.Logger, uid, form.Title, content)
 	if err != nil {
 		handleAddKeyError(c, err)
 		return
@@ -92,7 +92,7 @@ func createPublicKey(c *apiContext, form createPublicKeyRequest) {
 }
 
 func deletePublicKey(c *apiContext) {
-	if err := database.DeletePublicKey(c.Logger, c.User, c.ParamInt64("id")); err != nil {
+	if err := database.Handle.PublicKeys().Delete(c.Request().Context(), c.Logger, c.User, c.ParamInt64("id")); err != nil {
 		if database.IsErrKeyAccessDenied(err) {
 			c.ErrorStatus(http.StatusForbidden, errors.New("You do not have access to this key."))
 		} else {
