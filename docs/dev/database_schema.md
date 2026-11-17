@@ -146,3 +146,45 @@ Indexes:
 	"idx_passkey_user_id" (user_id)
 ```
 
+# Table "two_factor"
+
+```
+    Field    |    Column    |  PostgreSQL  |         MySQL         |        SQLite3        
+-------------+--------------+--------------+-----------------------+-----------------------
+ ID          | id           | BIGSERIAL    | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ UserID      | user_id      | BIGINT       | BIGINT                | INTEGER               
+ Secret      | secret       | VARCHAR(255) | VARCHAR(255)          | TEXT                  
+ CreatedUnix | created_unix | BIGINT       | BIGINT                | INTEGER               
+
+Primary keys: id
+Indexes: 
+	"UQE_two_factor_user_id" UNIQUE (user_id)
+```
+
+# Table "two_factor_recovery_code"
+
+```
+ Field  | Column  | PostgreSQL  |         MySQL         |        SQLite3        
+--------+---------+-------------+-----------------------+-----------------------
+ ID     | id      | BIGSERIAL   | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ UserID | user_id | BIGINT      | BIGINT                | INTEGER               
+ Code   | code    | VARCHAR(11) | VARCHAR(11)           | TEXT                  
+ IsUsed | is_used | BOOLEAN     | BOOLEAN               | NUMERIC               
+
+Primary keys: id
+```
+
+# Table "upload"
+
+```
+ Field | Column |  PostgreSQL  |         MySQL         |        SQLite3        
+-------+--------+--------------+-----------------------+-----------------------
+ ID    | id     | BIGSERIAL    | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ UUID  | uuid   | VARCHAR(40)  | VARCHAR(40)           | TEXT                  
+ Name  | name   | VARCHAR(255) | VARCHAR(255)          | TEXT                  
+
+Primary keys: id
+Indexes: 
+	"UQE_upload_uuid" UNIQUE (uuid)
+```
+

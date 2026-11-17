@@ -27,7 +27,7 @@ func TestDumpAndImport(t *testing.T) {
 	}
 	t.Parallel()
 
-	const wantTables = 9
+	const wantTables = 12
 	if len(Tables) != wantTables {
 		t.Fatalf("New table has added (want %d got %d), please add new tests for the table and update this check", wantTables, len(Tables))
 	}
@@ -199,6 +199,31 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			},
 			CreatedUnix: 1588568886,
 			UpdatedUnix: 1588572486, // 1 hour later
+		},
+
+		&TwoFactor{
+			ID:          1,
+			UserID:      1,
+			Secret:      "oR0Mt1ZqRqf2c7G5wHsXbA==",
+			CreatedUnix: 1588568886,
+		},
+
+		&TwoFactorRecoveryCode{
+			ID:     1,
+			UserID: 1,
+			Code:   "a1b2c-d3e4f",
+		},
+		&TwoFactorRecoveryCode{
+			ID:     2,
+			UserID: 1,
+			Code:   "f6e5d-c4b3a",
+			IsUsed: true,
+		},
+
+		&Upload{
+			ID:   1,
+			UUID: "8c2d0f1e-5a6b-4c7d-9e8f-0a1b2c3d4e5f",
+			Name: "notes.txt",
 		},
 	}
 	for _, val := range vals {

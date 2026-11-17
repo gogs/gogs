@@ -207,13 +207,19 @@ func importTable(ctx context.Context, db *gorm.DB, table any, r io.Reader) error
 		// PostgreSQL does not like the null characters (U+0000)
 		cleaned := bytes.ReplaceAll(scanner.Bytes(), []byte("\\u0000"), []byte(""))
 
-		elem := reflect.New(reflect.TypeOf(table).Elem()).Interface()
-		err = json.Unmarshal(cleaned, elem)
+		elem := reflect.New(reflect.TypeOf(table).Elem())
+		err = json.Unmarshal(cleaned, elem.Interface())
 		if err != nil {
 			return errors.Wrap(err, "unmarshal JSON to struct")
 		}
 
-		err = db.WithContext(ctx).Create(elem).Error
+		// Insert column values as they are in the archive, so that neither hooks nor
+		// column defaults (e.g., true for "repository.enable_wiki") change them.
+		row := make(map[string]any, len(s.DBNames))
+		for _, name := range s.DBNames {
+			row[name], _ = s.FieldsByDBName[name].ValueOf(ctx, elem.Elem())
+		}
+		err = db.WithContext(ctx).Table(rawTableName).Create(row).Error
 		if err != nil {
 			return errors.Wrap(err, "create row")
 		}
