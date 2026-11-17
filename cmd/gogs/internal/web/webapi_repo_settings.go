@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"strings"
@@ -32,12 +33,12 @@ type repoAdminContext struct {
 // the repository, or erase its wiki. Only its owners may, and for an
 // organization, only the owners of the organization, or site admins when
 // allowSiteAdmin is true.
-func (rc *repoAdminContext) viewerCanManage(viewer *database.User, allowSiteAdmin bool) bool {
+func (rc *repoAdminContext) viewerCanManage(ctx context.Context, viewer *database.User, allowSiteAdmin bool) bool {
 	if rc.viewerAccess < database.AccessModeOwner {
 		return false
 	}
 	if rc.Owner.IsOrganization() && !(allowSiteAdmin && viewer.IsAdmin) {
-		return rc.Owner.IsOwnedBy(viewer.ID)
+		return database.Handle.Organizations().IsOwner(ctx, rc.Owner.ID, viewer.ID)
 	}
 	return true
 }
@@ -384,8 +385,9 @@ func confirmRepoName(l i18n.Locale, repo *database.Repository, name string) *bin
 
 // postRepoConvert turns a mirror into a regular repository.
 func postRepoConvert(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, rc *repoAdminContext, req repoConfirmRequest) (statusCode int, resp any, err error) {
+	ctx := c.Request().Context()
 	repo := rc.Repo
-	if !rc.viewerCanManage(viewer, false) || !repo.IsMirror {
+	if !rc.viewerCanManage(ctx, viewer, false) || !repo.IsMirror {
 		return http.StatusNotFound, nil, errors.New("repository does not exist")
 	}
 	if resp := confirmRepoName(l, repo, req.RepoName); resp != nil {
@@ -411,8 +413,9 @@ type repoTransferRequest struct {
 
 // postRepoTransfer gives the repository to another user or organization.
 func postRepoTransfer(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, rc *repoAdminContext, req repoTransferRequest) (statusCode int, resp any, err error) {
+	ctx := c.Request().Context()
 	repo := rc.Repo
-	if !rc.viewerCanManage(viewer, true) {
+	if !rc.viewerCanManage(ctx, viewer, true) {
 		return http.StatusNotFound, nil, errors.New("repository does not exist")
 	}
 	if resp := confirmRepoName(l, repo, req.RepoName); resp != nil {
@@ -435,9 +438,10 @@ func postRepoTransfer(c flamego.Context, logger *logx.Logger, l i18n.Locale, vie
 }
 
 // deleteRepo deletes the repository with everything in it.
-func deleteRepo(logger *logx.Logger, l i18n.Locale, viewer *database.User, rc *repoAdminContext, req repoConfirmRequest) (statusCode int, resp any, err error) {
+func deleteRepo(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, rc *repoAdminContext, req repoConfirmRequest) (statusCode int, resp any, err error) {
+	ctx := c.Request().Context()
 	repo := rc.Repo
-	if !rc.viewerCanManage(viewer, true) {
+	if !rc.viewerCanManage(ctx, viewer, true) {
 		return http.StatusNotFound, nil, errors.New("repository does not exist")
 	}
 	if resp := confirmRepoName(l, repo, req.RepoName); resp != nil {
@@ -451,9 +455,10 @@ func deleteRepo(logger *logx.Logger, l i18n.Locale, viewer *database.User, rc *r
 }
 
 // deleteRepoWiki erases the wiki of the repository and turns it off.
-func deleteRepoWiki(logger *logx.Logger, l i18n.Locale, viewer *database.User, rc *repoAdminContext, req repoConfirmRequest) (statusCode int, resp any, err error) {
+func deleteRepoWiki(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, rc *repoAdminContext, req repoConfirmRequest) (statusCode int, resp any, err error) {
+	ctx := c.Request().Context()
 	repo := rc.Repo
-	if !rc.viewerCanManage(viewer, true) {
+	if !rc.viewerCanManage(ctx, viewer, true) {
 		return http.StatusNotFound, nil, errors.New("repository does not exist")
 	}
 	if resp := confirmRepoName(l, repo, req.RepoName); resp != nil {

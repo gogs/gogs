@@ -27,7 +27,7 @@ func TestDumpAndImport(t *testing.T) {
 	}
 	t.Parallel()
 
-	const wantTables = 29
+	const wantTables = 30
 	if len(Tables) != wantTables {
 		t.Fatalf("New table has added (want %d got %d), please add new tests for the table and update this check", wantTables, len(Tables))
 	}
@@ -366,6 +366,17 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			ID:     1,
 			UserID: 2,
 			RepoID: 1,
+		},
+
+		&Team{
+			ID:          1,
+			OrgID:       3,
+			LowerName:   "owners",
+			Name:        "Owners",
+			Description: "Owners of the organization",
+			Authorize:   AccessModeOwner,
+			NumRepos:    1,
+			NumMembers:  1,
 		},
 
 		&TeamRepo{

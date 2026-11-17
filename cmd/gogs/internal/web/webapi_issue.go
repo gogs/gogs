@@ -362,7 +362,7 @@ func toRepoIssueView(ctx context.Context, logger *logx.Logger, viewer *database.
 			tag, ok := tags[comment.PosterID]
 			if !ok {
 				switch {
-				case repo.IsOwnedBy(comment.PosterID) || (repoCtx.Owner.IsOrganization() && repoCtx.Owner.IsOwnedBy(comment.PosterID)):
+				case repo.IsOwnedBy(comment.PosterID) || (repoCtx.Owner.IsOrganization() && database.Handle.Organizations().IsOwner(ctx, repoCtx.Owner.ID, comment.PosterID)):
 					tag = "owner"
 				case database.Handle.Permissions().Authorize(ctx, logger, comment.PosterID, repo.ID, database.AccessModeWrite,
 					database.AccessModeOptions{OwnerID: repo.OwnerID, Private: repo.IsPrivate}):

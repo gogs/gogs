@@ -29,7 +29,7 @@ func createOrgForUser(c *apiContext, apiForm createOrgRequest, user *database.Us
 		IsActive:    true,
 		Type:        database.UserTypeOrganization,
 	}
-	if err := database.CreateOrganization(org, user); err != nil {
+	if err := database.Handle.Organizations().Create(c.Request().Context(), org, user); err != nil {
 		if database.IsErrUserAlreadyExist(err) ||
 			database.IsErrNameNotAllowed(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
@@ -91,7 +91,7 @@ type editOrgRequest struct {
 
 func editOrg(c *apiContext, form editOrgRequest) {
 	org := c.Org.Organization
-	if !org.IsOwnedBy(c.User.ID) {
+	if !database.Handle.Organizations().IsOwner(c.Request().Context(), org.ID, c.User.ID) {
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -111,7 +111,7 @@ func editOrg(c *apiContext, form editOrgRequest) {
 		return
 	}
 
-	org, err = database.GetOrgByName(org.Name)
+	org, err = database.Handle.Organizations().GetByName(c.Request().Context(), org.Name)
 	if err != nil {
 		c.Error(err, "get organization")
 		return

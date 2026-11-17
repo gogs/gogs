@@ -23,7 +23,7 @@ func adminAddTeamRepository(c *apiContext) {
 	if c.Written() {
 		return
 	}
-	if err := c.Org.Team.AddRepository(repo); err != nil {
+	if err := database.Handle.Teams().AddRepo(c.Request().Context(), c.Org.Team, repo); err != nil {
 		c.Error(err, "add repository")
 		return
 	}
@@ -36,7 +36,7 @@ func adminRemoveTeamRepository(c *apiContext) {
 	if c.Written() {
 		return
 	}
-	if err := c.Org.Team.RemoveRepository(repo.ID); err != nil {
+	if err := database.Handle.Teams().RemoveRepo(c.Request().Context(), c.Org.Team, repo.ID); err != nil {
 		c.Error(err, "remove repository")
 		return
 	}

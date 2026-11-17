@@ -728,7 +728,7 @@ func MigrateRepository(ctx context.Context, logger *logx.Logger, doer, owner *Us
 	wikiPath := WikiPath(owner.Name, opts.Name)
 
 	if owner.IsOrganization() {
-		t, err := owner.GetOwnerTeam()
+		t, err := Handle.Teams().GetOwnerTeam(context.TODO(), owner.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -1198,10 +1198,11 @@ func createRepository(e *xorm.Session, doer, owner *User, repo *Repository) (err
 
 	// Give access to all members in owner team.
 	if owner.IsOrganization() {
-		t, err := owner.getOwnerTeam(legacyTx(e))
+		teams := newTeamsStore(legacyTx(e))
+		t, err := teams.GetOwnerTeam(context.TODO(), owner.ID)
 		if err != nil {
 			return errors.Newf("getOwnerTeam: %v", err)
-		} else if err = t.addRepository(legacyTx(e), repo); err != nil {
+		} else if err = teams.addRepo(context.TODO(), t, repo); err != nil {
 			return errors.Newf("addRepository: %v", err)
 		}
 	} else {
@@ -1444,7 +1445,7 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 	collaboration := &Collaboration{RepoID: repo.ID}
 	for _, c := range collaborators {
 		collaboration.UserID = c.ID
-		if c.ID == newOwner.ID || newOwner.IsOrgMember(c.ID) {
+		if c.ID == newOwner.ID || (newOwner.IsOrganization() && newOrganizationsStore(legacyTx(sess)).IsMember(context.TODO(), newOwner.ID, c.ID)) {
 			if _, err = sess.Delete(collaboration); err != nil {
 				return errors.Newf("remove collaborator '%d': %v", c.ID, err)
 			}
@@ -1453,11 +1454,13 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 
 	// Remove old team-repository relations.
 	if owner.IsOrganization() {
-		if err = owner.getTeams(legacyTx(sess)); err != nil {
+		teams := newTeamsStore(legacyTx(sess))
+		orgTeams, err := teams.ListByOrg(context.TODO(), owner.ID)
+		if err != nil {
 			return errors.Newf("getTeams: %v", err)
 		}
-		for _, t := range owner.Teams {
-			if !t.hasRepository(legacyTx(sess), repo.ID) {
+		for _, t := range orgTeams {
+			if !teams.HasRepo(context.TODO(), owner.ID, t.ID, repo.ID) {
 				continue
 			}
 
@@ -1467,16 +1470,17 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 			}
 		}
 
-		if err = owner.removeOrgRepo(legacyTx(sess), repo.ID); err != nil {
+		if err = newOrganizationsStore(legacyTx(sess)).removeRepo(context.TODO(), owner.ID, repo.ID); err != nil {
 			return errors.Newf("removeOrgRepo: %v", err)
 		}
 	}
 
 	if newOwner.IsOrganization() {
-		t, err := newOwner.getOwnerTeam(legacyTx(sess))
+		teams := newTeamsStore(legacyTx(sess))
+		t, err := teams.GetOwnerTeam(context.TODO(), newOwner.ID)
 		if err != nil {
 			return errors.Newf("getOwnerTeam: %v", err)
-		} else if err = t.addRepository(legacyTx(sess), repo); err != nil {
+		} else if err = teams.addRepo(context.TODO(), t, repo); err != nil {
 			return errors.Newf("add to owner team: %v", err)
 		}
 	} else {
@@ -1687,8 +1691,9 @@ func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 	if err != nil {
 		return err
 	}
+	var teams []*Team
 	if org.IsOrganization() {
-		if err = org.GetTeams(); err != nil {
+		if teams, err = Handle.Teams().ListByOrg(context.TODO(), org.ID); err != nil {
 			return err
 		}
 	}
@@ -1700,10 +1705,11 @@ func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 	}
 
 	if org.IsOrganization() {
-		for _, t := range org.Teams {
-			if !t.hasRepository(legacyTx(sess), repoID) {
+		teamsStore := newTeamsStore(legacyTx(sess))
+		for _, t := range teams {
+			if !teamsStore.HasRepo(context.TODO(), org.ID, t.ID, repoID) {
 				continue
-			} else if err = t.removeRepository(legacyTx(sess), repo, false); err != nil {
+			} else if err = teamsStore.removeRepo(context.TODO(), t, repo, false); err != nil {
 				return err
 			}
 		}
@@ -2385,4 +2391,14 @@ func parseCountResult(results []map[string][]byte) int64 {
 		return count
 	}
 	return 0
+}
+
+// deleteBeans deletes all given beans, beans should contain delete conditions.
+func deleteBeans(tx *gorm.DB, beans ...any) (err error) {
+	for i := range beans {
+		if err = tx.Where(beans[i]).Delete(beans[i]).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }

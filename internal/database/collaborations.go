@@ -101,7 +101,7 @@ func (s *CollaborationsStore) ChangeMode(ctx context.Context, repo *Repository, 
 		return errors.Wrap(err, "get owner")
 	}
 	if repo.Owner.IsOrganization() {
-		teams, err := GetUserTeams(repo.OwnerID, userID)
+		teams, err := newTeamsStore(s.db).ListByMember(ctx, repo.OwnerID, userID)
 		if err != nil {
 			return errors.Wrapf(err, "list teams of user %d in organization %d", userID, repo.OwnerID)
 		}

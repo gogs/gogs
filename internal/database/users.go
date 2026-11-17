@@ -1233,11 +1233,9 @@ type User struct {
 	NumRepos     int `gorm:"size:32"`
 
 	// For organization
-	Description string  `gorm:"size:255"`
-	NumTeams    int     `gorm:"size:32"`
-	NumMembers  int     `gorm:"size:32"`
-	Teams       []*Team `gorm:"-" json:"-"`
-	Members     []*User `gorm:"-" json:"-"`
+	Description string `gorm:"size:255"`
+	NumTeams    int    `gorm:"size:32"`
+	NumMembers  int    `gorm:"size:32"`
 }
 
 // BeforeCreate implements the GORM create hook.
@@ -1391,33 +1389,6 @@ func (u *User) AvatarURL() string {
 // having a dedicated type `template.User`.
 func (u *User) IsFollowing(followID int64) bool {
 	return Handle.Users().IsFollowing(context.TODO(), u.ID, followID)
-}
-
-// IsUserOrgOwner returns true if the user is in the owner team of the given
-// organization.
-//
-// TODO(unknwon): This is also used in templates, which should be fixed by
-// having a dedicated type `template.User`.
-func (u *User) IsUserOrgOwner(orgID int64) bool {
-	return IsOrganizationOwner(orgID, u.ID)
-}
-
-// IsPublicMember returns true if the user has public membership of the given
-// organization.
-//
-// TODO(unknwon): This is also used in templates, which should be fixed by
-// having a dedicated type `template.User`.
-func (u *User) IsPublicMember(orgID int64) bool {
-	return IsPublicMembership(orgID, u.ID)
-}
-
-// GetOrganizationCount returns the count of organization membership that the
-// user has.
-//
-// TODO(unknwon): This is also used in templates, which should be fixed by
-// having a dedicated type `template.User`.
-func (u *User) GetOrganizationCount() (int64, error) {
-	return Handle.Organizations().CountByUser(context.TODO(), u.ID)
 }
 
 // ShortName truncates and returns the username at most in given length.

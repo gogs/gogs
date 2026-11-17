@@ -233,7 +233,7 @@ func TestUserSettingsOrganizations(t *testing.T) {
 		IsActive: true,
 		Type:     database.UserTypeOrganization,
 	}
-	require.NoError(t, database.CreateOrganization(org, userGet(t, u.ID)))
+	require.NoError(t, database.Handle.Organizations().Create(t.Context(), org, userGet(t, u.ID)))
 
 	type orgItem struct {
 		Name string `json:"name"`

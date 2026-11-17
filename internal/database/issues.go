@@ -820,7 +820,7 @@ func (s *IssuesStore) updateMentions(ctx context.Context, issueID int64, lowerNa
 			continue
 		}
 
-		members, err := getOrgUsersByOrgID(db, user.ID, 0)
+		members, err := newOrganizationsStore(s.db).listOrgUsers(ctx, user.ID, 0)
 		if err != nil {
 			return errors.Wrapf(err, "list members of organization %d", user.ID)
 		}

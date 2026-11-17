@@ -83,7 +83,6 @@ func init() {
 		new(Repository), new(Collaboration),
 		new(Issue), new(Comment), new(Attachment),
 		new(Mirror),
-		new(Team),
 	)
 
 	gonicNames := []string{"SSL"}
@@ -290,7 +289,7 @@ func GetStatistic(ctx context.Context, logger *logx.Logger) (stats Statistic) {
 	}
 
 	stats.Counter.User = Handle.Users().Count(ctx)
-	stats.Counter.Org = CountOrganizations()
+	stats.Counter.Org = Handle.Organizations().Count(ctx)
 	stats.Counter.PublicKey = count(new(PublicKey))
 	stats.Counter.Repo = CountRepositories(logger, true)
 	stats.Counter.Watch = count(new(Watch))
