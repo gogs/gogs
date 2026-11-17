@@ -158,7 +158,8 @@ func AuthenticatedUser(logger *logx.Logger, store AuthStore, r *http.Request, se
 // auto-registration is enabled. The bool is false when the header does not
 // apply to the request: the feature is off, the request did not come from a
 // trusted proxy, or the header is empty. Otherwise the header decides who the
-// viewer is, and the user is nil when it names a user that does not exist.
+// viewer is, and the user is nil when it names a user that does not exist or,
+// with auto-registration, a name that is not allowed.
 func ReverseProxyUser(store AuthStore, r *http.Request) (_ *database.User, ok bool, _ error) {
 	if !conf.Auth.EnableReverseProxyAuthentication || !isRequestFromTrustedProxy(r) {
 		return nil, false, nil
@@ -186,10 +187,19 @@ func ReverseProxyUser(store AuthStore, r *http.Request) (_ *database.User, ok bo
 			Activated: true,
 		},
 	)
-	if err != nil {
-		return nil, true, errors.Wrapf(err, "create user %q", username)
+	if err == nil {
+		return user, true, nil
+	} else if database.IsErrNameNotAllowed(err) {
+		return nil, true, nil
+	} else if database.IsErrUserAlreadyExist(err) {
+		// Another request has just registered the same user.
+		user, err = store.GetUserByUsername(r.Context(), username)
+		if err != nil {
+			return nil, true, errors.Wrap(err, "get user by name after concurrent registration")
+		}
+		return user, true, nil
 	}
-	return user, true, nil
+	return nil, true, errors.Wrapf(err, "create user %q", username)
 }
 
 // isRequestFromTrustedProxy reports whether the request's immediate remote

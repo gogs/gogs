@@ -65,9 +65,15 @@ func authenticate(logger *logx.Logger, store Store) flamego.Handler {
 			logger.Error("Failed to authenticate by reverse proxy header", "error", err)
 			return
 		} else if viaProxy && user == nil {
-			responseJSON(logger, c.ResponseWriter(), http.StatusForbidden, responseError{
-				Message: "User does not exist",
-			})
+			// Like Git over HTTP, which serves public repositories without
+			// authentication, the viewer may still download what anyone can.
+			if conf.Auth.RequireSigninView {
+				responseJSON(logger, c.ResponseWriter(), http.StatusForbidden, responseError{
+					Message: "User does not exist",
+				})
+				return
+			}
+			c.Map(&database.User{Name: "anonymous"})
 			return
 		}
 
