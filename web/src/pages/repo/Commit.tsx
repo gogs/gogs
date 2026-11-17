@@ -50,7 +50,7 @@ function CommitBody({ body }: { body: string }) {
         <button
           type="button"
           onClick={() => setExpanded((e) => !e)}
-          className="mt-1.5 cursor-pointer rounded border border-(--color-border) bg-(--color-surface) px-2 py-0.5 text-xs text-(--color-muted-foreground) hover:bg-(--color-surface)/80 hover:text-(--color-foreground)"
+          className="glass-control mt-1.5 cursor-pointer rounded border border-(--color-border) bg-(--color-surface) px-2 py-0.5 text-xs text-(--color-muted-foreground) hover:bg-(--color-surface)/80 hover:text-(--color-foreground)"
         >
           {expanded ? t("show_less") : t("show_more")}
         </button>
@@ -102,7 +102,7 @@ export function RepoCommit() {
           <div className="basis-full sm:basis-auto">
             <a
               href={browseFilesHref}
-              className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md border border-(--color-border) px-2 text-sm hover:bg-(--color-surface)"
+              className="glass-control inline-flex h-7 shrink-0 items-center gap-1 rounded-md border border-(--color-border) px-2 text-sm hover:bg-(--color-surface)"
             >
               <FileCode2 className="size-3.5" aria-hidden />
               <span>{t("repo.browse_files")}</span>

@@ -70,7 +70,7 @@ export function TeamForm({ org: orgName, team }: { org: string; team?: OrgTeamDe
   };
 
   const formElement = (
-    <form onSubmit={onSubmit} noValidate>
+    <form onSubmit={onSubmit} noValidate className="glass glass-ui:border glass-ui:p-4 sm:glass-ui:p-6">
       <fieldset disabled={save.isPending} className="contents">
         {team ? null : <h2 className={HEADING}>{title}</h2>}
         {formError ? (

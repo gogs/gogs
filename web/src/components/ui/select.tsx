@@ -35,7 +35,7 @@ function SelectTrigger({ className, children, ...props }: React.ComponentProps<t
     <SelectPrimitive.Trigger
       {...aria}
       className={cn(
-        "flex h-10 w-full items-center justify-between rounded-md border border-(--color-input) bg-(--color-background) px-3 py-2 text-sm text-(--color-foreground) outline-none transition-colors",
+        "flex h-10 w-full items-center justify-between rounded-md border border-(--color-input) bg-(--color-field) px-3 py-2 text-sm text-(--color-foreground) outline-none transition-colors",
         "focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring)",
         "aria-invalid:border-(--color-destructive) aria-invalid:focus-visible:border-(--color-destructive) aria-invalid:focus-visible:ring-(--color-destructive)",
         "disabled:cursor-not-allowed disabled:opacity-60",
@@ -63,7 +63,7 @@ function SelectContent({
       <SelectPrimitive.Content
         position={position}
         className={cn(
-          "relative z-50 max-h-(--radix-select-content-available-height) min-w-(--radix-select-trigger-width) overflow-hidden rounded-md border border-(--color-border) bg-(--color-popover) text-(--color-popover-foreground) shadow-md outline-none",
+          "relative z-50 max-h-(--radix-select-content-available-height) min-w-(--radix-select-trigger-width) overflow-hidden rounded-md border border-(--color-border) bg-(--color-popover) text-(--color-popover-foreground) shadow-md glass-ui:backdrop-blur-xl outline-none",
           "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
           position === "popper" && "data-[side=bottom]:translate-y-1 data-[side=top]:-translate-y-1",
           className,

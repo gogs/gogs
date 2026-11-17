@@ -79,7 +79,9 @@ export function RepoBranches({
     <BranchRow key={branch.name} owner={owner} name={name} branch={branch} data={data} />
   );
   const list = (branches: RepoBranch[]) => (
-    <ul className="divide-y divide-(--color-border) rounded-md border border-(--color-border)">{branches.map(row)}</ul>
+    <ul className="divide-y divide-(--color-border) glass rounded-md border border-(--color-border)">
+      {branches.map(row)}
+    </ul>
   );
   const tabsRef = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -98,7 +100,7 @@ export function RepoBranches({
             <nav
               ref={tabsRef}
               aria-label={t("repo.git_branches")}
-              className="inline-flex rounded-md border border-(--color-input)"
+              className="glass-control inline-flex rounded-md border border-(--color-input)"
             >
               {tabs.map(({ key, to, label, icon: Icon }) => (
                 <Link
@@ -124,13 +126,13 @@ export function RepoBranches({
           <BranchSearch owner={repo.owner} name={repo.name} view={view} query={query} />
         </div>
         {isEmpty ? (
-          <p className="rounded-md border border-(--color-border) px-4 py-8 text-center text-sm text-(--color-muted-foreground)">
+          <p className="glass rounded-md border border-(--color-border) px-4 py-8 text-center text-sm text-(--color-muted-foreground)">
             {query ? t("repo.branches.no_match").replace("%s", query) : t("repo.branches.none")}
           </p>
         ) : view === "overview" ? (
           <div className="flex flex-col gap-8">
             {data.sections.map(({ kind, branches, hasMore }) => (
-              <section key={kind}>
+              <section key={kind} className="glass-section">
                 <h2 className="mb-2 text-base font-semibold">{sectionTitles[kind]}</h2>
                 {list(branches)}
                 {hasMore && kind !== "default" ? (
@@ -139,7 +141,7 @@ export function RepoBranches({
                     params={params}
                     search={query ? { query } : {}}
                     aria-label={`${t("repo.branches.view_more")}: ${sectionTitles[kind]}`}
-                    className="mt-2 inline-block text-sm text-(--color-primary) hover:underline"
+                    className="mt-2 inline-block text-sm text-(--color-primary) hover:underline glass-ui:mx-4 glass-ui:mb-3"
                   >
                     {t("repo.branches.view_more")}
                   </Link>

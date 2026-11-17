@@ -57,7 +57,7 @@ export function RepoNewPull({
         <h1 className="text-2xl font-semibold">{t("repo.pulls.compare_changes")}</h1>
         <p className="mt-1 text-sm text-(--color-muted-foreground)">{t("repo.pulls.compare_changes_desc")}</p>
 
-        <div className="mt-4 flex flex-wrap items-center gap-2 rounded-md border border-(--color-border) bg-(--color-surface) p-2">
+        <div className="glass mt-4 flex flex-wrap items-center gap-2 rounded-md border border-(--color-border) bg-(--color-surface) p-2">
           <GitCompareArrows className="mx-1 size-4 shrink-0 text-(--color-muted-foreground)" aria-hidden />
           <RefPicker
             current={data.baseBranch}
@@ -90,7 +90,7 @@ export function RepoNewPull({
         </div>
 
         {message ? (
-          <p className="mt-4 rounded-md border border-(--color-border) px-4 py-6 text-center text-sm text-(--color-muted-foreground)">
+          <p className="mt-4 glass rounded-md border border-(--color-border) px-4 py-6 text-center text-sm text-(--color-muted-foreground)">
             <RichText text={message} links={[`/${repo.owner}/${repo.name}/pulls/${data.pullIndex}`]} />
           </p>
         ) : (
@@ -114,7 +114,7 @@ export function RepoNewPull({
         )}
 
         {data.commits.length ? (
-          <section className="mt-8">
+          <section className="glass-section mt-8">
             <h2 className="mb-3 text-lg font-semibold">
               {t(data.commits.length === 1 ? "repo.commits.n_commit" : "repo.commits.n_commits", {
                 count: data.commits.length,

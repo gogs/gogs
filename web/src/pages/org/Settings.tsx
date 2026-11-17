@@ -195,7 +195,7 @@ function OptionsForm({ org, settings }: { org: string; settings: OrgSettingsData
                 refs.current.description = el;
               }}
               rows={3}
-              className="block w-full rounded-md border border-(--color-input) bg-(--color-background) px-3 py-2 text-sm text-(--color-foreground) outline-none transition-colors focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-(--color-destructive)"
+              className="block w-full rounded-md border border-(--color-input) bg-(--color-field) px-3 py-2 text-sm text-(--color-foreground) outline-none transition-colors focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-(--color-destructive)"
               {...field("description")}
             />
           </FormField>

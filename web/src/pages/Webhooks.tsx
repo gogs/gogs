@@ -37,7 +37,7 @@ import { RepoSettingsLayout } from "@/pages/repo/Settings";
 
 const DATE_TIME_FMT = new Intl.DateTimeFormat(webContext.lang, { dateStyle: "medium", timeStyle: "medium" });
 const PRE_CLASS =
-  "rounded-md border border-(--color-border) px-3 py-2 font-mono text-xs whitespace-pre-wrap wrap-anywhere";
+  "glass rounded-md border border-(--color-border) px-3 py-2 font-mono text-xs whitespace-pre-wrap wrap-anywhere";
 const FIELD_ORDER = ["url", "channel"] as const;
 
 // WEBHOOK_TYPES are the kinds of webhooks, with their names and logos.

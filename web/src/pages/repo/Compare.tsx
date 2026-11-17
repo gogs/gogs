@@ -66,7 +66,7 @@ export function RepoCompare({
           </h2>
           <a
             href={`${repoLink}/compare/${before}...${after}.diff`}
-            className="inline-flex h-7 shrink-0 items-center rounded-md border border-(--color-border) px-2 font-mono text-xs hover:bg-(--color-surface)"
+            className="glass-control inline-flex h-7 shrink-0 items-center rounded-md border border-(--color-border) px-2 font-mono text-xs hover:bg-(--color-surface)"
           >
             {t("repo.diff_label")}
           </a>
@@ -95,7 +95,7 @@ export function RepoCompare({
             ) : null}
           </>
         ) : (
-          <p className="rounded-md border border-(--color-border) px-4 py-6 text-center text-sm text-(--color-muted-foreground)">
+          <p className="glass rounded-md border border-(--color-border) px-4 py-6 text-center text-sm text-(--color-muted-foreground)">
             {t("repo.commits.no_commits")}
           </p>
         )}

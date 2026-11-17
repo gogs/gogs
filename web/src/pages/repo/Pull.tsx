@@ -48,7 +48,7 @@ import { CommitList } from "./Commits";
 import { IssueConversation, IssueHeader, UserLink } from "./Issue";
 
 const TEXTAREA_CLASS =
-  "block w-full rounded-md border border-(--color-input) bg-(--color-background) px-3 py-2 text-sm text-(--color-foreground) outline-none transition-colors focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-60";
+  "block w-full rounded-md border border-(--color-input) bg-(--color-field) px-3 py-2 text-sm text-(--color-foreground) outline-none transition-colors focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-60";
 
 // RepoPull shows a pull request on one of its tabs: the conversation, the
 // commits it merges, or the files it changes. The files tab has no patch when
@@ -104,7 +104,7 @@ export function RepoPull({
           {commits?.length && pull.diff ? (
             <CommitList owner={pull.diff.owner} name={pull.diff.name} commits={commits} />
           ) : (
-            <p className="rounded-md border border-(--color-border) px-4 py-6 text-center text-sm text-(--color-muted-foreground)">
+            <p className="glass rounded-md border border-(--color-border) px-4 py-6 text-center text-sm text-(--color-muted-foreground)">
               {t("repo.commits.no_commits")}
             </p>
           )}
@@ -125,7 +125,7 @@ export function RepoPull({
           </div>
         ) : (
           <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6">
-            <p className="rounded-md border border-(--color-border) px-4 py-6 text-center text-sm text-(--color-muted-foreground)">
+            <p className="glass rounded-md border border-(--color-border) px-4 py-6 text-center text-sm text-(--color-muted-foreground)">
               {pull.diff ? t("repo.pulls.nothing_to_compare") : t("repo.pulls.data_broken")}
             </p>
           </main>
@@ -285,7 +285,7 @@ function MergeBox({ issueRef, data }: { issueRef: IssueRef; data: RepoPullData }
       <span className={cn("hidden size-10 shrink-0 items-center justify-center rounded-full sm:flex", tint)}>
         <Icon className={cn("size-5", iconClassName)} aria-hidden />
       </span>
-      <div className="min-w-0 flex-1 rounded-md border border-(--color-border)">
+      <div className="min-w-0 flex-1 glass rounded-md border border-(--color-border)">
         <div className="flex items-start gap-2 px-4 py-3 text-sm">
           <Icon className={cn("mt-0.5 size-4 shrink-0 sm:hidden", iconClassName)} aria-hidden />
           <div className="min-w-0">

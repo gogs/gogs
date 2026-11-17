@@ -28,7 +28,7 @@ import { subUrl } from "@/lib/url";
 const DESCRIPTION_MAX = 512;
 const NO_LICENSE = "none";
 const TEXTAREA_CLASS =
-  "block w-full rounded-md border border-(--color-input) bg-(--color-background) px-3 py-2 text-sm text-(--color-foreground) outline-none transition-colors focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-(--color-destructive)";
+  "block w-full rounded-md border border-(--color-input) bg-(--color-field) px-3 py-2 text-sm text-(--color-foreground) outline-none transition-colors focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-(--color-destructive)";
 
 type Fields = Record<string, string | null>;
 type Shared = Pick<RepoCreateForm, "ownerID" | "name" | "description" | "private" | "unlisted">;
@@ -235,7 +235,7 @@ function NewRepoPage({
   };
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-10 sm:px-6">
-      <form onSubmit={submit} noValidate>
+      <form onSubmit={submit} noValidate className="glass glass-ui:border glass-ui:p-4 sm:glass-ui:p-6">
         <fieldset disabled={pending} className="contents">
           <h1 className="mb-4 text-xl font-semibold">{title}</h1>
           <FormAlert message={formError} />
@@ -272,7 +272,7 @@ function GitignorePicker({
     <Popover onOpenChange={() => setQuery("")}>
       <PopoverTrigger
         id="gitignores"
-        className="flex h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-(--color-input) bg-(--color-background) px-3 py-2 text-left text-sm outline-none transition-colors focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-(--color-destructive)"
+        className="flex h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-(--color-input) bg-(--color-field) px-3 py-2 text-left text-sm outline-none transition-colors focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-(--color-destructive)"
         {...aria}
       >
         {value.length > 0 ? (

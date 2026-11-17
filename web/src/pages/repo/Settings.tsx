@@ -80,7 +80,7 @@ import { cn } from "@/lib/utils";
 import { DescriptionField } from "@/pages/repo/New";
 
 const TEXTAREA_CLASS =
-  "block w-full rounded-md border border-(--color-input) bg-(--color-background) px-3 py-2 font-mono text-sm text-(--color-foreground) outline-none transition-colors focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-(--color-destructive)";
+  "block w-full rounded-md border border-(--color-input) bg-(--color-field) px-3 py-2 font-mono text-sm text-(--color-foreground) outline-none transition-colors focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-(--color-destructive)";
 const DATE_TIME_FMT = new Intl.DateTimeFormat(webContext.lang, { dateStyle: "medium", timeStyle: "short" });
 const MODES: RepoCollaboratorMode[] = ["admin", "write", "read"];
 
@@ -680,7 +680,7 @@ function AdvancedSettings({ owner, name, settings }: { owner: string; name: stri
               onChange={(enablePulls) => set({ enablePulls })}
             >
               <p className="text-sm">{t("repo.settings.pulls.merge_methods_desc")}</p>
-              <div className="divide-y divide-(--color-border) rounded-md border border-(--color-border)">
+              <div className="divide-y divide-(--color-border) glass rounded-md border border-(--color-border)">
                 <div className="flex flex-col gap-3 px-4 py-3">
                   <CheckboxField
                     id="pullsAllowMerge"
@@ -1411,7 +1411,7 @@ export function RepoBranchSettings({
     <RepoSettingsLayout owner={owner} name={name} active="branches">
       <h1 className="sr-only">{t("repo.settings.branches")}</h1>
       {settings.isEmpty ? (
-        <p className="rounded-md border border-(--color-border) px-4 py-3 text-sm text-(--color-muted-foreground)">
+        <p className="glass rounded-md border border-(--color-border) px-4 py-3 text-sm text-(--color-muted-foreground)">
           {t("repo.settings.branches_empty")}
         </p>
       ) : (
@@ -1473,7 +1473,7 @@ export function RepoBranchSettings({
               </SelectContent>
             </Select>
             {settings.protectedBranches.length ? (
-              <ul className="mt-4 rounded-md border border-(--color-border)">
+              <ul className="mt-4 glass rounded-md border border-(--color-border)">
                 {settings.protectedBranches.map((b) => (
                   <li key={b} className="border-b border-(--color-border) last:border-b-0">
                     <Link
@@ -1678,7 +1678,7 @@ export function RepoGitHooks({ owner, name, hooks }: { owner: string; name: stri
     <RepoSettingsLayout owner={owner} name={name} active="githooks">
       <h1 className="mb-2 text-xl font-semibold">{t("repo.settings.githooks")}</h1>
       <p className="mb-4 text-sm text-(--color-muted-foreground)">{t("repo.settings.githooks_desc")}</p>
-      <ul className="rounded-md border border-(--color-border)">
+      <ul className="glass rounded-md border border-(--color-border)">
         {hooks.map((hook) => (
           <li key={hook.name} className="border-b border-(--color-border) last:border-b-0">
             <Link

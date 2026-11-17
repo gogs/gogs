@@ -76,7 +76,7 @@ export function OrgHome({ org, repos }: { org: OrgProfileData; repos: OwnerRepos
         </div>
       </div>
 
-      <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-6 sm:px-6 md:grid-cols-[minmax(0,1fr)_256px] lg:grid-cols-[minmax(0,1fr)_296px]">
+      <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 glass-ui:gap-x-4 py-6 sm:px-6 md:grid-cols-[minmax(0,1fr)_256px] lg:grid-cols-[minmax(0,1fr)_296px]">
         <section className="min-w-0" aria-label={t("user.repositories")}>
           {org.viewerIsOwner ? (
             <div className="mb-4 flex justify-end">
@@ -88,7 +88,7 @@ export function OrgHome({ org, repos }: { org: OrgProfileData; repos: OwnerRepos
               </Button>
             </div>
           ) : null}
-          <ul className="border-t border-(--color-border)">
+          <ul className="glass-list border-t border-(--color-border)">
             {repos.items.map((repo) => (
               <RepoListItem key={repo.name} repo={repo} />
             ))}
@@ -100,7 +100,7 @@ export function OrgHome({ org, repos }: { org: OrgProfileData; repos: OwnerRepos
           ) : null}
         </section>
 
-        <aside className="min-w-0">
+        <aside className="glass min-w-0 glass-ui:self-start glass-ui:border glass-ui:p-4">
           {org.members.length > 0 || org.viewerIsOwner ? (
             <section>
               <SectionHeader

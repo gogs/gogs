@@ -94,7 +94,7 @@ export function RepoReleases({ owner, name, data }: { owner: string; name: strin
       }
     >
       {data.releases.length ? (
-        <ul className="divide-y divide-(--color-border) rounded-md border border-(--color-border)">
+        <ul className="divide-y divide-(--color-border) glass rounded-md border border-(--color-border)">
           {data.releases.map((release) => (
             <ReleaseRow
               key={release.isDraft ? `draft:${release.tagName}` : release.tagName}
@@ -106,7 +106,7 @@ export function RepoReleases({ owner, name, data }: { owner: string; name: strin
           ))}
         </ul>
       ) : (
-        <p className="rounded-md border border-(--color-border) py-8 text-center text-sm text-(--color-muted-foreground)">
+        <p className="glass rounded-md border border-(--color-border) py-8 text-center text-sm text-(--color-muted-foreground)">
           {t("repo.pulls.no_results")}
         </p>
       )}
@@ -254,7 +254,7 @@ function ReleaseRow({
         {release.attachments?.length || !release.isDraft ? (
           <>
             <h3 className="mt-5 mb-2 text-sm font-semibold">{t("repo.release.downloads")}</h3>
-            <ul className="divide-y divide-(--color-border) rounded-md border border-(--color-border) text-sm">
+            <ul className="divide-y divide-(--color-border) glass rounded-md border border-(--color-border) text-sm">
               {release.attachments?.map((a) => (
                 <li key={a.uuid}>
                   <a
@@ -407,7 +407,7 @@ export function RepoReleaseEditor({
       <p className="-mt-2 mb-6 text-sm text-(--color-muted-foreground)">
         {release ? t("repo.release.edit_subheader") : t("repo.release.new_subheader")}
       </p>
-      <form onSubmit={onSubmit} className="max-w-3xl">
+      <form onSubmit={onSubmit} className="glass glass-ui:border glass-ui:p-4 sm:glass-ui:p-6 max-w-3xl">
         <fieldset disabled={mutation.isPending} className="flex flex-col gap-5">
           <FormAlert message={formError} />
           {release ? (
@@ -470,7 +470,7 @@ export function RepoReleaseEditor({
               onChange={(e) => setTitle(e.target.value)}
             />
           </FormField>
-          <div className="rounded-md border border-(--color-border) p-3">
+          <div className="glass rounded-md border border-(--color-border) p-3">
             <MarkdownEditor
               repo={{ owner, name }}
               label={t("repo.release.content")}

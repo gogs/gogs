@@ -155,7 +155,7 @@ export function MarkdownEditor({
           id={`${id}-preview`}
           aria-labelledby={`${id}-preview-tab`}
           aria-busy={preview.isFetching}
-          className="min-h-32 rounded-md border border-(--color-border) px-4 py-3"
+          className="min-h-32 glass rounded-md border border-(--color-border) px-4 py-3"
         >
           {value.trim() === "" ? (
             <p className="text-sm text-(--color-muted-foreground) italic">{t("repo.issues.no_content")}</p>
@@ -443,7 +443,7 @@ export function IssueMeta({
   const assigneeClass = "inline-flex max-w-full items-center gap-2 text-sm font-semibold";
 
   return (
-    <aside className="flex min-w-0 flex-col">
+    <aside className="glass flex min-w-0 flex-col glass-ui:self-start glass-ui:border glass-ui:p-4">
       <SidebarSection
         title={t("repo.issues.new.assignee")}
         editor={

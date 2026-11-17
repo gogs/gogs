@@ -107,7 +107,7 @@ function NewPageButton({ owner, name, primary }: { owner: string; name: string; 
 function WikiStart({ owner, name, canWrite }: { owner: string; name: string; canWrite: boolean }) {
   const { t } = useTranslation();
   return (
-    <section className="flex flex-col items-center rounded-md border border-(--color-border) px-6 py-16 text-center">
+    <section className="flex flex-col items-center glass rounded-md border border-(--color-border) px-6 py-16 text-center">
       <BookOpen className="size-12 text-(--color-muted-foreground)" aria-hidden />
       <h1 className="mt-4 text-2xl font-semibold">{t("repo.wiki.welcome")}</h1>
       <p className="mt-2 max-w-prose text-(--color-muted-foreground)">{t("repo.wiki.welcome_desc")}</p>
@@ -138,7 +138,7 @@ export function RepoWiki({ owner, name, data }: { owner: string; name: string; d
 
   return (
     <WikiLayout owner={owner} name={name} title={page.name}>
-      <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_16rem] lg:grid-cols-[minmax(0,1fr)_18rem]">
+      <div className="grid gap-8 glass-ui:gap-x-4 md:grid-cols-[minmax(0,1fr)_16rem] lg:grid-cols-[minmax(0,1fr)_18rem]">
         <article className="min-w-0">
           <header className="mb-6 border-b border-(--color-border) pb-4">
             <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
@@ -181,9 +181,11 @@ export function RepoWiki({ owner, name, data }: { owner: string; name: string; d
               ])}
             </p>
           </header>
-          <Markdown html={page.html} />
+          <div className="glass glass-ui:mt-4 glass-ui:border glass-ui:p-4 sm:glass-ui:p-6">
+            <Markdown html={page.html} />
+          </div>
         </article>
-        <aside className="flex min-w-0 flex-col gap-6 max-md:border-t max-md:border-(--color-border) max-md:pt-6">
+        <aside className="glass flex min-w-0 flex-col gap-6 max-md:border-t max-md:border-(--color-border) max-md:pt-6 glass-ui:self-start glass-ui:border glass-ui:p-4">
           <PageList owner={owner} name={name} pages={data.pages ?? []} current={page.name} />
           {data.cloneLinks?.https || data.cloneLinks?.ssh ? <WikiCloneBox links={data.cloneLinks} /> : null}
         </aside>
@@ -264,7 +266,7 @@ export function RepoWikiPages({ owner, name, data }: { owner: string; name: stri
         {data.viewerCanWrite ? <NewPageButton owner={owner} name={name} /> : null}
       </div>
       {data.pages.length ? (
-        <ul className="divide-y divide-(--color-border) rounded-md border border-(--color-border)">
+        <ul className="divide-y divide-(--color-border) glass rounded-md border border-(--color-border)">
           {data.pages.map((p) => (
             <li key={p.name} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 text-sm">
               <PageLink
@@ -325,7 +327,7 @@ export function RepoWikiEditor({
         <h1 className="text-2xl font-semibold">{heading}</h1>
         {page ? <NewPageButton owner={owner} name={name} /> : null}
       </div>
-      <form onSubmit={onSubmit} noValidate>
+      <form onSubmit={onSubmit} noValidate className="glass glass-ui:border glass-ui:p-4 sm:glass-ui:p-6">
         <fieldset disabled={save.isPending} className="flex flex-col gap-5">
           <FormAlert message={formError} />
           <FormField
@@ -342,7 +344,7 @@ export function RepoWikiEditor({
               onChange={(e) => setTitle(e.target.value)}
             />
           </FormField>
-          <div className="rounded-md border border-(--color-border) p-3">
+          <div className="glass rounded-md border border-(--color-border) p-3">
             <MarkdownEditor
               wiki
               repo={{ owner, name }}

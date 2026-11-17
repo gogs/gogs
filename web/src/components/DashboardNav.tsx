@@ -39,7 +39,7 @@ export function ContextSwitcher({ data, page }: { data: DashboardContextData; pa
   const close = () => setOpen(false);
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger className="flex w-full cursor-pointer items-center gap-2 rounded-md border border-(--color-border) px-2 py-1.5 text-sm hover:bg-(--color-surface)">
+      <PopoverTrigger className="glass-control flex w-full cursor-pointer items-center gap-2 rounded-md border border-(--color-border) px-2 py-1.5 text-sm hover:bg-(--color-surface)">
         <img src={data.avatarURL} alt="" className="size-6 shrink-0 rounded-md object-cover" />
         <span className="sr-only">{t("home.switch_dashboard_context")}: </span>
         <span className="min-w-0 flex-1 truncate text-left font-semibold">{data.name}</span>

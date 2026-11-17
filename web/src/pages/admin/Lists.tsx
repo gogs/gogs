@@ -62,7 +62,7 @@ function ListBody<T>({ list, children }: { list: AdminList<T>; children: (item: 
   return (
     <>
       {list.items.length > 0 ? (
-        <ul className="mt-4 border-t border-(--color-border)">{list.items.map(children)}</ul>
+        <ul className="glass-list mt-4 border-t border-(--color-border)">{list.items.map(children)}</ul>
       ) : (
         <p className="mt-4 border-t border-(--color-border) py-6 text-sm text-(--color-muted-foreground)">
           {t("repo.pulls.no_results")}

@@ -119,6 +119,14 @@ export function RepoCode({
   if (data.file) title = `${data.file.name} - ${fullName}`;
   else if (!data.empty && data.ref !== data.defaultBranch) title += ` @ ${data.ref}`;
   usePageTitle(title);
+  // Files and directories below the root show the file tree and widen the page
+  // chrome to line up with it, like diffs.
+  const wide = !summary && !data.empty;
+  useEffect(() => {
+    if (!wide) return;
+    document.documentElement.setAttribute("data-fullwidth", "code");
+    return () => document.documentElement.removeAttribute("data-fullwidth");
+  }, [wide]);
 
   if (data.empty) {
     return (
@@ -166,7 +174,7 @@ export function RepoCode({
             `${data.pullRequest.repoLink}/compare/${refPath(data.pullRequest.baseBranch)}...${refPath(data.pullRequest.head).replace(/%3A/g, ":")}`,
           )}
           aria-label={t("repo.pulls.compare_changes")}
-          className="grid size-8 shrink-0 place-items-center rounded-md border border-(--color-border) hover:bg-(--color-surface)"
+          className="glass-control grid size-8 shrink-0 place-items-center rounded-md border border-(--color-border) hover:bg-(--color-surface)"
         >
           <GitPullRequestArrow className="size-4 text-(--color-success)" aria-hidden />
         </a>
@@ -252,7 +260,7 @@ export function RepoCode({
           <div className="mb-4 lg:hidden">
             <AboutText summary={summary} />
           </div>
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
+          <div className="grid gap-8 glass-ui:gap-x-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
             <div className="min-w-0">
               <div className="mb-4 flex flex-wrap items-center gap-2">
                 {refPicker}
@@ -287,13 +295,16 @@ export function RepoCode({
                   <CloneMenu links={summary.cloneLinks} archiveLink={`${repoLink}/archive/${refPath(data.ref)}`} />
                 </span>
               </div>
-              <div className="overflow-hidden rounded-md border border-(--color-border)">
+              <div className="overflow-hidden glass rounded-md border border-(--color-border)">
                 {latestCommit}
                 {entryList}
               </div>
               {readme}
             </div>
-            <aside aria-labelledby="repo-about-heading" className="hidden min-w-0 lg:block">
+            <aside
+              aria-labelledby="repo-about-heading"
+              className="glass hidden min-w-0 glass-ui:self-start glass-ui:border glass-ui:p-4 lg:block"
+            >
               <h2 id="repo-about-heading" className="mb-3 font-semibold">
                 {t("repo.about")}
               </h2>
@@ -393,52 +404,57 @@ export function RepoCode({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <RepoHeader repo={repo} activeTab="code" />
-      <div className={cn("flex min-h-0 w-full flex-1", !treeShown && "mx-auto max-w-7xl")}>
+      <div className="flex min-h-0 w-full gap-4 px-4 sm:px-6">
         {treeShown ? (
-          <ResizableSidebar
-            defaultWidth={300}
-            minWidth={220}
-            maxWidth={480}
-            className="hidden border-r border-(--color-border) lg:sticky lg:top-[calc(3.5rem+1px)] lg:flex lg:h-[calc(100dvh-3.5rem-1px)] lg:self-start"
-          >
-            <div className="flex flex-col gap-2 p-3">
-              <div className="flex items-center gap-2">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={() => toggleTree(false)}
-                      aria-label={t("repo.hide_file_tree")}
-                      aria-expanded
-                      className={ICON_BUTTON_CLASS}
-                    >
-                      <PanelLeftClose className="size-4" aria-hidden />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t("repo.hide_file_tree")}</TooltipContent>
-                </Tooltip>
-                <h2 className="font-semibold">{t("repo.files")}</h2>
+          // The column stretches to the file view, so the sticky tree inside
+          // ends where the file view ends, or at the window bottom.
+          <div className="hidden shrink-0 lg:my-6 lg:block">
+            <ResizableSidebar
+              defaultWidth={300}
+              minWidth={220}
+              maxWidth={480}
+              className="glass overflow-hidden rounded-md border border-(--color-border) lg:sticky lg:top-[calc(3.5rem+1px+1.5rem)] lg:h-full lg:max-h-[calc(100dvh-3.5rem-1px-3rem)] lg:min-h-96"
+            >
+              <div className="flex flex-col gap-2 p-3">
+                <div className="flex items-center gap-2">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => toggleTree(false)}
+                        aria-label={t("repo.hide_file_tree")}
+                        aria-expanded
+                        className={ICON_BUTTON_CLASS}
+                      >
+                        <PanelLeftClose className="size-4" aria-hidden />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t("repo.hide_file_tree")}</TooltipContent>
+                  </Tooltip>
+                  <h2 className="font-semibold">{t("repo.files")}</h2>
+                </div>
+                <div className="flex min-w-0 items-center gap-2 [&>*:first-child]:min-w-0 [&>*:first-child]:flex-1 [&>*:first-child]:justify-start">
+                  {refPicker}
+                  {compareButton}
+                </div>
+                {goToFile()}
               </div>
-              <div className="flex min-w-0 items-center gap-2 [&>*:first-child]:min-w-0 [&>*:first-child]:flex-1 [&>*:first-child]:justify-start">
-                {refPicker}
-                {compareButton}
+              <div className="min-h-0 flex-1">
+                <RepoFileTree
+                  owner={repo.owner}
+                  name={repo.name}
+                  gitRef={data.ref}
+                  commitID={data.commitID}
+                  path={data.path}
+                />
               </div>
-              {goToFile()}
-            </div>
-            <div className="min-h-0 flex-1">
-              <RepoFileTree
-                owner={repo.owner}
-                name={repo.name}
-                gitRef={data.ref}
-                commitID={data.commitID}
-                path={data.path}
-              />
-            </div>
-          </ResizableSidebar>
+            </ResizableSidebar>
+          </div>
         ) : null}
-        <main className={cn("min-w-0 flex-1 px-4 py-6 sm:px-6", treeShown && "lg:pt-3 lg:pl-3")}>
+        {/* The last panel grows to the tree's minimum height, so the two always end together. */}
+        <main className="flex min-w-0 flex-1 flex-col py-6 [&>:last-child]:flex-1">
           <h1 className="sr-only">{data.path}</h1>
-          <div className="mb-3 flex flex-wrap items-center gap-2">
+          <div className="mb-3 flex flex-wrap items-center gap-2 glass glass-ui:border glass-ui:px-3 glass-ui:py-2">
             {withTree && !treeOpen ? (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -481,12 +497,12 @@ export function RepoCode({
           </div>
 
           {data.kind === "dir" ? (
-            <div className="overflow-hidden rounded-md border border-(--color-border)">
+            <div className="overflow-hidden glass rounded-md border border-(--color-border)">
               {latestCommit}
               {entryList}
             </div>
           ) : (
-            <div className="overflow-hidden rounded-md border border-(--color-border) [&>div]:border-b-0">
+            <div className="overflow-hidden glass rounded-md border border-(--color-border) [&>div]:border-b-0">
               {latestCommit}
             </div>
           )}
@@ -776,7 +792,7 @@ function Overview({ files, activeTab }: { files: RepoOverviewFile[]; activeTab?:
     <section
       id="readme"
       aria-label={t("repo.overview_files")}
-      className="mt-6 scroll-mt-20 rounded-md border border-(--color-border)"
+      className="mt-6 scroll-mt-20 glass rounded-md border border-(--color-border)"
     >
       <div className="flex items-center justify-between gap-2 border-b border-(--color-border) pr-2 pl-1">
         <PageTabs
@@ -1083,14 +1099,14 @@ function FileView({
   return (
     <section
       aria-labelledby="repo-file-heading"
-      className="mt-3 overflow-hidden rounded-md border border-(--color-border)"
+      className="mt-3 overflow-hidden glass rounded-md border border-(--color-border)"
     >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-(--color-border) bg-(--color-surface) px-4 py-2">
         {hasPreview ? (
           <div
             role="group"
             aria-label={t("repo.file_view_mode")}
-            className="inline-flex h-7 items-stretch overflow-hidden rounded-md border border-(--color-border) text-xs"
+            className="inline-flex h-7 items-stretch overflow-hidden rounded-md glass-control border border-(--color-border) text-xs"
           >
             <ViewModeButton active={!showSource} onClick={() => setShowSource(false)}>
               {t("repo.file_preview")}
@@ -1117,7 +1133,7 @@ function FileView({
           {formatFileSize(file.size)}
         </span>
         <div className="ml-auto flex items-center gap-1">
-          <div className="mr-1 flex h-8 overflow-hidden rounded-md border border-(--color-border) text-xs [&>*]:bg-(--color-background) [&>*:hover]:bg-(--color-surface) [&>*+*]:border-l [&>*+*]:border-(--color-border)">
+          <div className="mr-1 flex h-8 overflow-hidden rounded-md glass-control border border-(--color-border) text-xs [&>*]:bg-(--color-field) [&>*:hover]:bg-(--color-surface) [&>*+*]:border-l [&>*+*]:border-(--color-border)">
             <a href={rawURL} className="grid place-items-center px-2.5">
               {t("repo.file_raw")}
             </a>
@@ -1493,14 +1509,17 @@ function EmptyRepo({ data }: { data: RepoSrcData }) {
   const [remote, setRemote] = useState(links.ssh ?? links.https ?? "");
   if (!data.viewerCanWrite || data.isMirror) {
     return (
-      <p className="rounded-md border border-(--color-border) px-4 py-10 text-center text-sm text-(--color-muted-foreground)">
+      <p className="glass rounded-md border border-(--color-border) px-4 py-10 text-center text-sm text-(--color-muted-foreground)">
         {t("repo.empty_message")}
       </p>
     );
   }
   const branch = data.defaultBranch;
   return (
-    <section aria-labelledby="repo-quick-guide" className="overflow-hidden rounded-md border border-(--color-border)">
+    <section
+      aria-labelledby="repo-quick-guide"
+      className="overflow-hidden glass rounded-md border border-(--color-border)"
+    >
       <h2
         id="repo-quick-guide"
         className="border-b border-(--color-border) bg-(--color-surface) px-4 py-2 text-sm font-semibold"

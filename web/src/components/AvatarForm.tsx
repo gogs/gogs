@@ -65,7 +65,7 @@ export function AvatarForm({
                 type="file"
                 accept="image/png,image/jpeg,image/gif"
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                className="block w-full min-w-0 text-sm text-(--color-muted-foreground) file:mr-3 file:cursor-pointer file:rounded-md file:border file:border-(--color-input) file:bg-(--color-background) file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-(--color-foreground) hover:file:bg-(--color-surface)"
+                className="block w-full min-w-0 text-sm text-(--color-muted-foreground) file:mr-3 file:cursor-pointer file:rounded-md file:border file:border-(--color-input) file:bg-(--color-field) file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-(--color-foreground) hover:file:bg-(--color-surface)"
               />
             </FormField>
             <div className="flex flex-wrap gap-2">

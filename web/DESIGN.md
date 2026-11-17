@@ -57,11 +57,38 @@ Don't use foreground vs muted-foreground to imply "primary action" vs "secondary
 
 The traffic-light cluster in the faux-terminal frame uses one ad-hoc value: the amber dot falls back to `oklch(0.795 0.184 86.047)` via `bg-(--color-warning,...)`. There is no `--color-warning` token defined, so the fallback always wins. This is deliberate. Promoting it to a real token would invite reuse, and warning is not a system-wide concern in the current UI. Leave it inline until a second site needs warning semantics, then define the token in both light and dark palettes.
 
+## Glass
+
+The app has a frosted glass look, off by default. Users switch it on with "Glass effect" in the settings menu, next to the theme. The choice is kept in `localStorage` under `gogs-glass` (see `lib/glass.ts`). While it is on, `<html>` carries the `glass-ui` class, which the inline script in `index.html` sets before the first paint. Every glass style is scoped under that class, so the app without it looks exactly as it does with plain tokens: never change the plain look to get a glass effect.
+
+With glass on, `html` paints `--glass-backdrop`, a few soft color blobs over `--glass-page`, fixed to the viewport, with a dot grid that fades toward the bottom. Panels are translucent over it. Components opt in with marker classes, which style nothing while glass is off. Write the element's plain look with utilities as usual and add the marker:
+
+- **`glass`** goes on content containers: bordered boxes, comments, `Card`, the terminal frames, the settings panels and the diff workspace. It sets the translucent `--glass-fill`, a light top edge and a soft drop shadow, blurs what is behind it and rounds it to `--glass-radius` (`0.75rem`, `Card` sets `1rem`).
+- **`glass-list`** goes on lists of rows divided by bottom borders, e.g., the activity feed and repository lists, which become a glass panel with the rows inset. An empty list hides.
+- **`glass-section`** goes on a section whose heading labels one glass box or list below it, e.g., the dashboard activity feed, the branch groups and the commit days. The section becomes the panel, the heading its header row and the box inside loses its own frame, so the heading does not float alone on the backdrop. Tabs that switch what one panel shows, e.g., Repositories and Public Activity on a profile, become its header row the same way. Page titles stay above their panels.
+- **`glass-bar`** goes on full-width chrome that content scrolls under: the navbar and the repository header.
+- **`glass-control`** goes on outline buttons and segmented groups, e.g., Watch, Star and Fork, and the view switchers. A glass control sets its own fill, which outranks `hover:` utilities, so it brings its own hover: `--glass-control-hover` and a `--glass-line-hover` edge, and a group lights its edge while a button in it is hovered. Check hover in a browser that reports `(hover: hover)`, since Tailwind wraps `hover:` in that media query and headless Chrome without a mouse matches none of them.
+- **`glass-solid`** goes on filled buttons, with `--glass-solid` set to the fill color. It adds a light sheen, a bright top edge, a ring in that color and a soft glow, like the landing page's call to action. Glass shadows that replace `box-shadow` list Tailwind's `--tw-ring-offset-shadow` and `--tw-ring-shadow` first, so keyboard focus stays visible.
+
+Layout that only applies to glass, e.g., a border or padding the plain look does not have, uses the `glass-ui:` variant, e.g., `glass-ui:border glass-ui:p-3`.
+
+With glass on, only page titles, page tabs and toolbars sit on the backdrop. Everything else sits on a glass panel, including sidebars, e.g., the repository About column and the issue sidebar, which become one panel with `glass glass-ui:self-start glass-ui:border glass-ui:p-4`, and rendered documents such as wiki pages. Forms that are not in a settings panel, e.g., new repository, new milestone and new release, are one panel with `glass glass-ui:border glass-ui:p-4 sm:glass-ui:p-6`. Columns of panels sit 16px apart with `glass-ui:gap-x-4`. Full-height chrome beside the content, e.g., the file tree pane of the code view, takes `glass-bar`. A panel inside another panel, e.g., the Markdown editor in a form, drops its fill and shadow and keeps a faint border, and a `glass-section` inside another keeps its header row without a frame.
+
+Every control that draws its own border takes a marker. A button or link styled by hand rather than through `Button`, e.g., a commit SHA link or "Browse files", adds `glass-control`, and so does a dropdown in a toolbar, e.g., the issue filters. A field you type into or pick a value for in a form keeps the field look of `--color-field` and `--color-input`, whose stronger edge keeps the 3:1 contrast a field boundary needs.
+
+Borders follow the 1.0 landing page: thin translucent lines, never opaque gray. A glass panel draws its edge in `--glass-line` and lowers `--color-border` to `--glass-divider` for everything inside it, so its rows and sections divide faintly. A state that recolors a panel's edge, e.g., a linked comment, needs `!border-...`, since the marker rules outrank utilities. Round a header that fills the top of a panel with `rounded-t-[inherit]`, so it follows the panel's radius in both looks.
+
+Glass also makes `--color-surface`, `--color-secondary`, `--color-border` and `--color-input` translucent, so hover fills and dividers tint the glass under them, and `--color-popover` mostly opaque, so popovers, selects and dialogs keep text readable over what they cover. Their blur is `glass-ui:backdrop-blur-*`, so it only applies with glass on. Form fields use `bg-(--color-field)`: the page color without glass, and with glass lighter than the panels in light mode and darker in dark mode, so fields read as inset. Code in diffs and highlighted blocks takes the same field color, and file trees take the panel they sit in. Don't put a glass marker on elements with `position: fixed` children, since `backdrop-filter` makes it their containing block.
+
 ## Surface chrome
 
 The landing and 404/500 pages wrap their content in a faux-terminal frame (rounded border, traffic-light dots, monospace body). Reuse the same frame for any page that represents a Git/CLI state: the landing page, error pages, command-output stubs, raw diff fallbacks. Don't reuse it for normal content pages like settings or repository views.
 
 Strings rendered inside a terminal frame stay in English across all locales, regardless of the active UI language. Real CLI output (`git`, `ls`, `cat`, etc.) doesn't localize. Faux-CLI that does loses authenticity and reads as a translated error page in a costume. Translate the surrounding prose (headings, descriptions, CTAs), but leave command names, prompts, error tokens like `fatal:`, and command output strings untouched.
+
+## Page width
+
+Pages with a file tree, i.e., the code view below the repository root and commit, compare and pull request diffs, use the whole window width. They set `data-fullwidth` on `<html>`, which widens the navbar, the repository header and the footer to match, and keep the 16px or 24px page padding. The file tree sits in its own bordered box beside the content, never flush against the window edge. Other pages stay centered at `max-w-6xl` or `max-w-7xl`.
 
 ## File naming
 

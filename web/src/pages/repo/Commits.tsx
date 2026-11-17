@@ -132,7 +132,7 @@ export function RepoCommits({ owner, name, data }: { owner: string; name: string
         {data.commits.length ? (
           <CommitList owner={repo.owner} name={repo.name} commits={data.commits} path={data.path} />
         ) : (
-          <p className="rounded-md border border-(--color-border) py-10 text-center text-sm text-(--color-muted-foreground)">
+          <p className="glass rounded-md border border-(--color-border) py-10 text-center text-sm text-(--color-muted-foreground)">
             {t("repo.commits.no_commits")}
           </p>
         )}
@@ -166,7 +166,7 @@ export function CommitList({
 }) {
   if (compact) {
     return (
-      <ul className="divide-y divide-(--color-border) rounded-md border border-(--color-border)">
+      <ul className="divide-y divide-(--color-border) glass rounded-md border border-(--color-border)">
         {commits.map((commit) => (
           <CompactCommitRow key={commit.sha} owner={owner} name={name} commit={commit} />
         ))}
@@ -176,9 +176,9 @@ export function CommitList({
   return (
     <div className="flex flex-col gap-6">
       {groupByDay(commits).map((group) => (
-        <section key={group.day} aria-label={group.day}>
+        <section key={group.day} aria-label={group.day} className="glass-section">
           <h2 className="mb-2 text-sm font-semibold text-(--color-muted-foreground)">{group.day}</h2>
-          <ul className="divide-y divide-(--color-border) rounded-md border border-(--color-border)">
+          <ul className="divide-y divide-(--color-border) glass rounded-md border border-(--color-border)">
             {group.commits.map((commit) => (
               <CommitRow
                 key={commit.sha}
@@ -267,7 +267,7 @@ function CommitRow({
         <Link
           to="/$owner/$repo/commit/$sha"
           params={{ owner, repo: name, sha: commit.sha }}
-          className="rounded-md border border-(--color-border) px-2 py-1 font-mono text-xs hover:bg-(--color-surface)"
+          className="glass-control rounded-md border border-(--color-border) px-2 py-1 font-mono text-xs hover:bg-(--color-surface)"
         >
           {commit.sha.slice(0, 10)}
         </Link>
@@ -335,7 +335,7 @@ function CompactCommitRow({ owner, name, commit }: { owner: string; name: string
       <Link
         to="/$owner/$repo/commit/$sha"
         params={{ owner, repo: name, sha: commit.sha }}
-        className="shrink-0 rounded-md border border-(--color-border) px-2 py-1 font-mono text-xs hover:bg-(--color-surface)"
+        className="glass-control shrink-0 rounded-md border border-(--color-border) px-2 py-1 font-mono text-xs hover:bg-(--color-surface)"
       >
         {commit.sha.slice(0, 7)}
       </Link>

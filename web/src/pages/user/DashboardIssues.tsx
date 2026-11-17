@@ -29,9 +29,9 @@ export function DashboardIssues({
   const isOrg = data.kind === "organization";
 
   return (
-    <main className="mx-auto grid w-full max-w-6xl flex-1 content-start gap-6 px-4 py-6 sm:px-6 md:grid-cols-[256px_minmax(0,1fr)] lg:grid-cols-[296px_minmax(0,1fr)]">
+    <main className="mx-auto grid w-full max-w-6xl flex-1 content-start gap-6 px-4 glass-ui:gap-x-4 py-6 sm:px-6 md:grid-cols-[256px_minmax(0,1fr)] lg:grid-cols-[296px_minmax(0,1fr)]">
       <h1 className="sr-only">{title}</h1>
-      <aside className="min-w-0">
+      <aside className="glass min-w-0 glass-ui:self-start glass-ui:border glass-ui:p-3">
         <ContextSwitcher data={data} page={kind} />
         <Filters data={data} search={search} />
       </aside>
@@ -39,7 +39,7 @@ export function DashboardIssues({
         {isOrg ? <OrgNav name={data.name} page={kind} /> : null}
         <Toolbar data={data} search={search} className={isOrg ? "mt-4" : undefined} />
         {data.items.length > 0 ? (
-          <ul>
+          <ul className="glass-list glass-ui:mt-4">
             {data.items.map((issue) => (
               <IssueListItem
                 key={`${issue.repo}#${issue.index}`}
@@ -199,7 +199,7 @@ function Toolbar({
           })
         }
       >
-        <SelectTrigger aria-label={t("repo.issues.filter_sort")} className="h-9 w-auto gap-2">
+        <SelectTrigger aria-label={t("repo.issues.filter_sort")} className="glass-control h-9 w-auto gap-2">
           <span className="text-(--color-muted-foreground)">{t("repo.issues.filter_sort")}:</span>
           <SelectValue />
         </SelectTrigger>

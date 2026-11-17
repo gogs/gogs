@@ -112,7 +112,7 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
   });
 
   return (
-    <div className="border-b border-(--color-border) bg-(--color-background)">
+    <div className="glass-bar border-b border-(--color-border) bg-(--color-background)">
       <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-6">
         <div className="flex flex-wrap items-start justify-between gap-3 pb-3">
           <h1 className="flex min-w-0 flex-wrap items-center gap-2 text-base">
@@ -439,7 +439,7 @@ function SplitActionButton({
   }
 
   return (
-    <span className="inline-flex h-7 items-stretch overflow-hidden rounded-md border border-(--color-border) text-xs">
+    <span className="inline-flex h-7 items-stretch overflow-hidden rounded-md glass-control border border-(--color-border) text-xs">
       {action}
       <a
         href={countHref}

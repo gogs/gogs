@@ -51,7 +51,7 @@ export function RepoIssues({
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6">
         <h1 className="sr-only">{title}</h1>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <nav aria-label={t("issues")} className="inline-flex rounded-md border border-(--color-input)">
+          <nav aria-label={t("issues")} className="glass-control inline-flex rounded-md border border-(--color-input)">
             <Link
               to="/$owner/$repo/labels"
               params={params}
@@ -86,7 +86,7 @@ export function RepoIssues({
           ) : null}
         </div>
 
-        <div className="rounded-md border border-(--color-border)">
+        <div className="glass rounded-md border border-(--color-border)">
           <div className="flex flex-wrap items-center justify-between gap-2 bg-(--color-surface) px-2 py-1.5">
             <ul className="flex gap-1">
               {states.map(({ state, label, count, icon: Icon }) => {
@@ -162,7 +162,7 @@ export function RepoIssues({
   );
 }
 
-const TRIGGER_CLASS = "h-9 w-auto gap-2 bg-(--color-background)";
+const TRIGGER_CLASS = "glass-control h-9 w-auto gap-2 bg-(--color-field)";
 
 // Filters narrows the list by label, milestone, assignee and whose issues they
 // are, and sorts it.

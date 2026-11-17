@@ -38,7 +38,7 @@ import { cn } from "@/lib/utils";
 // to the branch or to a new branch.
 
 const TEXTAREA_CLASS =
-  "block w-full rounded-md border border-(--color-input) bg-(--color-background) px-3 py-2 text-sm text-(--color-foreground) placeholder:text-(--color-muted-foreground) outline-none transition-colors focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-60";
+  "block w-full rounded-md border border-(--color-input) bg-(--color-field) px-3 py-2 text-sm text-(--color-foreground) placeholder:text-(--color-muted-foreground) outline-none transition-colors focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-60";
 
 function EditorLayout({
   owner,
@@ -189,7 +189,7 @@ function CommitForm({
   return (
     <section
       aria-labelledby="commit-heading"
-      className="mt-6 flex gap-4 rounded-md border border-(--color-border) p-4 sm:p-5"
+      className="mt-6 flex gap-4 glass rounded-md border border-(--color-border) p-4 sm:p-5"
     >
       {user ? <img src={user.avatarURL} alt="" className="hidden size-10 shrink-0 rounded-full sm:block" /> : null}
       <div className="flex min-w-0 flex-1 flex-col gap-4">
@@ -462,70 +462,74 @@ export function RepoFileEditor({
               dangerouslySetInnerHTML={{ __html: conflict.html }}
             />
           ) : null}
-          <FormField
-            id="editor-path"
-            label={t("repo.editor.file_path")}
-            helper={t("repo.editor.filename_help")}
-            error={fields.path}
-            invalid={Boolean(fields.path)}
-          >
-            <PathInput
-              id="editor-path"
-              repoName={name}
-              dirs={dirs}
-              onDirs={setDirs}
-              value={fileName}
-              onChange={setFileName}
-              placeholder={t("repo.editor.name_your_file")}
-              autoFocus={isNew}
-            />
-          </FormField>
-          <div className="min-w-0 rounded-md border border-(--color-border) p-3">
-            <EditorTabs id={id} label={heading} tabs={tabs} current={currentTab} onChange={setTab} />
-            {currentTab === "write" ? (
-              <div role="tabpanel" id={`${id}-write`} aria-labelledby={`${id}-write-tab`}>
-                <CodeEditor
-                  id="editor-content"
-                  label={path || heading}
-                  lang={lang}
-                  repo={{ owner, name }}
-                  code={isCode}
-                  wrap={wrap}
-                  {...indentationOf(indent.data)}
-                  value={content}
-                  onChange={setContent}
-                  autoFocus={!isNew}
-                  minLines={20}
-                  aria-invalid={Boolean(fields.content) || undefined}
-                />
-              </div>
-            ) : currentTab === "preview" ? (
-              <div
-                role="tabpanel"
-                id={`${id}-preview`}
-                aria-labelledby={`${id}-preview-tab`}
-                aria-busy={preview.isFetching}
-                className="min-h-32 rounded-md border border-(--color-border) px-4 py-3"
+          <div className="glass flex min-w-0 flex-col gap-5 glass-ui:gap-0 glass-ui:overflow-hidden glass-ui:border">
+            <div className="glass-ui:border-b glass-ui:border-(--color-border) glass-ui:bg-(--color-surface) glass-ui:px-4 glass-ui:py-3">
+              <FormField
+                id="editor-path"
+                label={t("repo.editor.file_path")}
+                helper={t("repo.editor.filename_help")}
+                error={fields.path}
+                invalid={Boolean(fields.path)}
               >
-                {content.trim() === "" ? (
-                  <p className="text-sm text-(--color-muted-foreground) italic">{t("repo.issues.no_content")}</p>
-                ) : preview.data !== undefined ? (
-                  <Markdown html={preview.data} />
-                ) : preview.isError ? (
-                  <p className="text-sm text-(--color-destructive)">{preview.error.message}</p>
-                ) : (
-                  <p className="text-sm text-(--color-muted-foreground)">{t("repo.release.loading")}</p>
-                )}
-              </div>
-            ) : (
-              <div role="tabpanel" id={`${id}-changes`} aria-labelledby={`${id}-changes-tab`}>
-                <ChangesPreview
-                  oldFile={{ name: target.path, contents: original }}
-                  newFile={{ name: path, contents: content }}
-                  wrap={wrap}
+                <PathInput
+                  id="editor-path"
+                  repoName={name}
+                  dirs={dirs}
+                  onDirs={setDirs}
+                  value={fileName}
+                  onChange={setFileName}
+                  placeholder={t("repo.editor.name_your_file")}
+                  autoFocus={isNew}
                 />
-              </div>
-            )}
+              </FormField>
+            </div>
+            <div className="min-w-0 glass rounded-md border border-(--color-border) p-3 glass-ui:m-4">
+              <EditorTabs id={id} label={heading} tabs={tabs} current={currentTab} onChange={setTab} />
+              {currentTab === "write" ? (
+                <div role="tabpanel" id={`${id}-write`} aria-labelledby={`${id}-write-tab`}>
+                  <CodeEditor
+                    id="editor-content"
+                    label={path || heading}
+                    lang={lang}
+                    repo={{ owner, name }}
+                    code={isCode}
+                    wrap={wrap}
+                    {...indentationOf(indent.data)}
+                    value={content}
+                    onChange={setContent}
+                    autoFocus={!isNew}
+                    minLines={20}
+                    aria-invalid={Boolean(fields.content) || undefined}
+                  />
+                </div>
+              ) : currentTab === "preview" ? (
+                <div
+                  role="tabpanel"
+                  id={`${id}-preview`}
+                  aria-labelledby={`${id}-preview-tab`}
+                  aria-busy={preview.isFetching}
+                  className="min-h-32 glass rounded-md border border-(--color-border) px-4 py-3"
+                >
+                  {content.trim() === "" ? (
+                    <p className="text-sm text-(--color-muted-foreground) italic">{t("repo.issues.no_content")}</p>
+                  ) : preview.data !== undefined ? (
+                    <Markdown html={preview.data} />
+                  ) : preview.isError ? (
+                    <p className="text-sm text-(--color-destructive)">{preview.error.message}</p>
+                  ) : (
+                    <p className="text-sm text-(--color-muted-foreground)">{t("repo.release.loading")}</p>
+                  )}
+                </div>
+              ) : (
+                <div role="tabpanel" id={`${id}-changes`} aria-labelledby={`${id}-changes-tab`}>
+                  <ChangesPreview
+                    oldFile={{ name: target.path, contents: original }}
+                    newFile={{ name: path, contents: content }}
+                    wrap={wrap}
+                  />
+                </div>
+              )}
+            </div>
           </div>
         </fieldset>
         <fieldset disabled={save.isPending} className="min-w-0">
@@ -564,7 +568,7 @@ export function RepoFileDelete({ owner, name, target }: { owner: string; name: s
         <fieldset disabled={remove.isPending} className="min-w-0">
           <h1 className="mb-4 text-xl font-semibold">{heading}</h1>
           <FormAlert message={formError} />
-          <p className="flex items-start gap-2 rounded-md border border-(--color-border) bg-(--color-surface) px-4 py-3 font-mono text-sm">
+          <p className="glass flex items-start gap-2 rounded-md border border-(--color-border) bg-(--color-surface) px-4 py-3 font-mono text-sm">
             <FileX className="mt-0.5 size-4 shrink-0 text-(--color-destructive)" aria-hidden />
             <span className="min-w-0 wrap-anywhere">{target.path}</span>
           </p>
@@ -625,66 +629,72 @@ export function RepoFileUpload({ owner, name, target }: { owner: string; name: s
         <fieldset disabled={upload.isPending} className="flex min-w-0 flex-col gap-5">
           <h1 className="text-xl font-semibold">{heading}</h1>
           <FormAlert message={formError} />
-          <FormField
-            id="upload-path"
-            label={t("repo.editor.directory")}
-            error={fields.path}
-            invalid={Boolean(fields.path)}
-          >
-            <PathInput
-              id="upload-path"
-              repoName={name}
-              dirs={dirs}
-              onDirs={setDirs}
-              value={subdir}
-              onChange={setSubdir}
-              placeholder={t("repo.editor.add_subdir")}
-            />
-          </FormField>
-          <div>
-            <input
-              ref={fileInput}
-              type="file"
-              multiple
-              hidden
-              accept={!settings || settings.allowedTypes.includes("*/*") ? undefined : settings.allowedTypes.join(",")}
-              onChange={(e) => {
-                if (e.target.files) uploads.add(e.target.files);
-                e.target.value = "";
-              }}
-            />
-            <button
-              type="button"
-              aria-describedby={filesError ? "upload-files-error" : undefined}
-              disabled={settings ? uploads.files.length >= settings.maxFiles : true}
-              onClick={() => fileInput.current?.click()}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setDragging(true);
-              }}
-              onDragLeave={() => setDragging(false)}
-              onDrop={(e) => {
-                e.preventDefault();
-                setDragging(false);
-                uploads.add(e.dataTransfer.files);
-              }}
-              className={cn(
-                "flex w-full cursor-pointer flex-col items-center gap-2 rounded-md border-2 border-dashed px-4 py-10 text-sm text-(--color-muted-foreground) transition-colors hover:border-(--color-ring) hover:text-(--color-foreground) focus-visible:border-(--color-ring) focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60",
-                dragging
-                  ? "border-(--color-primary) bg-(--color-primary)/5 text-(--color-foreground)"
-                  : "border-(--color-border)",
-                filesError && "border-(--color-destructive)",
-              )}
-            >
-              <Upload className="size-6" aria-hidden />
-              {t("dropzone.default_message")}
-            </button>
-            {filesError ? (
-              <p id="upload-files-error" className="mt-1.5 text-sm text-(--color-destructive)">
-                {filesError}
-              </p>
-            ) : null}
-            <PendingFiles uploads={pending} />
+          <div className="glass flex min-w-0 flex-col gap-5 glass-ui:gap-0 glass-ui:overflow-hidden glass-ui:border">
+            <div className="glass-ui:border-b glass-ui:border-(--color-border) glass-ui:bg-(--color-surface) glass-ui:px-4 glass-ui:py-3">
+              <FormField
+                id="upload-path"
+                label={t("repo.editor.directory")}
+                error={fields.path}
+                invalid={Boolean(fields.path)}
+              >
+                <PathInput
+                  id="upload-path"
+                  repoName={name}
+                  dirs={dirs}
+                  onDirs={setDirs}
+                  value={subdir}
+                  onChange={setSubdir}
+                  placeholder={t("repo.editor.add_subdir")}
+                />
+              </FormField>
+            </div>
+            <div className="glass-ui:p-4">
+              <input
+                ref={fileInput}
+                type="file"
+                multiple
+                hidden
+                accept={
+                  !settings || settings.allowedTypes.includes("*/*") ? undefined : settings.allowedTypes.join(",")
+                }
+                onChange={(e) => {
+                  if (e.target.files) uploads.add(e.target.files);
+                  e.target.value = "";
+                }}
+              />
+              <button
+                type="button"
+                aria-describedby={filesError ? "upload-files-error" : undefined}
+                disabled={settings ? uploads.files.length >= settings.maxFiles : true}
+                onClick={() => fileInput.current?.click()}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragging(true);
+                }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragging(false);
+                  uploads.add(e.dataTransfer.files);
+                }}
+                className={cn(
+                  "flex w-full cursor-pointer flex-col items-center gap-2 rounded-md border-2 border-dashed px-4 py-10 text-sm text-(--color-muted-foreground) transition-colors hover:border-(--color-ring) hover:text-(--color-foreground) focus-visible:border-(--color-ring) focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60",
+                  dragging
+                    ? "border-(--color-primary) bg-(--color-primary)/5 text-(--color-foreground)"
+                    : "border-(--color-border)",
+                  filesError && "border-(--color-destructive)",
+                )}
+              >
+                <Upload className="size-6" aria-hidden />
+                {t("dropzone.default_message")}
+              </button>
+              {filesError ? (
+                <p id="upload-files-error" className="mt-1.5 text-sm text-(--color-destructive)">
+                  {filesError}
+                </p>
+              ) : null}
+              <PendingFiles uploads={pending} />
+            </div>
           </div>
         </fieldset>
         <fieldset disabled={upload.isPending} className="min-w-0">

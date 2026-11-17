@@ -151,7 +151,7 @@ export function IssueConversation({
   const ref = issueRef;
 
   return (
-    <div className={cn("grid content-start gap-8 md:grid-cols-[minmax(0,1fr)_16rem]", className)}>
+    <div className={cn("grid content-start gap-8 glass-ui:gap-x-4 md:grid-cols-[minmax(0,1fr)_16rem]", className)}>
       <div className="flex min-w-0 flex-col gap-4">
         <CommentCard
           issueRef={ref}
@@ -386,11 +386,11 @@ function CommentCard({
       </UserLink>
       <div
         className={cn(
-          "min-w-0 flex-1 rounded-md border",
-          linked ? "border-(--color-primary) ring-2 ring-(--color-primary)/30" : "border-(--color-border)",
+          "glass min-w-0 flex-1 rounded-md border",
+          linked ? "!border-(--color-primary) ring-2 ring-(--color-primary)/30" : "border-(--color-border)",
         )}
       >
-        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 rounded-t-md border-b border-(--color-border) bg-(--color-surface) py-1 pr-1 pl-3 text-sm">
+        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 rounded-t-[inherit] border-b border-(--color-border) bg-(--color-surface) py-1 pr-1 pl-3 text-sm">
           <p className="min-w-0 py-1 text-(--color-muted-foreground) wrap-anywhere">
             <UserLink user={poster} className="font-semibold text-(--color-foreground) hover:underline">
               {poster.name}
@@ -469,7 +469,7 @@ function AttachmentList({ attachments, className }: { attachments: IssueAttachme
               target="_blank"
               rel="noopener noreferrer"
               aria-label={t("repo.issues.attachment.open_tab").replace("%s", a.name)}
-              className="block rounded-md border border-(--color-border) hover:border-(--color-primary)"
+              className="block glass rounded-md border border-(--color-border) hover:!border-(--color-primary)"
             >
               <img src={a.url} alt={a.name} className="h-24 max-w-full rounded-md object-cover" />
             </a>
@@ -479,7 +479,7 @@ function AttachmentList({ attachments, className }: { attachments: IssueAttachme
               target="_blank"
               rel="noopener noreferrer"
               aria-label={t("repo.issues.attachment.download").replace("%s", a.name)}
-              className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-(--color-border) px-2 py-1 text-sm hover:bg-(--color-surface)"
+              className="glass-control inline-flex max-w-full items-center gap-1.5 rounded-md border border-(--color-border) px-2 py-1 text-sm hover:bg-(--color-surface)"
             >
               <Download className="size-4 shrink-0" aria-hidden />
               <span className="truncate">{a.name}</span>
@@ -706,7 +706,7 @@ function NewComment({
         alt=""
         className="hidden size-10 shrink-0 rounded-full border border-(--color-border) sm:block"
       />
-      <form onSubmit={onSubmit} className="min-w-0 flex-1 rounded-md border border-(--color-border) p-3">
+      <form onSubmit={onSubmit} className="min-w-0 flex-1 glass rounded-md border border-(--color-border) p-3">
         <fieldset disabled={mutation.isPending} className="contents">
           <MarkdownEditor
             key={round}

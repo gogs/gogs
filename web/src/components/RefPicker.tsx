@@ -73,7 +73,7 @@ export function RefPicker({
             placeholder={`${t(tags ? "repo.filter_branch_and_tag" : "repo.pulls.filter_branch")}...`}
             aria-label={t(tags ? "repo.filter_branch_and_tag" : "repo.pulls.filter_branch")}
             autoFocus
-            className="block w-full rounded-md border border-(--color-input) bg-(--color-background) py-1.5 pr-3 pl-8 text-sm outline-none placeholder:text-(--color-muted-foreground) focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring)"
+            className="block w-full rounded-md border border-(--color-input) bg-(--color-field) py-1.5 pr-3 pl-8 text-sm outline-none placeholder:text-(--color-muted-foreground) focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring)"
           />
         </div>
         {tags ? (

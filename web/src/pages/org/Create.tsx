@@ -37,7 +37,7 @@ export function OrgCreate() {
 
   return (
     <main className="mx-auto w-full max-w-xl flex-1 px-4 py-10 sm:px-6">
-      <form onSubmit={onSubmit} noValidate>
+      <form onSubmit={onSubmit} noValidate className="glass glass-ui:border glass-ui:p-4 sm:glass-ui:p-6">
         <fieldset disabled={mutation.isPending} className="contents">
           <h1 className="mb-4 text-xl font-semibold">{t("new_org")}</h1>
           {formError ? (

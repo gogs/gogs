@@ -71,7 +71,7 @@ export function RepoMilestones({
         ) : null
       }
     >
-      <div className="rounded-md border border-(--color-border)">
+      <div className="glass rounded-md border border-(--color-border)">
         <ul className="flex gap-1 bg-(--color-surface) px-2 py-1.5">
           {states.map(({ state, label, count, icon: Icon }) => {
             const active = state === search.state;
@@ -291,7 +291,7 @@ export function RepoMilestoneEditor({
 
   return (
     <IssueTrackerLayout owner={owner} name={name} active="milestones" title={title}>
-      <form onSubmit={onSubmit} noValidate className="max-w-2xl">
+      <form onSubmit={onSubmit} noValidate className="glass glass-ui:border glass-ui:p-4 sm:glass-ui:p-6 max-w-2xl">
         <fieldset disabled={save.isPending} className="contents">
           <h2 className="text-xl font-semibold">{title}</h2>
           <p className="mt-1 mb-6 text-sm text-(--color-muted-foreground)">
