@@ -60,6 +60,13 @@ func NewSanitizer() {
 		sanitizer.policy.AllowAttrs("class").Matching(lazyregexp.New(`^markdown-alert markdown-alert-(note|tip|important|warning|caution)$`).Regexp()).OnElements("div")
 		sanitizer.policy.AllowAttrs("class").Matching(lazyregexp.New(`^markdown-alert-title$`).Regexp()).OnElements("p")
 
+		// Alignment of blocks in READMEs, e.g., <div align="center">, as on GitHub
+		sanitizer.policy.AllowAttrs("align").Matching(lazyregexp.New(`(?i)^(left|center|right|justify)$`).Regexp()).OnElements("div", "p", "h1", "h2", "h3", "h4", "h5", "h6")
+
+		// Image sizes in pixels, e.g., width="201px", which browsers read as
+		// width="201". The UGC policy only allows numbers and percentages.
+		sanitizer.policy.AllowAttrs("width", "height").Matching(lazyregexp.New(`(?i)^[0-9]+px$`).Regexp()).OnElements("img")
+
 		// Keyboard keys, e.g., <kbd>Ctrl</kbd>
 		sanitizer.policy.AllowElements("kbd")
 

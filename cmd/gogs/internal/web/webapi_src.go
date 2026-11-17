@@ -85,7 +85,6 @@ type repoFile struct {
 	Content  *string       `json:"content,omitempty"`
 	HTML     string        `json:"html,omitempty"`
 	Notebook *repoNotebook `json:"notebook,omitempty"`
-	IsReadme bool          `json:"isReadme"`
 	// IsSymlink is set for a symbolic link, whose content is its target.
 	IsSymlink bool `json:"isSymlink"`
 	// TabWidth is the width of a tab that .editorconfig sets for the file.
@@ -497,7 +496,6 @@ func describeRepoFile(ctx context.Context, logger *logx.Logger, repo *database.R
 	file := &repoFile{
 		Name:      entry.Name(),
 		Size:      blob.Size(ctx),
-		IsReadme:  markup.IsReadmeFile(entry.Name()),
 		IsSymlink: entry.IsSymlink(),
 	}
 	switch {

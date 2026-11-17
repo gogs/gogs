@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -313,5 +314,119 @@ func TestCodeSearch(t *testing.T) {
 		assert.Empty(t, resp.Keyword)
 		assert.NotNil(t, resp.Files)
 		assert.Empty(t, resp.Files)
+	})
+}
+
+func TestIssueSearch(t *testing.T) {
+	owner := seedUser(t, CreateUserOptions{})
+	other := seedUser(t, CreateUserOptions{})
+	public := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	private := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
+
+	ownerClient := newClient(t)
+	ownerClient.signIn(owner)
+	otherClient := newClient(t)
+	otherClient.signIn(other)
+	anonymous := newClient(t)
+
+	// The keyword is unique to this test, so a search of all repositories
+	// only finds the issues below.
+	keyword := UniqueName("zebra")
+	open := issueCreate(t, ownerClient, public, "Open "+keyword, "")
+	closed := issueCreate(t, ownerClient, public, "Closed "+keyword, "")
+	// Closing the second issue makes it the most recently updated one. Update
+	// times are in seconds, so wait for the next one, or the order of the
+	// search would not tell open first from newest first.
+	time.Sleep(1100 * time.Millisecond)
+	status, body := ownerClient.do(http.MethodPut, issueAPIPath(public, "issues", closed, "closed"), map[string]any{})
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	secret := issueCreate(t, ownerClient, private, "Secret "+keyword, "")
+
+	branch := UniqueName("topic-")
+	pullCommitToNewBranch(t, ownerClient, public, branch, "topic.md", "# Topic\n")
+	pull := pullCreate(t, ownerClient, public, branch, "Pull "+keyword)
+
+	type item struct {
+		Repo     string `json:"repo"`
+		Index    int64  `json:"index"`
+		Title    string `json:"title"`
+		IsPull   bool   `json:"isPull"`
+		IsClosed bool   `json:"isClosed"`
+	}
+	search := func(t *testing.T, c *client, q, repo string) []item {
+		t.Helper()
+		path := "/api/web/search/issues?q=" + url.QueryEscape(q)
+		if repo != "" {
+			path += "&repo=" + url.QueryEscape(repo)
+		}
+		var resp struct {
+			Items []item `json:"items"`
+		}
+		c.doJSON(http.MethodGet, path, nil, http.StatusOK, &resp)
+		require.NotNil(t, resp.Items)
+		return resp.Items
+	}
+	titles := func(items []item) []string {
+		titles := make([]string, 0, len(items))
+		for _, it := range items {
+			titles = append(titles, it.Title)
+		}
+		return titles
+	}
+	publicName := owner.Name + "/" + public.Name
+	privateName := owner.Name + "/" + private.Name
+
+	t.Run("by title, open first", func(t *testing.T) {
+		items := search(t, anonymous, strings.ToUpper(keyword), "")
+		// The closed issue is the most recently updated, and still comes after
+		// the open ones.
+		require.Len(t, items, 3)
+		assert.ElementsMatch(t, []item{
+			{Repo: publicName, Index: pull, Title: "Pull " + keyword, IsPull: true},
+			{Repo: publicName, Index: open, Title: "Open " + keyword},
+		}, items[:2])
+		assert.Equal(t, item{Repo: publicName, Index: closed, Title: "Closed " + keyword, IsClosed: true}, items[2])
+	})
+
+	t.Run("by number", func(t *testing.T) {
+		for _, q := range []string{strconv.FormatInt(closed, 10), "#" + strconv.FormatInt(closed, 10)} {
+			items := search(t, anonymous, q, publicName)
+			require.NotEmpty(t, items, q)
+			assert.Equal(t, closed, items[0].Index, q)
+		}
+	})
+
+	t.Run("without a keyword", func(t *testing.T) {
+		assert.Empty(t, search(t, anonymous, "  ", ""))
+	})
+
+	t.Run("private repository", func(t *testing.T) {
+		// 🚨 SECURITY: Viewers who cannot read the repository find nothing of
+		// it, even when they name it.
+		for name, c := range map[string]*client{"anonymous": anonymous, "other": otherClient} {
+			assert.NotContains(t, titles(search(t, c, keyword, "")), "Secret "+keyword, "%s viewer", name)
+			assert.Empty(t, search(t, c, keyword, privateName), "%s viewer", name)
+			assert.Empty(t, search(t, c, strconv.FormatInt(secret, 10), privateName), "%s viewer", name)
+		}
+		assert.Contains(t, titles(search(t, ownerClient, keyword, "")), "Secret "+keyword)
+		assert.Equal(t, []string{"Secret " + keyword}, titles(search(t, ownerClient, keyword, privateName)))
+	})
+
+	t.Run("pull requests turned off", func(t *testing.T) {
+		status, body := ownerClient.do(http.MethodPut, repoSettingsAPIPath(public, "/settings/advanced"), map[string]any{
+			"enableIssues":       true,
+			"allowPublicIssues":  true,
+			"enablePulls":        false,
+			"pullsAllowMerge":    true,
+			"pullsSquashMessage": "title_commits",
+		})
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+
+		assert.Equal(t, []string{"Open " + keyword, "Closed " + keyword}, titles(search(t, anonymous, keyword, publicName)))
+		// The number also matches titles with it, so look for the pull request
+		// itself.
+		for _, it := range search(t, anonymous, strconv.FormatInt(pull, 10), publicName) {
+			assert.False(t, it.IsPull, "found %+v", it)
+		}
 	})
 }

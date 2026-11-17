@@ -27,6 +27,14 @@ func TestSanitizer(t *testing.T) {
 		// Keyboard keys
 		{input: `<kbd>Ctrl</kbd>+<kbd class="ui button" style="color:red" onclick="alert(1)">C</kbd>`, expVal: `<kbd>Ctrl</kbd>+<kbd>C</kbd>`},
 
+		// Block alignment
+		{input: `<div align="center"><p align="Right">x</p><h1 align="left">t</h1></div>`, expVal: `<div align="center"><p align="Right">x</p><h1 align="left">t</h1></div>`},
+		{input: `<div align="center;color:red"></div><span align="center"></span>`, expVal: `<div></div><span></span>`},
+
+		// Image sizes
+		{input: `<img src="a.png" width="201px" height="50%">`, expVal: `<img src="a.png" width="201px" height="50%">`},
+		{input: `<img src="a.png" width="20em" height="1px;color:red">`, expVal: `<img src="a.png">`},
+
 		// Ordered list start
 		{input: `<ol start="10"><li>x</li></ol>`, expVal: `<ol start="10"><li>x</li></ol>`},
 		{input: `<ol start="1; x"><li>x</li></ol>`, expVal: `<ol><li>x</li></ol>`},

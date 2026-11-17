@@ -1,8 +1,8 @@
-import type { FileTreeDirectoryHandle, FileTreeIcons } from "@pierre/trees";
+import { FILE_TREE_DEFAULT_ITEM_HEIGHT, type FileTreeDirectoryHandle, type FileTreeIcons } from "@pierre/trees";
 import { FileTree, useFileTree } from "@pierre/trees/react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { repoPathsQuery } from "@/lib/queries/repo";
 import { TREE_THEME_STYLE } from "@/lib/tree-theme";
@@ -16,10 +16,11 @@ function ancestorsOf(path: string) {
 
 // RepoFileTree shows every file of the commit as a tree beside the code
 // browser, with the path the page shows open and selected. Picking a file
-// opens it at the ref.
+// opens it at the ref. It asks for the height of its rows, and shrinks to
+// scroll when its parent has less room.
 export function RepoFileTree(props: { owner: string; name: string; gitRef: string; commitID: string; path: string }) {
   const { data } = useQuery(repoPathsQuery(props.owner, props.name, props.commitID));
-  if (!data) return <div className="flex-1" />;
+  if (!data) return <div className="min-h-0 flex-1" />;
   // The tree takes its paths once, so a new commit gets a new tree.
   return <Tree key={props.commitID} {...props} paths={data.paths} />;
 }
@@ -68,6 +69,10 @@ function Tree({
     tree.current = model;
   }, [model]);
 
+  // Opening and closing folders changes how many rows there are.
+  const [rows, setRows] = useState(() => model.getVisibleCount());
+  useEffect(() => model.subscribe(() => setRows(model.getVisibleCount())), [model]);
+
   // Follow the page to another path, e.g., after the back button.
   useEffect(() => {
     current.current = path;
@@ -83,5 +88,9 @@ function Tree({
     if (item) model.scrollToPath(path, { offset: "nearest" });
   }, [model, path]);
 
-  return <FileTree model={model} style={{ ...TREE_THEME_STYLE, height: "100%" }} />;
+  return (
+    <div className="min-h-0 flex-auto" style={{ height: rows * FILE_TREE_DEFAULT_ITEM_HEIGHT }}>
+      <FileTree model={model} style={{ ...TREE_THEME_STYLE, height: "100%" }} />
+    </div>
+  );
 }

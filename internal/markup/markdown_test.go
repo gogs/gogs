@@ -160,6 +160,11 @@ func TestMarkdown_SpecialLinks(t *testing.T) {
 			want:  "<p><a href=\"/user\" rel=\"nofollow\">@user</a></p>\n<p><a href=\"/user/repo/images/a.png\" rel=\"nofollow\"><img src=\"/user/repo/images/a.png\"></a> <code>#12</code></p>\n",
 		},
 		{
+			name:  "centered raw HTML with sized relative images",
+			input: "<div align=\"center\">\n<img src=\"logo.png\" width=\"100\" height=\"50%\" alt=\"logo\"> <img src=\"https://example.com/b.svg\" width=\"80\">\n</div>\n\n<p align=\"middle\"><img src=\"x.png\" width=\"10em\" align=\"right\"></p>",
+			want:  "<div align=\"center\">\n<a href=\"/user/repo/logo.png\" rel=\"nofollow\"><img src=\"/user/repo/logo.png\" width=\"100\" height=\"50%\" alt=\"logo\"></a> <a href=\"https://example.com/b.svg\" rel=\"nofollow\"><img src=\"https://example.com/b.svg\" width=\"80\"></a>\n</div>\n<p><a href=\"/user/repo/x.png\" rel=\"nofollow\"><img src=\"/user/repo/x.png\" align=\"right\"></a></p>\n",
+		},
+		{
 			name:  "raw anchor across blocks",
 			input: "<a href=\"x\">\n\n#12\n\n</a> #13",
 			want:  "<a href=\"x\" rel=\"nofollow\">\n<p>#12</p>\n<p></a> #13</p>\n",

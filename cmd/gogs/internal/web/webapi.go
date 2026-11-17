@@ -396,6 +396,7 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Get("/organizations", getExploreOrganizations)
 		}, requireViewAccess)
 		f.Get("/search/code", requireViewAccess, getCodeSearch)
+		f.Get("/search/issues", requireViewAccess, getIssueSearch)
 		f.Group("/users/{username}", func() {
 			f.Get("", getUserProfile)
 			f.Get("/repos", getUserProfileRepos)
