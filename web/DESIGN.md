@@ -59,7 +59,7 @@ The traffic-light cluster in the faux-terminal frame uses one ad-hoc value: the 
 
 **Warning**
 
-`--color-warning` (amber, defined in both palettes) marks content that asks for attention without being an error, e.g., the notice banner below the navbar. It is dark enough in the light palette to meet 3:1 as an icon on white, so use it for the icon and border, a 10% tint of it for the background, and keep the text in `--color-foreground`. Links inside a warning surface use the foreground color with an underline, because the primary color loses contrast on the tint.
+`--color-warning` (amber, defined in both palettes) marks content that asks for attention without being an error, e.g., the notice banner below the navbar. It is dark enough in the light palette to meet 3:1 as an icon on white, so use it for the icon and border, a 10% tint of it for the background, and keep the text in `--color-foreground`. A warning bar across the page takes `glass-bar` like the navbar, with its tint on an inner layer, since the marker sets the bar's background color. Links inside a warning surface use the foreground color with an underline, because the primary color loses contrast on the tint.
 
 ## Glass
 
