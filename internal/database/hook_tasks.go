@@ -4,15 +4,318 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
+	"crypto/tls"
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/cockroachdb/errors"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"unknwon.dev/x/logx"
 
+	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/errx"
+	"gogs.io/gogs/internal/netx"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
+	"gogs.io/gogs/internal/sync"
 )
+
+var HookQueue = sync.NewUniqueQueue(1000)
+
+type HookTaskType int
+
+const (
+	GOGS HookTaskType = iota + 1
+	SLACK
+	DISCORD
+	DINGTALK
+)
+
+var hookTaskTypes = map[string]HookTaskType{
+	"gogs":     GOGS,
+	"slack":    SLACK,
+	"discord":  DISCORD,
+	"dingtalk": DINGTALK,
+}
+
+// ToHookTaskType returns HookTaskType by given name.
+func ToHookTaskType(name string) HookTaskType {
+	return hookTaskTypes[name]
+}
+
+func (t HookTaskType) Name() string {
+	switch t {
+	case GOGS:
+		return "gogs"
+	case SLACK:
+		return "slack"
+	case DISCORD:
+		return "discord"
+	case DINGTALK:
+		return "dingtalk"
+	}
+	return ""
+}
+
+// IsValidHookTaskType returns true if given name is a valid hook task type.
+func IsValidHookTaskType(name string) bool {
+	_, ok := hookTaskTypes[name]
+	return ok
+}
+
+type HookEventType string
+
+const (
+	HookEventTypeCreate       HookEventType = "create"
+	HookEventTypeDelete       HookEventType = "delete"
+	HookEventTypeFork         HookEventType = "fork"
+	HookEventTypePush         HookEventType = "push"
+	HookEventTypeIssues       HookEventType = "issues"
+	HookEventTypePullRequest  HookEventType = "pull_request"
+	HookEventTypeIssueComment HookEventType = "issue_comment"
+	HookEventTypeRelease      HookEventType = "release"
+)
+
+// HookRequest represents hook task request information.
+type HookRequest struct {
+	Headers map[string]string `json:"headers"`
+}
+
+// HookResponse represents hook task response information.
+type HookResponse struct {
+	Status  int               `json:"status"`
+	Headers map[string]string `json:"headers"`
+	Body    string            `json:"body"`
+}
+
+// HookTask represents a hook task.
+type HookTask struct {
+	ID                          int64
+	RepoID                      int64 `xorm:"INDEX"`
+	HookID                      int64
+	UUID                        string
+	Type                        HookTaskType
+	URL                         string `xorm:"TEXT"`
+	Signature                   string `xorm:"TEXT"`
+	apiv1types.WebhookPayloader `xorm:"-" json:"-" gorm:"-"`
+	PayloadContent              string `xorm:"TEXT"`
+	ContentType                 HookContentType
+	EventType                   HookEventType
+	IsSSL                       bool
+	IsDelivered                 bool
+	Delivered                   int64
+	DeliveredString             string `xorm:"-" json:"-" gorm:"-"`
+
+	// History info.
+	IsSucceed       bool
+	RequestContent  string        `xorm:"TEXT"`
+	RequestInfo     *HookRequest  `xorm:"-" json:"-" gorm:"-"`
+	ResponseContent string        `xorm:"TEXT"`
+	ResponseInfo    *HookResponse `xorm:"-" json:"-" gorm:"-"`
+}
+
+// BeforeUpdate implements the GORM update hook.
+func (t *HookTask) BeforeUpdate(_ *gorm.DB) error {
+	if t.RequestInfo != nil {
+		t.RequestContent = t.ToJSON(t.RequestInfo)
+	}
+	if t.ResponseInfo != nil {
+		t.ResponseContent = t.ToJSON(t.ResponseInfo)
+	}
+	return nil
+}
+
+// AfterFind implements the GORM query hook.
+func (t *HookTask) AfterFind(_ *gorm.DB) error {
+	t.DeliveredString = time.Unix(0, t.Delivered).Format("2006-01-02 15:04:05 MST")
+
+	if t.RequestContent != "" {
+		t.RequestInfo = &HookRequest{}
+		if err := json.Unmarshal([]byte(t.RequestContent), t.RequestInfo); err != nil {
+			handleLogger().Error("Failed to unmarshal hook task request", "hookTaskID", t.ID, "error", err)
+		}
+	}
+
+	if t.ResponseContent != "" {
+		t.ResponseInfo = &HookResponse{}
+		if err := json.Unmarshal([]byte(t.ResponseContent), t.ResponseInfo); err != nil {
+			handleLogger().Error("Failed to unmarshal hook task response", "hookTaskID", t.ID, "error", err)
+		}
+	}
+	return nil
+}
+
+func (t *HookTask) ToJSON(v any) string {
+	p, err := json.Marshal(v)
+	if err != nil {
+		handleLogger().Error("Failed to marshal JSON", "hookTaskID", t.ID, "error", err)
+	}
+	return string(p)
+}
+
+var _ errx.NotFound = (*ErrHookTaskNotExist)(nil)
+
+type ErrHookTaskNotExist struct {
+	args map[string]any
+}
+
+func IsHookTaskNotExist(err error) bool {
+	_, ok := err.(ErrHookTaskNotExist)
+	return ok
+}
+
+func (err ErrHookTaskNotExist) Error() string {
+	return fmt.Sprintf("hook task does not exist: %v", err.args)
+}
+
+func (ErrHookTaskNotExist) NotFound() bool {
+	return true
+}
+
+func (t *HookTask) deliver(ctx context.Context, logger *logx.Logger, webhooks *WebhooksStore) {
+	payloadURL, err := url.Parse(t.URL)
+	if err != nil {
+		t.ResponseContent = fmt.Sprintf(`{"body": "Cannot parse payload URL: %v"}`, err)
+		return
+	}
+	if netx.IsBlockedLocalHostname(payloadURL.Hostname(), conf.Security.LocalNetworkAllowlist) {
+		t.ResponseContent = `{"body": "Payload URL resolved to a local network address that is implicitly blocked."}`
+		return
+	}
+
+	var body, contentType string
+	switch t.ContentType {
+	case JSON:
+		body, contentType = t.PayloadContent, "application/json"
+	case FORM:
+		body, contentType = url.Values{"payload": {t.PayloadContent}}.Encode(), "application/x-www-form-urlencoded"
+	}
+	req, err := http.NewRequest(http.MethodPost, t.URL, strings.NewReader(body))
+	if err != nil {
+		t.ResponseContent = fmt.Sprintf(`{"body": "Cannot create request: %v"}`, err)
+		return
+	}
+	req.Header.Set("User-Agent", "GogsServer")
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
+	}
+	req.Header.Set("X-Github-Delivery", t.UUID)
+	req.Header.Set("X-Github-Event", string(t.EventType))
+	req.Header.Set("X-Gogs-Delivery", t.UUID)
+	req.Header.Set("X-Gogs-Signature", t.Signature)
+	req.Header.Set("X-Gogs-Event", string(t.EventType))
+
+	t.IsDelivered = true
+
+	// Record delivery information.
+	t.RequestInfo = &HookRequest{
+		Headers: map[string]string{},
+	}
+	for k, vals := range req.Header {
+		t.RequestInfo.Headers[k] = strings.Join(vals, ",")
+	}
+
+	t.ResponseInfo = &HookResponse{
+		Headers: map[string]string{},
+	}
+
+	defer func() {
+		t.Delivered = time.Now().UnixNano()
+		if t.IsSucceed {
+			logger.Debug("Hook delivered", "uuid", t.UUID)
+		} else {
+			logger.Debug("Hook delivery failed", "uuid", t.UUID)
+		}
+
+		status := HookStatus(HookStatusFailed)
+		if t.IsSucceed {
+			status = HookStatusSucceed
+		}
+		if err := webhooks.setLastStatus(ctx, t.HookID, status); err != nil {
+			logger.Error("Failed to update last status of webhook", "webhookID", t.HookID, "error", err)
+		}
+	}()
+
+	client := &http.Client{
+		Timeout: time.Duration(conf.Webhook.DeliverTimeout) * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig:   &tls.Config{InsecureSkipVerify: conf.Webhook.SkipTLSVerify},
+			DisableKeepAlives: true,
+		},
+		CheckRedirect: func(req *http.Request, _ []*http.Request) error {
+			// The webhook target is explicitly configured by the user, so any
+			// redirect would silently retarget the signed payload. Refuse all
+			// redirects rather than chase them.
+			return errors.Newf("refusing to follow webhook redirect to %q", req.URL.Redacted())
+		},
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		t.ResponseInfo.Body = fmt.Sprintf("Delivery: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Status code is 20x can be seen as succeed.
+	t.IsSucceed = resp.StatusCode/100 == 2
+	t.ResponseInfo.Status = resp.StatusCode
+	for k, vals := range resp.Header {
+		t.ResponseInfo.Headers[k] = strings.Join(vals, ",")
+	}
+
+	p, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.ResponseInfo.Body = fmt.Sprintf("read body: %s", err)
+		return
+	}
+	t.ResponseInfo.Body = string(p)
+}
+
+// DeliverHooks delivers the deliveries that have not been made, and then
+// those of each repository that is queued.
+// TODO: shoot more hooks at same time.
+func DeliverHooks(logger *logx.Logger) {
+	ctx := context.Background()
+	webhooks, hookTasks := Handle.Webhooks(), Handle.HookTasks()
+	deliver := func(repoID int64) {
+		tasks, err := hookTasks.listUndelivered(ctx, repoID)
+		if err != nil {
+			logger.Error("Failed to list undelivered hook tasks", "repoID", repoID, "error", err)
+			return
+		}
+		for _, t := range tasks {
+			t.deliver(ctx, logger, webhooks)
+			if err = hookTasks.Update(ctx, t); err != nil {
+				logger.Error("Failed to update hook task", "hookTaskID", t.ID, "error", err)
+			}
+		}
+	}
+
+	deliver(0)
+
+	// Start listening on new hook requests.
+	for repoID := range HookQueue.Queue() {
+		logger.Debug("Delivering hooks", "repoID", repoID)
+		HookQueue.Remove(repoID)
+		id, err := strconv.ParseInt(repoID, 10, 64)
+		if err != nil {
+			logger.Error("Failed to parse queued repository ID", "repoID", repoID, "error", err)
+			continue
+		}
+		deliver(id)
+	}
+}
+
+func InitDeliverHooks(logger *logx.Logger) {
+	go DeliverHooks(logger)
+}
 
 // HookTasksStore is the storage layer for deliveries of webhooks.
 type HookTasksStore struct {

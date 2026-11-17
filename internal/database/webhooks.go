@@ -2,10 +2,231 @@ package database
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"time"
 
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
+
+	"gogs.io/gogs/internal/errx"
 )
+
+type HookContentType int
+
+const (
+	JSON HookContentType = iota + 1
+	FORM
+)
+
+var hookContentTypes = map[string]HookContentType{
+	"json": JSON,
+	"form": FORM,
+}
+
+// ToHookContentType returns HookContentType by given name.
+func ToHookContentType(name string) HookContentType {
+	return hookContentTypes[name]
+}
+
+func (t HookContentType) Name() string {
+	switch t {
+	case JSON:
+		return "json"
+	case FORM:
+		return "form"
+	}
+	return ""
+}
+
+// IsValidHookContentType returns true if given name is a valid hook content type.
+func IsValidHookContentType(name string) bool {
+	_, ok := hookContentTypes[name]
+	return ok
+}
+
+type HookEvents struct {
+	Create       bool `json:"create"`
+	Delete       bool `json:"delete"`
+	Fork         bool `json:"fork"`
+	Push         bool `json:"push"`
+	Issues       bool `json:"issues"`
+	PullRequest  bool `json:"pull_request"`
+	IssueComment bool `json:"issue_comment"`
+	Release      bool `json:"release"`
+}
+
+// HookEvent represents events that will delivery hook.
+type HookEvent struct {
+	PushOnly       bool `json:"push_only"`
+	SendEverything bool `json:"send_everything"`
+	ChooseEvents   bool `json:"choose_events"`
+
+	HookEvents `json:"events"`
+}
+
+type HookStatus int
+
+const (
+	HookStatusNone = iota
+	HookStatusSucceed
+	HookStatusFailed
+)
+
+// Webhook represents a web hook object.
+type Webhook struct {
+	ID           int64
+	RepoID       int64
+	OrgID        int64
+	URL          string `xorm:"url TEXT"`
+	ContentType  HookContentType
+	Secret       string              `xorm:"TEXT"`
+	Events       string              `xorm:"TEXT"`
+	*HookEvent   `xorm:"-" gorm:"-"` // LEGACY [1.0]: Cannot ignore JSON (i.e. json:"-") here, it breaks old backup archive
+	IsSSL        bool                `xorm:"is_ssl"`
+	IsActive     bool
+	HookTaskType HookTaskType
+	Meta         string     `xorm:"TEXT"` // store hook-specific attributes
+	LastStatus   HookStatus // Last delivery status
+
+	Created     time.Time `xorm:"-" json:"-" gorm:"-"`
+	CreatedUnix int64
+	Updated     time.Time `xorm:"-" json:"-" gorm:"-"`
+	UpdatedUnix int64
+}
+
+// BeforeCreate implements the GORM create hook.
+func (w *Webhook) BeforeCreate(tx *gorm.DB) error {
+	if w.CreatedUnix == 0 {
+		w.CreatedUnix = tx.NowFunc().Unix()
+		w.UpdatedUnix = w.CreatedUnix
+	}
+	return nil
+}
+
+// BeforeUpdate implements the GORM update hook.
+func (w *Webhook) BeforeUpdate(tx *gorm.DB) error {
+	w.UpdatedUnix = tx.NowFunc().Unix()
+	return nil
+}
+
+// AfterFind implements the GORM query hook.
+func (w *Webhook) AfterFind(_ *gorm.DB) error {
+	w.HookEvent = &HookEvent{}
+	if err := json.Unmarshal([]byte(w.Events), w.HookEvent); err != nil {
+		handleLogger().Error("Failed to unmarshal webhook events", "webhookID", w.ID, "error", err)
+	}
+	w.Created = time.Unix(w.CreatedUnix, 0).Local()
+	w.Updated = time.Unix(w.UpdatedUnix, 0).Local()
+	return nil
+}
+
+func (w *Webhook) SlackMeta() *SlackMeta {
+	s := &SlackMeta{}
+	if err := json.Unmarshal([]byte(w.Meta), s); err != nil {
+		handleLogger().Error("Failed to get Slack meta", "webhookID", w.ID, "error", err)
+	}
+	return s
+}
+
+// UpdateEvent handles conversion from HookEvent to Events.
+func (w *Webhook) UpdateEvent() error {
+	data, err := json.Marshal(w.HookEvent)
+	w.Events = string(data)
+	return err
+}
+
+// HasCreateEvent returns true if hook enabled create event.
+func (w *Webhook) HasCreateEvent() bool {
+	return w.SendEverything ||
+		(w.ChooseEvents && w.Create)
+}
+
+// HasDeleteEvent returns true if hook enabled delete event.
+func (w *Webhook) HasDeleteEvent() bool {
+	return w.SendEverything ||
+		(w.ChooseEvents && w.Delete)
+}
+
+// HasForkEvent returns true if hook enabled fork event.
+func (w *Webhook) HasForkEvent() bool {
+	return w.SendEverything ||
+		(w.ChooseEvents && w.Fork)
+}
+
+// HasPushEvent returns true if hook enabled push event.
+func (w *Webhook) HasPushEvent() bool {
+	return w.PushOnly || w.SendEverything ||
+		(w.ChooseEvents && w.Push)
+}
+
+// HasIssuesEvent returns true if hook enabled issues event.
+func (w *Webhook) HasIssuesEvent() bool {
+	return w.SendEverything ||
+		(w.ChooseEvents && w.Issues)
+}
+
+// HasPullRequestEvent returns true if hook enabled pull request event.
+func (w *Webhook) HasPullRequestEvent() bool {
+	return w.SendEverything ||
+		(w.ChooseEvents && w.PullRequest)
+}
+
+// HasIssueCommentEvent returns true if hook enabled issue comment event.
+func (w *Webhook) HasIssueCommentEvent() bool {
+	return w.SendEverything ||
+		(w.ChooseEvents && w.IssueComment)
+}
+
+// HasReleaseEvent returns true if hook enabled release event.
+func (w *Webhook) HasReleaseEvent() bool {
+	return w.SendEverything ||
+		(w.ChooseEvents && w.Release)
+}
+
+type eventChecker struct {
+	checker func() bool
+	typ     HookEventType
+}
+
+func (w *Webhook) EventsArray() []string {
+	events := make([]string, 0, 8)
+	eventCheckers := []eventChecker{
+		{w.HasCreateEvent, HookEventTypeCreate},
+		{w.HasDeleteEvent, HookEventTypeDelete},
+		{w.HasForkEvent, HookEventTypeFork},
+		{w.HasPushEvent, HookEventTypePush},
+		{w.HasIssuesEvent, HookEventTypeIssues},
+		{w.HasPullRequestEvent, HookEventTypePullRequest},
+		{w.HasIssueCommentEvent, HookEventTypeIssueComment},
+		{w.HasReleaseEvent, HookEventTypeRelease},
+	}
+	for _, c := range eventCheckers {
+		if c.checker() {
+			events = append(events, string(c.typ))
+		}
+	}
+	return events
+}
+
+var _ errx.NotFound = (*ErrWebhookNotExist)(nil)
+
+type ErrWebhookNotExist struct {
+	args map[string]any
+}
+
+func IsErrWebhookNotExist(err error) bool {
+	_, ok := err.(ErrWebhookNotExist)
+	return ok
+}
+
+func (err ErrWebhookNotExist) Error() string {
+	return fmt.Sprintf("webhook does not exist: %v", err.args)
+}
+
+func (ErrWebhookNotExist) NotFound() bool {
+	return true
+}
 
 // WebhooksStore is the storage layer for webhooks.
 type WebhooksStore struct {
