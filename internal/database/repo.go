@@ -550,11 +550,6 @@ func (r *Repository) GetWriters() (_ []*User, err error) {
 	return r.getUsersWithAccesMode(x, AccessModeWrite)
 }
 
-// GetMilestoneByID returns the milestone belongs to repository by given ID.
-func (r *Repository) GetMilestoneByID(milestoneID int64) (*Milestone, error) {
-	return GetMilestoneByRepoID(r.ID, milestoneID)
-}
-
 // IssueStats returns number of open and closed repository issues by given filter mode.
 func (r *Repository) IssueStats(userID int64, filterMode FilterMode, isPull bool) (int64, int64) {
 	return GetRepoIssueStats(r.ID, userID, filterMode, isPull)
