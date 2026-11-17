@@ -100,7 +100,7 @@ func PushUpdate(ctx context.Context, logger *logx.Logger, opts PushUpdateOptions
 		return errors.Wrap(err, "load repository attributes")
 	}
 
-	if err = repo.UpdateSize(ctx); err != nil {
+	if err = repos.UpdateSize(ctx, repo); err != nil {
 		return errors.Newf("UpdateSize: %v", err)
 	}
 

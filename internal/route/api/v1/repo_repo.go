@@ -41,7 +41,7 @@ func searchRepos(c *apiContext) {
 		}
 	}
 
-	repos, count, err := database.SearchRepositoryByName(opts)
+	repos, count, err := database.Handle.Repositories().Search(c.Request().Context(), *opts)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, map[string]any{
 			"ok":    false,
@@ -83,7 +83,7 @@ func listReposOfUser(c *apiContext, username string) {
 	if user.IsOrganization() {
 		ownRepos, _, err = database.Handle.Organizations().ListAccessibleRepos(c.Request().Context(), user.ID, c.User.ID, 1, user.NumRepos)
 	} else {
-		ownRepos, err = database.GetUserRepositories(&database.UserRepoOptions{
+		ownRepos, err = database.Handle.Repositories().ListByOwner(c.Request().Context(), database.UserRepoOptions{
 			UserID:   user.ID,
 			Private:  c.User.ID == user.ID,
 			Page:     1,
@@ -171,7 +171,7 @@ func createUserRepo(c *apiContext, owner *database.User, opt createRepoRequest) 
 	// CreateRepository checks for an existing repository directory before it
 	// checks the name, so a taken name would fail there with a 500 instead of
 	// a 422.
-	taken, err := database.IsRepositoryExist(owner, opt.Name)
+	taken, err := database.Handle.Repositories().Exists(c.Request().Context(), owner, opt.Name)
 	if err != nil {
 		c.Error(err, "check repository existence")
 		return
@@ -180,7 +180,7 @@ func createUserRepo(c *apiContext, owner *database.User, opt createRepoRequest) 
 		return
 	}
 
-	repo, err := database.CreateRepository(c.Request().Context(), c.Logger, c.User, owner, database.CreateRepoOptionsLegacy{
+	repo, err := database.Handle.Repositories().Create(c.Request().Context(), c.Logger, c.User, owner, database.CreateRepoOptionsLegacy{
 		Name:         opt.Name,
 		Description:  opt.Description,
 		Gitignores:   opt.Gitignores,
@@ -196,7 +196,7 @@ func createUserRepo(c *apiContext, owner *database.User, opt createRepoRequest) 
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
 		} else {
 			if repo != nil {
-				if err = database.DeleteRepository(c.Logger, c.User.ID, repo.ID); err != nil {
+				if err = database.Handle.Repositories().Delete(c.Request().Context(), c.Logger, c.User.ID, repo.ID); err != nil {
 					c.Logger.Error("Failed to delete repository", "error", err)
 				}
 			}
@@ -298,7 +298,7 @@ func migrate(c *apiContext, f migrateRepoRequest) {
 		return
 	}
 
-	repo, err := database.MigrateRepository(c.Request().Context(), c.Logger, c.User, ctxUser, database.MigrateRepoOptions{
+	repo, err := database.Handle.Repositories().Migrate(c.Request().Context(), c.Logger, c.User, ctxUser, database.MigrateRepoOptions{
 		Name:        f.RepoName,
 		Description: f.Description,
 		IsPrivate:   f.Private || conf.Repository.ForcePrivate,
@@ -307,7 +307,7 @@ func migrate(c *apiContext, f migrateRepoRequest) {
 	})
 	if err != nil {
 		if repo != nil {
-			if errDelete := database.DeleteRepository(c.Logger, ctxUser.ID, repo.ID); errDelete != nil {
+			if errDelete := database.Handle.Repositories().Delete(c.Request().Context(), c.Logger, ctxUser.ID, repo.ID); errDelete != nil {
 				c.Logger.Error("Failed to delete repository", "error", errDelete)
 			}
 		}
@@ -375,7 +375,7 @@ func deleteRepo(c *apiContext) {
 		return
 	}
 
-	if err := database.DeleteRepository(c.Logger, owner.ID, repo.ID); err != nil {
+	if err := database.Handle.Repositories().Delete(c.Request().Context(), c.Logger, owner.ID, repo.ID); err != nil {
 		c.Error(err, "delete repository")
 		return
 	}
@@ -385,7 +385,7 @@ func deleteRepo(c *apiContext) {
 }
 
 func listForks(c *apiContext) {
-	forks, err := c.Repo.Repository.GetForks()
+	forks, err := database.Handle.Repositories().ListForks(c.Request().Context(), c.Repo.Repository)
 	if err != nil {
 		c.Error(err, "get forks")
 		return
@@ -451,7 +451,7 @@ func issueTracker(c *apiContext, form editIssueTrackerRequest) {
 		repo.ExternalTrackerStyle = *form.TrackerIssueStyle
 	}
 
-	if err := database.UpdateRepository(c.Logger, repo, false); err != nil {
+	if err := database.Handle.Repositories().Update(c.Request().Context(), c.Logger, repo, false); err != nil {
 		c.Error(err, "update repository")
 		return
 	}
@@ -484,7 +484,7 @@ func wiki(c *apiContext, form editWikiRequest) {
 	if form.ExternalWikiURL != nil {
 		repo.ExternalWikiURL = *form.ExternalWikiURL
 	}
-	if err := database.UpdateRepository(c.Logger, repo, false); err != nil {
+	if err := database.Handle.Repositories().Update(c.Request().Context(), c.Logger, repo, false); err != nil {
 		c.Error(err, "update repository")
 		return
 	}

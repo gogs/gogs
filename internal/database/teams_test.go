@@ -66,7 +66,7 @@ func newTestOrg(t *testing.T, ctx context.Context, db *gorm.DB, name string) (or
 func newTestTeamRepo(t *testing.T, ctx context.Context, db *gorm.DB, org *User, name string, private bool) *Repository {
 	t.Helper()
 
-	repo, err := newReposStore(db).Create(ctx, org.ID, CreateRepoOptions{Name: name, Private: private})
+	repo, err := newReposStore(db).create(ctx, org.ID, CreateRepoOptions{Name: name, Private: private})
 	require.NoError(t, err)
 	return repo
 }

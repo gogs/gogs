@@ -66,7 +66,7 @@ func newTestIssueRepo(t *testing.T, ctx context.Context, db *gorm.DB, ownerName 
 	t.Helper()
 
 	owner := newTestIssueUser(t, ctx, db, ownerName)
-	repo, err := newReposStore(db).Create(ctx, owner.ID, CreateRepoOptions{Name: "repo1"})
+	repo, err := newReposStore(db).create(ctx, owner.ID, CreateRepoOptions{Name: "repo1"})
 	require.NoError(t, err)
 	repo.Owner = owner
 	return repo

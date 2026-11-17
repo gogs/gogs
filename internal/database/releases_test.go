@@ -60,7 +60,7 @@ func newTestReleaseRepo(t *testing.T, ctx context.Context, s *ReleasesStore, own
 
 	owner, err := newUsersStore(s.db).Create(ctx, ownerName, ownerName+"@example.com", CreateUserOptions{})
 	require.NoError(t, err)
-	repo, err := newReposStore(s.db).Create(ctx, owner.ID, CreateRepoOptions{Name: "repo1"})
+	repo, err := newReposStore(s.db).create(ctx, owner.ID, CreateRepoOptions{Name: "repo1"})
 	require.NoError(t, err)
 	repo.Owner = owner
 
@@ -211,7 +211,7 @@ func releasesLoadAttributes(t *testing.T, ctx context.Context, s *ReleasesStore)
 
 	owner, err := newUsersStore(s.db).Create(ctx, "rel-load", "rel-load@example.com", CreateUserOptions{})
 	require.NoError(t, err)
-	repo, err := newReposStore(s.db).Create(ctx, owner.ID, CreateRepoOptions{Name: "repo1"})
+	repo, err := newReposStore(s.db).create(ctx, owner.ID, CreateRepoOptions{Name: "repo1"})
 	require.NoError(t, err)
 
 	withPublisher := &Release{RepoID: repo.ID, PublisherID: owner.ID, TagName: "v1", LowerTagName: "v1"}

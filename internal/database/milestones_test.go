@@ -63,7 +63,7 @@ func newTestMilestoneRepo(t *testing.T, ctx context.Context, s *MilestonesStore,
 
 	owner, err := newUsersStore(s.db).Create(ctx, ownerName, ownerName+"@example.com", CreateUserOptions{})
 	require.NoError(t, err)
-	repo, err := newReposStore(s.db).Create(ctx, owner.ID, CreateRepoOptions{Name: "repo1"})
+	repo, err := newReposStore(s.db).create(ctx, owner.ID, CreateRepoOptions{Name: "repo1"})
 	require.NoError(t, err)
 	repo.Owner = owner
 	return repo

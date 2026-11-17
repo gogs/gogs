@@ -325,7 +325,7 @@ func (m *Mirror) runSync(logger *logx.Logger) ([]*mirrorSyncResult, bool) {
 		return nil, false
 	}
 
-	if err := m.Repo.UpdateSize(context.Background()); err != nil {
+	if err := Handle.Repositories().UpdateSize(context.Background(), m.Repo); err != nil {
 		logger.Error("Failed to update repository size", "repoID", m.Repo.ID, "error", err)
 	}
 

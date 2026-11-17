@@ -143,16 +143,19 @@ type adminRepo struct {
 }
 
 func getAdminRepos(logger *logx.Logger, c flamego.Context) (statusCode int, resp *adminListPage[adminRepo], err error) {
+	ctx := c.Request().Context()
 	page, pageSize := pageParam(c), conf.UI.Admin.RepoPagingNum
 	var (
 		repos []*database.Repository
 		total int64
 	)
 	if keyword := c.Query("q"); keyword == "" {
-		repos, err = database.Repositories(page, pageSize)
-		total = database.CountRepositories(logger, true)
+		repos, err = database.Handle.Repositories().ListByPage(ctx, page, pageSize)
+		if err == nil {
+			total, err = database.Handle.Repositories().Count(ctx, 0, true)
+		}
 	} else {
-		repos, total, err = database.SearchRepositoryByName(&database.SearchRepoOptions{
+		repos, total, err = database.Handle.Repositories().Search(ctx, database.SearchRepoOptions{
 			Keyword:  keyword,
 			OrderBy:  "id ASC",
 			Private:  true,
@@ -187,6 +190,7 @@ func getAdminRepos(logger *logx.Logger, c flamego.Context) (statusCode int, resp
 }
 
 func deleteAdminRepo(logger *logx.Logger, c flamego.Context, viewer *database.User) (statusCode int, resp any, err error) {
+	ctx := c.Request().Context()
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	repo, err := database.Handle.Repositories().GetByID(c.Request().Context(), id)
 	if err != nil {
@@ -196,7 +200,7 @@ func deleteAdminRepo(logger *logx.Logger, c flamego.Context, viewer *database.Us
 		logger.Error("Failed to get repository", "repoID", id, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get repository")
 	}
-	if err = database.DeleteRepository(logger, repo.OwnerID, repo.ID); err != nil {
+	if err = database.Handle.Repositories().Delete(ctx, logger, repo.OwnerID, repo.ID); err != nil {
 		logger.Error("Failed to delete repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete repository")
 	}

@@ -157,7 +157,7 @@ func CreateRepository(ctx context.Context, logger *logx.Logger, ownerID int64, o
 	if opts.AutoInit {
 		readme = "Default"
 	}
-	repo, err := database.CreateRepository(ctx, logger, owner, owner, database.CreateRepoOptionsLegacy{
+	repo, err := database.Handle.Repositories().Create(ctx, logger, owner, owner, database.CreateRepoOptionsLegacy{
 		Name:      UniqueName("repo-"),
 		IsPrivate: opts.Private,
 		AutoInit:  opts.AutoInit,

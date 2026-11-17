@@ -195,7 +195,7 @@ func newTestOrgRepo(t *testing.T, ctx context.Context, s *WebhooksStore) (org *U
 	require.NoError(t, err)
 	err = s.db.Exec(dbx.Quote("UPDATE %s SET type = ? WHERE id = ?", "user"), UserTypeOrganization, org.ID).Error
 	require.NoError(t, err)
-	repo, err = newReposStore(s.db).Create(ctx, org.ID, CreateRepoOptions{Name: "repo1"})
+	repo, err = newReposStore(s.db).create(ctx, org.ID, CreateRepoOptions{Name: "repo1"})
 	require.NoError(t, err)
 	return org, repo
 }
@@ -250,7 +250,7 @@ func webhooksPrepare(t *testing.T, ctx context.Context, s *WebhooksStore) {
 	assert.Empty(t, tasks[1].Signature)
 
 	// Webhooks of organizations are left out for repositories of users.
-	userRepo, err := newReposStore(s.db).Create(ctx, 404, CreateRepoOptions{Name: "repo2"})
+	userRepo, err := newReposStore(s.db).create(ctx, 404, CreateRepoOptions{Name: "repo2"})
 	require.NoError(t, err)
 	userRepo.Owner = &User{ID: 404}
 	newTestWebhook(t, ctx, s, userRepo.ID, 0, HookEvents{})
