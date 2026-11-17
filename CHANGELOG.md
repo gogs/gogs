@@ -96,6 +96,8 @@ All notable changes to Gogs are documented in this file.
 - A long word in a commit message body, e.g., a file path, no longer runs past the commit page. [#8606](https://github.com/gogs/gogs/pull/8606)
 - Cloning a public repository without signing in now downloads its Git LFS files instead of asking for credentials. [#8573](https://github.com/gogs/gogs/pull/8573)
 - `gogs restore` no longer resets some timestamps to the time of the restore, such as when issues and comments were last updated and when mirrors next sync. [#8511](https://github.com/gogs/gogs/pull/8511)
+- `gogs restore` no longer silently drops table rows larger than 64 KiB, such as issues with long descriptions, and every row after them. [#8527](https://github.com/gogs/gogs/pull/8527)
+- `gogs restore` of a backup made by Gogs 0.12 now keeps user passwords, access tokens, stars, and the owners of additional email addresses. [#8527](https://github.com/gogs/gogs/pull/8527)
 
 ### Removed
 
