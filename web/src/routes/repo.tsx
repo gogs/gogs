@@ -1,7 +1,12 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { type AnyRoute, createRoute, notFound, redirect } from "@tanstack/react-router";
 
-import { LoaderResponseError, loadAuthenticatedPage, loaderResponseError, signInRedirect } from "@/lib/loader-error";
+import {
+  LoaderResponseError,
+  authenticationRedirect,
+  loadAuthenticatedPage,
+  loaderResponseError,
+} from "@/lib/loader-error";
 import {
   type BranchesSearch,
   type ListSearch,
@@ -642,7 +647,7 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
       beforeLoad: ({ context, search, location }) => {
         if (!(context as RouterContext).user && (search as RepoIssuesSearch).type) {
           // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
-          throw signInRedirect(location.href);
+          throw authenticationRedirect(location.href);
         }
       },
       loaderDeps: ({ search }: { search: RepoIssuesSearch }) => search,

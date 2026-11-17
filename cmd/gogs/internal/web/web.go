@@ -279,15 +279,6 @@ func newRoutingHandler(logger *logx.Logger) (http.Handler, error) {
 	f := flamego.New()
 	f.Map(logger)
 	f.AutoHead(true)
-	// Like Macaron did, a trailing slash of a page path is ignored, e.g.,
-	// "/alice/widgets/" is the page of "/alice/widgets".
-	f.Before(func(_ http.ResponseWriter, r *http.Request) bool {
-		if p := r.URL.Path; len(p) > 1 && strings.HasSuffix(p, "/") && !strings.HasPrefix(p, "/api/") {
-			r.URL.Path = strings.TrimRight(p, "/")
-			r.URL.RawPath = ""
-		}
-		return false
-	})
 	f.Use(flamego.Recovery(flamego.RecoveryOptions{PlainText: true}))
 	f.Use(flamegoInjector)
 	f.Use(captcha.Captchaer(captcha.Options{URLPrefix: "/captcha/"}))
@@ -525,9 +516,9 @@ func renderIndex(index []byte, wc context.WebContext, inject injectContent) ([]b
 		Page      string `json:"page,omitempty"`
 		Error     string `json:"error,omitempty"`
 		Version   string `json:"version,omitempty"`
-		// The web app sends visitors who are not signed in to these pages.
-		LandingURL        string `json:"landingURL,omitempty"`
-		RequireSignInView bool   `json:"requireSignInView,omitempty"`
+		// The web app sends unauthenticated viewers to these pages.
+		LandingURL                 string `json:"landingURL,omitempty"`
+		RequireAuthenticatedViewer bool   `json:"requireAuthenticatedViewer,omitempty"`
 	}{
 		Lang:      wc.Lang,
 		SubURL:    wc.SubURL,
@@ -536,8 +527,8 @@ func renderIndex(index []byte, wc context.WebContext, inject injectContent) ([]b
 		Error:     wc.Error,
 		Version:   wc.Version,
 
-		LandingURL:        landingURL,
-		RequireSignInView: conf.Auth.RequireSigninView,
+		LandingURL:                 landingURL,
+		RequireAuthenticatedViewer: conf.Auth.RequireSigninView,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "marshal web context")

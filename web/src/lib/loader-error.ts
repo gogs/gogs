@@ -37,9 +37,9 @@ export async function loaderResponseError(res: Response): Promise<LoaderResponse
   return new LoaderResponseError(res.status, body, errorField);
 }
 
-// signInRedirect sends the viewer to sign in, and back to the page at href,
+// authenticationRedirect sends the viewer to sign in, and back to the page at href,
 // which is relative to the subpath, afterwards.
-export function signInRedirect(href: string) {
+export function authenticationRedirect(href: string) {
   return redirect({ to: "/user/sign-in", search: { redirect_to: webContext.subURL + href }, replace: true });
 }
 

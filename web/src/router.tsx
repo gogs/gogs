@@ -22,7 +22,7 @@ import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { webContext } from "@/lib/context";
-import { LoaderResponseError, signInRedirect } from "@/lib/loader-error";
+import { LoaderResponseError, authenticationRedirect } from "@/lib/loader-error";
 import type { UserInfo } from "@/lib/user-info";
 import { NotFound } from "@/pages/NotFound";
 import { ServerError } from "@/pages/ServerError";
@@ -134,7 +134,7 @@ function makeRouter(context: RouterContext) {
       if (err.status === 401) {
         // The location being loaded, which is not the current one yet.
         // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
-        throw signInRedirect(router.latestLocation.href);
+        throw authenticationRedirect(router.latestLocation.href);
       }
       if (err.status === 403 && err.errorField === "account not activated") {
         // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.

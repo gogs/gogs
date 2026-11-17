@@ -15,8 +15,8 @@ export interface WebContext {
   // Where visitors who are not signed in land instead of the home page, if
   // anywhere else, e.g., "/explore/repos".
   landingURL?: string;
-  // Whether visitors must sign in to view any content.
-  requireSignInView?: boolean;
+  // Whether viewers must be authenticated to view any content.
+  requireAuthenticatedViewer?: boolean;
 }
 
 declare global {
@@ -38,7 +38,7 @@ function read(): WebContext {
     error: ctx.error,
     version: ctx.version,
     landingURL: ctx.landingURL,
-    requireSignInView: ctx.requireSignInView,
+    requireAuthenticatedViewer: ctx.requireAuthenticatedViewer,
   };
 }
 
