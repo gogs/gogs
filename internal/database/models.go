@@ -80,10 +80,8 @@ func init() {
 	sql.Register("sqlite3", &sqlite.Driver{})
 
 	legacyTables = append(legacyTables,
-		new(User),
 		new(Repository),
-		new(ProtectBranch),
-		new(Team), new(OrgUser), new(TeamUser), new(TeamRepo),
+		new(Team),
 	)
 
 	gonicNames := []string{"SSL"}

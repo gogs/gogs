@@ -30,11 +30,12 @@ var Tables = []any{
 	new(Label), new(LFSObject), new(LoginSource),
 	new(Milestone), new(Mirror),
 	new(Notice),
-	new(Passkey), new(PublicKey), new(PullRequest),
+	new(OrgUser),
+	new(Passkey), new(ProtectBranch), new(PublicKey), new(PullRequest),
 	new(Release),
 	new(Star),
-	new(TwoFactor), new(TwoFactorRecoveryCode),
-	new(Upload),
+	new(TeamRepo), new(TeamUser), new(TwoFactor), new(TwoFactorRecoveryCode),
+	new(Upload), new(User),
 	new(Watch), new(Webhook),
 }
 

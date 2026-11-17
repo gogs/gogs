@@ -351,6 +351,25 @@ Primary keys: id
 Primary keys: id
 ```
 
+# Table "org_user"
+
+```
+  Field   |  Column   | PostgreSQL |         MySQL         |        SQLite3        
+----------+-----------+------------+-----------------------+-----------------------
+ ID       | id        | BIGSERIAL  | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ UID      | uid       | BIGINT     | BIGINT                | INTEGER               
+ OrgID    | org_id    | BIGINT     | BIGINT                | INTEGER               
+ IsPublic | is_public | BOOLEAN    | BOOLEAN               | NUMERIC               
+ IsOwner  | is_owner  | BOOLEAN    | BOOLEAN               | NUMERIC               
+ NumTeams | num_teams | INTEGER    | INT                   | INTEGER               
+
+Primary keys: id
+Indexes: 
+	"IDX_org_user_org_id" (org_id)
+	"IDX_org_user_uid" (uid)
+	"UQE_org_user_s" UNIQUE (uid, org_id)
+```
+
 # Table "passkey"
 
 ```
@@ -366,6 +385,25 @@ Primary keys: id
 Primary keys: id
 Indexes: 
 	"idx_passkey_user_id" (user_id)
+```
+
+# Table "protect_branch"
+
+```
+       Field        |        Column        |  PostgreSQL  |         MySQL         |        SQLite3        
+--------------------+----------------------+--------------+-----------------------+-----------------------
+ ID                 | id                   | BIGSERIAL    | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ RepoID             | repo_id              | BIGINT       | BIGINT                | INTEGER               
+ Name               | name                 | VARCHAR(255) | VARCHAR(255)          | TEXT                  
+ Protected          | protected            | BOOLEAN      | BOOLEAN               | NUMERIC               
+ RequirePullRequest | require_pull_request | BOOLEAN      | BOOLEAN               | NUMERIC               
+ EnableAllowlist    | enable_whitelist     | BOOLEAN      | BOOLEAN               | NUMERIC               
+ AllowlistUserIDs   | whitelist_user_i_ds  | TEXT         | TEXT                  | TEXT                  
+ AllowlistTeamIDs   | whitelist_team_i_ds  | TEXT         | TEXT                  | TEXT                  
+
+Primary keys: id
+Indexes: 
+	"UQE_protect_branch_protect_branch" UNIQUE (repo_id, name)
 ```
 
 # Table "public_key"
@@ -451,6 +489,38 @@ Indexes:
 	"UQE_star_s" UNIQUE (uid, repo_id)
 ```
 
+# Table "team_repo"
+
+```
+ Field  | Column  | PostgreSQL |         MySQL         |        SQLite3        
+--------+---------+------------+-----------------------+-----------------------
+ ID     | id      | BIGSERIAL  | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ OrgID  | org_id  | BIGINT     | BIGINT                | INTEGER               
+ TeamID | team_id | BIGINT     | BIGINT                | INTEGER               
+ RepoID | repo_id | BIGINT     | BIGINT                | INTEGER               
+
+Primary keys: id
+Indexes: 
+	"IDX_team_repo_org_id" (org_id)
+	"UQE_team_repo_s" UNIQUE (team_id, repo_id)
+```
+
+# Table "team_user"
+
+```
+ Field  | Column  | PostgreSQL |         MySQL         |        SQLite3        
+--------+---------+------------+-----------------------+-----------------------
+ ID     | id      | BIGSERIAL  | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ OrgID  | org_id  | BIGINT     | BIGINT                | INTEGER               
+ TeamID | team_id | BIGINT     | BIGINT                | INTEGER               
+ UID    | uid     | BIGINT     | BIGINT                | INTEGER               
+
+Primary keys: id
+Indexes: 
+	"IDX_team_user_org_id" (org_id)
+	"UQE_team_user_s" UNIQUE (team_id, uid)
+```
+
 # Table "two_factor"
 
 ```
@@ -491,6 +561,48 @@ Primary keys: id
 Primary keys: id
 Indexes: 
 	"UQE_upload_uuid" UNIQUE (uuid)
+```
+
+# Table "user"
+
+```
+       Field        |        Column        |         PostgreSQL          |           MySQL           |           SQLite3           
+--------------------+----------------------+-----------------------------+---------------------------+-----------------------------
+ ID                 | id                   | BIGSERIAL                   | BIGINT AUTO_INCREMENT     | INTEGER AUTOINCREMENT       
+ LowerName          | lower_name           | VARCHAR(255) NOT NULL       | VARCHAR(255) NOT NULL     | TEXT NOT NULL               
+ Name               | name                 | VARCHAR(255) NOT NULL       | VARCHAR(255) NOT NULL     | TEXT NOT NULL               
+ FullName           | full_name            | VARCHAR(255)                | VARCHAR(255)              | TEXT                        
+ Email              | email                | VARCHAR(255) NOT NULL       | VARCHAR(255) NOT NULL     | TEXT NOT NULL               
+ Password           | passwd               | VARCHAR(255) NOT NULL       | VARCHAR(255) NOT NULL     | TEXT NOT NULL               
+ LoginSource        | login_source         | BIGINT NOT NULL DEFAULT 0   | BIGINT NOT NULL DEFAULT 0 | INTEGER NOT NULL DEFAULT 0  
+ LoginName          | login_name           | VARCHAR(255)                | VARCHAR(255)              | TEXT                        
+ Type               | type                 | INTEGER                     | INT                       | INTEGER                     
+ Location           | location             | VARCHAR(255)                | VARCHAR(255)              | TEXT                        
+ Website            | website              | VARCHAR(255)                | VARCHAR(255)              | TEXT                        
+ Rands              | rands                | VARCHAR(10)                 | VARCHAR(10)               | TEXT                        
+ Salt               | salt                 | VARCHAR(10)                 | VARCHAR(10)               | TEXT                        
+ CreatedUnix        | created_unix         | BIGINT                      | BIGINT                    | INTEGER                     
+ UpdatedUnix        | updated_unix         | BIGINT                      | BIGINT                    | INTEGER                     
+ LastRepoVisibility | last_repo_visibility | BOOLEAN                     | BOOLEAN                   | NUMERIC                     
+ MaxRepoCreation    | max_repo_creation    | INTEGER NOT NULL DEFAULT -1 | INT NOT NULL DEFAULT -1   | INTEGER NOT NULL DEFAULT -1 
+ IsActive           | is_active            | BOOLEAN                     | BOOLEAN                   | NUMERIC                     
+ IsAdmin            | is_admin             | BOOLEAN                     | BOOLEAN                   | NUMERIC                     
+ AllowGitHook       | allow_git_hook       | BOOLEAN                     | BOOLEAN                   | NUMERIC                     
+ AllowImportLocal   | allow_import_local   | BOOLEAN                     | BOOLEAN                   | NUMERIC                     
+ ProhibitLogin      | prohibit_login       | BOOLEAN                     | BOOLEAN                   | NUMERIC                     
+ UseCustomAvatar    | use_custom_avatar    | BOOLEAN                     | BOOLEAN                   | NUMERIC                     
+ NumFollowers       | num_followers        | INTEGER                     | INT                       | INTEGER                     
+ NumFollowing       | num_following        | INTEGER NOT NULL DEFAULT 0  | INT NOT NULL DEFAULT 0    | INTEGER NOT NULL DEFAULT 0  
+ NumStars           | num_stars            | INTEGER                     | INT                       | INTEGER                     
+ NumRepos           | num_repos            | INTEGER                     | INT                       | INTEGER                     
+ Description        | description          | VARCHAR(255)                | VARCHAR(255)              | TEXT                        
+ NumTeams           | num_teams            | INTEGER                     | INT                       | INTEGER                     
+ NumMembers         | num_members          | INTEGER                     | INT                       | INTEGER                     
+
+Primary keys: id
+Indexes: 
+	"UQE_user_lower_name" UNIQUE (lower_name)
+	"UQE_user_name" UNIQUE (name)
 ```
 
 # Table "watch"
