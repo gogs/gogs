@@ -153,6 +153,20 @@ Indexes:
 	"IDX_hook_task_repo_id" (repo_id)
 ```
 
+# Table "issue_label"
+
+```
+  Field  |  Column  | PostgreSQL |         MySQL         |        SQLite3        
+---------+----------+------------+-----------------------+-----------------------
+ ID      | id       | BIGSERIAL  | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ IssueID | issue_id | BIGINT     | BIGINT                | INTEGER               
+ LabelID | label_id | BIGINT     | BIGINT                | INTEGER               
+
+Primary keys: id
+Indexes: 
+	"UQE_issue_label_s" UNIQUE (issue_id, label_id)
+```
+
 # Table "lfs_object"
 
 ```

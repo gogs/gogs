@@ -245,8 +245,8 @@ func DeleteLabel(repoID, labelID int64) error {
 // IssueLabel represents an issue-label relation.
 type IssueLabel struct {
 	ID      int64
-	IssueID int64 `xorm:"UNIQUE(s)"`
-	LabelID int64 `xorm:"UNIQUE(s)"`
+	IssueID int64 `gorm:"uniqueIndex:UQE_issue_label_s"`
+	LabelID int64 `gorm:"uniqueIndex:UQE_issue_label_s"`
 }
 
 func hasIssueLabel(tx *gorm.DB, issueID, labelID int64) bool {
