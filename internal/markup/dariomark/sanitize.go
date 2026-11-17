@@ -450,11 +450,11 @@ var allowedClasses = func() map[string]string {
 var allowedRoles = map[string]bool{"doc-noteref": true, "doc-backlink": true, "doc-endnotes": true}
 
 // appendHTMLEscaped appends b to dst escaped as html.EscapeString does.
-func appendHTMLEscaped(dst, b []byte) []byte {
+func appendHTMLEscaped[T string | []byte](dst []byte, b T) []byte {
 	start := 0
-	for i, c := range b {
+	for i := 0; i < len(b); i++ {
 		var esc string
-		switch c {
+		switch b[i] {
 		case '&':
 			esc = "&amp;"
 		case '\'':

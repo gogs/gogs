@@ -266,8 +266,8 @@ func TestMarkdown_Emoji(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			_, sanitized := renderMarkdown([]byte(test.input), "/user/repo", nil, false)
-			require.True(t, sanitized, "takes the fast path")
+			res := renderMarkdown([]byte(test.input), "/user/repo", nil, false, false)
+			require.True(t, res.Sanitized, "takes the fast path")
 			assert.Equal(t, test.want, string(MarkdownFile(test.input, "/user/repo", nil)))
 			// A raw HTML comment, which renders as a line ending, takes the
 			// path that tokenizes the HTML.
@@ -338,8 +338,8 @@ func TestMarkdown_FastPathXSS(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.input, func(t *testing.T) {
-			_, sanitized := renderMarkdown([]byte(test.input), "/user/repo", trackerMetas(), true)
-			assert.True(t, sanitized, "takes the fast path")
+			res := renderMarkdown([]byte(test.input), "/user/repo", trackerMetas(), true, false)
+			assert.True(t, res.Sanitized, "takes the fast path")
 			assert.Equal(t, test.want, string(Markdown(test.input, "/user/repo", trackerMetas())))
 		})
 	}
@@ -462,8 +462,8 @@ details
 <li class="task-list-item" data-source-lines="7-7"><input checked="" disabled="" type="checkbox"> ship</li>
 </ol>
 `
-	_, sanitized := renderMarkdown([]byte(input), "/user/repo", nil, true)
-	assert.True(t, sanitized, "takes the fast path")
+	res := renderMarkdown([]byte(input), "/user/repo", nil, true, false)
+	assert.True(t, res.Sanitized, "takes the fast path")
 	assert.Equal(t, want, string(Markdown(input, "/user/repo", nil)))
 	// Documents with raw HTML are sanitized by bluemonday instead.
 	assert.Equal(t, want+"<p><b>x</b></p>\n", string(Markdown(input+"\n<b>x</b>\n", "/user/repo", nil)))
@@ -535,6 +535,8 @@ func FuzzMarkdown(f *testing.F) {
 		"[x](javascript:alert(1)) ![y](data:image/png;base64,AAA) <a@b.c> [z](//evil.example.com \"t\\\" onclick=\\\"x\")\n",
 		"```c++\nx\n```\n\n    @user\n\n<b>raw</b> <textarea>@user</textarea>\n",
 		"a\nb :tada:\nc  \nd\\\ne\n",
+		"---\nt: <b>@user</b> #1 :tada: 'q\"\nl: [a, {b: ~}]\n---\n- [ ] x\n",
+		"---\nt: [x\n---\n<b>y</b>\n",
 	} {
 		f.Add(s)
 	}
@@ -543,8 +545,10 @@ func FuzzMarkdown(f *testing.F) {
 		body := []byte(s)
 		// Both line break modes, comments and files, chosen by the input.
 		hardWraps := len(s)%2 == 0
-		got, sanitized := renderMarkdown(body, urlPrefix, trackerMetas(), hardWraps)
-		if !sanitized {
+		file := !hardWraps
+		res := renderMarkdown(body, urlPrefix, trackerMetas(), hardWraps, file)
+		got := res.HTML
+		if !res.Sanitized {
 			SanitizeBytes(got)
 			return
 		}
@@ -556,6 +560,9 @@ func FuzzMarkdown(f *testing.F) {
 			return findSpecialLinks(text, urlPrefix, trackerMetas())
 		}
 		opts.Emoji = emoji
+		if file {
+			opts.FrontMatter = true
+		}
 		want := SanitizeBytes(dariomark.Render(body, opts).HTML)
 		if string(got) != string(want) {
 			t.Fatalf("sanitizing while rendering differs from bluemonday for %q\ngot  %q\nwant %q", s, got, want)
@@ -563,5 +570,88 @@ func FuzzMarkdown(f *testing.F) {
 		if again := SanitizeBytes(got); string(again) != string(got) {
 			t.Fatalf("bluemonday changes the output for %q\ngot   %q\nagain %q", s, got, again)
 		}
+	})
+}
+
+func TestMarkdownFile_FrontMatter(t *testing.T) {
+	conf.Server.ExternalURL = "http://localhost:3000/"
+	NewSanitizer()
+
+	const table = "<table>\n<tbody>\n" +
+		"<tr>\n<th>title</th>\n<td>Hello &lt;script&gt;</td>\n</tr>\n" +
+		"<tr>\n<th>tags</th>\n<td><table><tbody><tr><td><div>a</div></td><td><div>b</div></td></tr></tbody></table></td>\n</tr>\n" +
+		"<tr>\n<th>authors</th>\n<td><table><tbody><tr><td><div><table><thead><tr><th>name</th><th>url</th></tr></thead>" +
+		"<tbody><tr><td><div>Unknwon</div></td><td><div></div></td></tr></tbody></table></div></td></tr></tbody></table></td>\n</tr>\n" +
+		"<tr>\n<th>draft</th>\n<td></td>\n</tr>\n" +
+		"</tbody>\n</table>\n"
+	const frontMatter = "---\ntitle: Hello <script>\ntags: [a, b]\nauthors:\n  - name: Unknwon\n    url:\ndraft: ~\n---\n"
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "table",
+			input: frontMatter + "# Hello @unknwon :tada:\n",
+			want:  table + "<h1 id=\"user-content-hello-unknwon-tada\">Hello <a href=\"/unknwon\" rel=\"nofollow\">@unknwon</a> 🎉</h1>\n",
+		},
+		{
+			name:  "raw HTML",
+			input: frontMatter + "<b>x</b>\n",
+			want:  table + "<p><b>x</b></p>\n",
+		},
+		{
+			name:  "CRLF, trailing spaces and no final line ending",
+			input: "--- \t\r\na: 1\r\n---\t",
+			want:  "<table>\n<tbody>\n<tr>\n<th>a</th>\n<td>1</td>\n</tr>\n</tbody>\n</table>\n",
+		},
+		{
+			name:  "special links stay text",
+			input: "---\na: \"@unknwon #1 :tada:\"\n---\n",
+			want:  "<table>\n<tbody>\n<tr>\n<th>a</th>\n<td>@unknwon #1 :tada:</td>\n</tr>\n</tbody>\n</table>\n",
+		},
+		{name: "unclosed", input: "---\na: 1\n\nb\n", want: "<hr>\n<p>a: 1</p>\n<p>b</p>\n"},
+		{name: "closed by dots", input: "---\na: 1\n...\n", want: "<hr>\n<p>a: 1\n...</p>\n"},
+		{name: "empty", input: "---\n---\n", want: "<hr>\n<hr>\n"},
+		{name: "not a mapping", input: "---\n- a\n---\n", want: "<hr>\n<ul>\n<li>a</li>\n</ul>\n<hr>\n"},
+		{name: "not at the start", input: "\n---\na: 1\n---\n", want: "<hr>\n<h2 id=\"user-content-a-1\">a: 1</h2>\n"},
+		{
+			name:  "invalid YAML",
+			input: "---\na: [<b>\n---\nb\n",
+			want:  "<pre><code class=\"language-yaml\">---\na: [&lt;b&gt;\n---\n</code></pre>\n<p>b</p>\n",
+		},
+		{
+			// Aliases are not allowed, since they could multiply nodes, e.g.,
+			// "billion laughs", or contain themselves.
+			name:  "aliases",
+			input: "---\na: &a [x, x]\nb: [*a, *a]\n---\n",
+			want:  "<pre><code class=\"language-yaml\">---\na: &amp;a [x, x]\nb: [*a, *a]\n---\n</code></pre>\n",
+		},
+		{
+			name:  "too deep",
+			input: "---\na: " + strings.Repeat("[", 17) + strings.Repeat("]", 17) + "\n---\n",
+			want:  "<pre><code class=\"language-yaml\">---\na: " + strings.Repeat("[", 17) + strings.Repeat("]", 17) + "\n---\n</code></pre>\n",
+		},
+		{
+			name:  "too large",
+			input: "---\na: " + strings.Repeat("x", 64<<10) + "\n---\n",
+			want:  "<hr>\n<h2 id=\"user-content-a-" + strings.Repeat("x", 64<<10) + "\">a: " + strings.Repeat("x", 64<<10) + "</h2>\n",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := MarkdownFile(test.input, "/user/repo", nil)
+			assert.Equal(t, test.want, string(got))
+			assert.Equal(t, string(got), string(SanitizeBytes(got)), "survives sanitizing")
+		})
+	}
+
+	t.Run("task lists keep their source lines", func(t *testing.T) {
+		got := string(MarkdownFile("---\r\na: 1\r\n---\r\n- [ ] x\r\n- [x] y\r\n", "/user/repo", nil))
+		assert.Contains(t, got, `<li class="task-list-item" data-source-lines="4-4">`)
+		assert.Contains(t, got, `<li class="task-list-item" data-source-lines="5-5">`)
+	})
+	t.Run("comments", func(t *testing.T) {
+		assert.Equal(t, "<hr>\n<h2 id=\"user-content-a-1\">a: 1</h2>\n", string(Markdown("---\na: 1\n---\n", "/user/repo", nil)))
 	})
 }

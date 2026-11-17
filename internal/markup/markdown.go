@@ -235,8 +235,9 @@ func RawMarkdown(body []byte, urlPrefix string) []byte {
 }
 
 // renderMarkdown renders content in Markdown syntax to HTML with special
-// links, and reports whether the HTML is sanitized already.
-func renderMarkdown(body []byte, urlPrefix string, metas map[string]string, hardWraps bool) ([]byte, bool) {
+// links, see dariomark.Render. file renders YAML front matter as a table, for
+// Markdown files.
+func renderMarkdown(body []byte, urlPrefix string, metas map[string]string, hardWraps, file bool) dariomark.Result {
 	opts := markdownOptions(urlPrefix, hardWraps)
 	opts.FootnoteIDPrefix = footnoteIDPrefix(body)
 	opts.PostProcess = true
@@ -244,11 +245,13 @@ func renderMarkdown(body []byte, urlPrefix string, metas map[string]string, hard
 		return findSpecialLinks(text, urlPrefix, metas)
 	}
 	opts.Emoji = emoji
+	if file {
+		opts.FrontMatter = true
+	}
 	if sanitizer.ready.Load() {
 		opts.Sanitizer = markdownSanitizer
 	}
-	res := dariomark.Render(body, opts)
-	return res.HTML, res.Sanitized
+	return dariomark.Render(body, opts)
 }
 
 // Kinds of special links, see specialLinkKinds.
@@ -330,12 +333,12 @@ func isMentionChar(c byte) bool {
 // issue, a comment or a release note, and renders it to HTML with special
 // links. It renders every line break as written.
 func Markdown(input any, urlPrefix string, metas map[string]string) []byte {
-	return renderInput(TypeMarkdown, input, urlPrefix, metas, true)
+	return renderInput(TypeMarkdown, input, urlPrefix, metas, true, false)
 }
 
 // MarkdownFile is Markdown for Markdown files, e.g., READMEs and wiki pages.
 // It joins the lines of a paragraph, unless [markdown] ENABLE_HARD_LINE_BREAK
-// is set.
+// is set, and renders YAML front matter as a table above the document.
 func MarkdownFile(input any, urlPrefix string, metas map[string]string) []byte {
 	return Render(TypeMarkdown, input, urlPrefix, metas)
 }

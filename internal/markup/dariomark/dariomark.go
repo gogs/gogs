@@ -1,8 +1,8 @@
 // Package dariomark renders Markdown to HTML. Dariomark implements CommonMark
 // 0.31.2 and the GitHub Flavored Markdown extensions (tables, strikethrough,
-// task lists and extended autolinks), plus footnotes, GitHub alerts and
-// special links, e.g., mentions and issue references. It is safe for
-// concurrent use and runs in linear time.
+// task lists and extended autolinks), plus footnotes, alerts, YAML front
+// matter and special links, e.g., mentions and issue references. It is safe
+// for concurrent use and runs in linear time.
 package dariomark
 
 import (
@@ -94,6 +94,12 @@ type Options struct {
 	// Sanitizer, if not nil, enables sanitizing documents without raw HTML
 	// with PostProcess.
 	Sanitizer *Sanitizer
+
+	// FrontMatter renders YAML front matter as a table above the document,
+	// e.g., for Markdown files. Front matter is a first line "---" through the
+	// next line "---", which must end within the first 64 KB, and is a YAML
+	// mapping. Invalid YAML renders as a code block.
+	FrontMatter bool
 }
 
 // SpecialLink is a reference in text that renders as a link, see
@@ -142,6 +148,10 @@ type Result struct {
 	// documents without raw HTML when Options.PostProcess and Options.Sanitizer
 	// are set.
 	Sanitized bool
+	// FrontMatterSize is the size of the HTML of front matter at the start of
+	// HTML, see Options.FrontMatter. That HTML is only made of fixed tags and
+	// escaped text, so a caller that sanitizes HTML may skip it.
+	FrontMatterSize int
 	// Headings are the headings of the document in order, when
 	// Options.HeadingIDs is set. They are the entries of a table of contents.
 	Headings []Heading
@@ -195,21 +205,21 @@ func Render(src []byte, opts *Options) Result {
 	r.init(p, opts)
 	if !opts.PostProcess {
 		r.renderHTML(doc)
-		return Result{HTML: r.out.Bytes(), Headings: r.headingList()}
+		return Result{HTML: r.out.Bytes(), FrontMatterSize: r.frontMatterSize, Headings: r.headingList()}
 	}
 	if !p.hasRawHTML {
 		// Inline raw HTML is only found while rendering, which then starts
 		// over without sanitizing.
 		refBudget, padBudget, footnoteBudget := p.refBudget, p.padBudget, p.footnoteBudget
 		if out, ok := r.renderSanitized(func() { r.renderDocument(doc) }); ok {
-			return Result{HTML: out, Sanitized: true, Headings: r.headingList()}
+			return Result{HTML: out, Sanitized: true, FrontMatterSize: r.frontMatterSize, Headings: r.headingList()}
 		}
 		p.refBudget, p.padBudget, p.footnoteBudget = refBudget, padBudget, footnoteBudget
 		p.footnotes.resetInline()
 		r.init(p, opts)
 	}
 	r.renderHTML(doc)
-	return Result{HTML: r.postProcess(r.out.Bytes()), Headings: r.headingList()}
+	return Result{HTML: r.postProcess(r.out.Bytes()), FrontMatterSize: r.frontMatterSize, Headings: r.headingList()}
 }
 
 // streamMinSize is the size from which documents are rendered while they are
@@ -235,7 +245,7 @@ func (p *parser) renderStream(src []byte) Result {
 				r.stop = true
 			}
 		}); ok {
-			return Result{HTML: out, Sanitized: true, Headings: r.headingList()}
+			return Result{HTML: out, Sanitized: true, FrontMatterSize: r.frontMatterSize, Headings: r.headingList()}
 		}
 		p.reset()
 		p.opts = opts
@@ -245,9 +255,9 @@ func (p *parser) renderStream(src []byte) Result {
 	r.s = &r.html
 	p.parse(src, r.renderClosed)
 	if !opts.PostProcess {
-		return Result{HTML: r.out.Bytes(), Headings: r.headingList()}
+		return Result{HTML: r.out.Bytes(), FrontMatterSize: r.frontMatterSize, Headings: r.headingList()}
 	}
-	return Result{HTML: r.postProcess(r.out.Bytes()), Headings: r.headingList()}
+	return Result{HTML: r.postProcess(r.out.Bytes()), FrontMatterSize: r.frontMatterSize, Headings: r.headingList()}
 }
 
 // HTML renders the Markdown source to HTML without post-processing.
