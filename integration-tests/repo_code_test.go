@@ -594,6 +594,12 @@ func TestRepoCodeEditor(t *testing.T) {
 			"branch": "main", "path": "README.md", "content": "x",
 		})
 		assert.Equal(t, http.StatusUnprocessableEntity, status, "response: %s", body)
+
+		status, body = ownerClient.do(http.MethodPost, api+"/editor/files", map[string]any{
+			"branch": "main", "path": ".git/config", "content": "x",
+		})
+		assert.Equal(t, http.StatusUnprocessableEntity, status, "response: %s", body)
+		assert.Contains(t, string(body), "is not allowed as a file path")
 	})
 
 	t.Run("new branch", func(t *testing.T) {
@@ -674,6 +680,17 @@ func TestRepoCodeEditor(t *testing.T) {
 		assert.Equal(t, repoCodePage(repo)+"/src/main/files", result.Location)
 		assert.Equal(t, "kept content\n", repoCodeGet(t, ownerClient, repoCodePage(repo)+"/raw/main/files/kept.txt"))
 		assert.Equal(t, "Upload kept", repoCodeGit(t, repo, "log", "-1", "--format=%s", "main"))
+
+		// A file that would go into the ".git" directory fails the whole upload.
+		head := repoCodeGit(t, repo, "rev-parse", "refs/heads/main")
+		ok := upload("ok.txt", "ok\n")
+		dotGit := upload(".git", "x\n")
+		status, body = ownerClient.do(http.MethodPost, api+"/editor/upload", map[string]any{
+			"branch": "main", "path": "", "files": []string{ok, dotGit},
+		})
+		assert.Equal(t, http.StatusUnprocessableEntity, status, "response: %s", body)
+		assert.Contains(t, string(body), "is not allowed as a file path")
+		assert.Equal(t, head, repoCodeGit(t, repo, "rev-parse", "refs/heads/main"))
 
 		contentType, form := repoCodeMultipart(t, "x.txt", []byte("x"))
 		status, _, body = otherClient.doRaw(http.MethodPost, api+"/editor/uploads", contentType, form)

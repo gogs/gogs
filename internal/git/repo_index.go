@@ -75,7 +75,7 @@ func (r *Repository) AddToIndex(ctx context.Context, files ...IndexFile) error {
 		}
 		// 🚨 SECURITY: Prevent writing to special files, e.g., "NUL" on Windows.
 		if !filepath.IsLocal(filepath.FromSlash(f.Path)) {
-			return errors.Newf("bad path %q", f.Path)
+			return &BadPathError{Path: f.Path}
 		}
 	}
 
@@ -134,7 +134,7 @@ func (r *Repository) AddToIndex(ctx context.Context, files ...IndexFile) error {
 func checkIndexPath(p string) error {
 	if p != path.Clean(p) || p == "." || p == ".." || path.IsAbs(p) || strings.HasPrefix(p, "../") ||
 		slices.ContainsFunc(strings.FieldsFunc(p, func(r rune) bool { return r == '/' || r == '\\' }), isDotGit) {
-		return errors.Newf("bad path %q", p)
+		return &BadPathError{Path: p}
 	}
 	return nil
 }

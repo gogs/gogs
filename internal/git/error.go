@@ -1,6 +1,8 @@
 package git
 
 import (
+	"fmt"
+
 	"github.com/cockroachdb/errors"
 
 	"gogs.io/gogs/internal/errx"
@@ -17,6 +19,16 @@ var (
 	ErrNotSymbolicRef    = errors.New("the reference is not a symbolic reference")
 	ErrMergeConflict     = errors.New("merge has conflicts")
 )
+
+// BadPathError is returned when a path cannot be the path of a file in a tree,
+// e.g., one inside the ".git" directory.
+type BadPathError struct {
+	Path string
+}
+
+func (e *BadPathError) Error() string {
+	return fmt.Sprintf("bad path %q", e.Path)
+}
 
 var _ errx.NotFound = (*Error)(nil)
 

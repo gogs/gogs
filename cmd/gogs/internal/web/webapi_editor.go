@@ -427,6 +427,10 @@ func postRepoEditorFile(c flamego.Context, logger *logx.Logger, l i18n.Locale, v
 		if database.IsErrRepoFileAlreadyExist(err) {
 			return http.StatusUnprocessableEntity, pathError(l.Tr("repo.editor.file_already_exists", req.Path)), nil
 		}
+		var badPath *git.BadPathError
+		if errors.As(err, &badPath) {
+			return http.StatusUnprocessableEntity, pathError(l.Tr("repo.editor.bad_path", badPath.Path)), nil
+		}
 		logger.Error("Failed to update file", "treePath", req.Path, "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update file")
 	}
@@ -581,6 +585,10 @@ func postRepoEditorUpload(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 		Files:        req.Files,
 	})
 	if err != nil {
+		var badPath *git.BadPathError
+		if errors.As(err, &badPath) {
+			return http.StatusUnprocessableEntity, nil, errors.New(l.Tr("repo.editor.bad_path", badPath.Path))
+		}
 		logger.Error("Failed to upload files", "treePath", req.Path, "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "upload files")
 	}
