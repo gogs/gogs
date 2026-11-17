@@ -132,7 +132,7 @@ export function RepoBranches({
         ) : view === "overview" ? (
           <div className="flex flex-col gap-8">
             {data.sections.map(({ kind, branches, hasMore }) => (
-              <section key={kind} className="glass-section rounded-md">
+              <section key={kind} className="glass-section">
                 <h2 className="mb-2 text-base font-semibold">{sectionTitles[kind]}</h2>
                 {list(branches)}
                 {hasMore && kind !== "default" ? (

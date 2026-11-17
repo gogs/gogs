@@ -147,7 +147,7 @@ export function GoToFile({
         </kbd>
       </div>
       {showList ? (
-        <div className="absolute top-full right-0 left-0 z-20 mt-1 overflow-hidden rounded-md border border-(--color-border) bg-(--color-popover) shadow-lg backdrop-blur-xl sm:left-auto sm:w-[28rem]">
+        <div className="absolute top-full right-0 left-0 z-20 mt-1 overflow-hidden rounded-md border border-(--color-border) bg-(--color-background) glass-ui:bg-(--color-popover) shadow-lg glass-ui:backdrop-blur-xl sm:left-auto sm:w-[28rem]">
           <ul id={listID} role="listbox" aria-label={t("repo.go_to_file")} className="max-h-80 overflow-y-auto p-1">
             {results.map((path, i) => (
               <li

@@ -139,8 +139,8 @@
   --code-escape: #61d5c0;
 }
 
-/* Frosted glass, on by default and switched off from the settings menu,
-   which removes the glass-ui class (see lib/glass.ts). Panels are translucent
+/* Frosted glass, off by default and switched on from the settings menu,
+   which adds the glass-ui class (see lib/glass.ts). Panels are translucent
    over a fixed backdrop of soft color blobs, blurred so the backdrop only
    tints them. Hover fills, secondary fills and borders turn translucent so
    they tint the glass instead of painting gray boxes. */

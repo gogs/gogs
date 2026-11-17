@@ -113,7 +113,7 @@ function DashboardLists({ data }: { data: DashboardData }) {
                 "-mb-px flex-1 cursor-pointer border-b-2 px-2 py-2 text-sm",
                 selected
                   ? "border-(--color-primary) font-semibold text-(--color-foreground)"
-                  : "border-transparent text-(--color-muted-foreground) hover:border-(--color-border) hover:text-(--color-foreground)",
+                  : "border-transparent text-(--color-muted-foreground) hover:border-(--color-border) glass-ui:hover:border-(--glass-line-hover) hover:text-(--color-foreground)",
               )}
             >
               {label}

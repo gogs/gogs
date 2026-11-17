@@ -59,7 +59,7 @@ The traffic-light cluster in the faux-terminal frame uses one ad-hoc value: the 
 
 ## Glass
 
-The app has a frosted glass look, on by default. Users switch it off with "Glass effect" in the settings menu, next to the theme. The choice is kept in `localStorage` under `gogs-glass` (see `lib/glass.ts`), and without a choice the OS setting for reduced transparency turns it off. While it is on, `<html>` carries the `glass-ui` class, which the inline script in `index.html` sets before the first paint. Every glass style is scoped under that class, so the app without it looks exactly as it does with plain tokens: never change the plain look to get a glass effect.
+The app has a frosted glass look, off by default. Users switch it on with "Glass effect" in the settings menu, next to the theme. The choice is kept in `localStorage` under `gogs-glass` (see `lib/glass.ts`). While it is on, `<html>` carries the `glass-ui` class, which the inline script in `index.html` sets before the first paint. Every glass style is scoped under that class, so the app without it looks exactly as it does with plain tokens: never change the plain look to get a glass effect.
 
 With glass on, `html` paints `--glass-backdrop`, a few soft color blobs over `--glass-page`, fixed to the viewport, with a dot grid that fades toward the bottom. Panels are translucent over it. Components opt in with marker classes, which style nothing while glass is off. Write the element's plain look with utilities as usual and add the marker:
 
@@ -73,7 +73,7 @@ Layout that only applies to glass, e.g., a border or padding the plain look does
 
 Borders follow the 1.0 landing page: thin translucent lines, never opaque gray. A glass panel draws its edge in `--glass-line` and lowers `--color-border` to `--glass-divider` for everything inside it, so its rows and sections divide faintly. A state that recolors a panel's edge, e.g., a linked comment, needs `!border-...`, since the marker rules outrank utilities. Round a header that fills the top of a panel with `rounded-t-[inherit]`, so it follows the panel's radius in both looks.
 
-Glass also makes `--color-surface`, `--color-secondary`, `--color-border` and `--color-input` translucent, so hover fills and dividers tint the glass under them, and `--color-popover` mostly opaque, so popovers, selects and dialogs keep text readable over what they cover. Form fields use `bg-(--color-field)`: the page color without glass, and with glass lighter than the panels in light mode and darker in dark mode, so fields read as inset. Code in diffs and highlighted blocks takes the same field color, and file trees take the panel they sit in. Don't put a glass marker on elements with `position: fixed` children, since `backdrop-filter` makes it their containing block.
+Glass also makes `--color-surface`, `--color-secondary`, `--color-border` and `--color-input` translucent, so hover fills and dividers tint the glass under them, and `--color-popover` mostly opaque, so popovers, selects and dialogs keep text readable over what they cover. Their blur is `glass-ui:backdrop-blur-*`, so it only applies with glass on. Form fields use `bg-(--color-field)`: the page color without glass, and with glass lighter than the panels in light mode and darker in dark mode, so fields read as inset. Code in diffs and highlighted blocks takes the same field color, and file trees take the panel they sit in. Don't put a glass marker on elements with `position: fixed` children, since `backdrop-filter` makes it their containing block.
 
 ## Surface chrome
 

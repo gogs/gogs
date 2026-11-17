@@ -23,7 +23,7 @@ function SheetOverlay({ className, ...props }: React.ComponentProps<typeof Dialo
 }
 
 const sheetVariants = cva(
-  "fixed z-50 bg-(--color-popover) shadow-lg backdrop-blur-2xl transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-200 data-[state=open]:duration-300",
+  "fixed z-50 bg-(--color-background) glass-ui:bg-(--color-popover) shadow-lg glass-ui:backdrop-blur-2xl transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-200 data-[state=open]:duration-300",
   {
     variants: {
       side: {
