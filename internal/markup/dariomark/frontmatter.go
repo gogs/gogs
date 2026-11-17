@@ -3,39 +3,113 @@ package dariomark
 import (
 	"bytes"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
-// FrontMatterKind is the kind of a FrontMatterValue.
-type FrontMatterKind uint8
+// frontMatterKind is the kind of a frontMatterValue.
+type frontMatterKind uint8
 
 const (
-	// FrontMatterNone is YAML that is not front matter, e.g., because it is
-	// empty or is not a mapping. The document renders as if it had none.
-	FrontMatterNone FrontMatterKind = iota
-	// FrontMatterInvalid is YAML that is not valid. The front matter renders
-	// as a YAML code block.
-	FrontMatterInvalid
-	FrontMatterScalar
-	FrontMatterMapping
-	FrontMatterSequence
+	// frontMatterNone is YAML that is not front matter, i.e., it is empty or
+	// is not a mapping. The document renders as if it had none.
+	frontMatterNone frontMatterKind = iota
+	// frontMatterInvalid is YAML that is not valid, has aliases, keys other
+	// than scalars or nests too deeply. The front matter renders as a YAML
+	// code block.
+	frontMatterInvalid
+	frontMatterScalar
+	frontMatterMapping
+	frontMatterSequence
 )
 
-// FrontMatterValue is a value of YAML front matter, see Options.FrontMatter.
-// The front matter is a mapping, FrontMatterNone or FrontMatterInvalid.
-type FrontMatterValue struct {
-	Kind FrontMatterKind
-	// Text is the text of a scalar, which is empty for null.
-	Text string
-	// Keys are the keys of a mapping, as text.
-	Keys []string
-	// Values are the values of a mapping, in the order of Keys, or the items
+// frontMatterValue is a value of YAML front matter. The front matter itself is
+// a mapping, frontMatterNone or frontMatterInvalid.
+type frontMatterValue struct {
+	kind frontMatterKind
+	// text is the text of a scalar, which is empty for null.
+	text string
+	// keys are the keys of a mapping.
+	keys []string
+	// values are the values of a mapping, in the order of keys, or the items
 	// of a sequence.
-	Values []FrontMatterValue
+	values []frontMatterValue
+}
+
+// maxFrontMatterDepth is how deeply collections of front matter may nest.
+const maxFrontMatterDepth = 16
+
+// parseFrontMatter returns the value of the YAML of front matter. Like GitHub,
+// YAML that is empty or is not a mapping is not front matter, and YAML with
+// aliases is invalid, which also rules out aliases that multiply nodes, e.g.,
+// "billion laughs", or contain themselves.
+func parseFrontMatter(src []byte) frontMatterValue {
+	var doc yaml.Node
+	if err := yaml.Unmarshal(src, &doc); err != nil {
+		return frontMatterValue{kind: frontMatterInvalid}
+	}
+	if len(doc.Content) == 0 || doc.Content[0].Kind != yaml.MappingNode || len(doc.Content[0].Content) == 0 {
+		return frontMatterValue{}
+	}
+	v, ok := convertFrontMatter(doc.Content[0], 0)
+	if !ok {
+		return frontMatterValue{kind: frontMatterInvalid}
+	}
+	return v
+}
+
+// convertFrontMatter converts the YAML node n at depth, and reports false when
+// n has aliases, keys other than scalars, or nests too deeply.
+func convertFrontMatter(n *yaml.Node, depth int) (frontMatterValue, bool) {
+	if depth > maxFrontMatterDepth {
+		return frontMatterValue{}, false
+	}
+	switch n.Kind {
+	case yaml.ScalarNode:
+		v := frontMatterValue{kind: frontMatterScalar}
+		if n.ShortTag() != "!!null" {
+			v.text = n.Value
+		}
+		return v, true
+	case yaml.MappingNode:
+		v := frontMatterValue{
+			kind:   frontMatterMapping,
+			keys:   make([]string, 0, len(n.Content)/2),
+			values: make([]frontMatterValue, 0, len(n.Content)/2),
+		}
+		for i := 0; i+1 < len(n.Content); i += 2 {
+			key := n.Content[i]
+			if key.Kind != yaml.ScalarNode {
+				return v, false
+			}
+			value, ok := convertFrontMatter(n.Content[i+1], depth+1)
+			if !ok {
+				return v, false
+			}
+			v.keys = append(v.keys, key.Value)
+			v.values = append(v.values, value)
+		}
+		return v, true
+	case yaml.SequenceNode:
+		v := frontMatterValue{
+			kind:   frontMatterSequence,
+			values: make([]frontMatterValue, 0, len(n.Content)),
+		}
+		for _, item := range n.Content {
+			value, ok := convertFrontMatter(item, depth+1)
+			if !ok {
+				return v, false
+			}
+			v.values = append(v.values, value)
+		}
+		return v, true
+	}
+	return frontMatterValue{}, false
 }
 
 // maxFrontMatterSize is the offset in the source by which front matter must
 // end, see Options.FrontMatter. It bounds the search for the closing line and
-// the YAML that Options.FrontMatter parses.
+// the YAML to parse.
 var maxFrontMatterSize = 64 << 10
 
 // frontMatter returns the YAML of the front matter at the start of src, the
@@ -90,13 +164,13 @@ func frontMatterDelimiter(b []byte) int {
 // sanitizing skip it, see Result.FrontMatterSize.
 func (r *renderer) frontMatter(n *node) {
 	out := r.plain[:0]
-	if v := &r.p.frontMatter; v.Kind == FrontMatterMapping {
+	if v := &r.p.frontMatter; v.kind == frontMatterMapping {
 		out = append(out, "<table>\n<tbody>\n"...)
-		for i, key := range v.Keys {
+		for i, key := range v.keys {
 			out = append(out, "<tr>\n<th>"...)
 			out = appendFrontMatterText(out, key)
 			out = append(out, "</th>\n<td>"...)
-			out = r.appendFrontMatterValue(out, &v.Values[i])
+			out = r.appendFrontMatterValue(out, &v.values[i])
 			out = append(out, "</td>\n</tr>\n"...)
 		}
 		out = append(out, "</tbody>\n</table>\n"...)
@@ -114,25 +188,25 @@ func (r *renderer) frontMatter(n *node) {
 // as text, a mapping as a table with the keys in its head and the values in
 // its body, and a sequence as a table of one row. Like GitHub, the cells of
 // nested tables wrap their content in a div.
-func (r *renderer) appendFrontMatterValue(out []byte, v *FrontMatterValue) []byte {
-	switch v.Kind {
-	case FrontMatterMapping:
+func (r *renderer) appendFrontMatterValue(out []byte, v *frontMatterValue) []byte {
+	switch v.kind {
+	case frontMatterMapping:
 		out = append(out, "<table><thead><tr>"...)
-		for _, key := range v.Keys {
+		for _, key := range v.keys {
 			out = append(out, "<th>"...)
 			out = appendFrontMatterText(out, key)
 			out = append(out, "</th>"...)
 		}
 		out = append(out, "</tr></thead>"...)
-		return r.appendFrontMatterRow(out, v.Values)
-	case FrontMatterSequence:
+		return r.appendFrontMatterRow(out, v.values)
+	case frontMatterSequence:
 		out = append(out, "<table>"...)
-		return r.appendFrontMatterRow(out, v.Values)
+		return r.appendFrontMatterRow(out, v.values)
 	}
-	return appendFrontMatterText(out, v.Text)
+	return appendFrontMatterText(out, v.text)
 }
 
-func (r *renderer) appendFrontMatterRow(out []byte, values []FrontMatterValue) []byte {
+func (r *renderer) appendFrontMatterRow(out []byte, values []frontMatterValue) []byte {
 	out = append(out, "<tbody><tr>"...)
 	for i := range values {
 		out = append(out, "<td><div>"...)

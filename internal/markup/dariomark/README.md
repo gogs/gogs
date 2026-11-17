@@ -13,10 +13,11 @@ Dariomark was written from scratch, from the specifications, for the Markdown th
 - **Emoji shortcodes**: with a table of names, e.g., GitHub's, shortcodes like `:tada:` render as 🎉 wherever GitHub replaces them, e.g., not in code or in `10:30:45 :tada:`.
 - **Heading anchors**: headings get stable ids made the way GitHub makes them, e.g., `user-content-getting-started`, with `-1`, `-2` and so on for repeated headings.
 - **Table of contents data**: `Result.Headings` lists every heading with its level, text and id.
+- **YAML front matter**: with `Options.FrontMatter`, front matter at the start of a file renders as a table above the document, as GitHub renders it, with nested tables for nested mappings and lists. Invalid YAML renders as a code block, and YAML that is not a mapping renders as Markdown.
 - **Editable task lists**: task list items carry their source lines, e.g., `<li class="task-list-item" data-source-lines="5-7">`, so a client can toggle or reorder items, e.g., by drag and drop, by editing those lines of the source.
 - **SmartyPants punctuation**: curly quotes, dashes, ellipses and fractions.
 - **Built-in sanitizing**: documents without raw HTML are sanitized while they are written, with the same result as [bluemonday](https://github.com/microcosm-cc/bluemonday)'s user content policy.
-- **Safe for concurrent use**, with no dependencies beyond the Go standard library and `golang.org/x/net/html`.
+- **Safe for concurrent use**, with no dependencies beyond the Go standard library, `golang.org/x/net/html` and `gopkg.in/yaml.v3`.
 
 ## Performance
 
@@ -65,5 +66,6 @@ Markdown on a code hosting site comes from anyone who can open an issue, so one 
 
 - **Fail-closed sanitizing.** Every element and attribute Dariomark writes goes through one allowlist. Anything it does not recognize sends the document to bluemonday instead of through.
 - **Safe URLs.** Link and image URLs are checked by scheme. `javascript:`, `vbscript:` and `data:` URLs other than common image types are dropped, however they are encoded.
+- **Bounded front matter.** Front matter must end within the first 64 KB of a file and nest at most 16 levels deep, and YAML aliases are rejected as on GitHub, so alias bombs like "billion laughs" cannot multiply the output.
 - **Bounded nesting.** Containers nested more than 100 levels deep, e.g., `>` repeated, show the deeper markers as text, and the rest of the document renders normally.
 - **Document limits.** `markup.Render` shows documents larger than `[ui] MAX_DISPLAY_FILE_SIZE` (8 MB by default) as plain text, and documents of 64 KB or more share a budget of concurrent render memory, so a burst of large documents waits instead of exhausting memory.

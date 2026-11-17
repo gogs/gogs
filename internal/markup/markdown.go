@@ -246,7 +246,7 @@ func renderMarkdown(body []byte, urlPrefix string, metas map[string]string, hard
 	}
 	opts.Emoji = emoji
 	if file {
-		opts.FrontMatter = frontMatterValue
+		opts.FrontMatter = true
 	}
 	if sanitizer.ready.Load() {
 		opts.Sanitizer = markdownSanitizer

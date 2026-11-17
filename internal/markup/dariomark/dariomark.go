@@ -1,8 +1,8 @@
 // Package dariomark renders Markdown to HTML. Dariomark implements CommonMark
 // 0.31.2 and the GitHub Flavored Markdown extensions (tables, strikethrough,
-// task lists and extended autolinks), plus footnotes, GitHub alerts and
-// special links, e.g., mentions and issue references. It is safe for
-// concurrent use and runs in linear time.
+// task lists and extended autolinks), plus footnotes, GitHub alerts, YAML
+// front matter and special links, e.g., mentions and issue references. It is
+// safe for concurrent use and runs in linear time.
 package dariomark
 
 import (
@@ -95,13 +95,11 @@ type Options struct {
 	// with PostProcess.
 	Sanitizer *Sanitizer
 
-	// FrontMatter, if not nil, renders YAML front matter as a table above the
-	// document, as GitHub does for Markdown files. Front matter is a first
-	// line "---" through the next line "---", which must end within the first
-	// 64 KB, see FrontMatterValue. FrontMatter is called with the YAML between
-	// the two lines, and must bound the depth and size of the value it
-	// returns.
-	FrontMatter func(yaml []byte) FrontMatterValue
+	// FrontMatter renders YAML front matter as a table above the document, as
+	// GitHub does for Markdown files. Front matter is a first line "---"
+	// through the next line "---", which must end within the first 64 KB, and
+	// is a YAML mapping. Invalid YAML renders as a code block.
+	FrontMatter bool
 }
 
 // SpecialLink is a reference in text that renders as a link, see

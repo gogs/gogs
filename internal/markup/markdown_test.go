@@ -561,7 +561,7 @@ func FuzzMarkdown(f *testing.F) {
 		}
 		opts.Emoji = emoji
 		if file {
-			opts.FrontMatter = frontMatterValue
+			opts.FrontMatter = true
 		}
 		want := SanitizeBytes(dariomark.Render(body, opts).HTML)
 		if string(got) != string(want) {
@@ -629,8 +629,8 @@ func TestMarkdownFile_FrontMatter(t *testing.T) {
 		},
 		{
 			name:  "too deep",
-			input: "---\na: " + strings.Repeat("[", maxFrontMatterDepth+1) + strings.Repeat("]", maxFrontMatterDepth+1) + "\n---\n",
-			want:  "<pre><code class=\"language-yaml\">---\na: " + strings.Repeat("[", maxFrontMatterDepth+1) + strings.Repeat("]", maxFrontMatterDepth+1) + "\n---\n</code></pre>\n",
+			input: "---\na: " + strings.Repeat("[", 17) + strings.Repeat("]", 17) + "\n---\n",
+			want:  "<pre><code class=\"language-yaml\">---\na: " + strings.Repeat("[", 17) + strings.Repeat("]", 17) + "\n---\n</code></pre>\n",
 		},
 		{
 			name:  "too large",

@@ -71,7 +71,7 @@ type parser struct {
 
 	// frontMatter is the value of the front matter, see
 	// Options.FrontMatter.
-	frontMatter FrontMatterValue
+	frontMatter frontMatterValue
 
 	inl inlineParser
 	// r renders the document. It is part of the parser so that its
@@ -119,7 +119,7 @@ func (p *parser) reset() {
 	}
 	p.footnotes.reset()
 	p.hasRawHTML = false
-	p.frontMatter = FrontMatterValue{}
+	p.frontMatter = frontMatterValue{}
 	p.inl.reset()
 }
 
@@ -169,9 +169,9 @@ func (p *parser) parse(src []byte, flush func() bool) *node {
 	// The start of the input counts as a blank line.
 	p.curBlankIn = p.doc
 	pos := 0
-	if p.opts.FrontMatter != nil {
+	if p.opts.FrontMatter {
 		if yaml, size, lines := frontMatter(src); size > 0 {
-			if v := p.opts.FrontMatter(yaml); v.Kind != FrontMatterNone {
+			if v := parseFrontMatter(yaml); v.kind != frontMatterNone {
 				n := p.arena.new(kindFrontMatter)
 				n.text = src[:size]
 				n.startLine, n.lastLine = 1, int32(lines)
