@@ -121,7 +121,7 @@
   --color-field: #0a0a0a;
   --color-muted-foreground: #a3a3a3;
   --color-destructive: #ff6762;
-  --color-destructive-foreground: #ffffff;
+  --color-destructive-foreground: #0a0a0a;
   --color-success: #4ade80;
   --color-merged: #b392f0;
   --color-diff-added: #4ade80;
