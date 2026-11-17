@@ -156,6 +156,8 @@ func issuesCreate(t *testing.T, ctx context.Context, s *IssuesStore) {
 
 	got, err := s.GetByID(ctx, issue.ID)
 	require.NoError(t, err)
+	assert.Equal(t, got.CreatedUnix, issue.Created.Unix())
+	assert.Equal(t, got.CreatedUnix, issue.Updated.Unix())
 	assert.Equal(t, int64(1), got.Index)
 	assert.Equal(t, "Crash", got.Title)
 	assert.Equal(t, milestone.ID, got.MilestoneID)
@@ -202,6 +204,7 @@ func issuesCreate(t *testing.T, ctx context.Context, s *IssuesStore) {
 	payloads := hookPayloads(t, s.db)
 	require.Len(t, payloads, 1)
 	assert.Contains(t, payloads[0], `"action": "opened"`)
+	assert.NotContains(t, payloads[0], `"created_at": "0001-01-01`, "the issue has its creation time")
 
 	// A milestone and an assignee that do not exist are dropped, and a poster
 	// who cannot be assigned relates to the issue as its poster only.
