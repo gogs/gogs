@@ -9,7 +9,7 @@ import (
 )
 
 func listLabels(c *apiContext) {
-	labels, err := database.GetLabelsByRepoID(c.Repo.Repository.ID)
+	labels, err := database.Handle.Labels().ListByRepoID(c.Request().Context(), c.Repo.Repository.ID)
 	if err != nil {
 		c.Error(err, "get labels by repository ID")
 		return
@@ -27,9 +27,9 @@ func getLabel(c *apiContext) {
 	var err error
 	idStr := c.Param("id")
 	if id, _ := strconv.ParseInt(idStr, 10, 64); id > 0 {
-		label, err = database.GetLabelOfRepoByID(c.Repo.Repository.ID, id)
+		label, err = database.Handle.Labels().GetByID(c.Request().Context(), c.Repo.Repository.ID, id)
 	} else {
-		label, err = database.GetLabelOfRepoByName(c.Repo.Repository.ID, idStr)
+		label, err = database.Handle.Labels().GetByName(c.Request().Context(), c.Repo.Repository.ID, idStr)
 	}
 	if err != nil {
 		c.NotFoundOrError(err, "get label")
@@ -50,7 +50,7 @@ func createLabel(c *apiContext, form createLabelRequest) {
 		Color:  form.Color,
 		RepoID: c.Repo.Repository.ID,
 	}
-	if err := database.NewLabels(label); err != nil {
+	if err := database.Handle.Labels().Create(c.Request().Context(), label); err != nil {
 		c.Error(err, "new labels")
 		return
 	}
@@ -63,7 +63,7 @@ type editLabelRequest struct {
 }
 
 func editLabel(c *apiContext, form editLabelRequest) {
-	label, err := database.GetLabelOfRepoByID(c.Repo.Repository.ID, c.ParamInt64("id"))
+	label, err := database.Handle.Labels().GetByID(c.Request().Context(), c.Repo.Repository.ID, c.ParamInt64("id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get label of repository by ID")
 		return
@@ -75,7 +75,7 @@ func editLabel(c *apiContext, form editLabelRequest) {
 	if form.Color != nil {
 		label.Color = *form.Color
 	}
-	if err := database.UpdateLabel(label); err != nil {
+	if err := database.Handle.Labels().Update(c.Request().Context(), label); err != nil {
 		c.Error(err, "update label")
 		return
 	}
@@ -83,7 +83,7 @@ func editLabel(c *apiContext, form editLabelRequest) {
 }
 
 func deleteLabel(c *apiContext) {
-	if err := database.DeleteLabel(c.Repo.Repository.ID, c.ParamInt64("id")); err != nil {
+	if err := database.Handle.Labels().DeleteByID(c.Request().Context(), c.Repo.Repository.ID, c.ParamInt64("id")); err != nil {
 		c.Error(err, "delete label")
 		return
 	}

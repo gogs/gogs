@@ -170,7 +170,7 @@ func TestIssueCreateAndView(t *testing.T) {
 			"title":    "With a label",
 			"labelIDs": []int64{labelID},
 		}, http.StatusCreated, &created)
-		labels, err := database.GetLabelsByIssueID(issueFromDatabase(t, repo, created.Index).ID)
+		labels, err := database.Handle.Labels().ListByIssueID(t.Context(), issueFromDatabase(t, repo, created.Index).ID)
 		require.NoError(t, err)
 		assert.Empty(t, labels)
 	})
@@ -352,7 +352,7 @@ func TestIssueLabelsMilestoneAndAssignee(t *testing.T) {
 		v := issueGet(t, ownerClient, repo, index)
 		require.NotNil(t, v.Milestone)
 		assert.Equal(t, "v1.0", v.Milestone.Name)
-		m, err := database.GetMilestoneByRepoID(repo.ID, milestoneID)
+		m, err := database.Handle.Milestones().GetByID(t.Context(), repo.ID, milestoneID)
 		require.NoError(t, err)
 		assert.Equal(t, 1, m.NumIssues)
 

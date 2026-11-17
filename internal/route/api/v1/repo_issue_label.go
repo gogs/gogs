@@ -32,7 +32,7 @@ func addIssueLabels(c *apiContext, form issueLabelsRequest) {
 		return
 	}
 
-	labels, err := database.GetLabelsInRepoByIDs(c.Repo.Repository.ID, form.Labels)
+	labels, err := database.Handle.Labels().ListByIDs(c.Request().Context(), c.Repo.Repository.ID, form.Labels)
 	if err != nil {
 		c.Error(err, "get labels in repository by IDs")
 		return
@@ -43,7 +43,7 @@ func addIssueLabels(c *apiContext, form issueLabelsRequest) {
 		return
 	}
 
-	labels, err = database.GetLabelsByIssueID(issue.ID)
+	labels, err = database.Handle.Labels().ListByIssueID(c.Request().Context(), issue.ID)
 	if err != nil {
 		c.Error(err, "get labels by issue ID")
 		return
@@ -63,7 +63,7 @@ func deleteIssueLabel(c *apiContext) {
 		return
 	}
 
-	label, err := database.GetLabelOfRepoByID(c.Repo.Repository.ID, c.ParamInt64("id"))
+	label, err := database.Handle.Labels().GetByID(c.Request().Context(), c.Repo.Repository.ID, c.ParamInt64("id"))
 	if err != nil {
 		if database.IsErrLabelNotExist(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
@@ -73,7 +73,7 @@ func deleteIssueLabel(c *apiContext) {
 		return
 	}
 
-	if err := database.DeleteIssueLabel(issue, label); err != nil {
+	if err := database.Handle.Labels().RemoveFromIssue(c.Request().Context(), issue, label); err != nil {
 		c.Error(err, "delete issue label")
 		return
 	}
@@ -88,7 +88,7 @@ func replaceIssueLabels(c *apiContext, form issueLabelsRequest) {
 		return
 	}
 
-	labels, err := database.GetLabelsInRepoByIDs(c.Repo.Repository.ID, form.Labels)
+	labels, err := database.Handle.Labels().ListByIDs(c.Request().Context(), c.Repo.Repository.ID, form.Labels)
 	if err != nil {
 		c.Error(err, "get labels in repository by IDs")
 		return
@@ -99,7 +99,7 @@ func replaceIssueLabels(c *apiContext, form issueLabelsRequest) {
 		return
 	}
 
-	labels, err = database.GetLabelsByIssueID(issue.ID)
+	labels, err = database.Handle.Labels().ListByIssueID(c.Request().Context(), issue.ID)
 	if err != nil {
 		c.Error(err, "get labels by issue ID")
 		return

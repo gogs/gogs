@@ -148,6 +148,10 @@ func (db *DB) HookTasks() *HookTasksStore {
 	return newHookTasksStore(db.db)
 }
 
+func (db *DB) Labels() *LabelsStore {
+	return newLabelsStore(db.db)
+}
+
 func (db *DB) LFS() *LFSStore {
 	return newLFSStore(db.db)
 }
@@ -158,6 +162,10 @@ var loadedLoginSourceFilesStore loginSourceFilesStore
 
 func (db *DB) LoginSources() *LoginSourcesStore {
 	return newLoginSourcesStore(db.db, loadedLoginSourceFilesStore)
+}
+
+func (db *DB) Milestones() *MilestonesStore {
+	return newMilestonesStore(db.db)
 }
 
 func (db *DB) Mirrors() *MirrorsStore {

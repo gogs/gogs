@@ -16,10 +16,8 @@ import (
 func issueCreateLabel(t *testing.T, repo *Repository, name string) int64 {
 	t.Helper()
 
-	require.NoError(t, database.NewLabels(&database.Label{RepoID: repo.ID, Name: name, Color: "#123456"}))
-	// Inserting a list of labels does not set their IDs.
-	label := issueLabelsOf(t, repo)[name]
-	require.NotNil(t, label)
+	label := &database.Label{RepoID: repo.ID, Name: name, Color: "#123456"}
+	require.NoError(t, database.Handle.Labels().Create(t.Context(), label))
 	return label.ID
 }
 
@@ -29,14 +27,14 @@ func issueCreateMilestone(t *testing.T, repo *Repository, name string) int64 {
 	t.Helper()
 
 	m := &database.Milestone{RepoID: repo.ID, Name: name, Deadline: time.Date(9999, 12, 31, 0, 0, 0, 0, time.Local)}
-	require.NoError(t, database.NewMilestone(m))
+	require.NoError(t, database.Handle.Milestones().Create(t.Context(), m))
 	return m.ID
 }
 
 func issueLabelsOf(t *testing.T, repo *Repository) map[string]*database.Label {
 	t.Helper()
 
-	labels, err := database.GetLabelsByRepoID(repo.ID)
+	labels, err := database.Handle.Labels().ListByRepoID(t.Context(), repo.ID)
 	require.NoError(t, err)
 	byName := make(map[string]*database.Label, len(labels))
 	for _, l := range labels {
@@ -109,7 +107,7 @@ func TestIssueRepositoryLabels(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 		status, body = ownerClient.do(http.MethodPatch, path, map[string]any{"name": "defect", "color": "#00FF00"})
 		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-		label, err := database.GetLabelOfRepoByID(repo.ID, bug.ID)
+		label, err := database.Handle.Labels().GetByID(t.Context(), repo.ID, bug.ID)
 		require.NoError(t, err)
 		assert.Equal(t, "defect", label.Name)
 		assert.Equal(t, "#00FF00", label.Color)
@@ -127,7 +125,7 @@ func TestIssueRepositoryLabels(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 		status, body = ownerClient.do(http.MethodDelete, path, map[string]any{})
 		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-		_, err := database.GetLabelOfRepoByID(repo.ID, id)
+		_, err := database.Handle.Labels().GetByID(t.Context(), repo.ID, id)
 		assert.True(t, database.IsErrLabelNotExist(err), "label not deleted: %v", err)
 	})
 }
@@ -247,7 +245,7 @@ func TestIssueMilestones(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 		status, body = ownerClient.do(http.MethodPatch, path, map[string]any{"title": "v1.1", "description": "Renamed"})
 		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-		got, err := database.GetMilestoneByRepoID(repo.ID, m.ID)
+		got, err := database.Handle.Milestones().GetByID(t.Context(), repo.ID, m.ID)
 		require.NoError(t, err)
 		assert.Equal(t, "v1.1", got.Name)
 		assert.Equal(t, "Renamed", got.Content)
@@ -260,7 +258,7 @@ func TestIssueMilestones(t *testing.T) {
 
 		status, body = ownerClient.do(http.MethodPut, path+"/closed", map[string]any{})
 		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-		got, err := database.GetMilestoneByRepoID(repo.ID, m.ID)
+		got, err := database.Handle.Milestones().GetByID(t.Context(), repo.ID, m.ID)
 		require.NoError(t, err)
 		assert.True(t, got.IsClosed)
 		assert.Empty(t, list(ownerClient, "open").Items)
@@ -271,7 +269,7 @@ func TestIssueMilestones(t *testing.T) {
 
 		status, body = ownerClient.do(http.MethodDelete, path+"/closed", map[string]any{})
 		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-		got, err = database.GetMilestoneByRepoID(repo.ID, m.ID)
+		got, err = database.Handle.Milestones().GetByID(t.Context(), repo.ID, m.ID)
 		require.NoError(t, err)
 		assert.False(t, got.IsClosed)
 		assert.Len(t, list(ownerClient, "open").Items, 1)
@@ -287,7 +285,7 @@ func TestIssueMilestones(t *testing.T) {
 
 		status, body = ownerClient.do(http.MethodDelete, path, map[string]any{})
 		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-		_, err := database.GetMilestoneByRepoID(repo.ID, m.ID)
+		_, err := database.Handle.Milestones().GetByID(t.Context(), repo.ID, m.ID)
 		assert.True(t, database.IsErrMilestoneNotExist(err), "milestone not deleted: %v", err)
 		assert.Zero(t, issueFromDatabase(t, repo, index).MilestoneID, "the issue still has the deleted milestone")
 		names := []string{}
