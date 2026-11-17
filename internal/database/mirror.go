@@ -48,9 +48,9 @@ type Mirror struct {
 
 	// Last and next sync time of Git data from upstream
 	LastSync     time.Time `xorm:"-" json:"-" gorm:"-"`
-	LastSyncUnix int64     `xorm:"updated_unix"`
+	LastSyncUnix int64     `xorm:"updated_unix" gorm:"column:updated_unix"`
 	NextSync     time.Time `xorm:"-" json:"-" gorm:"-"`
-	NextSyncUnix int64     `xorm:"next_update_unix"`
+	NextSyncUnix int64     `xorm:"next_update_unix" gorm:"column:next_update_unix"`
 
 	address string `xorm:"-"`
 }

@@ -995,11 +995,12 @@ func syncDelegateHooks(repoPath string, hasProtectedBranch func() (bool, error))
 // hooks or the protection of the branches of the repository change.
 func (r *Repository) SyncDelegateHooks() error {
 	hasProtectedBranch := func() (bool, error) {
-		has, err := x.Where("repo_id = ? AND protected = ?", r.ID, true).Exist(new(ProtectBranch))
+		var count int64
+		err := Handle.db.Model(new(ProtectBranch)).Where("repo_id = ? AND protected = ?", r.ID, true).Count(&count).Error
 		if err != nil {
 			return false, errors.Wrap(err, "check protected branches")
 		}
-		return has, nil
+		return count > 0, nil
 	}
 	if err := syncDelegateHooks(r.RepoPath(), hasProtectedBranch); err != nil {
 		return err
