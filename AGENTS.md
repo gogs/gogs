@@ -15,6 +15,7 @@ This applies to all texts, including but not limited to UI, documentation, code 
 - Keep comments and documentation only about long-lasting facts, not your thought process.
 - Do not include implementation details in CHANGELOG entries, describe the visible impact only from user's POV.
 - Always use `e.g.,` and `i.e.,` with the trailing comma.
+- Describe whether a user is signed in as "authenticated" or "unauthenticated", never "signed-in", "signed in", "signed-out", or "signed out". "Sign in" stays for the action, e.g., "requires signing in".
 
 ## Coding guidelines
 
