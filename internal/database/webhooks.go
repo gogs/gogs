@@ -78,20 +78,20 @@ type Webhook struct {
 	ID           int64
 	RepoID       int64
 	OrgID        int64
-	URL          string `xorm:"url TEXT"`
-	ContentType  HookContentType
-	Secret       string              `xorm:"TEXT"`
-	Events       string              `xorm:"TEXT"`
-	*HookEvent   `xorm:"-" gorm:"-"` // LEGACY [1.0]: Cannot ignore JSON (i.e. json:"-") here, it breaks old backup archive
-	IsSSL        bool                `xorm:"is_ssl"`
+	URL          string          `gorm:"type:TEXT"`
+	ContentType  HookContentType `gorm:"size:32"`
+	Secret       string          `gorm:"type:TEXT"`
+	Events       string          `gorm:"type:TEXT"`
+	*HookEvent   `gorm:"-"`      // LEGACY [1.0]: Cannot ignore JSON (i.e. json:"-") here, it breaks old backup archive
+	IsSSL        bool
 	IsActive     bool
-	HookTaskType HookTaskType
-	Meta         string     `xorm:"TEXT"` // store hook-specific attributes
-	LastStatus   HookStatus // Last delivery status
+	HookTaskType HookTaskType `gorm:"size:32"`
+	Meta         string       `gorm:"type:TEXT"` // store hook-specific attributes
+	LastStatus   HookStatus   `gorm:"size:32"`   // Last delivery status
 
-	Created     time.Time `xorm:"-" json:"-" gorm:"-"`
+	Created     time.Time `json:"-" gorm:"-"`
 	CreatedUnix int64
-	Updated     time.Time `xorm:"-" json:"-" gorm:"-"`
+	Updated     time.Time `json:"-" gorm:"-"`
 	UpdatedUnix int64
 }
 

@@ -105,6 +105,33 @@ Indexes:
 	"follow_user_follow_unique" UNIQUE (user_id, follow_id)
 ```
 
+# Table "hook_task"
+
+```
+      Field      |      Column      |  PostgreSQL  |         MySQL         |        SQLite3        
+-----------------+------------------+--------------+-----------------------+-----------------------
+ ID              | id               | BIGSERIAL    | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ RepoID          | repo_id          | BIGINT       | BIGINT                | INTEGER               
+ HookID          | hook_id          | BIGINT       | BIGINT                | INTEGER               
+ UUID            | uuid             | VARCHAR(255) | VARCHAR(255)          | TEXT                  
+ Type            | type             | INTEGER      | INT                   | INTEGER               
+ URL             | url              | TEXT         | TEXT                  | TEXT                  
+ Signature       | signature        | TEXT         | TEXT                  | TEXT                  
+ PayloadContent  | payload_content  | TEXT         | TEXT                  | TEXT                  
+ ContentType     | content_type     | INTEGER      | INT                   | INTEGER               
+ EventType       | event_type       | VARCHAR(255) | VARCHAR(255)          | TEXT                  
+ IsSSL           | is_ssl           | BOOLEAN      | BOOLEAN               | NUMERIC               
+ IsDelivered     | is_delivered     | BOOLEAN      | BOOLEAN               | NUMERIC               
+ Delivered       | delivered        | BIGINT       | BIGINT                | INTEGER               
+ IsSucceed       | is_succeed       | BOOLEAN      | BOOLEAN               | NUMERIC               
+ RequestContent  | request_content  | TEXT         | TEXT                  | TEXT                  
+ ResponseContent | response_content | TEXT         | TEXT                  | TEXT                  
+
+Primary keys: id
+Indexes: 
+	"IDX_hook_task_repo_id" (repo_id)
+```
+
 # Table "lfs_object"
 
 ```
@@ -226,5 +253,28 @@ Primary keys: id
 Primary keys: id
 Indexes: 
 	"UQE_upload_uuid" UNIQUE (uuid)
+```
+
+# Table "webhook"
+
+```
+    Field     |     Column     | PostgreSQL |         MySQL         |        SQLite3        
+--------------+----------------+------------+-----------------------+-----------------------
+ ID           | id             | BIGSERIAL  | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ RepoID       | repo_id        | BIGINT     | BIGINT                | INTEGER               
+ OrgID        | org_id         | BIGINT     | BIGINT                | INTEGER               
+ URL          | url            | TEXT       | TEXT                  | TEXT                  
+ ContentType  | content_type   | INTEGER    | INT                   | INTEGER               
+ Secret       | secret         | TEXT       | TEXT                  | TEXT                  
+ Events       | events         | TEXT       | TEXT                  | TEXT                  
+ IsSSL        | is_ssl         | BOOLEAN    | BOOLEAN               | NUMERIC               
+ IsActive     | is_active      | BOOLEAN    | BOOLEAN               | NUMERIC               
+ HookTaskType | hook_task_type | INTEGER    | INT                   | INTEGER               
+ Meta         | meta           | TEXT       | TEXT                  | TEXT                  
+ LastStatus   | last_status    | INTEGER    | INT                   | INTEGER               
+ CreatedUnix  | created_unix   | BIGINT     | BIGINT                | INTEGER               
+ UpdatedUnix  | updated_unix   | BIGINT     | BIGINT                | INTEGER               
+
+Primary keys: id
 ```
 

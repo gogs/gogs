@@ -98,27 +98,27 @@ type HookResponse struct {
 // HookTask represents a hook task.
 type HookTask struct {
 	ID                          int64
-	RepoID                      int64 `xorm:"INDEX"`
+	RepoID                      int64 `gorm:"index:IDX_hook_task_repo_id"`
 	HookID                      int64
-	UUID                        string
-	Type                        HookTaskType
-	URL                         string `xorm:"TEXT"`
-	Signature                   string `xorm:"TEXT"`
-	apiv1types.WebhookPayloader `xorm:"-" json:"-" gorm:"-"`
-	PayloadContent              string `xorm:"TEXT"`
-	ContentType                 HookContentType
-	EventType                   HookEventType
+	UUID                        string       `gorm:"size:255"`
+	Type                        HookTaskType `gorm:"size:32"`
+	URL                         string       `gorm:"type:TEXT"`
+	Signature                   string       `gorm:"type:TEXT"`
+	apiv1types.WebhookPayloader `json:"-" gorm:"-"`
+	PayloadContent              string          `gorm:"type:TEXT"`
+	ContentType                 HookContentType `gorm:"size:32"`
+	EventType                   HookEventType   `gorm:"size:255"`
 	IsSSL                       bool
 	IsDelivered                 bool
 	Delivered                   int64
-	DeliveredString             string `xorm:"-" json:"-" gorm:"-"`
+	DeliveredString             string `json:"-" gorm:"-"`
 
 	// History info.
 	IsSucceed       bool
-	RequestContent  string        `xorm:"TEXT"`
-	RequestInfo     *HookRequest  `xorm:"-" json:"-" gorm:"-"`
-	ResponseContent string        `xorm:"TEXT"`
-	ResponseInfo    *HookResponse `xorm:"-" json:"-" gorm:"-"`
+	RequestContent  string        `gorm:"type:TEXT"`
+	RequestInfo     *HookRequest  `json:"-" gorm:"-"`
+	ResponseContent string        `gorm:"type:TEXT"`
+	ResponseInfo    *HookResponse `json:"-" gorm:"-"`
 }
 
 // BeforeUpdate implements the GORM update hook.

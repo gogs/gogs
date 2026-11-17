@@ -24,12 +24,14 @@ var Tables = []any{
 	new(DeployKey),
 	new(EmailAddress),
 	new(Follow),
+	new(HookTask),
 	new(LFSObject), new(LoginSource),
 	new(Notice),
 	new(Passkey),
 	new(PublicKey),
 	new(TwoFactor), new(TwoFactorRecoveryCode),
 	new(Upload),
+	new(Webhook),
 }
 
 // NewConnection returns a new database connection with the given logger. When

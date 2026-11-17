@@ -27,7 +27,7 @@ func TestDumpAndImport(t *testing.T) {
 	}
 	t.Parallel()
 
-	const wantTables = 14
+	const wantTables = 16
 	if len(Tables) != wantTables {
 		t.Fatalf("New table has added (want %d got %d), please add new tests for the table and update this check", wantTables, len(Tables))
 	}
@@ -162,6 +162,25 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			FollowID: 1,
 		},
 
+		&HookTask{
+			ID:              1,
+			RepoID:          1,
+			HookID:          1,
+			UUID:            "0f9b1a2c-3d4e-4f50-8a6b-7c8d9e0f1a2b",
+			Type:            GOGS,
+			URL:             "https://example.com/hook",
+			Signature:       "5d41402abc4b2a76b9719d911017c592",
+			PayloadContent:  `{"ref":"refs/heads/main"}`,
+			ContentType:     JSON,
+			EventType:       HookEventTypePush,
+			IsSSL:           true,
+			IsDelivered:     true,
+			Delivered:       1588568886000000000,
+			IsSucceed:       true,
+			RequestContent:  `{"headers":{}}`,
+			ResponseContent: `{"status":200}`,
+		},
+
 		&LFSObject{
 			RepoID:    1,
 			OID:       "ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f",
@@ -256,6 +275,34 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			ID:   1,
 			UUID: "8c2d0f1e-5a6b-4c7d-9e8f-0a1b2c3d4e5f",
 			Name: "notes.txt",
+		},
+
+		&Webhook{
+			ID:           1,
+			RepoID:       1,
+			URL:          "https://example.com/hook",
+			ContentType:  JSON,
+			Secret:       "s3cr3t",
+			Events:       `{"push_only":true,"send_everything":false,"choose_events":false,"events":{}}`,
+			IsSSL:        true,
+			IsActive:     true,
+			HookTaskType: GOGS,
+			LastStatus:   HookStatusSucceed,
+			CreatedUnix:  1588568886,
+			UpdatedUnix:  1588572486,
+		},
+
+		&Webhook{
+			ID:           2,
+			OrgID:        3,
+			URL:          "https://hooks.slack.com/services/T/B/X",
+			ContentType:  JSON,
+			Events:       `{"push_only":false,"send_everything":true,"choose_events":false,"events":{}}`,
+			HookTaskType: SLACK,
+			Meta:         `{"channel":"#dev","username":"gogs"}`,
+			LastStatus:   HookStatusFailed,
+			CreatedUnix:  1588568886,
+			UpdatedUnix:  1588568886,
 		},
 	}
 	for _, val := range vals {
