@@ -17,6 +17,7 @@ import (
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/git"
@@ -27,14 +28,28 @@ import (
 	"gogs.io/gogs/internal/userx"
 )
 
+// webAppPages is the web app, which renders the pages of the site.
+type webAppPages struct {
+	http.Handler
+}
+
+// NotFound renders the page that is not found, with a 404 status, like
+// visiting a path that is no page at all.
+func (p webAppPages) NotFound(c flamego.Context) {
+	r := c.Request().Request
+	wc := context.WebContextFrom(r)
+	wc.StatusCode = http.StatusNotFound
+	p.ServeHTTP(c.ResponseWriter(), r.WithContext(stdctx.WithValue(r.Context(), context.WebContextKey{}, wc)))
+}
+
 // getAttachment serves an attachment of an issue, a comment or a release to
 // viewers who can read the repository.
-func getAttachment(c flamego.Context, logger *logx.Logger, viewer *database.User) {
+func getAttachment(c flamego.Context, logger *logx.Logger, viewer *database.User, pages webAppPages) {
 	w := c.ResponseWriter()
 	attach, err := database.GetAttachmentByUUID(c.Param("uuid"))
 	if err != nil {
 		if errx.IsNotFound(err) {
-			writeErrorResponse(w, http.StatusNotFound, errors.New("attachment does not exist"))
+			pages.NotFound(c)
 			return
 		}
 		logger.Error("Failed to get attachment by UUID", "error", err)
@@ -51,7 +66,7 @@ func getAttachment(c flamego.Context, logger *logx.Logger, viewer *database.User
 		issue, err := database.GetIssueByID(attach.IssueID)
 		if err != nil {
 			if errx.IsNotFound(err) {
-				writeErrorResponse(w, http.StatusNotFound, errors.New("attachment does not exist"))
+				pages.NotFound(c)
 				return
 			}
 			logger.Error("Failed to get issue by ID", "issueID", attach.IssueID, "error", err)
@@ -63,7 +78,7 @@ func getAttachment(c flamego.Context, logger *logx.Logger, viewer *database.User
 		release, err := database.GetReleaseByID(attach.ReleaseID)
 		if err != nil {
 			if errx.IsNotFound(err) {
-				writeErrorResponse(w, http.StatusNotFound, errors.New("attachment does not exist"))
+				pages.NotFound(c)
 				return
 			}
 			logger.Error("Failed to get release by ID", "releaseID", attach.ReleaseID, "error", err)
@@ -82,7 +97,7 @@ func getAttachment(c flamego.Context, logger *logx.Logger, viewer *database.User
 	if (repo == nil && (viewerID == 0 || attach.UploaderID != viewerID)) ||
 		(repo != nil && !repo.HasAccess(logger, viewerID)) ||
 		!osx.IsFile(attach.LocalPath()) {
-		writeErrorResponse(w, http.StatusNotFound, errors.New("attachment does not exist"))
+		pages.NotFound(c)
 		return
 	}
 
@@ -103,13 +118,13 @@ func getAttachment(c flamego.Context, logger *logx.Logger, viewer *database.User
 }
 
 // getUserPublicKeys serves the public SSH keys of a user as plain text.
-func getUserPublicKeys(c flamego.Context, logger *logx.Logger) {
+func getUserPublicKeys(c flamego.Context, logger *logx.Logger, pages webAppPages) {
 	w := c.ResponseWriter()
 	name := c.Param("username")
 	user, err := database.Handle.Users().GetByUsername(c.Request().Context(), name)
 	if err != nil {
 		if errx.IsNotFound(err) {
-			writeErrorResponse(w, http.StatusNotFound, errors.New("user does not exist"))
+			pages.NotFound(c)
 			return
 		}
 		logger.Error("Failed to get user by name", "userName", name, "error", err)
@@ -166,11 +181,11 @@ func verifyActivateEmailCode(ctx stdctx.Context, logger *logx.Logger, code, emai
 
 // email2User sends the viewer to the profile of the user with the email
 // address in the query.
-func email2User(c flamego.Context, logger *logx.Logger) {
+func email2User(c flamego.Context, logger *logx.Logger, pages webAppPages) {
 	u, err := database.Handle.Users().GetByEmail(c.Request().Context(), c.Query("email"))
 	if err != nil {
 		if errx.IsNotFound(err) {
-			writeErrorResponse(c.ResponseWriter(), http.StatusNotFound, errors.New("user does not exist"))
+			pages.NotFound(c)
 			return
 		}
 		logger.Error("Failed to get user by email", "error", err)
@@ -182,11 +197,11 @@ func email2User(c flamego.Context, logger *logx.Logger) {
 
 // getRepoArchive serves the archive of a branch, a tag or a commit, e.g.,
 // "master.zip".
-func getRepoArchive(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) {
+func getRepoArchive(c flamego.Context, logger *logx.Logger, repoCtx *repoContext, pages webAppPages) {
 	w := c.ResponseWriter()
 	repo := repoCtx.Repo
 	if !repoCtx.Viewer.CanRead() || repo.IsEmpty {
-		writeErrorResponse(w, http.StatusNotFound, errors.New("repository does not exist"))
+		pages.NotFound(c)
 		return
 	}
 
@@ -200,7 +215,7 @@ func getRepoArchive(c flamego.Context, logger *logx.Logger, repoCtx *repoContext
 	archivePath, name, err := routerepo.PrepareArchive(c.Request().Context(), gitRepo, repo.Name, c.Param("**"))
 	if err != nil {
 		if errx.IsNotFound(err) {
-			writeErrorResponse(w, http.StatusNotFound, errors.New("ref does not exist"))
+			pages.NotFound(c)
 			return
 		}
 		logger.Error("Failed to prepare archive", "repoID", repo.ID, "error", err)

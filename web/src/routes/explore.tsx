@@ -1,4 +1,4 @@
-import { type AnyRoute, createRoute, notFound, redirect } from "@tanstack/react-router";
+import { type AnyRoute, createRoute, notFound } from "@tanstack/react-router";
 
 import { loaderResponseError } from "@/lib/loader-error";
 import { subUrl } from "@/lib/url";
@@ -11,15 +11,6 @@ import {
 } from "@/pages/explore/Explore.search";
 
 export function createExploreRoutes(rootRoute: AnyRoute) {
-  const exploreIndexRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/explore",
-    beforeLoad: () => {
-      // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
-      throw redirect({ to: "/explore/$kind", params: { kind: "repos" }, replace: true });
-    },
-  });
-
   const exploreRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/explore/$kind",
@@ -51,5 +42,5 @@ export function createExploreRoutes(rootRoute: AnyRoute) {
     component: Explore,
   });
 
-  return [exploreIndexRoute, exploreRoute];
+  return [exploreRoute];
 }

@@ -339,6 +339,10 @@ func newRoutingHandler(logger *logx.Logger) (http.Handler, error) {
 
 	// The web app renders every other path and asks the web API what the viewer
 	// may see. These routes serve the files and redirects next to its pages.
+	f.Map(webAppPages{webApp})
+	f.Get("/explore", func(c flamego.Context) {
+		c.Redirect(conf.Server.Subpath + "/explore/repos")
+	})
 	f.Get("/attachments/{uuid}", requireViewAccess, getAttachment)
 	f.Get("/{username}.keys", requireViewAccess, getUserPublicKeys)
 	f.Any("/user/activate_email", activateEmail)
