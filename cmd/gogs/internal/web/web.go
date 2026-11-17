@@ -88,6 +88,7 @@ func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOver
 	if err != nil {
 		return errors.Wrap(err, "initialize web handler")
 	}
+	apiV1Handler := newAPIV1Handler(logger)
 
 	// Flag for port number in case first time run conflict. Apply it before
 	// anything reads the external URL.
@@ -502,10 +503,7 @@ func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOver
 		// **********************
 
 		// TODO: Without session
-		m.Group("/api", func() {
-			apiv1.RegisterRoutes(logger, m)
-		}, ignSignIn)
-
+		m.Any("/api/v1/*", ignSignIn, apiV1Bridger(apiV1Handler))
 		m.Any("/api/web/*", flamegoBridger(webHandler))
 		m.Get("/redirect", flamegoBridger(webHandler))
 		m.Get("/captcha/*", flamegoBridger(webHandler))
@@ -740,6 +738,19 @@ func newRoutingHandler(logger *logx.Logger) (http.Handler, error) {
 	return f, nil
 }
 
+// newAPIV1Handler returns the handler of API v1 routes. It is separate from the
+// web handler so that requests the web handler receives, e.g., through
+// Context.ServeWeb, never reach API v1 routes without the sign-in and
+// authentication checks done by Macaron.
+func newAPIV1Handler(logger *logx.Logger) http.Handler {
+	f := flamego.New()
+	f.Map(logger)
+	f.Use(flamego.Recovery(flamego.RecoveryOptions{PlainText: true}))
+	f.Use(flamegoInjector)
+	apiv1.RegisterRoutes(f)
+	return f
+}
+
 func getRedirect(c flamego.Context) {
 	to := c.Request().URL.Query().Get("to")
 	if !urlx.IsSameSite(to) {
@@ -808,8 +819,9 @@ func newMacaron(logger *logx.Logger) (*macaron.Macaron, error) {
 		},
 	))
 
-	// API v1, Git HTTP and LFS still write JSON and plain text through
-	// Macaron's renderer, which no page template is rendered with anymore.
+	// The sign-in checks, the go-get page and the public SSH keys still write
+	// JSON and plain text through Macaron's renderer, which no page template is
+	// rendered with anymore.
 	m.Use(macaron.Renderer(macaron.RenderOptions{TemplateFileSystem: noTemplates{}}))
 
 	localeNames, err := embedconf.FileNames("locale")

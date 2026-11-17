@@ -71,6 +71,7 @@ All notable changes to Gogs are documented in this file.
 - Quoted values in authentication source files under `custom/conf/auth.d` are now read in full when they contain `#` or `;`, e.g., `bind_password = "p#ss"`. Previously they were cut at the first `#` or `;`. [#8489](https://github.com/gogs/gogs/pull/8489)
 - With `[log] MODE` set to console only, Gogs no longer creates the log directory, and starts when `[log] ROOT_PATH` is not writable. [#8596](https://github.com/gogs/gogs/pull/8596)
 - Gogs commands, including Git over SSH, no longer fail to start when another process holds or rotates the same log file. [#8616](https://github.com/gogs/gogs/pull/8616)
+- Getting the `.editorconfig` definition of an empty repository through the API responded with 500 instead of 404. [#8454](https://github.com/gogs/gogs/pull/8454)
 
 ### Removed
 

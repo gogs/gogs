@@ -1,11 +1,7 @@
 package v1
 
-import (
-	"gogs.io/gogs/internal/context"
-)
-
-func listTags(c *context.APIContext) {
-	tags, err := c.Repo.Repository.GetTags(c.Req.Context())
+func listTags(c *apiContext) {
+	tags, err := c.Repo.Repository.GetTags(c.Request().Context())
 	if err != nil {
 		c.Error(err, "get tags")
 		return
@@ -13,7 +9,7 @@ func listTags(c *context.APIContext) {
 
 	apiTags := make([]*tag, len(tags))
 	for i := range tags {
-		commit, err := tags[i].GetCommit(c.Req.Context())
+		commit, err := tags[i].GetCommit(c.Request().Context())
 		if err != nil {
 			c.Error(err, "get commit")
 			return
