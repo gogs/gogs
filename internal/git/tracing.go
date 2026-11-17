@@ -41,6 +41,14 @@ func endSpan(span trace.Span, err error) {
 	span.SetStatus(codes.Error, err.Error())
 }
 
+// setPath records the path in the repository an operation is limited to, if
+// any.
+func setPath(span trace.Span, path string) {
+	if path != "" {
+		span.SetAttributes(attribute.String("git.path", path))
+	}
+}
+
 // redactURL removes the credentials from a remote URL, e.g., of a mirror.
 func redactURL(rawURL string) string {
 	u, err := url.Parse(rawURL)

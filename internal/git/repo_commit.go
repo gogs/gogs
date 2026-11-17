@@ -204,6 +204,7 @@ func (r *Repository) Log(ctx context.Context, rev string, opts ...LogOptions) (_
 	var opt LogOptions
 	if len(opts) > 0 {
 		opt = opts[0]
+		setPath(span, opt.Path)
 	}
 
 	args := []string{"log", "--pretty=" + logFormatHashOnly}
@@ -288,6 +289,7 @@ func (r *Repository) CommitsByPage(ctx context.Context, rev string, page, size i
 	var opt CommitsByPageOptions
 	if len(opts) > 0 {
 		opt = opts[0]
+		setPath(span, opt.Path)
 	}
 
 	return r.Log(ctx, rev, LogOptions{

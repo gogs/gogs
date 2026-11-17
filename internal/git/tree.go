@@ -23,7 +23,7 @@ type Tree struct {
 
 // Subtree returns a subtree by given subpath of the tree.
 func (t *Tree) Subtree(ctx context.Context, subpath string) (_ *Tree, err error) {
-	ctx, span := tracer.Start(ctx, "git.Tree.Subtree", trace.WithAttributes(attribute.String("git.tree", t.id.String())))
+	ctx, span := tracer.Start(ctx, "git.Tree.Subtree", trace.WithAttributes(attribute.String("git.tree", t.id.String()), attribute.String("git.path", subpath)))
 	defer func() { endSpan(span, err) }()
 
 	if len(subpath) == 0 {

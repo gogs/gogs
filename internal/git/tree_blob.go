@@ -11,7 +11,7 @@ import (
 
 // TreeEntry returns the TreeEntry by given subpath of the tree.
 func (t *Tree) TreeEntry(ctx context.Context, subpath string) (_ *TreeEntry, err error) {
-	ctx, span := tracer.Start(ctx, "git.Tree.TreeEntry", trace.WithAttributes(attribute.String("git.tree", t.id.String())))
+	ctx, span := tracer.Start(ctx, "git.Tree.TreeEntry", trace.WithAttributes(attribute.String("git.tree", t.id.String()), attribute.String("git.path", subpath)))
 	defer func() { endSpan(span, err) }()
 
 	if len(subpath) == 0 {

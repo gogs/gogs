@@ -70,6 +70,9 @@ func (c *Commit) CommitByPath(ctx context.Context, opts ...CommitByRevisionOptio
 	ctx, span := tracer.Start(ctx, "git.Commit.CommitByPath", trace.WithAttributes(attribute.String("git.commit", c.ID.String())))
 	defer func() { endSpan(span, err) }()
 
+	if len(opts) > 0 {
+		setPath(span, opts[0].Path)
+	}
 	return c.repo.commitByRevision(ctx, c.ID.String(), opts...)
 }
 
@@ -79,6 +82,9 @@ func (c *Commit) CommitsByPage(ctx context.Context, page, size int, opts ...Comm
 	ctx, span := tracer.Start(ctx, "git.Commit.CommitsByPage", trace.WithAttributes(attribute.String("git.commit", c.ID.String()), attribute.Int64("git.page", int64(page)), attribute.Int64("git.page_size", int64(size))))
 	defer func() { endSpan(span, err) }()
 
+	if len(opts) > 0 {
+		setPath(span, opts[0].Path)
+	}
 	return c.repo.CommitsByPage(ctx, c.ID.String(), page, size, opts...)
 }
 
@@ -137,6 +143,7 @@ func (c *Commit) Ancestors(ctx context.Context, opts ...LogOptions) (_ []*Commit
 	var opt LogOptions
 	if len(opts) > 0 {
 		opt = opts[0]
+		setPath(span, opt.Path)
 	}
 
 	opt.Skip++
