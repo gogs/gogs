@@ -104,7 +104,6 @@ func Serve(ctx context.Context, logger *logx.Logger, opts ServeOptions) error {
 		return serveError("Internal error", "Failed to get repository: %v", err)
 	}
 	repo.Owner = owner
-	repo.Owner = owner
 
 	requestMode, ok := allowedCommands[verb]
 	if !ok {
