@@ -25,7 +25,7 @@ var Tables = []any{
 	new(EmailAddress),
 	new(Follow),
 	new(IssueLabel),
-	new(LFSObject), new(LoginSource),
+	new(Label), new(LFSObject), new(LoginSource),
 	new(Notice),
 	new(Passkey),
 	new(PublicKey),

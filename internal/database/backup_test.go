@@ -27,7 +27,7 @@ func TestDumpAndImport(t *testing.T) {
 	}
 	t.Parallel()
 
-	const wantTables = 15
+	const wantTables = 16
 	if len(Tables) != wantTables {
 		t.Fatalf("New table has added (want %d got %d), please add new tests for the table and update this check", wantTables, len(Tables))
 	}
@@ -166,6 +166,15 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			ID:      1,
 			IssueID: 1,
 			LabelID: 1,
+		},
+
+		&Label{
+			ID:              1,
+			RepoID:          1,
+			Name:            "bug",
+			Color:           "#ee0701",
+			NumIssues:       1,
+			NumClosedIssues: 0,
 		},
 
 		&LFSObject{

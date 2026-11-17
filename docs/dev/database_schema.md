@@ -119,6 +119,23 @@ Indexes:
 	"UQE_issue_label_s" UNIQUE (issue_id, label_id)
 ```
 
+# Table "label"
+
+```
+      Field      |      Column       |  PostgreSQL  |         MySQL         |        SQLite3        
+-----------------+-------------------+--------------+-----------------------+-----------------------
+ ID              | id                | BIGSERIAL    | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ RepoID          | repo_id           | BIGINT       | BIGINT                | INTEGER               
+ Name            | name              | VARCHAR(255) | VARCHAR(255)          | TEXT                  
+ Color           | color             | VARCHAR(7)   | VARCHAR(7)            | TEXT                  
+ NumIssues       | num_issues        | INTEGER      | INT                   | INTEGER               
+ NumClosedIssues | num_closed_issues | INTEGER      | INT                   | INTEGER               
+
+Primary keys: id
+Indexes: 
+	"IDX_label_repo_id" (repo_id)
+```
+
 # Table "lfs_object"
 
 ```
