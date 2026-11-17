@@ -9,7 +9,6 @@ All notable changes to Gogs are documented in this file.
 - Mermaid diagrams render in wiki pages, issues, comments and release notes, not only in Markdown files. [#8620](https://github.com/gogs/gogs/pull/8620)
 - Markdown supports GitHub alerts (`> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]` and `> [!CAUTION]`) and footnotes. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Headings in rendered Markdown have stable ids like GitHub's, e.g., `user-content-getting-started`, so links to sections also work in API output and outside the web interface. [#8519](https://github.com/gogs/gogs/pull/8519)
-- Headings in rendered Markdown show a link to themselves on hover, or always on touch screens, and links to a section, e.g., `#installation`, scroll to its heading, as on GitHub. [#8659](https://github.com/gogs/gogs/pull/8659)
 - Markdown renders `<kbd>` keys as keycaps, like GitHub, e.g., `<kbd>Ctrl</kbd>+<kbd>C</kbd>`. [#8598](https://github.com/gogs/gogs/pull/8598)
 - Markdown renders emoji shortcodes as emoji, e.g., `:tada:` as 🎉, and Markdown editors suggest them as you type, e.g., `:ta` lists 🎉 tada. [#8600](https://github.com/gogs/gogs/pull/8600) [#8601](https://github.com/gogs/gogs/pull/8601)
 - Markdown editors suggest people to mention and issues or pull requests to reference as you type, e.g., `@al` lists `@alice` and `#12` or `#login` lists the matching issues. [#8610](https://github.com/gogs/gogs/pull/8610)
