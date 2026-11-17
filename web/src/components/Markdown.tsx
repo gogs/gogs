@@ -20,11 +20,11 @@ const LINK_ICON =
   '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
 
 // prepareHTML replaces the code blocks, wherever they are nested, with
-// placeholders that CodeBlock renders into, and gives each heading with an id
-// a link to itself.
+// placeholders that CodeBlock renders into, and, given permalinkLabel, gives
+// each heading with an id a link to itself.
 function prepareHTML(
   html: string,
-  permalinkLabel: (heading: string) => string,
+  permalinkLabel?: (heading: string) => string,
 ): { html: string; blocks: CodeBlockContent[] } {
   const body = new DOMParser().parseFromString(html, "text/html").body;
   const blocks: CodeBlockContent[] = [];
@@ -40,7 +40,7 @@ function prepareHTML(
     code.parentElement!.replaceWith(placeholder);
   }
   for (const heading of Array.from(body.querySelectorAll<HTMLElement>("h1, h2, h3, h4, h5, h6"))) {
-    if (!heading.id.startsWith(HEADING_ID_PREFIX)) continue;
+    if (!permalinkLabel || !heading.id.startsWith(HEADING_ID_PREFIX)) continue;
     const anchor = document.createElement("a");
     anchor.className = "heading-anchor";
     anchor.setAttribute("href", `#${heading.id.slice(HEADING_ID_PREFIX.length)}`);
@@ -67,9 +67,24 @@ function scrollToHeading() {
 // Markdown shows Markdown that the server rendered and sanitized, e.g., the
 // content of an issue, highlighting its code blocks like CodeBlock and drawing
 // Mermaid code blocks as diagrams.
-export function Markdown({ html, className }: { html: string; className?: string }) {
+//
+// headingAnchors links headings to themselves and scrolls to the heading the
+// location hash names. Only the one document of a page may set it: documents
+// rendered separately share heading ids, e.g., the "Steps" of two comments.
+export function Markdown({
+  html,
+  className,
+  headingAnchors,
+}: {
+  html: string;
+  className?: string;
+  headingAnchors?: boolean;
+}) {
   const { t } = useTranslation();
-  const content = useMemo(() => prepareHTML(html, (heading) => t("heading_permalink", { heading })), [html, t]);
+  const content = useMemo(
+    () => prepareHTML(html, headingAnchors ? (heading) => t("heading_permalink", { heading }) : undefined),
+    [html, headingAnchors, t],
+  );
   // React sets the HTML again whenever this object changes, which would drop
   // the code blocks rendered into the placeholders.
   const innerHTML = useMemo(() => ({ __html: content.html }), [content]);
@@ -85,6 +100,7 @@ export function Markdown({ html, className }: { html: string; className?: string
   }, [content]);
 
   useEffect(() => {
+    if (!headingAnchors) return;
     scrollToHeading();
     // Following a link to the heading the hash already names does not change
     // the hash, so clicks on such links scroll as well.
@@ -98,7 +114,7 @@ export function Markdown({ html, className }: { html: string; className?: string
       window.removeEventListener("hashchange", scrollToHeading);
       document.removeEventListener("click", onClick);
     };
-  }, [content]);
+  }, [content, headingAnchors]);
 
   return (
     <div className={cn("markdown", className)}>
