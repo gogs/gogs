@@ -309,7 +309,7 @@ func adminSeedOrganization(t *testing.T, ownerID int64) *database.User {
 		IsActive: true,
 		Type:     database.UserTypeOrganization,
 	}
-	require.NoError(t, database.CreateOrganization(org, owner))
+	require.NoError(t, database.Handle.Organizations().Create(t.Context(), org, owner))
 	return org
 }
 

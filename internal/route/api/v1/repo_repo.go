@@ -34,7 +34,7 @@ func searchRepos(c *apiContext) {
 				})
 				return
 			}
-			if u.IsOrganization() && u.IsOwnedBy(c.User.ID) {
+			if u.IsOrganization() && database.Handle.Organizations().IsOwner(c.Request().Context(), u.ID, c.User.ID) {
 				opts.Private = true
 			}
 			// FIXME: how about collaborators?
@@ -81,7 +81,7 @@ func listReposOfUser(c *apiContext, username string) {
 	// or an organization isn't a member of.
 	var ownRepos []*database.Repository
 	if user.IsOrganization() {
-		ownRepos, _, err = user.GetUserRepositories(c.User.ID, 1, user.NumRepos)
+		ownRepos, _, err = database.Handle.Organizations().ListAccessibleRepos(c.Request().Context(), user.ID, c.User.ID, 1, user.NumRepos)
 	} else {
 		ownRepos, err = database.GetUserRepositories(&database.UserRepoOptions{
 			UserID:   user.ID,
@@ -218,13 +218,13 @@ func createRepo(c *apiContext, opt createRepoRequest) {
 }
 
 func createOrgRepo(c *apiContext, opt createRepoRequest) {
-	org, err := database.GetOrgByName(c.Param("org"))
+	org, err := database.Handle.Organizations().GetByName(c.Request().Context(), c.Param("org"))
 	if err != nil {
 		c.NotFoundOrError(err, "get organization by name")
 		return
 	}
 
-	if !org.IsOwnedBy(c.User.ID) {
+	if !database.Handle.Organizations().IsOwner(c.Request().Context(), org.ID, c.User.ID) {
 		c.ErrorStatus(http.StatusForbidden, errors.New("Given user is not owner of organization."))
 		return
 	}
@@ -265,7 +265,7 @@ func migrate(c *apiContext, f migrateRepoRequest) {
 
 	if ctxUser.IsOrganization() && !c.User.IsAdmin {
 		// Check ownership of organization.
-		if !ctxUser.IsOwnedBy(c.User.ID) {
+		if !database.Handle.Organizations().IsOwner(c.Request().Context(), ctxUser.ID, c.User.ID) {
 			c.ErrorStatus(http.StatusForbidden, errors.New("Given user is not owner of organization."))
 			return
 		}
@@ -370,7 +370,7 @@ func deleteRepo(c *apiContext) {
 		return
 	}
 
-	if owner.IsOrganization() && !owner.IsOwnedBy(c.User.ID) {
+	if owner.IsOrganization() && !database.Handle.Organizations().IsOwner(c.Request().Context(), owner.ID, c.User.ID) {
 		c.ErrorStatus(http.StatusForbidden, errors.New("Given user is not owner of organization."))
 		return
 	}

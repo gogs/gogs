@@ -17,12 +17,12 @@ func protectedBranchTeam(t *testing.T, org *database.User, repo *Repository, mod
 	t.Helper()
 
 	team := &database.Team{OrgID: org.ID, Name: UniqueName("team-"), Authorize: mode}
-	require.NoError(t, database.NewTeam(team))
+	require.NoError(t, database.Handle.Teams().Create(t.Context(), team))
 	r, err := getRepository(t, repo.ID)
 	require.NoError(t, err)
-	require.NoError(t, team.AddRepository(r))
+	require.NoError(t, database.Handle.Teams().AddRepo(t.Context(), team, r))
 	for _, id := range memberIDs {
-		require.NoError(t, team.AddMember(id))
+		require.NoError(t, database.Handle.Teams().AddMember(t.Context(), team.OrgID, team.ID, id))
 	}
 	return team
 }
@@ -144,7 +144,7 @@ func TestProtectedBranchAllowlist(t *testing.T) {
 		assert.False(t, pullWaitMergeable(t, joinerClient, repo, index).Pull.ViewerCanMerge)
 
 		// Joining and leaving the team does not save the branch protection.
-		require.NoError(t, release.AddMember(joiner.ID))
+		require.NoError(t, database.Handle.Teams().AddMember(t.Context(), release.OrgID, release.ID, joiner.ID))
 		v := pullWaitMergeable(t, joinerClient, repo, index)
 		assert.True(t, v.Pull.ViewerCanMerge)
 		assert.False(t, v.Pull.ViewerNotInAllowlist)
@@ -153,7 +153,7 @@ func TestProtectedBranchAllowlist(t *testing.T) {
 		out, ok := protectedBranchPush(t, repo, joiner)
 		assert.True(t, ok, "push after joining failed: %s", out)
 
-		require.NoError(t, release.RemoveMember(joiner.ID))
+		require.NoError(t, database.Handle.Teams().RemoveMember(t.Context(), release.OrgID, release.ID, joiner.ID))
 		index = newPull(t)
 		v = pullWaitMergeable(t, joinerClient, repo, index)
 		assert.False(t, v.Pull.ViewerCanMerge)

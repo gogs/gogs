@@ -257,8 +257,9 @@ type userSettingsOrgs struct {
 
 // getUserSettingsOrgs lists every organization the authenticated user is a
 // member of, including the ones their membership is private in.
-func getUserSettingsOrgs(logger *logx.Logger, viewer *database.User) (statusCode int, resp *userSettingsOrgs, err error) {
-	orgs, err := database.GetOrgsByUserID(viewer.ID, true)
+func getUserSettingsOrgs(c flamego.Context, logger *logx.Logger, viewer *database.User) (statusCode int, resp *userSettingsOrgs, err error) {
+	ctx := c.Request().Context()
+	orgs, err := database.Handle.Organizations().List(ctx, database.ListOrgsOptions{MemberID: viewer.ID, IncludePrivateMembers: true})
 	if err != nil {
 		logger.Error("Failed to list organizations", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list organizations")

@@ -137,8 +137,8 @@ func searchExploreUsers(ctx context.Context, typ database.UserType, keyword stri
 	}
 
 	if typ == database.UserTypeOrganization {
-		orgs, err := database.Organizations(page, pageSize)
-		return orgs, database.CountOrganizations(), err
+		orgs, err := database.Handle.Organizations().ListByPage(ctx, page, pageSize)
+		return orgs, database.Handle.Organizations().Count(ctx), err
 	}
 	users, err := database.Handle.Users().List(ctx, page, pageSize)
 	return users, database.Handle.Users().Count(ctx), err

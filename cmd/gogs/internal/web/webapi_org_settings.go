@@ -38,7 +38,8 @@ func orgNameError(l i18n.Locale, field string, err error) (int, *bindingErrorRes
 	return code, &bindingErrorResponse{Fields: fieldErrors{field: &msg}}
 }
 
-func postOrg(logger *logx.Logger, l i18n.Locale, viewer *database.User, req orgCreateRequest) (statusCode int, resp any, err error) {
+func postOrg(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, req orgCreateRequest) (statusCode int, resp any, err error) {
+	ctx := c.Request().Context()
 	if !viewer.CanCreateOrganization() {
 		return http.StatusForbidden, nil, errors.New("not allowed to create organizations")
 	}
@@ -47,7 +48,7 @@ func postOrg(logger *logx.Logger, l i18n.Locale, viewer *database.User, req orgC
 		IsActive: true,
 		Type:     database.UserTypeOrganization,
 	}
-	if err = database.CreateOrganization(org, viewer); err != nil {
+	if err = database.Handle.Organizations().Create(ctx, org, viewer); err != nil {
 		if code, resp := orgNameError(l, "orgName", err); resp != nil {
 			return code, resp, nil
 		}
@@ -209,6 +210,7 @@ type orgDeleteRequest struct {
 // deleteOrg deletes the organization once the owner confirms their password.
 // Organizations that still own repositories cannot be deleted.
 func deleteOrg(logger *logx.Logger, c flamego.Context, l i18n.Locale, viewer *database.User, m *orgMembership, req orgDeleteRequest) (statusCode int, resp any, err error) {
+	ctx := c.Request().Context()
 	if !m.IsOwner {
 		return http.StatusForbidden, nil, errors.New("organization owner required")
 	}
@@ -221,7 +223,7 @@ func deleteOrg(logger *logx.Logger, c flamego.Context, l i18n.Locale, viewer *da
 		logger.Error("Failed to authenticate user", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "authenticate user")
 	}
-	if err = database.DeleteOrganization(m.Org); err != nil {
+	if err = database.Handle.Organizations().Delete(ctx, m.Org); err != nil {
 		if database.IsErrUserOwnRepos(err) {
 			return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("form.org_still_own_repo")}, nil
 		}

@@ -386,7 +386,8 @@ func splitIDs(s string) []int64 {
 	return ids
 }
 
-func getRepoProtectedBranch(logger *logx.Logger, rc *repoAdminContext, protectBranch *database.ProtectBranch) (statusCode int, resp *repoProtectedBranch, err error) {
+func getRepoProtectedBranch(c flamego.Context, logger *logx.Logger, rc *repoAdminContext, protectBranch *database.ProtectBranch) (statusCode int, resp *repoProtectedBranch, err error) {
+	ctx := c.Request().Context()
 	resp = &repoProtectedBranch{
 		Name:               protectBranch.Name,
 		Protected:          protectBranch.Protected,
@@ -408,7 +409,7 @@ func getRepoProtectedBranch(logger *logx.Logger, rc *repoAdminContext, protectBr
 	for _, u := range writers {
 		resp.UserOptions = append(resp.UserOptions, repoProtectedBranchUser{ID: u.ID, Name: u.Name, AvatarURL: u.AvatarURLPath()})
 	}
-	teams, err := rc.Owner.TeamsHaveAccessToRepo(rc.Repo.ID, database.AccessModeWrite)
+	teams, err := database.Handle.Teams().ListByRepo(ctx, rc.Owner.ID, rc.Repo.ID, database.AccessModeWrite)
 	if err != nil {
 		logger.Error("Failed to list teams with write access", "repoID", rc.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list teams")

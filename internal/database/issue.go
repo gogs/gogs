@@ -203,9 +203,9 @@ type SuggestIssuesOptions struct {
 // IssueUser represents an issue-user relation.
 type IssueUser struct {
 	ID          int64 `gorm:"primary_key"`
-	UserID      int64 `xorm:"uid INDEX" gorm:"column:uid;index"`
+	UserID      int64 `gorm:"column:uid;index:IDX_issue_user_uid"`
 	IssueID     int64
-	RepoID      int64 `xorm:"INDEX" gorm:"index"`
+	RepoID      int64 `gorm:"index:IDX_issue_user_repo_id"`
 	MilestoneID int64
 	IsRead      bool
 	IsAssigned  bool

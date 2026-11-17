@@ -80,14 +80,9 @@ func init() {
 	sql.Register("sqlite3", &sqlite.Driver{})
 
 	legacyTables = append(legacyTables,
-		new(User),
 		new(Repository), new(Collaboration),
-		new(Watch), new(Star),
-		new(Issue), new(PullRequest), new(Comment), new(Attachment), new(IssueUser),
-		new(Milestone),
-		new(Mirror), new(Release), new(Webhook), new(HookTask),
-		new(ProtectBranch),
-		new(Team), new(OrgUser), new(TeamUser), new(TeamRepo),
+		new(Issue), new(Comment), new(Attachment),
+		new(Mirror),
 	)
 
 	gonicNames := []string{"SSL"}
@@ -294,7 +289,7 @@ func GetStatistic(ctx context.Context, logger *logx.Logger) (stats Statistic) {
 	}
 
 	stats.Counter.User = Handle.Users().Count(ctx)
-	stats.Counter.Org = CountOrganizations()
+	stats.Counter.Org = Handle.Organizations().Count(ctx)
 	stats.Counter.PublicKey = count(new(PublicKey))
 	stats.Counter.Repo = CountRepositories(logger, true)
 	stats.Counter.Watch = count(new(Watch))
