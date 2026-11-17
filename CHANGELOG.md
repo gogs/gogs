@@ -92,6 +92,7 @@ All notable changes to Gogs are documented in this file.
 - Users outside the push allowlist of a protected branch can no longer merge pull requests into it. [#8619](https://github.com/gogs/gogs/pull/8619)
 - Members who join a team in the push allowlist of a protected branch can push to it right away, and members who leave the team lose access right away, without saving the branch protection again. [#8619](https://github.com/gogs/gogs/pull/8619)
 - A long word in a commit message body, e.g., a file path, no longer runs past the commit page. [#8606](https://github.com/gogs/gogs/pull/8606)
+- Cloning a public repository without signing in now downloads its Git LFS files instead of asking for credentials. [#8573](https://github.com/gogs/gogs/pull/8573)
 
 ### Removed
 
