@@ -575,7 +575,11 @@ export function RepoFork({ id, options }: { id: number; options: RepoForkOptions
     >
       <div className="flex flex-col gap-1.5 text-sm">
         <span className="font-medium">{t("repo.fork_from")}</span>
-        <Link to={`/${baseName}`} className="w-fit text-(--color-primary) underline underline-offset-2 wrap-anywhere">
+        <Link
+          activeOptions={{ exact: true }}
+          to={`/${baseName}`}
+          className="w-fit text-(--color-primary) underline underline-offset-2 wrap-anywhere"
+        >
           {baseName}
         </Link>
       </div>

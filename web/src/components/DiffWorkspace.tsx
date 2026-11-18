@@ -36,7 +36,7 @@ import { ResizableSidebar } from "@/components/ResizableSidebar";
 import { RichDiff } from "@/components/RichDiff";
 import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { repoMarkdownFileQuery } from "@/lib/queries/repo";
+import { refPath, repoMarkdownFileQuery } from "@/lib/queries/repo";
 import { resolveTheme, useTheme } from "@/lib/theme-context";
 import { TREE_THEME_STYLE } from "@/lib/tree-theme";
 import { subUrl } from "@/lib/url";
@@ -748,10 +748,10 @@ export function DiffWorkspace({
       if (item.type !== "diff") return null;
       const path = item.fileDiff.name;
       const prev = item.fileDiff.prevName;
-      const viewFileHref = `/${owner}/${repo}/src/${newRef}/${path}`;
+      const viewFileHref = `/${owner}/${repo}/src/${refPath(`${newRef}/${path}`)}`;
       const rawFileHref = subUrl(`/${owner}/${repo}/raw/${newRef}/${path}`);
       // File history is `/commits/{ref}/{path}`. A commit SHA is a valid ref.
-      const historyHref = `/${owner}/${repo}/commits/${newRef}/${path}`;
+      const historyHref = `/${owner}/${repo}/commits/${refPath(`${newRef}/${path}`)}`;
       // The menu leaves out Edit/Delete, which need a branch ref. A commit SHA
       // 404s in the editor.
       const counts = richById[item.id] ? lineCounts.get(item.id) : undefined;

@@ -49,6 +49,7 @@ export function IssueListItem({
         <p className="text-sm break-words">
           {showRepo ? (
             <Link
+              activeOptions={{ exact: true }}
               to={`/${issue.repo}`}
               className="mr-1 text-(--color-muted-foreground) hover:text-(--color-primary) hover:underline"
             >
@@ -76,7 +77,7 @@ export function IssueListItem({
               {issue.title}
             </Link>
           ) : (
-            <Link to={`/${issue.repo}/pulls/${issue.index}`} className={titleClass}>
+            <Link activeOptions={{ exact: true }} to={`/${issue.repo}/pulls/${issue.index}`} className={titleClass}>
               {issue.title}
             </Link>
           )}

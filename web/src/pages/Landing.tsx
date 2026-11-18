@@ -72,7 +72,7 @@ function CmdLink({ href, cmd, desc, external }: { href: string; cmd: string; des
     );
   }
   return (
-    <Link to={href} className={className}>
+    <Link activeOptions={{ exact: true }} to={href} className={className}>
       {inner}
     </Link>
   );

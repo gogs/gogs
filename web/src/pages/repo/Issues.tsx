@@ -79,7 +79,12 @@ export function RepoIssues({
             </Button>
           ) : data.newPullRequestURL ? (
             <Button asChild variant="outline" size="sm">
-              <Link to={routePath(data.newPullRequestURL)}>
+              <Link
+                activeOptions={{ exact: true }}
+                // The router reads a "$" in a path as a parameter, and branch
+                // names in the URL are not escaped.
+                to={routePath(data.newPullRequestURL).replaceAll("$", "%24")}
+              >
                 <Plus className="size-4" aria-hidden />
                 {t("repo.pulls.new")}
               </Link>

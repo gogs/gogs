@@ -125,6 +125,7 @@ export function ProfileSidebar({ profile }: { profile: UserProfileData }) {
       <div className="flex items-center gap-4 md:block">
         {profile.viewerIsSelf ? (
           <Link
+            activeOptions={{ exact: true }}
             to="/user/settings"
             aria-label={t("user.change_avatar")}
             className="group relative block size-18 shrink-0 overflow-hidden rounded-full border border-(--color-border) outline-none focus-visible:ring-2 focus-visible:ring-(--color-ring) focus-visible:ring-offset-2 focus-visible:ring-offset-(--color-background) md:size-auto md:w-full"
@@ -224,7 +225,12 @@ export function ProfileSidebar({ profile }: { profile: UserProfileData }) {
               <li key={org.name}>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Link to={`/${org.name}`} aria-label={org.name} className="block rounded-md">
+                    <Link
+                      activeOptions={{ exact: true }}
+                      to={`/${org.name}`}
+                      aria-label={org.name}
+                      className="block rounded-md"
+                    >
                       <img
                         src={org.avatarURL}
                         alt=""

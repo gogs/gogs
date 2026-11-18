@@ -299,6 +299,7 @@ function BranchRow({
     action = (
       <Button asChild variant="outline" size="sm">
         <Link
+          activeOptions={{ exact: true }}
           to={`/${owner}/${name}/compare/${refPath(data.defaultBranch)}...${refPath(branch.name)}`}
           aria-label={`${t("repo.pulls.new")}: ${branch.name}`}
         >
@@ -314,6 +315,7 @@ function BranchRow({
       <div className="flex min-w-0 flex-1 basis-64 flex-col gap-1">
         <div className="flex flex-wrap items-center gap-2">
           <Link
+            activeOptions={{ exact: true }}
             to={`/${owner}/${name}/src/${refPath(branch.name)}`}
             className="rounded bg-(--color-surface) px-1.5 py-0.5 font-mono text-sm wrap-anywhere text-(--color-primary) hover:underline"
           >

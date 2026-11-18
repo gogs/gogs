@@ -188,7 +188,7 @@ function DashboardLists({ data }: { data: DashboardData }) {
         <ul>
           {data.mirrors.map((mirror) => (
             <li key={mirror.name}>
-              <Link to={`/${data.name}/${mirror.name}`} className={ROW_CLASS}>
+              <Link activeOptions={{ exact: true }} to={`/${data.name}/${mirror.name}`} className={ROW_CLASS}>
                 <RepoIcon repo={{ ...mirror, isFork: false, isMirror: true }} />
                 <span className="min-w-0 flex-1 truncate font-semibold">{mirror.name}</span>
                 <Count value={`${mirror.intervalHours}H`} icon={RefreshCw} />
@@ -226,6 +226,7 @@ function ListHeader({
         <Tooltip>
           <TooltipTrigger asChild>
             <Link
+              activeOptions={{ exact: true }}
               to={addHref}
               aria-label={addLabel}
               className="ml-auto grid size-8 place-items-center rounded-md text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
@@ -244,7 +245,7 @@ function RepoRow({ repo, showOwner = false }: { repo: DashboardRepo; showOwner?:
   const { t } = useTranslation();
   return (
     <li>
-      <Link to={`/${repo.owner}/${repo.name}`} className={ROW_CLASS}>
+      <Link activeOptions={{ exact: true }} to={`/${repo.owner}/${repo.name}`} className={ROW_CLASS}>
         <RepoIcon repo={repo} />
         <span className="min-w-0 flex-1 truncate">
           {showOwner ? <span className="text-(--color-muted-foreground)">{repo.owner} / </span> : null}

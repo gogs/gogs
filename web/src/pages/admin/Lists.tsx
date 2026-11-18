@@ -295,6 +295,7 @@ export function AdminRepos({ list, search }: { list: AdminList<AdminRepo>; searc
             <div className="min-w-0 flex-1 basis-56">
               <p className="flex flex-wrap items-center gap-2">
                 <Link
+                  activeOptions={{ exact: true }}
                   to={`/${repo.owner}/${repo.name}`}
                   className="font-semibold wrap-anywhere text-(--color-primary) hover:underline"
                 >

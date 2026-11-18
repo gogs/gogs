@@ -46,7 +46,11 @@ export function FileHeaderMenu({
       <PopoverContent align="end" sideOffset={4} className="w-48 p-1 text-sm">
         <ul className="flex flex-col">
           <li>
-            <Link to={viewFileHref} className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-(--color-surface)">
+            <Link
+              activeOptions={{ exact: true }}
+              to={viewFileHref}
+              className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-(--color-surface)"
+            >
               <FileCode2 className="size-3.5 shrink-0" aria-hidden />
               <span>{t("repo.view_file")}</span>
             </Link>
@@ -58,7 +62,11 @@ export function FileHeaderMenu({
             </a>
           </li>
           <li>
-            <Link to={historyHref} className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-(--color-surface)">
+            <Link
+              activeOptions={{ exact: true }}
+              to={historyHref}
+              className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-(--color-surface)"
+            >
               <History className="size-3.5 shrink-0" aria-hidden />
               <span>{t("repo.view_history")}</span>
             </Link>
@@ -71,6 +79,7 @@ export function FileHeaderMenu({
           {editFileHref ? (
             <li>
               <Link
+                activeOptions={{ exact: true }}
                 to={editFileHref}
                 className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-(--color-surface)"
               >
@@ -82,6 +91,7 @@ export function FileHeaderMenu({
           {deleteFileHref ? (
             <li>
               <Link
+                activeOptions={{ exact: true }}
                 to={deleteFileHref}
                 className="flex items-center gap-2 rounded px-2 py-1.5 text-(--color-destructive) hover:bg-(--color-surface)"
               >

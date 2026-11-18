@@ -175,6 +175,7 @@ export function RepoCode({
     <Tooltip>
       <TooltipTrigger asChild>
         <Link
+          activeOptions={{ exact: true }}
           to={routePath(
             `${data.pullRequest.repoLink}/compare/${refPath(data.pullRequest.baseBranch)}...${refPath(data.pullRequest.head).replace(/%3A/g, ":")}`,
           )}
@@ -1110,6 +1111,13 @@ function FileView({
   // "Code".
   const hasPreview = (file.kind === "markup" || file.kind === "notebook") && file.content !== undefined;
   const showSource = hasPreview && plain;
+  // A link to a line, e.g., from code search, scrolls the router to the
+  // element the hash names. The preview has no lines, so the page would keep
+  // the scroll position of the page the link was on.
+  const lineOfPreview = useRef(hasPreview && !showSource && LINE_HASH.test(window.location.hash));
+  useEffect(() => {
+    if (lineOfPreview.current) window.scrollTo(0, 0);
+  }, []);
   const setShowSource = (source: boolean) =>
     void navigate({
       to: ".",

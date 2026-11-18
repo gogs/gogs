@@ -33,7 +33,7 @@ export function Navbar() {
   return (
     <header className="glass-bar sticky top-0 z-10 border-b border-(--color-border) bg-(--color-background)">
       <nav className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 text-sm sm:gap-4 sm:px-6">
-        <Link to="/" className="flex shrink-0 items-center" aria-label="Gogs">
+        <Link activeOptions={{ exact: true }} to="/" className="flex shrink-0 items-center" aria-label="Gogs">
           <img src={subUrl("/img/favicon.png")} alt="" width="28" height="28" className="size-7" />
         </Link>
 
@@ -325,7 +325,7 @@ function MenuLink({
     );
   }
   return (
-    <Link to={href} onClick={onSelect} className={className}>
+    <Link activeOptions={{ exact: true }} to={href} onClick={onSelect} className={className}>
       {icon}
       {children}
     </Link>
@@ -342,7 +342,7 @@ function NavLink({ href, external, children }: { href: string; external?: boolea
     );
   }
   return (
-    <Link to={href} className={className}>
+    <Link activeOptions={{ exact: true }} to={href} className={className}>
       {children}
     </Link>
   );
@@ -383,7 +383,7 @@ function MobileLink({
           {children}
         </a>
       ) : (
-        <Link to={href} onClick={onClick} className={className}>
+        <Link activeOptions={{ exact: true }} to={href} onClick={onClick} className={className}>
           {children}
         </Link>
       )}

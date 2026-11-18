@@ -108,7 +108,9 @@ function ActivityRow({ item }: { item: ActivityItem }) {
     const link = e.target instanceof Element ? e.target.closest("a") : null;
     if (!link || link.origin !== window.location.origin) return;
     e.preventDefault();
-    void navigate({ to: routePath(link.pathname) + link.search + link.hash });
+    // The router reads a "$" in a path as a parameter, and the server leaves
+    // it unescaped in branch names.
+    void navigate({ to: routePath(link.pathname).replaceAll("$", "%24") + link.search + link.hash });
   };
   return (
     <li className="flex gap-3 border-b border-(--color-border) py-4">
@@ -119,7 +121,7 @@ function ActivityRow({ item }: { item: ActivityItem }) {
       />
       <div className="min-w-0 flex-1 text-sm">
         <p className="break-words [&_a]:text-(--color-primary) [&_a:hover]:underline">
-          <Link to={`/${item.actorName}`} className="font-semibold">
+          <Link activeOptions={{ exact: true }} to={`/${item.actorName}`} className="font-semibold">
             {item.actorName}
           </Link>{" "}
           <span onClick={onHeadlineClick} dangerouslySetInnerHTML={{ __html: item.headlineHTML }} />
@@ -130,6 +132,7 @@ function ActivityRow({ item }: { item: ActivityItem }) {
               <li key={commit.sha} className="flex min-w-0 items-center gap-2">
                 <img src={commit.avatarURL} alt="" className="size-4 shrink-0 rounded-full object-cover" />
                 <Link
+                  activeOptions={{ exact: true }}
                   to={routePath(`${item.repoURL}/commit/${commit.sha}`)}
                   className="shrink-0 font-mono text-xs text-(--color-primary) hover:underline"
                 >
@@ -140,7 +143,11 @@ function ActivityRow({ item }: { item: ActivityItem }) {
             ))}
             {item.compareURL ? (
               <li>
-                <Link to={routePath(item.compareURL)} className="text-(--color-primary) hover:underline">
+                <Link
+                  activeOptions={{ exact: true }}
+                  to={routePath(item.compareURL)}
+                  className="text-(--color-primary) hover:underline"
+                >
                   {t("action.compare_commits").replace(/%(?:\[1\])?d/, String(item.commitCount))}
                 </Link>
               </li>

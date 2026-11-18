@@ -147,7 +147,9 @@ export function SignUp() {
             />
           </p>
           <Button variant="link" size="inline" asChild className="self-center">
-            <Link to="/user/sign-in">{t("auth.back_to_sign_in")}</Link>
+            <Link activeOptions={{ exact: true }} to="/user/sign-in">
+              {t("auth.back_to_sign_in")}
+            </Link>
           </Button>
         </div>
       );
@@ -310,6 +312,7 @@ export function SignUp() {
               </Button>
               <Button variant="link" size="inline" asChild className="self-center">
                 <Link
+                  activeOptions={{ exact: true }}
                   to="/user/sign-in"
                   tabIndex={submitting ? -1 : 10}
                   aria-disabled={submitting || undefined}

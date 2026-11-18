@@ -131,7 +131,11 @@ export function CodeSearchResults({
             <FileCode className="size-4 shrink-0 text-(--color-muted-foreground)" aria-hidden />
             <span className="min-w-0 wrap-anywhere">
               {headerOf?.(file)}
-              <Link to={urlOf(file)} className="font-mono font-semibold text-(--color-primary) hover:underline">
+              <Link
+                activeOptions={{ exact: true }}
+                to={urlOf(file)}
+                className="font-mono font-semibold text-(--color-primary) hover:underline"
+              >
                 {file.path}
               </Link>
             </span>
@@ -205,6 +209,7 @@ function Snippet({
         return (
           <li key={line.line} className={cn("flex", line.isMatch && "bg-(--color-warning)/5")}>
             <Link
+              activeOptions={{ exact: true }}
               to={lineURL(line.line)}
               aria-label={t("repo.code_search.line", { line: line.line })}
               className="sticky left-0 w-14 shrink-0 bg-(--color-field) pr-3 glass-ui:backdrop-blur-xl text-right text-(--color-muted-foreground) tabular-nums hover:text-(--color-primary) hover:underline"

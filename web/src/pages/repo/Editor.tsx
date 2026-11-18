@@ -282,7 +282,9 @@ function CommitForm({
             {t("repo.editor.commit_changes")}
           </Button>
           <Button asChild variant="outline">
-            <Link to={cancelURL}>{t("cancel")}</Link>
+            <Link activeOptions={{ exact: true }} to={cancelURL}>
+              {t("cancel")}
+            </Link>
           </Button>
         </div>
       </div>

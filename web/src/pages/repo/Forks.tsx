@@ -45,6 +45,7 @@ export function RepoForks({ owner, name, forks }: { owner: string; name: string;
                   </Link>
                   <span className="text-(--color-muted-foreground)"> / </span>
                   <Link
+                    activeOptions={{ exact: true }}
                     to={`/${fork.owner}/${fork.name}`}
                     className="font-semibold text-(--color-primary) hover:underline"
                   >

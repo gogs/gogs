@@ -40,7 +40,11 @@ export function RepoCompare({
 
   const shaClass = "rounded bg-(--color-surface) px-1.5 py-0.5 font-mono text-sm text-(--color-foreground)";
   const shaLink = (sha: string) => (
-    <Link to={`/${owner}/${name}/commit/${sha}`} className={`${shaClass} hover:underline`}>
+    <Link
+      activeOptions={{ exact: true }}
+      to={`/${owner}/${name}/commit/${sha}`}
+      className={`${shaClass} hover:underline`}
+    >
       {sha.slice(0, 7)}
     </Link>
   );

@@ -673,7 +673,12 @@ function NewComment({
           .split(/(<a\b[^>]*>.*?<\/a>)/)
           .map((part, i) =>
             part.startsWith("<a") ? (
-              <Link key={i} to={signIn} className="text-(--color-primary) underline underline-offset-2">
+              <Link
+                activeOptions={{ exact: true }}
+                key={i}
+                to={signIn}
+                className="text-(--color-primary) underline underline-offset-2"
+              >
                 {part.replace(/^<[^>]+>|<\/a>$/g, "")}
               </Link>
             ) : (

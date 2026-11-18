@@ -218,6 +218,7 @@ function LabelRow({
         <LabelChip name={label.name} color={label.color} />
       </div>
       <Link
+        activeOptions={{ exact: true }}
         to={`/${owner}/${name}/issues?labels=${label.id}`}
         className="inline-flex items-center gap-1.5 text-sm text-(--color-muted-foreground) hover:text-(--color-foreground) hover:underline"
       >

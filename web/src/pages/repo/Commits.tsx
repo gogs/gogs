@@ -88,7 +88,11 @@ export function RepoCommits({ owner, name, data }: { owner: string; name: string
           {data.path ? (
             <p className="flex min-w-0 flex-wrap items-center gap-x-1 text-sm">
               <span className="text-(--color-muted-foreground)">{t("repo.commits.history_for")}</span>
-              <Link to={srcURL(data.ref)} className="font-semibold text-(--color-primary) hover:underline">
+              <Link
+                activeOptions={{ exact: true }}
+                to={srcURL(data.ref)}
+                className="font-semibold text-(--color-primary) hover:underline"
+              >
                 {repo.name}
               </Link>
               {pathParts.map((part, i) => (
@@ -98,6 +102,7 @@ export function RepoCommits({ owner, name, data }: { owner: string; name: string
                     <span className="font-semibold wrap-anywhere">{part}</span>
                   ) : (
                     <Link
+                      activeOptions={{ exact: true }}
                       to={srcURL(data.ref, pathParts.slice(0, i + 1).join("/"))}
                       className="text-(--color-primary) wrap-anywhere hover:underline"
                     >
@@ -289,7 +294,7 @@ function CommitRow({
         <Tooltip>
           <TooltipTrigger asChild>
             <Button asChild variant="ghost" size="icon" className="size-8 text-(--color-muted-foreground)">
-              <Link to={browseURL} aria-label={t("repo.browse_files")}>
+              <Link activeOptions={{ exact: true }} to={browseURL} aria-label={t("repo.browse_files")}>
                 <FolderCode className="size-4" aria-hidden />
               </Link>
             </Button>
@@ -318,7 +323,11 @@ function CompactCommitRow({ owner, name, commit }: { owner: string; name: string
         <p className="flex shrink-0 items-center gap-x-1.5 text-xs text-(--color-muted-foreground)">
           <img src={author.avatarURL} alt="" className="size-4 shrink-0 rounded-full" />
           {author.profileURL ? (
-            <Link to={routePath(author.profileURL)} className="font-semibold text-(--color-foreground) hover:underline">
+            <Link
+              activeOptions={{ exact: true }}
+              to={routePath(author.profileURL)}
+              className="font-semibold text-(--color-foreground) hover:underline"
+            >
               {author.name}
             </Link>
           ) : (

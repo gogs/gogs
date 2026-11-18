@@ -314,6 +314,7 @@ export function UserRepoSettings({ repos }: { repos: SettingsRepo[] }) {
               <span className="flex min-w-0 flex-1 basis-48 items-center gap-3">
                 <RepoIcon repo={repo} />
                 <Link
+                  activeOptions={{ exact: true }}
                   to={`/${fullName}`}
                   className="min-w-0 font-semibold wrap-anywhere text-(--color-primary) hover:underline"
                 >

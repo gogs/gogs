@@ -158,6 +158,7 @@ function MilestoneRow({
     <li className="flex flex-col gap-3 border-t border-(--color-border) px-4 py-4 md:flex-row md:gap-8">
       <div className="min-w-0 md:flex-1">
         <Link
+          activeOptions={{ exact: true }}
           to={`/${owner}/${name}/issues?state=${state}&milestone=${milestone.id}`}
           className="text-lg font-semibold wrap-anywhere hover:underline"
         >

@@ -86,7 +86,7 @@ export function OrgHome({ org, repos }: { org: OrgProfileData; repos: OwnerRepos
             </Button>
             {org.viewerIsOwner ? (
               <Button asChild variant="outline" size="sm">
-                <Link to={`/repo/create?org=${org.id}`}>
+                <Link activeOptions={{ exact: true }} to={`/repo/create?org=${org.id}`}>
                   <Plus className="size-4" aria-hidden />
                   {t("new_repo")}
                 </Link>
@@ -119,7 +119,12 @@ export function OrgHome({ org, repos }: { org: OrgProfileData; repos: OwnerRepos
                   <li key={member.name}>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Link to={`/${member.name}`} aria-label={member.name} className="block rounded-full">
+                        <Link
+                          activeOptions={{ exact: true }}
+                          to={`/${member.name}`}
+                          aria-label={member.name}
+                          className="block rounded-full"
+                        >
                           <img
                             src={member.avatarURL}
                             alt=""

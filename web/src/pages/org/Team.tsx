@@ -174,6 +174,7 @@ function TeamRepos({
           <li key={repo.name} className="flex items-center gap-3 border-b border-(--color-border) py-3">
             <RepoIcon repo={repo} />
             <Link
+              activeOptions={{ exact: true }}
               to={`/${org}/${repo.name}`}
               className="min-w-0 flex-1 font-semibold wrap-anywhere text-(--color-primary) hover:underline"
             >

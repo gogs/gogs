@@ -119,13 +119,21 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
               alt=""
               className="relative size-5 shrink-0 rounded border border-(--color-border) bg-(--color-surface) object-cover"
             />
-            <Link to={`/${repo.owner}`} className="text-(--color-primary) hover:underline">
+            <Link
+              activeOptions={{ exact: true }}
+              to={`/${repo.owner}`}
+              className="text-(--color-primary) hover:underline"
+            >
               {repo.owner}
             </Link>
             <span className="text-(--color-muted-foreground)" aria-hidden>
               /
             </span>
-            <Link to={repoLink} className="font-semibold text-(--color-primary) hover:underline">
+            <Link
+              activeOptions={{ exact: true }}
+              to={repoLink}
+              className="font-semibold text-(--color-primary) hover:underline"
+            >
               {repo.name}
             </Link>
             <VisibilityBadge visibility={repo.visibility} />
@@ -409,7 +417,7 @@ function SplitActionButton({
     action = (
       <Tooltip>
         <TooltipTrigger asChild>
-          <Link to={href} aria-label={ariaLabel} className={actionClassName}>
+          <Link activeOptions={{ exact: true }} to={href} aria-label={ariaLabel} className={actionClassName}>
             {actionContent}
           </Link>
         </TooltipTrigger>
@@ -431,7 +439,7 @@ function SplitActionButton({
   } else {
     const href = actionHref ?? countHref;
     action = (
-      <Link to={href} aria-label={ariaLabel} className={actionClassName}>
+      <Link activeOptions={{ exact: true }} to={href} aria-label={ariaLabel} className={actionClassName}>
         {actionContent}
       </Link>
     );
@@ -441,6 +449,7 @@ function SplitActionButton({
     <span className="inline-flex h-7 items-stretch overflow-hidden rounded-md glass-control border border-(--color-border) text-xs">
       {action}
       <Link
+        activeOptions={{ exact: true }}
         to={countHref}
         aria-label={countAriaLabel}
         className="flex items-center border-l border-(--color-border) bg-(--color-surface)/60 px-2 tabular-nums hover:bg-(--color-surface)"

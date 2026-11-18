@@ -9,7 +9,11 @@ import { cn } from "@/lib/utils";
 
 function AuthorName({ author, className }: { author: RepoCommitAuthor; className?: string }) {
   return author.profileURL ? (
-    <Link to={routePath(author.profileURL)} className={cn("hover:underline", className)}>
+    <Link
+      activeOptions={{ exact: true }}
+      to={routePath(author.profileURL)}
+      className={cn("hover:underline", className)}
+    >
       {author.name}
     </Link>
   ) : (

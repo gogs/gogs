@@ -284,6 +284,7 @@ export function SignIn() {
                     <Label htmlFor="password">{t("password")}</Label>
                     <Button variant="link" size="inline" asChild>
                       <Link
+                        activeOptions={{ exact: true }}
                         to="/user/reset-password"
                         tabIndex={submitting ? -1 : 7}
                         aria-disabled={submitting || undefined}
@@ -393,6 +394,7 @@ export function SignIn() {
                   ) : null}
                   <Button variant="link" size="inline" asChild className="self-center">
                     <Link
+                      activeOptions={{ exact: true }}
                       to="/user/sign-up"
                       tabIndex={submitting ? -1 : 8}
                       aria-disabled={submitting || undefined}
@@ -485,7 +487,9 @@ function PasskeySignIn({
           </Button>
         )}
         <Button variant="link" size="inline" asChild className="self-center">
-          <Link to="/user/sign-up">{t("auth.sign_up_now")}</Link>
+          <Link activeOptions={{ exact: true }} to="/user/sign-up">
+            {t("auth.sign_up_now")}
+          </Link>
         </Button>
       </div>
     </div>

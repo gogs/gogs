@@ -42,7 +42,11 @@ export function RepoListItem({ repo, showOwner = false }: { repo: RepoListItemDa
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="flex min-w-0 items-center gap-0.5">
-            <Link to={repoLink} className="min-w-0 wrap-anywhere text-(--color-primary) hover:underline">
+            <Link
+              activeOptions={{ exact: true }}
+              to={repoLink}
+              className="min-w-0 wrap-anywhere text-(--color-primary) hover:underline"
+            >
               {showOwner ? `${repo.owner} / ` : null}
               <span className="font-semibold">{repo.name}</span>
             </Link>

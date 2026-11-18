@@ -80,6 +80,7 @@ export function ContextSwitcher({ data, page }: { data: DashboardContextData; pa
         {user.canCreateOrganization ? (
           <div className="mt-1 border-t border-(--color-border) pt-1">
             <Link
+              activeOptions={{ exact: true }}
               to="/org/create"
               className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-(--color-surface)"
             >
