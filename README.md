@@ -32,28 +32,32 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 ## 💌 Features
 
 - Code hosting
-  - Git over SSH and HTTP(S), with deploy keys and LFS (local or S3\*).
-  - Migrate and mirror from other code hosts.
-  - Browse, edit, search\* and blame\* code right in the browser.
-  - Rendered Markdown, Jupyter Notebooks and PDFs, with rich diffs\*.
+  - Git over SSH and HTTP(S), with SHA-256 repositories, deploy keys and LFS (local or S3\*).
+  - Migrate and mirror from other code hosts, with GitHub two-way sync\*.
+  - Browse, edit, search and blame\* code right in the browser.
+  - Rendered Markdown, Jupyter Notebooks and PDFs, with rich diffs.
 - Collaboration
-  - Issues, wikis and pull requests, with inline reviews\* and stacks\*.
+  - Issues with templates, wikis and projects\*.
+  - Pull requests, with inline reviews\* and stacks\*.
   - Protected branches, with code owners\* and signed commits\*.
-  - Organizations, teams and collaborators.
+  - Organizations, teams, collaborators and service accounts\*.
 - Interface
   - Dashboards, profiles and activity timelines.
-  - Light and dark themes, a command palette\* and over [31 languages](https://crowdin.com/project/gogs).
+  - Light and dark themes, a command palette and over [31 languages](https://crowdin.com/project/gogs).
 - Integrations
   - Webhooks for Slack, Discord, DingTalk and more, plus server-side Git hooks.
   - A REST [API](https://gogs.io/api-reference), GitHub-compatible\*.
+- Automation
+  - Actions\* and compute\*.
+  - Packages\* and hosting\*.
 - Security
   - Sign in with LDAP, SMTP, PAM, reverse proxy, OAuth 2.0\*, OpenID Connect\* or SAML 2.0\*.
-  - Two-factor authentication and passkeys\*.
+  - Two-factor authentication and passkeys.
   - Session management\*, security alerts\* and breached password detection\*.
 - Operations
   - Single binary, Docker or Kubernetes\*, on Linux, macOS, Windows and ARM.
   - PostgreSQL, MySQL or SQLite3.
-  - OpenTelemetry with a built-in trace viewer\*.
+  - OpenTelemetry with a built-in trace viewer.
 
 <sub>* In development.</sub>
 
