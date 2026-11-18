@@ -133,6 +133,8 @@ All notable changes to Gogs are documented in this file.
 - A user can no longer add the same SSH key twice by changing its comment. When upgrading, such duplicates are merged into the key added first. [#8648](https://github.com/gogs/gogs/pull/8648)
 - The API repository search returned only repositories with a dot in their name or description when no search query was given. [#8587](https://github.com/gogs/gogs/pull/8587)
 - The pagination links of the API repository search and issue list keep the query of the request, e.g., the search keyword and page size, instead of leading to pages of another list. The links of a page past the last one lead back to the last page, and a very large page number, e.g., `page=99999999999999999999`, returns an empty page instead of the first one. Pages of both lists no longer repeat or skip items. [#8587](https://github.com/gogs/gogs/pull/8587)
+- `gogs backup` no longer needs free space in the system temporary directory for the whole archive, and respects `--tempdir`. [#8614](https://github.com/gogs/gogs/pull/8614)
+- `gogs backup --exclude-mirror-repos` no longer fails when the name of a repository or its owner has upper case letters, and now includes the wikis of the repositories. [#6497](https://github.com/gogs/gogs/issues/6497)
 
 ### Removed
 
