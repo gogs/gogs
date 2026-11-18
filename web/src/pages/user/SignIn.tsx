@@ -168,6 +168,8 @@ export function SignIn() {
   function startPasskey() {
     setFormError(null);
     setFieldErrors({});
+    // Coming back to the password shows a new captcha image.
+    setCaptcha("");
     setPasskey({ status: "waiting", attempt: 1 });
     setMethod("passkey");
   }
@@ -198,7 +200,7 @@ export function SignIn() {
             setFormError(t("auth.sign_in_failed"));
           }
           setSubmitting(false);
-          // The server used up the captcha on this attempt.
+          // The server uses up the captcha on each attempt it checks.
           if (captchaEnabled) refreshCaptcha();
           // Defer focus past the React commit so the fieldset is re-enabled
           // (.focus() is a no-op while the field is inside a disabled fieldset).
