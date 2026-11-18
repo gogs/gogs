@@ -113,6 +113,7 @@ All notable changes to Gogs are documented in this file.
 - With `[repository] FORCE_PRIVATE = true`, repositories created through the API and forks of public repositories are now private, and only site admins can make a private repository public. [#8186](https://github.com/gogs/gogs/issues/8186)
 - Forks can no longer be more visible than their base repository, e.g., a private fork allows public access to its wiki or issues only when its base allows it. [#8186](https://github.com/gogs/gogs/issues/8186)
 - Changing the settings of a mirror while it syncs, e.g., its interval or pruning, is no longer undone when the sync finishes. [#8502](https://github.com/gogs/gogs/pull/8502)
+- Deleting a repository now also deletes the files attached to its releases. [#8503](https://github.com/gogs/gogs/pull/8503)
 
 ### Removed
 

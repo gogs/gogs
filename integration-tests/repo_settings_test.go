@@ -368,6 +368,61 @@ func TestRepoSettingsDelete(t *testing.T) {
 	assert.NoDirExists(t, database.RepoPath(repo.Owner, repo.Name))
 }
 
+// Deleting a repository deletes the files attached to its issues, comments and
+// releases.
+func TestRepoSettingsDeleteAttachments(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	c := authenticatedClient(t, owner)
+	upload := func(kind string) string {
+		t.Helper()
+		status, body := issueUpload(t, c, repoSettingsAPIPath(repo, "/"+kind+"/attachments"), "screenshot.png", issuePNG(t))
+		require.Equal(t, http.StatusCreated, status, "response: %s", body)
+		var resp struct {
+			UUID string `json:"uuid"`
+		}
+		require.NoError(t, json.Unmarshal(body, &resp))
+		return resp.UUID
+	}
+
+	ofIssue := upload("issues")
+	var issue struct {
+		Index int64 `json:"index"`
+	}
+	c.doJSON(http.MethodPost, repoSettingsAPIPath(repo, "/issues"), map[string]any{"title": "Screenshot", "attachments": []string{ofIssue}}, http.StatusCreated, &issue)
+	ofComment := upload("issues")
+	var comment struct {
+		ID int64 `json:"id"`
+	}
+	c.doJSON(http.MethodPost, repoSettingsAPIPath(repo, "/issues/"+strconv.FormatInt(issue.Index, 10)+"/comments"), map[string]any{"content": "Another", "attachments": []string{ofComment}}, http.StatusCreated, &comment)
+	ofRelease := upload("releases")
+	status, body := c.do(http.MethodPost, repoSettingsAPIPath(repo, "/releases"), map[string]any{
+		"tagName":     "v1.0.0",
+		"target":      repoSettingsDefaultBranch(t, repo),
+		"title":       "First",
+		"attachments": []string{ofRelease},
+	})
+	require.Equal(t, http.StatusCreated, status, "response: %s", body)
+
+	uuids := map[string]string{"issue": ofIssue, "comment": ofComment, "release": ofRelease}
+	for kind, uuid := range uuids {
+		a, err := database.Handle.Attachments().GetByUUID(t.Context(), uuid)
+		require.NoError(t, err, kind)
+		require.True(t, a.IssueID > 0 || a.ReleaseID > 0, "%s attachment not attached", kind)
+		require.FileExists(t, database.AttachmentLocalPath(uuid), kind)
+	}
+
+	status, body = c.do(http.MethodDelete, repoSettingsAPIPath(repo, ""), map[string]any{"repoName": repo.Name})
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	for kind, uuid := range uuids {
+		_, err := database.Handle.Attachments().GetByUUID(t.Context(), uuid)
+		assert.True(t, database.IsErrAttachmentNotExist(err), "%s attachment left behind: %v", kind, err)
+		assert.NoFileExists(t, database.AttachmentLocalPath(uuid), kind)
+	}
+}
+
 func TestRepoSettingsTransfer(t *testing.T) {
 	t.Parallel()
 
