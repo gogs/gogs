@@ -196,3 +196,66 @@ func TestReverseProxyUser_concurrentRegistration(t *testing.T) {
 	require.NotNil(t, user)
 	assert.Equal(t, int64(7), user.ID)
 }
+
+type passwordStore struct {
+	AuthStore
+	user database.User
+}
+
+func (s *passwordStore) GetUserByID(_ context.Context, id int64) (*database.User, error) {
+	if id != s.user.ID {
+		return nil, database.ErrUserNotExist{}
+	}
+	u := s.user
+	return &u, nil
+}
+
+func TestAuthenticatedUser_PasswordChange(t *testing.T) {
+	store := &passwordStore{user: database.User{ID: 1, Name: "alice", Password: "hash1", Salt: "salt1"}}
+
+	f := flamego.New()
+	f.Use(session.Sessioner())
+	f.Get("/sign-in", func(sess session.Session) {
+		u, _ := store.GetUserByID(context.Background(), 1)
+		sess.Set("uid", u.ID)
+		sess.Set(SessionKeyPasswordFingerprint, PasswordFingerprint(u))
+	})
+	// A session signed in before fingerprints were stored.
+	f.Get("/legacy-sign-in", func(sess session.Session) {
+		sess.Set("uid", int64(1))
+	})
+	f.Get("/", func(w http.ResponseWriter, r *http.Request, sess session.Session) {
+		u, _, _ := AuthenticatedUser(logx.NewNoopLogger(), store, r, sess)
+		if u == nil {
+			_, _ = w.Write([]byte("anonymous"))
+			return
+		}
+		_, _ = w.Write([]byte(u.Name))
+	})
+
+	get := func(path string, cookies []*http.Cookie) (string, []*http.Cookie) {
+		r := httptest.NewRequest(http.MethodGet, path, nil)
+		for _, c := range cookies {
+			r.AddCookie(c)
+		}
+		w := httptest.NewRecorder()
+		f.ServeHTTP(w, r)
+		if set := w.Result().Cookies(); len(set) > 0 {
+			cookies = set
+		}
+		return w.Body.String(), cookies
+	}
+
+	_, current := get("/sign-in", nil)
+	_, legacy := get("/legacy-sign-in", nil)
+	body, _ := get("/", current)
+	assert.Equal(t, "alice", body)
+	body, _ = get("/", legacy)
+	assert.Equal(t, "alice", body, "a legacy session stays signed in")
+
+	store.user.Password, store.user.Salt = "hash2", "salt2"
+	body, _ = get("/", current)
+	assert.Equal(t, "anonymous", body)
+	body, _ = get("/", legacy)
+	assert.Equal(t, "anonymous", body, "the legacy session got the fingerprint of the old password")
+}

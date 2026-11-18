@@ -111,6 +111,40 @@ func TestSignInWithTwoFactor(t *testing.T) {
 		require.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
 		assert.Empty(t, other.username())
 	})
+
+	t.Run("authenticated as another user", func(t *testing.T) {
+		c := authenticatedClient(t, seedUser(t, CreateUserOptions{}))
+		var resp struct {
+			MFA bool `json:"mfa"`
+		}
+		c.doJSON(http.MethodPost, "/api/web/user/sign-in", map[string]any{
+			"username": u.Name,
+			"password": u.Password,
+		}, http.StatusOK, &resp)
+		require.True(t, resp.MFA)
+		status, body := c.do(http.MethodPost, "/api/web/user/mfa/recovery", map[string]any{"recoveryCode": tf.RecoveryCodes[2]})
+		require.Equal(t, http.StatusOK, status, "response: %s", body)
+		assert.Equal(t, u.Name, c.username())
+	})
+
+	t.Run("password changed", func(t *testing.T) {
+		c := newClient(t)
+		signIn(c)
+		newPassword := UniqueName("password-")
+		require.NoError(t, database.Handle.Users().Update(t.Context(), u.ID, database.UpdateUserOptions{Password: &newPassword}))
+		u.Password = newPassword
+
+		code := tf.RecoveryCodes[1]
+		status, body := c.do(http.MethodPost, "/api/web/user/mfa/recovery", map[string]any{"recoveryCode": code})
+		require.Equal(t, http.StatusUnauthorized, status, "signed in by the password before, response: %s", body)
+		assert.Empty(t, c.username())
+
+		// The recovery code is not used up, so it still signs in.
+		signIn(c)
+		status, body = c.do(http.MethodPost, "/api/web/user/mfa/recovery", map[string]any{"recoveryCode": code})
+		require.Equal(t, http.StatusOK, status, "response: %s", body)
+		assert.Equal(t, u.Name, c.username())
+	})
 }
 
 func TestActivateAccount(t *testing.T) {

@@ -107,6 +107,7 @@ func TestUserSettingsPassword(t *testing.T) {
 	userAssertSignInRequired(t, "PUT /api/web/user/settings/password")
 
 	u, c := userSignedIn(t)
+	other := authenticatedClient(t, u)
 	put := func(oldPassword, password, retype string) (int, []byte) {
 		return c.do(http.MethodPut, "/api/web/user/settings/password", map[string]any{
 			"oldPassword": oldPassword,
@@ -118,12 +119,24 @@ func TestUserSettingsPassword(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
 	status, body = put(u.Password, "new-password", "other-password")
 	assert.Equal(t, http.StatusBadRequest, status, "response: %s", body)
+	assert.Equal(t, u.Name, other.username(), "signed out by a failed password change")
 
 	status, body = put(u.Password, "new-password", "new-password")
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	assert.Equal(t, u.Name, c.username(), "the session that changed the password is signed out")
+	assert.Empty(t, other.username(), "another session is still signed in")
 	newClient(t).signIn(&User{Name: u.Name, Password: "new-password"})
 	status, body = newClient(t).do(http.MethodPost, "/api/web/user/sign-in", map[string]any{"username": u.Name, "password": u.Password})
 	assert.Equal(t, http.StatusUnauthorized, status, "old password still works, response: %s", body)
+
+	// A session idle while the password changes stays signed out when the
+	// password it signed in with comes back.
+	idle := authenticatedClient(t, &User{Name: u.Name, Password: "new-password"})
+	status, body = put("new-password", "newer-password", "newer-password")
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	status, body = put("newer-password", "new-password", "new-password")
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	assert.Empty(t, idle.username(), "signed in again by the password it signed in with")
 }
 
 func userAvatarForm(t *testing.T, data []byte) (string, *bytes.Buffer) {
