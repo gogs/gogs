@@ -28,7 +28,7 @@ export type AdminPage =
   | "auths"
   | "config"
   | "notices"
-  | "cron"
+  | "jobs"
   | "health"
   | "traces";
 
@@ -64,7 +64,7 @@ const NAV: { title?: string; items: NavItem[] }[] = [
     title: "admin.group_maintenance",
     items: [
       { page: "operations", path: "/operations", label: "admin.dashboard.operations", icon: Play },
-      { page: "cron", path: "/cron", label: "admin.monitor.cron", icon: Clock },
+      { page: "jobs", path: "/jobs", label: "admin.monitor.cron", icon: Clock },
     ],
   },
 ];

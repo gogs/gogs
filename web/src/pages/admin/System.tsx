@@ -306,11 +306,11 @@ function Empty() {
   );
 }
 
-// AdminCron lists the scheduled tasks of the server.
-export function AdminCron({ monitor }: { monitor: AdminMonitorData }) {
+// AdminJobs lists the background jobs of the server and their schedules.
+export function AdminJobs({ monitor }: { monitor: AdminMonitorData }) {
   const { t } = useTranslation();
   return (
-    <AdminLayout active="cron">
+    <AdminLayout active="jobs">
       <h1 className="mb-4 text-xl font-semibold">{t("admin.monitor.cron")}</h1>
       {monitor.cronTasks.length > 0 ? (
         <ul className="glass-list border-t border-(--color-border)">
