@@ -157,7 +157,11 @@ func describePull(ctx context.Context, repoCtx *repoContext, issue *database.Iss
 				}
 				info.ViewerCanDeleteBranch = (protected == nil || !protected.Protected) && pull.HeadBranch != repo.DefaultBranch
 			} else {
-				info.ViewerCanRestoreBranch = true
+				// A protected branch keeps its protection after it is deleted.
+				info.ViewerCanRestoreBranch, err = canPushTo(ctx, repoCtx, pull.HeadBranch, false)
+				if err != nil {
+					return nil, nil, nil, errors.Wrap(err, "check branch protection")
+				}
 			}
 		}
 		return info, rng, commits, nil

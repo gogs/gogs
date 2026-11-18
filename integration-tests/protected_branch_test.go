@@ -275,6 +275,38 @@ func TestProtectedBranchRules(t *testing.T) {
 		assert.Contains(t, string(body), `Branch \"staging\" is protected`)
 	})
 
+	t.Run("restoring a deleted protected head branch", func(t *testing.T) {
+		branch := UniqueName("feature-")
+		dir := gitClone(t, gitRemoteURL(t, repo, listed.Name, listed.Password))
+		gitRun(t, dir, "checkout", "-b", branch)
+		gitCommitFile(t, dir, branch+".txt")
+		gitRun(t, dir, "push", "origin", branch)
+		listedClient := authenticatedClient(t, listed)
+		index := pullCreate(t, listedClient, repo, branch, "Change "+branch)
+		pullWaitMergeable(t, listedClient, repo, index)
+		status, body := protectedBranchMerge(t, listedClient, repo, index)
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+
+		protect(t, branch, map[string]any{
+			"protected":        true,
+			"enableAllowlist":  true,
+			"allowlistUserIDs": []int64{listed.ID},
+		})
+		gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(repo.Owner, repo.Name), "branch", "-D", branch)
+
+		unlistedClient := authenticatedClient(t, unlisted)
+		assert.False(t, pullGet(t, unlistedClient, repo, index).Pull.ViewerCanRestoreBranch)
+		path := issueAPIPath(repo, "pulls", index, "branch")
+		status, body = unlistedClient.do(http.MethodPost, path, map[string]any{})
+		assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
+		_, err := gitCommand(t.TempDir(), "--git-dir", database.RepoPath(repo.Owner, repo.Name), "rev-parse", "--verify", "refs/heads/"+branch).CombinedOutput()
+		assert.Error(t, err, "branch was restored")
+
+		assert.True(t, pullGet(t, listedClient, repo, index).Pull.ViewerCanRestoreBranch)
+		status, body = listedClient.do(http.MethodPost, path, map[string]any{})
+		assert.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	})
+
 	t.Run("tag with the name of a protected branch", func(t *testing.T) {
 		dir := gitClone(t, gitRemoteURL(t, repo, unlisted.Name, unlisted.Password))
 		gitRun(t, dir, "tag", "main")
