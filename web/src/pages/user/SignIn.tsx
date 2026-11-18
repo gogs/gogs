@@ -1,15 +1,16 @@
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { Eye, EyeOff, Fingerprint, KeyRound, LoaderCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { webContext } from "@/lib/context";
 import { usePageTitle } from "@/lib/page-title";
-import { type RequestOptionsJSON, getPasskey, passkeysSupported } from "@/lib/passkey";
+import { type RequestOptionsJSON, externalPageURL, getPasskey, passkeysSupported } from "@/lib/passkey";
 import { subUrl } from "@/lib/url";
 
 export interface LoginSource {
@@ -121,9 +122,12 @@ export function SignIn() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string | null>>({});
   const usernameRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
+  const [passkeyPageURL] = useState(externalPageURL);
   // Visitors sign in with a passkey unless their browser does not support
-  // passkeys or they choose the password.
-  const [method, setMethod] = useState<"passkey" | "password">(() => (passkeysSupported() ? "passkey" : "password"));
+  // passkeys, passkeys do not work here, or they choose the password.
+  const [method, setMethod] = useState<"passkey" | "password">(() =>
+    passkeysSupported() && !passkeyPageURL ? "passkey" : "password",
+  );
   const [passkey, setPasskey] = useState<PasskeyState>({ status: "waiting", attempt: 1 });
   // Bumped to try signing in with a passkey again.
   const [passkeyRun, setPasskeyRun] = useState(0);
@@ -149,6 +153,13 @@ export function SignIn() {
     })();
     return () => stop.abort();
   }, [method, passkeyRun]);
+
+  function startPasskey() {
+    setFormError(null);
+    setFieldErrors({});
+    setPasskey({ status: "waiting", attempt: 1 });
+    setMethod("passkey");
+  }
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -351,19 +362,31 @@ export function SignIn() {
                   <Button type="submit" disabled={submitting} tabIndex={5} className="w-full">
                     {submitting ? t("auth.sign_in_submitting") : t("sign_in")}
                   </Button>
-                  {passkeysSupported() ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      tabIndex={6}
-                      className="w-full"
-                      onClick={() => {
-                        setFormError(null);
-                        setFieldErrors({});
-                        setPasskey({ status: "waiting", attempt: 1 });
-                        setMethod("passkey");
-                      }}
-                    >
+                  {passkeysSupported() && passkeyPageURL ? (
+                    <p className="text-center text-sm text-(--color-muted-foreground)">
+                      <Trans
+                        i18nKey="auth.passkey_wrong_host"
+                        values={{ externalURL: webContext.externalURL }}
+                        components={{
+                          url: (
+                            <a
+                              href={passkeyPageURL}
+                              tabIndex={submitting ? -1 : 6}
+                              aria-disabled={submitting || undefined}
+                              className={`wrap-anywhere text-(--color-primary) underline ${submitting ? "pointer-events-none opacity-50" : ""}`}
+                              onClick={(e) => {
+                                if (submitting) e.preventDefault();
+                              }}
+                            />
+                          ),
+                        }}
+                      />{" "}
+                      <Button type="button" variant="link" size="inline" tabIndex={6} onClick={startPasskey}>
+                        {t("auth.passkey_use_anyway")}
+                      </Button>
+                    </p>
+                  ) : passkeysSupported() ? (
+                    <Button type="button" variant="outline" tabIndex={6} className="w-full" onClick={startPasskey}>
                       <KeyRound className="size-4" aria-hidden />
                       {t("auth.passkey_sign_in")}
                     </Button>

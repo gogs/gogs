@@ -19,6 +19,7 @@ export interface WebContext {
   requireAuthenticatedViewer?: boolean;
   // The HTML of the notice banner that every page shows.
   notice?: string;
+  externalURL: string;
 }
 
 declare global {
@@ -29,7 +30,7 @@ declare global {
 
 function read(): WebContext {
   if (typeof window === "undefined") {
-    return { lang: "en-US", subURL: "", localeURL: "" };
+    return { lang: "en-US", subURL: "", localeURL: "", externalURL: "" };
   }
   const ctx = window.__webContext ?? {};
   return {
@@ -42,6 +43,7 @@ function read(): WebContext {
     landingURL: ctx.landingURL,
     requireAuthenticatedViewer: ctx.requireAuthenticatedViewer,
     notice: ctx.notice,
+    externalURL: ctx.externalURL ?? "",
   };
 }
 

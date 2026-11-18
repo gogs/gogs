@@ -1,3 +1,5 @@
+import { webContext } from "./context";
+
 // Helpers for the WebAuthn ceremonies of passkeys. The server sends options
 // and reads credentials as JSON, with binary values in base64url, which the
 // browser API takes and returns as ArrayBuffers.
@@ -21,6 +23,18 @@ export interface RequestOptionsJSON {
     challenge: string;
     allowCredentials?: CredentialDescriptorJSON[];
   };
+}
+
+export function externalPageURL() {
+  const { externalURL } = webContext;
+  let origin;
+  try {
+    ({ origin } = new URL(externalURL));
+  } catch {
+    return null;
+  }
+  if (origin === window.location.origin) return null;
+  return origin + window.location.pathname + window.location.search + window.location.hash;
 }
 
 export function passkeysSupported() {
