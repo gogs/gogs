@@ -43,14 +43,6 @@ func orgAddMember(t *testing.T, org *database.User, userID int64) {
 	require.NoError(t, org.AddMember(userID))
 }
 
-func orgSignedIn(t *testing.T, u *User) *client {
-	t.Helper()
-
-	c := newClient(t)
-	c.signIn(u)
-	return c
-}
-
 type orgMember struct {
 	Name     string `json:"name"`
 	IsPublic bool   `json:"isPublic"`
@@ -58,8 +50,10 @@ type orgMember struct {
 }
 
 func TestOrgCreate(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
-	c := orgSignedIn(t, owner)
+	c := authenticatedClient(t, owner)
 
 	name := UniqueName("org-")
 	var created struct {
@@ -84,13 +78,15 @@ func TestOrgCreate(t *testing.T) {
 }
 
 func TestOrgSettings(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	member := seedUser(t, CreateUserOptions{})
 	outsider := seedUser(t, CreateUserOptions{})
 	org := orgSeed(t, owner.ID)
 	orgAddMember(t, org, member.ID)
 
-	ownerClient := orgSignedIn(t, owner)
+	ownerClient := authenticatedClient(t, owner)
 	path := "/api/web/orgs/" + org.Name + "/settings"
 
 	type settings struct {
@@ -117,12 +113,12 @@ func TestOrgSettings(t *testing.T) {
 		"website":     "https://acme.example.com",
 		"location":    "Earth",
 	}
-	memberClient := orgSignedIn(t, member)
+	memberClient := authenticatedClient(t, member)
 	status, body := memberClient.do(http.MethodGet, path, nil)
 	assert.Equal(t, http.StatusForbidden, status, "member GET, response: %s", body)
 	status, body = memberClient.do(http.MethodPatch, path, update)
 	assert.Equal(t, http.StatusForbidden, status, "member PATCH, response: %s", body)
-	status, body = orgSignedIn(t, outsider).do(http.MethodGet, path, nil)
+	status, body = authenticatedClient(t, outsider).do(http.MethodGet, path, nil)
 	assert.Equal(t, http.StatusNotFound, status, "outsider GET, response: %s", body)
 
 	var renamed struct {
@@ -154,9 +150,11 @@ func TestOrgSettings(t *testing.T) {
 }
 
 func TestOrgDelete(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	member := seedUser(t, CreateUserOptions{})
-	ownerClient := orgSignedIn(t, owner)
+	ownerClient := authenticatedClient(t, owner)
 
 	t.Run("with repositories", func(t *testing.T) {
 		org := orgSeed(t, owner.ID)
@@ -192,7 +190,7 @@ func TestOrgDelete(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, tasks, 1)
 
-	status, body = orgSignedIn(t, member).do(http.MethodDelete, path, map[string]any{"password": member.Password})
+	status, body = authenticatedClient(t, member).do(http.MethodDelete, path, map[string]any{"password": member.Password})
 	assert.Equal(t, http.StatusForbidden, status, "member, response: %s", body)
 	status, body = ownerClient.do(http.MethodDelete, path, map[string]any{"password": owner.Password + "x"})
 	assert.Equal(t, http.StatusUnauthorized, status, "wrong password, response: %s", body)
@@ -218,11 +216,13 @@ func TestOrgDelete(t *testing.T) {
 }
 
 func TestOrgWebhooks(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	member := seedUser(t, CreateUserOptions{})
 	org := orgSeed(t, owner.ID)
 	orgAddMember(t, org, member.ID)
-	c := orgSignedIn(t, owner)
+	c := authenticatedClient(t, owner)
 	path := "/api/web/orgs/" + org.Name + "/settings/hooks"
 
 	hook := map[string]any{
@@ -233,7 +233,7 @@ func TestOrgWebhooks(t *testing.T) {
 		"events":      "push_only",
 		"active":      true,
 	}
-	status, body := orgSignedIn(t, member).do(http.MethodPost, path, hook)
+	status, body := authenticatedClient(t, member).do(http.MethodPost, path, hook)
 	assert.Equal(t, http.StatusForbidden, status, "member, response: %s", body)
 
 	var created struct {
@@ -299,11 +299,13 @@ func TestOrgWebhooks(t *testing.T) {
 // repository and the organization. Issues of a repository of a user reach no
 // webhook of an organization.
 func TestOrgWebhookEvents(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	org := orgSeed(t, owner.ID)
 	orgRepo := seedRepository(t, org.ID, CreateRepositoryOptions{})
 	userRepo := seedRepository(t, owner.ID, CreateRepositoryOptions{})
-	c := orgSignedIn(t, owner)
+	c := authenticatedClient(t, owner)
 	api := apiV1Client(t, owner)
 	issuesOnly := func(url string) map[string]any {
 		return map[string]any{
@@ -371,18 +373,20 @@ func orgAvatarForm(t *testing.T, content []byte) (string, *bytes.Buffer) {
 }
 
 func TestOrgAvatar(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	member := seedUser(t, CreateUserOptions{})
 	org := orgSeed(t, owner.ID)
 	orgAddMember(t, org, member.ID)
-	c := orgSignedIn(t, owner)
+	c := authenticatedClient(t, owner)
 	path := "/api/web/orgs/" + org.Name + "/settings/avatar"
 
 	var img bytes.Buffer
 	require.NoError(t, png.Encode(&img, image.NewRGBA(image.Rect(0, 0, 8, 8))))
 
 	contentType, form := orgAvatarForm(t, img.Bytes())
-	status, _, body := orgSignedIn(t, member).doRaw(http.MethodPut, path, contentType, form)
+	status, _, body := authenticatedClient(t, member).doRaw(http.MethodPut, path, contentType, form)
 	assert.Equal(t, http.StatusForbidden, status, "member, response: %s", body)
 
 	contentType, form = orgAvatarForm(t, []byte("not an image"))
@@ -403,7 +407,7 @@ func TestOrgAvatar(t *testing.T) {
 	// Organizations are created with a generated avatar.
 	require.True(t, hasCustomAvatar())
 
-	status, _, body = orgSignedIn(t, member).doRaw(http.MethodDelete, path, "", nil)
+	status, _, body = authenticatedClient(t, member).doRaw(http.MethodDelete, path, "", nil)
 	assert.Equal(t, http.StatusForbidden, status, "member, response: %s", body)
 	assert.True(t, hasCustomAvatar())
 
@@ -418,12 +422,14 @@ func TestOrgAvatar(t *testing.T) {
 }
 
 func TestOrgMembers(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	member := seedUser(t, CreateUserOptions{})
 	outsider := seedUser(t, CreateUserOptions{})
 	org := orgSeed(t, owner.ID)
-	ownerClient := orgSignedIn(t, owner)
-	memberClient := orgSignedIn(t, member)
+	ownerClient := authenticatedClient(t, owner)
+	memberClient := authenticatedClient(t, member)
 	path := "/api/web/orgs/" + org.Name + "/members"
 
 	listMembers := func(c *client) map[string]orgMember {
@@ -486,13 +492,15 @@ func TestOrgMembers(t *testing.T) {
 }
 
 func TestOrgTeams(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	member := seedUser(t, CreateUserOptions{})
 	org := orgSeed(t, owner.ID)
 	orgAddMember(t, org, member.ID)
 	repo := seedRepository(t, org.ID, CreateRepositoryOptions{})
-	ownerClient := orgSignedIn(t, owner)
-	memberClient := orgSignedIn(t, member)
+	ownerClient := authenticatedClient(t, owner)
+	memberClient := authenticatedClient(t, member)
 	teamsPath := "/api/web/orgs/" + org.Name + "/teams"
 
 	type teamSummary struct {

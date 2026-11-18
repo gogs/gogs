@@ -76,6 +76,8 @@ func orgActivity(t *testing.T, c *client, path string) []orgActivityItem {
 }
 
 func TestProfileUser(t *testing.T) {
+	t.Parallel()
+
 	u := seedUser(t, CreateUserOptions{})
 	viewer := seedUser(t, CreateUserOptions{})
 	org := orgSeed(t, viewer.ID)
@@ -88,12 +90,12 @@ func TestProfileUser(t *testing.T) {
 	assert.False(t, anonymous.ViewerIsSelf)
 	assert.Empty(t, anonymous.orgNames(), "private membership shown")
 
-	self := orgGetProfile(t, orgSignedIn(t, u), u.Name)
+	self := orgGetProfile(t, authenticatedClient(t, u), u.Name)
 	assert.Equal(t, u.Email, self.Email)
 	assert.True(t, self.ViewerIsSelf)
 	assert.Equal(t, []string{org.Name}, self.orgNames())
 
-	viewerClient := orgSignedIn(t, viewer)
+	viewerClient := authenticatedClient(t, viewer)
 	other := orgGetProfile(t, viewerClient, u.Name)
 	assert.Equal(t, u.Email, other.Email)
 	assert.False(t, other.ViewerIsSelf)
@@ -107,6 +109,8 @@ func TestProfileUser(t *testing.T) {
 }
 
 func TestProfileOrganization(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	org := orgSeed(t, owner.ID)
 
@@ -123,7 +127,7 @@ func TestProfileOrganization(t *testing.T) {
 		ViewerIsOwner  bool `json:"viewerIsOwner"`
 	}
 	var got profile
-	orgSignedIn(t, owner).doJSON(http.MethodGet, "/api/web/users/"+org.Name, nil, http.StatusOK, &got)
+	authenticatedClient(t, owner).doJSON(http.MethodGet, "/api/web/users/"+org.Name, nil, http.StatusOK, &got)
 	assert.Equal(t, "organization", got.Kind)
 	assert.Equal(t, org.Name, got.Name)
 	assert.True(t, got.ViewerIsOwner)
@@ -143,19 +147,21 @@ func TestProfileOrganization(t *testing.T) {
 		status, body := newClient(t).do(http.MethodGet, "/api/web/users/"+org.Name+path, nil)
 		assert.Equal(t, http.StatusNotFound, status, "GET %s, response: %s", path, body)
 	}
-	status, body := orgSignedIn(t, owner).do(http.MethodPost, "/api/web/users/"+org.Name+"/follow", orgNoBody)
+	status, body := authenticatedClient(t, owner).do(http.MethodPost, "/api/web/users/"+org.Name+"/follow", orgNoBody)
 	assert.Equal(t, http.StatusNotFound, status, "following an organization, response: %s", body)
 }
 
 func TestProfileRepos(t *testing.T) {
+	t.Parallel()
+
 	u := seedUser(t, CreateUserOptions{})
 	public := seedRepository(t, u.ID, CreateRepositoryOptions{})
 	private := seedRepository(t, u.ID, CreateRepositoryOptions{Private: true})
 	org := orgSeed(t, u.ID)
 	orgPublic := seedRepository(t, org.ID, CreateRepositoryOptions{})
 	orgPrivate := seedRepository(t, org.ID, CreateRepositoryOptions{Private: true})
-	ownerClient := orgSignedIn(t, u)
-	otherClient := orgSignedIn(t, seedUser(t, CreateUserOptions{}))
+	ownerClient := authenticatedClient(t, u)
+	otherClient := authenticatedClient(t, seedUser(t, CreateUserOptions{}))
 
 	repoNames := func(c *client, owner string) []string {
 		t.Helper()
@@ -186,8 +192,10 @@ func TestProfileRepos(t *testing.T) {
 }
 
 func TestProfileActivity(t *testing.T) {
+	t.Parallel()
+
 	u := seedUser(t, CreateUserOptions{})
-	c := orgSignedIn(t, u)
+	c := authenticatedClient(t, u)
 	public := orgCreateRepoThroughWeb(t, c, u.ID, false)
 	private := orgCreateRepoThroughWeb(t, c, u.ID, true)
 
@@ -204,14 +212,16 @@ func TestProfileActivity(t *testing.T) {
 	path := "/api/web/users/" + u.Name + "/activity"
 	assert.Equal(t, []string{"/" + u.Name + "/" + private, "/" + u.Name + "/" + public}, createdRepos(orgActivity(t, c, path)))
 	assert.Equal(t, []string{"/" + u.Name + "/" + public}, createdRepos(orgActivity(t, newClient(t), path)), "private activity shown to anonymous viewers")
-	other := orgSignedIn(t, seedUser(t, CreateUserOptions{}))
+	other := authenticatedClient(t, seedUser(t, CreateUserOptions{}))
 	assert.Equal(t, []string{"/" + u.Name + "/" + public}, createdRepos(orgActivity(t, other, path)), "private activity shown to others")
 }
 
 func TestProfileFollow(t *testing.T) {
+	t.Parallel()
+
 	followee := seedUser(t, CreateUserOptions{})
 	follower := seedUser(t, CreateUserOptions{})
-	c := orgSignedIn(t, follower)
+	c := authenticatedClient(t, follower)
 	followPath := "/api/web/users/" + followee.Name + "/follow"
 
 	people := func(path string) []string {

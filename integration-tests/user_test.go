@@ -17,6 +17,8 @@ import (
 const captchaSessionKey = "flamego::captcha::text"
 
 func TestSignUp(t *testing.T) {
+	t.Parallel()
+
 	c := newClient(t)
 	signUp := func(name, captcha string) (int, []byte) {
 		return c.do(http.MethodPost, "/api/web/user/sign-up", map[string]any{
@@ -48,6 +50,8 @@ func TestSignUp(t *testing.T) {
 }
 
 func TestSignInWithTwoFactor(t *testing.T) {
+	t.Parallel()
+
 	u := seedUser(t, CreateUserOptions{})
 	tf, err := EnableTwoFactor(t.Context(), u.ID)
 	require.NoError(t, err)
@@ -110,6 +114,8 @@ func TestSignInWithTwoFactor(t *testing.T) {
 }
 
 func TestActivateAccount(t *testing.T) {
+	t.Parallel()
+
 	u := seedUser(t, CreateUserOptions{Inactive: true})
 
 	c := newClient(t)

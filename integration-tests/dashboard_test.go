@@ -13,18 +13,10 @@ import (
 
 // orgOpenIssue opens an issue in the repository as the user through API v1,
 // and returns its index.
-func orgOpenIssue(t *testing.T, userID int64, owner, repo, title string) int64 {
+func orgOpenIssue(t *testing.T, u *User, owner, repo, title string) int64 {
 	t.Helper()
 
-	token, err := CreateAccessToken(t.Context(), userID)
-	require.NoError(t, err)
-	api := newClient(t)
-	api.header.Set("Authorization", "token "+token)
-	var created struct {
-		Number int64 `json:"number"`
-	}
-	api.doJSON(http.MethodPost, "/api/v1/repos/"+owner+"/"+repo+"/issues", map[string]any{"title": title}, http.StatusCreated, &created)
-	return created.Number
+	return apiV1CreateIssue(t, apiV1Client(t, u), &Repository{Owner: owner, Name: repo}, map[string]any{"title": title})
 }
 
 // orgOpenPullRequest commits a file to a new branch of the repository, which
@@ -128,12 +120,14 @@ func orgCreatedRepoURLs(items []orgActivityItem) []string {
 }
 
 func TestDashboardUser(t *testing.T) {
+	t.Parallel()
+
 	u := seedUser(t, CreateUserOptions{})
 	other := seedUser(t, CreateUserOptions{})
 	org := orgSeed(t, other.ID)
 	orgAddMember(t, org, u.ID)
-	c := orgSignedIn(t, u)
-	otherClient := orgSignedIn(t, other)
+	c := authenticatedClient(t, u)
+	otherClient := authenticatedClient(t, other)
 	repo := orgCreateRepoThroughWeb(t, c, u.ID, true)
 	fullName := u.Name + "/" + repo
 
@@ -150,7 +144,7 @@ func TestDashboardUser(t *testing.T) {
 	assert.NotContains(t, orgCreatedRepoURLs(orgActivity(t, otherClient, "/api/web/dashboard/activity")), "/"+fullName)
 
 	t.Run("issues", func(t *testing.T) {
-		index := orgOpenIssue(t, u.ID, u.Name, repo, "Crash on start")
+		index := orgOpenIssue(t, u, u.Name, repo, "Crash on start")
 		key := fullName + "#" + strconv.FormatInt(index, 10)
 		titles, resp := orgDashboardIssueTitles(t, c, "/api/web/dashboard/issues")
 		assert.Equal(t, map[string]string{key: "Crash on start"}, titles)
@@ -190,13 +184,15 @@ func TestDashboardUser(t *testing.T) {
 }
 
 func TestDashboardOrganization(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	member := seedUser(t, CreateUserOptions{})
 	outsider := seedUser(t, CreateUserOptions{})
 	org := orgSeed(t, owner.ID)
 	orgAddMember(t, org, member.ID)
-	ownerClient := orgSignedIn(t, owner)
-	memberClient := orgSignedIn(t, member)
+	ownerClient := authenticatedClient(t, owner)
+	memberClient := authenticatedClient(t, member)
 	public := orgCreateRepoThroughWeb(t, ownerClient, org.ID, false)
 	private := orgCreateRepoThroughWeb(t, ownerClient, org.ID, true)
 	base := "/api/web/orgs/" + org.Name + "/dashboard"
@@ -218,7 +214,7 @@ func TestDashboardOrganization(t *testing.T) {
 	)
 	assert.Equal(t, []string{"/" + org.Name + "/" + public}, orgCreatedRepoURLs(orgActivity(t, memberClient, base+"/activity")))
 
-	issue := orgOpenIssue(t, owner.ID, org.Name, private, "Private crash")
+	issue := orgOpenIssue(t, owner, org.Name, private, "Private crash")
 	issueKey := org.Name + "/" + private + "#" + strconv.FormatInt(issue, 10)
 	titles, _ := orgDashboardIssueTitles(t, ownerClient, base+"/issues")
 	assert.Equal(t, map[string]string{issueKey: "Private crash"}, titles)
@@ -232,7 +228,7 @@ func TestDashboardOrganization(t *testing.T) {
 		assert.Equal(t, map[string]string{pullKey: "Public feature"}, titles, "%s viewer", name)
 	}
 
-	outsiderClient := orgSignedIn(t, outsider)
+	outsiderClient := authenticatedClient(t, outsider)
 	for _, path := range []string{"", "/activity", "/issues", "/pulls"} {
 		status, body := outsiderClient.do(http.MethodGet, base+path, nil)
 		assert.Equal(t, http.StatusNotFound, status, "GET %s as outsider, response: %s", path, body)

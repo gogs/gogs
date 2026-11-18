@@ -100,6 +100,8 @@ func lfsBatch(t *testing.T, c *client, repo *Repository, operation, oid string, 
 }
 
 func TestLFSUploadDownloadVerify(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	c := lfsClient(t, owner)
@@ -162,6 +164,8 @@ func TestLFSUploadDownloadVerify(t *testing.T) {
 }
 
 func TestLFSUploadRejectsMismatchedContent(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	c := lfsClient(t, owner)
@@ -179,6 +183,8 @@ func TestLFSUploadRejectsMismatchedContent(t *testing.T) {
 }
 
 func TestLFSAccess(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	other := seedUser(t, CreateUserOptions{})
 	public := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
@@ -287,6 +293,8 @@ func TestLFSAccess(t *testing.T) {
 // the batch, upload, verify and download requests are the ones the client
 // sends.
 func TestLFSGitClient(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	other := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})

@@ -26,9 +26,7 @@ func userSignedIn(t *testing.T) (*User, *client) {
 	t.Helper()
 
 	u := seedUser(t, CreateUserOptions{})
-	c := newClient(t)
-	c.signIn(u)
-	return u, c
+	return u, authenticatedClient(t, u)
 }
 
 func userGet(t *testing.T, id int64) *database.User {
@@ -53,6 +51,8 @@ func userAssertSignInRequired(t *testing.T, routes ...string) {
 }
 
 func TestUserSettingsProfile(t *testing.T) {
+	t.Parallel()
+
 	userAssertSignInRequired(t, "GET /api/web/user/settings", "PATCH /api/web/user/settings")
 
 	u, c := userSignedIn(t)
@@ -102,6 +102,8 @@ func TestUserSettingsProfile(t *testing.T) {
 }
 
 func TestUserSettingsPassword(t *testing.T) {
+	t.Parallel()
+
 	userAssertSignInRequired(t, "PUT /api/web/user/settings/password")
 
 	u, c := userSignedIn(t)
@@ -138,6 +140,8 @@ func userAvatarForm(t *testing.T, data []byte) (string, *bytes.Buffer) {
 }
 
 func TestUserSettingsAvatar(t *testing.T) {
+	t.Parallel()
+
 	anonymous := newClient(t)
 	contentType, form := userAvatarForm(t, []byte("not an image"))
 	status, _, body := anonymous.doRaw(http.MethodPut, "/api/web/user/settings/avatar", contentType, form)
@@ -176,6 +180,8 @@ func TestUserSettingsAvatar(t *testing.T) {
 }
 
 func TestUserSettingsGravatar(t *testing.T) {
+	t.Parallel()
+
 	userAssertSignInRequired(t, "PUT /api/web/user/settings/gravatar")
 
 	u, c := userSignedIn(t)
@@ -186,6 +192,8 @@ func TestUserSettingsGravatar(t *testing.T) {
 }
 
 func TestUserSettingsRepositories(t *testing.T) {
+	t.Parallel()
+
 	userAssertSignInRequired(t, "GET /api/web/user/settings/repositories", "DELETE /api/web/user/settings/repositories/1")
 
 	u, c := userSignedIn(t)
@@ -232,6 +240,8 @@ func TestUserSettingsRepositories(t *testing.T) {
 }
 
 func TestUserSettingsOrganizations(t *testing.T) {
+	t.Parallel()
+
 	userAssertSignInRequired(t, "GET /api/web/user/settings/organizations")
 
 	u, c := userSignedIn(t)
@@ -257,6 +267,8 @@ func TestUserSettingsOrganizations(t *testing.T) {
 }
 
 func TestUserSettingsEmails(t *testing.T) {
+	t.Parallel()
+
 	userAssertSignInRequired(t,
 		"GET /api/web/user/settings/emails",
 		"POST /api/web/user/settings/emails",
@@ -335,6 +347,8 @@ func userSeedSSHKey(t *testing.T, userID int64, name string) (*database.PublicKe
 }
 
 func TestUserSettingsSSHKeys(t *testing.T) {
+	t.Parallel()
+
 	userAssertSignInRequired(t,
 		"GET /api/web/user/settings/ssh-keys",
 		"POST /api/web/user/settings/ssh-keys",
@@ -396,6 +410,8 @@ func TestUserSettingsSSHKeys(t *testing.T) {
 }
 
 func TestUserSettingsTwoFactor(t *testing.T) {
+	t.Parallel()
+
 	userAssertSignInRequired(t,
 		"GET /api/web/user/settings/two-factor",
 		"POST /api/web/user/settings/two-factor",
@@ -490,6 +506,8 @@ func TestUserSettingsTwoFactor(t *testing.T) {
 }
 
 func TestUserSettingsAccessTokens(t *testing.T) {
+	t.Parallel()
+
 	userAssertSignInRequired(t,
 		"GET /api/web/user/settings/tokens",
 		"POST /api/web/user/settings/tokens",

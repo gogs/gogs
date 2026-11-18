@@ -86,6 +86,8 @@ func gitMainOnDisk(t *testing.T, repo *Repository) string {
 }
 
 func TestGitInfoRefs(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	head := gitMainOnDisk(t, repo)
@@ -144,6 +146,8 @@ func gitBasicAuth(username, password string) string {
 // is set, which the server under test leaves empty, so OPTIONS requests are
 // rejected without running Git.
 func TestGitOptionsWithoutCORS(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	base := "/" + repo.Owner + "/" + repo.Name + ".git"
@@ -172,6 +176,8 @@ func TestGitOptionsWithoutCORS(t *testing.T) {
 }
 
 func TestGitCloneAndFetch(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 
@@ -194,6 +200,8 @@ func TestGitCloneAndFetch(t *testing.T) {
 }
 
 func TestGitClonePrivate(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	other := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
@@ -242,48 +250,50 @@ func TestGitClonePrivate(t *testing.T) {
 }
 
 func TestGitPush(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
-	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	for _, name := range []string{"http", "ssh", "serv"} {
+		t.Run(name, func(t *testing.T) {
+			repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+			remote := gitTransports(t, owner, repo)[name]
+			dir := remote.clone(t)
+			assert.Equal(t, gitMainOnDisk(t, repo), gitRun(t, dir, "rev-parse", "HEAD"))
+			fileName := UniqueName("file-") + ".txt"
+			want := gitCommitFile(t, dir, fileName)
+			out, err := remote.git(dir, "push", "origin", "main")
+			require.NoError(t, err, "push: %s", out)
+			assert.Equal(t, want, gitMainOnDisk(t, repo))
 
-	dir := gitClone(t, gitRemoteURL(t, repo, owner.Name, owner.Password))
-	fileName := UniqueName("file-") + ".txt"
-	want := gitCommitFile(t, dir, fileName)
-	gitRun(t, dir, "push", "origin", "main")
+			var src struct {
+				Entries []struct {
+					Name string `json:"name"`
+				} `json:"entries"`
+			}
+			newClient(t).doJSON(http.MethodGet, "/api/web/"+repo.Owner+"/"+repo.Name+"/src", nil, http.StatusOK, &src)
+			var names []string
+			for _, e := range src.Entries {
+				names = append(names, e.Name)
+			}
+			assert.ElementsMatch(t, []string{"README.md", fileName}, names)
 
-	assert.Equal(t, want, gitMainOnDisk(t, repo))
-
-	var src struct {
-		Entries []struct {
-			Name string `json:"name"`
-		} `json:"entries"`
+			// The server records the push in the news feed of the owner.
+			actions := gitRepoActions(t, owner.ID, repo.ID)
+			require.NotEmpty(t, actions)
+			pushed := actions[0]
+			assert.Equal(t, database.ActionCommitRepo, pushed.OpType)
+			assert.Equal(t, owner.ID, pushed.ActUserID)
+			assert.Equal(t, "main", pushed.RefName)
+			var commits database.PushCommits
+			require.NoError(t, json.Unmarshal([]byte(pushed.Content), &commits))
+			require.Len(t, commits.Commits, 1)
+			assert.Equal(t, want, commits.Commits[0].Sha1)
+			assert.Equal(t, "Add "+fileName, strings.TrimSpace(commits.Commits[0].Message))
+		})
 	}
-	newClient(t).doJSON(http.MethodGet, "/api/web/"+repo.Owner+"/"+repo.Name+"/src", nil, http.StatusOK, &src)
-	var names []string
-	for _, e := range src.Entries {
-		names = append(names, e.Name)
-	}
-	assert.ElementsMatch(t, []string{"README.md", fileName}, names)
-
-	// The server records the push in the news feed of the owner.
-	actions, err := database.Handle.Actions().ListByUser(t.Context(), owner.ID, owner.ID, 0, false)
-	require.NoError(t, err)
-	var pushed *database.Action
-	for _, a := range actions {
-		if a.OpType == database.ActionCommitRepo && a.RepoID == repo.ID {
-			pushed = a
-			break
-		}
-	}
-	require.NotNil(t, pushed, "no push action recorded")
-	assert.Equal(t, owner.ID, pushed.ActUserID)
-	assert.Equal(t, "main", pushed.RefName)
-	var commits database.PushCommits
-	require.NoError(t, json.Unmarshal([]byte(pushed.Content), &commits))
-	require.Len(t, commits.Commits, 1)
-	assert.Equal(t, want, commits.Commits[0].Sha1)
-	assert.Equal(t, "Add "+fileName, strings.TrimSpace(commits.Commits[0].Message))
 
 	t.Run("token", func(t *testing.T) {
+		repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 		token, err := CreateAccessToken(t.Context(), owner.ID)
 		require.NoError(t, err)
 		dir := gitClone(t, gitRemoteURL(t, repo, token, ""))
@@ -330,44 +340,68 @@ func gitNewRefActions(t *testing.T, ownerID, repoID int64, skip int) []gitRefAct
 	return got
 }
 
-// gitTransports returns, by name, functions that run Git in a directory as the
-// owner of the repository over each transport, and return its trimmed output
-// and whether it succeeded, along with the URL of the repository.
-func gitTransports(t *testing.T, owner *User, repo *Repository) map[string]struct {
+// gitTransport runs Git over one transport to the server.
+type gitTransport struct {
+	// url is the URL of the repository over the transport.
 	url string
+	// git runs Git in the directory and returns its trimmed output.
 	git func(dir string, args ...string) (string, error)
-} {
+}
+
+// gitTransports returns, by name, each transport to the repository as the user:
+// HTTP with the password, the builtin SSH server, and "gogs serv", which
+// OpenSSH runs.
+func gitTransports(t *testing.T, u *User, repo *Repository) map[string]gitTransport {
 	t.Helper()
 
-	key := sshUserKey(t, owner.ID)
-	return map[string]struct {
-		url string
-		git func(dir string, args ...string) (string, error)
-	}{
+	key := sshUserKey(t, u.ID)
+	serv := servProgram(t, key.id)
+	run := func(cmd *exec.Cmd) (string, error) {
+		out, err := cmd.CombinedOutput()
+		return strings.TrimSpace(string(out)), err
+	}
+	return map[string]gitTransport{
 		"http": {
-			url: gitRemoteURL(t, repo, owner.Name, owner.Password),
+			url: gitRemoteURL(t, repo, u.Name, u.Password),
 			git: func(dir string, args ...string) (string, error) {
-				out, err := gitCommand(dir, args...).CombinedOutput()
-				return strings.TrimSpace(string(out)), err
+				return run(gitCommand(dir, args...))
 			},
 		},
 		"ssh": {url: sshRemoteURL(repo), git: key.git},
+		"serv": {
+			url: "ssh://git@localhost/" + repo.Owner + "/" + repo.Name + ".git",
+			git: func(dir string, args ...string) (string, error) {
+				cmd := gitCommand(dir, args...)
+				cmd.Env = append(cmd.Env, "GIT_SSH="+serv)
+				return run(cmd)
+			},
+		},
 	}
 }
 
+// clone clones the repository over the transport into a new directory and
+// returns the directory.
+func (tr gitTransport) clone(t *testing.T) string {
+	t.Helper()
+
+	dir := filepath.Join(t.TempDir(), "clone")
+	out, err := tr.git(filepath.Dir(dir), "clone", tr.url, dir)
+	require.NoError(t, err, "clone: %s", out)
+	return dir
+}
+
 func TestGitPushRecordsRefUpdates(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	for _, name := range []string{"http", "ssh"} {
 		t.Run(name, func(t *testing.T) {
 			repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 			remote := gitTransports(t, owner, repo)[name]
-			dir := filepath.Join(t.TempDir(), "clone")
-			out, err := remote.git(filepath.Dir(dir), "clone", remote.url, dir)
-			require.NoError(t, err, "clone: %s", out)
-
+			dir := remote.clone(t)
 			gitCommitFile(t, dir, UniqueName("file-")+".txt")
 			gitRun(t, dir, "branch", "gone")
-			out, err = remote.git(dir, "push", "origin", "main", "gone")
+			out, err := remote.git(dir, "push", "origin", "main", "gone")
 			require.NoError(t, err, "push: %s", out)
 			before := len(gitRepoActions(t, owner.ID, repo.ID))
 
@@ -391,12 +425,14 @@ func TestGitPushRecordsRefUpdates(t *testing.T) {
 }
 
 func TestGitPushProtectedBranch(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	branch := repoSettingsDefaultBranch(t, repo)
 	hooksDir := filepath.Join(database.RepoPath(repo.Owner, repo.Name), "hooks")
 	path := repoSettingsAPIPath(repo, "/settings/branches/"+branch)
-	c := repoSettingsSignedIn(t, owner)
+	c := authenticatedClient(t, owner)
 
 	// Pushes to a repository without protected branches or custom hooks run no
 	// Gogs hook.
@@ -410,11 +446,9 @@ func TestGitPushProtectedBranch(t *testing.T) {
 
 	for name, remote := range gitTransports(t, owner, repo) {
 		t.Run(name, func(t *testing.T) {
-			dir := filepath.Join(t.TempDir(), "clone")
-			out, err := remote.git(filepath.Dir(dir), "clone", remote.url, dir)
-			require.NoError(t, err, "clone: %s", out)
+			dir := remote.clone(t)
 			gitCommitFile(t, dir, UniqueName("file-")+".txt")
-			out, err = remote.git(dir, "push", "origin", branch)
+			out, err := remote.git(dir, "push", "origin", branch)
 			require.NoError(t, err, "push: %s", out)
 			head := gitMainOnDisk(t, repo)
 			before := len(gitRepoActions(t, owner.ID, repo.ID))
@@ -439,29 +473,35 @@ func TestGitPushProtectedBranch(t *testing.T) {
 }
 
 func TestGitPushWithoutWriteAccess(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	other := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	head := gitMainOnDisk(t, repo)
 
-	for name, creds := range map[string][2]string{
-		"anonymous":           {"", ""},
-		"user without access": {other.Name, other.Password},
-	} {
-		t.Run(name, func(t *testing.T) {
-			dir := gitClone(t, gitRemoteURL(t, repo, creds[0], creds[1]))
+	t.Run("anonymous", func(t *testing.T) {
+		dir := gitClone(t, gitRemoteURL(t, repo, "", ""))
+		gitCommitFile(t, dir, UniqueName("file-")+".txt")
+		out, err := gitCommand(dir, "push", "origin", "main").CombinedOutput()
+		require.Error(t, err, "push succeeded: %s", out)
+		assert.Equal(t, head, gitMainOnDisk(t, repo))
+	})
+
+	// The user can read the public repository but not push to it.
+	denied := map[string]string{
+		"http": "User permission denied",
+		"ssh":  "You do not have sufficient authorization for this action",
+		"serv": "You do not have sufficient authorization for this action",
+	}
+	for name, remote := range gitTransports(t, other, repo) {
+		t.Run("user without write access over "+name, func(t *testing.T) {
+			dir := remote.clone(t)
 			gitCommitFile(t, dir, UniqueName("file-")+".txt")
-			out, err := gitCommand(dir, "push", "origin", "main").CombinedOutput()
+			out, err := remote.git(dir, "push", "origin", "main")
 			require.Error(t, err, "push succeeded: %s", out)
 			assert.Equal(t, head, gitMainOnDisk(t, repo))
+			assert.Contains(t, out, denied[name])
 		})
 	}
-
-	t.Run("receive-pack request", func(t *testing.T) {
-		c := newClient(t)
-		c.header.Set("Authorization", "Basic "+gitBasicAuth(other.Name, other.Password))
-		status, _, body := c.doRaw(http.MethodPost, "/"+repo.Owner+"/"+repo.Name+".git/git-receive-pack", "application/x-git-receive-pack-request", strings.NewReader("0000"))
-		assert.Equal(t, http.StatusForbidden, status, "response: %s", body)
-		assert.Contains(t, string(body), "User permission denied")
-	})
 }

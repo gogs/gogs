@@ -14,6 +14,8 @@ import (
 )
 
 func TestUserSignInPage(t *testing.T) {
+	t.Parallel()
+
 	newSource := func(activated bool) *database.LoginSource {
 		source, err := database.Handle.LoginSources().Create(t.Context(), database.CreateLoginSourceOptions{
 			Type:      auth.PAM,
@@ -47,6 +49,8 @@ func TestUserSignInPage(t *testing.T) {
 }
 
 func TestUserSignUpPage(t *testing.T) {
+	t.Parallel()
+
 	var resp struct {
 		RegistrationDisabled bool `json:"registrationDisabled"`
 		CaptchaEnabled       bool `json:"captchaEnabled"`
@@ -58,6 +62,8 @@ func TestUserSignUpPage(t *testing.T) {
 }
 
 func TestUserResetPassword(t *testing.T) {
+	t.Parallel()
+
 	u := seedUser(t, CreateUserOptions{})
 	stored, err := database.Handle.Users().GetByID(t.Context(), u.ID)
 	require.NoError(t, err)
@@ -110,6 +116,8 @@ func TestUserResetPassword(t *testing.T) {
 }
 
 func TestUserMFAPage(t *testing.T) {
+	t.Parallel()
+
 	u := seedUser(t, CreateUserOptions{})
 	_, err := EnableTwoFactor(t.Context(), u.ID)
 	require.NoError(t, err)
@@ -128,6 +136,8 @@ func TestUserMFAPage(t *testing.T) {
 }
 
 func TestUserActivatePage(t *testing.T) {
+	t.Parallel()
+
 	t.Run("signed out", func(t *testing.T) {
 		c := newClient(t)
 		status, body := c.do(http.MethodGet, "/api/web/user/activate", nil)
@@ -137,8 +147,7 @@ func TestUserActivatePage(t *testing.T) {
 	})
 
 	t.Run("active", func(t *testing.T) {
-		c := newClient(t)
-		c.signIn(seedUser(t, CreateUserOptions{}))
+		c := authenticatedClient(t, seedUser(t, CreateUserOptions{}))
 		status, body := c.do(http.MethodGet, "/api/web/user/activate", nil)
 		assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 		status, body = c.do(http.MethodPost, "/api/web/user/activate", map[string]any{})
@@ -147,8 +156,7 @@ func TestUserActivatePage(t *testing.T) {
 
 	t.Run("inactive", func(t *testing.T) {
 		u := seedUser(t, CreateUserOptions{Inactive: true})
-		c := newClient(t)
-		c.signIn(u)
+		c := authenticatedClient(t, u)
 		var resp struct {
 			Email             string `json:"email"`
 			CodeLifetimeHours int    `json:"codeLifetimeHours"`
@@ -165,9 +173,10 @@ func TestUserActivatePage(t *testing.T) {
 }
 
 func TestUserSignOut(t *testing.T) {
+	t.Parallel()
+
 	u := seedUser(t, CreateUserOptions{})
-	c := newClient(t)
-	c.signIn(u)
+	c := authenticatedClient(t, u)
 	sessionID := c.sessionID()
 
 	status, body := c.do(http.MethodPost, "/api/web/user/sign-out", map[string]any{})
@@ -179,6 +188,8 @@ func TestUserSignOut(t *testing.T) {
 }
 
 func TestUserDelete(t *testing.T) {
+	t.Parallel()
+
 	deleteUser := func(c *client, password string) (int, []byte) {
 		return c.do(http.MethodDelete, "/api/web/user", map[string]any{"password": password})
 	}
@@ -190,8 +201,7 @@ func TestUserDelete(t *testing.T) {
 
 	t.Run("wrong password", func(t *testing.T) {
 		u := seedUser(t, CreateUserOptions{})
-		c := newClient(t)
-		c.signIn(u)
+		c := authenticatedClient(t, u)
 		status, body := deleteUser(c, u.Password+"x")
 		assert.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
 		_, err := database.Handle.Users().GetByID(t.Context(), u.ID)
@@ -201,8 +211,7 @@ func TestUserDelete(t *testing.T) {
 	t.Run("owns a repository", func(t *testing.T) {
 		u := seedUser(t, CreateUserOptions{})
 		seedRepository(t, u.ID, CreateRepositoryOptions{})
-		c := newClient(t)
-		c.signIn(u)
+		c := authenticatedClient(t, u)
 		status, body := deleteUser(c, u.Password)
 		assert.Equal(t, http.StatusConflict, status, "response: %s", body)
 		_, err := database.Handle.Users().GetByID(t.Context(), u.ID)
@@ -211,8 +220,7 @@ func TestUserDelete(t *testing.T) {
 
 	t.Run("deleted", func(t *testing.T) {
 		u := seedUser(t, CreateUserOptions{})
-		c := newClient(t)
-		c.signIn(u)
+		c := authenticatedClient(t, u)
 		status, body := deleteUser(c, u.Password)
 		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 		_, err := database.Handle.Users().GetByID(t.Context(), u.ID)

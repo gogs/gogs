@@ -19,6 +19,8 @@ func apiV1AssertPassword(t *testing.T, username, password string) {
 }
 
 func TestAPIV1AdminUsers(t *testing.T) {
+	t.Parallel()
+
 	admin := apiV1Client(t, seedUser(t, CreateUserOptions{Admin: true}))
 	nonAdmin := apiV1Client(t, seedUser(t, CreateUserOptions{}))
 
@@ -103,6 +105,8 @@ func TestAPIV1AdminUsers(t *testing.T) {
 }
 
 func TestAPIV1AdminCreateForUser(t *testing.T) {
+	t.Parallel()
+
 	admin := apiV1Client(t, seedUser(t, CreateUserOptions{Admin: true}))
 	nonAdmin := apiV1Client(t, seedUser(t, CreateUserOptions{}))
 	u := seedUser(t, CreateUserOptions{})
@@ -137,6 +141,8 @@ func TestAPIV1AdminCreateForUser(t *testing.T) {
 }
 
 func TestAPIV1AdminTeams(t *testing.T) {
+	t.Parallel()
+
 	adminUser := seedUser(t, CreateUserOptions{Admin: true})
 	admin := apiV1Client(t, adminUser)
 	nonAdmin := apiV1Client(t, seedUser(t, CreateUserOptions{}))

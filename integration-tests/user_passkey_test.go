@@ -176,9 +176,10 @@ func userListPasskeys(c *client) []userPasskeyItem {
 }
 
 func TestUserPasskeys(t *testing.T) {
+	t.Parallel()
+
 	u := seedUser(t, CreateUserOptions{})
-	c := newClient(t)
-	c.signIn(u)
+	c := authenticatedClient(t, u)
 	assert.Empty(t, userListPasskeys(c))
 
 	t.Run("registration options", func(t *testing.T) {
@@ -211,8 +212,7 @@ func TestUserPasskeys(t *testing.T) {
 	})
 
 	t.Run("add without a registration in progress", func(t *testing.T) {
-		other := newClient(t)
-		other.signIn(seedUser(t, CreateUserOptions{}))
+		other := authenticatedClient(t, seedUser(t, CreateUserOptions{}))
 		status, body := other.do(http.MethodPost, "/api/web/user/settings/passkeys", map[string]any{
 			"name":       "Laptop",
 			"credential": map[string]any{"id": "x"},
@@ -297,8 +297,7 @@ func TestUserPasskeys(t *testing.T) {
 		assert.NotNil(t, passkeys[0].LastUsedAt)
 
 		// Another user cannot delete the passkey.
-		other := newClient(t)
-		other.signIn(seedUser(t, CreateUserOptions{}))
+		other := authenticatedClient(t, seedUser(t, CreateUserOptions{}))
 		status, body = other.do(http.MethodDelete, "/api/web/user/settings/passkeys/"+strconv.FormatInt(passkeys[0].ID, 10), map[string]any{})
 		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 		stored, err := database.Handle.Passkeys().List(t.Context(), u.ID)

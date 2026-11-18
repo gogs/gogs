@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -38,15 +37,15 @@ func codeSearchPaths(files []codeSearchFile) []string {
 }
 
 func TestCodeSearch(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	other := seedUser(t, CreateUserOptions{})
 	public := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	private := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
 
-	ownerClient := newClient(t)
-	ownerClient.signIn(owner)
-	otherClient := newClient(t)
-	otherClient.signIn(other)
+	ownerClient := authenticatedClient(t, owner)
+	otherClient := authenticatedClient(t, other)
 	anonymous := newClient(t)
 
 	// The keyword is unique to this test, so a search of all repositories
@@ -301,11 +300,14 @@ func TestCodeSearch(t *testing.T) {
 
 	t.Run("all repositories match case", func(t *testing.T) {
 		var resp codeSearchResponse
-		anonymous.doJSON(http.MethodGet, "/api/web/search/code?matchCase=true&q="+url.QueryEscape(strings.ToUpper(keyword)), nil, http.StatusOK, &resp)
+		// Scoped to the owner, so the search does not read every repository
+		// other tests create at the same time.
+		scope := "user:" + owner.Name + " "
+		anonymous.doJSON(http.MethodGet, "/api/web/search/code?matchCase=true&q="+url.QueryEscape(scope+strings.ToUpper(keyword)), nil, http.StatusOK, &resp)
 		assert.True(t, resp.MatchCase)
 		assert.Empty(t, resp.Files)
 
-		anonymous.doJSON(http.MethodGet, "/api/web/search/code?matchCase=true&q="+url.QueryEscape(keyword), nil, http.StatusOK, &resp)
+		anonymous.doJSON(http.MethodGet, "/api/web/search/code?matchCase=true&q="+url.QueryEscape(scope+keyword), nil, http.StatusOK, &resp)
 		assert.Equal(t, []string{publicName + ":docs/notes.md", publicName + ":src/main.go"}, codeSearchPaths(resp.Files))
 	})
 
@@ -318,15 +320,15 @@ func TestCodeSearch(t *testing.T) {
 }
 
 func TestIssueSearch(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	other := seedUser(t, CreateUserOptions{})
 	public := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	private := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
 
-	ownerClient := newClient(t)
-	ownerClient.signIn(owner)
-	otherClient := newClient(t)
-	otherClient.signIn(other)
+	ownerClient := authenticatedClient(t, owner)
+	otherClient := authenticatedClient(t, other)
 	anonymous := newClient(t)
 
 	// The keyword is unique to this test, so a search of all repositories
@@ -334,12 +336,13 @@ func TestIssueSearch(t *testing.T) {
 	keyword := UniqueName("zebra")
 	open := issueCreate(t, ownerClient, public, "Open "+keyword, "")
 	closed := issueCreate(t, ownerClient, public, "Closed "+keyword, "")
-	// Closing the second issue makes it the most recently updated one. Update
-	// times are in seconds, so wait for the next one, or the order of the
-	// search would not tell open first from newest first.
-	time.Sleep(1100 * time.Millisecond)
 	status, body := ownerClient.do(http.MethodPut, issueAPIPath(public, "issues", closed, "closed"), map[string]any{})
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	// Update times are in seconds, so the closed issue is moved a minute ahead
+	// to be the most recently updated one, or the order of the search would
+	// not tell open first from newest first.
+	err := gormDB.Exec("UPDATE issue SET updated_unix = updated_unix + 60 WHERE id = ?", issueFromDatabase(t, public, closed).ID).Error
+	require.NoError(t, err)
 	secret := issueCreate(t, ownerClient, private, "Secret "+keyword, "")
 
 	branch := UniqueName("topic-")

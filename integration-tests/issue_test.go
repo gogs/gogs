@@ -66,13 +66,13 @@ func issueFromDatabase(t *testing.T, repo *Repository, index int64) *database.Is
 }
 
 func TestIssueCreateAndView(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	other := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
-	ownerClient := newClient(t)
-	ownerClient.signIn(owner)
-	otherClient := newClient(t)
-	otherClient.signIn(other)
+	ownerClient := authenticatedClient(t, owner)
+	otherClient := authenticatedClient(t, other)
 	anonymous := newClient(t)
 
 	t.Run("new issue form", func(t *testing.T) {
@@ -175,13 +175,13 @@ func TestIssueCreateAndView(t *testing.T) {
 }
 
 func TestIssuePrivateRepository(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	other := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
-	ownerClient := newClient(t)
-	ownerClient.signIn(owner)
-	otherClient := newClient(t)
-	otherClient.signIn(other)
+	ownerClient := authenticatedClient(t, owner)
+	otherClient := authenticatedClient(t, other)
 
 	index := issueCreate(t, ownerClient, repo, "Secret", "")
 	assert.Equal(t, "Secret", issueGet(t, ownerClient, repo, index).Title)
@@ -197,16 +197,15 @@ func TestIssuePrivateRepository(t *testing.T) {
 }
 
 func TestIssueEditAndState(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	poster := seedUser(t, CreateUserOptions{})
 	other := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
-	ownerClient := newClient(t)
-	ownerClient.signIn(owner)
-	posterClient := newClient(t)
-	posterClient.signIn(poster)
-	otherClient := newClient(t)
-	otherClient.signIn(other)
+	ownerClient := authenticatedClient(t, owner)
+	posterClient := authenticatedClient(t, poster)
+	otherClient := authenticatedClient(t, other)
 
 	index := issueCreate(t, posterClient, repo, "Typo", "Old content")
 	path := issueAPIPath(repo, "issues", index)
@@ -245,16 +244,15 @@ func TestIssueEditAndState(t *testing.T) {
 }
 
 func TestIssueComments(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	commenter := seedUser(t, CreateUserOptions{})
 	other := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
-	ownerClient := newClient(t)
-	ownerClient.signIn(owner)
-	commenterClient := newClient(t)
-	commenterClient.signIn(commenter)
-	otherClient := newClient(t)
-	otherClient.signIn(other)
+	ownerClient := authenticatedClient(t, owner)
+	commenterClient := authenticatedClient(t, commenter)
+	otherClient := authenticatedClient(t, other)
 
 	index := issueCreate(t, ownerClient, repo, "Discuss", "")
 	path := issueAPIPath(repo, "issues", index, "comments")
@@ -302,14 +300,14 @@ func TestIssueComments(t *testing.T) {
 }
 
 func TestIssueLabelsMilestoneAndAssignee(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	other := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	otherRepo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
-	ownerClient := newClient(t)
-	ownerClient.signIn(owner)
-	otherClient := newClient(t)
-	otherClient.signIn(other)
+	ownerClient := authenticatedClient(t, owner)
+	otherClient := authenticatedClient(t, other)
 
 	index := issueCreate(t, otherClient, repo, "Triage me", "")
 	path := issueAPIPath(repo, "issues", index)
@@ -395,14 +393,14 @@ func TestIssueLabelsMilestoneAndAssignee(t *testing.T) {
 }
 
 func TestIssueAttachments(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	other := seedUser(t, CreateUserOptions{})
 	public := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	private := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
-	ownerClient := newClient(t)
-	ownerClient.signIn(owner)
-	otherClient := newClient(t)
-	otherClient.signIn(other)
+	ownerClient := authenticatedClient(t, owner)
+	otherClient := authenticatedClient(t, other)
 	anonymous := newClient(t)
 	content := issuePNG(t)
 
@@ -498,14 +496,14 @@ func TestIssueAttachments(t *testing.T) {
 }
 
 func TestIssueSuggestionsAndMarkdown(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	other := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	private := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
-	ownerClient := newClient(t)
-	ownerClient.signIn(owner)
-	otherClient := newClient(t)
-	otherClient.signIn(other)
+	ownerClient := authenticatedClient(t, owner)
+	otherClient := authenticatedClient(t, other)
 
 	t.Run("mentions", func(t *testing.T) {
 		var resp struct {

@@ -47,6 +47,8 @@ func protectedBranchMerge(t *testing.T, c *client, repo *Repository, index int64
 }
 
 func TestProtectedBranchAllowlist(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	listed := seedUser(t, CreateUserOptions{})
 	unlisted := seedUser(t, CreateUserOptions{})
@@ -58,10 +60,10 @@ func TestProtectedBranchAllowlist(t *testing.T) {
 	release := protectedBranchTeam(t, org, repo, database.AccessModeWrite)
 	readers := protectedBranchTeam(t, org, repo, database.AccessModeRead, reader.ID)
 
-	ownerClient := orgSignedIn(t, owner)
-	listedClient := orgSignedIn(t, listed)
-	unlistedClient := orgSignedIn(t, unlisted)
-	joinerClient := orgSignedIn(t, joiner)
+	ownerClient := authenticatedClient(t, owner)
+	listedClient := authenticatedClient(t, listed)
+	unlistedClient := authenticatedClient(t, unlisted)
+	joinerClient := authenticatedClient(t, joiner)
 
 	settingsPath := issueAPIPath(repo, "settings", "branches", "main")
 	protect := func(t *testing.T, body map[string]any) {

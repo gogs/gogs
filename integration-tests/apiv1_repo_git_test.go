@@ -15,6 +15,8 @@ import (
 )
 
 func TestAPIV1Contents(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	api := apiV1Client(t, owner)
@@ -114,6 +116,8 @@ func TestAPIV1Contents(t *testing.T) {
 }
 
 func TestAPIV1GitObjects(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	api := apiV1Client(t, owner)
@@ -182,6 +186,8 @@ func TestAPIV1GitObjects(t *testing.T) {
 }
 
 func TestAPIV1RawFile(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
 	api := apiV1Client(t, owner)
@@ -201,6 +207,8 @@ func TestAPIV1RawFile(t *testing.T) {
 }
 
 func TestAPIV1Archive(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	api := apiV1Client(t, owner)
@@ -220,6 +228,8 @@ func TestAPIV1Archive(t *testing.T) {
 }
 
 func TestAPIV1Editorconfig(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	api := apiV1Client(t, owner)
@@ -234,6 +244,8 @@ func TestAPIV1Editorconfig(t *testing.T) {
 }
 
 func TestAPIV1BranchesAndCommits(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	api := apiV1Client(t, owner)
@@ -326,6 +338,8 @@ func TestAPIV1BranchesAndCommits(t *testing.T) {
 }
 
 func TestAPIV1Tags(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	api := apiV1Client(t, owner)

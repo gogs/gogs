@@ -17,12 +17,18 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/pquerna/otp/totp"
+	"gorm.io/gorm"
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/userx"
 )
+
+// gormDB is the connection Init opens to the database of the server under test,
+// for the few tests that set up what no store method writes, e.g., an update
+// time in the past or future.
+var gormDB *gorm.DB
 
 // Init loads the configuration of the server under test from the given file and
 // connects to its database. The server must have started once to migrate the
@@ -32,7 +38,7 @@ func Init(logger *logx.Logger, configPath string) error {
 	if err != nil {
 		return errors.Wrap(err, "init configuration")
 	}
-	_, err = database.SetEngine(logger, false)
+	gormDB, err = database.SetEngine(logger, false)
 	if err != nil {
 		return errors.Wrap(err, "set engine")
 	}
