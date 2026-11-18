@@ -103,9 +103,24 @@ func listReposOfUser(c *apiContext, username string) {
 
 	// Early return for querying other user's repositories
 	if c.User.ID != user.ID {
+		accessModes, err := database.Handle.Permissions().AccessModes(c.Request().Context(), c.User.ID, ownRepos)
+		if err != nil {
+			c.Error(err, "get access modes")
+			return
+		}
 		repos := make([]*types.Repository, len(ownRepos))
-		for i := range ownRepos {
-			repos[i] = toRepository(ownRepos[i], &types.RepositoryPermission{Admin: true, Push: true, Pull: true})
+		for i, repo := range ownRepos {
+			accessMode := accessModes[repo.ID]
+			// Site admins have full access to every repository through the API, the
+			// same as when getting a single repository.
+			if c.IsTokenAuth && c.User.IsAdmin {
+				accessMode = database.AccessModeOwner
+			}
+			repos[i] = toRepository(repo, &types.RepositoryPermission{
+				Admin: accessMode >= database.AccessModeAdmin,
+				Push:  accessMode >= database.AccessModeWrite,
+				Pull:  accessMode >= database.AccessModeRead,
+			})
 		}
 		c.JSONSuccess(&repos)
 		return

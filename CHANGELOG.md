@@ -53,6 +53,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Fixed
 
+- Listing the repositories of another user or an organization through the API no longer reports admin, push and pull permissions on every repository. [#8667](https://github.com/gogs/gogs/pull/8667)
 - Commenting on, closing, or reopening an issue, including with `fixes #N` in a pushed commit, no longer hangs the server when using SQLite with email notifications enabled. [#8395](https://github.com/gogs/gogs/pull/8395)
 - Markdown files starting with a byte order mark now render their first line correctly, e.g., a leading heading is no longer shown as plain text. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Git operations that fail over the built-in SSH server now exit with a failure status on the client. [#8552](https://github.com/gogs/gogs/pull/8552)

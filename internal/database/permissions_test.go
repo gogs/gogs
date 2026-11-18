@@ -25,6 +25,7 @@ func TestPerms(t *testing.T) {
 		test func(t *testing.T, ctx context.Context, s *PermissionsStore)
 	}{
 		{"AccessMode", permsAccessMode},
+		{"AccessModes", permsAccessModes},
 		{"Authorize", permsAuthorize},
 		{"SetRepoPerms", permsSetRepoPerms},
 	} {
@@ -148,6 +149,52 @@ func permsAccessMode(t *testing.T, ctx context.Context, s *PermissionsStore) {
 		t.Run(test.name, func(t *testing.T) {
 			mode := s.AccessMode(ctx, logx.NewNoopLogger(), test.userID, test.repoID, test.opts)
 			assert.Equal(t, test.wantAccessMode, mode)
+		})
+	}
+}
+
+func permsAccessModes(t *testing.T, ctx context.Context, s *PermissionsStore) {
+	err := s.SetRepoPerms(ctx, 1, map[int64]AccessMode{2: AccessModeWrite})
+	require.NoError(t, err)
+	err = s.SetRepoPerms(ctx, 2, map[int64]AccessMode{1: AccessModeRead})
+	require.NoError(t, err)
+
+	repos := []*Repository{
+		{ID: 1, OwnerID: 98},
+		{ID: 2, OwnerID: 99, IsPrivate: true},
+		{ID: 3, OwnerID: 98, IsPrivate: true},
+	}
+	tests := []struct {
+		name   string
+		userID int64
+		want   map[int64]AccessMode
+	}{
+		{
+			name:   "anonymous user",
+			userID: 0,
+			want:   map[int64]AccessMode{1: AccessModeRead, 2: AccessModeNone, 3: AccessModeNone},
+		},
+		{
+			name:   "owner",
+			userID: 98,
+			want:   map[int64]AccessMode{1: AccessModeOwner, 2: AccessModeNone, 3: AccessModeOwner},
+		},
+		{
+			name:   "user with access to the private repository",
+			userID: 1,
+			want:   map[int64]AccessMode{1: AccessModeRead, 2: AccessModeRead, 3: AccessModeNone},
+		},
+		{
+			name:   "user with write access to the public repository",
+			userID: 2,
+			want:   map[int64]AccessMode{1: AccessModeWrite, 2: AccessModeNone, 3: AccessModeNone},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := s.AccessModes(ctx, test.userID, repos)
+			require.NoError(t, err)
+			assert.Equal(t, test.want, got)
 		})
 	}
 }

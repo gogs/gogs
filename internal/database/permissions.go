@@ -71,12 +71,9 @@ type AccessModeOptions struct {
 	Private bool  // Whether the repository is private.
 }
 
-// AccessMode returns the access mode that given user has to the repository.
-func (s *PermissionsStore) AccessMode(ctx context.Context, logger *logx.Logger, userID, repoID int64, opts AccessModeOptions) (mode AccessMode) {
-	if repoID <= 0 {
-		return AccessModeNone
-	}
-
+// implicitAccessMode returns the access mode that given user has to the
+// repository without looking up the access table, and whether that mode is final.
+func implicitAccessMode(userID int64, opts AccessModeOptions) (mode AccessMode, final bool) {
 	// Everyone has read access to public repository.
 	if !opts.Private {
 		mode = AccessModeRead
@@ -84,11 +81,24 @@ func (s *PermissionsStore) AccessMode(ctx context.Context, logger *logx.Logger, 
 
 	// Anonymous user gets the default access.
 	if userID <= 0 {
-		return mode
+		return mode, true
 	}
 
 	if userID == opts.OwnerID {
-		return AccessModeOwner
+		return AccessModeOwner, true
+	}
+	return mode, false
+}
+
+// AccessMode returns the access mode that given user has to the repository.
+func (s *PermissionsStore) AccessMode(ctx context.Context, logger *logx.Logger, userID, repoID int64, opts AccessModeOptions) AccessMode {
+	if repoID <= 0 {
+		return AccessModeNone
+	}
+
+	mode, final := implicitAccessMode(userID, opts)
+	if final {
+		return mode
 	}
 
 	access := new(Access)
@@ -100,6 +110,33 @@ func (s *PermissionsStore) AccessMode(ctx context.Context, logger *logx.Logger, 
 		return mode
 	}
 	return access.Mode
+}
+
+// AccessModes returns the access mode that given user has to each of the
+// repositories, keyed by repository ID, with a single lookup of the access table.
+func (s *PermissionsStore) AccessModes(ctx context.Context, userID int64, repos []*Repository) (map[int64]AccessMode, error) {
+	modes := make(map[int64]AccessMode, len(repos))
+	var lookupIDs []int64
+	for _, repo := range repos {
+		mode, final := implicitAccessMode(userID, AccessModeOptions{OwnerID: repo.OwnerID, Private: repo.IsPrivate})
+		modes[repo.ID] = mode
+		if !final {
+			lookupIDs = append(lookupIDs, repo.ID)
+		}
+	}
+	if len(lookupIDs) == 0 {
+		return modes, nil
+	}
+
+	var accesses []*Access
+	err := s.db.WithContext(ctx).Where("user_id = ? AND repo_id IN ?", userID, lookupIDs).Find(&accesses).Error
+	if err != nil {
+		return nil, errors.Wrap(err, "list accesses")
+	}
+	for _, access := range accesses {
+		modes[access.RepoID] = access.Mode
+	}
+	return modes, nil
 }
 
 // Authorize returns true if the user has at least the desired access mode to the

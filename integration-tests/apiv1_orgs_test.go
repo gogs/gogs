@@ -126,9 +126,53 @@ func TestAPIV1Organizations(t *testing.T) {
 		assert.Equal(t, name+"/"+repoName, repo.FullName)
 		assert.Equal(t, name, repo.Owner.UserName)
 
-		var repos []apiV1Repo
-		api.doJSON(http.MethodGet, "/api/v1/orgs/"+name+"/repos", nil, http.StatusOK, &repos)
-		assert.Equal(t, []string{repoName}, apiV1RepoNames(repos))
+		privateName := UniqueName("repo-")
+		api.doJSON(http.MethodPost, "/api/v1/org/"+name+"/repos", map[string]any{"name": privateName, "private": true}, http.StatusCreated, &repo)
+
+		// listAccess returns the repositories of the organization that the client
+		// can see, with the highest access the response reports on each.
+		listAccess := func(c *client) map[string]string {
+			t.Helper()
+
+			var repos []apiV1Repo
+			c.doJSON(http.MethodGet, "/api/v1/orgs/"+name+"/repos", nil, http.StatusOK, &repos)
+			access := make(map[string]string, len(repos))
+			for _, r := range repos {
+				require.NotNil(t, r.Permissions, "permissions of %q", r.Name)
+				switch {
+				case r.Permissions.Admin:
+					access[r.Name] = "admin"
+				case r.Permissions.Push:
+					access[r.Name] = "write"
+				case r.Permissions.Pull:
+					access[r.Name] = "read"
+				default:
+					access[r.Name] = "none"
+				}
+			}
+			return access
+		}
+
+		assert.Equal(t, map[string]string{repoName: "admin", privateName: "admin"}, listAccess(api), "owner")
+		assert.Equal(t, map[string]string{repoName: "read"}, listAccess(other), "non-member")
+
+		// A team gives its members its access to its repositories only.
+		member := seedUser(t, CreateUserOptions{})
+		admin := apiV1Client(t, seedUser(t, CreateUserOptions{Admin: true}))
+		var team apiV1Team
+		admin.doJSON(http.MethodPost, "/api/v1/admin/orgs/"+name+"/teams", map[string]any{"name": "developers", "permission": "write"}, http.StatusCreated, &team)
+		teamPath := "/api/v1/admin/teams/" + apiV1Itoa(team.ID)
+		for _, path := range []string{teamPath + "/members/" + member.Name, teamPath + "/repos/" + privateName} {
+			status, body = admin.do(http.MethodPut, path, nil)
+			require.Equal(t, http.StatusNoContent, status, "PUT %s, response: %s", path, body)
+		}
+		assert.Equal(t, map[string]string{repoName: "read", privateName: "write"}, listAccess(apiV1Client(t, member)), "team member")
+
+		collaborator := seedUser(t, CreateUserOptions{})
+		path := "/api/v1/repos/" + name + "/" + repoName + "/collaborators/" + collaborator.Name
+		status, body = api.do(http.MethodPut, path, map[string]any{"permission": "write"})
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+		assert.Equal(t, map[string]string{repoName: "write"}, listAccess(apiV1Client(t, collaborator)), "outside collaborator")
 
 		status, body = newClient(t).do(http.MethodGet, "/api/v1/orgs/"+name+"/repos", nil)
 		assert.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
