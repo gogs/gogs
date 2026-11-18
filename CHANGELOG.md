@@ -30,6 +30,7 @@ All notable changes to Gogs are documented in this file.
 - A command palette, opened with Ctrl K or ⌘K or the search button in the navbar, to jump to issues, pull requests, files, repositories, people and pages, search code, and run actions such as switching the theme or copying a clone URL. Type `>`, `#`, `@` or `/` to see only commands, issues, people or code. [#8551](https://github.com/gogs/gogs/pull/8551)
 - API endpoints to create branches and tags: `POST /repos/{owner}/{repo}/branches` and `POST /repos/{owner}/{repo}/tags`. [#8566](https://github.com/gogs/gogs/pull/8566)
 - API endpoint for an access token to delete itself: `DELETE /user/token`, e.g., for a tool to revoke its token when it is done. [#8574](https://github.com/gogs/gogs/pull/8574)
+- The API lists commits page by page with `page`, and from a branch, tag or commit with `sha`, and lists branches page by page with `page` and `limit`. [#8582](https://github.com/gogs/gogs/pull/8582)
 
 ### Changed
 
@@ -52,6 +53,7 @@ All notable changes to Gogs are documented in this file.
 - Avatars hosted by Gogs are now served from `/-/avatars/<id>` and `/-/repo-avatars/<id>`, so they no longer hide the pages of users named `avatars` or `repo-avatars`. Links to the old `/avatars/<id>` and `/repo-avatars/<id>` paths, e.g., in chat messages sent by webhooks, no longer load. [#8650](https://github.com/gogs/gogs/pull/8650)
 - External wiki and issue tracker URLs must start with `http://` or `https://`. Saving another URL, e.g., `javascript:alert(1)`, fails with a message, and repositories that already have one no longer send visitors to it. [#8638](https://github.com/gogs/gogs/pull/8638)
 - The API repository search matches `q` as given. A query such as `owner/name` no longer matches repositories named `name` from any owner. [#8587](https://github.com/gogs/gogs/pull/8587)
+- The API lists at most `[api] MAX_RESPONSE_ITEMS` commits per page, e.g., `pageSize=100` lists 50 commits and links to the next page. [#8582](https://github.com/gogs/gogs/pull/8582)
 
 ### Fixed
 
@@ -133,6 +135,7 @@ All notable changes to Gogs are documented in this file.
 - A user can no longer add the same SSH key twice by changing its comment. When upgrading, such duplicates are merged into the key added first. [#8648](https://github.com/gogs/gogs/pull/8648)
 - The API repository search returned only repositories with a dot in their name or description when no search query was given. [#8587](https://github.com/gogs/gogs/pull/8587)
 - The pagination links of the API repository search and issue list keep the query of the request, e.g., the search keyword and page size, instead of leading to pages of another list. The links of a page past the last one lead back to the last page, and a very large page number, e.g., `page=99999999999999999999`, returns an empty page instead of the first one. Pages of both lists no longer repeat or skip items. [#8587](https://github.com/gogs/gogs/pull/8587)
+- The API now lists no commits for an empty repository instead of failing. [#8582](https://github.com/gogs/gogs/pull/8582)
 
 ### Removed
 
