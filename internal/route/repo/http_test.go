@@ -22,7 +22,6 @@ func TestGitHTTPActionFromPath(t *testing.T) {
 	tests := []struct {
 		name    string
 		urlPath string
-		subpath string
 		owner   string
 		repo    string
 		want    string
@@ -42,28 +41,11 @@ func TestGitHTTPActionFromPath(t *testing.T) {
 			want:    "git-receive-pack",
 		},
 		{
-			name:    "with subpath",
-			urlPath: "/gogs/owner/repo/info/refs",
-			subpath: "/gogs",
-			owner:   "owner",
-			repo:    "repo",
-			want:    "info/refs",
-		},
-		{
 			name:    "owner starts like the subpath",
 			urlPath: "/github/repo/info/refs",
-			subpath: "/git",
 			owner:   "github",
 			repo:    "repo",
 			want:    "info/refs",
-		},
-		{
-			name:    "owner named like the subpath",
-			urlPath: "/git/repo/git-upload-pack",
-			subpath: "/git",
-			owner:   "git",
-			repo:    "repo",
-			want:    "git-upload-pack",
 		},
 		{
 			name:    "non git suffix",
@@ -75,7 +57,7 @@ func TestGitHTTPActionFromPath(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got := gitHTTPActionFromPath(tc.urlPath, tc.subpath, tc.owner, tc.repo)
+			got := gitHTTPActionFromPath(tc.urlPath, tc.owner, tc.repo)
 			assert.Equal(t, tc.want, got)
 		})
 	}
