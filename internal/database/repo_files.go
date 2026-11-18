@@ -191,13 +191,33 @@ func (r *Repository) commitToBranch(ctx context.Context, logger *logx.Logger, do
 	return nil
 }
 
+// ErrReferenceTaken is returned when a reference exists, or cannot be created
+// next to another one.
+var ErrReferenceTaken = errors.New("reference is taken")
+
 // CreateReference creates the reference, e.g., "refs/heads/feature", at the
 // commit by pushing it as the doer, which runs the hooks of the repository, and
-// records the push.
+// records the push. It returns ErrReferenceTaken when the reference is taken.
 func (r *Repository) CreateReference(ctx context.Context, logger *logx.Logger, doer *User, ref, commitID string) error {
 	// Stopping midway, e.g., when the client disconnects, would skip the hooks or
 	// recording the push.
 	ctx = context.WithoutCancel(ctx)
+
+	// A push of the same commit to a reference that already points at it succeeds
+	// without changing anything, so concurrent requests would each record it.
+	repoWorkingPool.CheckIn(strconv.FormatInt(r.ID, 10))
+	defer repoWorkingPool.CheckOut(strconv.FormatInt(r.ID, 10))
+
+	gitRepo, err := git.Open(r.RepoPath())
+	if err != nil {
+		return errors.Wrap(err, "open repository")
+	}
+	taken, err := gitRepo.IsReferenceTaken(ctx, ref)
+	if err != nil {
+		return errors.Wrap(err, "check reference")
+	} else if taken {
+		return ErrReferenceTaken
+	}
 
 	format, err := git.RepoObjectFormat(ctx, r.RepoPath())
 	if err != nil {
@@ -222,6 +242,10 @@ func (r *Repository) CreateReference(ctx context.Context, logger *logx.Logger, d
 	})
 	err = tmpRepo.Push(ctx, r.RepoPath(), commitID+":"+ref, git.PushOptions{Envs: envs, ExpectedOldID: update.OldID})
 	if err != nil {
+		// A Git push over HTTP or SSH may have created it in the meantime.
+		if taken, _ := gitRepo.IsReferenceTaken(ctx, ref); taken {
+			return ErrReferenceTaken
+		}
 		return errors.Wrapf(err, "push %s", ref)
 	}
 	PushUpdates(ctx, logger, doer, r.MustOwner().Name, r.Name, []git.RefUpdate{update}, func(branch string) {

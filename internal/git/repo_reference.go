@@ -84,6 +84,30 @@ func (r *Repository) hasReference(ctx context.Context, ref string) bool {
 	return err == nil
 }
 
+// IsReferenceTaken returns true if the reference, e.g., "refs/heads/a/b", exists
+// or cannot be created next to another one, e.g., "refs/heads/a" or
+// "refs/heads/a/b/c".
+func (r *Repository) IsReferenceTaken(ctx context.Context, ref string) (_ bool, err error) {
+	ctx, span := tracer.Start(ctx, "git.Repository.IsReferenceTaken", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.ref", ref)))
+	defer func() { endSpan(span, err) }()
+
+	// Every reference in the way shares the first three components, e.g.,
+	// "refs/heads/a", and the pattern matches them and the references under them.
+	parts := strings.SplitN(ref, "/", 4)
+	pattern := strings.Join(parts[:min(len(parts), 3)], "/")
+	stdout, err := exec(ctx, r.path, []string{"for-each-ref", "--format=%(refname)", "--end-of-options", pattern}, nil)
+	if err != nil {
+		return false, err
+	}
+	for other := range strings.Lines(string(stdout)) {
+		other = strings.TrimSpace(other)
+		if other == ref || strings.HasPrefix(other, ref+"/") || strings.HasPrefix(ref, other+"/") {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 // HasBranch returns true if given branch exists in the repository. The branch
 // must be given in short name, e.g., "master".
 func (r *Repository) HasBranch(ctx context.Context, branch string) bool {

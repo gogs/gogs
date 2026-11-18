@@ -81,24 +81,27 @@ func createReference(c *apiContext, prefix string, r createReferenceRequest) *gi
 		return nil
 	}
 
-	kind, isValidName, exists := "branch", gitRepo.IsValidBranchName, gitRepo.HasBranch
+	kind, isValidName := "branch", gitRepo.IsValidBranchName
 	if prefix == git.RefsTags {
-		kind, isValidName, exists = "tag", gitRepo.IsValidTagName, gitRepo.HasTag
+		kind, isValidName = "tag", gitRepo.IsValidTagName
 	}
 	if !isValidName(ctx, r.Name) {
 		c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("Invalid %s name %q.", kind, r.Name))
-		return nil
-	}
-	if exists(ctx, r.Name) {
-		c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("The %s %q already exists.", kind, r.Name))
 		return nil
 	}
 
 	if r.Target == "" {
 		r.Target = repo.DefaultBranch
 	}
+	// A branch wins over a tag of the same name, like everywhere else in the API.
+	rev := r.Target
+	if gitRepo.HasBranch(ctx, r.Target) {
+		rev = git.RefsHeads + r.Target
+	} else if gitRepo.HasTag(ctx, r.Target) {
+		rev = git.RefsTags + r.Target
+	}
 	// Peel annotated tags to the commit they point at.
-	commit, err := gitRepo.CatFileCommit(ctx, r.Target+"^{commit}")
+	commit, err := gitRepo.CatFileCommit(ctx, rev+"^{commit}")
 	if err != nil {
 		if git.IsErrRevisionNotExist(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("The target %q does not exist.", r.Target))
@@ -108,7 +111,11 @@ func createReference(c *apiContext, prefix string, r createReferenceRequest) *gi
 		return nil
 	}
 
-	if err = repo.CreateReference(ctx, c.Logger, c.User, prefix+r.Name, commit.ID.String()); err != nil {
+	err = repo.CreateReference(ctx, c.Logger, c.User, prefix+r.Name, commit.ID.String())
+	if errors.Is(err, database.ErrReferenceTaken) {
+		c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("The %s name %q is already taken.", kind, r.Name))
+		return nil
+	} else if err != nil {
 		c.Errorf(err, "create %s", kind)
 		return nil
 	}

@@ -312,7 +312,12 @@ func (r *Repository) RevParse(ctx context.Context, rev string) (_ string, err er
 		}
 		return "", err
 	}
-	return strings.TrimSpace(string(commitID)), nil
+	// A range, e.g., "a..b", parses into more than one object.
+	id := strings.TrimSpace(string(commitID))
+	if strings.Contains(id, "\n") {
+		return "", ErrRevisionNotExist
+	}
+	return id, nil
 }
 
 // CountObject contains disk usage report of a repository.

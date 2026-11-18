@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -551,6 +552,10 @@ func TestAPIV1CreateBranchesAndTags(t *testing.T) {
 		}{
 			{"branches", "from-default", ""},
 			{"tags", "v1", ""},
+			// Git cannot store these next to "feature/base".
+			{"branches", "feature", ""},
+			{"branches", "feature/base/x", ""},
+			{"tags", "feature", ""},
 			{"branches", "-x", ""},
 			{"branches", "a..b", ""},
 			{"branches", "HEAD", ""},
@@ -561,6 +566,7 @@ func TestAPIV1CreateBranchesAndTags(t *testing.T) {
 			{"tags", "v1/", ""},
 			{"tags", "a b", ""},
 			{"branches", "missing-target", "nope"},
+			{"branches", "range-target", "main..feature/base"},
 			{"tags", "missing-target", "--output=" + pwned},
 			{"branches", "missing-sha", strings.Repeat("1", len(mainSHA))},
 		} {
@@ -572,6 +578,35 @@ func TestAPIV1CreateBranchesAndTags(t *testing.T) {
 
 		status, body := api.do(http.MethodPost, apiV1RepoPath(repo, "/branches"), map[string]any{})
 		assert.Equal(t, http.StatusUnprocessableEntity, status, "no name, response: %s", body)
+	})
+
+	t.Run("ambiguous target", func(t *testing.T) {
+		// The tag "feature/base" points at main, the branch at feature.
+		got := create("branches", "from-ambiguous", "feature/base")
+		assert.Equal(t, featureSHA, got.Commit.ID, "target resolved to the tag")
+	})
+
+	t.Run("concurrent", func(t *testing.T) {
+		before := len(gitRepoActions(t, owner.ID, repo.ID))
+		statuses := make(chan int, 8)
+		var wg sync.WaitGroup
+		for range cap(statuses) {
+			wg.Go(func() {
+				status, _ := api.do(http.MethodPost, apiV1RepoPath(repo, "/branches"), map[string]any{"name": "concurrent"})
+				statuses <- status
+			})
+		}
+		wg.Wait()
+		close(statuses)
+		counts := make(map[int]int)
+		for status := range statuses {
+			counts[status]++
+		}
+		assert.Equal(t, map[int]int{http.StatusCreated: 1, http.StatusUnprocessableEntity: cap(statuses) - 1}, counts)
+		assert.ElementsMatch(t, []gitRefAction{
+			{OpType: database.ActionCreateBranch, RefName: "concurrent"},
+			{OpType: database.ActionCommitRepo, RefName: "concurrent"},
+		}, gitNewRefActions(t, owner.ID, repo.ID, before))
 	})
 
 	t.Run("empty repository", func(t *testing.T) {

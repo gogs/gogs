@@ -200,6 +200,11 @@ func TestRepository_RevParse(t *testing.T) {
 			expID:  "",
 			expErr: ErrRevisionNotExist,
 		},
+		{
+			rev:    "RELEASE_1.0..release-1.0",
+			expID:  "",
+			expErr: ErrRevisionNotExist,
+		},
 
 		// A revision starting with a dash must be rejected to prevent argument
 		// injection into "git rev-parse".
