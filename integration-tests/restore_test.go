@@ -1,6 +1,7 @@
 package integrationtests
 
 import (
+	"archive/zip"
 	"fmt"
 	"os"
 	"os/exec"
@@ -156,6 +157,23 @@ ROOT_PATH = %s
 	assert.NoFileExists(t, filepath.Join(customDir, "conf", "app.ini.local"))
 	assert.Equal(t, "not backed up", readTestFile(t, filepath.Join(customDir, "conf.bak", "app.ini.local")))
 	assert.Equal(t, "not backed up", readTestFile(t, filepath.Join(customDir, "public", "robots.txt")))
+
+	t.Run("next backup leaves out what the restore kept", func(t *testing.T) {
+		out, err := gogs("backup", "--tempdir", root, "--target", root, "--archive-name", "backup-after-restore.zip", "--exclude-repos")
+		require.NoError(t, err, "output: %s", out)
+
+		r, err := zip.OpenReader(filepath.Join(root, "backup-after-restore.zip"))
+		require.NoError(t, err)
+		defer func() { _ = r.Close() }()
+		var names []string
+		for _, f := range r.File {
+			names = append(names, f.Name)
+		}
+		assert.Contains(t, names, "gogs-backup/custom/conf/app.ini")
+		for _, name := range names {
+			assert.NotContains(t, name, ".bak", "archive entry %q", name)
+		}
+	})
 
 	t.Run("leftover backup stops the restore before it replaces any file", func(t *testing.T) {
 		// Only the backup of a path that the restore replaces after the custom files is left behind.
