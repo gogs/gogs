@@ -35,6 +35,7 @@ func TestWebhooks(t *testing.T) {
 		{"Update", webhooksUpdate},
 		{"Delete", webhooksDelete},
 		{"Prepare", webhooksPrepare},
+		{"Prepare to Discord without settings", webhooksPrepareDiscordWithoutSettings},
 		{"Test", webhooksTest},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -296,4 +297,28 @@ func webhooksTest(t *testing.T, ctx context.Context, s *WebhooksStore) {
 	err = s.Test(ctx, logger, repo, HookEventTypePush, payload, otherHook.ID)
 	assert.True(t, IsErrWebhookNotExist(err), "got %v", err)
 	assert.Len(t, listTestHookTasks(t, s), 1)
+}
+
+func webhooksPrepareDiscordWithoutSettings(t *testing.T, ctx context.Context, s *WebhooksStore) {
+	_, repo := newTestOrgRepo(t, ctx, s)
+	// API v1 creates Discord webhooks without settings.
+	discord := newTestWebhook(t, ctx, s, repo.ID, 0, HookEvents{})
+	discord.HookTaskType = DISCORD
+	discord.Meta = ""
+	require.NoError(t, s.Update(ctx, discord))
+	after := newTestWebhook(t, ctx, s, repo.ID, 0, HookEvents{})
+
+	payload := &apiv1types.WebhookPushPayload{
+		Ref:    "refs/heads/main",
+		Repo:   &apiv1types.Repository{Name: "repo", HTMLURL: "https://example.com/org/repo"},
+		Sender: &apiv1types.User{UserName: "alice", AvatarURL: "https://example.com/alice.png"},
+	}
+	err := s.Prepare(ctx, logx.NewNoopLogger(), repo, HookEventTypePush, payload)
+	require.NoError(t, err)
+
+	tasks := listTestHookTasks(t, s)
+	require.Len(t, tasks, 2)
+	assert.Equal(t, discord.ID, tasks[0].HookID)
+	assert.Contains(t, tasks[0].PayloadContent, "Pushed 0 new commits")
+	assert.Equal(t, after.ID, tasks[1].HookID)
 }
