@@ -361,11 +361,13 @@ func postRepoPullMerge(c flamego.Context, logger *logx.Logger, l i18n.Locale, vi
 		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("repo.pulls.merge_not_in_allowlist")}, nil
 	}
 	// Nobody merges past the reviews the base branch requires, admins
-	// included.
+	// included. The merge takes the head commit the reviews were decided at.
 	_, rng, _, err := describePull(c.Request().Context(), repoCtx, issue)
 	if err != nil {
 		logger.Error("Failed to describe pull request", "issueID", issue.ID, "error", err)
 		return http.StatusInternalServerError, nil, err
+	} else if rng == nil {
+		return http.StatusNotFound, nil, errors.New("pull request cannot be merged")
 	}
 	if _, status, err := describePullReviews(c.Request().Context(), logger, viewer, repoCtx, issue, rng); err != nil {
 		logger.Error("Failed to describe pull request reviews", "issueID", issue.ID, "error", err)
@@ -391,7 +393,10 @@ func postRepoPullMerge(c flamego.Context, logger *logx.Logger, l i18n.Locale, vi
 	if !repoCtx.Repo.AllowsMergeStyle(style) {
 		return http.StatusUnprocessableEntity, &bindingErrorResponse{Error: l.Tr("repo.pulls.merge_style_not_allowed")}, nil
 	}
-	if err = pull.Merge(c.Request().Context(), logger, viewer, gitRepo, style, database.MergeMessage{Title: req.Title, Body: req.Body}); err != nil {
+	err = pull.Merge(c.Request().Context(), logger, viewer, gitRepo, rng.Head, style, database.MergeMessage{Title: req.Title, Body: req.Body})
+	if errors.Is(err, database.ErrPullRequestHeadChanged) {
+		return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("repo.pulls.head_changed")}, nil
+	} else if err != nil {
 		logger.Error("Failed to merge pull request", "pullID", pull.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "merge")
 	}

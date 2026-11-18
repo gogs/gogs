@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -419,4 +420,96 @@ func TestProtectedBranchTransferToUser(t *testing.T) {
 	authenticatedClient(t, owner).doJSON(http.MethodGet, issueAPIPath(&moved, "settings", "branches", "main"), nil, http.StatusOK, &got)
 	assert.True(t, got.Protected)
 	assert.False(t, got.EnableAllowlist)
+}
+
+func TestProtectedBranchReviews(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	author := seedUser(t, CreateUserOptions{})
+	reviewer := seedUser(t, CreateUserOptions{})
+	org := orgSeed(t, owner.ID)
+	repo := seedRepository(t, org.ID, CreateRepositoryOptions{AutoInit: true})
+	protectedBranchTeam(t, org, repo, database.AccessModeWrite, author.ID, reviewer.ID)
+
+	ownerClient := authenticatedClient(t, owner)
+	protect := func(body map[string]any) {
+		t.Helper()
+		status, resp := ownerClient.do(http.MethodPut, issueAPIPath(repo, "settings", "branches", "main"), body)
+		require.Equal(t, http.StatusNoContent, status, "response: %s", resp)
+	}
+	var settings struct {
+		RequiredApprovals int `json:"requiredApprovals"`
+	}
+
+	// Without requiring pull requests, writers would push past the reviews, so
+	// they are not kept.
+	protect(map[string]any{"protected": true, "requiredApprovals": 1})
+	ownerClient.doJSON(http.MethodGet, issueAPIPath(repo, "settings", "branches", "main"), nil, http.StatusOK, &settings)
+	assert.Zero(t, settings.RequiredApprovals)
+	pushOut, ok := protectedBranchPush(t, repo, author)
+	require.True(t, ok, "push failed: %s", pushOut)
+
+	protect(map[string]any{"protected": true, "requirePullRequest": true, "requiredApprovals": 1, "dismissStaleApprovals": true})
+	ownerClient.doJSON(http.MethodGet, issueAPIPath(repo, "settings", "branches", "main"), nil, http.StatusOK, &settings)
+	require.Equal(t, 1, settings.RequiredApprovals)
+
+	branch := UniqueName("feature-")
+	dir := gitClone(t, gitRemoteURL(t, repo, author.Name, author.Password))
+	gitRun(t, dir, "checkout", "-b", branch)
+	gitCommitFile(t, dir, branch+".txt")
+	gitRun(t, dir, "push", "origin", branch)
+	authorClient := authenticatedClient(t, author)
+	index := pullCreate(t, authorClient, repo, branch, "Change "+branch)
+	pullWaitMergeable(t, authorClient, repo, index)
+
+	type reviewView struct {
+		MergeBlockers []string `json:"mergeBlockers"`
+		Pull          struct {
+			ViewerCanMerge bool `json:"viewerCanMerge"`
+			Diff           struct {
+				Head string `json:"head"`
+			} `json:"diff"`
+		} `json:"pull"`
+	}
+	view := func(c *client) reviewView {
+		t.Helper()
+		var v reviewView
+		c.doJSON(http.MethodGet, issueAPIPath(repo, "pulls", index), nil, http.StatusOK, &v)
+		return v
+	}
+	reviewerClient := authenticatedClient(t, reviewer)
+	approve := func() {
+		t.Helper()
+		status, body := reviewerClient.do(http.MethodPost, issueAPIPath(repo, "pulls", index, "reviews"), map[string]any{
+			"state":   "approve",
+			"headSHA": view(reviewerClient).Pull.Diff.Head,
+		})
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	}
+
+	// Admins are held to the reviews too.
+	v := view(ownerClient)
+	assert.Equal(t, []string{"approvals"}, v.MergeBlockers)
+	assert.False(t, v.Pull.ViewerCanMerge)
+	status, body := protectedBranchMerge(t, ownerClient, repo, index)
+	assert.Equal(t, http.StatusConflict, status, "response: %s", body)
+
+	approve()
+	v = view(ownerClient)
+	assert.Empty(t, v.MergeBlockers)
+	assert.True(t, v.Pull.ViewerCanMerge)
+
+	// New commits dismiss the approval of the older head.
+	gitCommitFile(t, dir, UniqueName("more-")+".txt")
+	gitRun(t, dir, "push", "origin", branch)
+	require.Eventually(t, func() bool {
+		return len(view(ownerClient).MergeBlockers) > 0
+	}, 30*time.Second, 200*time.Millisecond)
+	status, body = protectedBranchMerge(t, ownerClient, repo, index)
+	assert.Equal(t, http.StatusConflict, status, "response: %s", body)
+
+	approve()
+	status, body = protectedBranchMerge(t, ownerClient, repo, index)
+	assert.Equal(t, http.StatusNoContent, status, "response: %s", body)
 }

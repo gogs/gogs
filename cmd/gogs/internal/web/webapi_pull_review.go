@@ -195,7 +195,7 @@ func viewerCanRequestReviews(repoCtx *repoContext, issue *database.Issue) bool {
 // listReviewerOptions returns the users who can be asked to review the pull
 // request: those who can write to the repository, except who opened it.
 func listReviewerOptions(repo *database.Repository, issue *database.Issue) ([]issueUser, error) {
-	users, err := repo.GetAssignees()
+	users, err := repo.GetWriters()
 	if err != nil {
 		return nil, err
 	}
