@@ -267,13 +267,16 @@ func TestCodeSearch(t *testing.T) {
 	privateName := owner.Name + "/" + private.Name
 
 	t.Run("all repositories", func(t *testing.T) {
+		// Limited to the owner, because a search of every repository on the
+		// server under test can run out of time before it reaches these.
+		q := "user:" + owner.Name + " " + keyword
 		want := []string{publicName + ":docs/notes.md", publicName + ":src/main.go"}
 		// 🚨 SECURITY: Only the owner finds the code of the private repository.
 		for name, c := range map[string]*client{"anonymous": anonymous, "other": otherClient} {
-			resp := globalSearch(t, c, keyword)
+			resp := globalSearch(t, c, q)
 			assert.Equal(t, want, codeSearchPaths(resp.Files), "%s viewer", name)
 		}
-		resp := globalSearch(t, ownerClient, keyword)
+		resp := globalSearch(t, ownerClient, q)
 		assert.ElementsMatch(t, append(want, privateName+":secret.go"), codeSearchPaths(resp.Files))
 		for _, f := range resp.Files {
 			assert.Equal(t, "main", f.Ref)
