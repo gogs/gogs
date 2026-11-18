@@ -80,10 +80,6 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 - The UI is mobile-friendly and works on screens as narrow as 375px.
 - WebAssembly SIMD makes syntax highlighting in diffs faster, but is not required.
 
-## 📜 Installation
-
-Please follow [the guide in our documentation](https://gogs.io/getting-started/installation).
-
 ## 🙇‍♂️ Acknowledgments
 
 <p>This project is proudly supported by:</p>
@@ -99,11 +95,6 @@ Other acknowledgments:
 - Thanks [Mintlify](https://mintlify.com) for sponsoring open source documentation plan.
 - Thanks [Crowdin](https://crowdin.com) for sponsoring open source translation plan.
 - Thanks [Buildkite](https://buildkite.com) for sponsoring open source CI/CD plan.
-
-## 👋 Contributors
-
-- See [contributors page](https://github.com/gogs/gogs/graphs/contributors) for top 100 contributors.
-- See [TRANSLATORS](conf/locale/TRANSLATORS) for public list of translators.
 
 ## ⚖️ License
 
