@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -13,67 +12,9 @@ import (
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/cryptox"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/osx"
 )
-
-// BranchAlreadyExists represents an error when branch already exists.
-type BranchAlreadyExists struct {
-	Name string
-}
-
-// IsBranchAlreadyExists returns true if the error is BranchAlreadyExists.
-func IsBranchAlreadyExists(err error) bool {
-	_, ok := err.(BranchAlreadyExists)
-	return ok
-}
-
-func (err BranchAlreadyExists) Error() string {
-	return fmt.Sprintf("branch already exists [name: %s]", err.Name)
-}
-
-const (
-	EnvAuthUserID          = "GOGS_AUTH_USER_ID"
-	EnvAuthUserName        = "GOGS_AUTH_USER_NAME"
-	EnvAuthUserEmail       = "GOGS_AUTH_USER_EMAIL"
-	EnvRepoOwnerName       = "GOGS_REPO_OWNER_NAME"
-	EnvRepoOwnerSaltMd5    = "GOGS_REPO_OWNER_SALT_MD5"
-	EnvRepoID              = "GOGS_REPO_ID"
-	EnvRepoName            = "GOGS_REPO_NAME"
-	EnvRepoCustomHooksPath = "GOGS_REPO_CUSTOM_HOOKS_PATH"
-)
-
-type ComposeHookEnvsOptions struct {
-	AuthUser  *User
-	OwnerName string
-	OwnerSalt string
-	RepoID    int64
-	RepoName  string
-	RepoPath  string
-}
-
-func ComposeHookEnvs(opts ComposeHookEnvsOptions) []string {
-	envs := []string{
-		"SSH_ORIGINAL_COMMAND=1",
-		EnvAuthUserID + "=" + strconv.FormatInt(opts.AuthUser.ID, 10),
-		EnvAuthUserName + "=" + opts.AuthUser.Name,
-		EnvAuthUserEmail + "=" + opts.AuthUser.Email,
-		EnvRepoOwnerName + "=" + opts.OwnerName,
-		EnvRepoOwnerSaltMd5 + "=" + cryptox.MD5(opts.OwnerSalt),
-		EnvRepoID + "=" + strconv.FormatInt(opts.RepoID, 10),
-		EnvRepoName + "=" + opts.RepoName,
-		EnvRepoCustomHooksPath + "=" + filepath.Join(opts.RepoPath, "custom_hooks"),
-	}
-	return envs
-}
-
-// ___________    .___.__  __    ___________.__.__
-// \_   _____/  __| _/|__|/  |_  \_   _____/|__|  |   ____
-//  |    __)_  / __ | |  \   __\  |    __)  |  |  | _/ __ \
-//  |        \/ /_/ | |  ||  |    |     \   |  |  |_\  ___/
-// /_______  /\____ | |__||__|    \___  /   |__|____/\___  >
-//         \/      \/                 \/                 \/
 
 // newTemporaryRepository creates a bare repository in a temporary directory
 // that reads objects from the repositories at given paths, so that commits can
@@ -402,23 +343,6 @@ func (r *Repository) DeleteRepoFile(ctx context.Context, logger *logx.Logger, do
 // |______/  |   __/|____/\____(____  /\____ |   \___  /   |___|____/\___  >____  >
 //           |__|                   \/      \/       \/                  \/     \/
 //
-
-// Upload represent a uploaded file to a repo to be deleted when moved
-type Upload struct {
-	ID   int64
-	UUID string `gorm:"size:40;uniqueIndex:UQE_upload_uuid"`
-	Name string `gorm:"size:255"`
-}
-
-// UploadLocalPath returns where uploads is stored in local file system based on given UUID.
-func UploadLocalPath(uuid string) string {
-	return path.Join(conf.Repository.Upload.TempPath, uuid[0:1], uuid[1:2], uuid)
-}
-
-// LocalPath returns where uploads are temporarily stored in local file system.
-func (upload *Upload) LocalPath() string {
-	return UploadLocalPath(upload.UUID)
-}
 
 type UploadRepoFileOptions struct {
 	LastCommitID string

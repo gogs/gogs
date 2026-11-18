@@ -11,9 +11,27 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/pathx"
 )
+
+// Upload represent a uploaded file to a repo to be deleted when moved
+type Upload struct {
+	ID   int64
+	UUID string `gorm:"size:40;uniqueIndex:UQE_upload_uuid"`
+	Name string `gorm:"size:255"`
+}
+
+// UploadLocalPath returns where uploads is stored in local file system based on given UUID.
+func UploadLocalPath(uuid string) string {
+	return path.Join(conf.Repository.Upload.TempPath, uuid[0:1], uuid[1:2], uuid)
+}
+
+// LocalPath returns where uploads are temporarily stored in local file system.
+func (upload *Upload) LocalPath() string {
+	return UploadLocalPath(upload.UUID)
+}
 
 // UploadsStore is the storage layer for files uploaded to be committed later.
 type UploadsStore struct {

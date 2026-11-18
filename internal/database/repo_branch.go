@@ -83,3 +83,18 @@ type ProtectBranch struct {
 	AllowlistUserIDs string `xorm:"'whitelist_user_i_ds' TEXT" gorm:"column:whitelist_user_i_ds"`
 	AllowlistTeamIDs string `xorm:"'whitelist_team_i_ds' TEXT" gorm:"column:whitelist_team_i_ds"`
 }
+
+// BranchAlreadyExists represents an error when branch already exists.
+type BranchAlreadyExists struct {
+	Name string
+}
+
+// IsBranchAlreadyExists returns true if the error is BranchAlreadyExists.
+func IsBranchAlreadyExists(err error) bool {
+	_, ok := err.(BranchAlreadyExists)
+	return ok
+}
+
+func (err BranchAlreadyExists) Error() string {
+	return fmt.Sprintf("branch already exists [name: %s]", err.Name)
+}
