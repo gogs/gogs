@@ -151,10 +151,30 @@ func TestRepoForcePrivate(t *testing.T) {
 		repoVisibilityPatch(t, forkerClient, fork, false, false)
 		assert.True(t, repoVisibilityGet(t, fork.ID).IsPrivate, "owner made the fork public")
 
+		// Forks have their own visibility, which a site admin saving other settings
+		// keeps, and changes in the danger zone.
+		var settings struct {
+			VisibilityFollowsBase bool `json:"visibilityFollowsBase"`
+			CanBePublic           bool `json:"canBePublic"`
+			CanBeListed           bool `json:"canBeListed"`
+		}
+		adminClient.doJSON(http.MethodGet, repoSettingsAPIPath(fork, "/settings"), nil, http.StatusOK, &settings)
+		assert.False(t, settings.VisibilityFollowsBase)
+		assert.True(t, settings.CanBePublic)
+		assert.False(t, settings.CanBeListed)
+		repoVisibilityPatch(t, adminClient, fork, true, false)
+		assert.True(t, repoVisibilityGet(t, fork.ID).IsPrivate, "site admin saving other settings made the fork public")
+
 		repoVisibilityPatch(t, adminClient, fork, false, false)
 		got = repoVisibilityGet(t, fork.ID)
 		assert.False(t, got.IsPrivate)
 		assert.True(t, got.IsUnlisted, "fork more visible than its unlisted base")
+
+		// Listing the base keeps the fork as it is, rather than listing it too.
+		repoVisibilityPatch(t, ownerClient, base, false, false)
+		got = repoVisibilityGet(t, fork.ID)
+		assert.False(t, got.IsPrivate)
+		assert.True(t, got.IsUnlisted, "fork followed its base to listed")
 	})
 
 	t.Run("private forks of unlisted repositories lose public access", func(t *testing.T) {
@@ -192,6 +212,11 @@ func TestRepoForkVisibility(t *testing.T) {
 		base := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 		fork := repoVisibilityFork(t, forkerClient, base, forker)
 		assert.False(t, repoVisibilityGet(t, fork.ID).IsPrivate)
+		var settings struct {
+			VisibilityFollowsBase bool `json:"visibilityFollowsBase"`
+		}
+		forkerClient.doJSON(http.MethodGet, repoSettingsAPIPath(fork, "/settings"), nil, http.StatusOK, &settings)
+		assert.True(t, settings.VisibilityFollowsBase)
 
 		for _, tc := range []struct {
 			private, unlisted bool

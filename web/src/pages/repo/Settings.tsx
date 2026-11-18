@@ -276,9 +276,9 @@ export function RepoMirror({ owner, name }: { owner: string; name: string }) {
 
 // hasDangerZone tells whether the viewer has anything to do in the danger zone.
 // Admins can change the visibility, and only the owner can do the rest. Forks
-// keep the visibility of their base repository.
+// may keep the visibility of their base repository.
 function hasDangerZone(settings: RepoSettingsData) {
-  return settings.viewerIsOwner || !settings.isFork;
+  return settings.viewerIsOwner || !settings.visibilityFollowsBase;
 }
 
 // RepoDangerZone holds the actions on a repository that are hard or impossible
@@ -832,7 +832,7 @@ function DangerZone({ owner, name, settings }: { owner: string; name: string; se
 
   return (
     <div className="rounded-md border border-(--color-destructive)">
-      {settings.isFork ? null : <VisibilityAction owner={owner} name={name} settings={settings} />}
+      {settings.visibilityFollowsBase ? null : <VisibilityAction owner={owner} name={name} settings={settings} />}
       {settings.viewerIsOwner ? (
         <>
           {settings.mirror ? (
@@ -927,6 +927,8 @@ function VisibilityAction({ owner, name, settings }: { owner: string; name: stri
   });
   const { formError } = formErrors(mutation.error);
   const changed = form.private !== settings.private || form.unlisted !== settings.unlisted;
+  // The private checkbox already says why when the site forces it.
+  const visibilityLimited = (!settings.canBePublic && !settings.forcePrivate) || !settings.canBeListed;
   const title = t("repo.settings.change_visibility");
   const description = [
     t(settings.private ? "repo.settings.visibility_private" : "repo.settings.visibility_public"),
@@ -970,7 +972,11 @@ function VisibilityAction({ owner, name, settings }: { owner: string; name: stri
                 <FormAlert message={formError} />
                 <fieldset
                   className="flex flex-col gap-3"
-                  aria-describedby={settings.forkCount ? "visibility-helper" : undefined}
+                  aria-describedby={
+                    [visibilityLimited ? "visibility-limited" : "", settings.forkCount ? "visibility-helper" : ""]
+                      .filter(Boolean)
+                      .join(" ") || undefined
+                  }
                 >
                   <legend className="mb-3 text-sm font-medium">{t("repo.visibility")}</legend>
                   {settings.forcePrivate ? (
@@ -984,16 +990,23 @@ function VisibilityAction({ owner, name, settings }: { owner: string; name: stri
                     <CheckboxField
                       id="private"
                       label={<RichText text={t("repo.visiblity_helper")} />}
-                      checked={form.private}
+                      checked={form.private || !settings.canBePublic}
                       onChange={(checked) => setForm((f) => ({ ...f, private: checked }))}
+                      disabled={!settings.canBePublic}
                     />
                   )}
                   <CheckboxField
                     id="unlisted"
                     label={<RichText text={t("repo.unlisted_helper")} />}
-                    checked={form.unlisted}
+                    checked={form.unlisted || !settings.canBeListed}
                     onChange={(checked) => setForm((f) => ({ ...f, unlisted: checked }))}
+                    disabled={!settings.canBeListed}
                   />
+                  {visibilityLimited ? (
+                    <p id="visibility-limited" className="text-sm text-(--color-muted-foreground)">
+                      {t("repo.settings.fork_visibility_limited")}
+                    </p>
+                  ) : null}
                   {settings.forkCount ? (
                     <p id="visibility-helper" className="text-sm text-(--color-muted-foreground)">
                       {t("repo.visiblity_fork_helper")}

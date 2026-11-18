@@ -222,10 +222,14 @@ export interface RepoSettingsData {
   website: string;
   private: boolean;
   unlisted: boolean;
-  // Forks keep the visibility of their base repository.
   isFork: boolean;
+  // Forks keep the visibility of their base repository, unless the site forces private repositories.
+  visibilityFollowsBase: boolean;
   // The site forces private repositories and the viewer cannot make this one public.
   forcePrivate: boolean;
+  // False for forks whose base repository is private or unlisted.
+  canBePublic: boolean;
+  canBeListed: boolean;
   // False for forks whose base repository does not let them allow public access.
   canAllowPublicWiki: boolean;
   canAllowPublicIssues: boolean;

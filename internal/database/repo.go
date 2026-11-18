@@ -1728,10 +1728,11 @@ func updateRepository(logger *logx.Logger, e Engine, repo *Repository, visibilit
 		}
 		// Saving a fork limits it to what its base allows.
 		for i := range forkRepos {
-			if visibilityChanged {
-				// Forks follow their base repository, except that forks kept private by
-				// FORCE_PRIVATE stay private.
-				forkRepos[i].IsPrivate = repo.IsPrivate || (conf.Repository.ForcePrivate && forkRepos[i].IsPrivate)
+			// Forks follow their base repository, unless the site forces private
+			// repositories and forks keep the visibility they have, as far as their
+			// base allows.
+			if visibilityChanged && !conf.Repository.ForcePrivate {
+				forkRepos[i].IsPrivate = repo.IsPrivate
 				forkRepos[i].IsUnlisted = repo.IsUnlisted
 			}
 			if err = updateRepository(logger, e, forkRepos[i], visibilityChanged); err != nil {
