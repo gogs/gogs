@@ -10,9 +10,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 	"unknwon.dev/x/logx"
+	"xorm.io/core"
+	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/dbx"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/osx"
 )
@@ -86,6 +90,57 @@ func Test_CreateRepository_PreventDeletion(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "repository directory already exists")
 	assert.True(t, osx.Exist(canary))
+}
+
+func TestRepository_refreshAccesses(t *testing.T) {
+	if os.Getenv("GOGS_DATABASE_TYPE") != "mysql" {
+		t.Skip("only InnoDB locks the gaps between the rows a delete scans")
+	}
+	t.Parallel()
+
+	db := newTestDB(t, "repositoryRefreshAccesses")
+	dsn, err := dbx.NewDSN(conf.DatabaseOpts{
+		Type:     "mysql",
+		Host:     os.ExpandEnv("$MYSQL_HOST:$MYSQL_PORT"),
+		Name:     db.Migrator().CurrentDatabase(),
+		User:     os.Getenv("MYSQL_USER"),
+		Password: os.Getenv("MYSQL_PASSWORD"),
+	})
+	require.NoError(t, err)
+	engine, err := xorm.NewEngine("mysql", dsn)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = engine.Close() })
+	engine.SetMapper(core.GonicMapper{})
+
+	require.NoError(t, db.Create(&Access{UserID: 1, RepoID: 1, Mode: AccessModeOwner}).Error)
+	sess := engine.NewSession()
+	t.Cleanup(sess.Close)
+	require.NoError(t, sess.Begin())
+	repo := &Repository{ID: 2}
+	require.NoError(t, repo.refreshAccesses(sess, map[int64]AccessMode{1: AccessModeOwner}))
+
+	// Another repository created at the same time gets its accesses while the
+	// transaction of the first one is still open.
+	err = db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec("SET SESSION innodb_lock_wait_timeout = 1").Error; err != nil {
+			return err
+		}
+		return tx.Create(&Access{UserID: 1, RepoID: 3, Mode: AccessModeOwner}).Error
+	})
+	require.NoError(t, err, "giving accesses to another repository waited for the first one")
+
+	require.NoError(t, repo.refreshAccesses(sess, map[int64]AccessMode{4: AccessModeWrite}))
+	require.NoError(t, sess.Commit())
+	var got []*Access
+	require.NoError(t, db.Order("repo_id, user_id").Find(&got).Error)
+	for _, a := range got {
+		a.ID = 0
+	}
+	assert.Equal(t, []*Access{
+		{UserID: 1, RepoID: 1, Mode: AccessModeOwner},
+		{UserID: 4, RepoID: 2, Mode: AccessModeWrite},
+		{UserID: 1, RepoID: 3, Mode: AccessModeOwner},
+	}, got)
 }
 
 func TestGetRepoInitFile(t *testing.T) {
