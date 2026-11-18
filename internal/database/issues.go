@@ -7,16 +7,266 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/markup"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 	"gogs.io/gogs/internal/tool"
 )
+
+var ErrMissingIssueNumber = errors.New("no issue number specified")
+
+// Issue represents an issue or pull request of repository.
+type Issue struct {
+	ID              int64       `gorm:"primaryKey"`
+	RepoID          int64       `xorm:"INDEX UNIQUE(repo_index)" gorm:"index;uniqueIndex:issue_repo_index_unique;not null"`
+	Repo            *Repository `xorm:"-" json:"-" gorm:"-"`
+	Index           int64       `xorm:"UNIQUE(repo_index)" gorm:"uniqueIndex:issue_repo_index_unique;not null"` // Index in one repository.
+	PosterID        int64       `gorm:"index"`
+	Poster          *User       `xorm:"-" json:"-" gorm:"-"`
+	Title           string      `xorm:"name" gorm:"column:name"`
+	Content         string      `xorm:"TEXT" gorm:"type:TEXT"`
+	RenderedContent string      `xorm:"-" json:"-" gorm:"-"`
+	Labels          []*Label    `xorm:"-" json:"-" gorm:"-"`
+	MilestoneID     int64       `gorm:"index"`
+	Milestone       *Milestone  `xorm:"-" json:"-" gorm:"-"`
+	Priority        int
+	AssigneeID      int64 `gorm:"index"`
+	Assignee        *User `xorm:"-" json:"-" gorm:"-"`
+	IsClosed        bool
+	IsRead          bool         `xorm:"-" json:"-" gorm:"-"`
+	IsPull          bool         // Indicates whether it is a pull request or not.
+	PullRequest     *PullRequest `xorm:"-" json:"-" gorm:"-"`
+	NumComments     int
+
+	Deadline     time.Time `xorm:"-" json:"-" gorm:"-"`
+	DeadlineUnix int64
+	Created      time.Time `xorm:"-" json:"-" gorm:"-"`
+	CreatedUnix  int64
+	Updated      time.Time `xorm:"-" json:"-" gorm:"-"`
+	UpdatedUnix  int64
+
+	Attachments []*Attachment `xorm:"-" json:"-" gorm:"-"`
+	Comments    []*Comment    `xorm:"-" json:"-" gorm:"-"`
+}
+
+// BeforeCreate implements the GORM create hook.
+func (issue *Issue) BeforeCreate(tx *gorm.DB) error {
+	if issue.CreatedUnix == 0 {
+		issue.CreatedUnix = tx.NowFunc().Unix()
+		issue.UpdatedUnix = issue.CreatedUnix
+	}
+	return nil
+}
+
+// BeforeUpdate implements the GORM update hook.
+func (issue *Issue) BeforeUpdate(tx *gorm.DB) error {
+	issue.UpdatedUnix = tx.NowFunc().Unix()
+	issue.DeadlineUnix = issue.Deadline.Unix()
+	return nil
+}
+
+// AfterFind implements the GORM query hook.
+func (issue *Issue) AfterFind(_ *gorm.DB) error {
+	issue.Deadline = time.Unix(issue.DeadlineUnix, 0).Local()
+	issue.Created = time.Unix(issue.CreatedUnix, 0).Local()
+	issue.Updated = time.Unix(issue.UpdatedUnix, 0).Local()
+	return nil
+}
+
+func (issue *Issue) HTMLURL() string {
+	var path string
+	if issue.IsPull {
+		path = "pulls"
+	} else {
+		path = "issues"
+	}
+	return fmt.Sprintf("%s/%s/%d", issue.Repo.HTMLURL(), path, issue.Index)
+}
+
+// State returns string representation of issue status.
+func (issue *Issue) State() apiv1types.IssueStateType {
+	if issue.IsClosed {
+		return apiv1types.IssueStateClosed
+	}
+	return apiv1types.IssueStateOpen
+}
+
+// APIFormat returns the API format of the issue. It assumes some fields have
+// been assigned with values:
+// Required - Poster, Labels
+// Optional - Milestone, Assignee, PullRequest
+func (issue *Issue) APIFormat() *apiv1types.Issue {
+	apiLabels := make([]*apiv1types.IssueLabel, len(issue.Labels))
+	for i := range issue.Labels {
+		apiLabels[i] = issue.Labels[i].APIFormat()
+	}
+
+	apiIssue := &apiv1types.Issue{
+		ID:       issue.ID,
+		Index:    issue.Index,
+		Poster:   issue.Poster.APIFormat(),
+		Title:    issue.Title,
+		Body:     issue.Content,
+		Labels:   apiLabels,
+		State:    issue.State(),
+		Comments: issue.NumComments,
+		Created:  issue.Created,
+		Updated:  issue.Updated,
+	}
+
+	if issue.Milestone != nil {
+		apiIssue.Milestone = issue.Milestone.APIFormat()
+	}
+	if issue.Assignee != nil {
+		apiIssue.Assignee = issue.Assignee.APIFormat()
+	}
+	if issue.IsPull {
+		apiIssue.PullRequest = &apiv1types.PullRequestMeta{
+			HasMerged: issue.PullRequest.HasMerged,
+		}
+		if issue.PullRequest.HasMerged {
+			apiIssue.PullRequest.Merged = &issue.PullRequest.Merged
+		}
+	}
+
+	return apiIssue
+}
+
+// HashTag returns unique hash tag for issue.
+func (issue *Issue) HashTag() string {
+	return "issue-" + strconv.FormatInt(issue.ID, 10)
+}
+
+// IsPoster returns true if given user by ID is the poster.
+func (issue *Issue) IsPoster(uid int64) bool {
+	return issue.PosterID == uid
+}
+
+type NewIssueOptions struct {
+	Repo        *Repository
+	Issue       *Issue
+	LableIDs    []int64
+	Attachments []string // In UUID format.
+	IsPull      bool
+}
+
+var _ errx.NotFound = (*ErrIssueNotExist)(nil)
+
+type ErrIssueNotExist struct {
+	args map[string]any
+}
+
+func IsErrIssueNotExist(err error) bool {
+	_, ok := err.(ErrIssueNotExist)
+	return ok
+}
+
+func (err ErrIssueNotExist) Error() string {
+	return fmt.Sprintf("issue does not exist: %v", err.args)
+}
+
+func (ErrIssueNotExist) NotFound() bool {
+	return true
+}
+
+type IssuesOptions struct {
+	UserID      int64
+	AssigneeID  int64
+	RepoID      int64
+	PosterID    int64
+	MilestoneID int64
+	RepoIDs     []int64
+	Page        int
+	IsClosed    bool
+	IsMention   bool
+	IsPull      bool
+	Labels      string
+	SortType    string
+}
+
+// SuggestIssuesOptions is the options for SuggestIssues.
+type SuggestIssuesOptions struct {
+	RepoID int64
+	// Keyword matches the issues whose number starts with it or whose title
+	// contains it, ignoring case. An empty keyword matches every issue.
+	Keyword       string
+	IncludeIssues bool
+	IncludePulls  bool
+	Limit         int
+}
+
+// SearchIssuesOptions narrows down a search of issues and pull requests.
+type SearchIssuesOptions struct {
+	// IssueRepoIDs are the repositories whose issues to search, and
+	// PullRepoIDs those whose pull requests to search.
+	IssueRepoIDs []int64
+	PullRepoIDs  []int64
+	// Keyword is matched against titles, ignoring case. When it is a number,
+	// with or without "#", the issue with that number matches first.
+	Keyword string
+	Limit   int
+}
+
+// IssueUser represents an issue-user relation.
+type IssueUser struct {
+	ID          int64 `gorm:"primary_key"`
+	UserID      int64 `xorm:"uid INDEX" gorm:"column:uid;index"`
+	IssueID     int64
+	RepoID      int64 `xorm:"INDEX" gorm:"index"`
+	MilestoneID int64
+	IsRead      bool
+	IsAssigned  bool
+	IsMentioned bool
+	IsPoster    bool
+	IsClosed    bool
+}
+
+// PairsContains returns the index of the pair of given issue and user in the
+// pairs list, or -1 when the list does not contain it.
+func PairsContains(ius []*IssueUser, issueID, uid int64) int {
+	for i := range ius {
+		if ius[i].IssueID == issueID &&
+			ius[i].UserID == uid {
+			return i
+		}
+	}
+	return -1
+}
+
+// IssueStats represents issue statistic information.
+type IssueStats struct {
+	OpenCount, ClosedCount int64
+	YourReposCount         int64
+	AssignCount            int64
+	CreateCount            int64
+	MentionCount           int64
+}
+
+type FilterMode string
+
+const (
+	FilterModeYourRepos FilterMode = "your_repositories"
+	FilterModeAssign    FilterMode = "assigned"
+	FilterModeCreate    FilterMode = "created_by"
+	FilterModeMention   FilterMode = "mentioned"
+)
+
+type IssueStatsOptions struct {
+	RepoID      int64
+	UserID      int64
+	Labels      string
+	MilestoneID int64
+	AssigneeID  int64
+	FilterMode  FilterMode
+	IsPull      bool
+}
 
 // IssuesStore is the storage layer for issues and pull requests of
 // repositories, and the users related to them.
