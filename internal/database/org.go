@@ -243,13 +243,6 @@ func DeleteOrganization(org *User) error {
 	return sess.Commit()
 }
 
-// ________                ____ ___
-// \_____  \_______  ____ |    |   \______ ___________
-//  /   |   \_  __ \/ ___\|    |   /  ___// __ \_  __ \
-// /    |    \  | \/ /_/  >    |  /\___ \\  ___/|  | \/
-// \_______  /__|  \___  /|______//____  >\___  >__|
-//         \/     /_____/              \/     \/
-
 // OrgUser represents relations of organizations and their members.
 type OrgUser struct {
 	ID       int64 `gorm:"primaryKey"`

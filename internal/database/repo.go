@@ -2359,13 +2359,6 @@ func CheckRepoStats(logger *logx.Logger) {
 	// ***** END: Repository.NumForks *****
 }
 
-//  __      __         __         .__
-// /  \    /  \_____ _/  |_  ____ |  |__
-// \   \/\/   /\__  \\   __\/ ___\|  |  \
-//  \        /  / __ \|  | \  \___|   Y  \
-//   \__/\  /  (____  /__|  \___  >___|  /
-//        \/        \/          \/     \/
-
 // Watch is connection request for receiving repository notification.
 type Watch struct {
 	ID     int64 `gorm:"primaryKey"`
@@ -2481,13 +2474,6 @@ func NotifyWatchers(act *Action) error {
 	return notifyWatchers(x, act)
 }
 
-//   _________ __
-//  /   _____//  |______ _______
-//  \_____  \\   __\__  \\_  __ \
-//  /        \|  |  / __ \|  | \/
-// /_______  /|__| (____  /__|
-//         \/           \/
-
 type Star struct {
 	ID     int64 `gorm:"primaryKey"`
 	UserID int64 `xorm:"uid UNIQUE(s)" gorm:"column:uid;uniqueIndex:star_user_repo_unique;not null"`
@@ -2541,13 +2527,6 @@ func (r *Repository) GetStargazers(page int) ([]*User, error) {
 	}
 	return users, sess.Find(&users)
 }
-
-// ___________           __
-// \_   _____/__________|  | __
-//  |    __)/  _ \_  __ \  |/ /
-//  |     \(  <_> )  | \/    <
-//  \___  / \____/|__|  |__|_ \
-//      \/                   \/
 
 // HasForkedRepo checks if given user has already forked a repository.
 // When user has already forked, it returns true along with the repository.

@@ -4,13 +4,6 @@ import (
 	"fmt"
 )
 
-//  __      __.__ __   .__
-// /  \    /  \__|  | _|__|
-// \   \/\/   /  |  |/ /  |
-//  \        /|  |    <|  |
-//   \__/\  / |__|__|_ \__|
-//        \/          \/
-
 type ErrWikiAlreadyExist struct {
 	Title string
 }
@@ -23,13 +16,6 @@ func IsErrWikiAlreadyExist(err error) bool {
 func (err ErrWikiAlreadyExist) Error() string {
 	return fmt.Sprintf("wiki page already exists [title: %s]", err.Title)
 }
-
-// __________     ___.   .__  .__          ____  __.
-// \______   \__ _\_ |__ |  | |__| ____   |    |/ _|____ ___.__.
-//  |     ___/  |  \ __ \|  | |  |/ ___\  |      <_/ __ <   |  |
-//  |    |   |  |  / \_\ \  |_|  \  \___  |    |  \  ___/\___  |
-//  |____|   |____/|___  /____/__|\___  > |____|__ \___  > ____|
-//                     \/             \/          \/   \/\/
 
 type ErrKeyUnableVerify struct {
 	Result string
@@ -133,13 +119,6 @@ func (err ErrDeployKeyNameAlreadyUsed) Error() string {
 	return fmt.Sprintf("public key already exists [repo_id: %d, name: %s]", err.RepoID, err.Name)
 }
 
-// ________                            .__                __  .__
-// \_____  \_______  _________    ____ |__|____________ _/  |_|__| ____   ____
-//  /   |   \_  __ \/ ___\__  \  /    \|  \___   /\__  \\   __\  |/  _ \ /    \
-// /    |    \  | \/ /_/  > __ \|   |  \  |/    /  / __ \|  | |  (  <_> )   |  \
-// \_______  /__|  \___  (____  /___|  /__/_____ \(____  /__| |__|\____/|___|  /
-//         \/     /_____/     \/     \/         \/     \/                    \/
-
 type ErrLastOrgOwner struct {
 	UID int64
 }
@@ -152,13 +131,6 @@ func IsErrLastOrgOwner(err error) bool {
 func (err ErrLastOrgOwner) Error() string {
 	return fmt.Sprintf("user is the last member of owner team [uid: %d]", err.UID)
 }
-
-// __________                           .__  __
-// \______   \ ____ ______   ____  _____|__|/  |_  ___________ ___.__.
-//  |       _// __ \\____ \ /  _ \/  ___/  \   __\/  _ \_  __ <   |  |
-//  |    |   \  ___/|  |_> >  <_> )___ \|  ||  | (  <_> )  | \/\___  |
-//  |____|_  /\___  >   __/ \____/____  >__||__|  \____/|__|   / ____|
-//         \/     \/|__|              \/                       \/
 
 type ErrInvalidCloneAddr struct {
 	IsURLError            bool
@@ -229,13 +201,6 @@ func (err ErrRepoFileAlreadyExist) Error() string {
 	return fmt.Sprintf("repository file already exists [file_name: %s]", err.FileName)
 }
 
-// ___________
-// \__    ___/___ _____    _____
-//   |    |_/ __ \\__  \  /     \
-//   |    |\  ___/ / __ \|  Y Y  \
-//   |____| \___  >____  /__|_|  /
-//              \/     \/      \/
-
 type ErrTeamAlreadyExist struct {
 	ID    int64
 	OrgID int64
@@ -250,14 +215,6 @@ func IsErrTeamAlreadyExist(err error) bool {
 func (err ErrTeamAlreadyExist) Error() string {
 	return fmt.Sprintf("team already exists [id: %d, org_id: %d, name: %s]", err.ID, err.OrgID, err.Name)
 }
-
-//  ____ ___        .__                    .___
-// |    |   \______ |  |   _________     __| _/
-// |    |   /\____ \|  |  /  _ \__  \   / __ |
-// |    |  / |  |_> >  |_(  <_> ) __ \_/ /_/ |
-// |______/  |   __/|____/\____(____  /\____ |
-//           |__|                   \/      \/
-//
 
 type ErrUploadNotExist struct {
 	ID   int64

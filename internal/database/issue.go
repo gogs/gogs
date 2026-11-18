@@ -1090,13 +1090,6 @@ func GetParticipantsByIssueID(e Engine, issueID int64) ([]*User, error) {
 	return users, e.In("id", userIDs).Find(&users)
 }
 
-// .___                             ____ ___
-// |   | ______ ________ __   ____ |    |   \______ ___________
-// |   |/  ___//  ___/  |  \_/ __ \|    |   /  ___// __ \_  __ \
-// |   |\___ \ \___ \|  |  /\  ___/|    |  /\___ \\  ___/|  | \/
-// |___/____  >____  >____/  \___  >______//____  >\___  >__|
-//          \/     \/            \/             \/     \/
-
 // IssueUser represents an issue-user relation.
 type IssueUser struct {
 	ID          int64 `gorm:"primary_key"`
