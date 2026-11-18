@@ -391,8 +391,9 @@ func startVariant(binary, dir, dbName, secretKey, spansURL, name string, opts se
 
 // startSubpathProxy serves the target under the subpath on the listener, and
 // strips the subpath before passing requests on, like the reverse proxy
-// configurations in the documentation. It keeps the Host header, so the server
-// sees the host of its external URL.
+// configurations in the documentation. Like the NGINX one, it sends the host
+// of the target, so the server builds URLs from its external URL rather than
+// from the Host header.
 func startSubpathProxy(l net.Listener, subpath, target string) (stop func(), _ error) {
 	targetURL, err := neturl.Parse(target)
 	if err != nil {
@@ -404,7 +405,6 @@ func startSubpathProxy(l net.Listener, subpath, target string) (stop func(), _ e
 		ErrorLog: log.New(io.Discard, "", 0),
 		Rewrite: func(r *httputil.ProxyRequest) {
 			r.SetURL(targetURL)
-			r.Out.Host = r.In.Host
 			r.Out.URL.Path = strings.TrimPrefix(r.In.URL.Path, subpath)
 			r.Out.URL.RawPath = strings.TrimPrefix(r.In.URL.RawPath, subpath)
 			if r.Out.URL.Path == "" {

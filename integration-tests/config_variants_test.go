@@ -2,6 +2,7 @@ package integrationtests
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"path/filepath"
@@ -74,6 +75,7 @@ func TestRequireSigninView(t *testing.T) {
 		assert.Equal(t, http.StatusOK, status, "response: %s", body)
 		status, body = closed.do(http.MethodGet, path, nil)
 		assert.Equal(t, http.StatusForbidden, status, "response: %s", body)
+		assert.Contains(t, string(body), "Only authenticated user is allowed")
 
 		c := apiV1Client(t, owner)
 		c.baseURL = requireSigninViewServerURL
@@ -127,7 +129,7 @@ func TestRequireSigninView(t *testing.T) {
 	// A deploy key stands for no user, so it only reads the repositories it is
 	// added to, even public ones.
 	t.Run("SSH deploy key", func(t *testing.T) {
-		other := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
+		other := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 		key := sshDeployKey(t, other)
 		remoteURL := func(port int) string {
 			return fmt.Sprintf("ssh://git@127.0.0.1:%d/%s/%s.git", port, repo.Owner, repo.Name)
@@ -170,12 +172,28 @@ func TestSubpath(t *testing.T) {
 	}
 
 	t.Run("sign in", func(t *testing.T) {
+		// Browsers without Sec-Fetch-Site send the origin of the external URL,
+		// while the server sees the host of the proxy target.
+		signIn := func(c *client, origin string) (*http.Response, []byte) {
+			req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, subpathServerURL+"/api/web/user/sign-in",
+				strings.NewReader(fmt.Sprintf(`{"username":%q,"password":%q}`, owner.Name, owner.Password)))
+			require.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Origin", origin)
+			resp, err := c.http.Do(req)
+			require.NoError(t, err)
+			body, err := io.ReadAll(resp.Body)
+			_ = resp.Body.Close()
+			require.NoError(t, err)
+			return resp, body
+		}
+
+		resp, body := signIn(newSubpathClient(t), "http://evil.example.com")
+		assert.Equal(t, http.StatusForbidden, resp.StatusCode, "response: %s", body)
+
 		c := newSubpathClient(t)
-		resp, err := c.http.Post(subpathServerURL+"/api/web/user/sign-in", "application/json",
-			strings.NewReader(fmt.Sprintf(`{"username":%q,"password":%q}`, owner.Name, owner.Password)))
-		require.NoError(t, err)
-		_ = resp.Body.Close()
-		require.Equal(t, http.StatusOK, resp.StatusCode)
+		resp, body = signIn(c, parsed.Scheme+"://"+parsed.Host)
+		require.Equal(t, http.StatusOK, resp.StatusCode, "response: %s", body)
 		cookies := resp.Cookies()
 		require.NotEmpty(t, cookies)
 		for _, cookie := range cookies {
@@ -214,6 +232,21 @@ func TestSubpath(t *testing.T) {
 		c.doJSON(http.MethodGet, apiV1RepoPath(repo, ""), nil, http.StatusOK, &got)
 		assert.Equal(t, subpathServerURL+"/"+repo.Owner+"/"+repo.Name, got.HTMLURL)
 		assert.Equal(t, subpathServerURL+"/"+repo.Owner+"/"+repo.Name+".git", got.CloneURL)
+	})
+
+	t.Run("LFS", func(t *testing.T) {
+		content, oid := lfsObject()
+		c := lfsClient(t, owner)
+		c.baseURL = subpathServerURL
+		upload := lfsBatch(t, c, repo, "upload", oid, len(content)).Objects[0].Actions.Upload
+		require.NotNil(t, upload)
+		require.Equal(t, subpathServerURL+lfsBasePath(repo)+"/basic/"+oid, upload.Href)
+
+		status, _, body := c.doRaw(http.MethodPut, strings.TrimPrefix(upload.Href, subpathServerURL), "application/octet-stream", strings.NewReader(string(content)))
+		require.Equal(t, http.StatusOK, status, "response: %s", body)
+		download := lfsBatch(t, c, repo, "download", oid, len(content)).Objects[0].Actions.Download
+		require.NotNil(t, download)
+		assert.Equal(t, subpathServerURL+lfsBasePath(repo)+"/basic/"+oid, download.Href)
 	})
 
 	t.Run("Git over HTTP", func(t *testing.T) {
