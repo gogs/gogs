@@ -116,9 +116,9 @@ func (c *Comment) loadAttributes(e Engine) (err error) {
 	}
 
 	if c.Attachments == nil {
-		c.Attachments, err = getAttachmentsByCommentID(e, c.ID)
+		c.Attachments, err = newAttachmentsStore(legacyTx(e)).ListByCommentID(context.TODO(), c.ID)
 		if err != nil {
-			return errors.Newf("getAttachmentsByCommentID [%d]: %v", c.ID, err)
+			return errors.Wrap(err, "list attachments")
 		}
 	}
 
@@ -219,18 +219,9 @@ func createComment(logger *logx.Logger, e *xorm.Session, opts *CreateCommentOpti
 			return nil, err
 		}
 
-		attachments, err := getUnboundAttachmentsByUUIDs(e, opts.Attachments)
+		err = newAttachmentsStore(legacyTx(e)).Bind(context.TODO(), opts.Issue.ID, comment.ID, opts.Attachments)
 		if err != nil {
-			return nil, errors.Newf("getUnboundAttachmentsByUUIDs [uuids: %v]: %v", opts.Attachments, err)
-		}
-
-		for i := range attachments {
-			attachments[i].IssueID = opts.Issue.ID
-			attachments[i].CommentID = comment.ID
-			// None of the assigned values can be 0, so AllCols() is not needed.
-			if _, err = e.ID(attachments[i].ID).Update(attachments[i]); err != nil {
-				return nil, errors.Newf("update attachment [%d]: %v", attachments[i].ID, err)
-			}
+			return nil, errors.Wrap(err, "attach files")
 		}
 
 	case CommentTypeReopen:
@@ -522,7 +513,7 @@ func DeleteCommentByID(logger *logx.Logger, doer *User, id int64) error {
 		return errors.Newf("commit: %v", err)
 	}
 
-	_, err = DeleteAttachmentsByComment(comment.ID, true)
+	err = Handle.Attachments().DeleteByCommentID(context.TODO(), comment.ID, true)
 	if err != nil {
 		logger.Error("Failed to delete attachments of comment", "commentID", comment.ID, "error", err)
 	}

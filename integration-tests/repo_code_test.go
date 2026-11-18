@@ -5,16 +5,20 @@ import (
 	"archive/zip"
 	"bytes"
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"io"
 	"mime/multipart"
 	"net/http"
+	"os"
 	"os/exec"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/database"
 )
@@ -927,6 +931,90 @@ func TestRepoCodeReleases(t *testing.T) {
 	status, body = ownerClient.do(http.MethodGet, api+"/releases/edit/v1.0", nil)
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 	assert.Equal(t, "v2.0", repoCodeGit(t, repo, "tag", "--list"))
+}
+
+// An edit or deletion of a release whose client goes away after it started
+// still updates the files of the release, and publishing a draft whose tag name
+// is not valid says so.
+func TestRepoCodeReleaseChanges(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	c := authenticatedClient(t, owner)
+	api := repoCodeAPI(repo)
+	upload := func() string {
+		t.Helper()
+		contentType, body := repoCodeMultipart(t, "app.bin", []byte("binary build"))
+		status, _, resp := c.doRaw(http.MethodPost, api+"/releases/attachments", contentType, body)
+		require.Equal(t, http.StatusCreated, status, "response: %s", resp)
+		var attachment struct {
+			UUID string `json:"uuid"`
+		}
+		require.NoError(t, json.Unmarshal(resp, &attachment))
+		return attachment.UUID
+	}
+	gone := func(uuid string) bool {
+		_, err := database.Handle.Attachments().GetByUUID(t.Context(), uuid)
+		_, statErr := os.Stat(database.AttachmentLocalPath(uuid))
+		return database.IsErrAttachmentNotExist(err) && os.IsNotExist(statErr)
+	}
+
+	oldUUID := upload()
+	status, body := c.do(http.MethodPost, api+"/releases", map[string]any{"tagName": "v1.0.0", "target": "main", "title": "First", "attachments": []string{oldUUID}})
+	require.Equal(t, http.StatusCreated, status, "response: %s", body)
+	rel, err := database.Handle.Releases().GetByTagName(t.Context(), repo.ID, "v1.0.0")
+	require.NoError(t, err)
+
+	newUUID := upload()
+	c.goAwayWhileLocked("SELECT id FROM release WHERE id = ? FOR UPDATE", rel.ID,
+		http.MethodPatch, api+"/releases/edit/v1.0.0", map[string]any{"title": "First", "attachments": []string{newUUID}, "removedAttachments": []string{oldUUID}})
+	require.Eventually(t, func() bool {
+		a, err := database.Handle.Attachments().GetByUUID(t.Context(), newUUID)
+		return gone(oldUUID) && err == nil && a.ReleaseID == rel.ID
+	}, 10*time.Second, 100*time.Millisecond, "files of the release not updated")
+
+	c.goAwayWhileLocked("SELECT id FROM release WHERE id = ? FOR UPDATE", rel.ID,
+		http.MethodDelete, api+"/releases/edit/v1.0.0", nil)
+	require.Eventually(t, func() bool {
+		_, err := database.Handle.Releases().GetByID(t.Context(), rel.ID)
+		return database.IsErrReleaseNotExist(err) && gone(newUUID)
+	}, 10*time.Second, 100*time.Millisecond, "release and its files not deleted")
+
+	status, body = c.do(http.MethodPost, api+"/releases", map[string]any{"tagName": "v2.0.0", "target": "main", "title": "Second"})
+	require.Equal(t, http.StatusCreated, status, "response: %s", body)
+	rel, err = database.Handle.Releases().GetByTagName(t.Context(), repo.ID, "v2.0.0")
+	require.NoError(t, err)
+	lateUUID := upload()
+	status, body = c.whileLocked("SELECT id FROM release WHERE id = ? FOR UPDATE", rel.ID,
+		http.MethodPatch, api+"/releases/edit/v2.0.0", map[string]any{"title": "Second", "attachments": []string{lateUUID}},
+		func(tx *gorm.DB, _ context.CancelFunc) {
+			require.NoError(t, tx.Exec("DELETE FROM release WHERE id = ?", rel.ID).Error)
+		})
+	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
+	var notFound struct {
+		Error string `json:"error"`
+	}
+	require.NoError(t, json.Unmarshal(body, &notFound))
+	assert.Equal(t, "release does not exist", notFound.Error)
+	late, err := database.Handle.Attachments().GetByUUID(t.Context(), lateUUID)
+	require.NoError(t, err)
+	assert.Zero(t, late.ReleaseID, "file attached to a deleted release")
+
+	// Drafts get their tag only when published, which is when an invalid tag
+	// name is found. The tag name cannot be edited then, so the error is not
+	// one of a field.
+	status, body = c.do(http.MethodPost, api+"/releases", map[string]any{"tagName": "bad..name", "target": "main", "title": "Draft", "isDraft": true})
+	require.Equal(t, http.StatusCreated, status, "response: %s", body)
+	status, body = c.do(http.MethodPatch, api+"/releases/edit/bad..name", map[string]any{"title": "Draft", "isDraft": false})
+	require.Equal(t, http.StatusBadRequest, status, "response: %s", body)
+	var resp struct {
+		Error  string         `json:"error"`
+		Fields map[string]any `json:"fields"`
+	}
+	require.NoError(t, json.Unmarshal(body, &resp))
+	assert.Equal(t, "Tag name is not valid.", resp.Error)
+	assert.Empty(t, resp.Fields)
 }
 
 func TestRepoCodeWiki(t *testing.T) {

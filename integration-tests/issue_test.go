@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
+	"os"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -392,6 +394,66 @@ func TestIssueLabelsMilestoneAndAssignee(t *testing.T) {
 	})
 }
 
+// An edit whose client goes away after the content is saved still updates the
+// files the content links.
+func TestIssueEditAttachmentsClientGone(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	c := authenticatedClient(t, owner)
+	upload := func() (uuid, link string) {
+		t.Helper()
+		status, body := issueUpload(t, c, issueAPIPath(repo, "issues", "attachments"), "screenshot.png", issuePNG(t))
+		require.Equal(t, http.StatusCreated, status, "response: %s", body)
+		var resp struct {
+			UUID string `json:"uuid"`
+			URL  string `json:"url"`
+		}
+		require.NoError(t, json.Unmarshal(body, &resp))
+		return resp.UUID, "![screenshot](" + resp.URL + ")"
+	}
+	gone := func(uuid string) bool {
+		_, err := database.Handle.Attachments().GetByUUID(t.Context(), uuid)
+		_, statErr := os.Stat(database.AttachmentLocalPath(uuid))
+		return database.IsErrAttachmentNotExist(err) && os.IsNotExist(statErr)
+	}
+	attachedTo := func(uuid string, issueID, commentID int64) bool {
+		a, err := database.Handle.Attachments().GetByUUID(t.Context(), uuid)
+		return err == nil && a.IssueID == issueID && a.CommentID == commentID
+	}
+
+	oldUUID, oldLink := upload()
+	var created struct {
+		Index int64 `json:"index"`
+	}
+	c.doJSON(http.MethodPost, issueAPIPath(repo, "issues"), map[string]any{"title": "Screenshot", "content": oldLink, "attachments": []string{oldUUID}}, http.StatusCreated, &created)
+	issue := issueFromDatabase(t, repo, created.Index)
+	require.True(t, attachedTo(oldUUID, issue.ID, 0))
+
+	newUUID, newLink := upload()
+	c.goAwayWhileLocked("SELECT id FROM issue WHERE id = ? FOR UPDATE", issue.ID,
+		http.MethodPatch, issueAPIPath(repo, "issues", created.Index), map[string]any{"content": newLink, "attachments": []string{newUUID}})
+	require.Eventually(t, func() bool {
+		return gone(oldUUID) && attachedTo(newUUID, issue.ID, 0)
+	}, 10*time.Second, 100*time.Millisecond, "files of the issue not updated")
+	assert.Equal(t, newLink, issueFromDatabase(t, repo, created.Index).Content)
+
+	oldUUID, oldLink = upload()
+	var comment struct {
+		ID int64 `json:"id"`
+	}
+	c.doJSON(http.MethodPost, issueAPIPath(repo, "issues", created.Index, "comments"), map[string]any{"content": oldLink, "attachments": []string{oldUUID}}, http.StatusCreated, &comment)
+	require.True(t, attachedTo(oldUUID, issue.ID, comment.ID))
+
+	newUUID, newLink = upload()
+	c.goAwayWhileLocked("SELECT id FROM comment WHERE id = ? FOR UPDATE", comment.ID,
+		http.MethodPatch, issueAPIPath(repo, "issues", created.Index, "comments", comment.ID), map[string]any{"content": newLink, "attachments": []string{newUUID}})
+	require.Eventually(t, func() bool {
+		return gone(oldUUID) && attachedTo(newUUID, issue.ID, comment.ID)
+	}, 10*time.Second, 100*time.Millisecond, "files of the comment not updated")
+}
+
 func TestIssueAttachments(t *testing.T) {
 	t.Parallel()
 
@@ -436,7 +498,7 @@ func TestIssueAttachments(t *testing.T) {
 
 	t.Run("public repository", func(t *testing.T) {
 		uuid, url := upload(public)
-		a, err := database.GetAttachmentByUUID(uuid)
+		a, err := database.Handle.Attachments().GetByUUID(t.Context(), uuid)
 		require.NoError(t, err)
 		assert.Equal(t, owner.ID, a.UploaderID)
 		assert.Equal(t, "screenshot.png", a.Name)
@@ -456,7 +518,7 @@ func TestIssueAttachments(t *testing.T) {
 			"content":     "![screenshot](" + url + ")",
 			"attachments": []string{uuid},
 		}, http.StatusCreated, &created)
-		a, err = database.GetAttachmentByUUID(uuid)
+		a, err = database.Handle.Attachments().GetByUUID(t.Context(), uuid)
 		require.NoError(t, err)
 		assert.Equal(t, created.ID, a.CommentID)
 
@@ -481,7 +543,7 @@ func TestIssueAttachments(t *testing.T) {
 			"title":       "Private screenshot",
 			"attachments": []string{uuid},
 		}, http.StatusCreated, &created)
-		a, err := database.GetAttachmentByUUID(uuid)
+		a, err := database.Handle.Attachments().GetByUUID(t.Context(), uuid)
 		require.NoError(t, err)
 		assert.Equal(t, issueFromDatabase(t, private, created.Index).ID, a.IssueID)
 

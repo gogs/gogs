@@ -21,6 +21,7 @@ import (
 	"github.com/unknwon/com"
 	"golang.org/x/image/draw"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"unknwon.dev/ini/v2"
 	"unknwon.dev/x/logx"
 	"xorm.io/xorm"
@@ -1780,6 +1781,24 @@ func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 		return err
 	}
 
+	// Attachments of releases go with the releases, and are deleted after them,
+	// in the order deleting a single release takes their locks, so that the two
+	// cannot deadlock. The releases are locked before anything else is read,
+	// because on MySQL the first plain read fixes the snapshot, which would hide
+	// the attachments an edit of a release adds before the releases are deleted.
+	// GORM reads them, because XORM does not report an error that ends the rows,
+	// e.g., when MariaDB refuses the read, and the deletion would then go on
+	// outside the rolled back transaction.
+	tx := legacyTx(sess)
+	var releaseIDs []int64
+	listReleases := tx.Model(new(Release)).Where("repo_id = ?", repoID)
+	if !conf.UseSQLite3 {
+		listReleases = listReleases.Clauses(clause.Locking{Strength: "UPDATE"})
+	}
+	if err = listReleases.Pluck("id", &releaseIDs).Error; err != nil {
+		return errors.Newf("list releases: %v", err)
+	}
+
 	if org.IsOrganization() {
 		for _, t := range org.Teams {
 			if !t.hasRepository(sess, repoID) {
@@ -1814,9 +1833,23 @@ func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 		return err
 	}
 
+	attachmentPaths := make([]string, 0, len(releaseIDs))
+	// In chunks, because a statement can bind only so many parameters.
+	for ids := range slices.Chunk(releaseIDs, 500) {
+		var uuids []string
+		if err = tx.Model(new(Attachment)).Where("release_id IN ?", ids).Pluck("uuid", &uuids).Error; err != nil {
+			return errors.Newf("list attachments of releases: %v", err)
+		}
+		for _, uuid := range uuids {
+			attachmentPaths = append(attachmentPaths, AttachmentLocalPath(uuid))
+		}
+		if err = tx.Where("release_id IN ?", ids).Delete(new(Attachment)).Error; err != nil {
+			return errors.Newf("delete attachments of releases: %v", err)
+		}
+	}
+
 	// Delete comments and attachments.
 	issues := make([]*Issue, 0, 25)
-	attachmentPaths := make([]string, 0, len(issues))
 	if err = sess.Where("repo_id=?", repoID).Find(&issues); err != nil {
 		return err
 	}
@@ -1825,15 +1858,14 @@ func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 			return err
 		}
 
-		attachments := make([]*Attachment, 0, 5)
-		if err = sess.Where("issue_id=?", issues[i].ID).Find(&attachments); err != nil {
-			return err
+		rows, err := sess.Query("SELECT uuid FROM attachment WHERE issue_id = ?", issues[i].ID)
+		if err != nil {
+			return errors.Newf("list attachments: %v", err)
 		}
-		for j := range attachments {
-			attachmentPaths = append(attachmentPaths, attachments[j].LocalPath())
+		for _, row := range rows {
+			attachmentPaths = append(attachmentPaths, AttachmentLocalPath(string(row["uuid"])))
 		}
-
-		if _, err = sess.Where("issue_id = ?", issues[i].ID).Delete(new(Attachment)); err != nil {
+		if err = deleteByColumn(sess, "issue_id", issues[i].ID, "attachment"); err != nil {
 			return err
 		}
 	}

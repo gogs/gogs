@@ -1,0 +1,2 @@
+{"ID":1,"RepoID":1,"PublisherID":1,"TagName":"v1.0.0","LowerTagName":"v1.0.0","Target":"main","Title":"First release","Sha1":"4b825dc642cb6eb9a060e54bf8d69288fbee4904","NumCommits":12,"Note":"Notes of the first release.","IsDraft":false,"IsPrerelease":true,"CreatedUnix":1588568886}
+{"ID":2,"RepoID":1,"PublisherID":2,"TagName":"V2.0.0","LowerTagName":"v2.0.0","Target":"main","Title":"","Sha1":"","NumCommits":0,"Note":"","IsDraft":true,"IsPrerelease":false,"CreatedUnix":1588572486}

@@ -62,7 +62,8 @@ func (p webAppPages) Error(w http.ResponseWriter, r *http.Request, viewer *datab
 // viewers who can read the repository.
 func getAttachment(c flamego.Context, logger *logx.Logger, viewer *database.User, pages webAppPages) {
 	w := c.ResponseWriter()
-	attach, err := database.GetAttachmentByUUID(c.Param("uuid"))
+	ctx := c.Request().Context()
+	attach, err := database.Handle.Attachments().GetByUUID(ctx, c.Param("uuid"))
 	if err != nil {
 		if errx.IsNotFound(err) {
 			pages.NotFound(c)
@@ -91,7 +92,10 @@ func getAttachment(c flamego.Context, logger *logx.Logger, viewer *database.User
 		}
 		repo = issue.Repo
 	case attach.ReleaseID > 0:
-		release, err := database.GetReleaseByID(attach.ReleaseID)
+		release, err := database.Handle.Releases().GetByID(ctx, attach.ReleaseID)
+		if err == nil {
+			err = database.Handle.Releases().LoadAttributes(ctx, release)
+		}
 		if err != nil {
 			if errx.IsNotFound(err) {
 				pages.NotFound(c)

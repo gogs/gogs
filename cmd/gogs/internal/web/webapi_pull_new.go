@@ -283,7 +283,7 @@ func postRepoPull(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer 
 		return http.StatusConflict, nil, errors.Newf("pull request #%d has the same branches", index)
 	}
 
-	issue, labelIDs, statusCode, resp, err := newIssueFromRequest(l, viewer, repoCtx, req.repoNewIssueRequest)
+	issue, labelIDs, statusCode, resp, err := newIssueFromRequest(c.Request().Context(), l, viewer, repoCtx, req.repoNewIssueRequest)
 	if resp != nil || err != nil {
 		if statusCode == http.StatusInternalServerError {
 			logger.Error("Failed to check new pull request", "repoID", repo.ID, "error", err)

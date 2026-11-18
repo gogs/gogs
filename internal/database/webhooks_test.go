@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"unknwon.dev/x/logx"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/dbx"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
@@ -300,6 +301,9 @@ func webhooksTest(t *testing.T, ctx context.Context, s *WebhooksStore) {
 }
 
 func webhooksPrepareDiscordWithoutSettings(t *testing.T, ctx context.Context, s *WebhooksStore) {
+	// Discord payloads have links, which read the server settings that other
+	// suites mock.
+	conf.SetMockServer(t, conf.ServerOpts{})
 	_, repo := newTestOrgRepo(t, ctx, s)
 	// API v1 creates Discord webhooks without settings.
 	discord := newTestWebhook(t, ctx, s, repo.ID, 0, HookEvents{})
