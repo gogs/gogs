@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import type { RepoCommitAuthor } from "@/lib/queries/repo";
 import { cn } from "@/lib/utils";
 
@@ -48,14 +49,19 @@ export function CommitAuthors({
             </PopoverTrigger>
             <PopoverContent
               align="start"
-              className="flex max-h-[min(20rem,var(--radix-popover-content-available-height))] w-64 flex-col overflow-y-auto p-1 text-sm"
+              className="flex max-h-[min(20rem,var(--radix-popover-content-available-height))] w-64 flex-col p-1 text-sm"
             >
-              {people.map((person) => (
-                <span key={person.email} className="flex items-center gap-2 rounded-sm px-2 py-1.5">
-                  <img src={person.avatarURL} alt="" className="size-5 shrink-0 rounded-full" />
-                  <AuthorName author={person} className="min-w-0 truncate font-semibold" />
-                </span>
-              ))}
+              <p className="px-2 py-1.5 text-xs text-(--color-muted-foreground)">
+                {t("repo.authors_people", { count: people.length })}
+              </p>
+              <ScrollArea className="min-h-0">
+                {people.map((person) => (
+                  <span key={person.email} className="flex items-center gap-2 rounded-sm px-2 py-1.5">
+                    <img src={person.avatarURL} alt="" className="size-5 shrink-0 rounded-full" />
+                    <AuthorName author={person} className="min-w-0 truncate font-semibold" />
+                  </span>
+                ))}
+              </ScrollArea>
             </PopoverContent>
           </Popover>
         ) : (

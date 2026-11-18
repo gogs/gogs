@@ -9,6 +9,7 @@ import { Markdown } from "@/components/Markdown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { type IssueMetaOptions, type RepoIssueData, renderRepoMarkdown } from "@/lib/queries/repo";
 import type { RepoRef } from "@/lib/reference-completion";
 import type { AttachmentUploads, UploadLinker } from "@/lib/use-attachment-uploads";
@@ -335,7 +336,7 @@ function Picker<T extends { id: number; name: string }>({
         />
       </div>
       {/* -mb-px tucks the border of the last row under the edge of the popover. */}
-      <div className={cn("max-h-80 overflow-y-auto", !footer && "-mb-px")}>
+      <ScrollArea className={cn("max-h-80", !footer && "-mb-px")}>
         {shown.length ? (
           shown.map((group, i) => (
             <div key={i} role="group" aria-label={group.label}>
@@ -365,7 +366,7 @@ function Picker<T extends { id: number; name: string }>({
             {t("repo.issues.picker_no_results")}
           </p>
         )}
-      </div>
+      </ScrollArea>
       {footer ? (
         <Link
           to={footer.to}

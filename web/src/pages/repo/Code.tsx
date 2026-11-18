@@ -58,6 +58,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePageTitle } from "@/lib/page-title";
 import {
@@ -887,26 +888,28 @@ function OutlineMenu({ headings }: { headings: OutlineHeading[] }) {
           placeholder={t("repo.overview_filter_headings")}
           aria-label={t("repo.overview_filter_headings")}
         />
-        <ul className="mt-2 max-h-[60vh] overflow-y-auto">
-          {shown.map((heading) => (
-            <li key={heading.slug}>
-              <a
-                href={`#${encodeURIComponent(heading.slug)}`}
-                onClick={() => {
-                  choseHeading.current = true;
-                  setOpen(false);
-                }}
-                className={cn(
-                  "block rounded py-1.5 pr-2 text-sm wrap-anywhere text-(--color-foreground) hover:bg-(--color-surface)",
-                  heading.level === topLevel && "font-semibold",
-                )}
-                style={{ paddingLeft: `${0.5 + (heading.level - topLevel)}rem` }}
-              >
-                {heading.text}
-              </a>
-            </li>
-          ))}
-        </ul>
+        <ScrollArea className="mt-2 max-h-[60vh]">
+          <ul>
+            {shown.map((heading) => (
+              <li key={heading.slug}>
+                <a
+                  href={`#${encodeURIComponent(heading.slug)}`}
+                  onClick={() => {
+                    choseHeading.current = true;
+                    setOpen(false);
+                  }}
+                  className={cn(
+                    "block rounded py-1.5 pr-2 text-sm wrap-anywhere text-(--color-foreground) hover:bg-(--color-surface)",
+                    heading.level === topLevel && "font-semibold",
+                  )}
+                  style={{ paddingLeft: `${0.5 + (heading.level - topLevel)}rem` }}
+                >
+                  {heading.text}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </ScrollArea>
       </PopoverContent>
     </Popover>
   );
