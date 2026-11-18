@@ -190,7 +190,6 @@ func RegisterRoutes(f *flamego.Flame) {
 					f.Combo("").
 						Get(accessTokensHandler.List()).
 						Post(bind(createAccessTokenRequest{}), accessTokensHandler.Create())
-					f.Delete("/{id}", accessTokensHandler.Delete())
 				}, reqBasicAuth())
 			})
 		})
@@ -209,6 +208,7 @@ func RegisterRoutes(f *flamego.Flame) {
 
 		f.Group("/user", func() {
 			f.Get("", getAuthenticatedUser)
+			f.Delete("/token", newAccessTokensHandler(newAccessTokensStore()).DeleteSelf())
 			f.Combo("/emails").
 				Get(listEmails).
 				Post(bind(createEmailRequest{}), addEmail).

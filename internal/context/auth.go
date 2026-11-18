@@ -55,6 +55,16 @@ type AuthStore interface {
 	AuthenticateUser(ctx context.Context, login, password string, loginSourceID int64) (*database.User, error)
 }
 
+// AccessToken returns the access token in the "Authorization" header of the
+// request, or an empty string when the request does not carry one.
+func AccessToken(r *http.Request) string {
+	auths := strings.Fields(r.Header.Get("Authorization"))
+	if len(auths) == 2 && auths[0] == "token" {
+		return auths[1]
+	}
+	return ""
+}
+
 // authenticatedUserID returns the ID of the authenticated user, along with a bool value
 // which indicates whether the user uses token authentication.
 func authenticatedUserID(logger *logx.Logger, store AuthStore, r *http.Request, sess session.Session) (_ int64, isTokenAuth bool) {
@@ -62,16 +72,7 @@ func authenticatedUserID(logger *logx.Logger, store AuthStore, r *http.Request, 
 	// browser, including the routes that change the credentials and two-factor
 	// authentication of an account, which a leaked token must not reach.
 	if strings.HasPrefix(r.URL.Path, "/api/v1/") {
-		var tokenSHA string
-		auHead := r.Header.Get("Authorization")
-		if auHead != "" {
-			auths := strings.Fields(auHead)
-			if len(auths) == 2 && auths[0] == "token" {
-				tokenSHA = auths[1]
-			}
-		}
-
-		if len(tokenSHA) > 0 {
+		if tokenSHA := AccessToken(r); tokenSHA != "" {
 			t, err := store.GetAccessTokenBySHA1(r.Context(), tokenSHA)
 			if err != nil {
 				if !database.IsErrAccessTokenNotExist(err) {

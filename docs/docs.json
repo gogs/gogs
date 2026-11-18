@@ -169,7 +169,7 @@
               "api-reference/users/get-the-authenticated-user",
               "api-reference/users/list-access-tokens",
               "api-reference/users/create-an-access-token",
-              "api-reference/users/delete-an-access-token",
+              "api-reference/users/delete-the-access-token",
               "api-reference/users/list-email-addresses",
               "api-reference/users/add-email-addresses",
               "api-reference/users/delete-email-addresses",
