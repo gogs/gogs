@@ -2,9 +2,15 @@ package database
 
 import (
 	"context"
+	"database/sql"
+	"math/rand/v2"
 	"slices"
+	"time"
 
 	"github.com/cockroachdb/errors"
+	"github.com/glebarez/go-sqlite"
+	"github.com/go-sql-driver/mysql"
+	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"unknwon.dev/x/logx"
@@ -26,63 +32,95 @@ func newDeployKeysStore(db *gorm.DB) *DeployKeysStore {
 // ErrDeployKeyAlreadyExist when the repository already has the key, and
 // ErrDeployKeyNameAlreadyUsed when the repository has a key of the same name.
 func (s *DeployKeysStore) Add(ctx context.Context, logger *logx.Logger, repoID int64, name, content string) (*DeployKey, error) {
-	db := s.db.WithContext(ctx)
-	if err := checkKeyContent(db, content); err != nil {
-		return nil, err
-	}
-
-	pkey := &PublicKey{
-		Content: content,
-		Mode:    AccessModeRead,
-		Type:    KeyTypeDeploy,
-	}
-	existing := new(PublicKey)
-	err := db.Where("content = ? AND mode = ? AND type = ?", pkey.Content, pkey.Mode, pkey.Type).First(existing).Error
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, errors.Wrap(err, "get existing key")
-	}
-	has := err == nil
-	if has {
-		pkey = existing
-	}
-
-	var key *DeployKey
-	err = db.Transaction(func(tx *gorm.DB) error {
-		if has {
-			locked, err := lockPublicKeys(tx, pkey.ID)
-			if err != nil {
-				return errors.Wrap(err, "lock public key")
+	// Two repositories adding the same new key at the same time would each add
+	// a public key for it. Serializable transactions make one of them fail
+	// instead, and its next attempt finds the public key the other added.
+	const attempts = 5
+	for attempt := 1; ; attempt++ {
+		key, pkey, err := s.add(ctx, repoID, name, content)
+		if err != nil {
+			if attempt < attempts && isSerializationFailure(err) {
+				// At random, so that the transactions that failed together do not
+				// conflict again.
+				time.Sleep(time.Duration(1+rand.IntN(10*attempt)) * time.Millisecond)
+				continue
 			}
-			// The last repository that used the key deleted it after it was found.
-			if len(locked) == 0 {
-				has = false
-				pkey = &PublicKey{
-					Content: content,
-					Mode:    AccessModeRead,
-					Type:    KeyTypeDeploy,
-				}
+			return nil, err
+		}
+
+		if pkey != nil {
+			if err = appendAuthorizedKeysToFile(logger, pkey); err != nil {
+				return nil, errors.Wrap(err, "append to authorized_keys")
 			}
 		}
-		if !has {
-			if err := addKey(tx, pkey); err != nil {
+		key.Content = content
+		return key, nil
+	}
+}
+
+// add adds the deploy key in one serializable transaction, and returns the
+// public key it added, if any.
+func (s *DeployKeysStore) add(ctx context.Context, repoID int64, name, content string) (key *DeployKey, added *PublicKey, _ error) {
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Locked like lockPublicKeys does, so that deleting the last deploy key of
+		// the public key waits for this one to be added. Locked before any other
+		// read, which takes shared locks on MySQL that this would have to upgrade.
+		pkey := new(PublicKey)
+		err := tx.Where("content = ? AND mode = ? AND type = ?", content, AccessModeRead, KeyTypeDeploy).
+			Order("id").
+			Clauses(clause.Locking{Strength: "UPDATE"}).
+			First(pkey).
+			Error
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.Wrap(err, "get existing key")
+		}
+		notFound := errors.Is(err, gorm.ErrRecordNotFound)
+		if err = checkKeyContent(tx, content); err != nil {
+			return err
+		}
+		if notFound {
+			pkey = &PublicKey{
+				Content: content,
+				Mode:    AccessModeRead,
+				Type:    KeyTypeDeploy,
+			}
+			if err = addKey(tx, pkey); err != nil {
 				return errors.Wrap(err, "add key")
 			}
+			added = pkey
 		}
 
-		var err error
 		key, err = addDeployKey(tx, pkey.ID, repoID, name, pkey.Fingerprint)
 		return err
-	})
+	}, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	if !has {
-		if err = appendAuthorizedKeysToFile(logger, pkey); err != nil {
-			return nil, errors.Wrap(err, "append to authorized_keys")
-		}
+	return key, added, nil
+}
+
+// isSerializationFailure returns true when the error is a transaction that the
+// database rolled back for conflicting with another, which succeeds when
+// tried again.
+func isSerializationFailure(err error) bool {
+	var sqliteErr *sqlite.Error
+	if errors.As(err, &sqliteErr) {
+		// SQLITE_BUSY and SQLITE_LOCKED, which the shared cache returns without
+		// waiting.
+		code := sqliteErr.Code() & 0xff
+		return code == 5 || code == 6
 	}
-	key.Content = content
-	return key, nil
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		// serialization_failure and deadlock_detected.
+		return pgErr.Code == "40001" || pgErr.Code == "40P01"
+	}
+	var mysqlErr *mysql.MySQLError
+	if errors.As(err, &mysqlErr) {
+		// ER_LOCK_DEADLOCK.
+		return mysqlErr.Number == 1213
+	}
+	return false
 }
 
 // loadContents sets the content of given deploy keys from their public keys.
@@ -186,7 +224,7 @@ func (s *DeployKeysStore) Delete(ctx context.Context, logger *logx.Logger, doer 
 
 	var publicKeyDeleted bool
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		_, err := lockPublicKeys(tx, key.KeyID)
+		err := lockPublicKeys(tx, key.KeyID)
 		if err != nil {
 			return errors.Wrap(err, "lock public key")
 		}
@@ -208,23 +246,21 @@ func (s *DeployKeysStore) Delete(ctx context.Context, logger *logx.Logger, doer 
 	return newPublicKeysStore(s.db).RewriteAuthorizedKeys()
 }
 
-// lockPublicKeys locks the public keys of given IDs until the transaction ends,
-// and returns the IDs of those that exist. Deploy keys are only added and
-// deleted while their public keys are locked, so that a public key is deleted
-// exactly when its last deploy key is.
-func lockPublicKeys(tx *gorm.DB, ids ...int64) ([]int64, error) {
+// lockPublicKeys locks the public keys of given IDs until the transaction ends.
+// Deploy keys are only added and deleted while their public keys are locked,
+// so that a public key is deleted exactly when its last deploy key is.
+func lockPublicKeys(tx *gorm.DB, ids ...int64) error {
 	if len(ids) == 0 {
-		return nil, nil
+		return nil
 	}
 
 	var locked []int64
-	err := tx.Model(new(PublicKey)).
+	return tx.Model(new(PublicKey)).
 		Where("id IN ?", ids).
 		Order("id").
 		Clauses(clause.Locking{Strength: "UPDATE"}).
 		Pluck("id", &locked).
 		Error
-	return locked, err
 }
 
 // deleteUnusedPublicKeys deletes the public keys of given IDs that no deploy

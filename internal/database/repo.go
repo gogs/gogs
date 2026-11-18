@@ -1881,7 +1881,7 @@ func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 	if err = tx.Model(new(DeployKey)).Where("repo_id = ?", repoID).Pluck("key_id", &deployKeyIDs).Error; err != nil {
 		return errors.Wrap(err, "list deploy keys")
 	}
-	if _, err = lockPublicKeys(tx, deployKeyIDs...); err != nil {
+	if err = lockPublicKeys(tx, deployKeyIDs...); err != nil {
 		return errors.Wrap(err, "lock public keys")
 	}
 	if err = tx.Where("repo_id = ?", repoID).Delete(new(DeployKey)).Error; err != nil {
