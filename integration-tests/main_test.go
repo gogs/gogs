@@ -261,6 +261,7 @@ SSH_ROOT_PATH = %[6]s
 START_SSH_SERVER = true
 SSH_LISTEN_HOST = 127.0.0.1
 SSH_PORT = %[7]d
+MINIMUM_KEY_SIZE_CHECK = true
 
 [repository]
 ROOT = %[3]s
