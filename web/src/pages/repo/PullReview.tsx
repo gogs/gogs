@@ -206,7 +206,12 @@ export function ReviewThread({
   const { t } = useTranslation();
   const router = useRouter();
   const thread = root.thread!;
-  const [open, setOpen] = useState(!thread.resolvedBy);
+  const anchor = `thread-${root.id}`;
+  const linked = useIsLinked(anchor);
+  // A resolved thread starts collapsed, unless it is linked, until the viewer
+  // opens or closes it.
+  const [toggled, setOpen] = useState<boolean>();
+  const open = toggled ?? (!thread.resolvedBy || linked);
   const resolve = useMutation({
     mutationFn: (resolved: boolean) => setRepoPullThreadResolved(issueRef, root.id, resolved),
     onSuccess: async (_, resolved) => {
@@ -219,8 +224,15 @@ export function ReviewThread({
 
   return (
     <div
-      id={`thread-${root.id}`}
-      className="min-w-0 scroll-mt-4 rounded-md border border-(--color-border) bg-(--color-background)"
+      id={anchor}
+      className={cn(
+        "min-w-0 scroll-mt-4 rounded-md border border-(--color-border) bg-(--color-background)",
+        // The diff clips what is drawn outside the thread.
+        linked &&
+          (inDiff
+            ? "ring-2 ring-(--color-primary) ring-inset"
+            : "outline outline-(--color-primary) ring-2 ring-(--color-primary)/30"),
+      )}
     >
       {inDiff ? null : (
         <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 rounded-t-md border-b border-(--color-border) bg-(--color-surface) px-3 py-1.5 text-sm">
@@ -233,7 +245,7 @@ export function ReviewThread({
               <Link
                 to="/$owner/$repo/pulls/$index/files"
                 params={params}
-                hash={`thread-${root.id}`}
+                hash={anchor}
                 className="text-(--color-muted-foreground) hover:text-(--color-primary) hover:underline"
               >
                 {linesLabel(t, thread)}
