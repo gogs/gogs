@@ -79,11 +79,13 @@ func (s *UploadsStore) New(ctx context.Context, name string, r io.Reader) (*Uplo
 	return upload, nil
 }
 
-// isValidUUID returns true if given string is a UUID. PostgreSQL rejects
-// queries that compare the "uuid" column with anything else.
+// isValidUUID returns true if given string is a UUID in its canonical form,
+// e.g., "6ba7b810-9dad-11d1-80b4-00c04fd430c8". PostgreSQL rejects queries
+// that compare the "uuid" column with anything else, including the other forms
+// uuid.Parse accepts, such as "urn:uuid:" prefixed ones.
 func isValidUUID(s string) bool {
 	_, err := uuid.Parse(s)
-	return err == nil
+	return err == nil && len(s) == 36
 }
 
 // GetByUUID returns the upload with given UUID. It returns ErrUploadNotExist

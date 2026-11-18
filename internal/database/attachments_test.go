@@ -139,7 +139,7 @@ func attachmentsGetByUUID(t *testing.T, ctx context.Context, s *AttachmentsStore
 
 	// PostgreSQL stores UUIDs natively, so neither a malformed UUID nor an
 	// unknown one may fail with anything but not found.
-	for _, uuid := range []string{"00000000-0000-0000-0000-000000000000", "not-a-uuid", ""} {
+	for _, uuid := range []string{"00000000-0000-0000-0000-000000000000", "not-a-uuid", "", "urn:uuid:" + a.UUID, "{" + a.UUID + "}"} {
 		_, err = s.GetByUUID(ctx, uuid)
 		assert.True(t, IsErrAttachmentNotExist(err), "%q: got %v", uuid, err)
 	}
@@ -153,7 +153,7 @@ func attachmentsBind(t *testing.T, ctx context.Context, s *AttachmentsStore) {
 	ofIssue := newTestAttachment(t, ctx, s, "of-issue", 9, 0, 0)
 	ofRelease := newTestAttachment(t, ctx, s, "of-release", 0, 0, 9)
 
-	err := s.Bind(ctx, 3, 4, []string{unbound1.UUID, ofIssue.UUID, ofRelease.UUID, "not-a-uuid"})
+	err := s.Bind(ctx, 3, 4, []string{unbound1.UUID, ofIssue.UUID, ofRelease.UUID, "not-a-uuid", "urn:uuid:" + untouched.UUID})
 	require.NoError(t, err)
 	err = s.Bind(ctx, 5, 0, []string{unbound2.UUID})
 	require.NoError(t, err)

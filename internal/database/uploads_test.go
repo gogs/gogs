@@ -69,7 +69,7 @@ func uploadsNew(t *testing.T, ctx context.Context, s *UploadsStore) {
 
 func uploadsGet(t *testing.T, ctx context.Context, s *UploadsStore) {
 	// Malformed UUIDs are not found either.
-	for _, uuid := range []string{"404", "00000000-0000-0000-0000-000000000000"} {
+	for _, uuid := range []string{"404", "00000000-0000-0000-0000-000000000000", "urn:uuid:00000000-0000-0000-0000-000000000000"} {
 		_, err := s.GetByUUID(ctx, uuid)
 		assert.True(t, IsErrUploadNotExist(err), "%q: got %v", uuid, err)
 	}
