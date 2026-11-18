@@ -41,15 +41,15 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
   - Pull requests, with inline reviews\* and stacks\*.
   - Protected branches, with code owners\* and signed commits\*.
   - Organizations, teams, collaborators and service accounts\*.
+- Automation
+  - Actions\* and compute\*.
+  - Packages\* and hosting\*.
 - Interface
   - Dashboards, profiles and activity timelines.
   - Light and dark themes, a command palette and over [31 languages](https://crowdin.com/project/gogs).
 - Integrations
   - Webhooks for Slack, Discord, DingTalk and more, plus server-side Git hooks.
   - A REST [API](https://gogs.io/api-reference), GitHub-compatible\*.
-- Automation
-  - Actions\* and compute\*.
-  - Packages\* and hosting\*.
 - Security
   - Sign in with LDAP, SMTP, PAM, reverse proxy, OAuth 2.0\*, OpenID Connect\* or SAML 2.0\*.
   - Two-factor authentication and passkeys.
