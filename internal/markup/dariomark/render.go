@@ -73,7 +73,9 @@ type renderer struct {
 	s    sink
 	html htmlSink
 
-	plain     []byte
+	plain []byte
+	// code is a buffer for the content of code spans, see codeContent.
+	code      []byte
 	numBuf    [24]byte
 	listAttrs [2]attr
 
@@ -120,6 +122,9 @@ func (r *renderer) release() {
 	r.html = htmlSink{}
 	if cap(r.plain) > maxPooledBytes {
 		r.plain = nil
+	}
+	if cap(r.code) > maxPooledBytes {
+		r.code = nil
 	}
 	if cap(r.headings) > maxPooledSegs {
 		r.headings = nil
@@ -227,6 +232,148 @@ func shiftSegs(n *node, k int32) {
 	}
 }
 
+// plainLeaf renders the inline contents of the paragraph or table cell n
+// without parsing them into nodes, and reports whether it did. It does so
+// when they are only text, line breaks and code spans, as is common in
+// comments and documents written by AI agents. The output is what the inline
+// parser and renderer write for the same contents.
+func (r *renderer) plainLeaf(n *node) bool {
+	opts := r.opts
+	if r.s.san != nil || n.parsed || opts.Typographer.Enabled {
+		return false
+	}
+	src := n.text
+	if opts.Linkify && (bytes.IndexByte(src, '@') >= 0 || bytes.Contains(src, []byte("www.")) || bytes.Contains(src, []byte("://"))) {
+		return false
+	}
+	r.p.footnoteDefsBefore(n)
+	out := &r.out
+	start := len(out.buf)
+	inCell := n.kind == kindTableCell
+	// text is the start of the text not written yet, and noCloser has a bit
+	// for each length of backtick run that has no closing run left.
+	text := 0
+	var noCloser uint64
+	for i := 0; i < len(src); {
+		c := src[i]
+		if !plainSpecial[c] {
+			i++
+			continue
+		}
+		switch c {
+		case '\n':
+			// See inlineParser.lineEnding.
+			end := i
+			if end > text && src[end-1] == '\r' {
+				end--
+			}
+			spaces := 0
+			for end-spaces > text && src[end-spaces-1] == ' ' {
+				spaces++
+			}
+			hard := spaces >= 2
+			for end-spaces > text && (src[end-spaces-1] == ' ' || src[end-spaces-1] == '\t') {
+				spaces++
+			}
+			writeEscaped(out, src[text:end-spaces])
+			if hard || opts.HardWraps {
+				r.html.start("br")
+			}
+			out.writeByte('\n')
+			i++
+			for i < len(src) && (src[i] == ' ' || src[i] == '\t') {
+				i++
+			}
+			text = i
+		case '`':
+			// See inlineParser.codeSpan.
+			end := i + 1
+			for end < len(src) && src[end] == '`' {
+				end++
+			}
+			k := end - i
+			if k >= 64 {
+				out.buf = out.buf[:start]
+				return false
+			}
+			closer := -1
+			if noCloser&(1<<k) == 0 {
+				closer = scanBackticks(src, k, end)
+			}
+			if closer < 0 {
+				// The run is literal text, and so are later runs of its length.
+				noCloser |= 1 << k
+				i = end
+				continue
+			}
+			writeEscaped(out, src[text:i])
+			out.WriteString("<code>")
+			writeEscaped(out, r.codeContent(src[end:closer], inCell))
+			out.WriteString("</code>")
+			i = closer + k
+			text = i
+		default:
+			out.buf = out.buf[:start]
+			return false
+		}
+	}
+	writeEscaped(out, src[text:])
+	return true
+}
+
+// plainSpecial marks the characters that plainLeaf handles, or for which it
+// leaves the contents to the inline parser.
+var plainSpecial = withSpecial([256]bool{}, "\n\\`*_[]<&~")
+
+// scanBackticks returns the start of the first maximal run of n backticks in
+// src at or after pos, which does not start within a run, or -1.
+func scanBackticks(src []byte, n, pos int) int {
+	for pos < len(src) {
+		i := bytes.IndexByte(src[pos:], '`')
+		if i < 0 {
+			return -1
+		}
+		start := pos + i
+		end := start + 1
+		for end < len(src) && src[end] == '`' {
+			end++
+		}
+		if end-start == n {
+			return start
+		}
+		pos = end
+	}
+	return -1
+}
+
+// codeContent returns the content of a code span, as
+// inlineParser.codeContent does.
+func (r *renderer) codeContent(b []byte, inCell bool) []byte {
+	if bytes.IndexByte(b, '\n') >= 0 || inCell && bytes.Contains(b, []byte(`\|`)) {
+		out := r.code[:0]
+		for i := 0; i < len(b); i++ {
+			c := b[i]
+			if inCell && c == '\\' && i+1 < len(b) && b[i+1] == '|' {
+				continue
+			}
+			if c == '\n' {
+				c = ' '
+			}
+			out = append(out, c)
+		}
+		r.code = out
+		b = out
+	}
+	if len(b) >= 2 && b[0] == ' ' && b[len(b)-1] == ' ' {
+		for _, c := range b {
+			if c != ' ' {
+				return b[1 : len(b)-1]
+			}
+		}
+	}
+	return b
+}
+
 func (r *renderer) nl() {
 	r.s.text(newline)
 }
@@ -247,25 +394,32 @@ func (r *renderer) block(n *node) {
 		if !tight {
 			s.start("p")
 		}
-		m, ok := r.parseLeaf(n, true)
-		if !ok {
-			return
+		plain := r.plainLeaf(n)
+		var m inlineMark
+		if !plain {
+			var ok bool
+			if m, ok = r.parseLeaf(n, true); !ok {
+				return
+			}
+			r.inlines(n)
 		}
 		if tight {
-			r.inlines(n)
 			if n.next != nil {
 				r.nl()
 			}
-			r.p.releaseLeaf(n, m)
+			if !plain {
+				r.p.releaseLeaf(n, m)
+			}
 			return
 		}
-		r.inlines(n)
 		if n.parent.kind == kindFootnoteDef && n.next == nil {
 			r.backlinks(n.parent)
 		}
 		s.end("p")
 		r.nl()
-		r.p.releaseLeaf(n, m)
+		if !plain {
+			r.p.releaseLeaf(n, m)
+		}
 	case kindHeading:
 		m, ok := r.parseLeaf(n, false)
 		if !ok {
@@ -635,12 +789,14 @@ func (r *renderer) tableCell(tag string, c *node) bool {
 	default:
 		s.start(tag)
 	}
-	m, ok := r.parseLeaf(c, true)
-	if !ok {
-		return false
+	if !r.plainLeaf(c) {
+		m, ok := r.parseLeaf(c, true)
+		if !ok {
+			return false
+		}
+		r.inlines(c)
+		r.p.releaseLeaf(c, m)
 	}
-	r.inlines(c)
-	r.p.releaseLeaf(c, m)
 	s.end(tag)
 	r.nl()
 	return true

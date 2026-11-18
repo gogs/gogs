@@ -140,9 +140,7 @@ type inlineMark struct {
 // not nil, it may receive finished parts of the contents before the end, see
 // inlineParser.streamFlush.
 func (p *parser) parseLeaf(n *node, stream func(chunk *node)) inlineMark {
-	if p.opts.Footnotes && !p.footnotes.inlined && len(p.footnotes.defs) > 0 && int(n.startLine) > p.footnotes.firstLine {
-		p.parseFootnoteDefs()
-	}
+	p.footnoteDefsBefore(n)
 	m := inlineMark{arena: p.arena.mark(), buf: len(p.buf)}
 	if n.parsed {
 		return m
@@ -168,6 +166,14 @@ func (p *parser) parseLeaf(n *node, stream func(chunk *node)) inlineMark {
 		p.walkLinks(n, &p.rawAnchor)
 	}
 	return m
+}
+
+// footnoteDefsBefore parses the footnote definitions, see parseFootnoteDefs,
+// when the leaf block n is the first leaf after the first definition.
+func (p *parser) footnoteDefsBefore(n *node) {
+	if p.opts.Footnotes && !p.footnotes.inlined && len(p.footnotes.defs) > 0 && int(n.startLine) > p.footnotes.firstLine {
+		p.parseFootnoteDefs()
+	}
 }
 
 // releaseLeaf drops the inline contents of the leaf block n, which were
