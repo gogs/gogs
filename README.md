@@ -29,35 +29,42 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 - Ready to get hands dirty? Read our [contributing guide](.github/CONTRIBUTING.md).
 - Hmm... What about APIs? We have experimental support with [documentation](https://gogs.io/api-reference).
 
-## 💌 Features
+## 💌 Highlights
 
 - Code hosting
-  - Git over SSH and HTTP(S), with SHA-256 repositories, deploy keys and LFS (local or S3\*).
-  - Migrate and mirror from other code hosts, with GitHub two-way sync\*.
-  - Browse, edit, search and blame\* code right in the browser.
-  - Rendered Markdown, Jupyter Notebooks and PDFs, with rich diffs.
+  - Git over SSH and HTTP(S) with protocol v2, including a built-in SSH server.
+  - SHA-256 repositories, deploy keys and LFS (local or S3\*).
+  - Forks, mirrors and migration from other code hosts, with GitHub two-way sync\*.
+- Code browsing
+  - Browse and edit code in the browser, with blame\*.
+  - Code search within a repository or across all of them.
+  - Rendered Markdown, Jupyter Notebooks, PDFs and Mermaid diagrams.
+  - Rich diffs for Markdown and images.
 - Collaboration
-  - Issues with templates, wikis and projects\*.
-  - Pull requests, with inline reviews\* and stacks\*.
+  - Issues with templates and forms.
+  - Pull requests with merge commit, rebase and squash merges, inline reviews\* and stacks\*.
   - Protected branches, with code owners\* and signed commits\*.
+  - Wikis, releases and projects\*.
   - Organizations, teams, collaborators and service accounts\*.
 - Automation
   - Actions\* and compute\*.
   - Packages\* and hosting\*.
 - Interface
   - Dashboards, profiles and activity timelines.
-  - Light and dark themes, a command palette and over [31 languages](https://crowdin.com/project/gogs).
+  - A command palette for navigation, search and actions.
+  - Light and dark themes, and over [31 languages](https://crowdin.com/project/gogs).
 - Integrations
   - Webhooks for Slack, Discord, DingTalk and more, plus server-side Git hooks.
   - A REST [API](https://gogs.io/api-reference), GitHub-compatible\*.
 - Security
+  - Passkeys and multi-factor authentication.
   - Sign in with LDAP, SMTP, PAM, reverse proxy, OAuth 2.0\*, OpenID Connect\* or SAML 2.0\*.
-  - Two-factor authentication and passkeys.
   - Session management\*, security alerts\* and breached password detection\*.
 - Operations
   - Single binary, Docker or Kubernetes\*, on Linux, macOS, Windows and ARM.
   - PostgreSQL, MySQL or SQLite3.
-  - OpenTelemetry with a built-in trace viewer.
+  - OpenTelemetry tracing with a built-in trace viewer, and Prometheus metrics.
+  - Backup and restore from the command line.
 
 <sub>* In development.</sub>
 
