@@ -14,19 +14,56 @@ type attr struct {
 	escaped bool
 }
 
-// sink receives the rendered document as HTML tokens.
-type sink interface {
-	// text writes text, which is not escaped yet.
-	text(b []byte)
-	// entity writes a character reference, given in its HTML form and as
-	// text.
-	entity(html, text string)
-	// start writes a start tag with attributes whose values are not escaped
-	// yet.
-	start(name string, attrs ...attr)
-	end(name string)
-	// raw writes raw HTML.
-	raw(b []byte)
+// sink receives the rendered document as HTML tokens, which go to the
+// sanitizing sink when it is set, else to the HTML sink. It is a struct
+// rather than an interface so that the common HTML path makes direct calls.
+type sink struct {
+	html *htmlSink
+	san  *sanitizeSink
+}
+
+// text writes text, which is not escaped yet.
+func (s sink) text(b []byte) {
+	if s.san != nil {
+		s.san.text(b)
+		return
+	}
+	s.html.text(b)
+}
+
+// entity writes a character reference, given in its HTML form and as text.
+func (s sink) entity(html, text string) {
+	if s.san != nil {
+		s.san.entity(html, text)
+		return
+	}
+	s.html.entity(html, text)
+}
+
+// start writes a start tag with attributes whose values are not escaped yet.
+func (s sink) start(name string, attrs ...attr) {
+	if s.san != nil {
+		s.san.start(name, attrs...)
+		return
+	}
+	s.html.start(name, attrs...)
+}
+
+func (s sink) end(name string) {
+	if s.san != nil {
+		s.san.end(name)
+		return
+	}
+	s.html.end(name)
+}
+
+// raw writes raw HTML.
+func (s sink) raw(b []byte) {
+	if s.san != nil {
+		s.san.raw(b)
+		return
+	}
+	s.html.raw(b)
 }
 
 type renderer struct {
@@ -78,7 +115,7 @@ func (r *renderer) init(p *parser, opts *Options) {
 // release drops the references of r to the last render, and its buffers
 // above the sizes that pooled parsers keep.
 func (r *renderer) release() {
-	r.p, r.opts, r.s = nil, nil, nil
+	r.p, r.opts, r.s = nil, nil, sink{}
 	r.out = outBuf{}
 	r.html = htmlSink{}
 	if cap(r.plain) > maxPooledBytes {
@@ -130,7 +167,7 @@ func (r *renderer) parseLeaf(n *node, stream bool) (inlineMark, bool) {
 func (r *renderer) renderHTML(doc *node) {
 	// Short documents have more markup per byte of source.
 	r.out.Grow(len(r.p.src) + len(r.p.src)/4 + min(len(r.p.src), 2048))
-	r.s = &r.html
+	r.s = sink{html: &r.html}
 	r.renderDocument(doc)
 }
 

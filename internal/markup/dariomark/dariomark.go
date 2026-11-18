@@ -253,7 +253,7 @@ func (p *parser) renderStream(src []byte) Result {
 		r.init(p, opts)
 	}
 	r.out.Grow(len(src) + len(src)/4)
-	r.s = &r.html
+	r.s = sink{html: &r.html}
 	p.parse(src, r.renderClosed)
 	if !opts.PostProcess {
 		return Result{HTML: r.out.Bytes(), FrontMatterSize: r.frontMatterSize, Headings: r.headingList()}

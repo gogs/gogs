@@ -59,7 +59,7 @@ func (r *renderer) renderSanitized(render func()) ([]byte, bool) {
 	}
 	r.out.Grow(len(r.p.src) + len(r.p.src)/4)
 	s := &sanitizeSink{r: r, out: &r.out, san: r.opts.Sanitizer, emoji: emojiText{names: r.opts.Emoji}}
-	r.s = s
+	r.s = sink{san: s}
 	r.sanitizing = true
 	render()
 	s.flush()
