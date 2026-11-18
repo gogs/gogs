@@ -1797,19 +1797,19 @@ func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 		return errors.Newf("delete pull requests: %v", err)
 	}
 	if err = deleteByColumn(sess, "repo_id", repoID,
-		new(Access),
-		new(Action),
-		new(Watch),
-		new(Star),
-		new(Mirror),
-		new(IssueUser),
-		new(Milestone),
-		new(Release),
-		new(Collaboration),
-		new(ProtectBranch),
-		new(Webhook),
-		new(HookTask),
-		new(LFSObject),
+		"access",
+		"action",
+		"watch",
+		"star",
+		"mirror",
+		"issue_user",
+		"milestone",
+		"release",
+		"collaboration",
+		"protect_branch",
+		"webhook",
+		"hook_task",
+		"lfs_object",
 	); err != nil {
 		return err
 	}

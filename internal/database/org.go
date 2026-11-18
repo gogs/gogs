@@ -203,16 +203,17 @@ func Organizations(page, pageSize int) ([]*User, error) {
 	return orgs, x.Limit(pageSize, (page-1)*pageSize).Where("type=1").Asc("id").Find(&orgs)
 }
 
-// deleteByColumn deletes the rows of the tables of given beans whose column
-// has the ID. A non-positive ID is refused, because a column with 0 means "none"
-// in some tables, e.g., webhooks of organizations have repo_id 0.
-func deleteByColumn(e Engine, column string, id int64, beans ...any) error {
+// deleteByColumn deletes the rows of given tables whose column has the ID. It
+// takes table names rather than models, because XORM cannot map the models
+// that only GORM queries. A non-positive ID is refused, because a column with 0
+// means "none" in some tables, e.g., webhooks of organizations have repo_id 0.
+func deleteByColumn(e Engine, column string, id int64, tables ...string) error {
 	if id <= 0 {
 		return errors.Newf("delete by %s: invalid ID %d", column, id)
 	}
-	for _, bean := range beans {
-		if _, err := e.Where(column+" = ?", id).Delete(bean); err != nil {
-			return errors.Newf("delete %T by %s: %v", bean, column, err)
+	for _, table := range tables {
+		if _, err := e.Exec("DELETE FROM `"+table+"` WHERE "+column+" = ?", id); err != nil {
+			return errors.Newf("delete %s by %s: %v", table, column, err)
 		}
 	}
 	return nil
@@ -236,7 +237,7 @@ func DeleteOrganization(org *User) error {
 	if _, err = sess.Where("hook_id IN (SELECT id FROM webhook WHERE org_id = ?)", org.ID).Delete(new(HookTask)); err != nil {
 		return errors.Newf("delete deliveries of webhooks: %v", err)
 	}
-	if err = deleteByColumn(sess, "org_id", org.ID, new(Team), new(OrgUser), new(TeamUser), new(Webhook)); err != nil {
+	if err = deleteByColumn(sess, "org_id", org.ID, "team", "org_user", "team_user", "webhook"); err != nil {
 		return err
 	}
 	return sess.Commit()
