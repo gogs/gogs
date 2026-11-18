@@ -123,6 +123,17 @@ func TestGitInfoRefs(t *testing.T) {
 		assert.Equal(t, `Basic realm="."`, header.Get("WWW-Authenticate"))
 	})
 
+	t.Run("pushing with extra leading slashes needs credentials", func(t *testing.T) {
+		// 🚨 SECURITY: The router matches "//owner/repo" like "/owner/repo", so
+		// the path must not make a push look like a pull, which needs no
+		// credentials on a public repository.
+		status, _, body := c.doRaw(http.MethodGet, "/"+infoRefs+"?service=git-receive-pack", "", nil)
+		assert.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
+		receivePack := "//" + repo.Owner + "/" + repo.Name + ".git/git-receive-pack"
+		status, _, body = c.doRaw(http.MethodPost, receivePack, "application/x-git-receive-pack-request", strings.NewReader("0000"))
+		assert.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
+	})
+
 	t.Run("missing repository", func(t *testing.T) {
 		status, _, body := c.doRaw(http.MethodGet, "/"+repo.Owner+"/"+UniqueName("missing-")+".git/info/refs?service=git-upload-pack", "", nil)
 		assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
@@ -291,6 +302,17 @@ func TestGitPush(t *testing.T) {
 			assert.Equal(t, "Add "+fileName, strings.TrimSpace(commits.Commits[0].Message))
 		})
 	}
+
+	t.Run("extra leading slashes", func(t *testing.T) {
+		repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+		u, err := url.Parse(gitRemoteURL(t, repo, owner.Name, owner.Password))
+		require.NoError(t, err)
+		u.Path = "/" + u.Path
+		dir := gitClone(t, u.String())
+		want := gitCommitFile(t, dir, UniqueName("file-")+".txt")
+		gitRun(t, dir, "push", "origin", "main")
+		assert.Equal(t, want, gitMainOnDisk(t, repo))
+	})
 
 	t.Run("token", func(t *testing.T) {
 		repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})

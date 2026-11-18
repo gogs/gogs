@@ -32,6 +32,9 @@ const (
 	// A search of all repositories looks at the most recently updated ones
 	// first, and at most this many of them.
 	codeSearchMaxRepos = 1000
+	// A search that waits longer than this for a slot gives up, so a few
+	// visitors that keep the slots busy cannot queue every other search.
+	codeSearchSlotWait = 10 * time.Second
 )
 
 // codeSearchSlots bounds how many searches run at once, since each one reads
@@ -128,12 +131,16 @@ func appendSearchFiles(files []repoSearchFile, repo, ref, keyword string, matchC
 	return files
 }
 
-// acquireCodeSearchSlot waits for a search slot, and returns the function that
-// releases it.
+// acquireCodeSearchSlot waits for a search slot, at most codeSearchSlotWait,
+// and returns the function that releases it.
 func acquireCodeSearchSlot(ctx context.Context) (func(), error) {
+	timer := time.NewTimer(codeSearchSlotWait)
+	defer timer.Stop()
 	select {
 	case codeSearchSlots <- struct{}{}:
 		return func() { <-codeSearchSlots }, nil
+	case <-timer.C:
+		return nil, errors.New("too many code searches are running, try again later")
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}
@@ -164,7 +171,8 @@ type repoSearchResponse struct {
 // branch when there is none, for lines that contain the "q" query. With
 // "matchCase=true", letter case must match. With "exhaustive=true", it lists
 // every matching line of a file rather than the first few, and gets higher
-// limits.
+// limits. Only authenticated viewers can search exhaustively, since such a
+// search holds a slot for long.
 func getRepoSearch(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoSearchResponse, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
@@ -190,7 +198,7 @@ func getRepoSearch(c flamego.Context, logger *logx.Logger, repoCtx *repoContext)
 		RefType:    ref.Type,
 		Query:      strings.TrimSpace(c.Query("q")),
 		Keyword:    query.Keyword,
-		Exhaustive: c.QueryBool("exhaustive"),
+		Exhaustive: c.QueryBool("exhaustive") && repoCtx.Viewer.User != nil,
 		MatchCase:  c.QueryBool("matchCase"),
 		Files:      []repoSearchFile{},
 	}

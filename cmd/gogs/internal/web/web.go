@@ -286,6 +286,18 @@ func newRoutingHandler(logger *logx.Logger, localizer, sessioner, authenticate f
 	f.Map(logger)
 	f.Map(traceStore, health)
 	f.AutoHead(true)
+	// The router ignores extra leading slashes, e.g., it matches "//alice/repo"
+	// like "/alice/repo". Handlers that check the path, e.g., to tell a push
+	// from a pull, must see the same path the router matched.
+	f.Before(func(_ http.ResponseWriter, r *http.Request) bool {
+		if strings.HasPrefix(r.URL.Path, "//") {
+			r.URL.Path = "/" + strings.TrimLeft(r.URL.Path, "/")
+			if r.URL.RawPath != "" {
+				r.URL.RawPath = "/" + strings.TrimLeft(r.URL.RawPath, "/")
+			}
+		}
+		return false
+	})
 	if conf.Server.Protocol == "fcgi" && conf.Server.Subpath != "" {
 		f.Before(func(_ http.ResponseWriter, r *http.Request) bool {
 			r.URL.Path = strings.TrimPrefix(r.URL.Path, conf.Server.Subpath)
@@ -392,7 +404,7 @@ func newRoutingHandler(logger *logx.Logger, localizer, sessioner, authenticate f
 		f.Get("/-/repo-avatars/{id}", getRepoAvatar)
 		f.Get("/{username}.keys", requireViewAccess, getUserPublicKeys)
 		f.Any("/user/activate_email", activateEmail)
-		f.Get("/user/email2user", email2User)
+		f.Get("/user/email2user", requireViewAccess, email2User)
 		f.Group("/{owner}/{repo}", func() {
 			f.Get("", serveGoGet, webApp.ServeHTTP)
 			f.Get("/archive/{**}", requireViewAccess, withRepoContext, getRepoArchive)

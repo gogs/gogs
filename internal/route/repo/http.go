@@ -70,11 +70,16 @@ func gitHTTPActionFromPath(urlPath, subpath, owner, repo string) string {
 	return ""
 }
 
+// gitHTTPIsPull reports whether the action only reads the repository. Anything
+// it does not recognize counts as a push, which requires authentication.
 func gitHTTPIsPull(c flamego.Context, action string) bool {
-	if action == "info/refs" {
+	switch action {
+	case "git-upload-pack":
+		return true
+	case "info/refs":
 		return c.Query("service") != "git-receive-pack"
 	}
-	return action != "git-receive-pack"
+	return false
 }
 
 func HTTPContexter(logger *logx.Logger, store Store) flamego.Handler {

@@ -233,6 +233,15 @@ func TestAPIV1Releases(t *testing.T) {
 		Note:        "Notes",
 	}, nil)
 	require.NoError(t, err)
+	err = database.Handle.Releases().Create(t.Context(), logger, gitRepo, &database.Release{
+		RepoID:      repo.ID,
+		PublisherID: owner.ID,
+		TagName:     "v2.0.0",
+		Target:      "main",
+		Title:       "Draft release",
+		IsDraft:     true,
+	}, nil)
+	require.NoError(t, err)
 
 	type release struct {
 		TagName         string    `json:"tag_name"`
@@ -251,6 +260,14 @@ func TestAPIV1Releases(t *testing.T) {
 	assert.Equal(t, "Notes", releases[0].Body)
 	assert.False(t, releases[0].Draft)
 	assert.Equal(t, owner.Name, releases[0].Author.UserName)
+
+	// 🚨 SECURITY: Drafts are only listed to those who can write to the
+	// repository, like on the releases page.
+	var ownerReleases []release
+	apiV1Client(t, owner).doJSON(http.MethodGet, apiV1RepoPath(repo, "/releases"), nil, http.StatusOK, &ownerReleases)
+	require.Len(t, ownerReleases, 2)
+	assert.Equal(t, "v2.0.0", ownerReleases[1].TagName)
+	assert.True(t, ownerReleases[1].Draft)
 
 	private := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
 	status, body := newClient(t).do(http.MethodGet, apiV1RepoPath(private, "/releases"), nil)

@@ -9,6 +9,7 @@ import { RepoHeader } from "@/components/RepoHeader";
 import { usePageTitle } from "@/lib/page-title";
 import { type RepoSearchData, refPath, repoHeaderQuery } from "@/lib/queries/repo";
 import { subUrl } from "@/lib/url";
+import { useUserInfo } from "@/lib/use-user-info";
 
 export interface RepoSearchSearch {
   q?: string;
@@ -21,6 +22,7 @@ export interface RepoSearchSearch {
 export function RepoSearch({ owner, name, data }: { owner: string; name: string; data: RepoSearchData }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const user = useUserInfo();
   const { data: repo } = useSuspenseQuery(repoHeaderQuery(owner, name));
   usePageTitle(`${data.query ? `${data.query} - ` : ""}${t("repo.code_search")} - ${repo.owner}/${repo.name}`);
   const params = { owner: repo.owner, repo: repo.name };
@@ -75,12 +77,17 @@ export function RepoSearch({ owner, name, data }: { owner: string; name: string;
                 pressed: data.matchCase,
                 onToggle: (q) => search(q, { matchCase: !data.matchCase }),
               },
-              {
-                icon: ListChecks,
-                label: t("repo.code_search.exhaustive"),
-                pressed: data.exhaustive,
-                onToggle: (q) => search(q, { exhaustive: !data.exhaustive }),
-              },
+              // Only authenticated viewers can search exhaustively.
+              ...(user
+                ? [
+                    {
+                      icon: ListChecks,
+                      label: t("repo.code_search.exhaustive"),
+                      pressed: data.exhaustive,
+                      onToggle: (q: string) => search(q, { exhaustive: !data.exhaustive }),
+                    },
+                  ]
+                : []),
             ]}
           />
         </div>
