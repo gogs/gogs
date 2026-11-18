@@ -113,6 +113,10 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 	// Files are restored before the database because the current ones are kept as "<path>.bak" and can be moved
 	// back by hand, whereas a failed database import cannot be undone.
 	if !cmd.Bool("database-only") {
+		if err = checkLeftoverBackups(archivePath); err != nil {
+			logger.FatalContext(ctx, "Failed to restore files", "error", err)
+		}
+
 		// Custom files
 		if srcDir := filepath.Join(archivePath, "custom"); osx.IsDir(srcDir) {
 			if err = restoreCustomDir(srcDir, conf.CustomDir()); err != nil {
@@ -163,12 +167,48 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 // moveAside renames the path to "<path>.bak" to make room for the restored copy.
 func moveAside(path string) error {
 	// Renaming onto a leftover from an earlier restore fails with an unhelpful error, e.g., "Access is denied" on
-	// Windows. The path is quoted with '%s' rather than %q because %q escapes every backslash in a Windows path,
-	// which makes the path harder to read and copy from the message.
-	if osx.Exist(path + ".bak") {
-		return errors.Newf("'%s' already exists, probably from an earlier restore. Move or remove it, then run the restore again", path+".bak")
+	// Windows.
+	if err := leftoverBackupError(path); err != nil {
+		return err
 	}
 	return os.Rename(path, path+".bak")
+}
+
+// checkLeftoverBackups returns an error when a path that the restore moves aside already has a "<path>.bak", so
+// the restore stops before it replaces any file rather than partway through.
+func checkLeftoverBackups(archivePath string) error {
+	var paths []string
+	// The archive may have no custom files, in which case none are replaced.
+	entries, _ := os.ReadDir(filepath.Join(archivePath, "custom"))
+	for _, e := range entries {
+		if e.Name() != "data" {
+			paths = append(paths, filepath.Join(conf.CustomDir(), e.Name()))
+		}
+	}
+	for _, dir := range backupDataDirs {
+		if osx.IsDir(filepath.Join(archivePath, "data", dir)) {
+			paths = append(paths, filepath.Join(conf.Server.AppDataPath, dir))
+		}
+	}
+
+	for _, path := range paths {
+		if osx.Exist(path) {
+			if err := leftoverBackupError(path); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// leftoverBackupError returns an error when "<path>.bak" already exists.
+func leftoverBackupError(path string) error {
+	if !osx.Exist(path + ".bak") {
+		return nil
+	}
+	// The path is quoted with '%s' rather than %q because %q escapes every backslash in a Windows path, which makes
+	// the path harder to read and copy from the message.
+	return errors.Newf("'%s' already exists, probably from an earlier restore. Move or remove it, then run the restore again", path+".bak")
 }
 
 // restoreCustomDir moves each entry of srcDir into customDir, keeping the current one as "<path>.bak". Entries
