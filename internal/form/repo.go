@@ -45,6 +45,8 @@ func ParseRemoteAddr(options ParseRemoteAddrOptions) (string, error) {
 			return "", database.ErrInvalidCloneAddr{IsURLError: true}
 		}
 		remoteAddr = u.String()
+	} else if isSSHAddr(remoteAddr) {
+		return "", database.ErrInvalidCloneAddr{IsSSHAddress: true}
 	} else if !options.User.CanImportLocal() {
 		return "", database.ErrInvalidCloneAddr{IsPermissionDenied: true}
 	} else if !osx.IsDir(remoteAddr) {
@@ -52,4 +54,21 @@ func ParseRemoteAddr(options ParseRemoteAddrOptions) (string, error) {
 	}
 
 	return remoteAddr, nil
+}
+
+// isSSHAddr reports whether addr is an SSH address that Git would accept, either
+// a URL with an SSH scheme or the scp-like syntax, e.g., "git@example.com:owner/repo.git".
+func isSSHAddr(addr string) bool {
+	if scheme, _, ok := strings.Cut(addr, "://"); ok {
+		switch strings.ToLower(scheme) {
+		case "ssh", "git+ssh", "ssh+git":
+			return true
+		}
+		return false
+	}
+
+	// Git treats an address as scp-like when it has a colon before any slash,
+	// except for a Windows drive letter, e.g., `C:\repos`.
+	colon := strings.IndexByte(addr, ':')
+	return colon > 1 && !strings.ContainsAny(addr[:colon], `/\`)
 }

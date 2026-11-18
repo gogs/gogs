@@ -248,6 +248,19 @@ func TestAPIV1MigrateRepository(t *testing.T) {
 		"repo_name":  UniqueName("mirror-"),
 	})
 	assert.Equal(t, http.StatusForbidden, status, "migrated for another user, response: %s", body)
+
+	name := UniqueName("mirror-")
+	var resp struct {
+		Message string `json:"message"`
+	}
+	api.doJSON(http.MethodPost, "/api/v1/repos/migrate", map[string]any{
+		"clone_addr": "git@gitlab.example.com:owner/repo.git",
+		"uid":        owner.ID,
+		"repo_name":  name,
+	}, http.StatusUnprocessableEntity, &resp)
+	assert.Equal(t, sshCloneAddrError, resp.Message)
+	_, err := getRepositoryByName(t, owner.ID, name)
+	assert.True(t, database.IsErrRepoNotExist(err), "repository migrated from an SSH address: %v", err)
 }
 
 func TestAPIV1ListForks(t *testing.T) {

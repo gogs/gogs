@@ -137,6 +137,7 @@ type ErrInvalidCloneAddr struct {
 	IsInvalidPath         bool
 	IsPermissionDenied    bool
 	IsBlockedLocalAddress bool
+	IsSSHAddress          bool
 }
 
 func IsErrInvalidCloneAddr(err error) bool {
@@ -145,8 +146,8 @@ func IsErrInvalidCloneAddr(err error) bool {
 }
 
 func (err ErrInvalidCloneAddr) Error() string {
-	return fmt.Sprintf("invalid clone address [is_url_error: %v, is_invalid_path: %v, is_permission_denied: %v, is_blocked_local_address: %v]",
-		err.IsURLError, err.IsInvalidPath, err.IsPermissionDenied, err.IsBlockedLocalAddress)
+	return fmt.Sprintf("invalid clone address [is_url_error: %v, is_invalid_path: %v, is_permission_denied: %v, is_blocked_local_address: %v, is_ssh_address: %v]",
+		err.IsURLError, err.IsInvalidPath, err.IsPermissionDenied, err.IsBlockedLocalAddress, err.IsSSHAddress)
 }
 
 type ErrUpdateTaskNotExist struct {
