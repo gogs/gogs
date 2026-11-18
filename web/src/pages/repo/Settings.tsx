@@ -1575,7 +1575,7 @@ export function RepoBranchProtection({
   return (
     <RepoSettingsLayout owner={owner} name={name} active="branches">
       <h1 className="mb-2 text-xl font-semibold">{t("repo.settings.branch_protection")}</h1>
-      <p className="mb-6 text-sm text-(--color-muted-foreground)">
+      <p className="mb-5 text-sm text-(--color-muted-foreground)">
         {before}
         <code className="rounded bg-(--color-surface) px-1 font-mono text-[0.9em] font-semibold wrap-anywhere text-(--color-foreground)">
           {branch.name}
@@ -1585,8 +1585,8 @@ export function RepoBranchProtection({
       <form onSubmit={onSubmit} noValidate>
         <fieldset disabled={update.isPending} className="contents">
           <FormAlert message={formError} />
-          <div className="flex flex-col gap-5">
-            <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
               <CheckboxField
                 id="protected"
                 checked={form.protected}
@@ -1599,8 +1599,8 @@ export function RepoBranchProtection({
                 }
               />
               {form.protected ? (
-                <div className="ml-2 flex flex-col gap-5 border-l-2 border-(--color-border) pl-4">
-                  <div className="flex flex-col gap-3">
+                <div className="ml-2 flex flex-col gap-4 border-l-2 border-(--color-border) pl-3 sm:pl-4">
+                  <div className="flex flex-col gap-2">
                     <CheckboxField
                       id="requirePullRequest"
                       checked={form.requirePullRequest}
@@ -1613,9 +1613,9 @@ export function RepoBranchProtection({
                       }
                     />
                     {form.requirePullRequest ? (
-                      <div className="ml-2 flex flex-col gap-5 border-l-2 border-(--color-border) pl-4">
-                        <div className="flex flex-col gap-3">
-                          <div className="flex flex-col gap-1.5">
+                      <div className="ml-2 flex flex-col gap-4 border-l-2 border-(--color-border) pl-3 sm:pl-4">
+                        <div className="flex flex-col gap-2">
+                          <div className="flex flex-col gap-0.5">
                             <label htmlFor="requiredApprovals" className="text-sm font-medium">
                               {t("repo.settings.protect_required_approvals")}
                             </label>
@@ -1628,7 +1628,7 @@ export function RepoBranchProtection({
                               inputMode="numeric"
                               min={0}
                               max={10}
-                              className="w-24"
+                              className="mt-1.5 w-24"
                               aria-describedby="requiredApprovals-desc"
                               value={form.requiredApprovals}
                               onChange={(e) =>
@@ -1637,7 +1637,7 @@ export function RepoBranchProtection({
                             />
                           </div>
                           {form.requiredApprovals > 0 ? (
-                            <div className="ml-2 flex flex-col gap-5 border-l-2 border-(--color-border) pl-4">
+                            <div className="ml-2 flex flex-col gap-4 border-l-2 border-(--color-border) pl-3 sm:pl-4">
                               <CheckboxField
                                 id="dismissStaleApprovals"
                                 checked={form.dismissStaleApprovals}
@@ -1667,7 +1667,7 @@ export function RepoBranchProtection({
                     ) : null}
                   </div>
                   {isOrg ? (
-                    <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-2">
                       <CheckboxField
                         id="enableAllowlist"
                         checked={form.enableAllowlist}
@@ -1680,10 +1680,10 @@ export function RepoBranchProtection({
                         }
                       />
                       {form.enableAllowlist ? (
-                        <div className="ml-2 flex flex-col gap-5 border-l-2 border-(--color-border) pl-4">
+                        <div className="ml-2 flex flex-col gap-4 border-l-2 border-(--color-border) pl-3 sm:pl-4">
                           {branch.userOptions?.length ? (
-                            <fieldset className="flex flex-col gap-2.5">
-                              <legend className="mb-2.5 text-sm font-medium">
+                            <fieldset className="flex flex-col gap-2">
+                              <legend className="mb-2 text-sm font-medium">
                                 {t("repo.settings.protect_allowlist_users")}
                               </legend>
                               {branch.userOptions.map((u) => (
@@ -1703,8 +1703,8 @@ export function RepoBranchProtection({
                             </fieldset>
                           ) : null}
                           {branch.teamOptions?.length ? (
-                            <fieldset className="flex flex-col gap-2.5">
-                              <legend className="mb-2.5 text-sm font-medium">
+                            <fieldset className="flex flex-col gap-2">
+                              <legend className="mb-2 text-sm font-medium">
                                 {t("repo.settings.protect_allowlist_teams")}
                               </legend>
                               {branch.teamOptions.map((team) => (
@@ -1732,7 +1732,7 @@ export function RepoBranchProtection({
                 </div>
               ) : null}
             </div>
-            <div className="flex flex-wrap items-center gap-2 border-t border-(--color-border) pt-5">
+            <div className="flex flex-wrap items-center gap-2 border-t border-(--color-border) pt-4">
               <Button type="submit">{t("repo.settings.update_settings")}</Button>
               <Button asChild variant="outline">
                 <Link to="/$owner/$repo/settings/branches" params={{ owner, repo: name }}>
