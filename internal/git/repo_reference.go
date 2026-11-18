@@ -213,6 +213,11 @@ func (r *Repository) showRef(ctx context.Context, opts ...showRefOptions) ([]*Re
 
 	stdout, err := exec(ctx, r.path, args, nil)
 	if err != nil {
+		// Git exits with status 1 when no references match, e.g., in an empty
+		// repository.
+		if isExitStatus(err, 1) {
+			return []*Reference{}, nil
+		}
 		return nil, err
 	}
 

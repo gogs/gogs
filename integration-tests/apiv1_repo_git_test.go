@@ -115,6 +115,77 @@ func TestAPIV1Contents(t *testing.T) {
 	assert.Equal(t, http.StatusForbidden, status, "written by another user, response: %s", body)
 }
 
+func TestAPIV1EmptyRepository(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	api := apiV1Client(t, owner)
+
+	type commit struct {
+		Parents []struct {
+			SHA string `json:"sha"`
+		} `json:"parents"`
+	}
+	t.Run("default branch", func(t *testing.T) {
+		repo := seedRepository(t, owner.ID, CreateRepositoryOptions{})
+
+		var branches []struct {
+			Name string `json:"name"`
+		}
+		api.doJSON(http.MethodGet, apiV1RepoPath(repo, "/branches"), nil, http.StatusOK, &branches)
+		assert.Empty(t, branches)
+
+		firstSHA := apiV1PutFile(t, api, repo, "README.md", "First", "")
+		var first commit
+		api.doJSON(http.MethodGet, apiV1RepoPath(repo, "/commits/"+firstSHA), nil, http.StatusOK, &first)
+		assert.Empty(t, first.Parents)
+		assert.ElementsMatch(t, []gitRefAction{
+			{OpType: database.ActionCreateBranch, RefName: "main"},
+			{OpType: database.ActionCommitRepo, RefName: "main"},
+		}, gitNewRefActions(t, owner.ID, repo.ID, 1))
+
+		var got apiV1Repo
+		api.doJSON(http.MethodGet, apiV1RepoPath(repo, ""), nil, http.StatusOK, &got)
+		assert.False(t, got.Empty)
+		assert.Equal(t, "main", got.DefaultBranch)
+
+		branches = nil
+		api.doJSON(http.MethodGet, apiV1RepoPath(repo, "/branches"), nil, http.StatusOK, &branches)
+		require.Len(t, branches, 1)
+		assert.Equal(t, "main", branches[0].Name)
+
+		secondSHA := apiV1PutFile(t, api, repo, "README.md", "Second", "")
+		var second commit
+		api.doJSON(http.MethodGet, apiV1RepoPath(repo, "/commits/"+secondSHA), nil, http.StatusOK, &second)
+		require.Len(t, second.Parents, 1)
+		assert.Equal(t, firstSHA, second.Parents[0].SHA, "second commit is not on top of the first")
+	})
+
+	t.Run("other branch", func(t *testing.T) {
+		repo := seedRepository(t, owner.ID, CreateRepositoryOptions{})
+
+		// Like a first push, the first commit to another branch makes it the
+		// default branch.
+		apiV1PutFile(t, api, repo, "README.md", "Dev", "dev")
+		assert.ElementsMatch(t, []gitRefAction{
+			{OpType: database.ActionCreateBranch, RefName: "dev"},
+			{OpType: database.ActionCommitRepo, RefName: "dev"},
+		}, gitNewRefActions(t, owner.ID, repo.ID, 1))
+
+		var got apiV1Repo
+		api.doJSON(http.MethodGet, apiV1RepoPath(repo, ""), nil, http.StatusOK, &got)
+		assert.False(t, got.Empty)
+		assert.Equal(t, "dev", got.DefaultBranch)
+		assert.Equal(t, "dev", repoSettingsDefaultBranch(t, repo))
+
+		var file apiV1Content
+		api.doJSON(http.MethodGet, apiV1RepoPath(repo, "/contents/README.md"), nil, http.StatusOK, &file)
+		content, err := base64.StdEncoding.DecodeString(file.Content)
+		require.NoError(t, err)
+		assert.Equal(t, "Dev", string(content))
+	})
+}
+
 func TestAPIV1GitObjects(t *testing.T) {
 	t.Parallel()
 
