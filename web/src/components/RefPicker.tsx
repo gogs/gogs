@@ -64,6 +64,7 @@ export function RefPicker({
       </PopoverTrigger>
       <PopoverContent
         align="start"
+        avoidCollisions={false}
         collisionPadding={16}
         className="flex max-h-(--radix-popover-content-available-height) flex-col w-80 max-w-[calc(100vw-2rem)] p-0"
       >

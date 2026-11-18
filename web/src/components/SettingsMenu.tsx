@@ -43,6 +43,8 @@ export function SettingsMenu() {
       </PopoverTrigger>
       <PopoverContent
         align="end"
+        avoidCollisions={false}
+        collisionPadding={16}
         className="flex max-h-(--radix-popover-content-available-height) flex-col w-64 p-0 focus:outline-none"
         // Focus the popover container itself rather than the first focusable
         // child (the Light theme toggle) so an Enter/Space press right after

@@ -49,6 +49,8 @@ export function CommitAuthors({
             </PopoverTrigger>
             <PopoverContent
               align="start"
+              avoidCollisions={false}
+              collisionPadding={16}
               className="flex max-h-[min(20rem,var(--radix-popover-content-available-height))] w-64 flex-col p-1 text-sm"
             >
               <p className="px-2 py-1.5 text-xs text-(--color-muted-foreground)">
