@@ -9,10 +9,13 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"strconv"
 	"syscall"
 	"testing"
 	"time"
@@ -31,6 +34,14 @@ var (
 	// forcePrivateServerURL is the URL of another server under test, which only
 	// differs by setting [repository] FORCE_PRIVATE.
 	forcePrivateServerURL string
+	// portOverrideServerURL is the URL of another server under test, which is
+	// started with `gogs web --port` while its HTTP_PORT is taken, and whose
+	// external URL uses HTTP_PORT.
+	portOverrideServerURL string
+	// proxiedServerURL is the URL of a reverse proxy to another server under
+	// test, which is started like the one at portOverrideServerURL and has the
+	// URL of the proxy as its external URL.
+	proxiedServerURL string
 	// sshPort is the port of the builtin SSH server of the server under test.
 	sshPort int
 	// sessions reads the sessions the server under test stores in files.
@@ -98,7 +109,7 @@ func run(m *testing.M, dir string) (int, error) {
 	secretKey := make([]byte, 16)
 	_, _ = rand.Read(secretKey)
 	configPath := filepath.Join(dir, "app.ini")
-	if err = writeConfig(dir, configPath, port, sshPort, dbName, hex.EncodeToString(secretKey), false); err != nil {
+	if err = writeConfig(dir, configPath, fmt.Sprintf("http://localhost:%d/", port), port, sshPort, dbName, hex.EncodeToString(secretKey), false); err != nil {
 		return 0, errors.Wrap(err, "write configuration")
 	}
 
@@ -144,7 +155,7 @@ func run(m *testing.M, dir string) (int, error) {
 		return 0, errors.Wrap(err, "find free SSH port")
 	}
 	forcePrivateConfigPath := filepath.Join(dir, "app-force-private.ini")
-	if err = writeConfig(dir, forcePrivateConfigPath, forcePrivatePort, forcePrivateSSHPort, dbName, hex.EncodeToString(secretKey), true); err != nil {
+	if err = writeConfig(dir, forcePrivateConfigPath, fmt.Sprintf("http://localhost:%d/", forcePrivatePort), forcePrivatePort, forcePrivateSSHPort, dbName, hex.EncodeToString(secretKey), true); err != nil {
 		return 0, errors.Wrap(err, "write configuration")
 	}
 	forcePrivateServerURL = fmt.Sprintf("http://localhost:%d", forcePrivatePort)
@@ -153,6 +164,63 @@ func run(m *testing.M, dir string) (int, error) {
 		return 0, errors.Wrap(err, "start server with FORCE_PRIVATE")
 	}
 	defer stopForcePrivateServer()
+
+	// The servers started with `gogs web --port` share the database and the
+	// repositories as well. They start before the tests, because a server that
+	// starts delivers pending webhooks and cleans up temporary data, which tests
+	// that run meanwhile use.
+	taken, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		return 0, errors.Wrap(err, "listen on the port to take")
+	}
+	defer func() { _ = taken.Close() }()
+	takenPort := taken.Addr().(*net.TCPAddr).Port
+	startPortOverrideServer := func(name, externalURL string) (listenURL string, stop func(), _ error) {
+		port, err := freePort()
+		if err != nil {
+			return "", nil, errors.Wrap(err, "find free port")
+		}
+		sshPort, err := freePort()
+		if err != nil {
+			return "", nil, errors.Wrap(err, "find free SSH port")
+		}
+		configPath := filepath.Join(dir, "app-"+name+".ini")
+		if err = writeConfig(dir, configPath, externalURL, takenPort, sshPort, dbName, hex.EncodeToString(secretKey), false); err != nil {
+			return "", nil, errors.Wrap(err, "write configuration")
+		}
+		listenURL = fmt.Sprintf("http://localhost:%d", port)
+		stop, err = startServer(binary, configPath, listenURL, filepath.Join(dir, "server-"+name+".log"), spans.url, "--port", strconv.Itoa(port))
+		if err != nil {
+			return "", nil, errors.Wrapf(err, "start server %s", name)
+		}
+		return listenURL, stop, nil
+	}
+	var stopPortOverrideServer func()
+	portOverrideServerURL, stopPortOverrideServer, err = startPortOverrideServer("port-override", fmt.Sprintf("http://localhost:%d/", takenPort))
+	if err != nil {
+		return 0, err
+	}
+	defer stopPortOverrideServer()
+
+	proxyListener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		return 0, errors.Wrap(err, "listen for reverse proxy")
+	}
+	proxiedServerURL = fmt.Sprintf("http://localhost:%d", proxyListener.Addr().(*net.TCPAddr).Port)
+	proxiedListenURL, stopProxiedServer, err := startPortOverrideServer("proxied", proxiedServerURL+"/")
+	if err != nil {
+		_ = proxyListener.Close()
+		return 0, err
+	}
+	defer stopProxiedServer()
+	proxyTarget, err := url.Parse(proxiedListenURL)
+	if err != nil {
+		_ = proxyListener.Close()
+		return 0, errors.Wrap(err, "parse reverse proxy target")
+	}
+	proxy := &http.Server{Handler: httputil.NewSingleHostReverseProxy(proxyTarget)}
+	go func() { _ = proxy.Serve(proxyListener) }()
+	defer func() { _ = proxy.Close() }()
 
 	// Git hooks of seeded repositories call the binary at conf.AppPath(), which
 	// is read from the first argument, so they call the server binary rather
@@ -175,6 +243,8 @@ func run(m *testing.M, dir string) (int, error) {
 	code := m.Run()
 	stopServer()
 	stopForcePrivateServer()
+	stopPortOverrideServer()
+	stopProxiedServer()
 	// Only a full run is held to covering every route. A run of some tests,
 	// e.g., with -run, lists the routes left for information.
 	if code == 0 {
@@ -230,7 +300,7 @@ func freePort() (int, error) {
 // writeConfig writes the configuration of a server under test, which uses the
 // Postgres database of the name on the server the PG* environment variables
 // point to.
-func writeConfig(dir, path string, port, sshPort int, dbName, secretKey string, forcePrivate bool) error {
+func writeConfig(dir, path, externalURL string, port, sshPort int, dbName, secretKey string, forcePrivate bool) error {
 	u, err := user.Current()
 	if err != nil {
 		return errors.Wrap(err, "get current user")
@@ -249,7 +319,7 @@ RUN_MODE = dev
 [server]
 ; WebAuthn takes the host of the external URL as the relying party ID, which
 ; cannot be an IP address, so passkeys only work with a domain name.
-EXTERNAL_URL = http://localhost:%[2]d/
+EXTERNAL_URL = %[9]s
 DOMAIN = 127.0.0.1
 HTTP_ADDR = 127.0.0.1
 HTTP_PORT = %[2]d
@@ -290,7 +360,7 @@ ENABLE_REGISTRATION_CAPTCHA = true
 [log]
 MODE = console
 LEVEL = Info
-`, u.Username, port, filepath.Join(dir, "repositories"), database, secretKey, filepath.Join(dir, "ssh"), sshPort, forcePrivate)
+`, u.Username, port, filepath.Join(dir, "repositories"), database, secretKey, filepath.Join(dir, "ssh"), sshPort, forcePrivate, externalURL)
 	return os.WriteFile(path, []byte(config), 0o600)
 }
 
@@ -333,15 +403,16 @@ func createPostgresDatabase() (name string, drop func() error, _ error) {
 	return name, drop, nil
 }
 
-// startServer starts the server with the configuration, which logs to the file
-// and exports spans to the URL, and waits until it serves on the URL. The
-// returned function stops it, and does nothing once it has.
-func startServer(binary, configPath, url, logPath, spansURL string) (stop func(), _ error) {
+// startServer starts the server with the configuration and the extra arguments
+// of `gogs web`, which logs to the file and exports spans to the URL, and waits
+// until it serves on the URL. The returned function stops it, and does nothing
+// once it has.
+func startServer(binary, configPath, url, logPath, spansURL string, args ...string) (stop func(), _ error) {
 	serverLog, err := os.Create(logPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "create server log")
 	}
-	server := exec.Command(binary, "web", "--config", configPath)
+	server := exec.Command(binary, append([]string{"web", "--config", configPath}, args...)...)
 	server.Env = append(os.Environ(), "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="+spansURL)
 	server.Stdout = serverLog
 	server.Stderr = serverLog
