@@ -108,27 +108,7 @@ export function MarkdownEditor({
 
   return (
     <div>
-      <div role="tablist" aria-label={label} className="glass-control glass-tabs mb-2 flex gap-1">
-        {tabs.map((item) => (
-          <button
-            key={item.key}
-            type="button"
-            role="tab"
-            id={`${id}-${item.key}-tab`}
-            aria-selected={tab === item.key}
-            aria-controls={`${id}-${item.key}`}
-            onClick={() => setTab(item.key)}
-            className={cn(
-              "cursor-pointer rounded-md px-3 py-1.5 text-sm",
-              tab === item.key
-                ? "bg-(--color-surface) font-semibold text-(--color-foreground)"
-                : "text-(--color-muted-foreground) hover:text-(--color-foreground)",
-            )}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
+      <ContentTabs id={id} label={label} tabs={tabs} current={tab} onChange={setTab} />
       {tab === "write" ? (
         <div role="tabpanel" id={`${id}-write`} aria-labelledby={`${id}-write-tab`}>
           <CodeEditor
@@ -630,5 +610,46 @@ export function IssueMeta({
 
       {children}
     </aside>
+  );
+}
+
+// ContentTabs switch what one editor shows, e.g., Write and Preview, as tabs
+// underlined like the page tabs, which stand out on any background. Each tab
+// controls the panel with the ID of the tab without its "-tab" suffix.
+export function ContentTabs<K extends string>({
+  id,
+  label,
+  tabs,
+  current,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  tabs: readonly { key: K; label: string }[];
+  current: K;
+  onChange: (key: K) => void;
+}) {
+  return (
+    <div role="tablist" aria-label={label} className="mb-3 flex gap-1 overflow-x-auto border-b border-(--color-border)">
+      {tabs.map((tab) => (
+        <button
+          key={tab.key}
+          type="button"
+          role="tab"
+          id={`${id}-${tab.key}-tab`}
+          aria-selected={current === tab.key}
+          aria-controls={`${id}-${tab.key}`}
+          onClick={() => onChange(tab.key)}
+          className={cn(
+            "-mb-px cursor-pointer border-b-2 px-3 py-2 text-sm whitespace-nowrap outline-none focus-visible:ring-1 focus-visible:ring-(--color-ring)",
+            current === tab.key
+              ? "border-(--color-primary) font-semibold text-(--color-foreground)"
+              : "border-transparent text-(--color-muted-foreground) hover:border-(--color-border) hover:text-(--color-foreground)",
+          )}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
   );
 }
