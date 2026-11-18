@@ -42,7 +42,7 @@ export function Landing() {
             {"\n"}
             <CmdLink href="/explore/repos" cmd="explore" desc={t("explore")} spa />
             {"\n"}
-            <CmdLink href="https://gogs.io" cmd="help" desc={t("help")} external />
+            <CmdLink href="https://gogs.io/docs" cmd="help" desc={t("help")} external />
             {"\n"}
             {"\n"}
             <span className="text-(--color-muted-foreground)">$ </span>
