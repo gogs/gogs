@@ -357,8 +357,12 @@ func postRepoPull(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer 
 		Type:         database.PullRequestTypeGogs,
 	}
 	// Opening the pull request notifies watchers and webhooks about the
-	// repository and its owner.
+	// repository with its owner, and its base repository when it is a fork.
 	repo.Owner = repoCtx.Owner
+	if err = database.Handle.Repositories().LoadAttributes(ctx, repo); err != nil {
+		logger.Error("Failed to load base repository", "repoID", repo.ID, "error", err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "load base repository")
+	}
 	if err = database.NewPullRequest(ctx, logger, repo, issue, labelIDs, req.Attachments, pull, patch); err != nil {
 		logger.Error("Failed to create pull request", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "create pull request")
