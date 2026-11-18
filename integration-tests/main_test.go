@@ -45,6 +45,8 @@ var (
 	proxiedServerURL string
 	// sshPort is the port of the builtin SSH server of the server under test.
 	sshPort int
+	// serverConfigPath is the configuration file of the server under test.
+	serverConfigPath string
 	// sessions reads the sessions the server under test stores in files.
 	sessions session.Store
 	logger   = logx.NewNoopLogger()
@@ -109,8 +111,8 @@ func run(m *testing.M, dir string) (int, error) {
 	// store.
 	secretKey := make([]byte, 16)
 	_, _ = rand.Read(secretKey)
-	configPath := filepath.Join(dir, "app.ini")
-	if err = writeConfig(dir, configPath, fmt.Sprintf("http://localhost:%d/", port), port, sshPort, dbName, hex.EncodeToString(secretKey), false, conf.AntiBotVerificationAltcha); err != nil {
+	serverConfigPath = filepath.Join(dir, "app.ini")
+	if err = writeConfig(dir, serverConfigPath, fmt.Sprintf("http://localhost:%d/", port), port, sshPort, dbName, hex.EncodeToString(secretKey), false, conf.AntiBotVerificationAltcha); err != nil {
 		return 0, errors.Wrap(err, "write configuration")
 	}
 
@@ -138,7 +140,7 @@ func run(m *testing.M, dir string) (int, error) {
 	// Matches the external URL, so URLs the server builds are the ones the tests
 	// request.
 	serverURL = fmt.Sprintf("http://localhost:%d", port)
-	stopServer, err := startServer(binary, configPath, serverURL, filepath.Join(dir, "server.log"), spans.url)
+	stopServer, err := startServer(binary, serverConfigPath, serverURL, filepath.Join(dir, "server.log"), spans.url)
 	if err != nil {
 		return 0, err
 	}
@@ -227,7 +229,7 @@ func run(m *testing.M, dir string) (int, error) {
 	// is read from the first argument, so they call the server binary rather
 	// than this test binary.
 	os.Args[0] = binary
-	if err = Init(logger, configPath); err != nil {
+	if err = Init(logger, serverConfigPath); err != nil {
 		return 0, errors.Wrap(err, "init")
 	}
 	sessions, err = session.FileIniter()(context.Background(),
@@ -371,14 +373,7 @@ LEVEL = Info
 // createPostgresDatabase creates a database with a unique name on the server
 // the PG* environment variables point to. The returned function drops it.
 func createPostgresDatabase() (name string, drop func() error, _ error) {
-	dsn, err := dbx.NewDSN(conf.DatabaseOpts{
-		Type:     "postgres",
-		Host:     os.ExpandEnv("$PGHOST:$PGPORT"),
-		Schema:   "public",
-		User:     os.Getenv("PGUSER"),
-		Password: os.Getenv("PGPASSWORD"),
-		SSLMode:  os.Getenv("PGSSLMODE"),
-	})
+	dsn, err := postgresDSN("")
 	if err != nil {
 		return "", nil, errors.Wrap(err, "new DSN")
 	}
@@ -405,6 +400,21 @@ func createPostgresDatabase() (name string, drop func() error, _ error) {
 		return exec(fmt.Sprintf("DROP DATABASE %q", name))
 	}
 	return name, drop, nil
+}
+
+// postgresDSN returns the DSN of the database of the name, or of the default
+// database when the name is empty, on the server the PG* environment variables
+// point to.
+func postgresDSN(name string) (string, error) {
+	return dbx.NewDSN(conf.DatabaseOpts{
+		Type:     "postgres",
+		Host:     os.ExpandEnv("$PGHOST:$PGPORT"),
+		Name:     name,
+		Schema:   "public",
+		User:     os.Getenv("PGUSER"),
+		Password: os.Getenv("PGPASSWORD"),
+		SSLMode:  os.Getenv("PGSSLMODE"),
+	})
 }
 
 // startServer starts the server with the configuration and the extra arguments
