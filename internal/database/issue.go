@@ -911,6 +911,13 @@ func buildIssuesQuery(opts *IssuesOptions) *xorm.Session {
 	default:
 		sess.Desc("issue.created_unix")
 	}
+	// Issues often tie on the sort column, e.g., when created in the same second.
+	// A unique tiebreaker keeps pages from splitting them at random.
+	if opts.SortType == "oldest" {
+		sess.Asc("issue.id")
+	} else {
+		sess.Desc("issue.id")
+	}
 
 	if len(opts.Labels) > 0 && opts.Labels != "0" {
 		labelIDs := strings.Split(opts.Labels, ",")

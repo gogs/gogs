@@ -14,7 +14,7 @@ func responseAPIUsers(c *apiContext, users []*database.User) {
 }
 
 func listUserFollowers(c *apiContext, u *database.User) {
-	users, err := database.Handle.Users().ListFollowers(c.Request().Context(), u.ID, c.QueryInt("page"), database.ItemsPerPage)
+	users, err := database.Handle.Users().ListFollowers(c.Request().Context(), u.ID, c.queryPage(database.ItemsPerPage), database.ItemsPerPage)
 	if err != nil {
 		c.Error(err, "list followers")
 		return
@@ -35,7 +35,7 @@ func listFollowers(c *apiContext) {
 }
 
 func listUserFollowing(c *apiContext, u *database.User) {
-	users, err := database.Handle.Users().ListFollowings(c.Request().Context(), u.ID, c.QueryInt("page"), database.ItemsPerPage)
+	users, err := database.Handle.Users().ListFollowings(c.Request().Context(), u.ID, c.queryPage(database.ItemsPerPage), database.ItemsPerPage)
 	if err != nil {
 		c.Error(err, "list followings")
 		return

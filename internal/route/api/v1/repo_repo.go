@@ -2,7 +2,6 @@ package v1
 
 import (
 	"net/http"
-	"path"
 
 	"github.com/cockroachdb/errors"
 
@@ -15,11 +14,13 @@ import (
 )
 
 func searchRepos(c *apiContext) {
+	pageSize := toAllowedPageSize(c.QueryInt("limit"))
 	opts := &database.SearchRepoOptions{
-		Keyword:  path.Base(c.Query("q")),
+		Keyword:  c.Query("q"),
 		OwnerID:  c.QueryInt64("uid"),
-		PageSize: toAllowedPageSize(c.QueryInt("limit")),
-		Page:     c.QueryInt("page"),
+		OrderBy:  "id ASC", // Unique, so walking the pages lists every repository once.
+		PageSize: pageSize,
+		Page:     c.queryPage(pageSize),
 	}
 
 	// Check visibility.

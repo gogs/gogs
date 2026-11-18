@@ -3,7 +3,9 @@ package v1
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/cockroachdb/errors"
@@ -217,22 +219,37 @@ func (c *apiContext) webNotFoundOrError(err error, msg string) {
 	c.webError(err, msg)
 }
 
+// queryPage returns the requested page, at least 1. It caps the page so that
+// page*pageSize, the end of the page, fits in an int. An offset that overflows
+// to a negative number is silently dropped by the database, which returns the
+// first page instead.
+func (c *apiContext) queryPage(pageSize int) int {
+	return min(max(c.QueryInt("page"), 1), math.MaxInt/max(pageSize, 1))
+}
+
 // SetLinkHeader sets pagination link header by given total number and page size.
 func (c *apiContext) SetLinkHeader(total, pageSize int) {
-	path := c.path[1:]
-	page := paginater.New(total, pageSize, c.QueryInt("page"), 0)
+	// The paginater clamps the page to the last one, but the list it describes
+	// does not, e.g., page 10 of 3 pages is empty and comes after page 3.
+	current := c.queryPage(pageSize)
+	page := paginater.New(total, pageSize, current, 0)
+	// Links keep the other query parameters, e.g., the search keyword and the
+	// page size, so that every page belongs to the same list.
+	query := c.Request().URL.Query()
+	link := func(n int, rel string) string {
+		query.Set("page", strconv.Itoa(n))
+		return fmt.Sprintf("<%s%s?%s>; rel=%q", conf.Server.ExternalURL, c.path[1:], query.Encode(), rel)
+	}
 	links := make([]string, 0, 4)
 	if page.HasNext() {
-		links = append(links, fmt.Sprintf("<%s%s?page=%d>; rel=\"next\"", conf.Server.ExternalURL, path, page.Next()))
+		links = append(links, link(page.Next(), "next"))
 	}
-	if !page.IsLast() {
-		links = append(links, fmt.Sprintf("<%s%s?page=%d>; rel=\"last\"", conf.Server.ExternalURL, path, page.TotalPages()))
+	if current != page.TotalPages() {
+		links = append(links, link(page.TotalPages(), "last"))
 	}
-	if !page.IsFirst() {
-		links = append(links, fmt.Sprintf("<%s%s?page=1>; rel=\"first\"", conf.Server.ExternalURL, path))
-	}
-	if page.HasPrevious() {
-		links = append(links, fmt.Sprintf("<%s%s?page=%d>; rel=\"prev\"", conf.Server.ExternalURL, path, page.Previous()))
+	if current > 1 {
+		links = append(links, link(1, "first"))
+		links = append(links, link(min(current-1, page.TotalPages()), "prev"))
 	}
 
 	if len(links) > 0 {
