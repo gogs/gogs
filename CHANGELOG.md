@@ -67,6 +67,7 @@ All notable changes to Gogs are documented in this file.
 - The API repository search matches `q` as given. A query such as `owner/name` no longer matches repositories named `name` from any owner. [#8587](https://github.com/gogs/gogs/pull/8587)
 - The admin panel is revamped as a console that uses the whole window width, with its pages in a sidebar. [#8685](https://github.com/gogs/gogs/pull/8685)
 - The Docker image health check fails for a server with `[server] PROTOCOL = https` until `GOGS_HEALTHCHECK_URL` is set to an `https://` URL, e.g., `https://localhost:3000/healthcheck`. Before, the error response to plain HTTP counted as healthy. [#8603](https://github.com/gogs/gogs/pull/8603)
+- The API lists at most `[api] MAX_RESPONSE_ITEMS` commits per page, e.g., `pageSize=100` lists at most 50 commits by default, and links to the next page. [#8582](https://github.com/gogs/gogs/pull/8582)
 
 ### Fixed
 
