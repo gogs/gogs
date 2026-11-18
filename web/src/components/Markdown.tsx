@@ -101,9 +101,7 @@ function PermalinkSnippet({ code, permalink }: { code: string; permalink: Permal
   const { theme } = useTheme();
   const { href, path, commit, start, end } = permalink;
   const lines =
-    start === end
-      ? t("repo.permalink_line").replace("%s", String(start)).replace("%s", path)
-      : t("repo.permalink_lines").replace("%s", String(start)).replace("%s", String(end)).replace("%s", path);
+    start === end ? t("repo.permalink_line", { line: start, path }) : t("repo.permalink_lines", { start, end, path });
   // Pierre numbers lines from 1, so the numbers are drawn from a counter that
   // starts at the first line of the permalink.
   const numbersCSS = `[data-gutter] { counter-reset: permalink-line ${start - 1}; }
