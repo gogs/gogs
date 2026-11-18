@@ -166,6 +166,8 @@ export interface RepoForkOptions {
     isUnlisted: boolean;
   };
   owners: RepoNewOwner[];
+  // The site makes every new repository, including forks, private.
+  forcePrivate: boolean;
 }
 
 export function fetchRepoForkOptions(id: number) {
@@ -220,8 +222,17 @@ export interface RepoSettingsData {
   website: string;
   private: boolean;
   unlisted: boolean;
-  // Forks keep the visibility of their base repository.
   isFork: boolean;
+  // Forks keep the visibility of their base repository, unless the site forces private repositories.
+  visibilityFollowsBase: boolean;
+  // The site forces private repositories and the viewer cannot make this one public.
+  forcePrivate: boolean;
+  // False for forks whose base repository is private or unlisted.
+  canBePublic: boolean;
+  canBeListed: boolean;
+  // False for forks whose base repository does not let them allow public access.
+  canAllowPublicWiki: boolean;
+  canAllowPublicIssues: boolean;
   forkCount: number;
   avatarURL: string;
   hasCustomAvatar: boolean;

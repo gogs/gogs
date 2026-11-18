@@ -106,11 +106,12 @@ type repoSettings struct {
 	Website     string `json:"website"`
 	Private     bool   `json:"private"`
 	Unlisted    bool   `json:"unlisted"`
-	// IsFork is true for forks, which keep the visibility of their base
-	// repository.
-	IsFork    bool   `json:"isFork"`
-	ForkCount int    `json:"forkCount"`
-	AvatarURL string `json:"avatarURL"`
+	IsFork      bool   `json:"isFork"`
+	// VisibilityFollowsBase is true for forks that keep the visibility of their
+	// base repository, i.e., unless the site forces private repositories.
+	VisibilityFollowsBase bool   `json:"visibilityFollowsBase"`
+	ForkCount             int    `json:"forkCount"`
+	AvatarURL             string `json:"avatarURL"`
 	// HasCustomAvatar is true when an avatar was uploaded, which can be
 	// deleted.
 	HasCustomAvatar bool                 `json:"hasCustomAvatar"`
@@ -125,21 +126,34 @@ type repoSettings struct {
 	// danger zone.
 	ViewerIsOwner         bool `json:"viewerIsOwner"`
 	ViewerCanEditGitHooks bool `json:"viewerCanEditGitHooks"`
+	// ForcePrivate is true when the site forces private repositories and the
+	// viewer cannot make this one public.
+	ForcePrivate bool `json:"forcePrivate"`
+	// CanBePublic and CanBeListed are false for forks whose base repository is
+	// private or unlisted.
+	CanBePublic bool `json:"canBePublic"`
+	CanBeListed bool `json:"canBeListed"`
+	// CanAllowPublicWiki and CanAllowPublicIssues are false for forks whose base
+	// repository does not let them allow public access.
+	CanAllowPublicWiki   bool `json:"canAllowPublicWiki"`
+	CanAllowPublicIssues bool `json:"canAllowPublicIssues"`
 }
 
 func getRepoSettings(logger *logx.Logger, viewer *database.User, rc *repoAdminContext) (statusCode int, resp any, err error) {
 	repo := rc.Repo
 	avatarURL := repo.RelAvatarLink()
 	settings := &repoSettings{
-		Name:            repo.Name,
-		Description:     repo.Description,
-		Website:         repo.Website,
-		Private:         repo.IsPrivate,
-		Unlisted:        repo.IsUnlisted,
-		IsFork:          repo.IsFork,
-		ForkCount:       repo.NumForks,
-		AvatarURL:       avatarURL,
-		HasCustomAvatar: avatarURL != "",
+		Name:                  repo.Name,
+		Description:           repo.Description,
+		Website:               repo.Website,
+		Private:               repo.IsPrivate,
+		Unlisted:              repo.IsUnlisted,
+		IsFork:                repo.IsFork,
+		VisibilityFollowsBase: visibilityFollowsBase(repo),
+		ForcePrivate:          isForcedPrivate(viewer, repo),
+		ForkCount:             repo.NumForks,
+		AvatarURL:             avatarURL,
+		HasCustomAvatar:       avatarURL != "",
 		Advanced: repoAdvancedSettings{
 			EnableWiki:            repo.EnableWiki,
 			AllowPublicWiki:       repo.AllowPublicWiki,
@@ -164,6 +178,10 @@ func getRepoSettings(logger *logx.Logger, viewer *database.User, rc *repoAdminCo
 		OwnerIsOrganization:   rc.Owner.IsOrganization(),
 		ViewerIsOwner:         rc.viewerAccess >= database.AccessModeOwner,
 		ViewerCanEditGitHooks: viewer.CanEditGitHook(),
+		CanBePublic:           !repo.IsFork || !repo.BaseRepo.IsPrivate,
+		CanBeListed:           !repo.IsFork || !repo.BaseRepo.IsUnlisted,
+		CanAllowPublicWiki:    !repo.IsFork || repo.BaseRepo.ForksMayAllowPublicWiki(),
+		CanAllowPublicIssues:  !repo.IsFork || repo.BaseRepo.ForksMayAllowPublicIssues(),
 	}
 	if avatarURL == "" {
 		// The repository shows the avatar of its owner until it has its own.
@@ -200,6 +218,21 @@ type repoNameResponse struct {
 	Name  string `json:"name"`
 }
 
+// visibilityFollowsBase reports whether the repository is a fork that keeps the
+// visibility of its base repository. When the site forces private repositories,
+// forks have their own visibility, which saving never makes more visible than
+// their base.
+func visibilityFollowsBase(repo *database.Repository) bool {
+	return repo.IsFork && !conf.Repository.ForcePrivate
+}
+
+// isForcedPrivate reports whether the viewer must keep the repository private
+// because the site forces private repositories. Only site admins can make such
+// a repository public.
+func isForcedPrivate(viewer *database.User, repo *database.Repository) bool {
+	return conf.Repository.ForcePrivate && repo.IsPrivate && !viewer.IsAdmin
+}
+
 // patchRepoSettings renames the repository and changes its description,
 // website and visibility.
 func patchRepoSettings(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, rc *repoAdminContext, req repoSettingsRequest) (statusCode int, resp any, err error) {
@@ -227,8 +260,11 @@ func patchRepoSettings(c flamego.Context, logger *logx.Logger, l i18n.Locale, vi
 	repo.Website = req.Website
 
 	private, unlisted := req.Private, req.Unlisted
-	if repo.IsFork {
+	if visibilityFollowsBase(repo) {
 		private, unlisted = repo.BaseRepo.IsPrivate, repo.BaseRepo.IsUnlisted
+	}
+	if isForcedPrivate(viewer, repo) {
+		private = true
 	}
 	visibilityChanged := repo.IsPrivate != private || repo.IsUnlisted != unlisted
 	repo.IsPrivate, repo.IsUnlisted = private, unlisted

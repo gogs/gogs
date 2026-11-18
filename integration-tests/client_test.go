@@ -17,8 +17,11 @@ import (
 
 // client calls the server under test like a browser that keeps its cookies.
 type client struct {
-	t    *testing.T
-	http *http.Client
+	t *testing.T
+	// baseURL is the URL of the server the client calls, which is serverURL
+	// unless a test calls another server.
+	baseURL string
+	http    *http.Client
 	// header is sent with every request, e.g., an access token.
 	header http.Header
 }
@@ -27,7 +30,8 @@ func newClient(t *testing.T) *client {
 	jar, err := cookiejar.New(nil)
 	require.NoError(t, err)
 	return &client{
-		t: t,
+		t:       t,
+		baseURL: serverURL,
 		http: &http.Client{
 			Jar: jar,
 			CheckRedirect: func(*http.Request, []*http.Request) error {
@@ -59,7 +63,7 @@ func (c *client) do(method, path string, body any) (int, []byte) {
 func (c *client) doRaw(method, path, contentType string, body io.Reader) (int, http.Header, []byte) {
 	c.t.Helper()
 
-	req, err := http.NewRequestWithContext(context.Background(), method, serverURL+path, body)
+	req, err := http.NewRequestWithContext(context.Background(), method, c.baseURL+path, body)
 	require.NoError(c.t, err)
 	if contentType != "" {
 		req.Header.Set("Content-Type", contentType)
@@ -90,7 +94,7 @@ func (c *client) doJSON(method, path string, body any, wantStatus int, v any) {
 func (c *client) sessionID() string {
 	c.t.Helper()
 
-	u, err := url.Parse(serverURL)
+	u, err := url.Parse(c.baseURL)
 	require.NoError(c.t, err)
 	for _, cookie := range c.http.Jar.Cookies(u) {
 		if cookie.Name == conf.Session.CookieName {

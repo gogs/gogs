@@ -282,3 +282,57 @@ func TestSyncDelegateHooks_ProtectedMeanwhile(t *testing.T) {
 	require.NoError(t, syncDelegateHooks(repoPath, hasProtectedBranch))
 	assert.True(t, osx.IsFile(hookPath), "pre-receive hook must stay installed")
 }
+
+func TestRepository_limitVisibilityTo(t *testing.T) {
+	public := Repository{}
+	unlisted := Repository{IsUnlisted: true}
+	private := Repository{IsPrivate: true}
+	tests := []struct {
+		name string
+		fork Repository
+		base Repository
+		want Repository
+	}{
+		{name: "public fork of a private base", fork: public, base: private, want: private},
+		{name: "unlisted fork of a private base", fork: unlisted, base: private, want: Repository{IsPrivate: true, IsUnlisted: true}},
+		{name: "public fork of an unlisted base", fork: public, base: unlisted, want: unlisted},
+		{name: "private fork of a public base stays private", fork: private, base: public, want: private},
+		{name: "unlisted fork of a public base stays unlisted", fork: unlisted, base: public, want: unlisted},
+		{name: "same visibility", fork: public, base: public, want: public},
+		{
+			name: "public wiki and issues of a private fork of a private base that allows neither",
+			fork: Repository{IsPrivate: true, AllowPublicWiki: true, AllowPublicIssues: true},
+			base: private,
+			want: private,
+		},
+		{
+			name: "public issues of a private fork of a private base that allows only them",
+			fork: Repository{IsPrivate: true, AllowPublicWiki: true, AllowPublicIssues: true},
+			base: Repository{IsPrivate: true, AllowPublicIssues: true},
+			want: Repository{IsPrivate: true, AllowPublicIssues: true},
+		},
+		{
+			name: "public wiki and issues of a private fork of a public base",
+			fork: Repository{IsPrivate: true, AllowPublicWiki: true, AllowPublicIssues: true},
+			base: public,
+			want: Repository{IsPrivate: true, AllowPublicWiki: true, AllowPublicIssues: true},
+		},
+		{
+			// Explore would list the fork but not its base.
+			name: "public wiki and issues of a private fork of an unlisted base",
+			fork: Repository{IsPrivate: true, AllowPublicWiki: true, AllowPublicIssues: true},
+			base: unlisted,
+			want: Repository{IsPrivate: true, IsUnlisted: true},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			fork := test.fork
+			fork.limitVisibilityTo(&test.base)
+			assert.Equal(t, test.want.IsPrivate, fork.IsPrivate, "IsPrivate")
+			assert.Equal(t, test.want.IsUnlisted, fork.IsUnlisted, "IsUnlisted")
+			assert.Equal(t, test.want.AllowPublicWiki, fork.AllowPublicWiki, "AllowPublicWiki")
+			assert.Equal(t, test.want.AllowPublicIssues, fork.AllowPublicIssues, "AllowPublicIssues")
+		})
+	}
+}

@@ -187,7 +187,7 @@ func createUserRepo(c *apiContext, owner *database.User, opt createRepoRequest) 
 		Gitignores:   opt.Gitignores,
 		License:      opt.License,
 		Readme:       opt.Readme,
-		IsPrivate:    opt.Private,
+		IsPrivate:    opt.Private || conf.Repository.ForcePrivate,
 		AutoInit:     opt.AutoInit,
 		ObjectFormat: git.ObjectFormat(opt.ObjectFormat),
 	})

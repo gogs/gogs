@@ -594,9 +594,14 @@ export function RepoFork({ id, options }: { id: number; options: RepoForkOptions
       <fieldset className="flex flex-col gap-3" aria-describedby="fork-visibility-helper">
         <legend className="mb-3 text-sm font-medium">{t("repo.visibility")}</legend>
         <label htmlFor="private" className="flex items-start gap-2.5 text-sm">
-          <Checkbox id="private" className="mt-0.5 disabled:opacity-100" checked={base.isPrivate} disabled />
+          <Checkbox
+            id="private"
+            className="mt-0.5 disabled:opacity-100"
+            checked={base.isPrivate || options.forcePrivate}
+            disabled
+          />
           <span>
-            <RichText text={t("repo.visiblity_helper")} />
+            <RichText text={t(options.forcePrivate ? "repo.visiblity_helper_forced" : "repo.visiblity_helper")} />
           </span>
         </label>
         <label htmlFor="unlisted" className="flex items-start gap-2.5 text-sm">
