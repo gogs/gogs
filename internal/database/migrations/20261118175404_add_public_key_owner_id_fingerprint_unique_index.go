@@ -17,6 +17,9 @@ import (
 // fingerprints of public keys.
 const ownerFingerprintIndex = "UQE_public_key_owner_id_fingerprint"
 
+// keyTypeDeploy is the type of public keys of deploy keys.
+const keyTypeDeploy = 2
+
 // addPublicKeyOwnerIDFingerprintUniqueIndex makes each user have a key only
 // once, and repositories that add the same deploy key share one public key, as
 // they are meant to.
@@ -27,9 +30,10 @@ func addPublicKeyOwnerIDFingerprintUniqueIndex(db *gorm.DB) error {
 	return MergeDuplicatePublicKeys(db)
 }
 
-// MergeDuplicatePublicKeys merges the public keys that have the same owner and
-// fingerprint into the one added first, removes the others from the
-// authorized_keys file, and then adds the unique index on the owners and
+// MergeDuplicatePublicKeys deletes deploy keys of repositories that no longer
+// exist and public keys of deploy keys that no deploy key uses, merges the
+// public keys that have the same owner and fingerprint into the one added first,
+// removes the deleted ones from the authorized_keys file, and then adds the unique index on the owners and
 // fingerprints of public keys. Before the index, the same key with another
 // comment, or added twice at the same time, got a public key of its own. Public
 // keys of deploy keys have no owner, so they are unique by their fingerprints.
@@ -55,6 +59,11 @@ func AllowDuplicatePublicKeys(db *gorm.DB) error {
 }
 
 func mergePublicKeys(tx *gorm.DB) error {
+	removed, err := deleteOrphanDeployKeys(tx)
+	if err != nil {
+		return errors.Wrap(err, "delete orphan deploy keys")
+	}
+
 	type publicKey struct {
 		ID          int64
 		OwnerID     int64
@@ -62,7 +71,7 @@ func mergePublicKeys(tx *gorm.DB) error {
 		Fingerprint string
 	}
 	var pkeys []publicKey
-	err := tx.Table("public_key").Order("id").Find(&pkeys).Error
+	err = tx.Table("public_key").Order("id").Find(&pkeys).Error
 	if err != nil {
 		return errors.Wrap(err, "list public keys")
 	}
@@ -72,7 +81,6 @@ func mergePublicKeys(tx *gorm.DB) error {
 		fingerprint string
 	}
 	kept := make(map[ownerFingerprint]int64, len(pkeys))
-	removed := make(map[string]bool)
 	for _, pkey := range pkeys {
 		// Fingerprints computed by "ssh-keygen" before OpenSSH 6.8 are MD5.
 		fingerprint := pkey.Fingerprint
@@ -135,6 +143,38 @@ func mergePublicKeys(tx *gorm.DB) error {
 	// Before the transaction commits, so that its keys are still in the file
 	// when it fails.
 	return errors.Wrap(removeAuthorizedKeys(removed), "remove merged keys from authorized_keys")
+}
+
+// deleteOrphanDeployKeys deletes the deploy keys of repositories that no longer
+// exist, which deleting a repository used to leave behind, and the public keys
+// of deploy keys that no deploy key uses. On MySQL 5.7, a new repository may get
+// the ID of a deleted one, and with it the read access of its deploy keys. It
+// returns the IDs of the public keys it deleted.
+func deleteOrphanDeployKeys(tx *gorm.DB) (map[string]bool, error) {
+	// NOT EXISTS rather than NOT IN, which matches nothing when the subquery has
+	// a NULL, e.g., deploy_key.key_id on PostgreSQL.
+	err := tx.Exec("DELETE FROM " + quote(tx, "deploy_key") + " WHERE NOT EXISTS (SELECT 1 FROM " + quote(tx, "repository") +
+		" WHERE " + quote(tx, "repository") + ".id = " + quote(tx, "deploy_key") + ".repo_id)").Error
+	if err != nil {
+		return nil, errors.Wrap(err, "delete deploy keys")
+	}
+
+	var ids []int64
+	err = tx.Raw("SELECT id FROM "+quote(tx, "public_key")+" WHERE type = ? AND NOT EXISTS (SELECT 1 FROM "+quote(tx, "deploy_key")+
+		" WHERE "+quote(tx, "deploy_key")+".key_id = "+quote(tx, "public_key")+".id)", keyTypeDeploy).
+		Scan(&ids).Error
+	if err != nil {
+		return nil, errors.Wrap(err, "list unused public keys")
+	}
+	removed := make(map[string]bool, len(ids))
+	for _, id := range ids {
+		err = tx.Exec("DELETE FROM "+quote(tx, "public_key")+" WHERE id = ?", id).Error
+		if err != nil {
+			return nil, errors.Wrapf(err, "delete public key %d", id)
+		}
+		removed[strconv.FormatInt(id, 10)] = true
+	}
+	return removed, nil
 }
 
 // removeAuthorizedKeys removes the lines of the key IDs from the authorized_keys

@@ -37,10 +37,7 @@ func TestAddPublicKeyOwnerIDFingerprintUniqueIndex(t *testing.T) {
 	}
 	shared, sharedFingerprint := newKey()
 	other, otherFingerprint := newKey()
-	const (
-		keyTypeUser   = 1
-		keyTypeDeploy = 2
-	)
+	const keyTypeUser = 1
 	addPublicKey := func(id, ownerID int64, keyType int, content, fingerprint string) error {
 		return db.Table("public_key").Create(map[string]any{
 			"id": id, "owner_id": ownerID, "name": fmt.Sprintf("key-%d", id), "fingerprint": fingerprint, "content": content, "mode": 1, "type": keyType,
@@ -61,11 +58,22 @@ func TestAddPublicKeyOwnerIDFingerprintUniqueIndex(t *testing.T) {
 		}).Error
 		require.NoError(t, err)
 	}
+	for repoID := int64(1); repoID <= 3; repoID++ {
+		require.NoError(t, db.Exec("INSERT INTO repository (id, owner_id, lower_name, name) VALUES (?, 1, ?, ?)",
+			repoID, fmt.Sprintf("repo-%d", repoID), fmt.Sprintf("repo-%d", repoID)).Error)
+	}
 	addDeployKey(1, 1, 1, sharedFingerprint)
 	// Repository 1 has the key twice, repository 2 only through the duplicate.
 	addDeployKey(2, 2, 1, "3b:0c:aa:11")
 	addDeployKey(3, 2, 2, "3b:0c:aa:11")
 	addDeployKey(4, 3, 3, "9f:21:bb:22")
+	// Left behind by deleting repository 9: a key only it used, and the shared
+	// key, which repository 1 keeps. Key 14 has no deploy key at all.
+	orphan, orphanFingerprint := newKey()
+	require.NoError(t, addPublicKey(13, 0, keyTypeDeploy, orphan, orphanFingerprint))
+	require.NoError(t, addPublicKey(14, 0, keyTypeDeploy, orphan+" again", "aa:bb"))
+	addDeployKey(5, 13, 9, orphanFingerprint)
+	addDeployKey(6, 1, 9, sharedFingerprint)
 
 	rootPath := t.TempDir()
 	conf.SetMockSSH(t, conf.SSHOpts{RootPath: rootPath})
@@ -74,7 +82,7 @@ func TestAddPublicKeyOwnerIDFingerprintUniqueIndex(t *testing.T) {
 		return fmt.Sprintf("command=\"gogs serv key-%d --config=''\",no-pty %s\n", id, content)
 	}
 	require.NoError(t, os.WriteFile(authorizedKeys,
-		[]byte(line(2, shared+" desktop")+line(1, shared+" laptop")+line(3, other)+line(5, other+" alice@desktop")+line(4, other+" alice@laptop")+line(6, other)+line(52, other)+"ssh-ed25519 AAAA admin\n"),
+		[]byte(line(2, shared+" desktop")+line(1, shared+" laptop")+line(3, other)+line(5, other+" alice@desktop")+line(4, other+" alice@laptop")+line(6, other)+line(52, other)+line(13, orphan)+line(14, orphan+" again")+"ssh-ed25519 AAAA admin\n"),
 		0o600))
 
 	require.NoError(t, addPublicKeyOwnerIDFingerprintUniqueIndex(db))
@@ -107,7 +115,7 @@ func TestAddPublicKeyOwnerIDFingerprintUniqueIndex(t *testing.T) {
 		{4, 3, 3, otherFingerprint},
 	}, keys)
 
-	// Only the lines of the merged keys are gone, not the one of key 52, whose
+	// Only the lines of the merged and orphan keys are gone, not the one of key 52, whose
 	// ID only starts with that of key 5, or the line Gogs did not write.
 	data, err := os.ReadFile(authorizedKeys)
 	require.NoError(t, err)
