@@ -300,6 +300,11 @@ func TestAPIV1Milestones(t *testing.T) {
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{})
 	api := apiV1Client(t, owner)
+	countsOf := func() [2]int {
+		t.Helper()
+		r := repoSettingsGetRepo(t, repo.ID)
+		return [2]int{r.NumMilestones, r.NumClosedMilestones}
+	}
 
 	deadline := time.Date(2030, 1, 2, 0, 0, 0, 0, time.UTC)
 	var created apiV1Milestone
@@ -320,6 +325,25 @@ func TestAPIV1Milestones(t *testing.T) {
 	assert.Equal(t, created.ID, milestones[0].ID)
 	assert.Equal(t, "v1", milestones[0].Title)
 
+	assert.Equal(t, [2]int{1, 0}, countsOf())
+
+	otherRepo := seedRepository(t, owner.ID, CreateRepositoryOptions{})
+	var ofOtherRepo apiV1Milestone
+	api.doJSON(http.MethodPost, apiV1RepoPath(otherRepo, "/milestones"), map[string]any{"title": "Elsewhere"}, http.StatusCreated, &ofOtherRepo)
+	for _, id := range []int64{0, ofOtherRepo.ID} {
+		path := apiV1RepoPath(repo, "/milestones/"+apiV1Itoa(id))
+		status, body := api.do(http.MethodGet, path, nil)
+		assert.Equal(t, http.StatusNotFound, status, "milestone %d, response: %s", id, body)
+		status, body = api.do(http.MethodPatch, path, map[string]any{"state": "closed"})
+		assert.Equal(t, http.StatusNotFound, status, "milestone %d, response: %s", id, body)
+	}
+	status, body := api.do(http.MethodDelete, apiV1RepoPath(repo, "/milestones/"+apiV1Itoa(ofOtherRepo.ID)), nil)
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	var stillThere apiV1Milestone
+	api.doJSON(http.MethodGet, apiV1RepoPath(otherRepo, "/milestones/"+apiV1Itoa(ofOtherRepo.ID)), nil, http.StatusOK, &stillThere)
+	assert.Equal(t, ofOtherRepo, stillThere, "milestone of another repository changed")
+
+	closedAfter := time.Now().Truncate(time.Second)
 	var edited apiV1Milestone
 	api.doJSON(http.MethodPatch, apiV1RepoPath(repo, "/milestones/"+apiV1Itoa(created.ID)), map[string]any{
 		"title":       "v1.0",
@@ -334,13 +358,16 @@ func TestAPIV1Milestones(t *testing.T) {
 	assert.Equal(t, "v1.0", got.Title)
 	assert.Equal(t, "Edited", got.Description)
 	assert.Equal(t, "closed", got.State)
-	assert.NotNil(t, got.Closed)
+	require.NotNil(t, got.Closed)
+	assert.WithinRange(t, *got.Closed, closedAfter, time.Now(), "closed date")
+	assert.Equal(t, [2]int{1, 1}, countsOf())
 
-	status, body := apiV1Client(t, seedUser(t, CreateUserOptions{})).do(http.MethodDelete, apiV1RepoPath(repo, "/milestones/"+apiV1Itoa(created.ID)), nil)
+	status, body = apiV1Client(t, seedUser(t, CreateUserOptions{})).do(http.MethodDelete, apiV1RepoPath(repo, "/milestones/"+apiV1Itoa(created.ID)), nil)
 	assert.Equal(t, http.StatusForbidden, status, "deleted by another user, response: %s", body)
 
 	status, body = api.do(http.MethodDelete, apiV1RepoPath(repo, "/milestones/"+apiV1Itoa(created.ID)), nil)
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 	status, body = api.do(http.MethodGet, apiV1RepoPath(repo, "/milestones/"+apiV1Itoa(created.ID)), nil)
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
+	assert.Equal(t, [2]int{0, 0}, countsOf())
 }
