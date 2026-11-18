@@ -1,5 +1,6 @@
 import { type AriaAttributes, type ReactElement, type ReactNode, cloneElement } from "react";
 
+import { RichText } from "@/components/RichText";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -40,14 +41,16 @@ export function FormField({
 }
 
 // FormAlert shows the message for a whole form above its fields.
-export function FormAlert({ message }: { message: string | null }) {
+// FormAlert shows the error of a form. A message that marks inline code, e.g.,
+// a branch name, takes the code from `code`.
+export function FormAlert({ message, code }: { message: string | null; code?: string }) {
   if (!message) return null;
   return (
     <div
       role="alert"
       className="mb-4 rounded-md border border-(--color-destructive) bg-(--color-destructive)/10 px-3 py-2 text-sm text-(--color-destructive)"
     >
-      {message}
+      {code === undefined ? message : <RichText text={message} code={code} />}
     </div>
   );
 }

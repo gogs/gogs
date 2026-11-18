@@ -272,7 +272,13 @@ func TestProtectedBranchRules(t *testing.T) {
 		gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(repo.Owner, repo.Name), "branch", "-D", "staging")
 		status, body = commit("staging")
 		assert.Equal(t, http.StatusForbidden, status, "response: %s", body)
-		assert.Contains(t, string(body), `Branch \"staging\" is protected`)
+		var refused struct {
+			Error  string `json:"error"`
+			Branch string `json:"branch"`
+		}
+		require.NoError(t, json.Unmarshal(body, &refused))
+		assert.Equal(t, "Branch <code>{branch}</code> is protected and you are not in the push allowlist.", refused.Error)
+		assert.Equal(t, "staging", refused.Branch)
 	})
 
 	t.Run("restoring a deleted protected head branch", func(t *testing.T) {

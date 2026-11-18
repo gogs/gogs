@@ -294,13 +294,23 @@ func checkEditorCommit(c flamego.Context, l i18n.Locale, repoCtx *repoContext, g
 	if err != nil {
 		return http.StatusInternalServerError, nil, errors.Wrapf(err, "check protection of branch %q", target)
 	}
+	var key string
 	switch denial {
 	case database.PushDeniedNotInAllowlist:
-		return http.StatusForbidden, &bindingErrorResponse{Error: strings.ReplaceAll(l.Tr("repo.editor.protected_branch_not_in_allowlist"), "{branch}", target)}, nil
+		key = "repo.editor.protected_branch_not_in_allowlist"
 	case database.PushDeniedRequiresPullRequest:
-		return http.StatusForbidden, &bindingErrorResponse{Error: strings.ReplaceAll(l.Tr("repo.editor.protected_branch_requires_pull_request"), "{branch}", target)}, nil
+		key = "repo.editor.protected_branch_requires_pull_request"
+	default:
+		return 0, nil, nil
 	}
-	return 0, nil, nil
+	return http.StatusForbidden, &repoEditorProtectedBranch{Error: l.Tr(key), Branch: target}, nil
+}
+
+// repoEditorProtectedBranch refuses a commit to a protected branch. Error
+// marks where the branch name goes with <code>{branch}</code>.
+type repoEditorProtectedBranch struct {
+	Error  string `json:"error"`
+	Branch string `json:"branch"`
 }
 
 // commitMessage returns the summary, or the fallback when it is empty,

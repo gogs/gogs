@@ -373,6 +373,13 @@ function conflictOf(error: Error | null) {
   return { html: error.message, lastCommit: error.body.lastCommit };
 }
 
+// protectedBranchOf returns the branch a commit was refused for because it is
+// protected, which the error message shows as inline code.
+function protectedBranchOf(error: Error | null) {
+  if (!(error instanceof FormError) || typeof error.body.branch !== "string") return undefined;
+  return error.body.branch;
+}
+
 // RepoFileEditor edits a file of a branch, or creates one in a directory.
 export function RepoFileEditor({
   owner,
@@ -453,7 +460,7 @@ export function RepoFileEditor({
       <h1 className="sr-only">{heading}</h1>
       <form onSubmit={onSubmit} noValidate>
         <fieldset disabled={save.isPending} className="flex min-w-0 flex-col gap-5">
-          <FormAlert message={formError} />
+          <FormAlert message={formError} code={protectedBranchOf(save.error)} />
           {conflict ? (
             <div
               role="alert"
@@ -566,7 +573,7 @@ export function RepoFileDelete({ owner, name, target }: { owner: string; name: s
       <form onSubmit={onSubmit} noValidate>
         <fieldset disabled={remove.isPending} className="min-w-0">
           <h1 className="mb-4 text-xl font-semibold">{heading}</h1>
-          <FormAlert message={formError} />
+          <FormAlert message={formError} code={protectedBranchOf(remove.error)} />
           <p className="glass flex items-start gap-2 rounded-md border border-(--color-border) bg-(--color-surface) px-4 py-3 font-mono text-sm">
             <FileX className="mt-0.5 size-4 shrink-0 text-(--color-destructive)" aria-hidden />
             <span className="min-w-0 wrap-anywhere">{target.path}</span>
@@ -627,7 +634,7 @@ export function RepoFileUpload({ owner, name, target }: { owner: string; name: s
       <form onSubmit={onSubmit} noValidate>
         <fieldset disabled={upload.isPending} className="flex min-w-0 flex-col gap-5">
           <h1 className="text-xl font-semibold">{heading}</h1>
-          <FormAlert message={formError} />
+          <FormAlert message={formError} code={protectedBranchOf(upload.error)} />
           <div className="glass flex min-w-0 flex-col gap-5 glass-ui:gap-0 glass-ui:overflow-hidden glass-ui:border">
             <div className="glass-ui:border-b glass-ui:border-(--color-border) glass-ui:bg-(--color-surface) glass-ui:px-4 glass-ui:py-3">
               <FormField
