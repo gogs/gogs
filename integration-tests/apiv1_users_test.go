@@ -2,6 +2,7 @@ package integrationtests
 
 import (
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -60,32 +61,97 @@ func TestAPIV1AccessTokens(t *testing.T) {
 		Name string `json:"name"`
 		Sha1 string `json:"sha1"`
 	}
-	name := UniqueName("token-")
-	var created token
-	basic.doJSON(http.MethodPost, path, map[string]any{"name": name}, http.StatusCreated, &created)
-	assert.Equal(t, name, created.Name)
-	require.Len(t, created.Sha1, 40)
+	create := func(t *testing.T, c *client, path string) token {
+		t.Helper()
 
-	var tokens []token
-	basic.doJSON(http.MethodGet, path, nil, http.StatusOK, &tokens)
-	require.Len(t, tokens, 1)
-	assert.Equal(t, name, tokens[0].Name)
+		name := UniqueName("token-")
+		var created token
+		c.doJSON(http.MethodPost, path, map[string]any{"name": name}, http.StatusCreated, &created)
+		assert.Equal(t, name, created.Name)
+		require.Len(t, created.Sha1, 40)
+		return created
+	}
+	tokenClient := func(sha1 string) *client {
+		c := newClient(t)
+		c.header.Set("Authorization", "token "+sha1)
+		return c
+	}
+	assertAuthenticates := func(t *testing.T, sha1 string, want bool) {
+		t.Helper()
+
+		status, body := tokenClient(sha1).do(http.MethodGet, "/api/v1/user", nil)
+		if want {
+			assert.Equal(t, http.StatusOK, status, "response: %s", body)
+		} else {
+			assert.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
+		}
+	}
+	listNames := func(t *testing.T) []string {
+		t.Helper()
+
+		var tokens []token
+		basic.doJSON(http.MethodGet, path, nil, http.StatusOK, &tokens)
+		names := []string{}
+		for _, token := range tokens {
+			names = append(names, token.Name)
+		}
+		return names
+	}
+
+	created := create(t, basic, path)
+	assert.Equal(t, []string{created.Name}, listNames(t))
 
 	// The new token authenticates its user.
-	withToken := newClient(t)
-	withToken.header.Set("Authorization", "token "+created.Sha1)
+	withToken := tokenClient(created.Sha1)
 	var me apiV1User
 	withToken.doJSON(http.MethodGet, "/api/v1/user", nil, http.StatusOK, &me)
 	assert.Equal(t, u.Name, me.UserName)
 
-	status, body := basic.do(http.MethodPost, path, map[string]any{"name": name})
+	status, body := basic.do(http.MethodPost, path, map[string]any{"name": created.Name})
 	assert.Equal(t, http.StatusUnprocessableEntity, status, "duplicate name, response: %s", body)
 
-	// Tokens are only managed with the password.
+	// Tokens are only listed and created with the password.
 	status, body = withToken.do(http.MethodGet, path, nil)
 	assert.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
 	status, body = withToken.do(http.MethodPost, path, map[string]any{"name": UniqueName("token-")})
 	assert.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
+
+	t.Run("delete itself", func(t *testing.T) {
+		deleted := create(t, basic, path)
+		// A newer token, so deleting the newest token of the user is not mistaken
+		// for deleting the one that authenticates.
+		newer := create(t, basic, path)
+		other := seedUser(t, CreateUserOptions{})
+		otherToken := create(t, apiV1BasicClient(t, other.Name, other.Password), "/api/v1/users/"+other.Name+"/tokens")
+
+		// Only the token itself can delete it.
+		for name, c := range map[string]*client{
+			"anonymous":      newClient(t),
+			"password":       basic,
+			"unknown token":  tokenClient(strings.Repeat("0", 40)),
+			"token as Basic": apiV1BasicClient(t, u.Name, deleted.Sha1),
+		} {
+			status, body := c.do(http.MethodDelete, "/api/v1/user/token", nil)
+			assert.Equal(t, http.StatusUnauthorized, status, "%s, response: %s", name, body)
+		}
+		assertAuthenticates(t, deleted.Sha1, true)
+
+		status, body := tokenClient(deleted.Sha1).do(http.MethodDelete, "/api/v1/user/token", nil)
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+		assert.Empty(t, body)
+		assertAuthenticates(t, deleted.Sha1, false)
+		assert.Equal(t, []string{created.Name, newer.Name}, listNames(t))
+		assertAuthenticates(t, created.Sha1, true)
+		assertAuthenticates(t, newer.Sha1, true)
+		assertAuthenticates(t, otherToken.Sha1, true)
+
+		status, body = tokenClient(deleted.Sha1).do(http.MethodDelete, "/api/v1/user/token", nil)
+		assert.Equal(t, http.StatusUnauthorized, status, "deleted twice, response: %s", body)
+
+		// The name of a deleted token is free again.
+		status, body = basic.do(http.MethodPost, path, map[string]any{"name": deleted.Name})
+		assert.Equal(t, http.StatusCreated, status, "response: %s", body)
+	})
 }
 
 func TestAPIV1AuthenticatedUser(t *testing.T) {
@@ -230,4 +296,39 @@ func TestAPIV1UserKeys(t *testing.T) {
 		status, body := api.do(http.MethodGet, "/api/v1/user/keys/"+apiV1Itoa(created.ID), nil)
 		assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 	})
+}
+
+func TestAPIV1BasicAuthTwoFactor(t *testing.T) {
+	t.Parallel()
+
+	u := seedUser(t, CreateUserOptions{})
+	_, err := EnableTwoFactor(t.Context(), u.ID)
+	require.NoError(t, err)
+
+	// The password alone would otherwise create an access token, which skips the
+	// second factor for good.
+	basic := apiV1BasicClient(t, u.Name, u.Password)
+	tokensPath := "/api/v1/users/" + u.Name + "/tokens"
+	for _, req := range []struct {
+		method, path string
+		body         any
+	}{
+		{http.MethodGet, tokensPath, nil},
+		{http.MethodPost, tokensPath, map[string]any{"name": UniqueName("token-")}},
+	} {
+		status, body := basic.do(req.method, req.path, req.body)
+		assert.Equal(t, http.StatusUnauthorized, status, "%s %s, response: %s", req.method, req.path, body)
+	}
+	tokens, err := database.Handle.AccessTokens().List(t.Context(), u.ID)
+	require.NoError(t, err)
+	assert.Empty(t, tokens)
+
+	// Access tokens keep working.
+	var me apiV1User
+	apiV1Client(t, u).doJSON(http.MethodGet, "/api/v1/user", nil, http.StatusOK, &me)
+	assert.Equal(t, u.Name, me.UserName)
+
+	// A token revokes itself without the password.
+	status, body := apiV1Client(t, u).do(http.MethodDelete, "/api/v1/user/token", nil)
+	assert.Equal(t, http.StatusNoContent, status, "response: %s", body)
 }

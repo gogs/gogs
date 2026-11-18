@@ -27,6 +27,9 @@ const docURL = "https://github.com/gogs/docs-api"
 type RequestInfo struct {
 	IsBasicAuth bool
 	IsTokenAuth bool
+	// AccessTokenID is the ID of the access token the request authenticated
+	// with, 0 without token authentication.
+	AccessTokenID int64
 	// Path is the unescaped request path.
 	Path string
 	// WebNotFound and WebError respond with the 404 and 500 responses of web
@@ -77,6 +80,9 @@ type apiContext struct {
 	IsLogged    bool
 	IsBasicAuth bool
 	IsTokenAuth bool
+	// AccessTokenID is the ID of the access token the request authenticated
+	// with, 0 without token authentication.
+	AccessTokenID int64
 
 	// BaseURL is the base URL of API v1 endpoints, e.g., https://try.gogs.io/api/v1.
 	BaseURL string
@@ -95,18 +101,19 @@ type apiContext struct {
 
 func apiContexter(c flamego.Context, logger *logx.Logger, viewer *database.User, info RequestInfo) {
 	c.Map(&apiContext{
-		Context:     c,
-		Logger:      logger,
-		User:        viewer,
-		IsLogged:    viewer != nil,
-		IsBasicAuth: info.IsBasicAuth,
-		IsTokenAuth: info.IsTokenAuth,
-		BaseURL:     conf.Server.ExternalURL + "api/v1",
-		Link:        conf.Server.Subpath + strings.TrimSuffix(info.Path, "/"),
-		path:        info.Path,
-		webNotFound: info.WebNotFound,
-		webError:    info.WebError,
-		Repo:        &apiRepository{},
+		Context:       c,
+		Logger:        logger,
+		User:          viewer,
+		IsLogged:      viewer != nil,
+		IsBasicAuth:   info.IsBasicAuth,
+		IsTokenAuth:   info.IsTokenAuth,
+		AccessTokenID: info.AccessTokenID,
+		BaseURL:       conf.Server.ExternalURL + "api/v1",
+		Link:          conf.Server.Subpath + strings.TrimSuffix(info.Path, "/"),
+		path:          info.Path,
+		webNotFound:   info.WebNotFound,
+		webError:      info.WebError,
+		Repo:          &apiRepository{},
 	})
 }
 

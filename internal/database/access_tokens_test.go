@@ -159,12 +159,7 @@ func accessTokensDeleteByID(t *testing.T, ctx context.Context, s *AccessTokensSt
 	require.NoError(t, err)
 
 	_, err = s.GetBySHA1(ctx, token.Sha1)
-	wantErr := ErrAccessTokenNotExist{
-		args: errx.Args{
-			"sha": token.Sha1,
-		},
-	}
-	assert.Equal(t, wantErr, err)
+	assert.Equal(t, ErrAccessTokenNotExist{}, err)
 }
 
 func accessTokensGetBySHA(t *testing.T, ctx context.Context, s *AccessTokensStore) {
@@ -175,12 +170,7 @@ func accessTokensGetBySHA(t *testing.T, ctx context.Context, s *AccessTokensStor
 	require.NoError(t, err)
 
 	_, err = s.GetBySHA1(ctx, "bad_sha")
-	wantErr := ErrAccessTokenNotExist{
-		args: errx.Args{
-			"sha": "bad_sha",
-		},
-	}
-	assert.Equal(t, wantErr, err)
+	assert.Equal(t, ErrAccessTokenNotExist{}, err)
 }
 
 func accessTokensList(t *testing.T, ctx context.Context, s *AccessTokensStore) {

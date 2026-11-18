@@ -29,6 +29,7 @@ All notable changes to Gogs are documented in this file.
 - The admin panel shows recent traces of requests, with the user, repository and error behind each one, the Git commands and database queries they ran and search by trace ID, and charts of server health over the last hour and day on its own page, kept in memory without a collector. Set `[tracing] ENABLED = false` to turn it off. [#8554](https://github.com/gogs/gogs/pull/8554)
 - A command palette, opened with Ctrl K or ⌘K or the search button in the navbar, to jump to issues, pull requests, files, repositories, people and pages, search code, and run actions such as switching the theme or copying a clone URL. Type `>`, `#`, `@` or `/` to see only commands, issues, people or code. [#8551](https://github.com/gogs/gogs/pull/8551)
 - API endpoints to create branches and tags: `POST /repos/{owner}/{repo}/branches` and `POST /repos/{owner}/{repo}/tags`. [#8566](https://github.com/gogs/gogs/pull/8566)
+- API endpoint for an access token to delete itself: `DELETE /user/token`, e.g., for a tool to revoke its token when it is done. [#8574](https://github.com/gogs/gogs/pull/8574)
 
 ### Changed
 
@@ -84,6 +85,7 @@ All notable changes to Gogs are documented in this file.
 - The API responds with 404 instead of 500 for a missing SSH key, Git blob, or branch or tag reference. [#8651](https://github.com/gogs/gogs/pull/8651)
 - Creating a repository through the API with a name the owner already uses responds with 422 instead of 500. [#8651](https://github.com/gogs/gogs/pull/8651)
 - Creating or updating a file through the API on an existing branch other than the default one no longer fails. [#8651](https://github.com/gogs/gogs/pull/8651)
+- _Security:_ Users with two-factor authentication enabled could authenticate with only their password over HTTP Basic authentication, e.g., to create API access tokens. Basic authentication is now refused for them. Use an access token instead. [#8574](https://github.com/gogs/gogs/pull/8574)
 - _Security:_ Open redirect on the `/redirect` endpoint and post-action flows via a backslash in the redirect target. [#8391](https://github.com/gogs/gogs/pull/8391) - [GHSA-3g28-2vwg-gxq6](https://github.com/gogs/gogs/security/advisories/GHSA-3g28-2vwg-gxq6)
 - _Security:_ The "remember me" auto-login cookie was derived from database columns, so an attacker with a database dump could forge a valid cookie for any user. The auto-login cookie path has been removed entirely. Persistence is now provided by the server-issued session cookie. [#8289](https://github.com/gogs/gogs/pull/8289) - [GHSA-4pph-25p3-pw73](https://github.com/gogs/gogs/security/advisories/GHSA-4pph-25p3-pw73)
 - _Security:_ Session fixation. Signing in kept the session ID from before, so an attacker who planted a session ID in a user's browser was signed in as that user once they signed in. [#8618](https://github.com/gogs/gogs/pull/8618) - [GHSA-h48f-pxp7-c4mj](https://github.com/gogs/gogs/security/advisories/GHSA-h48f-pxp7-c4mj)

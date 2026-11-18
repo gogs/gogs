@@ -25,6 +25,9 @@ type AuthStore interface {
 	// the current time.
 	TouchAccessTokenByID(ctx context.Context, id int64) error
 
+	// IsTwoFactorEnabled returns true if the user has enabled 2FA.
+	IsTwoFactorEnabled(ctx context.Context, userID int64) bool
+
 	// GetUserByID returns the user with given ID. It returns
 	// database.ErrUserNotExist when not found.
 	GetUserByID(ctx context.Context, id int64) (*database.User, error)
@@ -52,40 +55,38 @@ type AuthStore interface {
 	AuthenticateUser(ctx context.Context, login, password string, loginSourceID int64) (*database.User, error)
 }
 
-// authenticatedUserID returns the ID of the authenticated user, along with a bool value
-// which indicates whether the user uses token authentication.
-func authenticatedUserID(logger *logx.Logger, store AuthStore, r *http.Request, sess session.Session) (_ int64, isTokenAuth bool) {
+// authenticatedUserID returns the ID of the authenticated user, along with the
+// ID of the access token it authenticated with, which is 0 when the user does
+// not use token authentication.
+func authenticatedUserID(logger *logx.Logger, store AuthStore, r *http.Request, sess session.Session) (_, tokenID int64) {
 	// Access tokens are for API v1 only. The web API under "/api/web" serves the
 	// browser, including the routes that change the credentials and two-factor
 	// authentication of an account, which a leaked token must not reach.
 	if strings.HasPrefix(r.URL.Path, "/api/v1/") {
 		var tokenSHA string
-		auHead := r.Header.Get("Authorization")
-		if auHead != "" {
-			auths := strings.Fields(auHead)
-			if len(auths) == 2 && auths[0] == "token" {
-				tokenSHA = auths[1]
-			}
+		auths := strings.Fields(r.Header.Get("Authorization"))
+		if len(auths) == 2 && auths[0] == "token" {
+			tokenSHA = auths[1]
 		}
 
-		if len(tokenSHA) > 0 {
+		if tokenSHA != "" {
 			t, err := store.GetAccessTokenBySHA1(r.Context(), tokenSHA)
 			if err != nil {
 				if !database.IsErrAccessTokenNotExist(err) {
 					logger.Error("Failed to get access token by SHA1", "error", err)
 				}
-				return 0, false
+				return 0, 0
 			}
 			if err = store.TouchAccessTokenByID(r.Context(), t.ID); err != nil {
 				logger.Error("Failed to touch access token", "tokenID", t.ID, "error", err)
 			}
-			return t.UserID, true
+			return t.UserID, t.ID
 		}
 	}
 
 	uid := sess.Get("uid")
 	if uid == nil {
-		return 0, false
+		return 0, 0
 	}
 	if id, ok := uid.(int64); ok {
 		_, err := store.GetUserByID(r.Context(), id)
@@ -93,25 +94,27 @@ func authenticatedUserID(logger *logx.Logger, store AuthStore, r *http.Request, 
 			if !database.IsErrUserNotExist(err) {
 				logger.Error("Failed to get user by ID", "userID", id, "error", err)
 			}
-			return 0, false
+			return 0, 0
 		}
-		return id, false
+		return id, 0
 	}
-	return 0, false
+	return 0, 0
 }
 
-// AuthenticatedUser returns the user object of the authenticated user, along with two bool values
-// which indicate whether the user uses HTTP Basic Authentication or token authentication respectively.
-func AuthenticatedUser(logger *logx.Logger, store AuthStore, r *http.Request, sess session.Session) (_ *database.User, isBasicAuth, isTokenAuth bool) {
-	uid, isTokenAuth := authenticatedUserID(logger, store, r, sess)
+// AuthenticatedUser returns the user object of the authenticated user, along
+// with whether the user uses HTTP Basic Authentication, and the ID of the access
+// token the user authenticated with, which is 0 when the user does not use token
+// authentication.
+func AuthenticatedUser(logger *logx.Logger, store AuthStore, r *http.Request, sess session.Session) (_ *database.User, isBasicAuth bool, tokenID int64) {
+	uid, tokenID := authenticatedUserID(logger, store, r, sess)
 
 	if uid <= 0 {
 		user, ok, err := ReverseProxyUser(store, r)
 		if err != nil {
 			logger.Error("Failed to authenticate by reverse proxy header", "error", err)
-			return nil, false, false
+			return nil, false, 0
 		} else if ok {
-			return user, false, false
+			return user, false, 0
 		}
 
 		// Check with basic auth. The web API under "/api/web" serves the browser,
@@ -135,27 +138,29 @@ func AuthenticatedUser(logger *logx.Logger, store AuthStore, r *http.Request, se
 					if !auth.IsErrBadCredentials(err) {
 						logger.Error("Failed to authenticate user", "error", err)
 					}
-					return nil, false, false
+					return nil, false, 0
 				}
-				if u.IsDisabled() {
-					return nil, false, false
+				// A password alone must not stand in for a sign-in that also asks for
+				// the second factor. Such users authenticate with an access token.
+				if u.IsDisabled() || store.IsTwoFactorEnabled(r.Context(), u.ID) {
+					return nil, false, 0
 				}
 
-				return u, true, false
+				return u, true, 0
 			}
 		}
-		return nil, false, false
+		return nil, false, 0
 	}
 
 	u, err := store.GetUserByID(r.Context(), uid)
 	if err != nil {
 		logger.Error("Failed to get user by ID", "userID", uid, "error", err)
-		return nil, false, false
+		return nil, false, 0
 	}
-	if isTokenAuth && u.IsDisabled() {
-		return nil, false, false
+	if tokenID > 0 && u.IsDisabled() {
+		return nil, false, 0
 	}
-	return u, false, isTokenAuth
+	return u, false, tokenID
 }
 
 // ReverseProxyUser returns the user named in the reverse proxy authentication

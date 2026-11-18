@@ -64,6 +64,18 @@ func (h *accessTokensHandler) Create() flamego.Handler {
 	}
 }
 
+// DeleteSelf deletes the access token that authenticates the request, so a
+// tool that only holds the token can revoke it when it is done.
+func (h *accessTokensHandler) DeleteSelf() flamego.Handler {
+	return func(c *apiContext) {
+		if err := h.store.DeleteAccessTokenByID(c.Request().Context(), c.User.ID, c.AccessTokenID); err != nil {
+			c.Error(err, "delete access token")
+			return
+		}
+		c.NoContent()
+	}
+}
+
 // AccessTokensStore is the data layer carrier for user access tokens API
 // endpoints. This interface is meant to abstract away and limit the exposure of
 // the underlying data layer to the handler through a thin-wrapper.
@@ -74,6 +86,9 @@ type AccessTokensStore interface {
 	CreateAccessToken(ctx gocontext.Context, userID int64, name string) (*database.AccessToken, error)
 	// ListAccessTokens returns all access tokens that belong to given user.
 	ListAccessTokens(ctx gocontext.Context, userID int64) ([]*database.AccessToken, error)
+	// DeleteAccessTokenByID deletes the access token of the given ID that belongs
+	// to the given user.
+	DeleteAccessTokenByID(ctx gocontext.Context, userID, id int64) error
 }
 
 type accessTokensStore struct{}
@@ -90,4 +105,8 @@ func (*accessTokensStore) CreateAccessToken(ctx gocontext.Context, userID int64,
 
 func (*accessTokensStore) ListAccessTokens(ctx gocontext.Context, userID int64) ([]*database.AccessToken, error) {
 	return database.Handle.AccessTokens().List(ctx, userID)
+}
+
+func (*accessTokensStore) DeleteAccessTokenByID(ctx gocontext.Context, userID, id int64) error {
+	return database.Handle.AccessTokens().DeleteByID(ctx, userID, id)
 }

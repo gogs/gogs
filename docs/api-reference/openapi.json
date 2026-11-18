@@ -3598,6 +3598,24 @@
         "description": "Requires basic authentication."
       }
     },
+    "/user/token": {
+      "delete": {
+        "operationId": "deleteAccessToken",
+        "summary": "Delete the access token",
+        "tags": [
+          "Users"
+        ],
+        "responses": {
+          "204": {
+            "description": "The resource has been successfully deleted."
+          },
+          "401": {
+            "description": "The request is not authenticated with an access token."
+          }
+        },
+        "description": "Deletes the access token that authenticates the request, which stops working right away. Requires an access token, so a tool that only holds the token can revoke it when it is done, without the password."
+      }
+    },
     "/user/emails": {
       "get": {
         "operationId": "listEmails",

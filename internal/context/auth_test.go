@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/flamego/flamego"
@@ -70,40 +71,42 @@ func (s tokenAuthStore) GetAccessTokenBySHA1(_ context.Context, sha1 string) (*d
 func (tokenAuthStore) TouchAccessTokenByID(context.Context, int64) error { return nil }
 
 func TestAuthenticatedUserIDAccessToken(t *testing.T) {
-	store := tokenAuthStore{token: &database.AccessToken{ID: 1, UserID: 7, Sha1: "0123456789abcdef"}}
+	store := tokenAuthStore{token: &database.AccessToken{ID: 3, UserID: 7, Sha1: "0123456789abcdef"}}
 
 	tests := []struct {
-		path          string
-		wantUserID    int64
-		wantTokenAuth bool
+		path        string
+		wantUserID  int64
+		wantTokenID int64
 	}{
-		{path: "/api/v1/user", wantUserID: 7, wantTokenAuth: true},
-		{path: "/api/web/user/settings/tokens", wantUserID: 0, wantTokenAuth: false},
-		{path: "/api/web/user/settings/two-factor/recovery-codes", wantUserID: 0, wantTokenAuth: false},
-		{path: "/api/web/admin/auths", wantUserID: 0, wantTokenAuth: false},
+		{path: "/api/v1/user", wantUserID: 7, wantTokenID: 3},
+		{path: "/api/web/user/settings/tokens", wantUserID: 0, wantTokenID: 0},
+		{path: "/api/web/user/settings/two-factor/recovery-codes", wantUserID: 0, wantTokenID: 0},
+		{path: "/api/web/admin/auths", wantUserID: 0, wantTokenID: 0},
 	}
 	for _, tc := range tests {
 		t.Run(tc.path, func(t *testing.T) {
 			f := flamego.New()
 			f.Use(session.Sessioner())
-			var gotUserID int64
-			var gotTokenAuth bool
+			var gotUserID, gotTokenID int64
 			f.Any("/{**}", func(r *http.Request, sess session.Session) {
-				gotUserID, gotTokenAuth = authenticatedUserID(logx.NewNoopLogger(), store, r, sess)
+				gotUserID, gotTokenID = authenticatedUserID(logx.NewNoopLogger(), store, r, sess)
 			})
 			req := httptest.NewRequest(http.MethodPost, tc.path, nil)
 			req.Header.Set("Authorization", "token "+store.token.Sha1)
 			f.ServeHTTP(httptest.NewRecorder(), req)
 			assert.Equal(t, tc.wantUserID, gotUserID)
-			assert.Equal(t, tc.wantTokenAuth, gotTokenAuth)
+			assert.Equal(t, tc.wantTokenID, gotTokenID)
 		})
 	}
 }
 
 type basicAuthStore struct {
 	AuthStore
-	user *database.User
+	user      *database.User
+	twoFactor bool
 }
+
+func (s basicAuthStore) IsTwoFactorEnabled(context.Context, int64) bool { return s.twoFactor }
 
 func (s basicAuthStore) AuthenticateUser(_ context.Context, login, password string, _ int64) (*database.User, error) {
 	if login != s.user.Name || password != "secret" {
@@ -113,13 +116,17 @@ func (s basicAuthStore) AuthenticateUser(_ context.Context, login, password stri
 }
 
 func TestAuthenticatedUserBasicAuth(t *testing.T) {
-	store := basicAuthStore{user: &database.User{ID: 7, Name: "alice", IsActive: true}}
+	user := &database.User{ID: 7, Name: "alice", IsActive: true}
 
 	tests := []struct {
-		path     string
-		wantUser bool
+		name      string
+		path      string
+		twoFactor bool
+		wantUser  bool
 	}{
 		{path: "/api/v1/user", wantUser: true},
+		{name: "two-factor authentication enabled", path: "/api/v1/user", twoFactor: true, wantUser: false},
+		{name: "two-factor authentication enabled", path: "/alice/repo/raw/main/README.md", twoFactor: true, wantUser: false},
 		{path: "/alice/repo/raw/main/README.md", wantUser: true},
 		{path: "/api/web/user/settings/two-factor", wantUser: false},
 		{path: "/api/web/user/settings/passkeys/registration", wantUser: false},
@@ -128,7 +135,8 @@ func TestAuthenticatedUserBasicAuth(t *testing.T) {
 		{path: "/%2Fapi/web/user/settings/two-factor", wantUser: false},
 	}
 	for _, tc := range tests {
-		t.Run(tc.path, func(t *testing.T) {
+		t.Run(strings.TrimSpace(tc.name+" "+tc.path), func(t *testing.T) {
+			store := basicAuthStore{user: user, twoFactor: tc.twoFactor}
 			f := flamego.New()
 			f.Use(session.Sessioner())
 			var got *database.User
