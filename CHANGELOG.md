@@ -125,6 +125,7 @@ All notable changes to Gogs are documented in this file.
 - Publishing a draft release whose tag name is not valid now says that the tag name is not valid, instead of failing with a server error. [#8503](https://github.com/gogs/gogs/pull/8503)
 - "New pull request" in a fork that takes pull requests now compares branches of the fork instead of always going to its base repository, and the comparison lets you choose between the fork and its base repository. [#8646](https://github.com/gogs/gogs/pull/8646)
 - Deleting a deploy key or its repository no longer leaves the key in `authorized_keys`, which blocked adding the key again. [#8648](https://github.com/gogs/gogs/pull/8648)
+- Adding an SSH or deploy key that fails, e.g., because the name is taken, no longer leaves the key in `authorized_keys`, where it could sign in as a key added later. [#8648](https://github.com/gogs/gogs/pull/8648)
 
 ### Removed
 
