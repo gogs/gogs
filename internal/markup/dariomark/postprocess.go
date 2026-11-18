@@ -15,9 +15,10 @@ import (
 //
 // Text outside links, code, preformatted text and raw text elements gets
 // special links, and text outside code and preformatted text gets emoji.
-// Images are wrapped in links to themselves, and end tags are renamed to
-// close the innermost open element. If the tokenizer fails other than at the
-// end of the input, the input is returned unchanged.
+// Images are wrapped in links to themselves, except in links, where only their
+// sources are resolved, and end tags are renamed to close the innermost open
+// element. If the tokenizer fails other than at the end of the input, the
+// input is returned unchanged.
 func (r *renderer) postProcess(b []byte) []byte {
 	var out bytes.Buffer
 	out.Grow(len(b) + len(b)/8)
@@ -49,7 +50,9 @@ func (r *renderer) postProcess(b []byte) []byte {
 			}
 			r.specialLinks(&out, []byte(t.String()), &emoji)
 			inText = true
-		case html.StartTagToken:
+		case html.StartTagToken, html.SelfClosingTagToken:
+			// The tokenizer reads the content after "<textarea/>" as raw
+			// text too.
 			rawText = isRawTextElement(t.Data)
 			if t.Data == "img" {
 				if !r.imageLink(&out, t) {
@@ -58,6 +61,9 @@ func (r *renderer) postProcess(b []byte) []byte {
 				continue
 			}
 			out.WriteString(t.String())
+			if t.Type == html.SelfClosingTagToken {
+				continue
+			}
 			if t.Data == "a" || t.Data == "code" || t.Data == "pre" {
 				// Copy the element verbatim, up to the end tag with its name
 				// that closes as many elements as were opened. Text in links
@@ -74,7 +80,7 @@ func (r *renderer) postProcess(b []byte) []byte {
 						emoji.write(&out, []byte(inner.String()))
 						continue
 					}
-					if inner.Type == html.StartTagToken && inner.Data == "img" && code == 0 {
+					if (inner.Type == html.StartTagToken || inner.Type == html.SelfClosingTagToken) && inner.Data == "img" && code == 0 {
 						inner.Attr = r.linkedImageAttrs(inner.Attr)
 					}
 					out.WriteString(inner.String())
@@ -99,11 +105,6 @@ func (r *renderer) postProcess(b []byte) []byte {
 			if !isNoEndTag(t.Data) {
 				startTags = append(startTags, t.Data)
 			}
-		case html.SelfClosingTagToken:
-			// The tokenizer reads the content after "<textarea/>" as raw
-			// text too.
-			rawText = isRawTextElement(t.Data)
-			out.WriteString(t.String())
 		case html.EndTagToken:
 			inText = continuesText && !slices.Contains(startTags, t.Data)
 			if len(startTags) == 0 {

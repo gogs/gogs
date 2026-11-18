@@ -165,6 +165,11 @@ func TestMarkdown_SpecialLinks(t *testing.T) {
 			want:  "<p><a href=\"https://example.com\" rel=\"nofollow\"><img src=\"/user/repo/badge.svg\"></a> and <a href=\"https://example.com\" rel=\"nofollow\"><code><img src=\"x.png\"></code></a></p>\n",
 		},
 		{
+			name:  "self-closing raw images",
+			input: "<a href=\"https://example.com\"><img src=\"badge.svg\" /></a> <img src=\"logo.png\" width=\"10\"/>",
+			want:  "<p><a href=\"https://example.com\" rel=\"nofollow\"><img src=\"/user/repo/badge.svg\"/></a> <a href=\"/user/repo/logo.png\" rel=\"nofollow\"><img src=\"/user/repo/logo.png\" width=\"10\"/></a></p>\n",
+		},
+		{
 			name:  "raw anchor",
 			input: "<a href=\"https://example.com\">#12 @user</a> #13",
 			want:  "<p><a href=\"https://example.com\" rel=\"nofollow\">#12 @user</a> <a href=\"https://tracker.example.com/user/repo/issues/13\" rel=\"nofollow\">#13</a></p>\n",
