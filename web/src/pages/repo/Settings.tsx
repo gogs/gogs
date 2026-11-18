@@ -1585,8 +1585,8 @@ export function RepoBranchProtection({
       <form onSubmit={onSubmit} noValidate>
         <fieldset disabled={update.isPending} className="contents">
           <FormAlert message={formError} />
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3">
               <CheckboxField
                 id="protected"
                 checked={form.protected}
@@ -1599,8 +1599,8 @@ export function RepoBranchProtection({
                 }
               />
               {form.protected ? (
-                <div className="ml-2 flex flex-col gap-4 border-l-2 border-(--color-border) pl-4">
-                  <div className="flex flex-col gap-2">
+                <div className="ml-2 flex flex-col gap-3 border-l-2 border-(--color-border) pl-4">
+                  <div className="flex flex-col gap-3">
                     <CheckboxField
                       id="requirePullRequest"
                       checked={form.requirePullRequest}
@@ -1613,7 +1613,7 @@ export function RepoBranchProtection({
                       }
                     />
                     {form.requirePullRequest ? (
-                      <div className="ml-2 flex flex-col gap-4 border-l-2 border-(--color-border) pl-4">
+                      <div className="ml-2 flex flex-col gap-3 border-l-2 border-(--color-border) pl-4">
                         <div className="flex flex-col gap-0.5">
                           <label htmlFor="requiredApprovals" className="text-sm font-medium">
                             {t("repo.settings.protect_required_approvals")}
@@ -1665,7 +1665,7 @@ export function RepoBranchProtection({
                     ) : null}
                   </div>
                   {isOrg ? (
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-3">
                       <CheckboxField
                         id="enableAllowlist"
                         checked={form.enableAllowlist}
@@ -1678,7 +1678,7 @@ export function RepoBranchProtection({
                         }
                       />
                       {form.enableAllowlist ? (
-                        <div className="ml-2 flex flex-col gap-4 border-l-2 border-(--color-border) pl-4">
+                        <div className="ml-2 flex flex-col gap-3 border-l-2 border-(--color-border) pl-4">
                           {branch.userOptions?.length ? (
                             <fieldset className="flex flex-col gap-2">
                               <legend className="mb-2 text-sm font-medium">
