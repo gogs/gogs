@@ -1,8 +1,8 @@
 import { Link, getRouteApi, useNavigate } from "@tanstack/react-router";
-import { CaseSensitive, TriangleAlert } from "lucide-react";
+import { CaseSensitive } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { CodeSearchForm, CodeSearchHelp, CodeSearchResults } from "@/components/CodeSearchResults";
+import { CodeSearchForm, CodeSearchHelp, CodeSearchResults, CodeSearchWarning } from "@/components/CodeSearchResults";
 import { usePageTitle } from "@/lib/page-title";
 import { refPath } from "@/lib/queries/repo";
 import { subUrl } from "@/lib/url";
@@ -50,15 +50,10 @@ export function CodeSearch() {
         <CodeSearchHelp hint={t("repo.code_search.global_hint")} global />
       ) : (
         <>
-          {data.timedOut ? (
-            // The tint is on an inner layer because the glass marker sets the
-            // panel's own background color.
-            <div className="glass mb-4 rounded-md border !border-(--color-warning)">
-              <p className="flex items-center gap-2 rounded-[inherit] bg-(--color-warning)/10 px-4 py-2 text-sm">
-                <TriangleAlert className="size-4 shrink-0 text-(--color-warning)" aria-hidden />
-                {t("repo.code_search.timed_out_partial")}
-              </p>
-            </div>
+          {data.timedOut || data.busy ? (
+            <CodeSearchWarning>
+              {t(data.busy ? "repo.code_search.busy" : "repo.code_search.timed_out_partial")}
+            </CodeSearchWarning>
           ) : null}
           {data.files.length ? (
             <CodeSearchResults
@@ -86,7 +81,7 @@ export function CodeSearch() {
                 );
               }}
             />
-          ) : (
+          ) : data.busy ? null : (
             <p className="glass rounded-md border border-(--color-border) px-4 py-10 text-center text-sm text-(--color-muted-foreground)">
               {t("repo.code_search.no_results")}
             </p>

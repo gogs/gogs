@@ -59,7 +59,8 @@ func (p webAppPages) Error(w http.ResponseWriter, r *http.Request, viewer *datab
 }
 
 // getAttachment serves an attachment of an issue, a comment or a release to
-// viewers who can read the repository.
+// viewers who can read the repository. Files of a draft release are only for
+// those who can write to it, like the draft itself.
 func getAttachment(c flamego.Context, logger *logx.Logger, viewer *database.User, pages webAppPages) {
 	w := c.ResponseWriter()
 	ctx := c.Request().Context()
@@ -77,7 +78,12 @@ func getAttachment(c flamego.Context, logger *logx.Logger, viewer *database.User
 	// Resolve the repository that owns this attachment so we can enforce
 	// repository-level read permission. Without this check, anyone with the UUID
 	// could download files belonging to private repositories.
-	var repo *database.Repository
+	var (
+		repo *database.Repository
+		// hiddenDraft is set for a file of a draft release the viewer cannot
+		// write to.
+		hiddenDraft bool
+	)
 	switch {
 	case attach.IssueID > 0:
 		issue, err := database.GetIssueByID(attach.IssueID)
@@ -106,6 +112,7 @@ func getAttachment(c flamego.Context, logger *logx.Logger, viewer *database.User
 			return
 		}
 		repo = release.Repo
+		hiddenDraft = release.IsDraft && !newViewer(ctx, logger, viewer, repo.Owner, repo).CanWrite()
 	}
 	var viewerID int64
 	if viewer != nil {
@@ -116,6 +123,7 @@ func getAttachment(c flamego.Context, logger *logx.Logger, viewer *database.User
 	// earlier edit. Only its uploader can download it.
 	if (repo == nil && (viewerID == 0 || attach.UploaderID != viewerID)) ||
 		(repo != nil && !repo.HasAccess(logger, viewerID)) ||
+		hiddenDraft ||
 		!osx.IsFile(attach.LocalPath()) {
 		pages.NotFound(c)
 		return
@@ -294,7 +302,13 @@ func email2User(c flamego.Context, logger *logx.Logger, pages webAppPages) {
 func getRepoArchive(c flamego.Context, logger *logx.Logger, repoCtx *repoContext, pages webAppPages) {
 	w := c.ResponseWriter()
 	repo := repoCtx.Repo
-	if !repoCtx.Viewer.CanRead() || repo.IsEmpty {
+	// Same response as a repository that does not exist, so the archive URL does
+	// not tell whether a private repository exists.
+	if !repoCtx.Viewer.CanRead() {
+		writeErrorResponse(w, http.StatusNotFound, errors.New("repository does not exist"))
+		return
+	}
+	if repo.IsEmpty {
 		pages.NotFound(c)
 		return
 	}

@@ -32,6 +32,9 @@ const (
 	// A search of all repositories looks at the most recently updated ones
 	// first, and at most this many of them.
 	codeSearchMaxRepos = 1000
+	// A search that waits longer than this for a slot gives up, so a few
+	// visitors that keep the slots busy cannot queue every other search.
+	codeSearchSlotWait = 10 * time.Second
 )
 
 // codeSearchSlots bounds how many searches run at once, since each one reads
@@ -128,12 +131,16 @@ func appendSearchFiles(files []repoSearchFile, repo, ref, keyword string, matchC
 	return files
 }
 
-// acquireCodeSearchSlot waits for a search slot, and returns the function that
-// releases it.
+// acquireCodeSearchSlot waits for a search slot, at most codeSearchSlotWait,
+// and returns the function that releases it.
 func acquireCodeSearchSlot(ctx context.Context) (func(), error) {
+	timer := time.NewTimer(codeSearchSlotWait)
+	defer timer.Stop()
 	select {
 	case codeSearchSlots <- struct{}{}:
 		return func() { <-codeSearchSlots }, nil
+	case <-timer.C:
+		return nil, errors.New("no slot became free in time")
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}
@@ -155,7 +162,10 @@ type repoSearchResponse struct {
 	// Truncated is set when more lines matched than the response lists.
 	Truncated bool `json:"truncated"`
 	// TimedOut is set when the search took too long and listed nothing.
-	TimedOut bool     `json:"timedOut"`
+	TimedOut bool `json:"timedOut"`
+	// Busy is set when other searches took every slot for too long, so this
+	// one did not run.
+	Busy     bool     `json:"busy"`
 	Branches []string `json:"branches"`
 	Tags     []string `json:"tags"`
 }
@@ -164,7 +174,8 @@ type repoSearchResponse struct {
 // branch when there is none, for lines that contain the "q" query. With
 // "matchCase=true", letter case must match. With "exhaustive=true", it lists
 // every matching line of a file rather than the first few, and gets higher
-// limits.
+// limits. Only authenticated viewers can search exhaustively, since such a
+// search holds a slot for long.
 func getRepoSearch(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoSearchResponse, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
@@ -190,16 +201,20 @@ func getRepoSearch(c flamego.Context, logger *logx.Logger, repoCtx *repoContext)
 		RefType:    ref.Type,
 		Query:      strings.TrimSpace(c.Query("q")),
 		Keyword:    query.Keyword,
-		Exhaustive: c.QueryBool("exhaustive"),
+		Exhaustive: c.QueryBool("exhaustive") && repoCtx.Viewer.User != nil,
 		MatchCase:  c.QueryBool("matchCase"),
 		Files:      []repoSearchFile{},
 	}
+	var release func()
 	if query.Keyword != "" {
-		release, err := acquireCodeSearchSlot(ctx)
+		release, err = acquireCodeSearchSlot(ctx)
 		if err != nil {
-			logger.Error("Failed to wait for a code search slot", "repoID", repo.ID, "error", err)
-			return http.StatusServiceUnavailable, nil, err
+			// The page still lists what it can and says why there are no results.
+			logger.Warn("Failed to wait for a code search slot", "repoID", repo.ID, "error", err)
+			resp.Busy = true
 		}
+	}
+	if release != nil {
 		timeout := codeSearchTimeout
 		opts := git.GrepOptions{
 			MaxResults:        limit,
@@ -252,6 +267,9 @@ type codeSearchResponse struct {
 	// TimedOut is set when the search took too long, and the repositories
 	// left were not searched.
 	TimedOut bool `json:"timedOut"`
+	// Busy is set when other searches took every slot for too long, so this
+	// one did not run.
+	Busy bool `json:"busy"`
 }
 
 // getCodeSearch searches the default branches of the repositories the viewer
@@ -278,8 +296,9 @@ func getCodeSearch(c flamego.Context, logger *logx.Logger, viewer *database.User
 
 	release, err := acquireCodeSearchSlot(ctx)
 	if err != nil {
-		logger.Error("Failed to wait for a code search slot", "error", err)
-		return http.StatusServiceUnavailable, nil, err
+		logger.Warn("Failed to wait for a code search slot", "error", err)
+		resp.Busy = true
+		return http.StatusOK, resp, nil
 	}
 	defer release()
 	searchCtx, cancel := context.WithTimeout(ctx, codeSearchTimeout)

@@ -1390,6 +1390,9 @@ export interface RepoSearchData {
   truncated: boolean;
   // timedOut is set when the search took too long and listed nothing.
   timedOut: boolean;
+  // busy is set when too many other searches were running, so this one did
+  // not run.
+  busy: boolean;
   branches: string[];
   tags: string[];
 }
@@ -1406,6 +1409,9 @@ export interface CodeSearchData {
   // timedOut is set when the search took too long, and some repositories
   // were not searched.
   timedOut: boolean;
+  // busy is set when too many other searches were running, so this one did
+  // not run.
+  busy: boolean;
 }
 
 // fetchRepoSearch searches the files of the ref in the splat, or of the

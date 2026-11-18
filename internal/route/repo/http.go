@@ -37,6 +37,8 @@ type HTTPContext struct {
 
 // writeError writes the status and the text of an error response.
 func writeError(w http.ResponseWriter, status int, text string) {
+	// The text can quote the request, which must not be sniffed as HTML.
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(status)
 	if text != "" {
 		_, _ = w.Write([]byte(text))
@@ -49,20 +51,14 @@ func askCredentials(c flamego.Context, status int, text string) {
 	writeError(c.ResponseWriter(), status, text)
 }
 
-// gitHTTPAction returns the Git HTTP path suffix after /{owner}/{repo}/.
+// gitHTTPAction returns the Git HTTP path suffix after /{owner}/{repo}/. The
+// path is the one the router matched, which no longer has the subpath, so the
+// owner can be named like the subpath, e.g., "github" under "/git".
 func gitHTTPAction(c flamego.Context) string {
-	return gitHTTPActionFromPath(
-		c.Request().URL.Path,
-		conf.Server.Subpath,
-		c.Param("owner"),
-		c.Param("repo"),
-	)
+	return gitHTTPActionFromPath(c.Request().URL.Path, c.Param("owner"), c.Param("repo"))
 }
 
-func gitHTTPActionFromPath(urlPath, subpath, owner, repo string) string {
-	if subpath != "" {
-		urlPath = strings.TrimPrefix(urlPath, subpath)
-	}
+func gitHTTPActionFromPath(urlPath, owner, repo string) string {
 	prefix := path.Join("/", owner, repo) + "/"
 	if after, ok := strings.CutPrefix(urlPath, prefix); ok {
 		return after
@@ -70,11 +66,16 @@ func gitHTTPActionFromPath(urlPath, subpath, owner, repo string) string {
 	return ""
 }
 
+// gitHTTPIsPull reports whether the action only reads the repository. Anything
+// it does not recognize counts as a push, which requires authentication.
 func gitHTTPIsPull(c flamego.Context, action string) bool {
-	if action == "info/refs" {
+	switch action {
+	case "git-upload-pack":
+		return true
+	case "info/refs":
 		return c.Query("service") != "git-receive-pack"
 	}
-	return action != "git-receive-pack"
+	return false
 }
 
 func HTTPContexter(logger *logx.Logger, store Store) flamego.Handler {

@@ -1,14 +1,15 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { CaseSensitive, ListChecks, TriangleAlert } from "lucide-react";
+import { CaseSensitive, ListChecks } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { CodeSearchForm, CodeSearchHelp, CodeSearchResults } from "@/components/CodeSearchResults";
+import { CodeSearchForm, CodeSearchHelp, CodeSearchResults, CodeSearchWarning } from "@/components/CodeSearchResults";
 import { RefPicker } from "@/components/RefPicker";
 import { RepoHeader } from "@/components/RepoHeader";
 import { usePageTitle } from "@/lib/page-title";
 import { type RepoSearchData, refPath, repoHeaderQuery } from "@/lib/queries/repo";
 import { subUrl } from "@/lib/url";
+import { useUserInfo } from "@/lib/use-user-info";
 
 export interface RepoSearchSearch {
   q?: string;
@@ -21,6 +22,7 @@ export interface RepoSearchSearch {
 export function RepoSearch({ owner, name, data }: { owner: string; name: string; data: RepoSearchData }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const user = useUserInfo();
   const { data: repo } = useSuspenseQuery(repoHeaderQuery(owner, name));
   usePageTitle(`${data.query ? `${data.query} - ` : ""}${t("repo.code_search")} - ${repo.owner}/${repo.name}`);
   const params = { owner: repo.owner, repo: repo.name };
@@ -38,9 +40,9 @@ export function RepoSearch({ owner, name, data }: { owner: string; name: string;
       },
     });
 
-  let message: string | null = null;
-  if (data.keyword && data.timedOut) message = t("repo.code_search.timed_out");
-  else if (data.keyword && !data.files.length) message = t("repo.code_search.no_results");
+  let warning: string | null = null;
+  if (data.busy) warning = t("repo.code_search.busy");
+  else if (data.timedOut) warning = t("repo.code_search.timed_out");
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -75,22 +77,28 @@ export function RepoSearch({ owner, name, data }: { owner: string; name: string;
                 pressed: data.matchCase,
                 onToggle: (q) => search(q, { matchCase: !data.matchCase }),
               },
-              {
-                icon: ListChecks,
-                label: t("repo.code_search.exhaustive"),
-                pressed: data.exhaustive,
-                onToggle: (q) => search(q, { exhaustive: !data.exhaustive }),
-              },
+              // Only authenticated viewers can search exhaustively.
+              ...(user
+                ? [
+                    {
+                      icon: ListChecks,
+                      label: t("repo.code_search.exhaustive"),
+                      pressed: data.exhaustive,
+                      onToggle: (q: string) => search(q, { exhaustive: !data.exhaustive }),
+                    },
+                  ]
+                : []),
             ]}
           />
         </div>
 
         {!data.keyword ? (
           <CodeSearchHelp hint={t("repo.code_search.hint", { ref: data.ref })} />
-        ) : message ? (
-          <p className="glass flex items-center justify-center gap-2 rounded-md border border-(--color-border) px-4 py-10 text-center text-sm text-(--color-muted-foreground)">
-            {data.timedOut ? <TriangleAlert className="size-4 shrink-0 text-(--color-warning)" aria-hidden /> : null}
-            <span className="wrap-anywhere">{message}</span>
+        ) : warning ? (
+          <CodeSearchWarning>{warning}</CodeSearchWarning>
+        ) : !data.files.length ? (
+          <p className="glass rounded-md border border-(--color-border) px-4 py-10 text-center text-sm text-(--color-muted-foreground)">
+            {t("repo.code_search.no_results")}
           </p>
         ) : (
           <>
@@ -107,7 +115,7 @@ export function RepoSearch({ owner, name, data }: { owner: string; name: string;
                 {t(data.exhaustive ? "repo.code_search.truncated_exhaustive" : "repo.code_search.truncated", {
                   count: data.files.reduce((n, f) => n + f.lines.filter((l) => l.isMatch).length, 0),
                 })}{" "}
-                {data.exhaustive ? null : (
+                {data.exhaustive || !user ? null : (
                   <Link
                     to="/$owner/$repo/search/$"
                     params={{ ...params, _splat: data.ref }}

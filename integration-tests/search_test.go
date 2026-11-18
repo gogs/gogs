@@ -156,7 +156,7 @@ func TestCodeSearch(t *testing.T) {
 		})
 
 		t.Run("lists every line of a file with context", func(t *testing.T) {
-			resp := exhaustiveSearch(t, anonymous, many)
+			resp := exhaustiveSearch(t, otherClient, many)
 			assert.True(t, resp.Exhaustive)
 			assert.False(t, resp.Truncated)
 			require.Equal(t, []string{"docs/many.txt", "src/many.txt"}, codeSearchPaths(resp.Files))
@@ -172,8 +172,17 @@ func TestCodeSearch(t *testing.T) {
 			}
 		})
 
+		t.Run("is only for authenticated viewers", func(t *testing.T) {
+			// An exhaustive search holds a search slot for long, so anonymous
+			// visitors get the default limits.
+			resp := exhaustiveSearch(t, anonymous, many)
+			assert.False(t, resp.Exhaustive)
+			require.Equal(t, []string{"docs/many.txt", "src/many.txt"}, codeSearchPaths(resp.Files))
+			assert.Equal(t, 10, matches(resp.Files[0]))
+		})
+
 		t.Run("keeps the path qualifier", func(t *testing.T) {
-			resp := exhaustiveSearch(t, anonymous, "path:docs "+many)
+			resp := exhaustiveSearch(t, otherClient, "path:docs "+many)
 			assert.Equal(t, many, resp.Keyword)
 			assert.Equal(t, []string{"docs/many.txt"}, codeSearchPaths(resp.Files))
 		})
@@ -182,7 +191,7 @@ func TestCodeSearch(t *testing.T) {
 			huge := UniqueName("huge")
 			repoCodeNewFile(t, ownerClient, public, "huge.txt", strings.Repeat(huge+"\n", 5001), "Add huge")
 
-			resp := exhaustiveSearch(t, anonymous, huge)
+			resp := exhaustiveSearch(t, otherClient, huge)
 			assert.True(t, resp.Truncated)
 			require.Equal(t, []string{"huge.txt"}, codeSearchPaths(resp.Files))
 			assert.Equal(t, 5000, matches(resp.Files[0]))

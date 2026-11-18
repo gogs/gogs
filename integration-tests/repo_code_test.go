@@ -856,10 +856,30 @@ func TestRepoCodeReleases(t *testing.T) {
 	})
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 
+	contentType, upload = repoCodeMultipart(t, "next.bin", []byte("next build"))
+	status, _, body = ownerClient.doRaw(http.MethodPost, api+"/releases/attachments", contentType, upload)
+	require.Equal(t, http.StatusCreated, status, "response: %s", body)
+	var draftAttachment struct {
+		UUID string `json:"uuid"`
+	}
+	require.NoError(t, json.Unmarshal(body, &draftAttachment))
 	status, body = ownerClient.do(http.MethodPost, api+"/releases", map[string]any{
 		"tagName": "v2.0", "target": "main", "title": "Upcoming", "isDraft": true,
+		"attachments": []string{draftAttachment.UUID},
 	})
 	require.Equal(t, http.StatusCreated, status, "response: %s", body)
+
+	// 🚨 SECURITY: Files of a draft are only for those who can write to the
+	// repository, like the draft itself, even to readers who know the UUID.
+	downloadStatus := func(c *client, uuid string) int {
+		t.Helper()
+		status, _, _ := c.doRaw(http.MethodGet, "/attachments/"+uuid, "", nil)
+		return status
+	}
+	assert.Equal(t, http.StatusOK, downloadStatus(anonymous, attachment.UUID), "file of a published release")
+	assert.Equal(t, http.StatusNotFound, downloadStatus(anonymous, draftAttachment.UUID), "anonymous viewer")
+	assert.Equal(t, http.StatusNotFound, downloadStatus(otherClient, draftAttachment.UUID), "reader")
+	assert.Equal(t, http.StatusOK, downloadStatus(ownerClient, draftAttachment.UUID), "writer")
 
 	type release struct {
 		TagName     string `json:"tagName"`
@@ -917,12 +937,16 @@ func TestRepoCodeReleases(t *testing.T) {
 	assert.Equal(t, "First release, fixed", edit.Title)
 	assert.Equal(t, "Better notes.", edit.Content)
 
-	// Publishing the draft makes its tag.
-	status, body = ownerClient.do(http.MethodPatch, api+"/releases/edit/v2.0", map[string]any{"title": "Second"})
+	// Publishing the draft makes its tag, and its files public.
+	status, body = ownerClient.do(http.MethodPatch, api+"/releases/edit/v2.0", map[string]any{
+		"title":       "Second",
+		"attachments": []string{draftAttachment.UUID},
+	})
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 	assert.Equal(t, head, repoCodeGit(t, repo, "rev-parse", "v2.0^{commit}"))
 	anonymous.doJSON(http.MethodGet, api+"/releases", nil, http.StatusOK, &list)
 	assert.Len(t, list.Releases, 2)
+	assert.Equal(t, http.StatusOK, downloadStatus(anonymous, draftAttachment.UUID), "file of the published draft")
 
 	status, body = otherClient.do(http.MethodDelete, api+"/releases/edit/v1.0", map[string]any{})
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
@@ -1246,6 +1270,15 @@ func TestRepoCodeArchive(t *testing.T) {
 		require.Equal(t, http.StatusOK, status, "response: %s", body)
 		_, err := zip.NewReader(bytes.NewReader(body), int64(len(body)))
 		assert.NoError(t, err)
+	})
+
+	t.Run("private repository looks like a missing one", func(t *testing.T) {
+		// 🚨 SECURITY: The response must not tell whether a private repository
+		// exists.
+		_, privateHeader, privateBody := anonymous.doRaw(http.MethodGet, repoCodePage(private)+"/archive/main.zip", "", nil)
+		_, missingHeader, missingBody := anonymous.doRaw(http.MethodGet, "/"+owner.Name+"/"+UniqueName("missing-")+"/archive/main.zip", "", nil)
+		assert.Equal(t, missingHeader.Get("Content-Type"), privateHeader.Get("Content-Type"))
+		assert.Equal(t, string(missingBody), string(privateBody))
 	})
 }
 
