@@ -3,7 +3,10 @@ package integrationtests
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -53,6 +56,88 @@ func TestAPIV1CreateRepository(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
 	status, body = apiV1Client(t, seedUser(t, CreateUserOptions{})).do(http.MethodGet, apiV1RepoPath(repo, ""), nil)
 	assert.Equal(t, http.StatusNotFound, status, "private repository of another user, response: %s", body)
+}
+
+// Repositories created at the same time each give their creators and the
+// members of their owner teams access. The tests run on PostgreSQL, which never
+// failed these creations, so this guards the accesses rather than the locks
+// MySQL takes.
+func TestAPIV1CreateRepositoriesAtTheSameTime(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	member := seedUser(t, CreateUserOptions{})
+	outsider := apiV1Client(t, seedUser(t, CreateUserOptions{}))
+	ownerAPI := apiV1Client(t, owner)
+	type creation struct {
+		api   *client
+		path  string
+		owner string
+	}
+	var creations []creation
+	// Each owner gets one repository, because creations by the same owner wait
+	// for each other to count it.
+	for range 4 {
+		org := orgSeed(t, owner.ID)
+		team, err := org.GetOwnerTeam()
+		require.NoError(t, err)
+		require.NoError(t, database.AddTeamMember(org.ID, team.ID, member.ID))
+		creations = append(creations, creation{api: ownerAPI, path: "/api/v1/org/" + org.Name + "/repos", owner: org.Name})
+
+		u := seedUser(t, CreateUserOptions{})
+		creations = append(creations, creation{api: apiV1Client(t, u), path: "/api/v1/user/repos", owner: u.Name})
+	}
+
+	name := UniqueName("repo-")
+	requests := make([]*http.Request, len(creations))
+	for i, c := range creations {
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, serverURL+c.path, strings.NewReader(`{"name":"`+name+`","private":true}`))
+		require.NoError(t, err)
+		req.Header = c.api.header.Clone()
+		req.Header.Set("Content-Type", "application/json")
+		requests[i] = req
+	}
+	// The client fails the test on errors, which only the test goroutine may do.
+	statuses := make([]int, len(requests))
+	bodies := make([]string, len(requests))
+	var wg sync.WaitGroup
+	for i, req := range requests {
+		wg.Go(func() {
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				bodies[i] = err.Error()
+				return
+			}
+			defer func() { _ = resp.Body.Close() }()
+			body, _ := io.ReadAll(resp.Body)
+			statuses[i], bodies[i] = resp.StatusCode, string(body)
+		})
+	}
+	wg.Wait()
+
+	for i, c := range creations {
+		require.Equal(t, http.StatusCreated, statuses[i], "%s, response: %s", c.path, bodies[i])
+	}
+	for _, c := range creations {
+		repo := &Repository{Owner: c.owner, Name: name}
+		var got apiV1Repo
+		c.api.doJSON(http.MethodGet, apiV1RepoPath(repo, ""), nil, http.StatusOK, &got)
+		require.NotNil(t, got.Permissions)
+		assert.True(t, got.Permissions.Admin, "creator of %s is not admin", got.FullName)
+
+		status, body := outsider.do(http.MethodGet, apiV1RepoPath(repo, ""), nil)
+		assert.Equal(t, http.StatusNotFound, status, "private repository %s seen by an outsider, response: %s", got.FullName, body)
+	}
+	memberAPI := apiV1Client(t, member)
+	for _, c := range creations {
+		if c.api != ownerAPI {
+			continue
+		}
+		var got apiV1Repo
+		memberAPI.doJSON(http.MethodGet, apiV1RepoPath(&Repository{Owner: c.owner, Name: name}, ""), nil, http.StatusOK, &got)
+		require.NotNil(t, got.Permissions)
+		assert.True(t, got.Permissions.Admin, "member of the owner team is not admin of %s", got.FullName)
+	}
 }
 
 func apiV1RepoNames(repos []apiV1Repo) []string {

@@ -15,7 +15,7 @@ import (
 type Access struct {
 	ID     int64      `gorm:"primaryKey"`
 	UserID int64      `xorm:"UNIQUE(s)" gorm:"uniqueIndex:access_user_repo_unique;not null"`
-	RepoID int64      `xorm:"UNIQUE(s)" gorm:"uniqueIndex:access_user_repo_unique;not null"`
+	RepoID int64      `xorm:"UNIQUE(s)" gorm:"uniqueIndex:access_user_repo_unique;not null;index:idx_access_repo_id"`
 	Mode   AccessMode `gorm:"not null"`
 }
 

@@ -2662,10 +2662,20 @@ func (r *Repository) refreshAccesses(e Engine, accessMap map[int64]AccessMode) (
 		})
 	}
 
-	// Delete old accesses and insert new ones for repository.
-	if _, err = e.Delete(&Access{RepoID: r.ID}); err != nil {
-		return errors.Newf("delete old accesses: %v", err)
-	} else if _, err = e.Insert(newAccesses); err != nil {
+	// On MySQL, deleting by a repo_id that has no rows, e.g., of a repository
+	// being created, locks the gap past the largest repo_id. Repositories created
+	// at the same time all insert into that gap, so their transactions would
+	// deadlock each other. Checking first takes no locks.
+	hasOldAccesses, err := e.Where("repo_id = ?", r.ID).Exist(new(Access))
+	if err != nil {
+		return errors.Newf("check old accesses: %v", err)
+	}
+	if hasOldAccesses {
+		if _, err = e.Delete(&Access{RepoID: r.ID}); err != nil {
+			return errors.Newf("delete old accesses: %v", err)
+		}
+	}
+	if _, err = e.Insert(newAccesses); err != nil {
 		return errors.Newf("insert new accesses: %v", err)
 	}
 	return nil
