@@ -244,6 +244,12 @@ func TestProtectedBranchRules(t *testing.T) {
 		}
 		c.doJSON(http.MethodGet, issueAPIPath(repo, "src", "dev"), nil, http.StatusOK, &src)
 		assert.Equal(t, "ok", src.Editor)
+		// The editor says up front that only a new branch can take the commit.
+		var target struct {
+			DirectCommitRefused string `json:"directCommitRefused"`
+		}
+		c.doJSON(http.MethodGet, issueAPIPath(repo, "editor", "dev"), nil, http.StatusOK, &target)
+		assert.Equal(t, "Branch <code>{branch}</code> is protected and you are not in the push allowlist.", target.DirectCommitRefused)
 
 		commit := func(newBranch string) (int, []byte) {
 			return c.do(http.MethodPost, issueAPIPath(repo, "editor", "files"), map[string]any{
@@ -256,7 +262,13 @@ func TestProtectedBranchRules(t *testing.T) {
 		before := gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(repo.Owner, repo.Name), "rev-parse", "refs/heads/dev")
 		status, body := commit("")
 		assert.Equal(t, http.StatusForbidden, status, "response: %s", body)
-		assert.Contains(t, string(body), "you are not in the push allowlist")
+		var refused struct {
+			Fields map[string]string `json:"fields"`
+			Branch string            `json:"branch"`
+		}
+		require.NoError(t, json.Unmarshal(body, &refused))
+		assert.Equal(t, map[string]string{"branch": "Branch <code>{branch}</code> is protected and you are not in the push allowlist."}, refused.Fields)
+		assert.Equal(t, "dev", refused.Branch)
 		assert.Equal(t, before, gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(repo.Owner, repo.Name), "rev-parse", "refs/heads/dev"))
 
 		status, body = commit(UniqueName("proposal-"))
@@ -272,12 +284,9 @@ func TestProtectedBranchRules(t *testing.T) {
 		gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(repo.Owner, repo.Name), "branch", "-D", "staging")
 		status, body = commit("staging")
 		assert.Equal(t, http.StatusForbidden, status, "response: %s", body)
-		var refused struct {
-			Error  string `json:"error"`
-			Branch string `json:"branch"`
-		}
+		refused.Fields, refused.Branch = nil, ""
 		require.NoError(t, json.Unmarshal(body, &refused))
-		assert.Equal(t, "Branch <code>{branch}</code> is protected and you are not in the push allowlist.", refused.Error)
+		assert.Equal(t, map[string]string{"newBranch": "Branch <code>{branch}</code> is protected and you are not in the push allowlist."}, refused.Fields)
 		assert.Equal(t, "staging", refused.Branch)
 	})
 

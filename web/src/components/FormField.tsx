@@ -1,6 +1,5 @@
 import { type AriaAttributes, type ReactElement, type ReactNode, cloneElement } from "react";
 
-import { RichText } from "@/components/RichText";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -41,16 +40,14 @@ export function FormField({
 }
 
 // FormAlert shows the message for a whole form above its fields.
-// FormAlert shows the error of a form. A message that marks inline code, e.g.,
-// a branch name, takes the code from `code`.
-export function FormAlert({ message, code }: { message: string | null; code?: string }) {
+export function FormAlert({ message }: { message: string | null }) {
   if (!message) return null;
   return (
     <div
       role="alert"
       className="mb-4 rounded-md border border-(--color-destructive) bg-(--color-destructive)/10 px-3 py-2 text-sm text-(--color-destructive)"
     >
-      {code === undefined ? message : <RichText text={message} code={code} />}
+      {message}
     </div>
   );
 }
@@ -104,24 +101,46 @@ export function RadioField({
   checked,
   onChange,
   label,
+  disabled,
+  description,
+  descriptionId,
 }: {
   id: string;
   name: string;
   checked: boolean;
   onChange: () => void;
   label: ReactNode;
+  disabled?: boolean;
+  // description shows below the label, e.g., why the choice is disabled.
+  description?: ReactNode;
+  descriptionId?: string;
 }) {
   return (
-    <label htmlFor={id} className="flex cursor-pointer items-start gap-2.5 text-sm">
-      <input
-        id={id}
-        type="radio"
-        name={name}
-        checked={checked}
-        onChange={onChange}
-        className="mt-0.5 size-4 shrink-0 cursor-pointer accent-(--color-primary)"
-      />
-      <span>{label}</span>
-    </label>
+    <div className="flex flex-col gap-1">
+      <label
+        htmlFor={id}
+        className={cn(
+          "flex items-start gap-2.5 text-sm",
+          disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer",
+        )}
+      >
+        <input
+          id={id}
+          type="radio"
+          name={name}
+          checked={checked}
+          onChange={onChange}
+          disabled={disabled}
+          aria-describedby={description ? descriptionId : undefined}
+          className="mt-0.5 size-4 shrink-0 cursor-pointer accent-(--color-primary) disabled:cursor-not-allowed"
+        />
+        <span>{label}</span>
+      </label>
+      {description ? (
+        <p id={descriptionId} className="ml-6.5 text-sm text-(--color-destructive)">
+          {description}
+        </p>
+      ) : null}
+    </div>
   );
 }

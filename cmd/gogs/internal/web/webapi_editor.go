@@ -98,13 +98,17 @@ type repoEditorTarget struct {
 	// pull request.
 	PullRequestsAllowed bool                     `json:"pullRequestsAllowed"`
 	Upload              *issueAttachmentSettings `json:"upload,omitempty"`
+	// DirectCommitRefused is why the viewer cannot commit to the branch itself
+	// but only to a new branch, with <code>{branch}</code> where the branch
+	// name goes. It is left out when they can.
+	DirectCommitRefused string `json:"directCommitRefused,omitempty"`
 }
 
 // getRepoEditorTarget describes the branch and the path in the route, which
 // is the branch name followed by the path, for the pages that change files.
 // Branch names can have slashes, so the shortest leading part of the route
 // that names a branch is the branch.
-func getRepoEditorTarget(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoEditorTarget, err error) {
+func getRepoEditorTarget(c flamego.Context, logger *logx.Logger, l i18n.Locale, repoCtx *repoContext) (statusCode int, resp *repoEditorTarget, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
 	gitRepo, err := openRepoGit(repoCtx)
@@ -147,6 +151,12 @@ func getRepoEditorTarget(c flamego.Context, logger *logx.Logger, repoCtx *repoCo
 		PullRequestsAllowed: pullRequestBase(c.Request().Context(), repoCtx) != nil,
 		Upload:              attachmentSettings(repoUploadLimits()),
 	}
+	denial, err := database.Handle.ProtectBranches().CheckPushByName(ctx, repo.ID, branch, repoCtx.Viewer.ID(), false)
+	if err != nil {
+		logger.Error("Failed to check branch protection", "repoID", repo.ID, "branch", branch, "error", err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "check branch protection")
+	}
+	resp.DirectCommitRefused = protectedBranchMessage(l, denial)
 	if treePath == "" {
 		return http.StatusOK, resp, nil
 	}
@@ -294,23 +304,36 @@ func checkEditorCommit(c flamego.Context, l i18n.Locale, repoCtx *repoContext, g
 	if err != nil {
 		return http.StatusInternalServerError, nil, errors.Wrapf(err, "check protection of branch %q", target)
 	}
-	var key string
-	switch denial {
-	case database.PushDeniedNotInAllowlist:
-		key = "repo.editor.protected_branch_not_in_allowlist"
-	case database.PushDeniedRequiresPullRequest:
-		key = "repo.editor.protected_branch_requires_pull_request"
-	default:
+	msg := protectedBranchMessage(l, denial)
+	if msg == "" {
 		return 0, nil, nil
 	}
-	return http.StatusForbidden, &repoEditorProtectedBranch{Error: l.Tr(key), Branch: target}, nil
+	// The reason shows next to the choice of the branch it is about.
+	field := "branch"
+	if req.NewBranch != "" {
+		field = "newBranch"
+	}
+	return http.StatusForbidden, &repoEditorProtectedBranch{Fields: fieldErrors{field: &msg}, Branch: target}, nil
 }
 
-// repoEditorProtectedBranch refuses a commit to a protected branch. Error
-// marks where the branch name goes with <code>{branch}</code>.
+// protectedBranchMessage returns why the protection of a branch refuses a
+// commit, with <code>{branch}</code> where the branch name goes, or empty
+// when it does not.
+func protectedBranchMessage(l i18n.Locale, denial database.PushDenial) string {
+	switch denial {
+	case database.PushDeniedNotInAllowlist:
+		return l.Tr("repo.editor.protected_branch_not_in_allowlist")
+	case database.PushDeniedRequiresPullRequest:
+		return l.Tr("repo.editor.protected_branch_requires_pull_request")
+	}
+	return ""
+}
+
+// repoEditorProtectedBranch refuses a commit to a protected branch. Branch is
+// the name the messages of Fields leave out.
 type repoEditorProtectedBranch struct {
-	Error  string `json:"error"`
-	Branch string `json:"branch"`
+	Fields fieldErrors `json:"fields"`
+	Branch string      `json:"branch"`
 }
 
 // commitMessage returns the summary, or the fallback when it is empty,
