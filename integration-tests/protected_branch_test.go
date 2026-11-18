@@ -180,3 +180,243 @@ func TestProtectedBranchAllowlist(t *testing.T) {
 		assert.Contains(t, out, "commits must be merged through pull request")
 	})
 }
+
+func TestProtectedBranchRules(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	listed := seedUser(t, CreateUserOptions{})
+	unlisted := seedUser(t, CreateUserOptions{})
+	org := orgSeed(t, owner.ID)
+	repo := seedRepository(t, org.ID, CreateRepositoryOptions{AutoInit: true})
+	protectedBranchTeam(t, org, repo, database.AccessModeWrite, listed.ID, unlisted.ID)
+
+	ownerClient := authenticatedClient(t, owner)
+	protect := func(t *testing.T, branch string, body map[string]any) {
+		t.Helper()
+		status, resp := ownerClient.do(http.MethodPut, issueAPIPath(repo, "settings", "branches", branch), body)
+		require.Equal(t, http.StatusNoContent, status, "response: %s", resp)
+	}
+	protect(t, "main", map[string]any{
+		"protected":          true,
+		"requirePullRequest": true,
+		"enableAllowlist":    true,
+		"allowlistUserIDs":   []int64{listed.ID},
+	})
+
+	t.Run("web editor and contents API follow the push rules", func(t *testing.T) {
+		editor := func(u *User) string {
+			var resp struct {
+				Editor string `json:"editor"`
+			}
+			authenticatedClient(t, u).doJSON(http.MethodGet, issueAPIPath(repo, "src", "main"), nil, http.StatusOK, &resp)
+			return resp.Editor
+		}
+		// People in the allowlist push past the pull request requirement, so
+		// they can also edit in the browser.
+		assert.Equal(t, "ok", editor(listed))
+		assert.Empty(t, editor(unlisted))
+
+		before := gitMainOnDisk(t, repo)
+		status, body := apiV1Client(t, unlisted).do(http.MethodPut, apiV1RepoPath(repo, "/contents/unlisted.txt"), map[string]any{
+			"message": "Add unlisted.txt",
+			"content": "dW5saXN0ZWQK",
+			"branch":  "main",
+		})
+		assert.Equal(t, http.StatusForbidden, status, "response: %s", body)
+		assert.Contains(t, string(body), "you are not in the push allowlist")
+		assert.Equal(t, before, gitMainOnDisk(t, repo))
+
+		apiV1PutFile(t, apiV1Client(t, listed), repo, "listed.txt", "listed\n", "main")
+	})
+
+	t.Run("writer outside the allowlist commits to a new branch in the editor", func(t *testing.T) {
+		dir := gitClone(t, gitRemoteURL(t, repo, listed.Name, listed.Password))
+		gitRun(t, dir, "push", "origin", "main:refs/heads/dev")
+		protect(t, "dev", map[string]any{
+			"protected":        true,
+			"enableAllowlist":  true,
+			"allowlistUserIDs": []int64{listed.ID},
+		})
+		c := authenticatedClient(t, unlisted)
+		var src struct {
+			Editor string `json:"editor"`
+		}
+		c.doJSON(http.MethodGet, issueAPIPath(repo, "src", "dev"), nil, http.StatusOK, &src)
+		assert.Equal(t, "ok", src.Editor)
+		// The editor says up front that only a new branch can take the commit.
+		var target struct {
+			DirectCommitRefused string `json:"directCommitRefused"`
+		}
+		c.doJSON(http.MethodGet, issueAPIPath(repo, "editor", "dev"), nil, http.StatusOK, &target)
+		assert.Equal(t, "Branch <code>{branch}</code> is protected and you are not in the push allowlist.", target.DirectCommitRefused)
+
+		commit := func(newBranch string) (int, []byte) {
+			return c.do(http.MethodPost, issueAPIPath(repo, "editor", "files"), map[string]any{
+				"branch":    "dev",
+				"newBranch": newBranch,
+				"path":      UniqueName("file-") + ".txt",
+				"content":   "content\n",
+			})
+		}
+		before := gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(repo.Owner, repo.Name), "rev-parse", "refs/heads/dev")
+		status, body := commit("")
+		assert.Equal(t, http.StatusForbidden, status, "response: %s", body)
+		var refused struct {
+			Fields map[string]string `json:"fields"`
+			Branch string            `json:"branch"`
+		}
+		require.NoError(t, json.Unmarshal(body, &refused))
+		assert.Equal(t, map[string]string{"branch": "Branch <code>{branch}</code> is protected and you are not in the push allowlist."}, refused.Fields)
+		assert.Equal(t, "dev", refused.Branch)
+		assert.Equal(t, before, gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(repo.Owner, repo.Name), "rev-parse", "refs/heads/dev"))
+
+		status, body = commit(UniqueName("proposal-"))
+		assert.Equal(t, http.StatusOK, status, "response: %s", body)
+
+		// A new branch with the name of a deleted branch that is still protected.
+		gitRun(t, dir, "push", "origin", "main:refs/heads/staging")
+		protect(t, "staging", map[string]any{
+			"protected":        true,
+			"enableAllowlist":  true,
+			"allowlistUserIDs": []int64{listed.ID},
+		})
+		gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(repo.Owner, repo.Name), "branch", "-D", "staging")
+		status, body = commit("staging")
+		assert.Equal(t, http.StatusForbidden, status, "response: %s", body)
+		refused.Fields, refused.Branch = nil, ""
+		require.NoError(t, json.Unmarshal(body, &refused))
+		assert.Equal(t, map[string]string{"newBranch": "Branch <code>{branch}</code> is protected and you are not in the push allowlist."}, refused.Fields)
+		assert.Equal(t, "staging", refused.Branch)
+	})
+
+	t.Run("restoring a deleted protected head branch", func(t *testing.T) {
+		branch := UniqueName("feature-")
+		dir := gitClone(t, gitRemoteURL(t, repo, listed.Name, listed.Password))
+		gitRun(t, dir, "checkout", "-b", branch)
+		gitCommitFile(t, dir, branch+".txt")
+		gitRun(t, dir, "push", "origin", branch)
+		listedClient := authenticatedClient(t, listed)
+		index := pullCreate(t, listedClient, repo, branch, "Change "+branch)
+		pullWaitMergeable(t, listedClient, repo, index)
+		status, body := protectedBranchMerge(t, listedClient, repo, index)
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+
+		protect(t, branch, map[string]any{
+			"protected":        true,
+			"enableAllowlist":  true,
+			"allowlistUserIDs": []int64{listed.ID},
+		})
+		gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(repo.Owner, repo.Name), "branch", "-D", branch)
+
+		unlistedClient := authenticatedClient(t, unlisted)
+		assert.False(t, pullGet(t, unlistedClient, repo, index).Pull.ViewerCanRestoreBranch)
+		path := issueAPIPath(repo, "pulls", index, "branch")
+		status, body = unlistedClient.do(http.MethodPost, path, map[string]any{})
+		assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
+		_, err := gitCommand(t.TempDir(), "--git-dir", database.RepoPath(repo.Owner, repo.Name), "rev-parse", "--verify", "refs/heads/"+branch).CombinedOutput()
+		assert.Error(t, err, "branch was restored")
+
+		assert.True(t, pullGet(t, listedClient, repo, index).Pull.ViewerCanRestoreBranch)
+		status, body = listedClient.do(http.MethodPost, path, map[string]any{})
+		assert.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	})
+
+	t.Run("tag with the name of a protected branch", func(t *testing.T) {
+		dir := gitClone(t, gitRemoteURL(t, repo, unlisted.Name, unlisted.Password))
+		gitRun(t, dir, "tag", "main")
+		out, err := gitCommand(dir, "push", "origin", "refs/tags/main").CombinedOutput()
+		require.NoError(t, err, "push tag: %s", out)
+
+		out, err = gitCommand(dir, "push", "origin", ":refs/tags/main").CombinedOutput()
+		require.NoError(t, err, "delete tag: %s", out)
+
+		// The branch stays protected.
+		pushOut, ok := protectedBranchPush(t, repo, unlisted)
+		assert.False(t, ok, "push succeeded: %s", pushOut)
+		assert.Contains(t, pushOut, "you are not in the push allowlist")
+	})
+
+	t.Run("branch created again under its protection", func(t *testing.T) {
+		dir := gitClone(t, gitRemoteURL(t, repo, listed.Name, listed.Password))
+		gitRun(t, dir, "push", "origin", "main:refs/heads/release")
+		protect(t, "release", map[string]any{"protected": true})
+		// Protection outlives a branch deleted outside of Gogs.
+		gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(repo.Owner, repo.Name), "branch", "-D", "release")
+
+		out, err := gitCommand(dir, "push", "origin", "main:refs/heads/release").CombinedOutput()
+		require.NoError(t, err, "push: %s", out)
+
+		out, err = gitCommand(dir, "push", "origin", ":refs/heads/release").CombinedOutput()
+		assert.Error(t, err, "delete succeeded: %s", out)
+		assert.Contains(t, string(out), "is protected from deletion")
+	})
+
+	t.Run("API creates branches and tags under protected names", func(t *testing.T) {
+		dir := gitClone(t, gitRemoteURL(t, repo, listed.Name, listed.Password))
+		gitRun(t, dir, "push", "origin", "main:refs/heads/hotfix")
+		protect(t, "hotfix", map[string]any{
+			"protected":        true,
+			"enableAllowlist":  true,
+			"allowlistUserIDs": []int64{listed.ID},
+		})
+		gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(repo.Owner, repo.Name), "branch", "-D", "hotfix")
+		create := func(u *User, kind, name string) (int, []byte) {
+			return apiV1Client(t, u).do(http.MethodPost, apiV1RepoPath(repo, "/"+kind), map[string]any{"name": name})
+		}
+
+		status, body := create(unlisted, "tags", "hotfix")
+		assert.Equal(t, http.StatusCreated, status, "create tag: %s", body)
+
+		status, body = create(unlisted, "branches", "hotfix")
+		assert.Equal(t, http.StatusForbidden, status, "response: %s", body)
+		assert.Contains(t, string(body), "you are not in the push allowlist")
+		_, err := gitCommand(t.TempDir(), "--git-dir", database.RepoPath(repo.Owner, repo.Name), "rev-parse", "--verify", "refs/heads/hotfix").CombinedOutput()
+		assert.Error(t, err, "branch was created")
+
+		status, body = create(listed, "branches", "hotfix")
+		assert.Equal(t, http.StatusCreated, status, "response: %s", body)
+
+		// A taken name is reported as such, not as protected.
+		status, body = create(unlisted, "branches", "hotfix")
+		assert.Equal(t, http.StatusUnprocessableEntity, status, "response: %s", body)
+	})
+}
+
+func TestProtectedBranchTransferToUser(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	listed := seedUser(t, CreateUserOptions{})
+	org := orgSeed(t, owner.ID)
+	repo := seedRepository(t, org.ID, CreateRepositoryOptions{AutoInit: true})
+	protectedBranchTeam(t, org, repo, database.AccessModeWrite, listed.ID)
+
+	ownerClient := authenticatedClient(t, owner)
+	status, body := ownerClient.do(http.MethodPut, issueAPIPath(repo, "settings", "branches", "main"), map[string]any{
+		"protected":        true,
+		"enableAllowlist":  true,
+		"allowlistUserIDs": []int64{listed.ID},
+	})
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	out, ok := protectedBranchPush(t, repo, owner)
+	require.False(t, ok, "push before transfer succeeded: %s", out)
+
+	status, body = ownerClient.do(http.MethodPost, issueAPIPath(repo, "settings", "transfer"), map[string]any{"repoName": repo.Name, "newOwner": owner.Name})
+	require.Equal(t, http.StatusOK, status, "response: %s", body)
+	moved := *repo
+	moved.Owner = owner.Name
+
+	// Settings of user repositories have no allowlist, so one left enabled
+	// would keep out everyone not listed by name, e.g., the new owner.
+	out, ok = protectedBranchPush(t, &moved, owner)
+	assert.True(t, ok, "push after transfer failed: %s", out)
+
+	var got struct {
+		Protected       bool `json:"protected"`
+		EnableAllowlist bool `json:"enableAllowlist"`
+	}
+	authenticatedClient(t, owner).doJSON(http.MethodGet, issueAPIPath(&moved, "settings", "branches", "main"), nil, http.StatusOK, &got)
+	assert.True(t, got.Protected)
+	assert.False(t, got.EnableAllowlist)
+}

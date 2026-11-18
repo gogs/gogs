@@ -57,10 +57,28 @@ func withRepoEditor(c flamego.Context, repoCtx *repoContext) {
 }
 
 // editableBranch reports whether files of the branch can be changed in the
-// browser: it exists and does not take changes only through pull requests.
-func editableBranch(c flamego.Context, logger *logx.Logger, repoCtx *repoContext, gitRepo *git.Repository, branch string) bool {
-	ctx := c.Request().Context()
-	return branch != "" && gitRepo.HasBranch(ctx, branch) && !database.Handle.ProtectBranches().RequiresPullRequest(ctx, logger, repoCtx.Repo.ID, branch)
+// browser: it exists, and its protection lets the viewer push to it or, when
+// it does not require pull requests, commit to a new branch from it.
+// Committing checks the branch written, see checkEditorCommit.
+func editableBranch(ctx context.Context, repoCtx *repoContext, gitRepo *git.Repository, branch string) (bool, error) {
+	if branch == "" || !gitRepo.HasBranch(ctx, branch) {
+		return false, nil
+	}
+	protectBranch, err := database.Handle.ProtectBranches().GetByName(ctx, repoCtx.Repo.ID, branch)
+	if err != nil {
+		if database.IsErrBranchNotExist(err) {
+			return true, nil
+		}
+		return false, errors.Wrapf(err, "get protection of branch %q", branch)
+	}
+	if !protectBranch.Protected || !protectBranch.RequirePullRequest {
+		return true, nil
+	}
+	denial, err := database.Handle.ProtectBranches().CheckPush(ctx, protectBranch, repoCtx.Viewer.ID(), false)
+	if err != nil {
+		return false, errors.Wrapf(err, "check protection of branch %q", branch)
+	}
+	return denial == "", nil
 }
 
 type repoEditorTarget struct {
@@ -80,13 +98,17 @@ type repoEditorTarget struct {
 	// pull request.
 	PullRequestsAllowed bool                     `json:"pullRequestsAllowed"`
 	Upload              *issueAttachmentSettings `json:"upload,omitempty"`
+	// DirectCommitRefused is why the viewer cannot commit to the branch itself
+	// but only to a new branch, with <code>{branch}</code> where the branch
+	// name goes. It is left out when they can.
+	DirectCommitRefused string `json:"directCommitRefused,omitempty"`
 }
 
 // getRepoEditorTarget describes the branch and the path in the route, which
 // is the branch name followed by the path, for the pages that change files.
 // Branch names can have slashes, so the shortest leading part of the route
 // that names a branch is the branch.
-func getRepoEditorTarget(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoEditorTarget, err error) {
+func getRepoEditorTarget(c flamego.Context, logger *logx.Logger, l i18n.Locale, repoCtx *repoContext) (statusCode int, resp *repoEditorTarget, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
 	gitRepo, err := openRepoGit(repoCtx)
@@ -103,7 +125,10 @@ func getRepoEditorTarget(c flamego.Context, logger *logx.Logger, repoCtx *repoCo
 			break
 		}
 	}
-	if !editableBranch(c, logger, repoCtx, gitRepo, branch) {
+	if editable, err := editableBranch(ctx, repoCtx, gitRepo, branch); err != nil {
+		logger.Error("Failed to check whether the branch is editable", "repoID", repo.ID, "branch", branch, "error", err)
+		return http.StatusInternalServerError, nil, err
+	} else if !editable {
 		return http.StatusNotFound, nil, errors.New("branch does not exist")
 	}
 	// 🚨 SECURITY: Prevent path traversal.
@@ -126,6 +151,12 @@ func getRepoEditorTarget(c flamego.Context, logger *logx.Logger, repoCtx *repoCo
 		PullRequestsAllowed: pullRequestBase(c.Request().Context(), repoCtx) != nil,
 		Upload:              attachmentSettings(repoUploadLimits()),
 	}
+	denial, err := database.Handle.ProtectBranches().CheckPushByName(ctx, repo.ID, branch, repoCtx.Viewer.ID(), false)
+	if err != nil {
+		logger.Error("Failed to check branch protection", "repoID", repo.ID, "branch", branch, "error", err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "check branch protection")
+	}
+	resp.DirectCommitRefused = protectedBranchMessage(l, denial)
 	if treePath == "" {
 		return http.StatusOK, resp, nil
 	}
@@ -184,7 +215,10 @@ func getRepoEditorIndent(c flamego.Context, logger *logx.Logger, repoCtx *repoCo
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
 	}
 	branch := c.Query("branch")
-	if !editableBranch(c, logger, repoCtx, gitRepo, branch) {
+	if editable, err := editableBranch(ctx, repoCtx, gitRepo, branch); err != nil {
+		logger.Error("Failed to check whether the branch is editable", "repoID", repo.ID, "branch", branch, "error", err)
+		return http.StatusInternalServerError, nil, err
+	} else if !editable {
 		return http.StatusNotFound, nil, errors.New("branch does not exist")
 	}
 	commit, err := gitRepo.BranchCommit(ctx, branch)
@@ -237,8 +271,10 @@ type repoEditorCommitResult struct {
 
 // checkEditorCommit checks the branches of a commit request, and returns the
 // response for a request that cannot be committed, or nil.
-func checkEditorCommit(c flamego.Context, logger *logx.Logger, l i18n.Locale, repoCtx *repoContext, gitRepo *git.Repository, req *repoEditorCommitRequest) (statusCode int, resp any, err error) {
-	if !editableBranch(c, logger, repoCtx, gitRepo, req.Branch) {
+func checkEditorCommit(c flamego.Context, l i18n.Locale, repoCtx *repoContext, gitRepo *git.Repository, req *repoEditorCommitRequest) (statusCode int, resp any, err error) {
+	if editable, err := editableBranch(c.Request().Context(), repoCtx, gitRepo, req.Branch); err != nil {
+		return http.StatusInternalServerError, nil, err
+	} else if !editable {
 		return http.StatusNotFound, nil, errors.New("branch does not exist")
 	}
 	if utf8.RuneCountInString(req.Summary) > 100 {
@@ -246,21 +282,58 @@ func checkEditorCommit(c flamego.Context, logger *logx.Logger, l i18n.Locale, re
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"summary": &msg}}, nil
 	}
 	req.NewBranch = strings.TrimSpace(req.NewBranch)
-	if req.NewBranch == "" {
+	if req.NewBranch != "" {
+		var msg string
+		switch {
+		case utf8.RuneCountInString(req.NewBranch) > 100:
+			msg = l.Tr("repo.editor.new_branch_name") + l.Tr("form.max_size_error", "100")
+		case gitRepo.HasBranch(c.Request().Context(), req.NewBranch):
+			msg = l.Tr("repo.editor.branch_already_exists", req.NewBranch)
+		case !gitRepo.IsValidBranchName(c.Request().Context(), req.NewBranch):
+			msg = l.Tr("repo.editor.invalid_branch_name", req.NewBranch)
+		}
+		if msg != "" {
+			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"newBranch": &msg}}, nil
+		}
+	}
+
+	// A new branch can have the name of a deleted branch that is still
+	// protected.
+	target := cmp.Or(req.NewBranch, req.Branch)
+	denial, err := database.Handle.ProtectBranches().CheckPushByName(c.Request().Context(), repoCtx.Repo.ID, target, repoCtx.Viewer.ID(), false)
+	if err != nil {
+		return http.StatusInternalServerError, nil, errors.Wrapf(err, "check protection of branch %q", target)
+	}
+	msg := protectedBranchMessage(l, denial)
+	if msg == "" {
 		return 0, nil, nil
 	}
-	var msg string
-	switch {
-	case utf8.RuneCountInString(req.NewBranch) > 100:
-		msg = l.Tr("repo.editor.new_branch_name") + l.Tr("form.max_size_error", "100")
-	case gitRepo.HasBranch(c.Request().Context(), req.NewBranch):
-		msg = l.Tr("repo.editor.branch_already_exists", req.NewBranch)
-	case !gitRepo.IsValidBranchName(c.Request().Context(), req.NewBranch):
-		msg = l.Tr("repo.editor.invalid_branch_name", req.NewBranch)
-	default:
-		return 0, nil, nil
+	// The reason shows next to the choice of the branch it is about.
+	field := "branch"
+	if req.NewBranch != "" {
+		field = "newBranch"
 	}
-	return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"newBranch": &msg}}, nil
+	return http.StatusForbidden, &repoEditorProtectedBranch{Fields: fieldErrors{field: &msg}, Branch: target}, nil
+}
+
+// protectedBranchMessage returns why the protection of a branch refuses a
+// commit, with <code>{branch}</code> where the branch name goes, or empty
+// when it does not.
+func protectedBranchMessage(l i18n.Locale, denial database.PushDenial) string {
+	switch denial {
+	case database.PushDeniedNotInAllowlist:
+		return l.Tr("repo.editor.protected_branch_not_in_allowlist")
+	case database.PushDeniedRequiresPullRequest:
+		return l.Tr("repo.editor.protected_branch_requires_pull_request")
+	}
+	return ""
+}
+
+// repoEditorProtectedBranch refuses a commit to a protected branch. Branch is
+// the name the messages of Fields leave out.
+type repoEditorProtectedBranch struct {
+	Fields fieldErrors `json:"fields"`
+	Branch string      `json:"branch"`
 }
 
 // commitMessage returns the summary, or the fallback when it is empty,
@@ -343,7 +416,10 @@ func postRepoEditorFile(c flamego.Context, logger *logx.Logger, l i18n.Locale, v
 		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
 	}
-	if statusCode, resp, err = checkEditorCommit(c, logger, l, repoCtx, gitRepo, &req.repoEditorCommitRequest); statusCode != 0 {
+	if statusCode, resp, err = checkEditorCommit(c, l, repoCtx, gitRepo, &req.repoEditorCommitRequest); statusCode != 0 {
+		if statusCode == http.StatusInternalServerError {
+			logger.Error("Failed to check commit", "repoID", repoCtx.Repo.ID, "error", err)
+		}
 		return statusCode, resp, err
 	}
 	commit, err := gitRepo.BranchCommit(ctx, req.Branch)
@@ -457,7 +533,10 @@ func postRepoEditorDelete(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
 	}
-	if statusCode, resp, err = checkEditorCommit(c, logger, l, repoCtx, gitRepo, &req.repoEditorCommitRequest); statusCode != 0 {
+	if statusCode, resp, err = checkEditorCommit(c, l, repoCtx, gitRepo, &req.repoEditorCommitRequest); statusCode != 0 {
+		if statusCode == http.StatusInternalServerError {
+			logger.Error("Failed to check commit", "repoID", repoCtx.Repo.ID, "error", err)
+		}
 		return statusCode, resp, err
 	}
 	commit, err := gitRepo.BranchCommit(ctx, req.Branch)
@@ -545,7 +624,10 @@ func postRepoEditorUpload(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
 	}
-	if statusCode, resp, err = checkEditorCommit(c, logger, l, repoCtx, gitRepo, &req.repoEditorCommitRequest); statusCode != 0 {
+	if statusCode, resp, err = checkEditorCommit(c, l, repoCtx, gitRepo, &req.repoEditorCommitRequest); statusCode != 0 {
+		if statusCode == http.StatusInternalServerError {
+			logger.Error("Failed to check commit", "repoID", repoCtx.Repo.ID, "error", err)
+		}
 		return statusCode, resp, err
 	}
 	commit, err := gitRepo.BranchCommit(ctx, req.Branch)

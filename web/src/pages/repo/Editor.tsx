@@ -9,6 +9,7 @@ import { FormAlert, FormField, RadioField } from "@/components/FormField";
 import { PendingFiles } from "@/components/IssueForm";
 import { Markdown } from "@/components/Markdown";
 import { RepoHeader } from "@/components/RepoHeader";
+import { RichText } from "@/components/RichText";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { codeLanguageOf } from "@/lib/code-language";
@@ -140,12 +141,12 @@ interface CommitFields {
   newBranch: string;
 }
 
-function useCommitFields() {
+function useCommitFields(target: RepoEditorTarget) {
   const user = useUserInfo();
   return useState<CommitFields>({
     summary: "",
     message: "",
-    toNewBranch: false,
+    toNewBranch: Boolean(target.directCommitRefused),
     newBranch: `${user?.username ?? "patch"}-patch-1`,
   });
 }
@@ -170,12 +171,16 @@ function CommitForm({
   cancelURL,
   submitDisabled,
   destructive,
+  refusedBranch,
 }: {
   target: RepoEditorTarget;
   value: CommitFields;
   onChange: (value: CommitFields) => void;
   defaultSummary: string;
   errors: Record<string, string | null>;
+  // refusedBranch is the protected branch a commit was refused for, which
+  // the error of its field leaves out.
+  refusedBranch?: string;
   cancelURL: string;
   submitDisabled?: boolean;
   destructive?: boolean;
@@ -184,6 +189,7 @@ function CommitForm({
   const user = useUserInfo();
   const set = (patch: Partial<CommitFields>) => onChange({ ...value, ...patch });
   const [before, after = ""] = t("repo.editor.commit_directly_to_this_branch").split(/<strong[^>]*>%s<\/strong>|%s/);
+  const directRefused = errors.branch ?? target.directCommitRefused;
 
   return (
     <section
@@ -225,6 +231,8 @@ function CommitForm({
             name="commit-to"
             checked={!value.toNewBranch}
             onChange={() => set({ toNewBranch: false })}
+            disabled={Boolean(directRefused)}
+            hint={directRefused ? <RichText text={directRefused} code={target.branch} /> : undefined}
             label={
               <>
                 {before}
@@ -263,7 +271,7 @@ function CommitForm({
               </div>
               {errors.newBranch ? (
                 <p id="commit-new-branch-error" className="mt-1.5 text-sm text-(--color-destructive)">
-                  {errors.newBranch}
+                  <RichText text={errors.newBranch} code={refusedBranch} />
                 </p>
               ) : null}
             </div>
@@ -373,6 +381,13 @@ function conflictOf(error: Error | null) {
   return { html: error.message, lastCommit: error.body.lastCommit };
 }
 
+// protectedBranchOf returns the branch a commit was refused for because it is
+// protected, which the field error shows as inline code.
+function protectedBranchOf(error: Error | null) {
+  if (!(error instanceof FormError) || typeof error.body.branch !== "string") return undefined;
+  return error.body.branch;
+}
+
 // RepoFileEditor edits a file of a branch, or creates one in a directory.
 export function RepoFileEditor({
   owner,
@@ -392,7 +407,7 @@ export function RepoFileEditor({
   const [fileName, setFileName] = useState(() => (isNew ? "" : (splitPath(target.path).at(-1) ?? "")));
   const [content, setContent] = useState(original);
   const [tab, setTab] = useState<"write" | "preview" | "changes">("write");
-  const [commit, setCommit] = useCommitFields();
+  const [commit, setCommit] = useCommitFields(target);
   const [lastCommit, setLastCommit] = useState(target.lastCommit);
   const path = [...dirs, fileName].join("/");
 
@@ -538,6 +553,7 @@ export function RepoFileEditor({
             onChange={setCommit}
             defaultSummary={defaultSummary}
             errors={fields}
+            refusedBranch={protectedBranchOf(save.error)}
             cancelURL={srcURL(owner, name, target.branch, target.path)}
           />
         </fieldset>
@@ -549,7 +565,7 @@ export function RepoFileEditor({
 // RepoFileDelete deletes a file of a branch.
 export function RepoFileDelete({ owner, name, target }: { owner: string; name: string; target: RepoEditorTarget }) {
   const { t } = useTranslation();
-  const [commit, setCommit] = useCommitFields();
+  const [commit, setCommit] = useCommitFields(target);
   const remove = useMutation({
     mutationFn: () => deleteRepoFile(owner, name, { ...commitOf(target.branch, commit), path: target.path }),
     onSuccess: ({ location }) => window.location.assign(location),
@@ -577,6 +593,7 @@ export function RepoFileDelete({ owner, name, target }: { owner: string; name: s
             onChange={setCommit}
             defaultSummary={t("repo.editor.delete").replace("%s", target.path)}
             errors={fields}
+            refusedBranch={protectedBranchOf(remove.error)}
             cancelURL={srcURL(owner, name, target.branch, target.path)}
             destructive
           />
@@ -594,7 +611,7 @@ export function RepoFileUpload({ owner, name, target }: { owner: string; name: s
   const [dragging, setDragging] = useState(false);
   const [dirs, setDirs] = useState(() => splitPath(target.path));
   const [subdir, setSubdir] = useState("");
-  const [commit, setCommit] = useCommitFields();
+  const [commit, setCommit] = useCommitFields(target);
   const uploads = useAttachmentUploads(owner, name, target.upload, "editor");
   const path = [...dirs, subdir].filter(Boolean).join("/");
 
@@ -703,6 +720,7 @@ export function RepoFileUpload({ owner, name, target }: { owner: string; name: s
             onChange={setCommit}
             defaultSummary={t("repo.editor.upload_files_to_dir").replace("%s", path || "/")}
             errors={fields}
+            refusedBranch={protectedBranchOf(upload.error)}
             cancelURL={srcURL(owner, name, target.branch, target.path)}
             submitDisabled={uploads.uploading}
           />

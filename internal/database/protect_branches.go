@@ -47,22 +47,58 @@ func (s *ProtectBranchesStore) ListProtected(ctx context.Context, repoID int64) 
 		Error
 }
 
-// RequiresPullRequest returns true if the branch with given name in the
-// repository is protected and takes changes only through pull requests.
-func (s *ProtectBranchesStore) RequiresPullRequest(ctx context.Context, logger *logx.Logger, repoID int64, name string) bool {
-	protectBranch, err := s.GetByName(ctx, repoID, name)
+// PushDenial is the rule of a protected branch that refuses an update of the
+// branch, or empty when none does.
+type PushDenial string
+
+const (
+	PushDeniedNotInAllowlist      PushDenial = "not_in_allowlist"
+	PushDeniedRequiresPullRequest PushDenial = "requires_pull_request"
+)
+
+// CheckPushByName is CheckPush for the branch with given name in the
+// repository, which may not be protected at all.
+func (s *ProtectBranchesStore) CheckPushByName(ctx context.Context, repoID int64, branch string, userID int64, viaPullRequest bool) (PushDenial, error) {
+	protectBranch, err := s.GetByName(ctx, repoID, branch)
 	if err != nil {
-		if !IsErrBranchNotExist(err) {
-			logger.Error("Failed to get protected branch", "repoID", repoID, "branch", name, "error", err)
+		if IsErrBranchNotExist(err) {
+			return "", nil
 		}
-		return false
+		return "", errors.Wrap(err, "get protected branch")
 	}
-	return protectBranch.Protected && protectBranch.RequirePullRequest
+	return s.CheckPush(ctx, protectBranch, userID, viaPullRequest)
 }
 
-// IsUserInAllowlist returns whether the user is in the allowlist of the branch,
-// by name or as a current member of an allowlisted team.
-func (s *ProtectBranchesStore) IsUserInAllowlist(ctx context.Context, protectBranch *ProtectBranch, userID int64) (bool, error) {
+// CheckPush returns the rule of the branch protection that refuses the user,
+// who can already write to the repository, to update the branch, which a
+// merge of a pull request does when viaPullRequest is true. Deletion and force
+// pushes, which a protected branch refuses to everyone, are left to the
+// caller. Repository and site admins are bound like everyone else.
+func (s *ProtectBranchesStore) CheckPush(ctx context.Context, protectBranch *ProtectBranch, userID int64, viaPullRequest bool) (PushDenial, error) {
+	if !protectBranch.Protected {
+		return "", nil
+	}
+	if protectBranch.EnableAllowlist {
+		inAllowlist, err := s.isUserInAllowlist(ctx, protectBranch, userID)
+		if err != nil {
+			return "", errors.Wrap(err, "check allowlist")
+		} else if !inAllowlist {
+			return PushDeniedNotInAllowlist, nil
+		}
+		// People in the allowlist can push without a pull request.
+		return "", nil
+	}
+	if protectBranch.RequirePullRequest && !viaPullRequest {
+		return PushDeniedRequiresPullRequest, nil
+	}
+	return "", nil
+}
+
+// isUserInAllowlist returns whether the user is in the allowlist of the branch,
+// by name or as a current member of an allowlisted team that still has the
+// repository. Teams of an organization the repository was transferred from
+// no longer count.
+func (s *ProtectBranchesStore) isUserInAllowlist(ctx context.Context, protectBranch *ProtectBranch, userID int64) (bool, error) {
 	if userID <= 0 {
 		return false, nil
 	}
@@ -74,7 +110,12 @@ func (s *ProtectBranchesStore) IsUserInAllowlist(ctx context.Context, protectBra
 		return false, nil
 	}
 	var count int64
-	err := s.db.WithContext(ctx).Model(new(TeamUser)).Where("team_id IN ? AND uid = ?", teamIDs, userID).Count(&count).Error
+	err := s.db.WithContext(ctx).
+		Model(new(TeamUser)).
+		Joins("INNER JOIN team_repo ON team_repo.team_id = team_user.team_id").
+		Where("team_user.team_id IN ? AND team_user.uid = ? AND team_repo.repo_id = ?", teamIDs, userID, protectBranch.RepoID).
+		Count(&count).
+		Error
 	return count > 0, err
 }
 

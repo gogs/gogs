@@ -94,7 +94,11 @@ func runHookPreReceive(ctx context.Context, cmd *cli.Command) error {
 		}
 		oldCommitID := string(fields[0])
 		newCommitID := string(fields[1])
-		branchName := git.RefShortName(string(fields[2]))
+		// Only branches are protected, a tag of the same name is not.
+		branchName, isBranch := strings.CutPrefix(string(fields[2]), git.RefsHeads)
+		if !isBranch {
+			continue
+		}
 
 		// Branch protection
 		repoID, _ := strconv.ParseInt(os.Getenv(database.EnvRepoID), 10, 64)
@@ -109,29 +113,25 @@ func runHookPreReceive(ctx context.Context, cmd *cli.Command) error {
 			continue
 		}
 
-		// When the allowlist is enabled, only users in it can push, and they can
-		// bypass the require pull request check.
-		bypassRequirePullRequest := false
-
 		userID, _ := strconv.ParseInt(os.Getenv(database.EnvAuthUserID), 10, 64)
-		if protectBranch.EnableAllowlist {
-			inAllowlist, err := database.Handle.ProtectBranches().IsUserInAllowlist(ctx, protectBranch, userID)
-			if err != nil {
-				fail(logger, "Internal error", "IsUserInAllowlist [repo_id: %d, branch: %s, user_id: %d]: %v", repoID, branchName, userID, err)
-			}
-			if !inAllowlist {
-				fail(logger, fmt.Sprintf("Branch '%s' is protected and you are not in the push allowlist", branchName), "")
-			}
-
-			bypassRequirePullRequest = true
+		denial, err := database.Handle.ProtectBranches().CheckPush(ctx, protectBranch, userID, false)
+		if err != nil {
+			fail(logger, "Internal error", "Check push [repo_id: %d, branch: %s, user_id: %d]: %v", repoID, branchName, userID, err)
 		}
-
-		if !bypassRequirePullRequest && protectBranch.RequirePullRequest {
+		switch denial {
+		case database.PushDeniedNotInAllowlist:
+			fail(logger, fmt.Sprintf("Branch '%s' is protected and you are not in the push allowlist", branchName), "")
+		case database.PushDeniedRequiresPullRequest:
 			fail(logger, fmt.Sprintf("Branch '%s' is protected and commits must be merged through pull request", branchName), "")
 		}
 
 		if git.IsEmptyID(newCommitID) {
 			fail(logger, fmt.Sprintf("Branch '%s' is protected from deletion", branchName), "")
+		}
+		// A branch being created, e.g., again after it was deleted, has no
+		// commits to lose.
+		if git.IsEmptyID(oldCommitID) {
+			continue
 		}
 
 		// A push that removes commits from the branch is a force push.

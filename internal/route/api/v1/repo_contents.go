@@ -190,6 +190,13 @@ func putContents(c *apiContext, r putContentsRequest) {
 		oldBranch = r.Branch
 	}
 
+	if ok, err := checkBranchProtection(c, r.Branch); err != nil {
+		c.Errorf(err, "check protection of branch %q", r.Branch)
+		return
+	} else if !ok {
+		return
+	}
+
 	// 🚨 SECURITY: Prevent path traversal.
 	treePath := pathx.Clean(c.Param("**"))
 

@@ -56,8 +56,11 @@ type createReferenceRequest struct {
 
 // POST /repos/:username/:reponame/branches
 func createBranch(c *apiContext, r createReferenceRequest) {
-	commit := createReference(c, git.RefsHeads, r)
-	if commit == nil {
+	commit, err := createReference(c, git.RefsHeads, r)
+	if err != nil {
+		c.Error(err, "create branch")
+		return
+	} else if commit == nil {
 		return
 	}
 	branch := &database.Branch{RepoPath: c.Repo.Repository.RepoPath(), Name: r.Name}
@@ -65,20 +68,19 @@ func createBranch(c *apiContext, r createReferenceRequest) {
 }
 
 // createReference creates the branch or tag, by the prefix of its reference,
-// and returns the commit it points at. It returns nil when it has written an
-// error response.
-func createReference(c *apiContext, prefix string, r createReferenceRequest) *git.Commit {
+// and returns the commit it points at. It returns a nil commit when it has
+// written a client error response, and an error for the caller to report.
+func createReference(c *apiContext, prefix string, r createReferenceRequest) (*git.Commit, error) {
 	repo := c.Repo.Repository
 	if repo.IsMirror {
 		c.ErrorStatus(http.StatusForbidden, errors.New("Mirror repository is read-only."))
-		return nil
+		return nil, nil
 	}
 
 	ctx := c.Request().Context()
 	gitRepo, err := git.Open(repo.RepoPath())
 	if err != nil {
-		c.Error(err, "open repository")
-		return nil
+		return nil, errors.Wrap(err, "open repository")
 	}
 
 	kind, isValidName := "branch", gitRepo.IsValidBranchName
@@ -87,7 +89,7 @@ func createReference(c *apiContext, prefix string, r createReferenceRequest) *gi
 	}
 	if !isValidName(ctx, r.Name) {
 		c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("Invalid %s name %q.", kind, r.Name))
-		return nil
+		return nil, nil
 	}
 
 	if r.Target == "" {
@@ -105,19 +107,49 @@ func createReference(c *apiContext, prefix string, r createReferenceRequest) *gi
 	if err != nil {
 		if git.IsErrRevisionNotExist(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("The target %q does not exist.", r.Target))
-		} else {
-			c.Error(err, "get target commit")
+			return nil, nil
 		}
-		return nil
+		return nil, errors.Wrap(err, "get target commit")
+	}
+
+	if prefix == git.RefsHeads {
+		if gitRepo.HasBranch(ctx, r.Name) {
+			c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("The %s name %q is already taken.", kind, r.Name))
+			return nil, nil
+		}
+		// A protected branch keeps its protection after it is deleted.
+		if ok, err := checkBranchProtection(c, r.Name); err != nil {
+			return nil, errors.Wrapf(err, "check protection of branch %q", r.Name)
+		} else if !ok {
+			return nil, nil
+		}
 	}
 
 	err = repo.CreateReference(ctx, c.Logger, c.User, prefix+r.Name, commit.ID.String())
 	if errors.Is(err, git.ErrReferenceConflict) {
 		c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("The %s name %q is already taken.", kind, r.Name))
-		return nil
+		return nil, nil
 	} else if err != nil {
-		c.Errorf(err, "create %s", kind)
-		return nil
+		return nil, errors.Wrapf(err, "create %s", kind)
 	}
-	return commit
+	return commit, nil
+}
+
+// checkBranchProtection returns whether the protection of the branch lets the
+// user push to it, and writes the 403 response when it does not. The caller
+// reports the error.
+func checkBranchProtection(c *apiContext, branch string) (bool, error) {
+	denial, err := database.Handle.ProtectBranches().CheckPushByName(c.Request().Context(), c.Repo.Repository.ID, branch, c.User.ID, false)
+	if err != nil {
+		return false, err
+	}
+	switch denial {
+	case database.PushDeniedNotInAllowlist:
+		c.ErrorStatus(http.StatusForbidden, errors.Newf("Branch %q is protected and you are not in the push allowlist.", branch))
+		return false, nil
+	case database.PushDeniedRequiresPullRequest:
+		c.ErrorStatus(http.StatusForbidden, errors.Newf("Branch %q is protected and commits must be merged through a pull request.", branch))
+		return false, nil
+	}
+	return true, nil
 }

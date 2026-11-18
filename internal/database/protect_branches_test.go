@@ -34,8 +34,7 @@ func TestProtectBranches(t *testing.T) {
 	}{
 		{"GetByName", protectBranchesGetByName},
 		{"ListProtected", protectBranchesListProtected},
-		{"RequiresPullRequest", protectBranchesRequiresPullRequest},
-		{"IsUserInAllowlist", protectBranchesIsUserInAllowlist},
+		{"CheckPush", protectBranchesCheckPush},
 		{"Save", protectBranchesSave},
 		{"SaveForOrg", protectBranchesSaveForOrg},
 	} {
@@ -87,56 +86,55 @@ func protectBranchesListProtected(t *testing.T, ctx context.Context, s *ProtectB
 	assert.Equal(t, []string{"main", "release"}, names)
 }
 
-func protectBranchesRequiresPullRequest(t *testing.T, ctx context.Context, s *ProtectBranchesStore) {
-	for _, pb := range []*ProtectBranch{
-		{RepoID: 1, Name: "main", Protected: true, RequirePullRequest: true},
-		{RepoID: 1, Name: "dev", Protected: true, RequirePullRequest: false},
-		{RepoID: 1, Name: "old", Protected: false, RequirePullRequest: true},
-	} {
-		err := s.db.Create(pb).Error
-		require.NoError(t, err)
-	}
-
-	logger := logx.NewNoopLogger()
-	assert.True(t, s.RequiresPullRequest(ctx, logger, 1, "main"))
-	assert.False(t, s.RequiresPullRequest(ctx, logger, 1, "dev"))
-	assert.False(t, s.RequiresPullRequest(ctx, logger, 1, "old"))
-	assert.False(t, s.RequiresPullRequest(ctx, logger, 1, "none"))
-	assert.False(t, s.RequiresPullRequest(ctx, logger, 2, "main"))
-}
-
-func protectBranchesIsUserInAllowlist(t *testing.T, ctx context.Context, s *ProtectBranchesStore) {
+func protectBranchesCheckPush(t *testing.T, ctx context.Context, s *ProtectBranchesStore) {
+	const repoID = 1
 	team := &Team{OrgID: 10, LowerName: "writers", Name: "writers", Authorize: AccessModeWrite}
-	err := s.db.Create(team).Error
-	require.NoError(t, err)
-	err = s.db.Create(&TeamUser{OrgID: 10, TeamID: team.ID, UID: 9}).Error
-	require.NoError(t, err)
-	err = s.db.Create(&TeamUser{OrgID: 10, TeamID: team.ID + 1, UID: 8}).Error
-	require.NoError(t, err)
+	require.NoError(t, s.db.Create(team).Error)
+	require.NoError(t, s.db.Create(&TeamRepo{OrgID: 10, TeamID: team.ID, RepoID: repoID}).Error)
+	require.NoError(t, s.db.Create(&TeamUser{OrgID: 10, TeamID: team.ID, UID: 9}).Error)
+	// The team of an organization the repository was transferred from, which
+	// no longer has the repository.
+	oldTeam := &Team{OrgID: 11, LowerName: "old", Name: "old", Authorize: AccessModeWrite}
+	require.NoError(t, s.db.Create(oldTeam).Error)
+	require.NoError(t, s.db.Create(&TeamUser{OrgID: 11, TeamID: oldTeam.ID, UID: 8}).Error)
 
-	pb := &ProtectBranch{
-		AllowlistUserIDs: "5,7",
-		AllowlistTeamIDs: strconv.FormatInt(team.ID, 10),
-	}
-	for _, tc := range []struct {
-		userID int64
-		want   bool
-	}{
-		{userID: 5, want: true},
-		{userID: 7, want: true},
-		{userID: 9, want: true},  // Member of an allowlisted team
-		{userID: 8, want: false}, // Member of another team
-		{userID: 6, want: false},
-		{userID: 0, want: false},
+	for _, pb := range []*ProtectBranch{
+		{RepoID: repoID, Name: "open", Protected: true},
+		{RepoID: repoID, Name: "pulls", Protected: true, RequirePullRequest: true},
+		{RepoID: repoID, Name: "unprotected", Protected: false, RequirePullRequest: true, EnableAllowlist: true},
+		{
+			RepoID: repoID, Name: "allowlist", Protected: true, RequirePullRequest: true, EnableAllowlist: true,
+			AllowlistUserIDs: "5", AllowlistTeamIDs: strconv.FormatInt(team.ID, 10) + "," + strconv.FormatInt(oldTeam.ID, 10),
+		},
 	} {
-		got, err := s.IsUserInAllowlist(ctx, pb, tc.userID)
-		require.NoError(t, err)
-		assert.Equal(t, tc.want, got, "user %d", tc.userID)
+		require.NoError(t, s.db.Create(pb).Error)
 	}
 
-	got, err := s.IsUserInAllowlist(ctx, &ProtectBranch{}, 9)
-	require.NoError(t, err)
-	assert.False(t, got)
+	for _, tc := range []struct {
+		name           string
+		branch         string
+		userID         int64
+		viaPullRequest bool
+		want           PushDenial
+	}{
+		{name: "no protection", branch: "none", userID: 6},
+		{name: "protection turned off", branch: "unprotected", userID: 6},
+		{name: "protected without rules", branch: "open", userID: 6},
+		{name: "push to pull request branch", branch: "pulls", userID: 6, want: PushDeniedRequiresPullRequest},
+		{name: "merge into pull request branch", branch: "pulls", userID: 6, viaPullRequest: true},
+		{name: "listed user pushes past pull requests", branch: "allowlist", userID: 5},
+		{name: "member of listed team", branch: "allowlist", userID: 9},
+		{name: "member of team without the repository", branch: "allowlist", userID: 8, want: PushDeniedNotInAllowlist},
+		{name: "unlisted user", branch: "allowlist", userID: 6, want: PushDeniedNotInAllowlist},
+		{name: "unlisted user merges", branch: "allowlist", userID: 6, viaPullRequest: true, want: PushDeniedNotInAllowlist},
+		{name: "no user", branch: "allowlist", userID: 0, want: PushDeniedNotInAllowlist},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := s.CheckPushByName(ctx, repoID, tc.branch, tc.userID, tc.viaPullRequest)
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, got)
+		})
+	}
 }
 
 // newTestRepoOnDisk creates a repository of given owner in the database and

@@ -29,8 +29,11 @@ func listTags(c *apiContext) {
 
 // POST /repos/:username/:reponame/tags
 func createTag(c *apiContext, r createReferenceRequest) {
-	commit := createReference(c, git.RefsTags, r)
-	if commit == nil {
+	commit, err := createReference(c, git.RefsTags, r)
+	if err != nil {
+		c.Error(err, "create tag")
+		return
+	} else if commit == nil {
 		return
 	}
 	tag := &database.Tag{RepoPath: c.Repo.Repository.RepoPath(), Name: r.Name}

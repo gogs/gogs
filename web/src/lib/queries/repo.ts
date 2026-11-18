@@ -1123,6 +1123,9 @@ export interface RepoEditorTarget {
   // pull request.
   pullRequestsAllowed: boolean;
   upload?: IssueAttachmentSettings;
+  // directCommitRefused is why the viewer can only commit to a new branch,
+  // with <code>{branch}</code> where the branch name goes.
+  directCommitRefused?: string;
 }
 
 // fetchRepoEditorTarget describes the branch and the path in the editor
