@@ -227,9 +227,16 @@ func getRepoSrc(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (s
 			resp.Editor = "not_branch"
 		case !repoCtx.Viewer.CanWrite():
 			resp.Editor = "no_write"
-		case editableBranch(c, logger, repoCtx, gitRepo, ref.Name):
-			resp.Editor = "ok"
-			resp.CanUploadFile = conf.Repository.Upload.Enabled
+		default:
+			editable, err := editableBranch(ctx, repoCtx, gitRepo, ref.Name)
+			if err != nil {
+				logger.Error("Failed to check whether the branch is editable", "repoID", repo.ID, "branch", ref.Name, "error", err)
+				return http.StatusInternalServerError, nil, err
+			}
+			if editable {
+				resp.Editor = "ok"
+				resp.CanUploadFile = conf.Repository.Upload.Enabled
+			}
 		}
 	}
 	if ref.Type == "branch" {
