@@ -2,6 +2,7 @@ import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 
+import { CaptchaField } from "@/components/CaptchaField";
 import { PasswordInput } from "@/components/PasswordInput";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -258,50 +259,17 @@ export function SignUp() {
             </div>
 
             {captchaEnabled && (
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="captcha">{t("captcha")}</Label>
-                <div className="group relative">
-                  <button
-                    type="button"
-                    tabIndex={7}
-                    disabled={submitting}
-                    onClick={refreshCaptcha}
-                    aria-label={t("refresh_captcha")}
-                    className="block w-full cursor-pointer overflow-hidden rounded-md border border-(--color-border) bg-(--color-surface) outline-none focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <img
-                      src={subUrl("/captcha/image.jpeg") + "?refresh=true&v=" + captchaRefresh}
-                      alt={t("captcha_image_alt")}
-                      className="block h-20 w-full object-fill"
-                    />
-                  </button>
-                  <span
-                    role="tooltip"
-                    className="pointer-events-none absolute top-1/2 left-1/2 z-10 -translate-x-1/2 -translate-y-1/2 rounded-md bg-(--color-foreground) px-2 py-1 text-xs font-medium text-(--color-background) opacity-0 shadow transition-opacity duration-150 group-hover:opacity-90 group-focus-within:opacity-90"
-                  >
-                    {t("click_to_refresh_captcha")}
-                  </span>
-                </div>
-                <Input
-                  ref={captchaRef}
-                  id="captcha"
-                  name="captcha"
-                  type="text"
-                  autoComplete="off"
-                  required
-                  tabIndex={8}
-                  placeholder={t("captcha_placeholder")}
-                  value={captcha}
-                  onChange={(e) => setCaptcha(e.target.value)}
-                  aria-invalid={"captcha" in fieldErrors ? true : undefined}
-                  aria-describedby={fieldErrors.captcha ? "captcha-error" : undefined}
-                />
-                {fieldErrors.captcha && (
-                  <p id="captcha-error" className="text-sm text-(--color-destructive)">
-                    {fieldErrors.captcha}
-                  </p>
-                )}
-              </div>
+              <CaptchaField
+                value={captcha}
+                onChange={setCaptcha}
+                refreshKey={captchaRefresh}
+                onRefresh={refreshCaptcha}
+                disabled={submitting}
+                error={fieldErrors.captcha}
+                invalid={"captcha" in fieldErrors}
+                inputRef={captchaRef}
+                tabIndex={[7, 8]}
+              />
             )}
 
             <div className="mt-2 flex flex-col gap-3">

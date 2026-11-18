@@ -111,6 +111,8 @@ Anchor links inside the form aren't covered by `disabled`. For each, set `tabInd
 
 Swap the submit label to a present-continuous string ("Signing in…", "Verifying…") while submitting. Keep idle and active strings as separate locale keys.
 
+Forms that guard against bots, e.g., signing up and signing in, ask for a captcha with `CaptchaField` from `@/components/CaptchaField`. Load a new image through its `refreshKey` after every failed submission, since the server uses up a captcha on each attempt.
+
 ## Settings pages
 
 The settings pages of users, organizations and repositories, and the admin panel, use `SettingsLayout` from `@/components/SettingsLayout`: the links between the pages sit beside the page. Below the `md` breakpoint they move into a full-width dropdown above the page, named after the current page, since a row of ten links does not fit. Wrap each link in `SettingsNavItem` with a leading Lucide icon, and give every item of a menu one. The current page gets a bar in `--color-primary` beside its surface fill, so it shows in dark mode too. Menus with more than a few items put related links under a heading with `SettingsNavGroup`, as GitHub does, e.g., "Access" and "Code and automation", and leave the first group without one. Each page does one job. The destructive actions of a menu sit on their own page named "Danger zone", below a `SettingsNavDivider`, marked with `destructive`, along with changes that are hard to undo, e.g., the visibility of a repository. Pages still served by the server are plain `<a>` links. Give each `Link` `activeOptions={{ exact: true }}`, since TanStack Router otherwise marks a link as the current page on every page under its path.

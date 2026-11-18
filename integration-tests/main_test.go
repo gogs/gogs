@@ -28,9 +28,10 @@ import (
 var (
 	// serverURL is the URL of the server under test, without a trailing slash.
 	serverURL string
-	// forcePrivateServerURL is the URL of another server under test, which only
-	// differs by setting [repository] FORCE_PRIVATE.
-	forcePrivateServerURL string
+	// hardenedServerURL is the URL of another server under test, which only
+	// differs by setting [repository] FORCE_PRIVATE and [auth]
+	// ENABLE_LOGIN_CAPTCHA.
+	hardenedServerURL string
 	// sshPort is the port of the builtin SSH server of the server under test.
 	sshPort int
 	// sessions reads the sessions the server under test stores in files.
@@ -61,8 +62,8 @@ func TestMain(m *testing.M) {
 		_ = os.RemoveAll(dir)
 	} else {
 		serverLog, _ := os.ReadFile(filepath.Join(dir, "server.log"))
-		forcePrivateServerLog, _ := os.ReadFile(filepath.Join(dir, "server-force-private.log"))
-		fmt.Fprintf(os.Stderr, "Server log:\n%s\nLog of the server with FORCE_PRIVATE:\n%s\nWork directory %q is left intact for inspection\n", serverLog, forcePrivateServerLog, dir)
+		hardenedServerLog, _ := os.ReadFile(filepath.Join(dir, "server-hardened.log"))
+		fmt.Fprintf(os.Stderr, "Server log:\n%s\nLog of the hardened server:\n%s\nWork directory %q is left intact for inspection\n", serverLog, hardenedServerLog, dir)
 	}
 	os.Exit(code)
 }
@@ -132,27 +133,27 @@ func run(m *testing.M, dir string) (int, error) {
 	}
 	defer stopServer()
 
-	// The server with FORCE_PRIVATE shares the database and the repositories, so
-	// tests seed data once and call either server. It starts after the first one
-	// has migrated the database and generated the SSH host keys.
-	forcePrivatePort, err := freePort()
+	// The hardened server shares the database and the repositories, so tests
+	// seed data once and call either server. It starts after the first one has
+	// migrated the database and generated the SSH host keys.
+	hardenedPort, err := freePort()
 	if err != nil {
 		return 0, errors.Wrap(err, "find free port")
 	}
-	forcePrivateSSHPort, err := freePort()
+	hardenedSSHPort, err := freePort()
 	if err != nil {
 		return 0, errors.Wrap(err, "find free SSH port")
 	}
-	forcePrivateConfigPath := filepath.Join(dir, "app-force-private.ini")
-	if err = writeConfig(dir, forcePrivateConfigPath, forcePrivatePort, forcePrivateSSHPort, dbName, hex.EncodeToString(secretKey), true); err != nil {
+	hardenedConfigPath := filepath.Join(dir, "app-hardened.ini")
+	if err = writeConfig(dir, hardenedConfigPath, hardenedPort, hardenedSSHPort, dbName, hex.EncodeToString(secretKey), true); err != nil {
 		return 0, errors.Wrap(err, "write configuration")
 	}
-	forcePrivateServerURL = fmt.Sprintf("http://localhost:%d", forcePrivatePort)
-	stopForcePrivateServer, err := startServer(binary, forcePrivateConfigPath, forcePrivateServerURL, filepath.Join(dir, "server-force-private.log"), spans.url)
+	hardenedServerURL = fmt.Sprintf("http://localhost:%d", hardenedPort)
+	stopHardenedServer, err := startServer(binary, hardenedConfigPath, hardenedServerURL, filepath.Join(dir, "server-hardened.log"), spans.url)
 	if err != nil {
-		return 0, errors.Wrap(err, "start server with FORCE_PRIVATE")
+		return 0, errors.Wrap(err, "start hardened server")
 	}
-	defer stopForcePrivateServer()
+	defer stopHardenedServer()
 
 	// Git hooks of seeded repositories call the binary at conf.AppPath(), which
 	// is read from the first argument, so they call the server binary rather
@@ -174,7 +175,7 @@ func run(m *testing.M, dir string) (int, error) {
 	}
 	code := m.Run()
 	stopServer()
-	stopForcePrivateServer()
+	stopHardenedServer()
 	// Only a full run is held to covering every route. A run of some tests,
 	// e.g., with -run, lists the routes left for information.
 	if code == 0 {
@@ -230,7 +231,7 @@ func freePort() (int, error) {
 // writeConfig writes the configuration of a server under test, which uses the
 // Postgres database of the name on the server the PG* environment variables
 // point to.
-func writeConfig(dir, path string, port, sshPort int, dbName, secretKey string, forcePrivate bool) error {
+func writeConfig(dir, path string, port, sshPort int, dbName, secretKey string, hardened bool) error {
 	u, err := user.Current()
 	if err != nil {
 		return errors.Wrap(err, "get current user")
@@ -286,11 +287,12 @@ HOST = 127.0.0.1:1
 [auth]
 DISABLE_REGISTRATION = false
 ENABLE_REGISTRATION_CAPTCHA = true
+ENABLE_LOGIN_CAPTCHA = %[8]t
 
 [log]
 MODE = console
 LEVEL = Info
-`, u.Username, port, filepath.Join(dir, "repositories"), database, secretKey, filepath.Join(dir, "ssh"), sshPort, forcePrivate)
+`, u.Username, port, filepath.Join(dir, "repositories"), database, secretKey, filepath.Join(dir, "ssh"), sshPort, hardened)
 	return os.WriteFile(path, []byte(config), 0o600)
 }
 
