@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"strings"
@@ -443,7 +444,9 @@ func postRepoConvert(c flamego.Context, logger *logx.Logger, l i18n.Locale, view
 		logger.Error("Failed to clean up migrate info", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "clean up migrate info")
 	}
-	if err = database.Handle.Mirrors().DeleteByRepoID(c.Request().Context(), repo.ID); err != nil {
+	// The repository is no longer a mirror, so its mirror row has to go even
+	// when the client goes away.
+	if err = database.Handle.Mirrors().DeleteByRepoID(context.WithoutCancel(c.Request().Context()), repo.ID); err != nil {
 		logger.Error("Failed to delete mirror", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete mirror")
 	}
