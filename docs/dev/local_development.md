@@ -187,6 +187,12 @@ export LDAP_HOST=localhost LDAP_PORT=389 LDAP_BASE_DN=dc=example,dc=org \
   LDAP_ADMIN_DN=cn=admin,dc=example,dc=org LDAP_ADMIN_PASSWORD=admin
 ```
 
+The SMTP tests serve implicit TLS on port 465 and skip those cases when they cannot listen on it. On Linux, let unprivileged processes listen on it:
+
+```bash
+sudo sysctl -w net.ipv4.ip_unprivileged_port_start=465
+```
+
 ## Other nice things
 
 ### Load email templates and static files from disk

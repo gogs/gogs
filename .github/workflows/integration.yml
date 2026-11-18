@@ -80,6 +80,10 @@ jobs:
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version: 1.27.x
+      # SMTP sign-in tests serve implicit TLS on port 465, the only port Gogs
+      # uses implicit TLS for.
+      - name: Allow listening on port 465
+        run: sudo sysctl -w net.ipv4.ip_unprivileged_port_start=465
       - name: Run integration tests
         run: go test -count=1 -shuffle=on -v ./integration-tests/...
         env:
