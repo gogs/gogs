@@ -57,18 +57,31 @@ func withRepoEditor(c flamego.Context, repoCtx *repoContext) {
 }
 
 // editableBranch reports whether files of the branch can be changed in the
-// browser: it exists and its protection lets the viewer push to it.
+// browser: it exists, and its protection lets the viewer push to it or, when
+// it does not require pull requests, commit to a new branch from it.
+// Committing checks the branch written, see checkEditorCommit.
 func editableBranch(c flamego.Context, logger *logx.Logger, repoCtx *repoContext, gitRepo *git.Repository, branch string) bool {
 	ctx := c.Request().Context()
 	if branch == "" || !gitRepo.HasBranch(ctx, branch) {
 		return false
 	}
-	canPush, err := canPushTo(ctx, repoCtx, branch, false)
+	protectBranch, err := database.Handle.ProtectBranches().GetByName(ctx, repoCtx.Repo.ID, branch)
+	if err != nil {
+		if database.IsErrBranchNotExist(err) {
+			return true
+		}
+		logger.Error("Failed to get branch protection", "repoID", repoCtx.Repo.ID, "branch", branch, "error", err)
+		return false
+	}
+	if !protectBranch.Protected || !protectBranch.RequirePullRequest {
+		return true
+	}
+	denial, err := database.Handle.ProtectBranches().CheckPush(ctx, protectBranch, repoCtx.Viewer.ID(), false)
 	if err != nil {
 		logger.Error("Failed to check branch protection", "repoID", repoCtx.Repo.ID, "branch", branch, "error", err)
 		return false
 	}
-	return canPush
+	return denial == ""
 }
 
 type repoEditorTarget struct {
@@ -254,21 +267,36 @@ func checkEditorCommit(c flamego.Context, logger *logx.Logger, l i18n.Locale, re
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"summary": &msg}}, nil
 	}
 	req.NewBranch = strings.TrimSpace(req.NewBranch)
-	if req.NewBranch == "" {
-		return 0, nil, nil
+	if req.NewBranch != "" {
+		var msg string
+		switch {
+		case utf8.RuneCountInString(req.NewBranch) > 100:
+			msg = l.Tr("repo.editor.new_branch_name") + l.Tr("form.max_size_error", "100")
+		case gitRepo.HasBranch(c.Request().Context(), req.NewBranch):
+			msg = l.Tr("repo.editor.branch_already_exists", req.NewBranch)
+		case !gitRepo.IsValidBranchName(c.Request().Context(), req.NewBranch):
+			msg = l.Tr("repo.editor.invalid_branch_name", req.NewBranch)
+		}
+		if msg != "" {
+			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"newBranch": &msg}}, nil
+		}
 	}
-	var msg string
-	switch {
-	case utf8.RuneCountInString(req.NewBranch) > 100:
-		msg = l.Tr("repo.editor.new_branch_name") + l.Tr("form.max_size_error", "100")
-	case gitRepo.HasBranch(c.Request().Context(), req.NewBranch):
-		msg = l.Tr("repo.editor.branch_already_exists", req.NewBranch)
-	case !gitRepo.IsValidBranchName(c.Request().Context(), req.NewBranch):
-		msg = l.Tr("repo.editor.invalid_branch_name", req.NewBranch)
-	default:
-		return 0, nil, nil
+
+	// A new branch can have the name of a deleted branch that is still
+	// protected.
+	target := cmp.Or(req.NewBranch, req.Branch)
+	denial, err := database.Handle.ProtectBranches().CheckPushByName(c.Request().Context(), repoCtx.Repo.ID, target, repoCtx.Viewer.ID(), false)
+	if err != nil {
+		logger.Error("Failed to check branch protection", "repoID", repoCtx.Repo.ID, "branch", target, "error", err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "check branch protection")
 	}
-	return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"newBranch": &msg}}, nil
+	switch denial {
+	case database.PushDeniedNotInAllowlist:
+		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("repo.editor.protected_branch_not_in_allowlist", target)}, nil
+	case database.PushDeniedRequiresPullRequest:
+		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("repo.editor.protected_branch_requires_pull_request", target)}, nil
+	}
+	return 0, nil, nil
 }
 
 // commitMessage returns the summary, or the fallback when it is empty,

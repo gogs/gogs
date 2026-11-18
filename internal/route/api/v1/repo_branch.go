@@ -111,9 +111,15 @@ func createReference(c *apiContext, prefix string, r createReferenceRequest) *gi
 		return nil
 	}
 
-	// A protected branch keeps its protection after it is deleted.
-	if prefix == git.RefsHeads && !checkBranchProtection(c, r.Name) {
-		return nil
+	if prefix == git.RefsHeads {
+		if gitRepo.HasBranch(ctx, r.Name) {
+			c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("The %s name %q is already taken.", kind, r.Name))
+			return nil
+		}
+		// A protected branch keeps its protection after it is deleted.
+		if !checkBranchProtection(c, r.Name) {
+			return nil
+		}
 	}
 
 	err = repo.CreateReference(ctx, c.Logger, c.User, prefix+r.Name, commit.ID.String())

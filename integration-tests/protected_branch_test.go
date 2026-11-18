@@ -230,6 +230,51 @@ func TestProtectedBranchRules(t *testing.T) {
 		apiV1PutFile(t, apiV1Client(t, listed), repo, "listed.txt", "listed\n", "main")
 	})
 
+	t.Run("writer outside the allowlist commits to a new branch in the editor", func(t *testing.T) {
+		dir := gitClone(t, gitRemoteURL(t, repo, listed.Name, listed.Password))
+		gitRun(t, dir, "push", "origin", "main:refs/heads/dev")
+		protect(t, "dev", map[string]any{
+			"protected":        true,
+			"enableAllowlist":  true,
+			"allowlistUserIDs": []int64{listed.ID},
+		})
+		c := authenticatedClient(t, unlisted)
+		var src struct {
+			Editor string `json:"editor"`
+		}
+		c.doJSON(http.MethodGet, issueAPIPath(repo, "src", "dev"), nil, http.StatusOK, &src)
+		assert.Equal(t, "ok", src.Editor)
+
+		commit := func(newBranch string) (int, []byte) {
+			return c.do(http.MethodPost, issueAPIPath(repo, "editor", "files"), map[string]any{
+				"branch":    "dev",
+				"newBranch": newBranch,
+				"path":      UniqueName("file-") + ".txt",
+				"content":   "content\n",
+			})
+		}
+		before := gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(repo.Owner, repo.Name), "rev-parse", "refs/heads/dev")
+		status, body := commit("")
+		assert.Equal(t, http.StatusForbidden, status, "response: %s", body)
+		assert.Contains(t, string(body), "you are not in the push allowlist")
+		assert.Equal(t, before, gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(repo.Owner, repo.Name), "rev-parse", "refs/heads/dev"))
+
+		status, body = commit(UniqueName("proposal-"))
+		assert.Equal(t, http.StatusOK, status, "response: %s", body)
+
+		// A new branch with the name of a deleted branch that is still protected.
+		gitRun(t, dir, "push", "origin", "main:refs/heads/staging")
+		protect(t, "staging", map[string]any{
+			"protected":        true,
+			"enableAllowlist":  true,
+			"allowlistUserIDs": []int64{listed.ID},
+		})
+		gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(repo.Owner, repo.Name), "branch", "-D", "staging")
+		status, body = commit("staging")
+		assert.Equal(t, http.StatusForbidden, status, "response: %s", body)
+		assert.Contains(t, string(body), `Branch \"staging\" is protected`)
+	})
+
 	t.Run("tag with the name of a protected branch", func(t *testing.T) {
 		dir := gitClone(t, gitRemoteURL(t, repo, unlisted.Name, unlisted.Password))
 		gitRun(t, dir, "tag", "main")
@@ -284,6 +329,10 @@ func TestProtectedBranchRules(t *testing.T) {
 
 		status, body = create(listed, "branches", "hotfix")
 		assert.Equal(t, http.StatusCreated, status, "response: %s", body)
+
+		// A taken name is reported as such, not as protected.
+		status, body = create(unlisted, "branches", "hotfix")
+		assert.Equal(t, http.StatusUnprocessableEntity, status, "response: %s", body)
 	})
 }
 
