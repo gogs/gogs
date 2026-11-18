@@ -634,10 +634,13 @@ func TestOrgTeams(t *testing.T) {
 	status, body = ownerClient.do(http.MethodDelete, teamsPath+"/owners", orgNoBody)
 	assert.Equal(t, http.StatusForbidden, status, "owners team, response: %s", body)
 
+	status, body = ownerClient.do(http.MethodPut, teamPath+"/repos/"+repo.Name, orgNoBody)
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 	status, body = ownerClient.do(http.MethodDelete, teamPath, orgNoBody)
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 	_, err = database.GetTeamByID(team.ID)
 	assert.True(t, database.IsErrTeamNotExist(err), "team still exists: %v", err)
+	assert.False(t, database.HasTeamRepo(org.ID, team.ID, repo.ID), "team-repo relation of the deleted team still exists")
 	status, body = ownerClient.do(http.MethodGet, teamPath, nil)
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 }
