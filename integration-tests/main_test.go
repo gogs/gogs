@@ -28,6 +28,9 @@ import (
 var (
 	// serverURL is the URL of the server under test, without a trailing slash.
 	serverURL string
+	// forcePrivateServerURL is the URL of another server under test, which only
+	// differs by setting [repository] FORCE_PRIVATE.
+	forcePrivateServerURL string
 	// sshPort is the port of the builtin SSH server of the server under test.
 	sshPort int
 	// sessions reads the sessions the server under test stores in files.
@@ -58,7 +61,8 @@ func TestMain(m *testing.M) {
 		_ = os.RemoveAll(dir)
 	} else {
 		serverLog, _ := os.ReadFile(filepath.Join(dir, "server.log"))
-		fmt.Fprintf(os.Stderr, "Server log:\n%s\nWork directory %q is left intact for inspection\n", serverLog, dir)
+		forcePrivateServerLog, _ := os.ReadFile(filepath.Join(dir, "server-force-private.log"))
+		fmt.Fprintf(os.Stderr, "Server log:\n%s\nLog of the server with FORCE_PRIVATE:\n%s\nWork directory %q is left intact for inspection\n", serverLog, forcePrivateServerLog, dir)
 	}
 	os.Exit(code)
 }
@@ -89,8 +93,12 @@ func run(m *testing.M, dir string) (int, error) {
 	if err != nil {
 		return 0, errors.Wrap(err, "create Postgres database")
 	}
+	// Servers that share the database must share the key that encrypts what they
+	// store.
+	secretKey := make([]byte, 16)
+	_, _ = rand.Read(secretKey)
 	configPath := filepath.Join(dir, "app.ini")
-	if err = writeConfig(dir, configPath, port, sshPort, dbName); err != nil {
+	if err = writeConfig(dir, configPath, port, sshPort, dbName, hex.EncodeToString(secretKey), false); err != nil {
 		return 0, errors.Wrap(err, "write configuration")
 	}
 
@@ -110,51 +118,41 @@ func run(m *testing.M, dir string) (int, error) {
 		}
 	}
 
-	serverLog, err := os.Create(filepath.Join(dir, "server.log"))
-	if err != nil {
-		return 0, errors.Wrap(err, "create server log")
-	}
-	defer func() { _ = serverLog.Close() }()
 	spans, err := newSpanReceiver()
 	if err != nil {
 		return 0, errors.Wrap(err, "start span receiver")
 	}
 	defer spans.close()
-	server := exec.Command(binary, "web", "--config", configPath)
-	server.Env = append(os.Environ(), "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="+spans.url)
-	server.Stdout = serverLog
-	server.Stderr = serverLog
-	if err = server.Start(); err != nil {
-		return 0, errors.Wrap(err, "start server")
-	}
-	exited := make(chan error, 1)
-	go func() { exited <- server.Wait() }()
-	stopped := false
-	// The server exports the spans it has left when it stops.
-	stopServer := func() {
-		if stopped {
-			return
-		}
-		stopped = true
-		_ = server.Process.Signal(os.Interrupt)
-		select {
-		case err := <-exited:
-			// Gogs stops cleanly on an interrupt, so an error means it crashed.
-			if err != nil {
-				fmt.Fprintln(os.Stderr, "Server exited with error:", err)
-			}
-		case <-time.After(10 * time.Second):
-			_ = server.Process.Kill()
-		}
-	}
-	defer stopServer()
-
 	// Matches the external URL, so URLs the server builds are the ones the tests
 	// request.
 	serverURL = fmt.Sprintf("http://localhost:%d", port)
-	if err = waitForServer(exited); err != nil {
+	stopServer, err := startServer(binary, configPath, serverURL, filepath.Join(dir, "server.log"), spans.url)
+	if err != nil {
 		return 0, err
 	}
+	defer stopServer()
+
+	// The server with FORCE_PRIVATE shares the database and the repositories, so
+	// tests seed data once and call either server. It starts after the first one
+	// has migrated the database and generated the SSH host keys.
+	forcePrivatePort, err := freePort()
+	if err != nil {
+		return 0, errors.Wrap(err, "find free port")
+	}
+	forcePrivateSSHPort, err := freePort()
+	if err != nil {
+		return 0, errors.Wrap(err, "find free SSH port")
+	}
+	forcePrivateConfigPath := filepath.Join(dir, "app-force-private.ini")
+	if err = writeConfig(dir, forcePrivateConfigPath, forcePrivatePort, forcePrivateSSHPort, dbName, hex.EncodeToString(secretKey), true); err != nil {
+		return 0, errors.Wrap(err, "write configuration")
+	}
+	forcePrivateServerURL = fmt.Sprintf("http://localhost:%d", forcePrivatePort)
+	stopForcePrivateServer, err := startServer(binary, forcePrivateConfigPath, forcePrivateServerURL, filepath.Join(dir, "server-force-private.log"), spans.url)
+	if err != nil {
+		return 0, errors.Wrap(err, "start server with FORCE_PRIVATE")
+	}
+	defer stopForcePrivateServer()
 
 	// Git hooks of seeded repositories call the binary at conf.AppPath(), which
 	// is read from the first argument, so they call the server binary rather
@@ -176,6 +174,7 @@ func run(m *testing.M, dir string) (int, error) {
 	}
 	code := m.Run()
 	stopServer()
+	stopForcePrivateServer()
 	// Only a full run is held to covering every route. A run of some tests,
 	// e.g., with -run, lists the routes left for information.
 	if code == 0 {
@@ -228,16 +227,14 @@ func freePort() (int, error) {
 	return l.Addr().(*net.TCPAddr).Port, nil
 }
 
-// writeConfig writes the configuration of the server under test, which uses the
+// writeConfig writes the configuration of a server under test, which uses the
 // Postgres database of the name on the server the PG* environment variables
 // point to.
-func writeConfig(dir, path string, port, sshPort int, dbName string) error {
+func writeConfig(dir, path string, port, sshPort int, dbName, secretKey string, forcePrivate bool) error {
 	u, err := user.Current()
 	if err != nil {
 		return errors.Wrap(err, "get current user")
 	}
-	secretKey := make([]byte, 16)
-	_, _ = rand.Read(secretKey)
 
 	database := fmt.Sprintf(`TYPE = postgres
 HOST = %s:%s
@@ -267,6 +264,7 @@ SSH_PORT = %[7]d
 
 [repository]
 ROOT = %[3]s
+FORCE_PRIVATE = %[8]t
 
 [database]
 %[4]s
@@ -292,7 +290,7 @@ ENABLE_REGISTRATION_CAPTCHA = true
 [log]
 MODE = console
 LEVEL = Info
-`, u.Username, port, filepath.Join(dir, "repositories"), database, hex.EncodeToString(secretKey), filepath.Join(dir, "ssh"), sshPort)
+`, u.Username, port, filepath.Join(dir, "repositories"), database, secretKey, filepath.Join(dir, "ssh"), sshPort, forcePrivate)
 	return os.WriteFile(path, []byte(config), 0o600)
 }
 
@@ -335,11 +333,55 @@ func createPostgresDatabase() (name string, drop func() error, _ error) {
 	return name, drop, nil
 }
 
-func waitForServer(exited <-chan error) error {
+// startServer starts the server with the configuration, which logs to the file
+// and exports spans to the URL, and waits until it serves on the URL. The
+// returned function stops it, and does nothing once it has.
+func startServer(binary, configPath, url, logPath, spansURL string) (stop func(), _ error) {
+	serverLog, err := os.Create(logPath)
+	if err != nil {
+		return nil, errors.Wrap(err, "create server log")
+	}
+	server := exec.Command(binary, "web", "--config", configPath)
+	server.Env = append(os.Environ(), "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="+spansURL)
+	server.Stdout = serverLog
+	server.Stderr = serverLog
+	if err = server.Start(); err != nil {
+		_ = serverLog.Close()
+		return nil, errors.Wrap(err, "start server")
+	}
+	exited := make(chan error, 1)
+	go func() { exited <- server.Wait() }()
+	stopped := false
+	// The server exports the spans it has left when it stops.
+	stop = func() {
+		if stopped {
+			return
+		}
+		stopped = true
+		_ = server.Process.Signal(os.Interrupt)
+		select {
+		case err := <-exited:
+			// Gogs stops cleanly on an interrupt, so an error means it crashed.
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "Server exited with error:", err)
+			}
+		case <-time.After(10 * time.Second):
+			_ = server.Process.Kill()
+		}
+		_ = serverLog.Close()
+	}
+	if err = waitForServer(url, exited); err != nil {
+		stop()
+		return nil, err
+	}
+	return stop, nil
+}
+
+func waitForServer(url string, exited <-chan error) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 	for {
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, serverURL+"/healthcheck", nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url+"/healthcheck", nil)
 		if err != nil {
 			return errors.Wrap(err, "new request")
 		}
