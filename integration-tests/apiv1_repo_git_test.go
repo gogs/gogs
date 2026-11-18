@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -441,4 +442,168 @@ func TestAPIV1Tags(t *testing.T) {
 
 	status, body := newClient(t).do(http.MethodGet, apiV1RepoPath(repo, "/tags"), nil)
 	assert.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
+}
+
+func TestAPIV1CreateBranchesAndTags(t *testing.T) {
+	owner := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	api := apiV1Client(t, owner)
+	webhookURL, deliveries := repoSettingsWebhookReceiver(t)
+	repoSettingsCreateWebhookFor(t, repoSettingsSignedIn(t, owner), repo, webhookURL, true, map[string]bool{"push": true, "create": true})
+
+	mainSHA := apiV1PutFile(t, api, repo, "main.txt", "Main", "")
+	// Each update lists its commit, so the next event comes from the endpoints.
+	assert.Equal(t, "push", repoSettingsNextEvent(t, deliveries).Event)
+	featureSHA := apiV1PutFile(t, api, repo, "feature.txt", "Feature", "feature/base")
+	for range 2 {
+		repoSettingsNextEvent(t, deliveries)
+	}
+	repoPath := database.RepoPath(repo.Owner, repo.Name)
+	repoSettingsGit(t, repoPath, "tag", "-a", "annotated", "-m", "Annotated", featureSHA)
+
+	type ref struct {
+		Name   string `json:"name"`
+		Commit struct {
+			ID string `json:"id"`
+		} `json:"commit"`
+	}
+	create := func(kind, name, target string) ref {
+		t.Helper()
+		var got ref
+		api.doJSON(http.MethodPost, apiV1RepoPath(repo, "/"+kind), map[string]any{"name": name, "target": target}, http.StatusCreated, &got)
+		return got
+	}
+
+	t.Run("branches", func(t *testing.T) {
+		before := len(gitRepoActions(t, owner.ID, repo.ID))
+		for name, c := range map[string]struct{ target, want string }{
+			"from-default":       {"", mainSHA},
+			"from-sha":           {featureSHA, featureSHA},
+			"nested/from-branch": {"feature/base", featureSHA},
+		} {
+			got := create("branches", name, c.target)
+			assert.Equal(t, name, got.Name)
+			assert.Equal(t, c.want, got.Commit.ID, "branch %q", name)
+			assert.Equal(t, c.want, repoSettingsGit(t, repoPath, "rev-parse", "refs/heads/"+name), "branch %q on disk", name)
+
+			// The branch is pushed, so it fires webhooks like a "git push".
+			assert.Equal(t, repoSettingsEvent{Event: "create", Ref: name, RefType: "branch"}, repoSettingsNextEvent(t, deliveries))
+			push := repoSettingsNextEvent(t, deliveries)
+			assert.Equal(t, "push", push.Event)
+			assert.Equal(t, "refs/heads/"+name, push.Ref)
+			assert.Equal(t, c.want, push.After)
+		}
+
+		var b ref
+		api.doJSON(http.MethodGet, apiV1RepoPath(repo, "/branches/nested/from-branch"), nil, http.StatusOK, &b)
+		assert.Equal(t, featureSHA, b.Commit.ID)
+
+		var want []gitRefAction
+		for _, name := range []string{"from-default", "from-sha", "nested/from-branch"} {
+			want = append(want,
+				gitRefAction{OpType: database.ActionCreateBranch, RefName: name},
+				gitRefAction{OpType: database.ActionCommitRepo, RefName: name},
+			)
+		}
+		assert.ElementsMatch(t, want, gitNewRefActions(t, owner.ID, repo.ID, before))
+	})
+
+	t.Run("tags", func(t *testing.T) {
+		before := len(gitRepoActions(t, owner.ID, repo.ID))
+		for name, c := range map[string]struct{ target, want string }{
+			"v1":           {"", mainSHA},
+			"from-tag":     {"annotated", featureSHA},
+			"feature/base": {mainSHA, mainSHA},
+		} {
+			got := create("tags", name, c.target)
+			assert.Equal(t, name, got.Name)
+			assert.Equal(t, c.want, got.Commit.ID, "tag %q", name)
+			// Tags are lightweight, on the commit even when the target is an
+			// annotated tag.
+			assert.Equal(t, "commit", repoSettingsGit(t, repoPath, "cat-file", "-t", "refs/tags/"+name), "tag %q", name)
+			assert.Equal(t, c.want, repoSettingsGit(t, repoPath, "rev-parse", "refs/tags/"+name), "tag %q on disk", name)
+			assert.Equal(t, repoSettingsEvent{Event: "create", Ref: name, RefType: "tag"}, repoSettingsNextEvent(t, deliveries))
+		}
+
+		var tags []ref
+		api.doJSON(http.MethodGet, apiV1RepoPath(repo, "/tags"), nil, http.StatusOK, &tags)
+		got := make(map[string]string)
+		for _, tag := range tags {
+			got[tag.Name] = tag.Commit.ID
+		}
+		assert.Equal(t, mainSHA, got["v1"])
+		assert.Equal(t, featureSHA, got["from-tag"])
+		assert.Equal(t, mainSHA, got["feature/base"])
+
+		assert.ElementsMatch(t, []gitRefAction{
+			{OpType: database.ActionPushTag, RefName: "v1"},
+			{OpType: database.ActionPushTag, RefName: "from-tag"},
+			{OpType: database.ActionPushTag, RefName: "feature/base"},
+		}, gitNewRefActions(t, owner.ID, repo.ID, before))
+	})
+
+	t.Run("invalid requests", func(t *testing.T) {
+		pwned := filepath.Join(t.TempDir(), "pwned")
+		for _, c := range []struct {
+			kind, name, target string
+		}{
+			{"branches", "from-default", ""},
+			{"tags", "v1", ""},
+			{"branches", "-x", ""},
+			{"branches", "a..b", ""},
+			{"branches", "HEAD", ""},
+			{"branches", "x.lock", ""},
+			{"branches", "@{-1}", ""},
+			{"tags", "-x", ""},
+			{"tags", "HEAD", ""},
+			{"tags", "v1/", ""},
+			{"tags", "a b", ""},
+			{"branches", "missing-target", "nope"},
+			{"tags", "missing-target", "--output=" + pwned},
+			{"branches", "missing-sha", strings.Repeat("1", len(mainSHA))},
+		} {
+			status, body := api.do(http.MethodPost, apiV1RepoPath(repo, "/"+c.kind), map[string]any{"name": c.name, "target": c.target})
+			assert.Equal(t, http.StatusUnprocessableEntity, status, "%s %q at %q, response: %s", c.kind, c.name, c.target, body)
+		}
+		assert.NoFileExists(t, pwned)
+		assert.Empty(t, repoSettingsGit(t, repoPath, "for-each-ref", "refs/heads/missing-target", "refs/heads/missing-sha", "refs/tags/missing-target"))
+
+		status, body := api.do(http.MethodPost, apiV1RepoPath(repo, "/branches"), map[string]any{})
+		assert.Equal(t, http.StatusUnprocessableEntity, status, "no name, response: %s", body)
+	})
+
+	t.Run("empty repository", func(t *testing.T) {
+		empty := seedRepository(t, owner.ID, CreateRepositoryOptions{})
+		status, body := api.do(http.MethodPost, apiV1RepoPath(empty, "/branches"), map[string]any{"name": "feature"})
+		assert.Equal(t, http.StatusUnprocessableEntity, status, "response: %s", body)
+	})
+
+	t.Run("mirror", func(t *testing.T) {
+		u := seedUser(t, CreateUserOptions{})
+		mirror, _ := repoSettingsMigrate(t, repoSettingsSignedIn(t, u), u, repo, true)
+		for _, kind := range []string{"branches", "tags"} {
+			status, body := apiV1Client(t, u).do(http.MethodPost, apiV1RepoPath(mirror, "/"+kind), map[string]any{"name": "new"})
+			assert.Equal(t, http.StatusForbidden, status, "%s, response: %s", kind, body)
+		}
+	})
+
+	t.Run("collaborator", func(t *testing.T) {
+		collaborator := seedUser(t, CreateUserOptions{})
+		collaboratorAPI := apiV1Client(t, collaborator)
+		path := apiV1RepoPath(repo, "/collaborators/"+collaborator.Name)
+		status, body := api.do(http.MethodPut, path, map[string]any{"permission": "read"})
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+		for _, kind := range []string{"branches", "tags"} {
+			status, body = collaboratorAPI.do(http.MethodPost, apiV1RepoPath(repo, "/"+kind), map[string]any{"name": "by-reader"})
+			assert.Equal(t, http.StatusForbidden, status, "%s with read access, response: %s", kind, body)
+		}
+
+		status, body = api.do(http.MethodPut, path, map[string]any{"permission": "write"})
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+		for _, kind := range []string{"branches", "tags"} {
+			var got ref
+			collaboratorAPI.doJSON(http.MethodPost, apiV1RepoPath(repo, "/"+kind), map[string]any{"name": "by-writer"}, http.StatusCreated, &got)
+			assert.Equal(t, mainSHA, got.Commit.ID, kind)
+		}
+	})
 }
