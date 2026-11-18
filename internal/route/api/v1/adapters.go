@@ -268,11 +268,21 @@ func toRepositoryCollaborator(c *database.Collaborator) *types.RepositoryCollabo
 	}
 }
 
-// toRepository converts a database repository to an API repository.
-// It assumes the Owner field has been loaded on the repo.
+// toRepository converts a database repository to an API repository. It
+// assumes the Owner field has been loaded on the repo, and the BaseRepo field
+// with its Owner field if the repo is a fork.
 func toRepository(repo *database.Repository, perm *types.RepositoryPermission) *types.Repository {
+	apiRepo := toRepositoryWithoutParent(repo, perm)
+	if repo.IsFork {
+		// As on GitHub, the parent does not include its own parent.
+		apiRepo.Parent = toRepositoryWithoutParent(repo.BaseRepo, &types.RepositoryPermission{Pull: true})
+	}
+	return apiRepo
+}
+
+func toRepositoryWithoutParent(repo *database.Repository, perm *types.RepositoryPermission) *types.Repository {
 	cloneLink := repo.CloneLink()
-	apiRepo := &types.Repository{
+	return &types.Repository{
 		ID:            repo.ID,
 		Owner:         toUser(repo.Owner),
 		Name:          repo.Name,
@@ -296,9 +306,4 @@ func toRepository(repo *database.Repository, perm *types.RepositoryPermission) *
 		Updated:       repo.Updated,
 		Permissions:   perm,
 	}
-	if repo.IsFork {
-		p := &types.RepositoryPermission{Pull: true}
-		apiRepo.Parent = toRepository(repo.BaseRepo, p)
-	}
-	return apiRepo
 }
