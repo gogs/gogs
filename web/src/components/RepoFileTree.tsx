@@ -89,7 +89,11 @@ function Tree({
   }, [model, path]);
 
   return (
-    <div className="min-h-0 flex-auto" style={{ height: rows * FILE_TREE_DEFAULT_ITEM_HEIGHT }}>
+    // The rows keep the inset of the header above them from the bottom edge.
+    <div
+      className="min-h-0 flex-auto pb-3"
+      style={{ height: `calc(${rows * FILE_TREE_DEFAULT_ITEM_HEIGHT}px + 0.75rem)` }}
+    >
       <FileTree model={model} style={{ ...TREE_THEME_STYLE, height: "100%" }} />
     </div>
   );
