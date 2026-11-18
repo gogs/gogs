@@ -287,8 +287,7 @@ func checkEditorCommit(c flamego.Context, logger *logx.Logger, l i18n.Locale, re
 	target := cmp.Or(req.NewBranch, req.Branch)
 	denial, err := database.Handle.ProtectBranches().CheckPushByName(c.Request().Context(), repoCtx.Repo.ID, target, repoCtx.Viewer.ID(), false)
 	if err != nil {
-		logger.Error("Failed to check branch protection", "repoID", repoCtx.Repo.ID, "branch", target, "error", err)
-		return http.StatusInternalServerError, nil, errors.Wrap(err, "check branch protection")
+		return http.StatusInternalServerError, nil, errors.Wrapf(err, "check protection of branch %q", target)
 	}
 	switch denial {
 	case database.PushDeniedNotInAllowlist:
@@ -380,6 +379,9 @@ func postRepoEditorFile(c flamego.Context, logger *logx.Logger, l i18n.Locale, v
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
 	}
 	if statusCode, resp, err = checkEditorCommit(c, logger, l, repoCtx, gitRepo, &req.repoEditorCommitRequest); statusCode != 0 {
+		if statusCode == http.StatusInternalServerError {
+			logger.Error("Failed to check commit", "repoID", repoCtx.Repo.ID, "error", err)
+		}
 		return statusCode, resp, err
 	}
 	commit, err := gitRepo.BranchCommit(ctx, req.Branch)
@@ -494,6 +496,9 @@ func postRepoEditorDelete(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
 	}
 	if statusCode, resp, err = checkEditorCommit(c, logger, l, repoCtx, gitRepo, &req.repoEditorCommitRequest); statusCode != 0 {
+		if statusCode == http.StatusInternalServerError {
+			logger.Error("Failed to check commit", "repoID", repoCtx.Repo.ID, "error", err)
+		}
 		return statusCode, resp, err
 	}
 	commit, err := gitRepo.BranchCommit(ctx, req.Branch)
@@ -582,6 +587,9 @@ func postRepoEditorUpload(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
 	}
 	if statusCode, resp, err = checkEditorCommit(c, logger, l, repoCtx, gitRepo, &req.repoEditorCommitRequest); statusCode != 0 {
+		if statusCode == http.StatusInternalServerError {
+			logger.Error("Failed to check commit", "repoID", repoCtx.Repo.ID, "error", err)
+		}
 		return statusCode, resp, err
 	}
 	commit, err := gitRepo.BranchCommit(ctx, req.Branch)

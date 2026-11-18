@@ -146,7 +146,7 @@ func checkBranchProtection(c *apiContext, branch string) bool {
 		c.ErrorStatus(http.StatusForbidden, errors.Newf("Branch %q is protected and you are not in the push allowlist.", branch))
 		return false
 	case database.PushDeniedRequiresPullRequest:
-		c.ErrorStatus(http.StatusForbidden, errors.Newf("Branch %q is protected and commits must be merged through pull request.", branch))
+		c.ErrorStatus(http.StatusForbidden, errors.Newf("Branch %q is protected and commits must be merged through a pull request.", branch))
 		return false
 	}
 	return true
