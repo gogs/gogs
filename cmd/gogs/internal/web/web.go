@@ -286,6 +286,12 @@ func newRoutingHandler(logger *logx.Logger, localizer, sessioner, authenticate f
 	f.Map(logger)
 	f.Map(traceStore, health)
 	f.AutoHead(true)
+	if conf.Server.Protocol == "fcgi" && conf.Server.Subpath != "" {
+		f.Before(func(_ http.ResponseWriter, r *http.Request) bool {
+			r.URL.Path = strings.TrimPrefix(r.URL.Path, conf.Server.Subpath)
+			return false
+		})
+	}
 	// The router ignores extra leading slashes, e.g., it matches "//alice/repo"
 	// like "/alice/repo". Handlers that check the path, e.g., to tell a push
 	// from a pull, must see the same path the router matched.
@@ -298,12 +304,6 @@ func newRoutingHandler(logger *logx.Logger, localizer, sessioner, authenticate f
 		}
 		return false
 	})
-	if conf.Server.Protocol == "fcgi" && conf.Server.Subpath != "" {
-		f.Before(func(_ http.ResponseWriter, r *http.Request) bool {
-			r.URL.Path = strings.TrimPrefix(r.URL.Path, conf.Server.Subpath)
-			return false
-		})
-	}
 	if !conf.Server.DisableRouterLog {
 		f.Use(flamego.Logger())
 	}

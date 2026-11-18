@@ -114,7 +114,7 @@ export function RepoSearch({ owner, name, data }: { owner: string; name: string;
                 {t(data.exhaustive ? "repo.code_search.truncated_exhaustive" : "repo.code_search.truncated", {
                   count: data.files.reduce((n, f) => n + f.lines.filter((l) => l.isMatch).length, 0),
                 })}{" "}
-                {data.exhaustive ? null : (
+                {data.exhaustive || !user ? null : (
                   <Link
                     to="/$owner/$repo/search/$"
                     params={{ ...params, _splat: data.ref }}

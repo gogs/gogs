@@ -60,11 +60,14 @@ func gitHTTPAction(c flamego.Context) string {
 }
 
 func gitHTTPActionFromPath(urlPath, subpath, owner, repo string) string {
-	if subpath != "" {
-		urlPath = strings.TrimPrefix(urlPath, subpath)
-	}
+	// The reverse proxy usually strips the subpath, so the path starts with the
+	// owner, whose name may itself start like the subpath, e.g., "github" under
+	// "/git".
 	prefix := path.Join("/", owner, repo) + "/"
 	if after, ok := strings.CutPrefix(urlPath, prefix); ok {
+		return after
+	}
+	if after, ok := strings.CutPrefix(urlPath, subpath+prefix); ok && subpath != "" {
 		return after
 	}
 	return ""

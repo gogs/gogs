@@ -50,6 +50,22 @@ func TestGitHTTPActionFromPath(t *testing.T) {
 			want:    "info/refs",
 		},
 		{
+			name:    "owner starts like the subpath",
+			urlPath: "/github/repo/info/refs",
+			subpath: "/git",
+			owner:   "github",
+			repo:    "repo",
+			want:    "info/refs",
+		},
+		{
+			name:    "owner named like the subpath",
+			urlPath: "/git/repo/git-upload-pack",
+			subpath: "/git",
+			owner:   "git",
+			repo:    "repo",
+			want:    "git-upload-pack",
+		},
+		{
 			name:    "non git suffix",
 			urlPath: "/owner/repo/src/main.go",
 			owner:   "owner",
