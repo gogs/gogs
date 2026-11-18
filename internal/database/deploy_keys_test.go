@@ -66,11 +66,18 @@ func deployKeysAdd(t *testing.T, ctx context.Context, s *DeployKeysStore) {
 	require.NoError(t, err)
 	assert.Equal(t, key.KeyID, key2.KeyID)
 	assert.NotEqual(t, key.ID, key2.ID)
+	// So do they when the comments of the contents differ.
+	key3, err := s.Add(ctx, logger, 3, "deploy", content+" ci@example.com")
+	require.NoError(t, err)
+	assert.Equal(t, key.KeyID, key3.KeyID)
 
 	_, err = s.Add(ctx, logger, 1, "again", content)
 	assert.True(t, IsErrDeployKeyAlreadyExist(err), "got %v", err)
-	_, err = s.Add(ctx, logger, 1, "deploy", newTestSSHKey(t))
+	// A key rolled back leaves no line, whose key ID a later key may get.
+	rolledBack := newTestSSHKey(t)
+	_, err = s.Add(ctx, logger, 1, "deploy", rolledBack)
 	assert.True(t, IsErrDeployKeyNameAlreadyUsed(err), "got %v", err)
+	assert.NotContains(t, readAuthorizedKeys(t, authorizedKeys), rolledBack)
 
 	// Content of a user key cannot be a deploy key.
 	userContent := newTestSSHKey(t)
@@ -154,7 +161,7 @@ func deployKeysTouch(t *testing.T, ctx context.Context, s *DeployKeysStore) {
 }
 
 func deployKeysDelete(t *testing.T, ctx context.Context, s *DeployKeysStore) {
-	setMockSSHForKeys(t)
+	authorizedKeys := setMockSSHForKeys(t)
 	logger := logx.NewNoopLogger()
 
 	usersStore := newUsersStore(s.db)
@@ -185,6 +192,7 @@ func deployKeysDelete(t *testing.T, ctx context.Context, s *DeployKeysStore) {
 	assert.True(t, IsErrDeployKeyNotExist(err), "got %v", err)
 	_, err = newPublicKeysStore(s.db).GetByID(ctx, key1.KeyID)
 	require.NoError(t, err)
+	assert.Contains(t, readAuthorizedKeys(t, authorizedKeys), fmt.Sprintf("key-%d ", key1.KeyID))
 
 	// Site admins can delete keys of any repository, and the last one takes its
 	// public key with it.
@@ -192,6 +200,7 @@ func deployKeysDelete(t *testing.T, ctx context.Context, s *DeployKeysStore) {
 	require.NoError(t, err)
 	_, err = newPublicKeysStore(s.db).GetByID(ctx, key2.KeyID)
 	assert.True(t, IsErrKeyNotExist(err), "got %v", err)
+	assert.NotContains(t, readAuthorizedKeys(t, authorizedKeys), fmt.Sprintf("key-%d ", key2.KeyID))
 
 	// Deleting a key that does not exist is not an error.
 	err = s.Delete(ctx, logger, alice, key1.ID)

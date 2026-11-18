@@ -1877,6 +1877,22 @@ func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 		return err
 	}
 
+	var deployKeyIDs []int64
+	if err = tx.Model(new(DeployKey)).Where("repo_id = ?", repoID).Pluck("key_id", &deployKeyIDs).Error; err != nil {
+		return errors.Wrap(err, "list deploy keys")
+	}
+	if err = lockPublicKeys(tx, deployKeyIDs...); err != nil {
+		return errors.Wrap(err, "lock public keys")
+	}
+	if err = tx.Where("repo_id = ?", repoID).Delete(new(DeployKey)).Error; err != nil {
+		return errors.Wrap(err, "delete deploy keys")
+	}
+	// Other repositories may use the same public keys.
+	publicKeyDeleted, err := deleteUnusedPublicKeys(tx, deployKeyIDs...)
+	if err != nil {
+		return err
+	}
+
 	if repo.IsFork {
 		if _, err = sess.Exec("UPDATE `repository` SET num_forks=num_forks-1 WHERE id=?", repo.ForkID); err != nil {
 			return errors.Newf("decrease fork count: %v", err)
@@ -1908,6 +1924,11 @@ func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 		}
 	}
 
+	if publicKeyDeleted {
+		if err = newPublicKeysStore(Handle.db).RewriteAuthorizedKeys(); err != nil {
+			return errors.Wrap(err, "rewrite authorized keys")
+		}
+	}
 	return nil
 }
 

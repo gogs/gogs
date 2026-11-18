@@ -299,6 +299,7 @@ Indexes:
 Primary keys: id
 Indexes: 
 	"IDX_public_key_owner_id" (owner_id)
+	"UQE_public_key_owner_id_fingerprint" UNIQUE (owner_id, fingerprint)
 ```
 
 # Table "release"

@@ -9,7 +9,6 @@ import (
 	"math/big"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -41,9 +40,9 @@ const (
 // PublicKey represents a user or deploy SSH public key.
 type PublicKey struct {
 	ID          int64      `gorm:"primaryKey"`
-	OwnerID     int64      `gorm:"not null;index:IDX_public_key_owner_id"`
+	OwnerID     int64      `gorm:"not null;index:IDX_public_key_owner_id;uniqueIndex:UQE_public_key_owner_id_fingerprint"`
 	Name        string     `gorm:"size:255;not null"`
-	Fingerprint string     `gorm:"size:255;not null"`
+	Fingerprint string     `gorm:"size:255;not null;uniqueIndex:UQE_public_key_owner_id_fingerprint"`
 	Content     string     `gorm:"type:TEXT;not null"`
 	Mode        AccessMode `gorm:"size:32;not null;default:2"`
 	Type        KeyType    `gorm:"size:32;not null;default:1"`
@@ -322,8 +321,15 @@ func CheckPublicKeyString(logger *logx.Logger, content string) (_ string, err er
 	return "", errors.Newf("key type is not allowed: %s", keyType)
 }
 
-// appendAuthorizedKeysToFile appends new SSH keys' content to authorized_keys file.
+// appendAuthorizedKeysToFile appends new SSH keys' content to authorized_keys
+// file. Callers append keys once the transactions that add them commit, so that
+// a key rolled back leaves no line whose key ID a later key may get.
 func appendAuthorizedKeysToFile(logger *logx.Logger, keys ...*PublicKey) error {
+	// The builtin SSH server does not read the file.
+	if conf.SSH.StartBuiltinServer {
+		return nil
+	}
+
 	sshOpLocker.Lock()
 	defer sshOpLocker.Unlock()
 
@@ -358,11 +364,12 @@ func appendAuthorizedKeysToFile(logger *logx.Logger, keys ...*PublicKey) error {
 	return nil
 }
 
-// checkKeyContent only checks if key content has been used as a user public
-// key. It is OK to use same key as deploy key for multiple repositories.
-func checkKeyContent(tx *gorm.DB, content string) error {
+// checkKeyContent only checks if the key of the fingerprint has been used as a
+// user public key, whatever its comment. It is OK to use same key as deploy key
+// for multiple repositories.
+func checkKeyContent(tx *gorm.DB, fingerprint, content string) error {
 	var count int64
-	err := tx.Model(new(PublicKey)).Where("content = ? AND type = ?", content, KeyTypeUser).Count(&count).Error
+	err := tx.Model(new(PublicKey)).Where("fingerprint = ? AND type = ?", fingerprint, KeyTypeUser).Count(&count).Error
 	if err != nil {
 		return err
 	} else if count > 0 {
@@ -371,31 +378,15 @@ func checkKeyContent(tx *gorm.DB, content string) error {
 	return nil
 }
 
-func addKey(logger *logx.Logger, tx *gorm.DB, key *PublicKey) (err error) {
-	// Calculate fingerprint.
-	tmpPath := strings.ReplaceAll(path.Join(os.TempDir(), fmt.Sprintf("%d", time.Now().Nanosecond()), "id_rsa.pub"), "\\", "/")
-	_ = os.MkdirAll(path.Dir(tmpPath), os.ModePerm)
-	if err = os.WriteFile(tmpPath, []byte(key.Content), 0o644); err != nil {
-		return err
-	}
-
-	stdout, stderr, err := sshKeygenFingerprint(conf.SSH.KeygenPath, tmpPath)
+// publicKeyFingerprint returns the SHA256 fingerprint of the public key in the
+// authorized_keys format, as "ssh-keygen -l" prints it. Public keys are unique
+// by their owners and fingerprints, which the migrations compute the same way.
+func publicKeyFingerprint(content string) (string, error) {
+	key, _, _, _, err := ssh.ParseAuthorizedKey([]byte(content))
 	if err != nil {
-		return errors.Newf("fail to parse public key: %s - %s", err, stderr)
-	} else if len(stdout) < 2 {
-		return errors.New("not enough output for calculating fingerprint: " + stdout)
+		return "", errors.Wrap(err, "parse public key")
 	}
-	key.Fingerprint = strings.Split(stdout, " ")[1]
-
-	if err = tx.Create(key).Error; err != nil {
-		return err
-	}
-
-	// Don't need to rewrite this file if builtin SSH server is enabled.
-	if conf.SSH.StartBuiltinServer {
-		return nil
-	}
-	return appendAuthorizedKeysToFile(logger, key)
+	return ssh.FingerprintSHA256(key), nil
 }
 
 // deletePublicKeys does the actual key deletion but does not update authorized_keys file.

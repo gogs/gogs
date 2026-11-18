@@ -146,6 +146,12 @@ func ImportDatabase(ctx context.Context, logger *logx.Logger, db *gorm.DB, dirPa
 	if err != nil {
 		return errors.Wrap(err, "migrate")
 	}
+	// Backups from before public keys were unique by their owners and
+	// fingerprints may have duplicates, which are merged after the import.
+	err = migrations.AllowDuplicatePublicKeys(db.WithContext(ctx))
+	if err != nil {
+		return errors.Wrap(err, "allow duplicate public keys")
+	}
 
 	err = importLegacyTables(ctx, logger, dirPath, verbose)
 	if err != nil {
@@ -184,6 +190,10 @@ func ImportDatabase(ctx context.Context, logger *logx.Logger, db *gorm.DB, dirPa
 		}
 	}
 
+	err = migrations.MergeDuplicatePublicKeys(db.WithContext(ctx))
+	if err != nil {
+		return errors.Wrap(err, "merge duplicate public keys")
+	}
 	return nil
 }
 

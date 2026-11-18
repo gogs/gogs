@@ -99,8 +99,11 @@ func publicKeysAdd(t *testing.T, ctx context.Context, s *PublicKeysStore) {
 	assert.True(t, strings.HasPrefix(key.Fingerprint, "SHA256:"), "fingerprint %q", key.Fingerprint)
 	assert.Contains(t, readAuthorizedKeys(t, authorizedKeys), fmt.Sprintf("key-%d", key.ID))
 
-	// The same content cannot be added again, even by another user.
+	// The same key cannot be added again, even by another user or with another
+	// comment.
 	_, err = s.Add(ctx, logger, 2, "desktop", content)
+	assert.True(t, IsErrKeyAlreadyExist(err), "got %v", err)
+	_, err = s.Add(ctx, logger, 1, "desktop", content+" alice@example.com")
 	assert.True(t, IsErrKeyAlreadyExist(err), "got %v", err)
 
 	// Names are unique for each user only.
@@ -239,4 +242,12 @@ func publicKeysRewriteAuthorizedKeys(t *testing.T, ctx context.Context, s *Publi
 
 	got := readAuthorizedKeys(t, authorizedKeys)
 	assert.Equal(t, key.AuthorizedString(), got)
+
+	// The builtin SSH server does not read the file, which is left alone.
+	conf.SSH.StartBuiltinServer = true
+	err = os.WriteFile(authorizedKeys, []byte("ssh-ed25519 AAAA admin\n"), 0o600)
+	require.NoError(t, err)
+	err = s.RewriteAuthorizedKeys()
+	require.NoError(t, err)
+	assert.Equal(t, "ssh-ed25519 AAAA admin\n", readAuthorizedKeys(t, authorizedKeys))
 }

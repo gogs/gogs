@@ -24,17 +24,21 @@ func newPublicKeysStore(db *gorm.DB) *PublicKeysStore {
 
 // Add adds a new public key of given user to the database and the
 // "authorized_keys" file. The content must already be checked by
-// CheckPublicKeyString. It returns ErrKeyAlreadyExist when the content is used
-// by another user key, and ErrKeyNameAlreadyUsed when the user has a key of
+// CheckPublicKeyString. It returns ErrKeyAlreadyExist when the key is used by a
+// user key, whatever its comment, and ErrKeyNameAlreadyUsed when the user has a key of
 // the same name.
 func (s *PublicKeysStore) Add(ctx context.Context, logger *logx.Logger, ownerID int64, name, content string) (*PublicKey, error) {
+	fingerprint, err := publicKeyFingerprint(content)
+	if err != nil {
+		return nil, err
+	}
 	db := s.db.WithContext(ctx)
-	if err := checkKeyContent(db, content); err != nil {
+	if err = checkKeyContent(db, fingerprint, content); err != nil {
 		return nil, err
 	}
 
 	var count int64
-	err := db.Model(new(PublicKey)).Where("owner_id = ? AND name = ?", ownerID, name).Count(&count).Error
+	err = db.Model(new(PublicKey)).Where("owner_id = ? AND name = ?", ownerID, name).Count(&count).Error
 	if err != nil {
 		return nil, errors.Wrap(err, "count keys by name")
 	} else if count > 0 {
@@ -42,17 +46,23 @@ func (s *PublicKeysStore) Add(ctx context.Context, logger *logx.Logger, ownerID 
 	}
 
 	key := &PublicKey{
-		OwnerID: ownerID,
-		Name:    name,
-		Content: content,
-		Mode:    AccessModeWrite,
-		Type:    KeyTypeUser,
+		OwnerID:     ownerID,
+		Name:        name,
+		Fingerprint: fingerprint,
+		Content:     content,
+		Mode:        AccessModeWrite,
+		Type:        KeyTypeUser,
 	}
-	err = db.Transaction(func(tx *gorm.DB) error {
-		return addKey(logger, tx, key)
-	})
-	if err != nil {
+	if err = db.Create(key).Error; err != nil {
+		// The user added the same key at the same time.
+		if isUniqueViolation(err) {
+			return nil, ErrKeyAlreadyExist{ownerID, content}
+		}
 		return nil, errors.Wrap(err, "add key")
+	}
+	// The key is already added, and resyncing SSH keys adds its line.
+	if err = appendAuthorizedKeysToFile(logger, key); err != nil {
+		logger.Error("Failed to append public key to authorized_keys", "keyID", key.ID, "error", err)
 	}
 	return key, nil
 }
@@ -131,8 +141,13 @@ func authorizedKeysPath() string {
 }
 
 // RewriteAuthorizedKeys rewrites the "authorized_keys" file under the SSH root
-// path with all public keys stored in the database.
+// path with all public keys stored in the database. It leaves the file alone
+// with the builtin SSH server, which does not read it.
 func (s *PublicKeysStore) RewriteAuthorizedKeys() error {
+	if conf.SSH.StartBuiltinServer {
+		return nil
+	}
+
 	sshOpLocker.Lock()
 	defer sshOpLocker.Unlock()
 

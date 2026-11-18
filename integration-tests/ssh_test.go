@@ -5,9 +5,11 @@ import (
 	"crypto/rand"
 	"encoding/pem"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -185,6 +187,84 @@ func TestSSHDeployKey(t *testing.T) {
 		out := key.cloneFails(t, otherRepo)
 		assert.Contains(t, out, "Key access denied")
 	})
+}
+
+// sshServLsRemote lists the main branch of the repository through "gogs serv"
+// with the key ID, as OpenSSH does with the line of the key in the
+// authorized_keys file.
+func sshServLsRemote(t *testing.T, keyID int64, repo *Repository) (string, error) {
+	t.Helper()
+
+	cmd := gitCommand(t.TempDir(), "ls-remote", "ssh://git@localhost/"+repo.Owner+"/"+repo.Name+".git", "refs/heads/main")
+	cmd.Env = append(cmd.Env, "GIT_SSH="+servProgram(t, keyID))
+	out, err := cmd.CombinedOutput()
+	return strings.TrimSpace(string(out)), err
+}
+
+func TestSSHDeleteDeployKey(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
+	otherRepo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
+	_, content := sshNewKey(t)
+	key, err := database.Handle.DeployKeys().Add(t.Context(), logger, repo.ID, UniqueName("deploy-"), content)
+	require.NoError(t, err)
+	otherKey, err := database.Handle.DeployKeys().Add(t.Context(), logger, otherRepo.ID, UniqueName("deploy-"), content)
+	require.NoError(t, err)
+
+	c := authenticatedClient(t, owner)
+	deleteKey := func(repo *Repository, key *database.DeployKey) {
+		t.Helper()
+		status, body := c.do(http.MethodDelete, repoSettingsAPIPath(repo, "/settings/keys/"+strconv.FormatInt(key.ID, 10)), repoSettingsNoBody)
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	}
+
+	// The other repository still uses the key, so it still gets in.
+	deleteKey(repo, key)
+	out, err := sshServLsRemote(t, key.KeyID, otherRepo)
+	require.NoError(t, err, "ls-remote: %s", out)
+	assert.Equal(t, gitMainOnDisk(t, otherRepo)+"\trefs/heads/main", out)
+	out, err = sshServLsRemote(t, key.KeyID, repo)
+	require.Error(t, err, "ls-remote succeeded: %s", out)
+
+	// The last repository takes the public key with it.
+	deleteKey(otherRepo, otherKey)
+	_, err = database.Handle.PublicKeys().GetByID(t.Context(), key.KeyID)
+	assert.True(t, database.IsErrKeyNotExist(err), "key not deleted: %v", err)
+}
+
+func TestSSHDeleteRepositoryWithDeployKeys(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
+	otherRepo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
+	_, ownContent := sshNewKey(t)
+	ownKey, err := database.Handle.DeployKeys().Add(t.Context(), logger, repo.ID, UniqueName("deploy-"), ownContent)
+	require.NoError(t, err)
+	_, sharedContent := sshNewKey(t)
+	sharedKey, err := database.Handle.DeployKeys().Add(t.Context(), logger, repo.ID, UniqueName("deploy-"), sharedContent)
+	require.NoError(t, err)
+	_, err = database.Handle.DeployKeys().Add(t.Context(), logger, otherRepo.ID, UniqueName("deploy-"), sharedContent)
+	require.NoError(t, err)
+
+	status, body := apiV1Client(t, owner).do(http.MethodDelete, apiV1RepoPath(repo, ""), nil)
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+
+	keys, err := database.Handle.DeployKeys().List(t.Context(), repo.ID)
+	require.NoError(t, err)
+	assert.Empty(t, keys)
+
+	_, err = database.Handle.PublicKeys().GetByID(t.Context(), ownKey.KeyID)
+	assert.True(t, database.IsErrKeyNotExist(err), "key not deleted: %v", err)
+
+	// The key of the other repository keeps working.
+	_, err = database.Handle.PublicKeys().GetByID(t.Context(), sharedKey.KeyID)
+	require.NoError(t, err)
+	out, err := sshServLsRemote(t, sharedKey.KeyID, otherRepo)
+	require.NoError(t, err, "ls-remote: %s", out)
+	assert.Equal(t, gitMainOnDisk(t, otherRepo)+"\trefs/heads/main", out)
 }
 
 // servProgram writes a program that Git runs in place of ssh, which connects
