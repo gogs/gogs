@@ -1640,6 +1640,7 @@
                 "properties": {
                   "tag_name": {
                     "type": "string",
+                    "maxLength": 255,
                     "description": "Name of the tag",
                     "example": "v1.0.0"
                   },
