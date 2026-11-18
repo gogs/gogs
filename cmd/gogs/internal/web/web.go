@@ -293,11 +293,15 @@ func newHealth(traceStore *telemetry.Store) *telemetry.Health {
 
 // overrideHTTPPort makes the server listen on the given port, e.g., when the
 // configured port is taken on the first run. The external URL follows only when
-// it uses the configured port, i.e., Gogs serves it directly. Otherwise it is
-// the address of a reverse proxy or a port mapping, which the port to listen on
-// does not change.
+// it uses the configured port, explicitly or as the default port of its scheme,
+// i.e., Gogs serves it directly. Otherwise it is the address of a reverse proxy
+// or a port mapping, which the port to listen on does not change.
 func overrideHTTPPort(port int) {
-	if conf.Server.URL.Port() == strconv.Itoa(conf.Server.HTTPPort) {
+	externalPort := conf.Server.URL.Port()
+	if externalPort == "" {
+		externalPort = map[string]string{"http": "80", "https": "443"}[conf.Server.URL.Scheme]
+	}
+	if externalPort == strconv.Itoa(conf.Server.HTTPPort) {
 		conf.Server.URL.Host = net.JoinHostPort(conf.Server.URL.Hostname(), strconv.Itoa(port))
 		conf.Server.ExternalURL = conf.Server.URL.String()
 	}
