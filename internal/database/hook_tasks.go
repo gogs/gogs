@@ -335,14 +335,13 @@ func (s *HookTasksStore) ListByWebhook(ctx context.Context, webhookID int64, pag
 	if page < 1 {
 		page = 1
 	}
-	tasks := make([]*HookTask, 0, pageSize)
-	return tasks, s.db.WithContext(ctx).
-		Where("hook_id = ?", webhookID).
-		Order("id DESC").
-		Limit(pageSize).
-		Offset((page - 1) * pageSize).
-		Find(&tasks).
-		Error
+	db := s.db.WithContext(ctx).Where("hook_id = ?", webhookID).Order("id DESC")
+	// GORM sends "LIMIT 0" for a page size of 0, which would list nothing.
+	if pageSize > 0 {
+		db = db.Limit(pageSize).Offset((page - 1) * pageSize)
+	}
+	var tasks []*HookTask
+	return tasks, db.Find(&tasks).Error
 }
 
 // GetByUUID returns the delivery of the webhook with given UUID. It returns

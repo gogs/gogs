@@ -84,6 +84,10 @@ func hookTasksListByWebhook(t *testing.T, ctx context.Context, s *HookTasksStore
 	got, err = s.ListByWebhook(ctx, 1, 0, 2)
 	require.NoError(t, err)
 	assert.Equal(t, []int64{ids[4], ids[3]}, taskIDs(got))
+	// A page size of 0 lists all deliveries, as XORM did for `[webhook] PAGING_NUM = 0`.
+	got, err = s.ListByWebhook(ctx, 1, 1, 0)
+	require.NoError(t, err)
+	assert.Equal(t, []int64{ids[4], ids[3], ids[2], ids[1], ids[0]}, taskIDs(got))
 
 	got, err = s.ListByWebhook(ctx, 3, 1, 2)
 	require.NoError(t, err)
