@@ -75,3 +75,17 @@ func TestRestoreCustomDir(t *testing.T) {
 		assert.Equal(t, "current", readFile(t, filepath.Join(customDir, "conf", "app.ini")))
 	})
 }
+
+func TestReplacePath(t *testing.T) {
+	t.Run("moves current back when the move fails", func(t *testing.T) {
+		root := t.TempDir()
+		dstPath := filepath.Join(root, "conf")
+		writeFile(t, filepath.Join(dstPath, "app.ini"), "current")
+
+		err := replacePath(filepath.Join(root, "missing"), dstPath)
+		require.Error(t, err)
+
+		assert.Equal(t, "current", readFile(t, filepath.Join(dstPath, "app.ini")))
+		assert.NoDirExists(t, dstPath+".bak")
+	})
+}

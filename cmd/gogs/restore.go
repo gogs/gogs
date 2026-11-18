@@ -133,13 +133,7 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 				continue
 			}
 
-			dirPath := filepath.Join(conf.Server.AppDataPath, dir)
-			if osx.IsDir(dirPath) {
-				if err = moveAside(dirPath); err != nil {
-					logger.FatalContext(ctx, "Failed to backup current 'data'", "error", err)
-				}
-			}
-			if err = os.Rename(srcPath, dirPath); err != nil {
+			if err = replacePath(srcPath, filepath.Join(conf.Server.AppDataPath, dir)); err != nil {
 				logger.FatalContext(ctx, "Failed to import 'data'", "error", err)
 			}
 		}
@@ -161,6 +155,24 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 
 	logger.Info("Restore succeeded")
 
+	return nil
+}
+
+// replacePath moves srcPath to dstPath, keeping the current dstPath as "<dstPath>.bak". When the move fails, e.g.,
+// because the temporary directory is on another file system, the current dstPath is moved back so it is not lost.
+func replacePath(srcPath, dstPath string) error {
+	if !osx.Exist(dstPath) {
+		return os.Rename(srcPath, dstPath)
+	}
+	if err := moveAside(dstPath); err != nil {
+		return errors.Wrap(err, "back up current")
+	}
+	if err := os.Rename(srcPath, dstPath); err != nil {
+		if rollbackErr := os.Rename(dstPath+".bak", dstPath); rollbackErr != nil {
+			return errors.Wrapf(err, "move, and the current one is left at '%s' because moving it back failed: %v", dstPath+".bak", rollbackErr)
+		}
+		return errors.Wrap(err, "move")
+	}
 	return nil
 }
 
@@ -228,14 +240,8 @@ func restoreCustomDir(srcDir, customDir string) error {
 			continue
 		}
 
-		dstPath := filepath.Join(customDir, e.Name())
-		if osx.Exist(dstPath) {
-			if err = moveAside(dstPath); err != nil {
-				return errors.Wrapf(err, "back up '%s'", e.Name())
-			}
-		}
-		if err = os.Rename(filepath.Join(srcDir, e.Name()), dstPath); err != nil {
-			return errors.Wrapf(err, "move '%s'", e.Name())
+		if err = replacePath(filepath.Join(srcDir, e.Name()), filepath.Join(customDir, e.Name())); err != nil {
+			return errors.Wrapf(err, "replace '%s'", e.Name())
 		}
 	}
 	return nil
