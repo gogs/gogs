@@ -182,53 +182,15 @@ func (ErrHookTaskNotExist) NotFound() bool {
 func (t *HookTask) deliver(ctx context.Context, logger *logx.Logger, webhooks *WebhooksStore) {
 	// A redelivery succeeds only when this attempt does.
 	t.IsSucceed = false
-
-	payloadURL, err := url.Parse(t.URL)
-	if err != nil {
-		t.ResponseContent = fmt.Sprintf(`{"body": "Cannot parse payload URL: %v"}`, err)
-		return
-	}
-	if netx.IsBlockedLocalHostname(payloadURL.Hostname(), conf.Security.LocalNetworkAllowlist) {
-		t.ResponseContent = `{"body": "Payload URL resolved to a local network address that is implicitly blocked."}`
-		return
-	}
-
-	var body, contentType string
-	switch t.ContentType {
-	case JSON:
-		body, contentType = t.PayloadContent, "application/json"
-	case FORM:
-		body, contentType = url.Values{"payload": {t.PayloadContent}}.Encode(), "application/x-www-form-urlencoded"
-	}
-	req, err := http.NewRequest(http.MethodPost, t.URL, strings.NewReader(body))
-	if err != nil {
-		t.ResponseContent = fmt.Sprintf(`{"body": "Cannot create request: %v"}`, err)
-		return
-	}
-	req.Header.Set("User-Agent", "GogsServer")
-	if contentType != "" {
-		req.Header.Set("Content-Type", contentType)
-	}
-	req.Header.Set("X-Github-Delivery", t.UUID)
-	req.Header.Set("X-Github-Event", string(t.EventType))
-	req.Header.Set("X-Gogs-Delivery", t.UUID)
-	req.Header.Set("X-Gogs-Signature", t.Signature)
-	req.Header.Set("X-Gogs-Event", string(t.EventType))
-
+	// An attempt that fails before sending the request is recorded as a failed
+	// delivery too, so it is not retried on every run of the queue.
 	t.IsDelivered = true
-
-	// Record delivery information.
 	t.RequestInfo = &HookRequest{
 		Headers: map[string]string{},
 	}
-	for k, vals := range req.Header {
-		t.RequestInfo.Headers[k] = strings.Join(vals, ",")
-	}
-
 	t.ResponseInfo = &HookResponse{
 		Headers: map[string]string{},
 	}
-
 	defer func() {
 		t.Delivered = time.Now().UnixNano()
 		if t.IsSucceed {
@@ -245,6 +207,42 @@ func (t *HookTask) deliver(ctx context.Context, logger *logx.Logger, webhooks *W
 			logger.Error("Failed to update last status of webhook", "webhookID", t.HookID, "error", err)
 		}
 	}()
+
+	payloadURL, err := url.Parse(t.URL)
+	if err != nil {
+		t.ResponseInfo.Body = fmt.Sprintf("Cannot parse payload URL: %v", err)
+		return
+	}
+	if netx.IsBlockedLocalHostname(payloadURL.Hostname(), conf.Security.LocalNetworkAllowlist) {
+		t.ResponseInfo.Body = "Payload URL resolved to a local network address that is implicitly blocked."
+		return
+	}
+
+	var body, contentType string
+	switch t.ContentType {
+	case JSON:
+		body, contentType = t.PayloadContent, "application/json"
+	case FORM:
+		body, contentType = url.Values{"payload": {t.PayloadContent}}.Encode(), "application/x-www-form-urlencoded"
+	}
+	req, err := http.NewRequest(http.MethodPost, t.URL, strings.NewReader(body))
+	if err != nil {
+		t.ResponseInfo.Body = fmt.Sprintf("Cannot create request: %v", err)
+		return
+	}
+	req.Header.Set("User-Agent", "GogsServer")
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
+	}
+	req.Header.Set("X-Github-Delivery", t.UUID)
+	req.Header.Set("X-Github-Event", string(t.EventType))
+	req.Header.Set("X-Gogs-Delivery", t.UUID)
+	req.Header.Set("X-Gogs-Signature", t.Signature)
+	req.Header.Set("X-Gogs-Event", string(t.EventType))
+
+	for k, vals := range req.Header {
+		t.RequestInfo.Headers[k] = strings.Join(vals, ",")
+	}
 
 	client := &http.Client{
 		Timeout: time.Duration(conf.Webhook.DeliverTimeout) * time.Second,

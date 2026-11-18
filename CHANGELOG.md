@@ -103,6 +103,7 @@ All notable changes to Gogs are documented in this file.
 - Reverse proxy authentication now also works for Git and Git LFS over HTTP, so users authenticated by the proxy can clone and push. If your proxy lets Git or Git LFS requests through without authenticating them, make sure it removes or overwrites the header those requests carry, or clients can be authenticated as any user. [#8652](https://github.com/gogs/gogs/pull/8652)
 - Avatars are no longer shown to unauthenticated visitors when the site requires signing in, and the avatar of a private repository is only shown to those who can read the repository. [#8650](https://github.com/gogs/gogs/pull/8650)
 - A webhook redelivery that fails now shows as failed, and so does its webhook, even when an earlier delivery succeeded. [#8501](https://github.com/gogs/gogs/pull/8501)
+- A webhook delivery to an invalid payload URL or to a blocked local network address now shows as failed with the reason, instead of staying pending and being retried on every delivery run. [#8501](https://github.com/gogs/gogs/pull/8501)
 
 ### Removed
 

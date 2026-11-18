@@ -10,13 +10,6 @@ import (
 	"unknwon.dev/x/logx"
 )
 
-func TestHookTask_deliver(t *testing.T) {
-	// A redelivery that fails does not keep the success of an earlier delivery.
-	task := &HookTask{URL: "://bad", IsDelivered: true, IsSucceed: true}
-	task.deliver(context.Background(), logx.NewNoopLogger(), nil)
-	assert.False(t, task.IsSucceed)
-}
-
 func TestHookTasks(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
@@ -36,6 +29,7 @@ func TestHookTasks(t *testing.T) {
 		{"GetByUUID", hookTasksGetByUUID},
 		{"Update", hookTasksUpdate},
 		{"listUndelivered", hookTasksListUndelivered},
+		{"deliver", hookTasksDeliver},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
@@ -151,4 +145,47 @@ func hookTasksListUndelivered(t *testing.T, ctx context.Context, s *HookTasksSto
 	got, err = s.listUndelivered(ctx, 1)
 	require.NoError(t, err)
 	assert.Equal(t, []int64{pending1.ID}, taskIDs(got))
+}
+
+func hookTasksDeliver(t *testing.T, ctx context.Context, s *HookTasksStore) {
+	webhooks := &WebhooksStore{db: s.db}
+	for _, tc := range []struct {
+		url      string
+		wantBody string
+	}{
+		{"://bad", "Cannot parse payload URL: "},
+		{"http://127.0.0.1:1/hook", "Payload URL resolved to a local network address that is implicitly blocked."},
+	} {
+		t.Run(tc.url, func(t *testing.T) {
+			w := newTestWebhook(t, ctx, webhooks, 1, 0, HookEvents{})
+			task := newTestHookTask(t, s, 1, w.ID, "uuid-"+tc.url)
+			// A redelivery of a delivery that succeeded before.
+			task.URL = tc.url
+			task.IsSucceed = true
+			task.ResponseInfo = &HookResponse{Status: 200, Body: "received"}
+			require.NoError(t, s.Update(ctx, task))
+			require.NoError(t, webhooks.setLastStatus(ctx, w.ID, HookStatusSucceed))
+			task, err := s.GetByUUID(ctx, w.ID, task.UUID)
+			require.NoError(t, err)
+			task.IsDelivered = false
+
+			task.deliver(ctx, logx.NewNoopLogger(), webhooks)
+			require.NoError(t, s.Update(ctx, task))
+
+			got, err := s.GetByUUID(ctx, w.ID, task.UUID)
+			require.NoError(t, err)
+			assert.True(t, got.IsDelivered, "a failed attempt is not retried")
+			assert.False(t, got.IsSucceed)
+			assert.NotZero(t, got.Delivered)
+			require.NotNil(t, got.ResponseInfo)
+			assert.Zero(t, got.ResponseInfo.Status)
+			assert.Contains(t, got.ResponseInfo.Body, tc.wantBody)
+			undelivered, err := s.listUndelivered(ctx, 1)
+			require.NoError(t, err)
+			assert.Empty(t, undelivered)
+			gotWebhook, err := webhooks.GetOfRepo(ctx, 1, w.ID)
+			require.NoError(t, err)
+			assert.Equal(t, HookStatus(HookStatusFailed), gotWebhook.LastStatus)
+		})
+	}
 }
