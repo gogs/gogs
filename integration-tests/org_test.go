@@ -172,6 +172,16 @@ func TestOrgDelete(t *testing.T) {
 	other := orgSeed(t, owner.ID)
 	orgAddMember(t, other, member.ID)
 	path := "/api/web/orgs/" + org.Name
+	hookIDs := map[int64]int64{}
+	for _, o := range []*database.User{org, other} {
+		var created struct {
+			ID int64 `json:"id"`
+		}
+		ownerClient.doJSON(http.MethodPost, "/api/web/orgs/"+o.Name+"/settings/hooks", map[string]any{
+			"type": "gogs", "url": "http://127.0.0.1:1/hook", "contentType": "json", "events": "push_only", "active": true,
+		}, http.StatusCreated, &created)
+		hookIDs[o.ID] = created.ID
+	}
 
 	status, body := orgSignedIn(t, member).do(http.MethodDelete, path, map[string]any{"password": member.Password})
 	assert.Equal(t, http.StatusForbidden, status, "member, response: %s", body)
@@ -189,6 +199,10 @@ func TestOrgDelete(t *testing.T) {
 	assert.False(t, database.IsOrganizationMember(org.ID, owner.ID))
 	assert.True(t, database.IsOrganizationMember(other.ID, member.ID))
 	assert.True(t, database.IsOrganizationMember(other.ID, owner.ID))
+	_, err = database.Handle.Webhooks().GetOfOrg(t.Context(), org.ID, hookIDs[org.ID])
+	assert.True(t, database.IsErrWebhookNotExist(err), "webhook of deleted organization still exists: %v", err)
+	_, err = database.Handle.Webhooks().GetOfOrg(t.Context(), other.ID, hookIDs[other.ID])
+	assert.NoError(t, err)
 }
 
 func TestOrgWebhooks(t *testing.T) {

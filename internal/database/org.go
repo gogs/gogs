@@ -231,7 +231,7 @@ func DeleteOrganization(org *User) error {
 		return err
 	}
 
-	if err = deleteByColumn(sess, "org_id", org.ID, new(Team), new(OrgUser), new(TeamUser)); err != nil {
+	if err = deleteByColumn(sess, "org_id", org.ID, new(Team), new(OrgUser), new(TeamUser), new(Webhook)); err != nil {
 		return err
 	}
 	return sess.Commit()
