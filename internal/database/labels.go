@@ -197,9 +197,25 @@ func (s *LabelsStore) ListByIssueID(ctx context.Context, issueID int64) ([]*Labe
 		Find(&labels).Error
 }
 
-// Update saves all fields of the label.
+// Update saves the name and color of the label.
 func (s *LabelsStore) Update(ctx context.Context, l *Label) error {
-	return s.db.WithContext(ctx).Model(l).Select("*").Updates(l).Error
+	return s.db.WithContext(ctx).Model(l).Select("name", "color").Updates(l).Error
+}
+
+// addToCounts adds to the numbers of issues and closed issues of the label.
+// The database adds to the numbers it has rather than saving the ones of the
+// label, so that changes made since the label was read are kept.
+func (s *LabelsStore) addToCounts(ctx context.Context, label *Label, issues, closedIssues int) error {
+	err := s.db.WithContext(ctx).Exec(
+		"UPDATE label SET num_issues = num_issues + ?, num_closed_issues = num_closed_issues + ? WHERE id = ?",
+		issues, closedIssues, label.ID,
+	).Error
+	if err != nil {
+		return err
+	}
+	label.NumIssues += issues
+	label.NumClosedIssues += closedIssues
+	return nil
 }
 
 // DeleteByID deletes the label with given ID of the repository with given ID,
@@ -242,12 +258,12 @@ func (s *LabelsStore) addToIssue(ctx context.Context, issue *Issue, labels ...*L
 			return errors.Wrapf(err, "add label %d", label.ID)
 		}
 
-		label.NumIssues++
+		closedIssues := 0
 		if issue.IsClosed {
-			label.NumClosedIssues++
+			closedIssues = 1
 		}
-		if err = s.Update(ctx, label); err != nil {
-			return errors.Wrapf(err, "update label %d", label.ID)
+		if err = s.addToCounts(ctx, label, 1, closedIssues); err != nil {
+			return errors.Wrapf(err, "count issues of label %d", label.ID)
 		}
 		issue.Labels = append(issue.Labels, label)
 	}
@@ -271,13 +287,13 @@ func (s *LabelsStore) removeFromIssue(ctx context.Context, issue *Issue, label *
 		return nil
 	}
 
-	label.NumIssues--
+	closedIssues := 0
 	if issue.IsClosed {
-		label.NumClosedIssues--
+		closedIssues = -1
 	}
-	err := s.Update(ctx, label)
+	err := s.addToCounts(ctx, label, -1, closedIssues)
 	if err != nil {
-		return errors.Wrap(err, "update label")
+		return errors.Wrap(err, "count issues of label")
 	}
 
 	issue.Labels = slices.DeleteFunc(issue.Labels, func(l *Label) bool { return l.ID == label.ID })

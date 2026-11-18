@@ -411,13 +411,12 @@ func (issue *Issue) changeStatus(logger *logx.Logger, e *xorm.Session, doer *Use
 	if err = issue.getLabels(e); err != nil {
 		return err
 	}
-	for idx := range issue.Labels {
-		if issue.IsClosed {
-			issue.Labels[idx].NumClosedIssues++
-		} else {
-			issue.Labels[idx].NumClosedIssues--
-		}
-		if err = newLabelsStore(legacyTx(e)).Update(context.TODO(), issue.Labels[idx]); err != nil {
+	closedIssues := -1
+	if issue.IsClosed {
+		closedIssues = 1
+	}
+	for _, label := range issue.Labels {
+		if err = newLabelsStore(legacyTx(e)).addToCounts(context.TODO(), label, 0, closedIssues); err != nil {
 			return err
 		}
 	}

@@ -1,6 +1,7 @@
 package integrationtests
 
 import (
+	"context"
 	"net/http"
 	"slices"
 	"testing"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/database"
 )
@@ -294,4 +296,65 @@ func TestIssueMilestones(t *testing.T) {
 		}
 		assert.False(t, slices.Contains(names, "v1.1"))
 	})
+}
+
+// The numbers of issues of labels and milestones keep the issues another
+// change counts while a request waits to count its own.
+func TestIssueCountsUnderConcurrentChanges(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{})
+	api := apiV1Client(t, owner)
+	labelID := issueCreateLabel(t, repo, "bug")
+	milestoneID := issueCreateMilestone(t, repo, "v1")
+	labeled := apiV1CreateIssue(t, api, repo, map[string]any{"title": "Labeled"})
+	inMilestone := apiV1CreateIssue(t, api, repo, map[string]any{"title": "In milestone"})
+
+	countsOf := func(table string, id int64) []int {
+		t.Helper()
+		var counts struct {
+			NumIssues       int
+			NumClosedIssues int
+			Completeness    int
+		}
+		columns := "num_issues, num_closed_issues"
+		if table == "milestone" {
+			columns += ", completeness"
+		}
+		require.NoError(t, gormDB.Raw("SELECT "+columns+" FROM "+table+" WHERE id = ?", id).Scan(&counts).Error)
+		if table == "milestone" {
+			return []int{counts.NumIssues, counts.NumClosedIssues, counts.Completeness}
+		}
+		return []int{counts.NumIssues, counts.NumClosedIssues}
+	}
+	// whileCounting sends the request while the row of the label or milestone
+	// is locked by a transaction that counts a closed issue of another change.
+	whileCounting := func(table string, id int64, method, path string, body any) {
+		t.Helper()
+		status, resp := api.whileLocked("SELECT id FROM "+table+" WHERE id = ? FOR UPDATE", id, method, apiV1RepoPath(repo, path), body,
+			func(tx *gorm.DB, _ context.CancelFunc) {
+				require.NoError(t, tx.Exec("UPDATE "+table+" SET num_issues = num_issues + 1, num_closed_issues = num_closed_issues + 1 WHERE id = ?", id).Error)
+			},
+		)
+		require.True(t, status >= 200 && status < 300, "status %d, response: %s", status, resp)
+	}
+
+	whileCounting("label", labelID, http.MethodPost, "/issues/"+apiV1Itoa(labeled)+"/labels", map[string]any{"labels": []int64{labelID}})
+	assert.Equal(t, []int{2, 1}, countsOf("label", labelID), "label added to an issue")
+	whileCounting("label", labelID, http.MethodPatch, "/issues/"+apiV1Itoa(labeled), map[string]any{"state": "closed"})
+	assert.Equal(t, []int{3, 3}, countsOf("label", labelID), "issue with the label closed")
+	whileCounting("label", labelID, http.MethodPatch, "/labels/"+apiV1Itoa(labelID), map[string]any{"name": "defect"})
+	assert.Equal(t, []int{4, 4}, countsOf("label", labelID), "label edited")
+	whileCounting("label", labelID, http.MethodDelete, "/issues/"+apiV1Itoa(labeled)+"/labels/"+apiV1Itoa(labelID), nil)
+	assert.Equal(t, []int{4, 4}, countsOf("label", labelID), "label removed from a closed issue")
+
+	whileCounting("milestone", milestoneID, http.MethodPatch, "/issues/"+apiV1Itoa(inMilestone), map[string]any{"milestone": milestoneID})
+	assert.Equal(t, []int{2, 1, 50}, countsOf("milestone", milestoneID), "issue added to the milestone")
+	whileCounting("milestone", milestoneID, http.MethodPatch, "/issues/"+apiV1Itoa(inMilestone), map[string]any{"state": "closed"})
+	assert.Equal(t, []int{3, 3, 100}, countsOf("milestone", milestoneID), "issue in the milestone closed")
+	whileCounting("milestone", milestoneID, http.MethodPatch, "/milestones/"+apiV1Itoa(milestoneID), map[string]any{"title": "v1.0", "state": "closed"})
+	assert.Equal(t, []int{4, 4, 100}, countsOf("milestone", milestoneID), "milestone edited and closed")
+	whileCounting("milestone", milestoneID, http.MethodPatch, "/issues/"+apiV1Itoa(inMilestone), map[string]any{"milestone": 0})
+	assert.Equal(t, []int{4, 4, 100}, countsOf("milestone", milestoneID), "closed issue removed from the milestone")
 }

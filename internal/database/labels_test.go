@@ -123,16 +123,19 @@ func labelsUpdate(t *testing.T, ctx context.Context, s *LabelsStore) {
 	l := newTestLabel(t, ctx, s, 1, "bug")
 	other := newTestLabel(t, ctx, s, 1, "feature")
 
+	// The numbers of issues counted since the label was read are kept.
+	err := s.db.Exec("UPDATE label SET num_issues = 3, num_closed_issues = 1 WHERE id = ?", l.ID).Error
+	require.NoError(t, err)
 	l.Name = "defect"
 	l.Color = "#abcdef"
-	l.NumIssues = 0
-	err := s.Update(ctx, l)
+	err = s.Update(ctx, l)
 	require.NoError(t, err)
 
 	got, err := s.GetByID(ctx, 1, l.ID)
 	require.NoError(t, err)
 	assert.Equal(t, "defect", got.Name)
 	assert.Equal(t, "#abcdef", got.Color)
+	assert.Equal(t, []int{3, 1}, []int{got.NumIssues, got.NumClosedIssues})
 
 	got, err = s.GetByID(ctx, 1, other.ID)
 	require.NoError(t, err)
@@ -173,14 +176,16 @@ func labelsDeleteByID(t *testing.T, ctx context.Context, s *LabelsStore) {
 func labelsAddToIssue(t *testing.T, ctx context.Context, s *LabelsStore) {
 	bug := newTestLabel(t, ctx, s, 1, "bug")
 	feature := newTestLabel(t, ctx, s, 1, "feature")
+	staleBug := *bug
 
 	open := &Issue{ID: 7}
 	err := s.AddToIssue(ctx, open, bug, feature)
 	require.NoError(t, err)
 	assert.Equal(t, []int64{bug.ID, feature.ID}, labelIDs(open.Labels))
 
+	// Issues counted since the label was read are kept.
 	closed := &Issue{ID: 8, IsClosed: true}
-	err = s.AddToIssue(ctx, closed, bug)
+	err = s.AddToIssue(ctx, closed, &staleBug)
 	require.NoError(t, err)
 
 	// Adding a label that the issue has changes nothing.
@@ -209,11 +214,13 @@ func labelsRemoveFromIssue(t *testing.T, ctx context.Context, s *LabelsStore) {
 	closed := &Issue{ID: 7, IsClosed: true}
 	err := s.AddToIssue(ctx, closed, bug, feature)
 	require.NoError(t, err)
+	staleBug := *bug
 	open := &Issue{ID: 8}
 	err = s.AddToIssue(ctx, open, bug)
 	require.NoError(t, err)
 
-	err = s.RemoveFromIssue(ctx, closed, bug)
+	// Issues counted since the label was read are kept.
+	err = s.RemoveFromIssue(ctx, closed, &staleBug)
 	require.NoError(t, err)
 	assert.Equal(t, []int64{feature.ID}, labelIDs(closed.Labels))
 	got, err := s.GetByID(ctx, 1, bug.ID)

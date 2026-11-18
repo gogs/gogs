@@ -202,17 +202,19 @@ func milestonesUpdate(t *testing.T, ctx context.Context, s *MilestonesStore) {
 
 	got, err := s.GetByID(ctx, 1, m.ID)
 	require.NoError(t, err)
+	// The numbers of issues counted since the milestone was read are kept.
+	err = s.db.Exec("UPDATE milestone SET num_issues = 4, num_closed_issues = 1, completeness = 25 WHERE id = ?", m.ID).Error
+	require.NoError(t, err)
 	got.Name = "v1.0"
 	got.Content = ""
-	got.NumIssues = 4
-	got.NumClosedIssues = 1
 	err = s.Update(ctx, got)
 	require.NoError(t, err)
 
 	got, err = s.GetByID(ctx, 1, m.ID)
 	require.NoError(t, err)
 	assert.Equal(t, "v1.0", got.Name)
-	assert.Equal(t, 25, got.Completeness)
+	assert.Empty(t, got.Content)
+	assert.Equal(t, []int{4, 1, 25}, []int{got.NumIssues, got.NumClosedIssues, got.Completeness})
 	got, err = s.GetByID(ctx, 1, other.ID)
 	require.NoError(t, err)
 	assert.Equal(t, "v2", got.Name)
@@ -243,8 +245,9 @@ func milestonesChangeStatus(t *testing.T, ctx context.Context, s *MilestonesStor
 
 	// Closing a closed milestone keeps its closed date.
 	closedDate := time.Unix(1_000_000_000, 0)
-	got.ClosedDate = closedDate
-	err = s.Update(ctx, got)
+	err = s.db.Exec("UPDATE milestone SET closed_date_unix = ? WHERE id = ?", closedDate.Unix(), m.ID).Error
+	require.NoError(t, err)
+	got, err = s.GetByID(ctx, repo.ID, m.ID)
 	require.NoError(t, err)
 	err = s.ChangeStatus(ctx, got, true)
 	require.NoError(t, err)

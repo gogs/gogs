@@ -45,12 +45,6 @@ func (m *Milestone) BeforeCreate(_ *gorm.DB) error {
 
 // BeforeUpdate implements the GORM update hook.
 func (m *Milestone) BeforeUpdate(_ *gorm.DB) error {
-	if m.NumIssues > 0 {
-		m.Completeness = m.NumClosedIssues * 100 / m.NumIssues
-	} else {
-		m.Completeness = 0
-	}
-
 	m.DeadlineUnix = m.Deadline.Unix()
 	m.ClosedDateUnix = m.ClosedDate.Unix()
 	return nil
@@ -204,9 +198,40 @@ func (s *MilestonesStore) CountIssues(ctx context.Context, milestoneID int64, is
 	return count, db.Count(&count).Error
 }
 
-// Update saves all fields of the milestone.
+// Update saves the name, description and deadline of the milestone.
 func (s *MilestonesStore) Update(ctx context.Context, m *Milestone) error {
-	return s.db.WithContext(ctx).Model(m).Select("*").Updates(m).Error
+	return s.update(ctx, m)
+}
+
+func (s *MilestonesStore) update(ctx context.Context, m *Milestone, columns ...string) error {
+	columns = append([]string{"name", "content", "deadline_unix"}, columns...)
+	return s.db.WithContext(ctx).Model(m).Select(columns).Updates(m).Error
+}
+
+// addToCounts adds to the numbers of issues and closed issues of the
+// milestone, and computes its completeness again. The database adds to the
+// numbers it has rather than saving the ones of the milestone, so that changes
+// made since the milestone was read are kept. It must run in a transaction,
+// which keeps others from changing the numbers until completeness is saved.
+func (s *MilestonesStore) addToCounts(ctx context.Context, m *Milestone, issues, closedIssues int) error {
+	db := s.db.WithContext(ctx)
+	err := db.Exec(
+		"UPDATE milestone SET num_issues = num_issues + ?, num_closed_issues = num_closed_issues + ? WHERE id = ?",
+		issues, closedIssues, m.ID,
+	).Error
+	if err != nil {
+		return errors.Wrap(err, "add to counts")
+	}
+
+	err = db.Select("num_issues", "num_closed_issues").Where("id = ?", m.ID).Take(m).Error
+	if err != nil {
+		return errors.Wrap(err, "get counts")
+	}
+	m.Completeness = 0
+	if m.NumIssues > 0 {
+		m.Completeness = m.NumClosedIssues * 100 / m.NumIssues
+	}
+	return db.Model(m).UpdateColumn("completeness", m.Completeness).Error
 }
 
 // countInRepo updates the numbers of milestones of the repository with given
@@ -221,7 +246,7 @@ WHERE id = ?`,
 	).Error
 }
 
-// ChangeStatus saves all fields of the milestone with it closed or reopened,
+// ChangeStatus saves what Update saves with the milestone closed or reopened,
 // and updates the numbers of milestones of its repository. Closing an open
 // milestone sets its closed date to now.
 func (s *MilestonesStore) ChangeStatus(ctx context.Context, m *Milestone, isClosed bool) error {
@@ -232,7 +257,7 @@ func (s *MilestonesStore) ChangeStatus(ctx context.Context, m *Milestone, isClos
 		m.IsClosed = isClosed
 
 		store := newMilestonesStore(tx)
-		err := store.Update(ctx, m)
+		err := store.update(ctx, m, "is_closed", "closed_date_unix")
 		if err != nil {
 			return errors.Wrap(err, "update milestone")
 		}
@@ -275,12 +300,11 @@ func (s *MilestonesStore) updateIssueStats(ctx context.Context, issue *Issue) er
 	if err != nil {
 		return err
 	}
+	closedIssues := -1
 	if issue.IsClosed {
-		m.NumClosedIssues++
-	} else {
-		m.NumClosedIssues--
+		closedIssues = 1
 	}
-	return s.Update(ctx, m)
+	return s.addToCounts(ctx, m, 0, closedIssues)
 }
 
 // assignIssue moves the issue from the milestone with given ID, if any, to its
@@ -293,13 +317,13 @@ func (s *MilestonesStore) assignIssue(ctx context.Context, issue *Issue, oldMile
 			return err
 		}
 
-		m.NumIssues--
+		closedIssues := 0
 		if issue.IsClosed {
-			m.NumClosedIssues--
+			closedIssues = -1
 		}
-		err = s.Update(ctx, m)
+		err = s.addToCounts(ctx, m, -1, closedIssues)
 		if err != nil {
-			return errors.Wrap(err, "update old milestone")
+			return errors.Wrap(err, "count issues of old milestone")
 		}
 		err = db.Exec("UPDATE issue_user SET milestone_id = 0 WHERE issue_id = ?", issue.ID).Error
 		if err != nil {
@@ -314,13 +338,13 @@ func (s *MilestonesStore) assignIssue(ctx context.Context, issue *Issue, oldMile
 			return err
 		}
 
-		m.NumIssues++
+		closedIssues := 0
 		if issue.IsClosed {
-			m.NumClosedIssues++
+			closedIssues = 1
 		}
-		err = s.Update(ctx, m)
+		err = s.addToCounts(ctx, m, 1, closedIssues)
 		if err != nil {
-			return errors.Wrap(err, "update new milestone")
+			return errors.Wrap(err, "count issues of new milestone")
 		}
 		err = db.Exec("UPDATE issue_user SET milestone_id = ? WHERE issue_id = ?", m.ID, issue.ID).Error
 		if err != nil {
