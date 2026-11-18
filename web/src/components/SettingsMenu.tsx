@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { webContext } from "@/lib/context";
 import { readGlass, setGlass } from "@/lib/glass";
@@ -42,7 +43,8 @@ export function SettingsMenu() {
       </PopoverTrigger>
       <PopoverContent
         align="end"
-        className="w-64 p-0 focus:outline-none"
+        collisionPadding={16}
+        className="flex max-h-(--radix-popover-content-available-height) flex-col w-64 p-0 focus:outline-none"
         // Focus the popover container itself rather than the first focusable
         // child (the Light theme toggle) so an Enter/Space press right after
         // opening the menu does not accidentally change the theme. Keyboard
@@ -119,19 +121,21 @@ export function SettingsMenu() {
             components={{ name: <span className="font-semibold text-(--color-foreground)" /> }}
           />
         </div>
-        <ul className="max-h-60 overflow-y-auto p-1 text-sm">
-          {otherLanguages.map((lang) => (
-            <li key={lang.code}>
-              <button
-                type="button"
-                onClick={() => switchLanguage(lang.code)}
-                className="flex w-full cursor-pointer items-center rounded-sm px-2 py-1.5 text-left hover:bg-(--color-surface) hover:text-(--color-foreground)"
-              >
-                {lang.name}
-              </button>
-            </li>
-          ))}
-        </ul>
+        <ScrollArea className="max-h-60">
+          <ul className="p-1 text-sm">
+            {otherLanguages.map((lang) => (
+              <li key={lang.code}>
+                <button
+                  type="button"
+                  onClick={() => switchLanguage(lang.code)}
+                  className="flex w-full cursor-pointer items-center rounded-sm px-2 py-1.5 text-left hover:bg-(--color-surface) hover:text-(--color-foreground)"
+                >
+                  {lang.name}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </ScrollArea>
 
         {import.meta.env.DEV ? (
           <>

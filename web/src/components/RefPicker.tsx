@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 export type RefType = "branch" | "tag" | "commit";
@@ -61,7 +62,11 @@ export function RefPicker({
           <ChevronDown className="size-4 shrink-0" aria-hidden />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" collisionPadding={16} className="w-80 max-w-[calc(100vw-2rem)] p-0">
+      <PopoverContent
+        align="start"
+        collisionPadding={16}
+        className="flex max-h-(--radix-popover-content-available-height) flex-col w-80 max-w-[calc(100vw-2rem)] p-0"
+      >
         <div className="relative border-b border-(--color-border) p-2">
           <Search
             className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-(--color-muted-foreground)"
@@ -103,36 +108,38 @@ export function RefPicker({
             ))}
           </div>
         ) : null}
-        <div
+        <ScrollArea
           role={tags ? "tabpanel" : undefined}
           id={`${id}-list`}
           aria-labelledby={tags ? `${id}-${tab}-tab` : undefined}
-          className="max-h-72 overflow-y-auto p-1"
+          className="max-h-72"
         >
-          {refs.length ? (
-            <ul>
-              {refs.map((ref) => (
-                <li key={ref} onClick={() => setOpen(false)}>
-                  {renderLink(
-                    ref,
-                    ITEM_CLASS,
-                    <>
-                      <Check
-                        className={cn("size-4 shrink-0", (ref !== current || type === "commit") && "invisible")}
-                        aria-hidden
-                      />
-                      <span className="min-w-0 break-all">{ref}</span>
-                    </>,
-                  )}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="px-2 py-4 text-center text-sm text-(--color-muted-foreground)">
-              {t("repo.pulls.no_results")}
-            </p>
-          )}
-        </div>
+          <div className="p-1">
+            {refs.length ? (
+              <ul>
+                {refs.map((ref) => (
+                  <li key={ref} onClick={() => setOpen(false)}>
+                    {renderLink(
+                      ref,
+                      ITEM_CLASS,
+                      <>
+                        <Check
+                          className={cn("size-4 shrink-0", (ref !== current || type === "commit") && "invisible")}
+                          aria-hidden
+                        />
+                        <span className="min-w-0 break-all">{ref}</span>
+                      </>,
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="px-2 py-4 text-center text-sm text-(--color-muted-foreground)">
+                {t("repo.pulls.no_results")}
+              </p>
+            )}
+          </div>
+        </ScrollArea>
       </PopoverContent>
     </Popover>
   );

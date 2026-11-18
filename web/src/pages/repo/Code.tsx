@@ -58,6 +58,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePageTitle } from "@/lib/page-title";
 import {
@@ -874,7 +875,8 @@ function OutlineMenu({ headings }: { headings: OutlineHeading[] }) {
       </Tooltip>
       <PopoverContent
         align="end"
-        className="w-80 max-w-[calc(100vw-2rem)] p-2"
+        collisionPadding={16}
+        className="flex max-h-(--radix-popover-content-available-height) flex-col w-80 max-w-[calc(100vw-2rem)] p-2"
         onCloseAutoFocus={(e) => {
           if (choseHeading.current) e.preventDefault();
           choseHeading.current = false;
@@ -887,26 +889,28 @@ function OutlineMenu({ headings }: { headings: OutlineHeading[] }) {
           placeholder={t("repo.overview_filter_headings")}
           aria-label={t("repo.overview_filter_headings")}
         />
-        <ul className="mt-2 max-h-[60vh] overflow-y-auto">
-          {shown.map((heading) => (
-            <li key={heading.slug}>
-              <a
-                href={`#${encodeURIComponent(heading.slug)}`}
-                onClick={() => {
-                  choseHeading.current = true;
-                  setOpen(false);
-                }}
-                className={cn(
-                  "block rounded py-1.5 pr-2 text-sm wrap-anywhere text-(--color-foreground) hover:bg-(--color-surface)",
-                  heading.level === topLevel && "font-semibold",
-                )}
-                style={{ paddingLeft: `${0.5 + (heading.level - topLevel)}rem` }}
-              >
-                {heading.text}
-              </a>
-            </li>
-          ))}
-        </ul>
+        <ScrollArea className="mt-2 max-h-[60vh]">
+          <ul>
+            {shown.map((heading) => (
+              <li key={heading.slug}>
+                <a
+                  href={`#${encodeURIComponent(heading.slug)}`}
+                  onClick={() => {
+                    choseHeading.current = true;
+                    setOpen(false);
+                  }}
+                  className={cn(
+                    "block rounded py-1.5 pr-2 text-sm wrap-anywhere text-(--color-foreground) hover:bg-(--color-surface)",
+                    heading.level === topLevel && "font-semibold",
+                  )}
+                  style={{ paddingLeft: `${0.5 + (heading.level - topLevel)}rem` }}
+                >
+                  {heading.text}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </ScrollArea>
       </PopoverContent>
     </Popover>
   );

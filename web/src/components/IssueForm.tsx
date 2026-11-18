@@ -9,6 +9,7 @@ import { Markdown } from "@/components/Markdown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { type IssueMetaOptions, type RepoIssueData, renderRepoMarkdown } from "@/lib/queries/repo";
 import type { RepoRef } from "@/lib/reference-completion";
 import type { AttachmentUploads, UploadLinker } from "@/lib/use-attachment-uploads";
@@ -269,7 +270,11 @@ export function SidebarSection({
               </button>
             </PopoverTrigger>
           </h2>
-          <PopoverContent align="end" collisionPadding={16} className="w-75 max-w-[calc(100vw-2rem)] p-0">
+          <PopoverContent
+            align="end"
+            collisionPadding={16}
+            className="flex max-h-(--radix-popover-content-available-height) flex-col w-75 max-w-[calc(100vw-2rem)] p-0"
+          >
             {editor(() => setOpen(false))}
           </PopoverContent>
         </Popover>
@@ -321,7 +326,7 @@ function Picker<T extends { id: number; name: string }>({
     }))
     .filter((group) => group.items.length);
   return (
-    <div className="flex flex-col text-sm">
+    <div className="flex min-h-0 flex-col text-sm">
       <p className="border-b border-(--color-border) px-3 py-2 text-xs font-semibold">{heading}</p>
       <div className="border-b border-(--color-border) p-2">
         <Input
@@ -335,7 +340,7 @@ function Picker<T extends { id: number; name: string }>({
         />
       </div>
       {/* -mb-px tucks the border of the last row under the edge of the popover. */}
-      <div className={cn("max-h-80 overflow-y-auto", !footer && "-mb-px")}>
+      <ScrollArea className={cn("max-h-80", !footer && "-mb-px")}>
         {shown.length ? (
           shown.map((group, i) => (
             <div key={i} role="group" aria-label={group.label}>
@@ -365,7 +370,7 @@ function Picker<T extends { id: number; name: string }>({
             {t("repo.issues.picker_no_results")}
           </p>
         )}
-      </div>
+      </ScrollArea>
       {footer ? (
         <Link
           to={footer.to}

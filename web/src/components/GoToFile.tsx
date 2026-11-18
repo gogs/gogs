@@ -5,6 +5,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { FileIcon } from "@/components/FileIcon";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { repoPathsQuery } from "@/lib/queries/repo";
 import { cn } from "@/lib/utils";
 
@@ -148,28 +149,30 @@ export function GoToFile({
       </div>
       {showList ? (
         <div className="absolute top-full right-0 left-0 z-20 mt-1 overflow-hidden rounded-md border border-(--color-border) bg-(--color-background) glass-ui:bg-(--color-popover) shadow-lg glass-ui:backdrop-blur-xl sm:left-auto sm:w-[28rem]">
-          <ul id={listID} role="listbox" aria-label={t("repo.go_to_file")} className="max-h-80 overflow-y-auto p-1">
-            {results.map((path, i) => (
-              <li
-                key={path}
-                id={`${listID}-${i}`}
-                role="option"
-                aria-selected={i === active}
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => go(path)}
-                onMouseMove={() => setActive(i)}
-                className={cn(
-                  "flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-(--color-muted-foreground)",
-                  i === active && "bg-(--color-surface)",
-                )}
-              >
-                <FileIcon name={path.slice(path.lastIndexOf("/") + 1)} />
-                <span className="min-w-0 truncate">
-                  <Highlighted path={path} query={q} />
-                </span>
-              </li>
-            ))}
-          </ul>
+          <ScrollArea className="max-h-80">
+            <ul id={listID} role="listbox" aria-label={t("repo.go_to_file")} className="p-1">
+              {results.map((path, i) => (
+                <li
+                  key={path}
+                  id={`${listID}-${i}`}
+                  role="option"
+                  aria-selected={i === active}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => go(path)}
+                  onMouseMove={() => setActive(i)}
+                  className={cn(
+                    "flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-(--color-muted-foreground)",
+                    i === active && "bg-(--color-surface)",
+                  )}
+                >
+                  <FileIcon name={path.slice(path.lastIndexOf("/") + 1)} />
+                  <span className="min-w-0 truncate">
+                    <Highlighted path={path} query={q} />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </ScrollArea>
           {!results.length ? (
             <p className="px-3 py-2 text-sm text-(--color-muted-foreground)">
               {isPending ? t("repo.go_to_file_loading") : t("repo.go_to_file_none")}

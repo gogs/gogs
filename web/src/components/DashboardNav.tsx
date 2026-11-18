@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { PageTabs } from "@/components/PageTabs";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import type { DashboardContextData } from "@/lib/queries/user";
 import { subUrl } from "@/lib/url";
 import { useUserInfo } from "@/lib/use-user-info";
@@ -45,32 +46,38 @@ export function ContextSwitcher({ data, page }: { data: DashboardContextData; pa
         <span className="min-w-0 flex-1 truncate text-left font-semibold">{data.name}</span>
         <ChevronDown className="size-4 shrink-0 text-(--color-muted-foreground)" aria-hidden />
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-(--radix-popover-trigger-width) min-w-56 p-1">
+      <PopoverContent
+        align="start"
+        collisionPadding={16}
+        className="flex max-h-(--radix-popover-content-available-height) flex-col w-(--radix-popover-trigger-width) min-w-56 p-1"
+      >
         <p className="px-2 py-1.5 text-xs text-(--color-muted-foreground)">{t("home.switch_dashboard_context")}</p>
-        <ul className="max-h-80 overflow-y-auto">
-          <li>
-            <ContextLink
-              linkProps={{ to: USER_PATHS[page] }}
-              current={data.kind === "user"}
-              avatarURL={user.avatarURL}
-              onSelect={close}
-            >
-              {user.username}
-            </ContextLink>
-          </li>
-          {data.organizations.map((org) => (
-            <li key={org.name}>
+        <ScrollArea className="max-h-80">
+          <ul>
+            <li>
               <ContextLink
-                linkProps={{ to: ORG_PATHS[page], params: { org: org.name } }}
-                current={data.kind === "organization" && data.name === org.name}
-                avatarURL={org.avatarURL}
+                linkProps={{ to: USER_PATHS[page] }}
+                current={data.kind === "user"}
+                avatarURL={user.avatarURL}
                 onSelect={close}
               >
-                {org.name}
+                {user.username}
               </ContextLink>
             </li>
-          ))}
-        </ul>
+            {data.organizations.map((org) => (
+              <li key={org.name}>
+                <ContextLink
+                  linkProps={{ to: ORG_PATHS[page], params: { org: org.name } }}
+                  current={data.kind === "organization" && data.name === org.name}
+                  avatarURL={org.avatarURL}
+                  onSelect={close}
+                >
+                  {org.name}
+                </ContextLink>
+              </li>
+            ))}
+          </ul>
+        </ScrollArea>
         {user.canCreateOrganization ? (
           <div className="mt-1 border-t border-(--color-border) pt-1">
             <a

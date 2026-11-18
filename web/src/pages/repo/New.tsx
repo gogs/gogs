@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePageTitle } from "@/lib/page-title";
 import {
@@ -281,29 +282,37 @@ function GitignorePicker({
         )}
         <ChevronDown className="size-4 shrink-0 text-(--color-muted-foreground)" aria-hidden />
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-(--radix-popover-trigger-width) p-2">
+      <PopoverContent
+        align="start"
+        collisionPadding={16}
+        className="flex max-h-(--radix-popover-content-available-height) flex-col w-(--radix-popover-trigger-width) p-2"
+      >
         <Input
           aria-label={t("explore.search")}
           placeholder={t("explore.search")}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <ul className="mt-2 flex max-h-64 flex-col gap-2 overflow-y-auto px-1 py-1">
-          {shown.map((name) => (
-            <li key={name}>
-              <CheckboxField
-                id={`gitignore-${options.indexOf(name)}`}
-                label={name}
-                checked={value.includes(name)}
-                onChange={(checked) =>
-                  onChange(
-                    checked ? options.filter((o) => o === name || value.includes(o)) : value.filter((v) => v !== name),
-                  )
-                }
-              />
-            </li>
-          ))}
-        </ul>
+        <ScrollArea className="mt-2 max-h-64">
+          <ul className="flex flex-col gap-2 px-1 py-1">
+            {shown.map((name) => (
+              <li key={name}>
+                <CheckboxField
+                  id={`gitignore-${options.indexOf(name)}`}
+                  label={name}
+                  checked={value.includes(name)}
+                  onChange={(checked) =>
+                    onChange(
+                      checked
+                        ? options.filter((o) => o === name || value.includes(o))
+                        : value.filter((v) => v !== name),
+                    )
+                  }
+                />
+              </li>
+            ))}
+          </ul>
+        </ScrollArea>
       </PopoverContent>
     </Popover>
   );
