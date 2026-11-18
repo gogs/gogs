@@ -42,7 +42,7 @@ func (e *emojiText) startNode() {
 
 // write writes text, the next part of the current text node, to out with
 // shortcodes replaced.
-func (e *emojiText) write(out *bytes.Buffer, text []byte) {
+func (e *emojiText) write(out *outBuf, text []byte) {
 	if len(text) == 0 {
 		return
 	}

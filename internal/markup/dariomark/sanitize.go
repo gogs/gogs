@@ -32,7 +32,7 @@ type Sanitizer struct {
 // setting failed, on HTML that it does not handle.
 type sanitizeSink struct {
 	r   *renderer
-	out *bytes.Buffer
+	out *outBuf
 	san *Sanitizer
 	// run is the text since the last tag, unescaped.
 	run []byte
@@ -151,7 +151,7 @@ func (s *sanitizeSink) endTag(name string) {
 
 func (s *sanitizeSink) wrapImage(attrs []html.Attribute) {
 	t := html.Token{Type: html.StartTagToken, Data: "img", Attr: attrs}
-	var b bytes.Buffer
+	var b outBuf
 	if !s.r.imageLink(&b, t) {
 		s.emitStart("img", attrs)
 		return
@@ -362,17 +362,17 @@ func (s *sanitizeSink) emitStart(name string, attrs []html.Attribute) {
 		return
 	}
 	out := s.out
-	out.WriteByte('<')
+	out.writeByte('<')
 	out.WriteString(name)
 	for _, a := range clean {
-		out.WriteByte(' ')
+		out.writeByte(' ')
 		out.WriteString(a.Key)
 		out.WriteString(`="`)
 		s.buf = appendHTMLEscaped(s.buf[:0], []byte(a.Val))
 		out.Write(s.buf)
-		out.WriteByte('"')
+		out.writeByte('"')
 	}
-	out.WriteByte('>')
+	out.writeByte('>')
 }
 
 // emitEnd writes an end tag as the sanitizer does.
@@ -387,7 +387,7 @@ func (s *sanitizeSink) emitEnd(name string) {
 	}
 	s.out.WriteString("</")
 	s.out.WriteString(name)
-	s.out.WriteByte('>')
+	s.out.writeByte('>')
 }
 
 // validURL validates and normalizes a URL as the sanitizer does.

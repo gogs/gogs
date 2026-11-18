@@ -20,7 +20,7 @@ import (
 // element. If the tokenizer fails other than at the end of the input, the
 // input is returned unchanged.
 func (r *renderer) postProcess(b []byte) []byte {
-	var out bytes.Buffer
+	var out outBuf
 	out.Grow(len(b) + len(b)/8)
 	// Front matter is text, which is not linked.
 	out.Write(b[:r.frontMatterSize])
@@ -113,7 +113,7 @@ func (r *renderer) postProcess(b []byte) []byte {
 			}
 			out.WriteString("</")
 			out.WriteString(startTags[len(startTags)-1])
-			out.WriteByte('>')
+			out.writeByte('>')
 			startTags = startTags[:len(startTags)-1]
 		default:
 			out.WriteString(t.String())
@@ -149,7 +149,7 @@ func isRawTextElement(name string) bool {
 // specialLinks writes text, the escaped text of a text node, to out with
 // special references rendered as links, and emoji shortcodes replaced by e.
 // The links split the text into text nodes.
-func (r *renderer) specialLinks(out *bytes.Buffer, text []byte, e *emojiText) {
+func (r *renderer) specialLinks(out *outBuf, text []byte, e *emojiText) {
 	f := r.opts.SpecialLinks
 	if f == nil {
 		e.write(out, text)
@@ -188,7 +188,7 @@ func (r *renderer) rawImagePrefix(src string) (string, bool) {
 // whether it did. Relative sources are resolved against the raw file URL of
 // Options.LinkBase. Images without a source or with a data URI are not
 // wrapped.
-func (r *renderer) imageLink(out *bytes.Buffer, t html.Token) bool {
+func (r *renderer) imageLink(out *outBuf, t html.Token) bool {
 	var src string
 	for _, a := range t.Attr {
 		if a.Key == "src" {

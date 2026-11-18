@@ -32,7 +32,7 @@ type sink interface {
 type renderer struct {
 	p    *parser
 	opts *Options
-	out  bytes.Buffer
+	out  outBuf
 	s    sink
 	html htmlSink
 
@@ -63,7 +63,7 @@ func (r *renderer) init(p *parser, opts *Options) {
 	r.p = p
 	r.opts = opts
 	// The output of the previous render belongs to its caller.
-	r.out = bytes.Buffer{}
+	r.out = outBuf{}
 	r.html = htmlSink{out: &r.out, xhtml: opts.XHTML}
 	r.headings = r.headings[:0]
 	r.headingText = r.headingText[:0]
@@ -79,7 +79,7 @@ func (r *renderer) init(p *parser, opts *Options) {
 // above the sizes that pooled parsers keep.
 func (r *renderer) release() {
 	r.p, r.opts, r.s = nil, nil, nil
-	r.out = bytes.Buffer{}
+	r.out = outBuf{}
 	r.html = htmlSink{}
 	if cap(r.plain) > maxPooledBytes {
 		r.plain = nil
@@ -933,7 +933,7 @@ func (r *renderer) renderFootnotes() {
 
 // htmlSink serializes tokens to HTML.
 type htmlSink struct {
-	out   *bytes.Buffer
+	out   *outBuf
 	xhtml bool
 }
 
@@ -947,10 +947,10 @@ func (h *htmlSink) entity(html, _ string) {
 
 func (h *htmlSink) start(name string, attrs ...attr) {
 	out := h.out
-	out.WriteByte('<')
+	out.writeByte('<')
 	out.WriteString(name)
 	for _, a := range attrs {
-		out.WriteByte(' ')
+		out.writeByte(' ')
 		out.WriteString(a.key)
 		out.WriteString(`="`)
 		if a.escaped {
@@ -958,12 +958,12 @@ func (h *htmlSink) start(name string, attrs ...attr) {
 		} else {
 			writeEscaped(out, a.val)
 		}
-		out.WriteByte('"')
+		out.writeByte('"')
 	}
 	if h.xhtml && isVoid(name) {
 		out.WriteString(" />")
 	} else {
-		out.WriteByte('>')
+		out.writeByte('>')
 	}
 }
 
@@ -978,7 +978,7 @@ func isVoid(name string) bool {
 func (h *htmlSink) end(name string) {
 	h.out.WriteString("</")
 	h.out.WriteString(name)
-	h.out.WriteByte('>')
+	h.out.writeByte('>')
 }
 
 func (h *htmlSink) raw(b []byte) {
@@ -986,7 +986,7 @@ func (h *htmlSink) raw(b []byte) {
 }
 
 // writeEscaped writes b with "&", "<", ">" and '"' escaped.
-func writeEscaped(out *bytes.Buffer, b []byte) {
+func writeEscaped(out *outBuf, b []byte) {
 	start := 0
 	for i := 0; i < len(b); i++ {
 		c := b[i]
@@ -1044,4 +1044,24 @@ func (r *renderer) replaceNUL(b []byte) []byte {
 		return b
 	}
 	return bytes.ReplaceAll(b, []byte{0}, []byte("\uFFFD"))
+}
+
+// outBuf is an append-only output buffer. Its methods are small enough to be
+// inlined, which matters for the many short writes of rendering.
+type outBuf struct {
+	buf []byte
+}
+
+func (o *outBuf) Write(b []byte)          { o.buf = append(o.buf, b...) }
+func (o *outBuf) WriteString(s string)    { o.buf = append(o.buf, s...) }
+func (o *outBuf) writeByte(c byte)        { o.buf = append(o.buf, c) }
+func (o *outBuf) Len() int                { return len(o.buf) }
+func (o *outBuf) Bytes() []byte           { return o.buf }
+func (o *outBuf) AvailableBuffer() []byte { return o.buf[len(o.buf):] }
+
+// Grow makes room for n more bytes.
+func (o *outBuf) Grow(n int) {
+	if cap(o.buf)-len(o.buf) < n {
+		o.buf = append(o.buf[:len(o.buf):len(o.buf)], make([]byte, n)...)[:len(o.buf)]
+	}
 }
