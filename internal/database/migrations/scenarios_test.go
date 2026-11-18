@@ -1,19 +1,25 @@
 package migrations
 
 import (
+	"crypto/ed25519"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"maps"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/ssh"
 	"gorm.io/gorm"
 	"unknwon.dev/x/logx"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/dbtest"
 )
 
@@ -53,6 +59,20 @@ func TestMigrateScenarios(t *testing.T) {
 	require.NoError(t, Migrate(logx.NewNoopLogger(), newDB))
 	newSchema := dumpSchema(t, newDB)
 
+	newKey := func() (string, string) {
+		pub, _, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+		key, err := ssh.NewPublicKey(pub)
+		require.NoError(t, err)
+		return strings.TrimSpace(string(ssh.MarshalAuthorizedKey(key))), ssh.FingerprintSHA256(key)
+	}
+	sharedKey, sharedFingerprint := newKey()
+	otherKey, otherFingerprint := newKey()
+	orphanKey, orphanFingerprint := newKey()
+	authorizedKeysLine := func(id int64, content string) string {
+		return fmt.Sprintf("command=\"gogs serv key-%d --config=''\",no-pty %s\n", id, content)
+	}
+
 	scenarios := []migrationScenario{
 		{
 			name: "new installation",
@@ -70,6 +90,19 @@ func TestMigrateScenarios(t *testing.T) {
 			},
 		},
 		{
+			name: "new installation on MySQL with another default character set",
+			seed: func(t *testing.T, db *gorm.DB) {
+				if db.Name() != "mysql" {
+					t.Skip("MySQL only")
+				}
+				require.NoError(t, db.Exec("ALTER DATABASE `"+db.Migrator().CurrentDatabase()+"` CHARACTER SET latin1 COLLATE latin1_swedish_ci").Error)
+			},
+			check: func(t *testing.T, db *gorm.DB) {
+				// Tables that XORM used to create stay utf8mb4, as XORM created them.
+				require.NoError(t, db.Exec("INSERT INTO issue (repo_id, `index`, name) VALUES (1, 1, ?)", "Emoji \U0001F600").Error)
+			},
+		},
+		{
 			name:   "Gogs 0.12",
 			legacy: 19,
 			seed: func(t *testing.T, db *gorm.DB) {
@@ -77,7 +110,26 @@ func TestMigrateScenarios(t *testing.T) {
 					{"id": 1, "uid": 1, "name": "ci", "sha1": "73da7bb9d2a475bbc2ab79da7d4e94940cb9f9d5"},
 					{"id": 2, "uid": 2, "name": "deploy", "sha1": "4c6dc8d6a4b9ed1d0c1b5bfb1b8b1b5b1b8b1b5b"},
 				}).Error)
-				require.NoError(t, db.Table("repository").Create(map[string]any{"id": 1, "owner_id": 1, "lower_name": "example", "name": "example"}).Error)
+				const userType, orgType = 0, 1
+				require.NoError(t, db.Table("user").Create([]map[string]any{
+					{"id": 1, "lower_name": "alice", "name": "alice", "email": "alice@example.com", "passwd": "", "avatar": "", "avatar_email": "", "type": userType},
+					{"id": 2, "lower_name": "acme", "name": "acme", "email": "acme@example.com", "passwd": "", "avatar": "", "avatar_email": "", "type": orgType},
+				}).Error)
+				require.NoError(t, db.Table("repository").Create([]map[string]any{
+					{"id": 1, "owner_id": 1, "lower_name": "example", "name": "example"},
+					{"id": 2, "owner_id": 2, "lower_name": "example", "name": "example"},
+				}).Error)
+
+				// Push allowlists on branches of a user repository and of an organization
+				// repository.
+				require.NoError(t, db.Table("protect_branch").Create([]map[string]any{
+					{"id": 1, "repo_id": 1, "name": "main", "protected": true, "enable_whitelist": true, "whitelist_user_i_ds": "1"},
+					{"id": 2, "repo_id": 2, "name": "main", "protected": true, "enable_whitelist": true, "whitelist_user_i_ds": "1"},
+				}).Error)
+				require.NoError(t, db.Table("protect_branch_whitelist").Create([]map[string]any{
+					{"id": 1, "protect_branch_id": 1, "repo_id": 1, "name": "main", "user_id": 1},
+					{"id": 2, "protect_branch_id": 2, "repo_id": 2, "name": "main", "user_id": 1},
+				}).Error)
 			},
 			check: func(t *testing.T, db *gorm.DB) {
 				assert.Equal(t, []string{
@@ -91,7 +143,12 @@ func TestMigrateScenarios(t *testing.T) {
 				require.NoError(t, db.Table("repository").
 					Where("is_unlisted = ? AND pulls_allow_merge = ? AND pulls_allow_squash = ? AND pulls_delete_branch = ? AND pulls_merge_message = '' AND pulls_squash_message = ''", false, true, false, false).
 					Count(&count).Error)
-				assert.Equal(t, int64(1), count)
+				assert.Equal(t, int64(2), count)
+
+				// Only organization repositories keep their push allowlists.
+				var enableAllowlist []bool
+				require.NoError(t, db.Table("protect_branch").Order("id").Pluck("enable_whitelist", &enableAllowlist).Error)
+				assert.Equal(t, []bool{false, true}, enableAllowlist)
 			},
 		},
 		{
@@ -103,10 +160,52 @@ func TestMigrateScenarios(t *testing.T) {
 				// XORM added the column on startup.
 				require.NoError(t, addRepositoryIsUnlisted(db))
 				require.NoError(t, db.Table("repository").Create(map[string]any{"id": 1, "owner_id": 1, "lower_name": "example", "name": "example", "is_unlisted": true}).Error)
+				for repoID := int64(2); repoID <= 3; repoID++ {
+					require.NoError(t, db.Table("repository").Create(map[string]any{"id": repoID, "owner_id": 1, "lower_name": fmt.Sprintf("repo-%d", repoID), "name": fmt.Sprintf("repo-%d", repoID)}).Error)
+				}
 
 				// Since 0.13, tokens store their SHA-256 and the first 40 characters of it as
 				// SHA-1, so hashing the SHA-1 again breaks them.
 				require.NoError(t, db.Table("access_token").Create(map[string]any{"id": 1, "uid": 1, "name": "ci", "sha1": sha256Hex("token")[:40], "sha256": sha256Hex("token")}).Error)
+
+				const keyTypeUser = 1
+				addPublicKey := func(id, ownerID int64, keyType int, content, fingerprint string) {
+					require.NoError(t, db.Table("public_key").Create(map[string]any{
+						"id": id, "owner_id": ownerID, "name": fmt.Sprintf("key-%d", id), "fingerprint": fingerprint, "content": content, "mode": 1, "type": keyType,
+					}).Error)
+				}
+				addDeployKey := func(id, keyID, repoID int64, fingerprint string) {
+					require.NoError(t, db.Table("deploy_key").Create(map[string]any{
+						"id": id, "key_id": keyID, "repo_id": repoID, "name": fmt.Sprintf("key-%d", id), "fingerprint": fingerprint,
+					}).Error)
+				}
+				// Deploy keys: the same key with another comment and the MD5 fingerprint of
+				// an old "ssh-keygen", and another key with an MD5 fingerprint.
+				addPublicKey(1, 0, keyTypeDeploy, sharedKey+" laptop", sharedFingerprint)
+				addPublicKey(2, 0, keyTypeDeploy, sharedKey+" desktop", "3b:0c:aa:11")
+				addPublicKey(3, 0, keyTypeDeploy, otherKey, "9f:21:bb:22")
+				// User keys: user 7 has the key twice, user 8 has it once and keeps it.
+				addPublicKey(4, 7, keyTypeUser, otherKey+" alice@laptop", otherFingerprint)
+				addPublicKey(5, 7, keyTypeUser, otherKey+" alice@desktop", otherFingerprint)
+				addPublicKey(6, 8, keyTypeUser, otherKey, otherFingerprint)
+				addDeployKey(1, 1, 1, sharedFingerprint)
+				// Repository 1 has the key twice, repository 2 only through the duplicate.
+				addDeployKey(2, 2, 1, "3b:0c:aa:11")
+				addDeployKey(3, 2, 2, "3b:0c:aa:11")
+				addDeployKey(4, 3, 3, "9f:21:bb:22")
+				// Left behind by deleting repository 9: a key only it used, and the shared
+				// key, which repository 1 keeps. Key 14 has no deploy key at all.
+				addPublicKey(13, 0, keyTypeDeploy, orphanKey, orphanFingerprint)
+				addPublicKey(14, 0, keyTypeDeploy, orphanKey+" again", "aa:bb")
+				addDeployKey(5, 13, 9, orphanFingerprint)
+				addDeployKey(6, 1, 9, sharedFingerprint)
+
+				rootPath := t.TempDir()
+				conf.SetMockSSH(t, conf.SSHOpts{RootPath: rootPath})
+				line := authorizedKeysLine
+				require.NoError(t, os.WriteFile(filepath.Join(rootPath, "authorized_keys"),
+					[]byte(line(2, sharedKey+" desktop")+line(1, sharedKey+" laptop")+line(3, otherKey)+line(5, otherKey+" alice@desktop")+line(4, otherKey+" alice@laptop")+line(6, otherKey)+line(52, otherKey)+line(13, orphanKey)+line(14, orphanKey+" again")+"ssh-ed25519 AAAA admin\n"),
+					0o600))
 			},
 			check: func(t *testing.T, db *gorm.DB) {
 				assert.Equal(t, []string{sha256Hex("token")}, accessTokenSHA256s(t, db))
@@ -114,6 +213,41 @@ func TestMigrateScenarios(t *testing.T) {
 				var isUnlisted bool
 				require.NoError(t, db.Table("repository").Where("id = 1").Select("is_unlisted").Scan(&isUnlisted).Error)
 				assert.True(t, isUnlisted)
+
+				type publicKey struct {
+					ID          int64
+					OwnerID     int64
+					Fingerprint string
+				}
+				var publicKeys []publicKey
+				require.NoError(t, db.Table("public_key").Order("id").Find(&publicKeys).Error)
+				assert.Equal(t, []publicKey{
+					{1, 0, sharedFingerprint},
+					{3, 0, otherFingerprint},
+					{4, 7, otherFingerprint},
+					{6, 8, otherFingerprint},
+				}, publicKeys)
+
+				type deployKey struct {
+					ID          int64
+					KeyID       int64
+					RepoID      int64
+					Fingerprint string
+				}
+				var deployKeys []deployKey
+				require.NoError(t, db.Table("deploy_key").Order("id").Find(&deployKeys).Error)
+				assert.Equal(t, []deployKey{
+					{1, 1, 1, sharedFingerprint},
+					{3, 1, 2, sharedFingerprint},
+					{4, 3, 3, otherFingerprint},
+				}, deployKeys)
+
+				// Only the lines of the merged and orphan keys are gone, not the one of key
+				// 52, whose ID only starts with that of key 5, or the line Gogs did not write.
+				line := authorizedKeysLine
+				data, err := os.ReadFile(filepath.Join(conf.SSH.RootPath, "authorized_keys"))
+				require.NoError(t, err)
+				assert.Equal(t, line(1, sharedKey+" laptop")+line(3, otherKey)+line(4, otherKey+" alice@laptop")+line(6, otherKey)+line(52, otherKey)+"ssh-ed25519 AAAA admin\n", string(data))
 			},
 		},
 		{
@@ -202,6 +336,35 @@ func createLegacyDatabase(t *testing.T, db *gorm.DB, version int64) {
 	}
 	require.NoError(t, db.Migrator().CreateTable(new(Version)))
 	require.NoError(t, db.Create(&Version{ID: 1, Version: version}).Error)
+}
+
+// The columns that store commit IDs before version 23 widened them.
+type pullRequestPreV23 struct {
+	ID             int64  `gorm:"primaryKey"`
+	MergeBase      string `gorm:"type:VARCHAR(40)"`
+	MergedCommitID string `gorm:"type:VARCHAR(40)"`
+}
+
+func (*pullRequestPreV23) TableName() string {
+	return "pull_request"
+}
+
+type releasePreV23 struct {
+	ID   int64  `gorm:"primaryKey"`
+	Sha1 string `gorm:"column:sha1;type:VARCHAR(40)"`
+}
+
+func (*releasePreV23) TableName() string {
+	return "release"
+}
+
+type commentPreV23 struct {
+	ID        int64  `gorm:"primaryKey"`
+	CommitSHA string `gorm:"column:commit_sha;type:VARCHAR(40)"`
+}
+
+func (*commentPreV23) TableName() string {
+	return "comment"
 }
 
 func sha256Hex(s string) string {
