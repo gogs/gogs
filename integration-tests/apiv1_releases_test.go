@@ -43,6 +43,25 @@ func apiV1NextReleaseEvent(t *testing.T, deliveries <-chan repoSettingsDelivery)
 	return payload.Action, payload.Release.TagName
 }
 
+// releaseOldCommitTime is when the commits of releaseOldCommit were authored.
+var releaseOldCommitTime = time.Date(2001, 2, 3, 4, 5, 6, 0, time.UTC)
+
+// releaseOldCommit makes a commit on top of the parent, authored at
+// releaseOldCommitTime, without updating any branch, and returns its ID.
+func releaseOldCommit(t *testing.T, repoPath, parent string) string {
+	t.Helper()
+
+	cmd := exec.Command("git", "commit-tree", "-p", parent, "-m", "Old", parent+"^{tree}")
+	cmd.Dir = repoPath
+	cmd.Env = append(os.Environ(),
+		"GIT_AUTHOR_NAME=Tester", "GIT_AUTHOR_EMAIL=tester@example.com", "GIT_AUTHOR_DATE="+releaseOldCommitTime.Format(time.RFC3339),
+		"GIT_COMMITTER_NAME=Tester", "GIT_COMMITTER_EMAIL=tester@example.com",
+	)
+	out, err := cmd.CombinedOutput()
+	require.NoError(t, err, "git commit-tree: %s", out)
+	return strings.TrimSpace(string(out))
+}
+
 func TestAPIV1Releases(t *testing.T) {
 	t.Parallel()
 
@@ -56,15 +75,7 @@ func TestAPIV1Releases(t *testing.T) {
 	mainSHA := repoSettingsGit(t, repoPath, "rev-parse", "refs/heads/main")
 	featureSHA := apiV1PutFile(t, api, repo, "feature.txt", "Feature", "feature")
 	// An existing tag on an old commit that no branch points at.
-	commitTree := exec.Command("git", "commit-tree", "-p", featureSHA, "-m", "Old", featureSHA+"^{tree}")
-	commitTree.Dir = repoPath
-	commitTree.Env = append(os.Environ(),
-		"GIT_AUTHOR_NAME=Tester", "GIT_AUTHOR_EMAIL=tester@example.com", "GIT_AUTHOR_DATE=2001-02-03T04:05:06Z",
-		"GIT_COMMITTER_NAME=Tester", "GIT_COMMITTER_EMAIL=tester@example.com",
-	)
-	out, err := commitTree.CombinedOutput()
-	require.NoError(t, err, "git commit-tree: %s", out)
-	oldSHA := strings.TrimSpace(string(out))
+	oldSHA := releaseOldCommit(t, repoPath, featureSHA)
 	repoSettingsGit(t, repoPath, "tag", "existing", oldSHA)
 
 	create := func(body map[string]any) apiV1Release {
@@ -92,7 +103,7 @@ func TestAPIV1Releases(t *testing.T) {
 	// release is dated by that commit.
 	existing := create(map[string]any{"tag_name": "existing"})
 	assert.Equal(t, oldSHA, repoSettingsGit(t, repoPath, "rev-parse", "refs/tags/existing"))
-	assert.Equal(t, time.Date(2001, 2, 3, 4, 5, 6, 0, time.UTC).Unix(), existing.Created.Unix())
+	assert.Equal(t, releaseOldCommitTime.Unix(), existing.Created.Unix())
 	_, tag = apiV1NextReleaseEvent(t, deliveries)
 	assert.Equal(t, "existing", tag)
 
@@ -205,6 +216,27 @@ func TestAPIV1Releases(t *testing.T) {
 		assert.Equal(t, "existing", tag)
 		status, body = api.do(http.MethodDelete, releasePath(again.ID), nil)
 		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	})
+
+	t.Run("deleted publisher", func(t *testing.T) {
+		writer := seedUser(t, CreateUserOptions{})
+		status, body := api.do(http.MethodPut, apiV1RepoPath(repo, "/collaborators/"+writer.Name), map[string]any{"permission": "write"})
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+		var rel apiV1Release
+		apiV1Client(t, writer).doJSON(http.MethodPost, apiV1RepoPath(repo, "/releases"), map[string]any{"tag_name": "by-deleted"}, http.StatusCreated, &rel)
+		apiV1NextReleaseEvent(t, deliveries)
+		require.NoError(t, database.Handle.Users().DeleteByID(t.Context(), writer.ID, true))
+
+		var list []apiV1Release
+		api.doJSON(http.MethodGet, apiV1RepoPath(repo, "/releases"), nil, http.StatusOK, &list)
+		authors := make(map[string]string)
+		for _, r := range list {
+			authors[r.TagName] = r.Author.UserName
+		}
+		assert.Equal(t, "Ghost", authors["by-deleted"])
+		assert.Equal(t, owner.Name, authors["v1"])
+		api.doJSON(http.MethodGet, releasePath(rel.ID), nil, http.StatusOK, &rel)
+		assert.Equal(t, "Ghost", rel.Author.UserName)
 	})
 
 	t.Run("mirror", func(t *testing.T) {

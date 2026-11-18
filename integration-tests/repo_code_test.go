@@ -1039,6 +1039,29 @@ func TestRepoCodeReleases(t *testing.T) {
 	status, body = ownerClient.do(http.MethodGet, api+"/releases/edit/v1.0", nil)
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 	assert.Equal(t, "v2.0", repoCodeGit(t, repo, "tag", "--list"))
+
+	// A release of an existing tag is dated by the commit of the tag.
+	oldSHA := releaseOldCommit(t, database.RepoPath(repo.Owner, repo.Name), head)
+	repoCodeGit(t, repo, "tag", "old", oldSHA)
+	status, body = ownerClient.do(http.MethodPost, api+"/releases", map[string]any{"tagName": "old", "target": "main", "title": "Old"})
+	require.Equal(t, http.StatusCreated, status, "response: %s", body)
+	var dated struct {
+		Releases []struct {
+			TagName   string    `json:"tagName"`
+			Sha       string    `json:"sha"`
+			CreatedAt time.Time `json:"createdAt"`
+		} `json:"releases"`
+	}
+	ownerClient.doJSON(http.MethodGet, api+"/releases", nil, http.StatusOK, &dated)
+	var found bool
+	for _, r := range dated.Releases {
+		if r.TagName == "old" {
+			found = true
+			assert.Equal(t, oldSHA, r.Sha)
+			assert.Equal(t, releaseOldCommitTime.Unix(), r.CreatedAt.Unix())
+		}
+	}
+	assert.True(t, found, "release of the tag listed")
 }
 
 // An edit or deletion of a release whose client goes away after it started
