@@ -242,4 +242,12 @@ func publicKeysRewriteAuthorizedKeys(t *testing.T, ctx context.Context, s *Publi
 
 	got := readAuthorizedKeys(t, authorizedKeys)
 	assert.Equal(t, key.AuthorizedString(), got)
+
+	// The builtin SSH server does not read the file, which is left alone.
+	conf.SSH.StartBuiltinServer = true
+	err = os.WriteFile(authorizedKeys, []byte("ssh-ed25519 AAAA admin\n"), 0o600)
+	require.NoError(t, err)
+	err = s.RewriteAuthorizedKeys()
+	require.NoError(t, err)
+	assert.Equal(t, "ssh-ed25519 AAAA admin\n", readAuthorizedKeys(t, authorizedKeys))
 }

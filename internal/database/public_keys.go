@@ -141,8 +141,13 @@ func authorizedKeysPath() string {
 }
 
 // RewriteAuthorizedKeys rewrites the "authorized_keys" file under the SSH root
-// path with all public keys stored in the database.
+// path with all public keys stored in the database. It leaves the file alone
+// with the builtin SSH server, which does not read it.
 func (s *PublicKeysStore) RewriteAuthorizedKeys() error {
+	if conf.SSH.StartBuiltinServer {
+		return nil
+	}
+
 	sshOpLocker.Lock()
 	defer sshOpLocker.Unlock()
 

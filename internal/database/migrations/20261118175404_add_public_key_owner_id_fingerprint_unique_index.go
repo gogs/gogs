@@ -184,7 +184,8 @@ func deleteOrphanDeployKeys(tx *gorm.DB) (map[string]bool, error) {
 // merged into when the file is in the order of its keys, and a later key may get
 // its key ID.
 func removeAuthorizedKeys(ids map[string]bool) error {
-	if len(ids) == 0 {
+	// The builtin SSH server does not read the file.
+	if len(ids) == 0 || conf.SSH.StartBuiltinServer {
 		return nil
 	}
 

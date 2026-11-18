@@ -161,7 +161,7 @@ func deployKeysTouch(t *testing.T, ctx context.Context, s *DeployKeysStore) {
 }
 
 func deployKeysDelete(t *testing.T, ctx context.Context, s *DeployKeysStore) {
-	setMockSSHForKeys(t)
+	authorizedKeys := setMockSSHForKeys(t)
 	logger := logx.NewNoopLogger()
 
 	usersStore := newUsersStore(s.db)
@@ -192,6 +192,7 @@ func deployKeysDelete(t *testing.T, ctx context.Context, s *DeployKeysStore) {
 	assert.True(t, IsErrDeployKeyNotExist(err), "got %v", err)
 	_, err = newPublicKeysStore(s.db).GetByID(ctx, key1.KeyID)
 	require.NoError(t, err)
+	assert.Contains(t, readAuthorizedKeys(t, authorizedKeys), fmt.Sprintf("key-%d ", key1.KeyID))
 
 	// Site admins can delete keys of any repository, and the last one takes its
 	// public key with it.
@@ -199,6 +200,7 @@ func deployKeysDelete(t *testing.T, ctx context.Context, s *DeployKeysStore) {
 	require.NoError(t, err)
 	_, err = newPublicKeysStore(s.db).GetByID(ctx, key2.KeyID)
 	assert.True(t, IsErrKeyNotExist(err), "got %v", err)
+	assert.NotContains(t, readAuthorizedKeys(t, authorizedKeys), fmt.Sprintf("key-%d ", key2.KeyID))
 
 	// Deleting a key that does not exist is not an error.
 	err = s.Delete(ctx, logger, alice, key1.ID)
