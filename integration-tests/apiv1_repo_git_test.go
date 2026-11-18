@@ -445,11 +445,13 @@ func TestAPIV1Tags(t *testing.T) {
 }
 
 func TestAPIV1CreateBranchesAndTags(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	api := apiV1Client(t, owner)
 	webhookURL, deliveries := repoSettingsWebhookReceiver(t)
-	repoSettingsCreateWebhookFor(t, repoSettingsSignedIn(t, owner), repo, webhookURL, true, map[string]bool{"push": true, "create": true})
+	repoSettingsCreateWebhookFor(t, authenticatedClient(t, owner), repo, webhookURL, true, map[string]bool{"push": true, "create": true})
 
 	mainSHA := apiV1PutFile(t, api, repo, "main.txt", "Main", "")
 	// Each update lists its commit, so the next event comes from the endpoints.
@@ -580,7 +582,7 @@ func TestAPIV1CreateBranchesAndTags(t *testing.T) {
 
 	t.Run("mirror", func(t *testing.T) {
 		u := seedUser(t, CreateUserOptions{})
-		mirror, _ := repoSettingsMigrate(t, repoSettingsSignedIn(t, u), u, repo, true)
+		mirror, _ := repoSettingsMigrate(t, authenticatedClient(t, u), u, repo, true)
 		for _, kind := range []string{"branches", "tags"} {
 			status, body := apiV1Client(t, u).do(http.MethodPost, apiV1RepoPath(mirror, "/"+kind), map[string]any{"name": "new"})
 			assert.Equal(t, http.StatusForbidden, status, "%s, response: %s", kind, body)
