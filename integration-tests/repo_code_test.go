@@ -516,7 +516,7 @@ func TestRepoCodeRawAndDiffs(t *testing.T) {
 		// the subtests above are unaffected.
 		gitInput := func(stdin string, args ...string) string {
 			t.Helper()
-			cmd := exec.Command("git", append([]string{"-C", database.RepoPath(repo.Owner, repo.Name), "-c", "user.name=Plumber", "-c", "user.email=plumber@example.com"}, args...)...)
+			cmd := gitCommand(database.RepoPath(repo.Owner, repo.Name), args...)
 			cmd.Stdin = strings.NewReader(stdin)
 			out, err := cmd.Output()
 			require.NoError(t, err, "git %v", args)
