@@ -123,6 +123,9 @@ func TestAuthenticatedUserBasicAuth(t *testing.T) {
 		{path: "/alice/repo/raw/main/README.md", wantUser: true},
 		{path: "/api/web/user/settings/two-factor", wantUser: false},
 		{path: "/api/web/user/settings/passkeys/registration", wantUser: false},
+		{path: "//api/web/user/settings/two-factor", wantUser: false},
+		{path: "///api/web/user/settings/two-factor", wantUser: false},
+		{path: "/%2Fapi/web/user/settings/two-factor", wantUser: false},
 	}
 	for _, tc := range tests {
 		t.Run(tc.path, func(t *testing.T) {
@@ -130,7 +133,11 @@ func TestAuthenticatedUserBasicAuth(t *testing.T) {
 			f.Use(session.Sessioner())
 			var got *database.User
 			var gotBasicAuth bool
-			f.Any("/{**}", func(r *http.Request, sess session.Session) {
+			f.Group("", func() {
+				f.Get("/api/web/user/settings/two-factor", func() {})
+				f.Get("/api/web/user/settings/passkeys/registration", func() {})
+				f.Any("/{**}", func() {})
+			}, func(r *http.Request, sess session.Session) {
 				got, gotBasicAuth, _ = AuthenticatedUser(logx.NewNoopLogger(), store, r, sess)
 			})
 			req := httptest.NewRequest(http.MethodGet, tc.path, nil)
