@@ -194,7 +194,7 @@ func TestRepoSettingsMirror(t *testing.T) {
 		"enablePrune": false,
 	})
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-	stored, err := database.GetMirrorByRepoID(mirror.ID)
+	stored, err := database.Handle.Mirrors().GetByRepoID(t.Context(), mirror.ID)
 	require.NoError(t, err)
 	assert.Equal(t, 24, stored.Interval)
 	assert.False(t, stored.EnablePrune)
@@ -203,22 +203,68 @@ func TestRepoSettingsMirror(t *testing.T) {
 	require.NotNil(t, settings.Mirror)
 	assert.Equal(t, mirrorSettings{Address: cloneAddr, Interval: 24}, *settings.Mirror)
 
-	commit := repoSettingsAddCommit(t, source, branch, "After the mirror")
-	status, body = c.do(http.MethodPost, repoSettingsAPIPath(mirror, "/settings/mirror/sync"), repoSettingsNoBody)
-	require.Equal(t, http.StatusAccepted, status, "response: %s", body)
 	mirrorPath := database.RepoPath(mirror.Owner, mirror.Name)
-	assert.Eventually(t, func() bool {
-		// Not repoSettingsHead, which cannot fail the test from the goroutine
-		// the condition runs in.
-		out, err := exec.Command("git", "-C", mirrorPath, "rev-parse", "refs/heads/"+branch).Output()
-		return err == nil && strings.TrimSpace(string(out)) == commit
-	}, 30*time.Second, 200*time.Millisecond, "mirror not synced")
+	sourcePath := database.RepoPath(source.Owner, source.Name)
+	// sync adds a commit to the source and waits for the mirror to fetch it,
+	// along with any other change made to the source before.
+	sync := func(message string) {
+		t.Helper()
+		commit := repoSettingsAddCommit(t, source, branch, message)
+		status, body := c.do(http.MethodPost, repoSettingsAPIPath(mirror, "/settings/mirror/sync"), repoSettingsNoBody)
+		require.Equal(t, http.StatusAccepted, status, "response: %s", body)
+		require.Eventually(t, func() bool {
+			// Not repoSettingsHead, which cannot fail the test from the goroutine
+			// the condition runs in.
+			out, err := exec.Command("git", "-C", mirrorPath, "rev-parse", "refs/heads/"+branch).Output()
+			return err == nil && strings.TrimSpace(string(out)) == commit
+		}, 30*time.Second, 200*time.Millisecond, "mirror not synced")
+	}
+	hasBranch := func(name string) bool {
+		return exec.Command("git", "-C", mirrorPath, "rev-parse", "--verify", "refs/heads/"+name).Run() == nil
+	}
+
+	// Saving the settings set the next sync time as well, so start in a later
+	// second to tell the two apart.
+	time.Sleep(time.Until(time.Unix(time.Now().Unix()+1, 0)))
+	before := time.Now().Unix()
+	sync("After the mirror")
+	// The sync is recorded once the mirror is updated, and the next one is
+	// scheduled the interval after it.
+	require.Eventually(t, func() bool {
+		stored, err = database.Handle.Mirrors().GetByRepoID(t.Context(), mirror.ID)
+		return err == nil && stored.LastSyncUnix >= before
+	}, 30*time.Second, 200*time.Millisecond, "sync not recorded")
+	assert.LessOrEqual(t, stored.LastSyncUnix, time.Now().Unix())
+	assert.GreaterOrEqual(t, stored.NextSyncUnix, before+24*60*60)
+	assert.LessOrEqual(t, stored.NextSyncUnix, time.Now().Unix()+24*60*60)
+
+	// Without pruning, branches deleted from the source stay.
+	repoSettingsGit(t, sourcePath, "branch", "gone", branch)
+	sync("Add a branch")
+	require.True(t, hasBranch("gone"))
+	repoSettingsGit(t, sourcePath, "branch", "-D", "gone")
+	sync("Delete a branch")
+	assert.True(t, hasBranch("gone"), "branch pruned while pruning is off")
+
+	status, body = c.do(http.MethodPut, repoSettingsAPIPath(mirror, "/settings/mirror"), map[string]any{
+		"address":     cloneAddr,
+		"interval":    24,
+		"enablePrune": true,
+	})
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	sync("Prune")
+	assert.False(t, hasBranch("gone"), "branch not pruned")
 
 	regular := seedRepository(t, u.ID, CreateRepositoryOptions{AutoInit: true})
 	status, body = c.do(http.MethodPost, repoSettingsAPIPath(regular, "/settings/mirror/sync"), repoSettingsNoBody)
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 	status, body = c.do(http.MethodPut, repoSettingsAPIPath(regular, "/settings/mirror"), map[string]any{"address": cloneAddr, "interval": 24})
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
+
+	status, body = c.do(http.MethodDelete, repoSettingsAPIPath(mirror, ""), map[string]any{"repoName": mirror.Name})
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	_, err = database.Handle.Mirrors().GetByRepoID(t.Context(), mirror.ID)
+	assert.True(t, database.IsMirrorNotExist(err), "mirror of deleted repository left behind: %v", err)
 }
 
 func TestRepoSettingsConvertMirror(t *testing.T) {
@@ -247,7 +293,7 @@ func TestRepoSettingsConvertMirror(t *testing.T) {
 	got, err = getRepository(t, mirror.ID)
 	require.NoError(t, err)
 	assert.False(t, got.IsMirror)
-	_, err = database.GetMirrorByRepoID(mirror.ID)
+	_, err = database.Handle.Mirrors().GetByRepoID(t.Context(), mirror.ID)
 	assert.Error(t, err, "mirror left behind")
 
 	var settings struct {

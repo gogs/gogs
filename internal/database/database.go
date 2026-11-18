@@ -26,6 +26,7 @@ var Tables = []any{
 	new(Follow),
 	new(HookTask),
 	new(LFSObject), new(LoginSource),
+	new(Mirror),
 	new(Notice),
 	new(Passkey),
 	new(PublicKey),
@@ -151,6 +152,10 @@ var loadedLoginSourceFilesStore loginSourceFilesStore
 
 func (db *DB) LoginSources() *LoginSourcesStore {
 	return newLoginSourcesStore(db.db, loadedLoginSourceFilesStore)
+}
+
+func (db *DB) Mirrors() *MirrorsStore {
+	return newMirrorsStore(db.db)
 }
 
 func (db *DB) Notices() *NoticesStore {
