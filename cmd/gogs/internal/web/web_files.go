@@ -79,8 +79,10 @@ func getAttachment(c flamego.Context, logger *logx.Logger, viewer *database.User
 	// repository-level read permission. Without this check, anyone with the UUID
 	// could download files belonging to private repositories.
 	var (
-		repo  *database.Repository
-		draft bool
+		repo *database.Repository
+		// hiddenDraft is set for a file of a draft release the viewer cannot
+		// write to.
+		hiddenDraft bool
 	)
 	switch {
 	case attach.IssueID > 0:
@@ -110,7 +112,7 @@ func getAttachment(c flamego.Context, logger *logx.Logger, viewer *database.User
 			return
 		}
 		repo = release.Repo
-		draft = release.IsDraft
+		hiddenDraft = release.IsDraft && !newViewer(ctx, logger, viewer, repo.Owner, repo).CanWrite()
 	}
 	var viewerID int64
 	if viewer != nil {
@@ -121,7 +123,7 @@ func getAttachment(c flamego.Context, logger *logx.Logger, viewer *database.User
 	// earlier edit. Only its uploader can download it.
 	if (repo == nil && (viewerID == 0 || attach.UploaderID != viewerID)) ||
 		(repo != nil && !repo.HasAccess(logger, viewerID)) ||
-		(draft && !canWriteRepo(ctx, logger, viewer, repo)) ||
+		hiddenDraft ||
 		!osx.IsFile(attach.LocalPath()) {
 		pages.NotFound(c)
 		return
@@ -440,18 +442,4 @@ func serveGoGet(c flamego.Context) {
 			"InsecureFlag":   insecureFlag,
 		},
 	)))
-}
-
-// canWriteRepo reports whether the viewer is a site admin or can write to the
-// repository.
-func canWriteRepo(ctx stdctx.Context, logger *logx.Logger, viewer *database.User, repo *database.Repository) bool {
-	if viewer == nil {
-		return false
-	}
-	return viewer.IsAdmin || database.Handle.Permissions().Authorize(ctx, logger, viewer.ID, repo.ID, database.AccessModeWrite,
-		database.AccessModeOptions{
-			OwnerID: repo.OwnerID,
-			Private: repo.IsPrivate,
-		},
-	)
 }

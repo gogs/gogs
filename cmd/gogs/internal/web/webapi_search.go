@@ -15,6 +15,7 @@ import (
 
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
+	"gogs.io/gogs/internal/i18n"
 )
 
 const (
@@ -140,7 +141,7 @@ func acquireCodeSearchSlot(ctx context.Context) (func(), error) {
 	case codeSearchSlots <- struct{}{}:
 		return func() { <-codeSearchSlots }, nil
 	case <-timer.C:
-		return nil, errors.New("too many code searches are running, try again later")
+		return nil, errors.New("no slot became free in time")
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}
@@ -173,7 +174,7 @@ type repoSearchResponse struct {
 // every matching line of a file rather than the first few, and gets higher
 // limits. Only authenticated viewers can search exhaustively, since such a
 // search holds a slot for long.
-func getRepoSearch(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoSearchResponse, err error) {
+func getRepoSearch(c flamego.Context, logger *logx.Logger, l i18n.Locale, repoCtx *repoContext) (statusCode int, _ any, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
 	gitRepo, err := openRepoGit(repoCtx)
@@ -193,7 +194,7 @@ func getRepoSearch(c flamego.Context, logger *logx.Logger, repoCtx *repoContext)
 	// A smaller limit, e.g., for showing a few matches as the viewer types,
 	// makes the search stop sooner.
 	limit := max(1, min(c.QueryInt("limit", codeSearchMaxResults), codeSearchMaxResults))
-	resp = &repoSearchResponse{
+	resp := &repoSearchResponse{
 		Ref:        ref.Name,
 		RefType:    ref.Type,
 		Query:      strings.TrimSpace(c.Query("q")),
@@ -206,7 +207,7 @@ func getRepoSearch(c flamego.Context, logger *logx.Logger, repoCtx *repoContext)
 		release, err := acquireCodeSearchSlot(ctx)
 		if err != nil {
 			logger.Error("Failed to wait for a code search slot", "repoID", repo.ID, "error", err)
-			return http.StatusServiceUnavailable, nil, err
+			return http.StatusServiceUnavailable, &bindingErrorResponse{Error: l.Tr("repo.code_search.busy")}, nil
 		}
 		timeout := codeSearchTimeout
 		opts := git.GrepOptions{
@@ -265,10 +266,10 @@ type codeSearchResponse struct {
 // getCodeSearch searches the default branches of the repositories the viewer
 // can read for lines that contain the "q" query, narrowed down by its
 // qualifiers. With "matchCase=true", letter case must match.
-func getCodeSearch(c flamego.Context, logger *logx.Logger, viewer *database.User) (statusCode int, resp *codeSearchResponse, err error) {
+func getCodeSearch(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User) (statusCode int, _ any, err error) {
 	ctx := c.Request().Context()
 	query := parseCodeQuery(c.Query("q"))
-	resp = &codeSearchResponse{
+	resp := &codeSearchResponse{
 		Query:     strings.TrimSpace(c.Query("q")),
 		Keyword:   query.Keyword,
 		MatchCase: c.QueryBool("matchCase"),
@@ -287,7 +288,7 @@ func getCodeSearch(c flamego.Context, logger *logx.Logger, viewer *database.User
 	release, err := acquireCodeSearchSlot(ctx)
 	if err != nil {
 		logger.Error("Failed to wait for a code search slot", "error", err)
-		return http.StatusServiceUnavailable, nil, err
+		return http.StatusServiceUnavailable, &bindingErrorResponse{Error: l.Tr("repo.code_search.busy")}, nil
 	}
 	defer release()
 	searchCtx, cancel := context.WithTimeout(ctx, codeSearchTimeout)
