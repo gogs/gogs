@@ -65,8 +65,10 @@ func healthcheckTarget(protocol, addr string, port int) (*http.Client, string, e
 
 	switch protocol {
 	case "http", "https":
-		host := addr
-		if ip := net.ParseIP(addr); addr == "" || (ip != nil && ip.IsUnspecified()) {
+		// The server listens at "HTTP_ADDR:HTTP_PORT", so an IPv6 address is
+		// set in brackets.
+		host := strings.TrimSuffix(strings.TrimPrefix(addr, "["), "]")
+		if ip := net.ParseIP(host); host == "" || (ip != nil && ip.IsUnspecified()) {
 			host = "127.0.0.1"
 			if ip != nil && ip.To4() == nil {
 				host = "::1"

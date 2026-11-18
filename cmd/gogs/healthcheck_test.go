@@ -42,6 +42,23 @@ func TestHealthcheckTarget(t *testing.T) {
 		})
 	}
 
+	t.Run("http with an IPv6 address", func(t *testing.T) {
+		listener, err := net.Listen("tcp", "[::1]:0")
+		if err != nil {
+			t.Skip("IPv6 loopback is not available:", err)
+		}
+		s := httptest.NewUnstartedServer(handler)
+		s.Listener = listener
+		s.Start()
+		t.Cleanup(s.Close)
+
+		for _, addr := range []string{"[::]", "[::1]"} {
+			client, url, err := healthcheckTarget("http", addr, port(t, s))
+			require.NoError(t, err)
+			get(t, client, url)
+		}
+	})
+
 	t.Run("https with a self-signed certificate", func(t *testing.T) {
 		s := httptest.NewTLSServer(handler)
 		t.Cleanup(s.Close)
