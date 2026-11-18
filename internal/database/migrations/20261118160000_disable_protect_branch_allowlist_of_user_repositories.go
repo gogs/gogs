@@ -5,9 +5,11 @@ import (
 )
 
 // disableProtectBranchAllowlistOfUserRepositories turns off the push allowlist
-// of the protected branches of repositories that users own, which their
-// settings do not show. These were left enabled by transfers from an
-// organization, and kept out everyone not listed by name, e.g., the owner.
+// of the protected branches of repositories that users own. The allowlist is
+// only for organization repositories, and the settings of a user repository
+// neither show nor edit it, yet an enabled one kept out everyone not listed by
+// name, e.g., the owner. Transfers from an organization used to leave it
+// enabled.
 func disableProtectBranchAllowlistOfUserRepositories(db *gorm.DB) error {
 	userIDs := db.Table("user").Select("id").Where("type = ?", 0)
 	repoIDs := db.Table("repository").Select("id").Where("owner_id IN (?)", userIDs)
