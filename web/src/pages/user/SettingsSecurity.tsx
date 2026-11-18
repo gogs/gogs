@@ -2,7 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { Copy, KeyRound, Lock, LockOpen } from "lucide-react";
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { ConfirmButton } from "@/components/ConfirmButton";
@@ -12,8 +12,9 @@ import { RichText } from "@/components/RichText";
 import { UserSettingsLayout } from "@/components/UserSettingsLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { webContext } from "@/lib/context";
 import { fill } from "@/lib/format";
-import { PasskeyWrongHostError, passkeysSupported } from "@/lib/passkey";
+import { externalPageURL, passkeysSupported } from "@/lib/passkey";
 import { formErrors } from "@/lib/queries/request";
 import {
   type Credential,
@@ -355,6 +356,10 @@ function UserPasskeys({ passkeys }: { passkeys: Credential[] }) {
   const router = useRouter();
   const [name, setName] = useState("");
   const supported = passkeysSupported();
+  // Where passkeys work, if not here. Viewers here can still add one, in case
+  // EXTERNAL_URL is set wrong.
+  const [passkeyPageURL] = useState(externalPageURL);
+  const [addAnyway, setAddAnyway] = useState(false);
   const add = useMutation({
     mutationFn: () => addPasskey(name),
     onSuccess: async () => {
@@ -369,13 +374,11 @@ function UserPasskeys({ passkeys }: { passkeys: Credential[] }) {
   // passkey prompt or no passkey could be created, and with a NotAllowedError
   // only for the former, which needs no message.
   const message =
-    add.error instanceof PasskeyWrongHostError
-      ? t("settings.passkey_wrong_host", { host: add.error.host })
-      : add.error instanceof DOMException
-        ? add.error.name === "NotAllowedError"
-          ? null
-          : t("settings.passkey_add_failed")
-        : formError;
+    add.error instanceof DOMException
+      ? add.error.name === "NotAllowedError"
+        ? null
+        : t("settings.passkey_add_failed")
+      : formError;
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -410,30 +413,46 @@ function UserPasskeys({ passkeys }: { passkeys: Credential[] }) {
           {t("settings.passkeys_none")}
         </p>
       )}
-      <form onSubmit={onSubmit} noValidate className="mt-6">
-        <fieldset disabled={!supported || add.isPending} className="contents">
-          <FormAlert message={supported ? message : t("settings.passkey_unsupported")} />
-          <div className="flex flex-col gap-3">
-            <FormField id="name" label={t("settings.passkey_name")} error={fields.name} invalid={"name" in fields}>
-              <Input
-                id="name"
-                name="name"
-                autoComplete="off"
-                required
-                placeholder={t("settings.passkey_name_placeholder")}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </FormField>
-            <div>
-              <Button type="submit" variant="outline">
-                <KeyRound className="size-4" aria-hidden />
-                {add.isPending ? t("settings.passkey_adding") : t("settings.passkey_add")}
-              </Button>
+      {supported && passkeyPageURL && !addAnyway ? (
+        <p className="mt-6 text-sm text-(--color-muted-foreground)">
+          <Trans
+            i18nKey="settings.passkey_wrong_host"
+            values={{ externalURL: webContext.externalURL }}
+            components={{
+              url: <a href={passkeyPageURL} className="wrap-anywhere text-(--color-primary) underline" />,
+            }}
+          />{" "}
+          <Button type="button" variant="link" size="inline" onClick={() => setAddAnyway(true)}>
+            {t("settings.passkey_add_anyway")}
+          </Button>
+        </p>
+      ) : (
+        <form onSubmit={onSubmit} noValidate className="mt-6">
+          <fieldset disabled={!supported || add.isPending} className="contents">
+            <FormAlert message={supported ? message : t("settings.passkey_unsupported")} />
+            <div className="flex flex-col gap-3">
+              <FormField id="name" label={t("settings.passkey_name")} error={fields.name} invalid={"name" in fields}>
+                <Input
+                  id="name"
+                  name="name"
+                  autoComplete="off"
+                  required
+                  autoFocus={addAnyway}
+                  placeholder={t("settings.passkey_name_placeholder")}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </FormField>
+              <div>
+                <Button type="submit" variant="outline">
+                  <KeyRound className="size-4" aria-hidden />
+                  {add.isPending ? t("settings.passkey_adding") : t("settings.passkey_add")}
+                </Button>
+              </div>
             </div>
-          </div>
-        </fieldset>
-      </form>
+          </fieldset>
+        </form>
+      )}
     </section>
   );
 }

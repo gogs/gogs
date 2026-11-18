@@ -535,6 +535,8 @@ func renderIndex(index []byte, wc context.WebContext, inject injectContent) ([]b
 		LandingURL                 string `json:"landingURL,omitempty"`
 		RequireAuthenticatedViewer bool   `json:"requireAuthenticatedViewer,omitempty"`
 		Notice                     string `json:"notice,omitempty"`
+		// Passkeys only work on the external URL.
+		ExternalURL string `json:"externalURL"`
 	}{
 		Lang:      wc.Lang,
 		SubURL:    wc.SubURL,
@@ -546,6 +548,7 @@ func renderIndex(index []byte, wc context.WebContext, inject injectContent) ([]b
 		LandingURL:                 landingURL,
 		RequireAuthenticatedViewer: conf.Auth.RequireSigninView,
 		Notice:                     wc.Notice,
+		ExternalURL:                conf.Server.ExternalURL,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "marshal web context")

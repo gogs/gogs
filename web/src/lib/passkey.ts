@@ -1,3 +1,5 @@
+import { webContext } from "./context";
+
 // Helpers for the WebAuthn ceremonies of passkeys. The server sends options
 // and reads credentials as JSON, with binary values in base64url, which the
 // browser API takes and returns as ArrayBuffers.
@@ -23,25 +25,17 @@ export interface RequestOptionsJSON {
   };
 }
 
-// PasskeyWrongHostError reports that the browser refused a passkey because
-// the site is open at another address than host, the one in EXTERNAL_URL
-// that passkeys are for.
-export class PasskeyWrongHostError extends Error {
-  readonly host: string;
-  constructor(host: string) {
-    super(`passkeys are for ${host}`);
-    this.name = "PasskeyWrongHostError";
-    this.host = host;
-  }
-}
-
-// asWrongHost turns the SecurityError of the browser into a
-// PasskeyWrongHostError for host, and leaves other errors alone.
-function asWrongHost(err: unknown, host: string | undefined) {
-  if (err instanceof DOMException && err.name === "SecurityError") {
-    return new PasskeyWrongHostError(host ?? window.location.hostname);
-  }
-  return err;
+// externalPageURL returns the current page at the external URL when the site
+// is open at another origin, and null otherwise. Passkeys only work at the
+// origin of the external URL: at another host the browser refuses them, and at
+// another port or scheme the server rejects them after the browser or password
+// manager already saved a new one.
+export function externalPageURL() {
+  const { externalURL } = webContext;
+  if (!externalURL) return null;
+  const { origin } = new URL(externalURL);
+  if (origin === window.location.origin) return null;
+  return origin + window.location.pathname + window.location.search + window.location.hash;
 }
 
 export function passkeysSupported() {
@@ -69,19 +63,14 @@ function toDescriptors(list?: CredentialDescriptorJSON[]): PublicKeyCredentialDe
 // createPasskey asks the browser to create a passkey with the options of the
 // server, and returns it as the server reads it.
 export async function createPasskey({ publicKey }: CreationOptionsJSON) {
-  let credential: PublicKeyCredential;
-  try {
-    credential = (await navigator.credentials.create({
-      publicKey: {
-        ...publicKey,
-        challenge: fromBase64URL(publicKey.challenge),
-        user: { ...publicKey.user, id: fromBase64URL(publicKey.user.id) },
-        excludeCredentials: toDescriptors(publicKey.excludeCredentials),
-      },
-    })) as PublicKeyCredential;
-  } catch (err) {
-    throw asWrongHost(err, publicKey.rp.id);
-  }
+  const credential = (await navigator.credentials.create({
+    publicKey: {
+      ...publicKey,
+      challenge: fromBase64URL(publicKey.challenge),
+      user: { ...publicKey.user, id: fromBase64URL(publicKey.user.id) },
+      excludeCredentials: toDescriptors(publicKey.excludeCredentials),
+    },
+  })) as PublicKeyCredential;
   const response = credential.response as AuthenticatorAttestationResponse;
   return {
     id: credential.id,
@@ -101,22 +90,17 @@ export async function createPasskey({ publicKey }: CreationOptionsJSON) {
 // server with, and returns the answer as the server reads it. The signal
 // cancels the request, which is then rejected with its reason.
 export async function getPasskey({ publicKey }: RequestOptionsJSON, signal: AbortSignal) {
-  let credential: PublicKeyCredential;
-  try {
-    credential = (await navigator.credentials.get({
-      publicKey: {
-        ...publicKey,
-        challenge: fromBase64URL(publicKey.challenge),
-        allowCredentials: toDescriptors(publicKey.allowCredentials),
-        // The caller times the request out with the signal, so it can tell a
-        // timeout from the visitor cancelling, which browsers report the same way.
-        timeout: undefined,
-      },
-      signal,
-    })) as PublicKeyCredential;
-  } catch (err) {
-    throw asWrongHost(err, publicKey.rpId);
-  }
+  const credential = (await navigator.credentials.get({
+    publicKey: {
+      ...publicKey,
+      challenge: fromBase64URL(publicKey.challenge),
+      allowCredentials: toDescriptors(publicKey.allowCredentials),
+      // The caller times the request out with the signal, so it can tell a
+      // timeout from the visitor cancelling, which browsers report the same way.
+      timeout: undefined,
+    },
+    signal,
+  })) as PublicKeyCredential;
   const response = credential.response as AuthenticatorAssertionResponse;
   return {
     id: credential.id,
