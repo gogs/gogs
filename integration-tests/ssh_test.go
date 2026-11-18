@@ -5,9 +5,12 @@ import (
 	"crypto/rand"
 	"encoding/pem"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -185,6 +188,128 @@ func TestSSHDeployKey(t *testing.T) {
 		out := key.cloneFails(t, otherRepo)
 		assert.Contains(t, out, "Key access denied")
 	})
+}
+
+// sshResyncAuthorizedKeys has the server rewrite the authorized_keys file with
+// every key, as OpenSSH installs have it. The builtin SSH server does not add
+// keys to the file.
+func sshResyncAuthorizedKeys(t *testing.T) {
+	t.Helper()
+
+	admin := authenticatedClient(t, seedUser(t, CreateUserOptions{Admin: true}))
+	status, body := admin.do(http.MethodPost, "/api/web/admin/operations/resync-ssh-keys", adminNoBody)
+	require.Equal(t, http.StatusOK, status, "response: %s", body)
+}
+
+var sshAuthorizedKeyID = regexp.MustCompile(` serv key-(\d+) `)
+
+// sshAuthorizedKeyIDs returns the key IDs of the lines in the authorized_keys
+// file of the server that have the content, in the order OpenSSH matches them.
+func sshAuthorizedKeyIDs(t *testing.T, content string) []int64 {
+	t.Helper()
+
+	data, err := os.ReadFile(filepath.Join(conf.SSH.RootPath, "authorized_keys"))
+	if os.IsNotExist(err) {
+		return nil
+	}
+	require.NoError(t, err)
+
+	var ids []int64
+	for line := range strings.Lines(string(data)) {
+		if !strings.HasSuffix(strings.TrimSpace(line), " "+content) {
+			continue
+		}
+		m := sshAuthorizedKeyID.FindStringSubmatch(line)
+		require.NotNil(t, m, "line without key ID: %s", line)
+		id, err := strconv.ParseInt(m[1], 10, 64)
+		require.NoError(t, err)
+		ids = append(ids, id)
+	}
+	return ids
+}
+
+// sshServLsRemote lists the main branch of the repository through "gogs serv"
+// with the key ID, as OpenSSH does with the line of the key in the
+// authorized_keys file.
+func sshServLsRemote(t *testing.T, keyID int64, repo *Repository) (string, error) {
+	t.Helper()
+
+	cmd := gitCommand(t.TempDir(), "ls-remote", "ssh://git@localhost/"+repo.Owner+"/"+repo.Name+".git", "refs/heads/main")
+	cmd.Env = append(cmd.Env, "GIT_SSH="+servProgram(t, keyID))
+	out, err := cmd.CombinedOutput()
+	return strings.TrimSpace(string(out)), err
+}
+
+func TestSSHDeleteDeployKey(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
+	otherRepo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
+	_, content := sshNewKey(t)
+	key, err := database.Handle.DeployKeys().Add(t.Context(), logger, repo.ID, UniqueName("deploy-"), content)
+	require.NoError(t, err)
+	otherKey, err := database.Handle.DeployKeys().Add(t.Context(), logger, otherRepo.ID, UniqueName("deploy-"), content)
+	require.NoError(t, err)
+	sshResyncAuthorizedKeys(t)
+	require.Equal(t, []int64{key.KeyID}, sshAuthorizedKeyIDs(t, content))
+
+	c := authenticatedClient(t, owner)
+	deleteKey := func(repo *Repository, key *database.DeployKey) {
+		t.Helper()
+		status, body := c.do(http.MethodDelete, repoSettingsAPIPath(repo, "/settings/keys/"+strconv.FormatInt(key.ID, 10)), repoSettingsNoBody)
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	}
+
+	// The other repository still uses the key, so OpenSSH still lets it in.
+	deleteKey(repo, key)
+	assert.Equal(t, []int64{key.KeyID}, sshAuthorizedKeyIDs(t, content))
+	out, err := sshServLsRemote(t, key.KeyID, otherRepo)
+	require.NoError(t, err, "ls-remote: %s", out)
+	assert.Equal(t, gitMainOnDisk(t, otherRepo)+"\trefs/heads/main", out)
+	out, err = sshServLsRemote(t, key.KeyID, repo)
+	require.Error(t, err, "ls-remote succeeded: %s", out)
+
+	// A line left behind would come before the line of a key added again, so
+	// OpenSSH would keep passing the deleted key ID.
+	deleteKey(otherRepo, otherKey)
+	assert.Empty(t, sshAuthorizedKeyIDs(t, content))
+}
+
+func TestSSHDeleteRepositoryWithDeployKeys(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
+	otherRepo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
+	_, ownContent := sshNewKey(t)
+	ownKey, err := database.Handle.DeployKeys().Add(t.Context(), logger, repo.ID, UniqueName("deploy-"), ownContent)
+	require.NoError(t, err)
+	_, sharedContent := sshNewKey(t)
+	sharedKey, err := database.Handle.DeployKeys().Add(t.Context(), logger, repo.ID, UniqueName("deploy-"), sharedContent)
+	require.NoError(t, err)
+	_, err = database.Handle.DeployKeys().Add(t.Context(), logger, otherRepo.ID, UniqueName("deploy-"), sharedContent)
+	require.NoError(t, err)
+	sshResyncAuthorizedKeys(t)
+
+	status, body := apiV1Client(t, owner).do(http.MethodDelete, apiV1RepoPath(repo, ""), nil)
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+
+	keys, err := database.Handle.DeployKeys().List(t.Context(), repo.ID)
+	require.NoError(t, err)
+	assert.Empty(t, keys)
+
+	_, err = database.Handle.PublicKeys().GetByID(t.Context(), ownKey.KeyID)
+	assert.True(t, database.IsErrKeyNotExist(err), "key not deleted: %v", err)
+	assert.Empty(t, sshAuthorizedKeyIDs(t, ownContent))
+
+	// The key of the other repository keeps working.
+	_, err = database.Handle.PublicKeys().GetByID(t.Context(), sharedKey.KeyID)
+	require.NoError(t, err)
+	assert.Equal(t, []int64{sharedKey.KeyID}, sshAuthorizedKeyIDs(t, sharedContent))
+	out, err := sshServLsRemote(t, sharedKey.KeyID, otherRepo)
+	require.NoError(t, err, "ls-remote: %s", out)
+	assert.Equal(t, gitMainOnDisk(t, otherRepo)+"\trefs/heads/main", out)
 }
 
 // servProgram writes a program that Git runs in place of ssh, which connects
