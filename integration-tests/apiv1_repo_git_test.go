@@ -116,6 +116,8 @@ func TestAPIV1Contents(t *testing.T) {
 }
 
 func TestAPIV1EmptyRepository(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	api := apiV1Client(t, owner)
 
