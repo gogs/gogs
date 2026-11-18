@@ -114,6 +114,7 @@ All notable changes to Gogs are documented in this file.
 - Forks can no longer be more visible than their base repository, e.g., a private fork allows public access to its wiki or issues only when its base allows it. [#8186](https://github.com/gogs/gogs/issues/8186)
 - Changing the settings of a mirror while it syncs, e.g., its interval or pruning, is no longer undone when the sync finishes. [#8502](https://github.com/gogs/gogs/pull/8502)
 - Deleting a release, or the repository it belongs to, now also deletes the files attached to the release. [#8503](https://github.com/gogs/gogs/pull/8503)
+- Publishing a draft release whose tag name is not valid now says that the tag name is not valid, instead of failing with a server error. [#8503](https://github.com/gogs/gogs/pull/8503)
 
 ### Removed
 

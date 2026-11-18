@@ -338,9 +338,10 @@ func (s *ReleasesStore) Update(ctx context.Context, logger *logx.Logger, doer *U
 	// without its release being published.
 	ctx = context.WithoutCancel(ctx)
 
+	// Not wrapped, so that callers recognize ErrInvalidTagName.
 	err := createTag(ctx, gitRepo, r)
 	if err != nil {
-		return errors.Wrap(err, "create tag")
+		return err
 	}
 
 	r.PublisherID = doer.ID

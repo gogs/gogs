@@ -305,6 +305,15 @@ func releasesUpdate(t *testing.T, ctx context.Context, s *ReleasesStore) {
 	gotOfIssue, err := attachments.GetByUUID(ctx, ofIssue.UUID)
 	require.NoError(t, err)
 	assert.Equal(t, []int64{9, 0}, []int64{gotOfIssue.IssueID, gotOfIssue.ReleaseID})
+
+	// A draft gets its tag only when published, which is when an invalid tag
+	// name is found.
+	bad := &Release{RepoID: repo.ID, PublisherID: repo.OwnerID, TagName: "bad..name", Target: "main", IsDraft: true}
+	err = s.Create(ctx, logger, gitRepo, bad, nil)
+	require.NoError(t, err)
+	bad.IsDraft = false
+	err = s.Update(ctx, logger, doer, gitRepo, bad, true, nil)
+	assert.True(t, IsErrInvalidTagName(err), "got %v", err)
 }
 
 func releasesDeleteByID(t *testing.T, ctx context.Context, s *ReleasesStore) {

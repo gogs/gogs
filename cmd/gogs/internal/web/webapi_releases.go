@@ -431,9 +431,10 @@ func patchRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, vie
 	rel.IsDraft = rel.IsDraft && req.IsDraft
 	rel.IsPrerelease = req.IsPrerelease
 	if err = database.Handle.Releases().Update(c.Request().Context(), logger, viewer, gitRepo, rel, isPublish, req.Attachments); err != nil {
-		if database.IsErrInvalidTagName(err) {
-			msg := l.Tr("repo.release.tag_name_invalid")
-			return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"tagName": &msg}}, nil
+		switch {
+		case database.IsErrInvalidTagName(err):
+			// The tag name cannot be edited, so it is not a field error.
+			return http.StatusBadRequest, nil, errors.New(l.Tr("repo.release.tag_name_invalid"))
 		}
 		logger.Error("Failed to update release", "releaseID", rel.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update release")
