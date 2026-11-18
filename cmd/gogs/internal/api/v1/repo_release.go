@@ -2,6 +2,7 @@ package v1
 
 import (
 	"net/http"
+	"unicode/utf8"
 
 	"github.com/cockroachdb/errors"
 
@@ -10,11 +11,11 @@ import (
 )
 
 type createReleaseRequest struct {
-	TagName string `json:"tag_name" validate:"required"`
+	TagName string `json:"tag_name" binding:"Required;MaxSize(255)"`
 	// The branch to tag when the tag does not exist yet, defaults to the default
 	// branch.
 	TargetCommitish string `json:"target_commitish"`
-	Name            string `json:"name" validate:"max=255"`
+	Name            string `json:"name" binding:"MaxSize(255)"`
 	Body            string `json:"body"`
 	Draft           bool   `json:"draft"`
 	Prerelease      bool   `json:"prerelease"`
@@ -24,6 +25,11 @@ type createReleaseRequest struct {
 func createRelease(c *apiContext, r createReleaseRequest) {
 	ctx := c.Request().Context()
 	repo := c.Repo.Repository
+	// Mirror syncs would remove or move the tag.
+	if repo.IsMirror {
+		c.ErrorStatus(http.StatusForbidden, errors.New("Mirror repository is read-only."))
+		return
+	}
 	gitRepo, err := git.Open(repo.RepoPath())
 	if err != nil {
 		c.Error(err, "open repository")
@@ -44,7 +50,7 @@ func createRelease(c *apiContext, r createReleaseRequest) {
 
 	// An existing tag keeps the time it was made, a new one is made now.
 	var tagCreatedUnix int64
-	if tag, err := gitRepo.Tag(ctx, git.RefsTags+r.TagName); err == nil {
+	if tag, err := gitRepo.Tag(ctx, r.TagName); err == nil {
 		if commit, err := tag.Commit(ctx); err == nil {
 			tagCreatedUnix = commit.Author.When.Unix()
 		}
@@ -73,7 +79,7 @@ func createRelease(c *apiContext, r createReleaseRequest) {
 		IsPrerelease: r.Prerelease,
 		CreatedUnix:  tagCreatedUnix,
 	}
-	if err = database.NewRelease(ctx, gitRepo, rel, nil); err != nil {
+	if err = database.Handle.Releases().Create(ctx, c.Logger, gitRepo, rel, nil); err != nil {
 		switch {
 		case database.IsErrReleaseAlreadyExist(err):
 			c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("A release of the tag %q already exists.", r.TagName))
@@ -90,7 +96,8 @@ func createRelease(c *apiContext, r createReleaseRequest) {
 // getReleaseOfRepo returns the release in the route, or nil when it has written
 // an error response.
 func getReleaseOfRepo(c *apiContext) *database.Release {
-	rel, err := database.GetReleaseByID(c.ParamInt64("id"))
+	ctx := c.Request().Context()
+	rel, err := database.Handle.Releases().GetByID(ctx, c.ParamInt64("id"))
 	// Only writers see drafts, as in the web interface.
 	if err == nil && (rel.RepoID != c.Repo.Repository.ID || rel.IsDraft && !c.Repo.IsWriter()) {
 		err = database.ErrReleaseNotExist{}
@@ -99,15 +106,24 @@ func getReleaseOfRepo(c *apiContext) *database.Release {
 		c.NotFoundOrError(err, "get release")
 		return nil
 	}
+	if err = database.Handle.Releases().LoadAttributes(ctx, rel); err != nil {
+		c.Error(err, "load release attributes")
+		return nil
+	}
 	return rel
 }
 
 // writeRelease responds with the release of the ID, read again so that it has
 // its creation time.
 func writeRelease(c *apiContext, status int, id int64) {
-	rel, err := database.GetReleaseByID(id)
+	ctx := c.Request().Context()
+	rel, err := database.Handle.Releases().GetByID(ctx, id)
 	if err != nil {
 		c.Error(err, "get release")
+		return
+	}
+	if err = database.Handle.Releases().LoadAttributes(ctx, rel); err != nil {
+		c.Error(err, "load release attributes")
 		return
 	}
 	c.JSON(status, toRelease(rel))
@@ -123,7 +139,7 @@ func getRelease(c *apiContext) {
 }
 
 type editReleaseRequest struct {
-	Name       *string `json:"name" validate:"omitempty,max=255"`
+	Name       *string `json:"name"`
 	Body       *string `json:"body"`
 	Draft      *bool   `json:"draft"`
 	Prerelease *bool   `json:"prerelease"`
@@ -131,6 +147,11 @@ type editReleaseRequest struct {
 
 // PATCH /repos/:username/:reponame/releases/:id
 func editRelease(c *apiContext, r editReleaseRequest) {
+	// Binding rules do not measure pointers.
+	if r.Name != nil && utf8.RuneCountInString(*r.Name) > 255 {
+		c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("The name is longer than 255 characters."))
+		return
+	}
 	rel := getReleaseOfRepo(c)
 	if rel == nil {
 		return
@@ -147,7 +168,13 @@ func editRelease(c *apiContext, r editReleaseRequest) {
 		return
 	}
 
+	ctx := c.Request().Context()
 	isPublish := r.Draft != nil && !*r.Draft && rel.IsDraft
+	// Publishing tags the target branch when the tag does not exist yet.
+	if isPublish && !gitRepo.HasTag(ctx, rel.TagName) && !gitRepo.HasBranch(ctx, rel.Target) {
+		c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("The target branch %q does not exist.", rel.Target))
+		return
+	}
 	if r.Name != nil {
 		rel.Title = *r.Name
 	}
@@ -166,12 +193,15 @@ func editRelease(c *apiContext, r editReleaseRequest) {
 	for i, a := range rel.Attachments {
 		uuids[i] = a.UUID
 	}
-	if err = database.UpdateRelease(c.Request().Context(), c.User, gitRepo, rel, isPublish, uuids); err != nil {
-		if database.IsErrInvalidTagName(err) {
+	if err = database.Handle.Releases().Update(ctx, c.Logger, c.User, gitRepo, rel, isPublish, uuids); err != nil {
+		switch {
+		case database.IsErrInvalidTagName(err):
 			c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("Invalid tag name %q.", rel.TagName))
-			return
+		case database.IsErrReleaseNotExist(err):
+			c.NotFound()
+		default:
+			c.Error(err, "update release")
 		}
-		c.Error(err, "update release")
 		return
 	}
 	writeRelease(c, http.StatusOK, rel.ID)
@@ -183,8 +213,8 @@ func deleteRelease(c *apiContext) {
 	if rel == nil {
 		return
 	}
-	if err := database.DeleteReleaseOfRepoByID(c.Request().Context(), c.Repo.Repository.ID, rel.ID); err != nil {
-		c.Error(err, "delete release")
+	if err := database.Handle.Releases().DeleteByID(c.Request().Context(), c.Logger, c.Repo.Repository.ID, rel.ID); err != nil {
+		c.NotFoundOrError(err, "delete release")
 		return
 	}
 	c.NoContent()
