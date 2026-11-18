@@ -289,7 +289,6 @@ func TestAdminMonitor(t *testing.T) {
 			Description string `json:"description"`
 			Schedule    string `json:"schedule"`
 		} `json:"cronTasks"`
-		Processes []any `json:"processes"`
 	}
 	admin.doJSON(http.MethodGet, "/api/web/admin/monitor", nil, http.StatusOK, &resp)
 	schedules := make(map[string]string)
@@ -303,7 +302,6 @@ func TestAdminMonitor(t *testing.T) {
 		"Check repository statistics": "@every 24h",
 		"Repository archive cleanup":  "@every 24h",
 	}, schedules)
-	assert.NotNil(t, resp.Processes)
 }
 
 // adminSeedOrganization creates an organization owned by the user.

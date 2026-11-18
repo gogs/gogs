@@ -1,11 +1,14 @@
 package database
 
 import (
+	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
 	"math/big"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"strconv"
@@ -20,7 +23,6 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
-	"gogs.io/gogs/internal/process"
 )
 
 const (
@@ -187,15 +189,29 @@ func writeTmpKeyFile(content, keyTestPath string) (string, error) {
 	return tmpFile.Name(), nil
 }
 
+// sshKeygenFingerprint runs "ssh-keygen -lf" on the public key file at the path,
+// and stops it after a minute.
+func sshKeygenFingerprint(keygenPath, path string) (stdout, stderr string, err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	var outBuf, errBuf bytes.Buffer
+	cmd := exec.CommandContext(ctx, keygenPath, "-lf", path)
+	cmd.Stdout = &outBuf
+	cmd.Stderr = &errBuf
+	err = cmd.Run()
+	return outBuf.String(), errBuf.String(), err
+}
+
 // SSHKeygenParsePublicKey extracts key type and length using ssh-keygen.
-func SSHKeygenParsePublicKey(logger *logx.Logger, key, keyTestPath, keygenPath string) (string, int, error) {
+func SSHKeygenParsePublicKey(key, keyTestPath, keygenPath string) (string, int, error) {
 	tmpName, err := writeTmpKeyFile(key, keyTestPath)
 	if err != nil {
 		return "", 0, errors.Newf("writeTmpKeyFile: %v", err)
 	}
 	defer os.Remove(tmpName)
 
-	stdout, stderr, err := process.Exec(logger, "SSHKeygenParsePublicKey", keygenPath, "-lf", tmpName)
+	stdout, stderr, err := sshKeygenFingerprint(keygenPath, tmpName)
 	if err != nil {
 		return "", 0, errors.Newf("fail to parse public key: %s - %s", err, stderr)
 	}
@@ -291,7 +307,7 @@ func CheckPublicKeyString(logger *logx.Logger, content string) (_ string, err er
 		keyType, length, err = SSHNativeParsePublicKey(content)
 	} else {
 		fnName = "SSHKeygenParsePublicKey"
-		keyType, length, err = SSHKeygenParsePublicKey(logger, content, conf.SSH.KeyTestPath, conf.SSH.KeygenPath)
+		keyType, length, err = SSHKeygenParsePublicKey(content, conf.SSH.KeyTestPath, conf.SSH.KeygenPath)
 	}
 	if err != nil {
 		return "", errors.Newf("%s: %v", fnName, err)
@@ -363,7 +379,7 @@ func addKey(logger *logx.Logger, tx *gorm.DB, key *PublicKey) (err error) {
 		return err
 	}
 
-	stdout, stderr, err := process.Exec(logger, "AddPublicKey", conf.SSH.KeygenPath, "-lf", tmpPath)
+	stdout, stderr, err := sshKeygenFingerprint(conf.SSH.KeygenPath, tmpPath)
 	if err != nil {
 		return errors.Newf("fail to parse public key: %s - %s", err, stderr)
 	} else if len(stdout) < 2 {

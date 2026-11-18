@@ -231,15 +231,8 @@ export interface AdminCronTask {
   execTimes: number;
 }
 
-export interface AdminProcess {
-  pid: number;
-  description: string;
-  start: string;
-}
-
 export interface AdminMonitor {
   cronTasks: AdminCronTask[];
-  processes: AdminProcess[];
 }
 
 export function fetchAdminMonitor() {
