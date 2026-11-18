@@ -13,76 +13,63 @@ import (
 	"gogs.io/gogs/internal/conf"
 )
 
-// deployFingerprintIndex is the name of the unique index on the fingerprints of
-// public keys of deploy keys.
-const deployFingerprintIndex = "UQE_public_key_deploy_fingerprint"
+// ownerFingerprintIndex is the name of the unique index on the owners and
+// fingerprints of public keys.
+const ownerFingerprintIndex = "UQE_public_key_owner_id_fingerprint"
 
-// keyTypeDeploy is the type of public keys of deploy keys.
-const keyTypeDeploy = 2
-
-// addPublicKeyDeployFingerprintUniqueIndex makes repositories that add the same
-// deploy key share one public key, as they are meant to.
-func addPublicKeyDeployFingerprintUniqueIndex(db *gorm.DB) error {
-	if db.Migrator().HasIndex("public_key", deployFingerprintIndex) {
+// addPublicKeyOwnerIDFingerprintUniqueIndex makes each user have a key only
+// once, and repositories that add the same deploy key share one public key, as
+// they are meant to.
+func addPublicKeyOwnerIDFingerprintUniqueIndex(db *gorm.DB) error {
+	if db.Migrator().HasIndex("public_key", ownerFingerprintIndex) {
 		return errMigrationSkipped
 	}
-	return AddDeployFingerprintIndex(db)
+	return AddOwnerFingerprintIndex(db)
 }
 
-// AddDeployFingerprintIndex merges the public keys of deploy keys that have the
-// same fingerprint into the one added first, removes the others from the
-// authorized_keys file, and then adds the unique index on the fingerprints of
-// public keys of deploy keys. Before the index, the same key with another
-// comment, or added by two repositories at the same time, got its own public
-// key.
-func AddDeployFingerprintIndex(db *gorm.DB) error {
-	err := db.Transaction(mergeDeployPublicKeys)
+// AddOwnerFingerprintIndex merges the public keys that have the same owner and
+// fingerprint into the one added first, removes the others from the
+// authorized_keys file, and then adds the unique index on the owners and
+// fingerprints of public keys. Before the index, the same key with another
+// comment, or added twice at the same time, got a public key of its own. Public
+// keys of deploy keys have no owner, so they are unique by their fingerprints.
+func AddOwnerFingerprintIndex(db *gorm.DB) error {
+	err := db.Transaction(mergePublicKeys)
 	if err != nil {
-		return errors.Wrap(err, "merge public keys of deploy keys")
+		return errors.Wrap(err, "merge public keys")
 	}
-
-	var stmt string
-	switch db.Name() {
-	case "mysql":
-		// MySQL has no partial indexes, so the index is on a column that only has
-		// the fingerprints of deploy keys. The binary collation keeps fingerprints
-		// that only differ in case apart.
-		stmt = "ALTER TABLE `public_key` " +
-			"ADD COLUMN `deploy_fingerprint` VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin " +
-			"AS (CASE WHEN `type` = 2 THEN `fingerprint` END) STORED, " +
-			"ADD UNIQUE INDEX `" + deployFingerprintIndex + "` (`deploy_fingerprint`)"
-	default:
-		stmt = "CREATE UNIQUE INDEX " + quote(db, deployFingerprintIndex) + " ON " + quote(db, "public_key") +
-			" (" + quote(db, "fingerprint") + ") WHERE " + quote(db, "type") + " = 2"
-	}
-	return errors.Wrap(db.Exec(stmt).Error, "create index")
+	err = db.Exec("CREATE UNIQUE INDEX " + quote(db, ownerFingerprintIndex) + " ON " + quote(db, "public_key") +
+		" (" + quote(db, "owner_id") + ", " + quote(db, "fingerprint") + ")").Error
+	return errors.Wrap(err, "create index")
 }
 
-// DropDeployFingerprintIndex drops the index that AddDeployFingerprintIndex
-// adds, e.g., to restore a backup that may have duplicates.
-func DropDeployFingerprintIndex(db *gorm.DB) error {
-	if !db.Migrator().HasIndex("public_key", deployFingerprintIndex) {
+// DropOwnerFingerprintIndex drops the index that AddOwnerFingerprintIndex adds,
+// e.g., to restore a backup that may have duplicates.
+func DropOwnerFingerprintIndex(db *gorm.DB) error {
+	if !db.Migrator().HasIndex("public_key", ownerFingerprintIndex) {
 		return nil
 	}
-	if db.Name() == "mysql" {
-		return db.Migrator().DropColumn("public_key", "deploy_fingerprint")
-	}
-	return db.Migrator().DropIndex("public_key", deployFingerprintIndex)
+	return db.Migrator().DropIndex("public_key", ownerFingerprintIndex)
 }
 
-func mergeDeployPublicKeys(tx *gorm.DB) error {
+func mergePublicKeys(tx *gorm.DB) error {
 	type publicKey struct {
 		ID          int64
+		OwnerID     int64
 		Content     string
 		Fingerprint string
 	}
 	var pkeys []publicKey
-	err := tx.Table("public_key").Where("type = ?", keyTypeDeploy).Order("id").Find(&pkeys).Error
+	err := tx.Table("public_key").Order("id").Find(&pkeys).Error
 	if err != nil {
 		return errors.Wrap(err, "list public keys")
 	}
 
-	kept := make(map[string]int64, len(pkeys))
+	type ownerFingerprint struct {
+		ownerID     int64
+		fingerprint string
+	}
+	kept := make(map[ownerFingerprint]int64, len(pkeys))
 	removed := make(map[string]bool)
 	for _, pkey := range pkeys {
 		// Fingerprints computed by "ssh-keygen" before OpenSSH 6.8 are MD5.
@@ -91,9 +78,9 @@ func mergeDeployPublicKeys(tx *gorm.DB) error {
 			fingerprint = ssh.FingerprintSHA256(key)
 		}
 
-		keptID, ok := kept[fingerprint]
+		keptID, ok := kept[ownerFingerprint{pkey.OwnerID, fingerprint}]
 		if !ok {
-			kept[fingerprint] = pkey.ID
+			kept[ownerFingerprint{pkey.OwnerID, fingerprint}] = pkey.ID
 			if fingerprint == pkey.Fingerprint {
 				continue
 			}
@@ -108,6 +95,7 @@ func mergeDeployPublicKeys(tx *gorm.DB) error {
 			continue
 		}
 
+		// Only public keys of deploy keys are referenced, by their deploy keys.
 		type deployKey struct {
 			ID     int64
 			RepoID int64

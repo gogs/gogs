@@ -127,6 +127,7 @@ All notable changes to Gogs are documented in this file.
 - Deleting a deploy key or its repository no longer leaves the key in `authorized_keys`, which blocked adding the key again. [#8648](https://github.com/gogs/gogs/pull/8648)
 - Adding an SSH or deploy key that fails, e.g., because the name is taken, no longer leaves the key in `authorized_keys`, where it could sign in as a key added later. [#8648](https://github.com/gogs/gogs/pull/8648)
 - A deploy key added to several repositories with different comments now works for all of them, instead of being denied for all but one. [#8648](https://github.com/gogs/gogs/pull/8648)
+- An SSH key can no longer be added again with another comment. Copies of the same key that a user already added are merged into the one added first. [#8648](https://github.com/gogs/gogs/pull/8648)
 
 ### Removed
 

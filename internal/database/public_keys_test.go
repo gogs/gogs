@@ -99,8 +99,11 @@ func publicKeysAdd(t *testing.T, ctx context.Context, s *PublicKeysStore) {
 	assert.True(t, strings.HasPrefix(key.Fingerprint, "SHA256:"), "fingerprint %q", key.Fingerprint)
 	assert.Contains(t, readAuthorizedKeys(t, authorizedKeys), fmt.Sprintf("key-%d", key.ID))
 
-	// The same content cannot be added again, even by another user.
+	// The same key cannot be added again, even by another user or with another
+	// comment.
 	_, err = s.Add(ctx, logger, 2, "desktop", content)
+	assert.True(t, IsErrKeyAlreadyExist(err), "got %v", err)
+	_, err = s.Add(ctx, logger, 1, "desktop", content+" alice@example.com")
 	assert.True(t, IsErrKeyAlreadyExist(err), "got %v", err)
 
 	// Names are unique for each user only.

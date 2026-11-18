@@ -146,11 +146,11 @@ func ImportDatabase(ctx context.Context, logger *logx.Logger, db *gorm.DB, dirPa
 	if err != nil {
 		return errors.Wrap(err, "migrate")
 	}
-	// Backups from before deploy keys were unique by their fingerprints may have
-	// duplicates, which are merged after the import.
-	err = migrations.DropDeployFingerprintIndex(db.WithContext(ctx))
+	// Backups from before public keys were unique by their owners and
+	// fingerprints may have duplicates, which are merged after the import.
+	err = migrations.DropOwnerFingerprintIndex(db.WithContext(ctx))
 	if err != nil {
-		return errors.Wrap(err, "drop unique index on fingerprints of deploy keys")
+		return errors.Wrap(err, "drop unique index on owners and fingerprints of public keys")
 	}
 
 	err = importLegacyTables(ctx, logger, dirPath, verbose)
@@ -190,9 +190,9 @@ func ImportDatabase(ctx context.Context, logger *logx.Logger, db *gorm.DB, dirPa
 		}
 	}
 
-	err = migrations.AddDeployFingerprintIndex(db.WithContext(ctx))
+	err = migrations.AddOwnerFingerprintIndex(db.WithContext(ctx))
 	if err != nil {
-		return errors.Wrap(err, "add unique index on fingerprints of deploy keys")
+		return errors.Wrap(err, "add unique index on owners and fingerprints of public keys")
 	}
 	return nil
 }

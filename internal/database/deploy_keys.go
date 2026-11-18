@@ -35,7 +35,8 @@ func (s *DeployKeysStore) Add(ctx context.Context, logger *logx.Logger, repoID i
 		return nil, err
 	}
 
-	// Deploy keys are unique by their fingerprints. Another repository adding
+	// Public keys of deploy keys, which have no owner, are unique by their
+	// fingerprints. Another repository adding
 	// the same key at the same time makes the first attempt violate that, and the
 	// second attempt then finds the public key the other one added.
 	for attempt := 1; ; attempt++ {
@@ -61,7 +62,7 @@ func (s *DeployKeysStore) Add(ctx context.Context, logger *logx.Logger, repoID i
 // added, if any.
 func (s *DeployKeysStore) add(ctx context.Context, repoID int64, name, content, fingerprint string) (key *DeployKey, added *PublicKey, _ error) {
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := checkKeyContent(tx, content); err != nil {
+		if err := checkKeyContent(tx, fingerprint, content); err != nil {
 			return err
 		}
 
@@ -75,11 +76,12 @@ func (s *DeployKeysStore) add(ctx context.Context, repoID int64, name, content, 
 		}
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			pkey = &PublicKey{
-				Content: content,
-				Mode:    AccessModeRead,
-				Type:    KeyTypeDeploy,
+				Fingerprint: fingerprint,
+				Content:     content,
+				Mode:        AccessModeRead,
+				Type:        KeyTypeDeploy,
 			}
-			if err = addKey(tx, pkey); err != nil {
+			if err = tx.Create(pkey).Error; err != nil {
 				return errors.Wrap(err, "add key")
 			}
 			added = pkey
