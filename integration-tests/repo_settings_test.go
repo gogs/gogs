@@ -372,6 +372,7 @@ func TestRepoSettingsTransfer(t *testing.T) {
 	newOwner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	repoSettingsAddCollaborator(t, repo, admin, database.AccessModeAdmin)
+	repoSettingsAddCollaborator(t, repo, newOwner, database.AccessModeWrite)
 	path := repoSettingsAPIPath(repo, "/settings/transfer")
 
 	status, body := repoSettingsSignedIn(t, admin).do(http.MethodPost, path, map[string]any{"repoName": repo.Name, "newOwner": newOwner.Name})
@@ -395,6 +396,14 @@ func TestRepoSettingsTransfer(t *testing.T) {
 	assert.Equal(t, newOwner.ID, got.OwnerID)
 	assert.DirExists(t, database.RepoPath(newOwner.Name, repo.Name))
 	assert.NoDirExists(t, database.RepoPath(owner.Name, repo.Name))
+	// The new owner stops being a collaborator, the others stay.
+	collaborators, err := got.GetCollaborators()
+	require.NoError(t, err)
+	var names []string
+	for _, c := range collaborators {
+		names = append(names, c.Name)
+	}
+	assert.Equal(t, []string{admin.Name}, names)
 }
 
 func TestRepoSettingsDeleteWiki(t *testing.T) {

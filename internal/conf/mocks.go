@@ -57,11 +57,15 @@ func SetMockRepository(t *testing.T, opts RepositoryOpts) {
 	})
 }
 
+var mockUI sync.Mutex
+
 func SetMockUI(t *testing.T, opts UIOpts) {
+	mockUI.Lock()
 	before := UI
 	UI = opts
 	t.Cleanup(func() {
 		UI = before
+		mockUI.Unlock()
 	})
 }
 

@@ -39,9 +39,11 @@ type DiscordEmbedObject struct {
 }
 
 type DiscordPayload struct {
-	Content   string                `json:"content"`
-	Username  string                `json:"username"`
-	AvatarURL string                `json:"avatar_url"`
+	Content string `json:"content"`
+	// Discord rejects an empty username, so it is left out to use the name
+	// set on the webhook in Discord.
+	Username  string                `json:"username,omitempty"`
+	AvatarURL string                `json:"avatar_url,omitempty"`
 	Embeds    []*DiscordEmbedObject `json:"embeds"`
 }
 
@@ -368,9 +370,12 @@ func getDiscordReleasePayload(p *apiv1types.WebhookReleasePayload) *DiscordPaylo
 }
 
 func GetDiscordPayload(p apiv1types.WebhookPayloader, event HookEventType, meta string) (payload *DiscordPayload, err error) {
+	// Discord webhooks created through API v1 have no settings.
 	slack := &SlackMeta{}
-	if err := json.Unmarshal([]byte(meta), slack); err != nil {
-		return nil, errors.Newf("unmarshal: %v", err)
+	if meta != "" {
+		if err := json.Unmarshal([]byte(meta), slack); err != nil {
+			return nil, errors.Newf("unmarshal: %v", err)
+		}
 	}
 
 	switch event {

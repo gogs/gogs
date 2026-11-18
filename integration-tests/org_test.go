@@ -2,6 +2,7 @@ package integrationtests
 
 import (
 	"bytes"
+	"encoding/json"
 	"image"
 	"image/png"
 	"mime/multipart"
@@ -168,19 +169,52 @@ func TestOrgDelete(t *testing.T) {
 
 	org := orgSeed(t, owner.ID)
 	orgAddMember(t, org, member.ID)
+	other := orgSeed(t, owner.ID)
+	orgAddMember(t, other, member.ID)
 	path := "/api/web/orgs/" + org.Name
+	hookIDs := map[int64]int64{}
+	for _, o := range []*database.User{org, other} {
+		var created struct {
+			ID int64 `json:"id"`
+		}
+		ownerClient.doJSON(http.MethodPost, "/api/web/orgs/"+o.Name+"/settings/hooks", map[string]any{
+			"type": "gogs", "url": "http://127.0.0.1:1/hook", "contentType": "json", "events": "send_everything", "active": true,
+		}, http.StatusCreated, &created)
+		hookIDs[o.ID] = created.ID
+	}
+	// An organization with repositories cannot be deleted, but the deliveries
+	// of a repository that is transferred out stay with the webhook.
+	repo := seedRepository(t, org.ID, CreateRepositoryOptions{})
+	apiV1CreateIssue(t, apiV1Client(t, owner), repo, map[string]any{"title": "delivered to the organization"})
+	status, body := ownerClient.do(http.MethodPost, repoSettingsAPIPath(repo, "/settings/transfer"), map[string]any{"repoName": repo.Name, "newOwner": owner.Name})
+	require.Equal(t, http.StatusOK, status, "response: %s", body)
+	tasks, err := database.Handle.HookTasks().ListByWebhook(t.Context(), hookIDs[org.ID], 1, 0)
+	require.NoError(t, err)
+	require.Len(t, tasks, 1)
 
-	status, body := orgSignedIn(t, member).do(http.MethodDelete, path, map[string]any{"password": member.Password})
+	status, body = orgSignedIn(t, member).do(http.MethodDelete, path, map[string]any{"password": member.Password})
 	assert.Equal(t, http.StatusForbidden, status, "member, response: %s", body)
 	status, body = ownerClient.do(http.MethodDelete, path, map[string]any{"password": owner.Password + "x"})
 	assert.Equal(t, http.StatusUnauthorized, status, "wrong password, response: %s", body)
-	_, err := database.Handle.Users().GetByID(t.Context(), org.ID)
+	_, err = database.Handle.Users().GetByID(t.Context(), org.ID)
 	require.NoError(t, err, "organization deleted before the owner confirmed")
 
 	status, body = ownerClient.do(http.MethodDelete, path, map[string]any{"password": owner.Password})
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 	_, err = database.Handle.Users().GetByID(t.Context(), org.ID)
 	assert.True(t, database.IsErrUserNotExist(err), "organization still exists: %v", err)
+	// Only the memberships of the deleted organization are gone.
+	assert.False(t, database.IsOrganizationMember(org.ID, member.ID))
+	assert.False(t, database.IsOrganizationMember(org.ID, owner.ID))
+	assert.True(t, database.IsOrganizationMember(other.ID, member.ID))
+	assert.True(t, database.IsOrganizationMember(other.ID, owner.ID))
+	_, err = database.Handle.Webhooks().GetOfOrg(t.Context(), org.ID, hookIDs[org.ID])
+	assert.True(t, database.IsErrWebhookNotExist(err), "webhook of deleted organization still exists: %v", err)
+	tasks, err = database.Handle.HookTasks().ListByWebhook(t.Context(), hookIDs[org.ID], 1, 0)
+	require.NoError(t, err)
+	assert.Empty(t, tasks, "deliveries of webhooks of deleted organization")
+	_, err = database.Handle.Webhooks().GetOfOrg(t.Context(), other.ID, hookIDs[other.ID])
+	assert.NoError(t, err)
 }
 
 func TestOrgWebhooks(t *testing.T) {
@@ -206,7 +240,7 @@ func TestOrgWebhooks(t *testing.T) {
 		ID int64 `json:"id"`
 	}
 	c.doJSON(http.MethodPost, path, hook, http.StatusCreated, &created)
-	stored, err := database.GetWebhookByOrgID(org.ID, created.ID)
+	stored, err := database.Handle.Webhooks().GetOfOrg(t.Context(), org.ID, created.ID)
 	require.NoError(t, err)
 	assert.Equal(t, "http://127.0.0.1:1/hook", stored.URL)
 	assert.Equal(t, "s3cret", stored.Secret)
@@ -255,10 +289,71 @@ func TestOrgWebhooks(t *testing.T) {
 
 	status, body = c.do(http.MethodDelete, hookPath, orgNoBody)
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-	_, err = database.GetWebhookByOrgID(org.ID, created.ID)
+	_, err = database.Handle.Webhooks().GetOfOrg(t.Context(), org.ID, created.ID)
 	assert.True(t, database.IsErrWebhookNotExist(err), "webhook still exists: %v", err)
 	status, body = c.do(http.MethodGet, hookPath, nil)
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
+}
+
+// Issues of a repository of the organization reach the webhooks of both the
+// repository and the organization. Issues of a repository of a user reach no
+// webhook of an organization.
+func TestOrgWebhookEvents(t *testing.T) {
+	owner := seedUser(t, CreateUserOptions{})
+	org := orgSeed(t, owner.ID)
+	orgRepo := seedRepository(t, org.ID, CreateRepositoryOptions{})
+	userRepo := seedRepository(t, owner.ID, CreateRepositoryOptions{})
+	c := orgSignedIn(t, owner)
+	api := apiV1Client(t, owner)
+	issuesOnly := func(url string) map[string]any {
+		return map[string]any{
+			"type":         "gogs",
+			"url":          url,
+			"contentType":  "json",
+			"events":       "choose_events",
+			"chosenEvents": map[string]bool{"issues": true},
+			"active":       true,
+		}
+	}
+	var created struct {
+		ID int64 `json:"id"`
+	}
+	repoURL, repoDeliveries := repoSettingsWebhookReceiver(t)
+	c.doJSON(http.MethodPost, repoSettingsAPIPath(orgRepo, "/settings/hooks"), issuesOnly(repoURL), http.StatusCreated, &created)
+	repoHookID := created.ID
+	orgURL, orgDeliveries := repoSettingsWebhookReceiver(t)
+	c.doJSON(http.MethodPost, "/api/web/orgs/"+org.Name+"/settings/hooks", issuesOnly(orgURL), http.StatusCreated, &created)
+	orgHookID := created.ID
+
+	// The issue of the user repository is created first, so a delivery of it
+	// to the organization webhook would be queued before the other.
+	apiV1CreateIssue(t, api, userRepo, map[string]any{"title": "of user"})
+	apiV1CreateIssue(t, api, orgRepo, map[string]any{"title": "of organization"})
+
+	type issuesPayload struct {
+		Action string `json:"action"`
+		Issue  struct {
+			Title string `json:"title"`
+		} `json:"issue"`
+		Repo struct {
+			FullName string `json:"full_name"`
+		} `json:"repository"`
+	}
+	for name, deliveries := range map[string]<-chan repoSettingsDelivery{"repository": repoDeliveries, "organization": orgDeliveries} {
+		d := repoSettingsNextDelivery(t, deliveries)
+		assert.Equal(t, "issues", d.Header.Get("X-Gogs-Event"), name)
+		var payload issuesPayload
+		require.NoError(t, json.Unmarshal(d.Body, &payload), "payload: %s", d.Body)
+		assert.Equal(t, "opened", payload.Action, name)
+		assert.Equal(t, "of organization", payload.Issue.Title, name)
+		assert.Equal(t, org.Name+"/"+orgRepo.Name, payload.Repo.FullName, name)
+	}
+
+	for _, id := range []int64{repoHookID, orgHookID} {
+		tasks, err := database.Handle.HookTasks().ListByWebhook(t.Context(), id, 1, 10)
+		require.NoError(t, err)
+		assert.Len(t, tasks, 1, "deliveries of webhook %d", id)
+	}
 }
 
 // orgAvatarForm returns a multipart form with the content as the avatar file.

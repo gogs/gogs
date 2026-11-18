@@ -228,7 +228,7 @@ func (s *ActionsStore) MirrorSyncPush(ctx context.Context, logger *logx.Logger, 
 
 	opts.Commits.CompareURL = repox.CompareCommitsPath(opts.Owner.Name, opts.Repo.Name, opts.OldCommitID, opts.NewCommitID)
 	apiPusher := opts.Owner.APIFormat()
-	err = PrepareWebhooks(logger,
+	err = newWebhooksStore(s.db).Prepare(ctx, logger,
 		opts.Repo,
 		HookEventTypePush,
 		&apiv1types.WebhookPushPayload{
@@ -498,7 +498,7 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, logger *logx.Logger, opts
 	apiRepo := opts.Repo.APIFormat(opts.Owner)
 	apiPusher := pusher.APIFormat()
 	if isDelRef {
-		err = PrepareWebhooks(logger,
+		err = newWebhooksStore(s.db).Prepare(ctx, logger,
 			opts.Repo,
 			HookEventTypeDelete,
 			&apiv1types.WebhookDeletePayload{
@@ -542,7 +542,7 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, logger *logx.Logger, opts
 
 	var compareURL string
 	if isNewRef {
-		err = PrepareWebhooks(logger,
+		err = newWebhooksStore(s.db).Prepare(ctx, logger,
 			opts.Repo,
 			HookEventTypeCreate,
 			&apiv1types.WebhookCreatePayload{
@@ -575,7 +575,7 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, logger *logx.Logger, opts
 		return errors.Wrap(err, "convert commits to API format")
 	}
 
-	err = PrepareWebhooks(logger,
+	err = newWebhooksStore(s.db).Prepare(ctx, logger,
 		opts.Repo,
 		HookEventTypePush,
 		&apiv1types.WebhookPushPayload{
@@ -637,7 +637,7 @@ func (s *ActionsStore) PushTag(ctx context.Context, logger *logx.Logger, opts Pu
 	apiRepo := opts.Repo.APIFormat(opts.Owner)
 	apiPusher := pusher.APIFormat()
 	if git.IsEmptyID(opts.NewCommitID) {
-		err = PrepareWebhooks(logger,
+		err = newWebhooksStore(s.db).Prepare(ctx, logger,
 			opts.Repo,
 			HookEventTypeDelete,
 			&apiv1types.WebhookDeletePayload{
@@ -660,7 +660,7 @@ func (s *ActionsStore) PushTag(ctx context.Context, logger *logx.Logger, opts Pu
 		return nil
 	}
 
-	err = PrepareWebhooks(logger,
+	err = newWebhooksStore(s.db).Prepare(ctx, logger,
 		opts.Repo,
 		HookEventTypeCreate,
 		&apiv1types.WebhookCreatePayload{

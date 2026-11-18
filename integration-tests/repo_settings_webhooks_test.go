@@ -9,7 +9,9 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -161,7 +163,7 @@ func TestRepoSettingsWebhooks(t *testing.T) {
 	assert.True(t, detail.Settings.ChosenEvents["push"])
 	assert.True(t, detail.Settings.ChosenEvents["issues"])
 	assert.False(t, detail.Settings.ChosenEvents["release"])
-	stored, err := database.GetWebhookOfRepoByID(repo.ID, id)
+	stored, err := database.Handle.Webhooks().GetOfRepo(t.Context(), repo.ID, id)
 	require.NoError(t, err)
 	assert.Equal(t, secret, stored.Secret)
 	assert.True(t, stored.ChooseEvents)
@@ -227,7 +229,7 @@ func TestRepoSettingsWebhooks(t *testing.T) {
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 	status, body = c.do(http.MethodGet, hookPath, nil)
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
-	_, err = database.GetWebhookOfRepoByID(repo.ID, id)
+	_, err = database.Handle.Webhooks().GetOfRepo(t.Context(), repo.ID, id)
 	assert.True(t, database.IsErrWebhookNotExist(err), "webhook not deleted: %v", err)
 }
 
@@ -248,11 +250,11 @@ func TestRepoSettingsTriggerTask(t *testing.T) {
 	var task *database.HookTask
 	require.Eventually(t, func() bool {
 		var err error
-		task, err = database.GetHookTaskOfWebhookByUUID(id, uuid)
+		task, err = database.Handle.HookTasks().GetByUUID(t.Context(), id, uuid)
 		return err == nil && task.IsDelivered && task.Delivered > 0
 	}, 30*time.Second, 200*time.Millisecond, "delivery not recorded")
 	task.IsDelivered = false
-	require.NoError(t, database.UpdateHookTask(task))
+	require.NoError(t, database.Handle.HookTasks().Update(t.Context(), task))
 
 	u, err := database.Handle.Users().GetByID(t.Context(), owner.ID)
 	require.NoError(t, err)
@@ -270,4 +272,341 @@ func TestRepoSettingsTriggerTask(t *testing.T) {
 	status, body = trigger(hex.EncodeToString(sum[:]))
 	require.Equal(t, http.StatusAccepted, status, "response: %s", body)
 	assert.Equal(t, uuid, repoSettingsNextDelivery(t, deliveries).Header.Get("X-Gogs-Delivery"))
+}
+
+// A webhook is reachable only through the repository or organization it
+// belongs to, even by the admin of another one.
+func TestRepoSettingsWebhooksOfOthers(t *testing.T) {
+	victim := seedUser(t, CreateUserOptions{})
+	victimRepo := seedRepository(t, victim.ID, CreateRepositoryOptions{AutoInit: true})
+	victimClient := repoSettingsSignedIn(t, victim)
+	url, deliveries := repoSettingsWebhookReceiver(t)
+	victimHookID := repoSettingsCreateWebhook(t, victimClient, victimRepo, url, "victim secret")
+	status, body := victimClient.do(http.MethodPost, repoSettingsAPIPath(victimRepo, "/settings/hooks/"+strconv.FormatInt(victimHookID, 10)+"/test"), repoSettingsNoBody)
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	uuid := repoSettingsNextDelivery(t, deliveries).Header.Get("X-Gogs-Delivery")
+	require.Eventually(t, func() bool {
+		task, err := database.Handle.HookTasks().GetByUUID(t.Context(), victimHookID, uuid)
+		return err == nil && task.IsDelivered && task.Delivered > 0
+	}, 30*time.Second, 200*time.Millisecond, "delivery not recorded")
+
+	victimOrg := orgSeed(t, victim.ID)
+	var victimOrgHook struct {
+		ID int64 `json:"id"`
+	}
+	victimClient.doJSON(http.MethodPost, "/api/web/orgs/"+victimOrg.Name+"/settings/hooks", map[string]any{
+		"type": "gogs", "url": url, "contentType": "json", "events": "push_only", "active": true,
+	}, http.StatusCreated, &victimOrgHook)
+
+	attacker := seedUser(t, CreateUserOptions{})
+	attackerRepo := seedRepository(t, attacker.ID, CreateRepositoryOptions{AutoInit: true})
+	attackerOrg := orgSeed(t, attacker.ID)
+	c := repoSettingsSignedIn(t, attacker)
+	api := apiV1Client(t, attacker)
+
+	for _, id := range []int64{victimHookID, victimOrgHook.ID} {
+		hookPath := repoSettingsAPIPath(attackerRepo, "/settings/hooks/"+strconv.FormatInt(id, 10))
+		for _, req := range []struct {
+			method string
+			path   string
+			body   any
+		}{
+			{http.MethodGet, hookPath, nil},
+			{http.MethodPatch, hookPath, map[string]any{"url": "http://127.0.0.1:1/stolen", "contentType": "json", "events": "send_everything", "active": true}},
+			{http.MethodDelete, hookPath, repoSettingsNoBody},
+			{http.MethodPost, hookPath + "/test", repoSettingsNoBody},
+			{http.MethodPost, hookPath + "/deliveries/" + uuid + "/redeliver", repoSettingsNoBody},
+			{http.MethodPatch, apiV1RepoPath(attackerRepo, "/hooks/"+apiV1Itoa(id)), map[string]any{"config": map[string]string{"url": "http://127.0.0.1:1/stolen"}}},
+		} {
+			caller := c
+			if strings.HasPrefix(req.path, "/api/v1/") {
+				caller = api
+			}
+			status, body := caller.do(req.method, req.path, req.body)
+			assert.Equal(t, http.StatusNotFound, status, "%s %s, response: %s", req.method, req.path, body)
+		}
+		// Deleting through the API answers the same whether or not the
+		// webhook exists.
+		status, body := api.do(http.MethodDelete, apiV1RepoPath(attackerRepo, "/hooks/"+apiV1Itoa(id)), nil)
+		assert.Equal(t, http.StatusNoContent, status, "response: %s", body)
+
+		orgHookPath := "/api/web/orgs/" + attackerOrg.Name + "/settings/hooks/" + strconv.FormatInt(id, 10)
+		status, body = c.do(http.MethodGet, orgHookPath, nil)
+		assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
+		status, body = c.do(http.MethodPatch, orgHookPath, map[string]any{"url": "http://127.0.0.1:1/stolen", "contentType": "json", "events": "send_everything", "active": true})
+		assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
+		status, body = c.do(http.MethodDelete, orgHookPath, orgNoBody)
+		assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
+	}
+
+	hook, err := database.Handle.Webhooks().GetOfRepo(t.Context(), victimRepo.ID, victimHookID)
+	require.NoError(t, err)
+	assert.Equal(t, url, hook.URL)
+	assert.Equal(t, "victim secret", hook.Secret)
+	assert.True(t, hook.PushOnly)
+	orgHook, err := database.Handle.Webhooks().GetOfOrg(t.Context(), victimOrg.ID, victimOrgHook.ID)
+	require.NoError(t, err)
+	assert.Equal(t, url, orgHook.URL)
+	task, err := database.Handle.HookTasks().GetByUUID(t.Context(), victimHookID, uuid)
+	require.NoError(t, err)
+	assert.True(t, task.IsDelivered, "delivery queued again")
+	select {
+	case d := <-deliveries:
+		t.Fatalf("unexpected delivery %q", d.Header.Get("X-Gogs-Delivery"))
+	default:
+	}
+}
+
+// A redelivery that gets no response shows as failed, although the delivery
+// succeeded before.
+func TestRepoSettingsWebhookFailedRedelivery(t *testing.T) {
+	owner := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	c := repoSettingsSignedIn(t, owner)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("received"))
+	}))
+	t.Cleanup(srv.Close)
+	id := repoSettingsCreateWebhook(t, c, repo, srv.URL+"/hook", "")
+	hooksPath := repoSettingsAPIPath(repo, "/settings/hooks")
+	hookPath := hooksPath + "/" + strconv.FormatInt(id, 10)
+
+	lastStatus := func() string {
+		var list struct {
+			Items []struct {
+				LastStatus string `json:"lastStatus"`
+			} `json:"items"`
+		}
+		c.doJSON(http.MethodGet, hooksPath, nil, http.StatusOK, &list)
+		require.Len(t, list.Items, 1)
+		return list.Items[0].LastStatus
+	}
+	// waitForDelivery returns the webhook once its only delivery has a
+	// response that satisfies the condition.
+	waitForDelivery := func(cond func(status int, body string) bool) repoSettingsWebhookDetail {
+		var detail repoSettingsWebhookDetail
+		require.Eventually(t, func() bool {
+			detail = repoSettingsWebhookDetail{}
+			code, body := c.do(http.MethodGet, hookPath, nil)
+			return code == http.StatusOK && json.Unmarshal(body, &detail) == nil &&
+				len(detail.Deliveries) == 1 && detail.Deliveries[0].Response != nil &&
+				cond(detail.Deliveries[0].Response.Status, detail.Deliveries[0].Response.Body)
+		}, 30*time.Second, 200*time.Millisecond, "delivery not recorded")
+		return detail
+	}
+
+	status, body := c.do(http.MethodPost, hookPath+"/test", repoSettingsNoBody)
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	detail := waitForDelivery(func(status int, _ string) bool { return status == http.StatusOK })
+	assert.True(t, detail.Deliveries[0].Succeeded)
+	assert.Equal(t, "succeeded", lastStatus())
+
+	srv.Close()
+	status, body = c.do(http.MethodPost, hookPath+"/deliveries/"+detail.Deliveries[0].UUID+"/redeliver", repoSettingsNoBody)
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	detail = waitForDelivery(func(_ int, body string) bool { return strings.HasPrefix(body, "Delivery: ") })
+	assert.False(t, detail.Deliveries[0].Succeeded)
+	assert.Equal(t, "failed", lastStatus())
+}
+
+// Deleting a repository deletes its webhooks and their deliveries, and no
+// others.
+func TestRepoSettingsWebhooksOfDeletedRepository(t *testing.T) {
+	owner := seedUser(t, CreateUserOptions{})
+	org := orgSeed(t, owner.ID)
+	repo := seedRepository(t, org.ID, CreateRepositoryOptions{AutoInit: true})
+	other := seedRepository(t, org.ID, CreateRepositoryOptions{AutoInit: true})
+	c := repoSettingsSignedIn(t, owner)
+	url, deliveries := repoSettingsWebhookReceiver(t)
+	var orgHook struct {
+		ID int64 `json:"id"`
+	}
+	c.doJSON(http.MethodPost, "/api/web/orgs/"+org.Name+"/settings/hooks", map[string]any{
+		"type": "gogs", "url": url, "contentType": "json", "events": "push_only", "active": true,
+	}, http.StatusCreated, &orgHook)
+	hookIDs := map[int64]int64{}
+	for _, r := range []*Repository{repo, other} {
+		id := repoSettingsCreateWebhook(t, c, r, url, "")
+		hookIDs[r.ID] = id
+		status, body := c.do(http.MethodPost, repoSettingsAPIPath(r, "/settings/hooks/"+strconv.FormatInt(id, 10)+"/test"), repoSettingsNoBody)
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+		uuid := repoSettingsNextDelivery(t, deliveries).Header.Get("X-Gogs-Delivery")
+		require.Eventually(t, func() bool {
+			task, err := database.Handle.HookTasks().GetByUUID(t.Context(), id, uuid)
+			return err == nil && task.Delivered > 0
+		}, 30*time.Second, 200*time.Millisecond, "delivery not recorded")
+	}
+
+	// A repository is deleted only with its own owner and ID.
+	for _, ids := range [][2]int64{{owner.ID, repo.ID}, {0, repo.ID}, {org.ID, 0}} {
+		assert.True(t, database.IsErrRepoNotExist(database.DeleteRepository(logger, ids[0], ids[1])), "owner %d, repository %d", ids[0], ids[1])
+	}
+	for _, r := range []*Repository{repo, other} {
+		_, err := database.Handle.Repositories().GetByID(t.Context(), r.ID)
+		require.NoError(t, err)
+	}
+
+	require.NoError(t, database.DeleteRepository(logger, org.ID, repo.ID))
+	_, err := database.Handle.Webhooks().GetOfRepo(t.Context(), repo.ID, hookIDs[repo.ID])
+	assert.True(t, database.IsErrWebhookNotExist(err), "webhook not deleted: %v", err)
+	tasks, err := database.Handle.HookTasks().ListByWebhook(t.Context(), hookIDs[repo.ID], 1, 10)
+	require.NoError(t, err)
+	assert.Empty(t, tasks)
+
+	_, err = database.Handle.Webhooks().GetOfRepo(t.Context(), other.ID, hookIDs[other.ID])
+	assert.NoError(t, err)
+	tasks, err = database.Handle.HookTasks().ListByWebhook(t.Context(), hookIDs[other.ID], 1, 10)
+	require.NoError(t, err)
+	assert.Len(t, tasks, 1)
+	_, err = database.Handle.Webhooks().GetOfOrg(t.Context(), org.ID, orgHook.ID)
+	assert.NoError(t, err)
+}
+
+// repoSettingsEvent is the event of a webhook delivery and the parts of its
+// payload that tell pushes, creations and deletions apart.
+type repoSettingsEvent struct {
+	Event   string
+	Ref     string
+	RefType string
+	After   string
+	Commits []string
+}
+
+func repoSettingsNextEvent(t *testing.T, deliveries <-chan repoSettingsDelivery) repoSettingsEvent {
+	t.Helper()
+
+	d := repoSettingsNextDelivery(t, deliveries)
+	var payload struct {
+		Ref     string `json:"ref"`
+		RefType string `json:"ref_type"`
+		After   string `json:"after"`
+		Commits []struct {
+			Message string `json:"message"`
+		} `json:"commits"`
+	}
+	require.NoError(t, json.Unmarshal(d.Body, &payload), "payload: %s", d.Body)
+	e := repoSettingsEvent{Event: d.Header.Get("X-Gogs-Event"), Ref: payload.Ref, RefType: payload.RefType, After: payload.After}
+	for _, c := range payload.Commits {
+		e.Commits = append(e.Commits, strings.TrimSpace(c.Message))
+	}
+	return e
+}
+
+// repoSettingsCreateWebhookFor adds a Gogs webhook that sends the events as
+// JSON to the URL, and returns its ID.
+func repoSettingsCreateWebhookFor(t *testing.T, c *client, repo *Repository, url string, active bool, events map[string]bool) int64 {
+	t.Helper()
+
+	var created struct {
+		ID int64 `json:"id"`
+	}
+	c.doJSON(http.MethodPost, repoSettingsAPIPath(repo, "/settings/hooks"), map[string]any{
+		"type":         "gogs",
+		"url":          url,
+		"contentType":  "json",
+		"events":       "choose_events",
+		"chosenEvents": events,
+		"active":       active,
+	}, http.StatusCreated, &created)
+	require.NotZero(t, created.ID)
+	return created.ID
+}
+
+// Pushing over Git delivers push, create and delete events to the active
+// webhooks subscribed to them, and to no others.
+func TestRepoSettingsWebhookGitPush(t *testing.T) {
+	owner := seedUser(t, CreateUserOptions{})
+	for _, name := range []string{"http", "ssh"} {
+		t.Run(name, func(t *testing.T) {
+			repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+			branch := repoSettingsDefaultBranch(t, repo)
+			c := repoSettingsSignedIn(t, owner)
+			allURL, all := repoSettingsWebhookReceiver(t)
+			allID := repoSettingsCreateWebhookFor(t, c, repo, allURL, true, map[string]bool{"push": true, "create": true, "delete": true})
+			createURL, creations := repoSettingsWebhookReceiver(t)
+			createID := repoSettingsCreateWebhookFor(t, c, repo, createURL, true, map[string]bool{"create": true})
+			noneURL, none := repoSettingsWebhookReceiver(t)
+			issuesID := repoSettingsCreateWebhookFor(t, c, repo, noneURL, true, map[string]bool{"issues": true})
+			inactiveID := repoSettingsCreateWebhookFor(t, c, repo, noneURL, false, map[string]bool{"push": true, "create": true, "delete": true})
+
+			remote := gitTransports(t, owner, repo)[name]
+			dir := filepath.Join(t.TempDir(), "clone")
+			out, err := remote.git(filepath.Dir(dir), "clone", remote.url, dir)
+			require.NoError(t, err, "clone: %s", out)
+			push := func(refspecs ...string) {
+				t.Helper()
+				out, err := remote.git(dir, append([]string{"push", "origin"}, refspecs...)...)
+				require.NoError(t, err, "push: %s", out)
+			}
+
+			file := UniqueName("file-") + ".txt"
+			sha := gitCommitFile(t, dir, file)
+			push(branch)
+			assert.Equal(t, repoSettingsEvent{Event: "push", Ref: "refs/heads/" + branch, After: sha, Commits: []string{"Add " + file}}, repoSettingsNextEvent(t, all))
+
+			first := file
+			file = UniqueName("file-") + ".txt"
+			sha = gitCommitFile(t, dir, file)
+			push("HEAD:refs/heads/feature")
+			assert.Equal(t, repoSettingsEvent{Event: "create", Ref: "feature", RefType: "branch"}, repoSettingsNextEvent(t, all))
+			// The push of a new branch lists all its commits, newest first.
+			assert.Equal(t, repoSettingsEvent{Event: "push", Ref: "refs/heads/feature", After: sha, Commits: []string{"Add " + file, "Add " + first, "Initial commit"}}, repoSettingsNextEvent(t, all))
+			assert.Equal(t, repoSettingsEvent{Event: "create", Ref: "feature", RefType: "branch"}, repoSettingsNextEvent(t, creations))
+
+			gitRun(t, dir, "tag", "v1")
+			push("v1")
+			assert.Equal(t, repoSettingsEvent{Event: "create", Ref: "v1", RefType: "tag"}, repoSettingsNextEvent(t, all))
+			assert.Equal(t, repoSettingsEvent{Event: "create", Ref: "v1", RefType: "tag"}, repoSettingsNextEvent(t, creations))
+
+			push(":feature")
+			assert.Equal(t, repoSettingsEvent{Event: "delete", Ref: "feature", RefType: "branch"}, repoSettingsNextEvent(t, all))
+			push(":v1")
+			assert.Equal(t, repoSettingsEvent{Event: "delete", Ref: "v1", RefType: "tag"}, repoSettingsNextEvent(t, all))
+
+			// Every event creates the deliveries of all webhooks at once, so the
+			// others would exist by now.
+			for id, want := range map[int64]int{allID: 6, createID: 2, issuesID: 0, inactiveID: 0} {
+				tasks, err := database.Handle.HookTasks().ListByWebhook(t.Context(), id, 1, 0)
+				require.NoError(t, err)
+				assert.Len(t, tasks, want, "deliveries of webhook %d", id)
+			}
+			for name, deliveries := range map[string]<-chan repoSettingsDelivery{"all": all, "create": creations, "none": none} {
+				select {
+				case d := <-deliveries:
+					t.Errorf("unexpected %q delivery to %s receiver: %s", d.Header.Get("X-Gogs-Event"), name, d.Body)
+				default:
+				}
+			}
+		})
+	}
+}
+
+// Deleting and restoring the head branch of a merged pull request delivers
+// delete and create events.
+func TestRepoSettingsWebhookPullHeadBranch(t *testing.T) {
+	owner := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	c := repoSettingsSignedIn(t, owner)
+	branch := UniqueName("feature-")
+	pullCommitToNewBranch(t, c, repo, branch, "feature.txt", "Hello pull request\n")
+	index := pullCreate(t, c, repo, branch, "Feature")
+	pullWaitMergeable(t, c, repo, index)
+	status, body := c.do(http.MethodPost, issueAPIPath(repo, "pulls", index, "merge"), map[string]any{"style": "create_merge_commit"})
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+
+	url, deliveries := repoSettingsWebhookReceiver(t)
+	id := repoSettingsCreateWebhookFor(t, c, repo, url, true, map[string]bool{"create": true, "delete": true})
+	path := issueAPIPath(repo, "pulls", index, "branch")
+
+	status, body = c.do(http.MethodDelete, path, map[string]any{})
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	assert.Equal(t, repoSettingsEvent{Event: "delete", Ref: branch, RefType: "branch"}, repoSettingsNextEvent(t, deliveries))
+
+	status, body = c.do(http.MethodPost, path, map[string]any{})
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	assert.Equal(t, repoSettingsEvent{Event: "create", Ref: branch, RefType: "branch"}, repoSettingsNextEvent(t, deliveries))
+
+	tasks, err := database.Handle.HookTasks().ListByWebhook(t.Context(), id, 1, 0)
+	require.NoError(t, err)
+	assert.Len(t, tasks, 2)
 }

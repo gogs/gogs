@@ -378,6 +378,16 @@ func TestAPIV1Hooks(t *testing.T) {
 	status, body = apiV1Client(t, seedUser(t, CreateUserOptions{})).do(http.MethodGet, apiV1RepoPath(repo, "/hooks"), nil)
 	assert.Equal(t, http.StatusForbidden, status, "listed by another user, response: %s", body)
 
+	// An ID that is not a webhook of the repository neither edits nor deletes
+	// one.
+	status, body = api.do(http.MethodPatch, apiV1RepoPath(repo, "/hooks/0"), map[string]any{"active": true})
+	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
+	status, body = api.do(http.MethodDelete, apiV1RepoPath(repo, "/hooks/0"), nil)
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	hooks = nil
+	api.doJSON(http.MethodGet, apiV1RepoPath(repo, "/hooks"), nil, http.StatusOK, &hooks)
+	assert.Equal(t, []hook{want}, hooks)
+
 	status, body = api.do(http.MethodDelete, apiV1RepoPath(repo, "/hooks/"+apiV1Itoa(created.ID)), nil)
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 	hooks = nil

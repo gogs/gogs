@@ -232,7 +232,7 @@ func (issue *Issue) sendLabelUpdatedWebhook(logger *logx.Logger, doer *User) {
 			logger.Error("Failed to load issue", "error", err)
 			return
 		}
-		err = PrepareWebhooks(logger, issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
+		err = Handle.Webhooks().Prepare(context.TODO(), logger, issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
 			Action:      apiv1types.WebhookIssueLabelUpdated,
 			Index:       issue.Index,
 			PullRequest: issue.PullRequest.APIFormat(logger),
@@ -240,7 +240,7 @@ func (issue *Issue) sendLabelUpdatedWebhook(logger *logx.Logger, doer *User) {
 			Sender:      doer.APIFormat(),
 		})
 	} else {
-		err = PrepareWebhooks(logger, issue.Repo, HookEventTypeIssues, &apiv1types.WebhookIssuesPayload{
+		err = Handle.Webhooks().Prepare(context.TODO(), logger, issue.Repo, HookEventTypeIssues, &apiv1types.WebhookIssuesPayload{
 			Action:     apiv1types.WebhookIssueLabelUpdated,
 			Index:      issue.Index,
 			Issue:      issue.APIFormat(),
@@ -345,7 +345,7 @@ func (issue *Issue) ClearLabels(logger *logx.Logger, doer *User) (err error) {
 			logger.Error("Failed to load issue", "error", err)
 			return err
 		}
-		err = PrepareWebhooks(logger, issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
+		err = Handle.Webhooks().Prepare(context.TODO(), logger, issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
 			Action:      apiv1types.WebhookIssueLabelCleared,
 			Index:       issue.Index,
 			PullRequest: issue.PullRequest.APIFormat(logger),
@@ -353,7 +353,7 @@ func (issue *Issue) ClearLabels(logger *logx.Logger, doer *User) (err error) {
 			Sender:      doer.APIFormat(),
 		})
 	} else {
-		err = PrepareWebhooks(logger, issue.Repo, HookEventTypeIssues, &apiv1types.WebhookIssuesPayload{
+		err = Handle.Webhooks().Prepare(context.TODO(), logger, issue.Repo, HookEventTypeIssues, &apiv1types.WebhookIssuesPayload{
 			Action:     apiv1types.WebhookIssueLabelCleared,
 			Index:      issue.Index,
 			Issue:      issue.APIFormat(),
@@ -484,7 +484,7 @@ func (issue *Issue) ChangeStatus(logger *logx.Logger, doer *User, repo *Reposito
 		} else {
 			apiPullRequest.Action = apiv1types.WebhookIssueReopened
 		}
-		err = PrepareWebhooks(logger, repo, HookEventTypePullRequest, apiPullRequest)
+		err = Handle.Webhooks().Prepare(context.TODO(), logger, repo, HookEventTypePullRequest, apiPullRequest)
 	} else {
 		apiIssues := &apiv1types.WebhookIssuesPayload{
 			Index:      issue.Index,
@@ -497,7 +497,7 @@ func (issue *Issue) ChangeStatus(logger *logx.Logger, doer *User, repo *Reposito
 		} else {
 			apiIssues.Action = apiv1types.WebhookIssueReopened
 		}
-		err = PrepareWebhooks(logger, repo, HookEventTypeIssues, apiIssues)
+		err = Handle.Webhooks().Prepare(context.TODO(), logger, repo, HookEventTypeIssues, apiIssues)
 	}
 	if err != nil {
 		logger.Error("Failed to prepare webhooks", "isPull", issue.IsPull, "isClosed", isClosed, "error", err)
@@ -515,7 +515,7 @@ func (issue *Issue) ChangeTitle(logger *logx.Logger, doer *User, title string) (
 
 	if issue.IsPull {
 		issue.PullRequest.Issue = issue
-		err = PrepareWebhooks(logger, issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
+		err = Handle.Webhooks().Prepare(context.TODO(), logger, issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
 			Action:      apiv1types.WebhookIssueEdited,
 			Index:       issue.Index,
 			PullRequest: issue.PullRequest.APIFormat(logger),
@@ -528,7 +528,7 @@ func (issue *Issue) ChangeTitle(logger *logx.Logger, doer *User, title string) (
 			Sender:     doer.APIFormat(),
 		})
 	} else {
-		err = PrepareWebhooks(logger, issue.Repo, HookEventTypeIssues, &apiv1types.WebhookIssuesPayload{
+		err = Handle.Webhooks().Prepare(context.TODO(), logger, issue.Repo, HookEventTypeIssues, &apiv1types.WebhookIssuesPayload{
 			Action: apiv1types.WebhookIssueEdited,
 			Index:  issue.Index,
 			Issue:  issue.APIFormat(),
@@ -557,7 +557,7 @@ func (issue *Issue) ChangeContent(logger *logx.Logger, doer *User, content strin
 
 	if issue.IsPull {
 		issue.PullRequest.Issue = issue
-		err = PrepareWebhooks(logger, issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
+		err = Handle.Webhooks().Prepare(context.TODO(), logger, issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
 			Action:      apiv1types.WebhookIssueEdited,
 			Index:       issue.Index,
 			PullRequest: issue.PullRequest.APIFormat(logger),
@@ -570,7 +570,7 @@ func (issue *Issue) ChangeContent(logger *logx.Logger, doer *User, content strin
 			Sender:     doer.APIFormat(),
 		})
 	} else {
-		err = PrepareWebhooks(logger, issue.Repo, HookEventTypeIssues, &apiv1types.WebhookIssuesPayload{
+		err = Handle.Webhooks().Prepare(context.TODO(), logger, issue.Repo, HookEventTypeIssues, &apiv1types.WebhookIssuesPayload{
 			Action: apiv1types.WebhookIssueEdited,
 			Index:  issue.Index,
 			Issue:  issue.APIFormat(),
@@ -617,7 +617,7 @@ func (issue *Issue) ChangeAssignee(logger *logx.Logger, doer *User, assigneeID i
 		} else {
 			apiPullRequest.Action = apiv1types.WebhookIssueAssigned
 		}
-		err = PrepareWebhooks(logger, issue.Repo, HookEventTypePullRequest, apiPullRequest)
+		err = Handle.Webhooks().Prepare(context.TODO(), logger, issue.Repo, HookEventTypePullRequest, apiPullRequest)
 	} else {
 		apiIssues := &apiv1types.WebhookIssuesPayload{
 			Index:      issue.Index,
@@ -630,7 +630,7 @@ func (issue *Issue) ChangeAssignee(logger *logx.Logger, doer *User, assigneeID i
 		} else {
 			apiIssues.Action = apiv1types.WebhookIssueAssigned
 		}
-		err = PrepareWebhooks(logger, issue.Repo, HookEventTypeIssues, apiIssues)
+		err = Handle.Webhooks().Prepare(context.TODO(), logger, issue.Repo, HookEventTypeIssues, apiIssues)
 	}
 	if err != nil {
 		logger.Error("Failed to prepare webhooks", "isPull", issue.IsPull, "removeAssignee", isRemoveAssignee, "error", err)
@@ -775,7 +775,7 @@ func NewIssue(logger *logx.Logger, repo *Repository, issue *Issue, labelIDs []in
 		logger.Error("Failed to mail participants", "error", err)
 	}
 
-	if err = PrepareWebhooks(logger, repo, HookEventTypeIssues, &apiv1types.WebhookIssuesPayload{
+	if err = Handle.Webhooks().Prepare(context.TODO(), logger, repo, HookEventTypeIssues, &apiv1types.WebhookIssuesPayload{
 		Action:     apiv1types.WebhookIssueOpened,
 		Index:      issue.Index,
 		Issue:      issue.APIFormat(),

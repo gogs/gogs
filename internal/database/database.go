@@ -24,12 +24,14 @@ var Tables = []any{
 	new(DeployKey),
 	new(EmailAddress),
 	new(Follow),
+	new(HookTask),
 	new(LFSObject), new(LoginSource),
 	new(Notice),
 	new(Passkey),
 	new(PublicKey),
 	new(TwoFactor), new(TwoFactorRecoveryCode),
 	new(Upload),
+	new(Webhook),
 }
 
 // NewConnection returns a new database connection with the given logger. When
@@ -136,6 +138,10 @@ func (db *DB) DeployKeys() *DeployKeysStore {
 	return newDeployKeysStore(db.db)
 }
 
+func (db *DB) HookTasks() *HookTasksStore {
+	return newHookTasksStore(db.db)
+}
+
 func (db *DB) LFS() *LFSStore {
 	return newLFSStore(db.db)
 }
@@ -186,6 +192,10 @@ func (db *DB) Uploads() *UploadsStore {
 
 func (db *DB) Users() *UsersStore {
 	return newUsersStore(db.db)
+}
+
+func (db *DB) Webhooks() *WebhooksStore {
+	return newWebhooksStore(db.db)
 }
 
 // ConnectionsInUse returns how many database connections are in use, across
