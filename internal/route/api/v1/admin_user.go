@@ -3,13 +3,15 @@ package v1
 import (
 	"net/http"
 
+	"github.com/cockroachdb/errors"
+
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/i18n"
 )
 
-func parseLoginSource(c *apiContext, sourceID int64) {
+func parseLoginSource(c *apiContext, sourceID int64, loginName string) {
 	if sourceID == 0 {
 		return
 	}
@@ -22,6 +24,11 @@ func parseLoginSource(c *apiContext, sourceID int64) {
 			c.Error(err, "get login source by ID")
 		}
 		return
+	}
+
+	// Users of a login source are authenticated there as this login.
+	if loginName == "" {
+		c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("login_name is required for users of a login source"))
 	}
 }
 
@@ -36,7 +43,7 @@ type adminCreateUserRequest struct {
 }
 
 func adminCreateUser(c *apiContext, l i18n.Locale, form adminCreateUserRequest) {
-	parseLoginSource(c, form.SourceID)
+	parseLoginSource(c, form.SourceID, form.LoginName)
 	if c.Written() {
 		return
 	}
@@ -96,7 +103,7 @@ func adminEditUser(c *apiContext, form adminEditUserRequest) {
 		return
 	}
 
-	parseLoginSource(c, form.SourceID)
+	parseLoginSource(c, form.SourceID, form.LoginName)
 	if c.Written() {
 		return
 	}

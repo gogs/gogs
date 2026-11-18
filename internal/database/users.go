@@ -106,7 +106,7 @@ func (s *UsersStore) Authenticate(ctx context.Context, logger *logx.Logger, logi
 		// the email. Authenticate the identity the account is bound to instead.
 		sourceLogin = user.LoginName
 		if sourceLogin == "" {
-			sourceLogin = user.Name
+			sourceLogin = user.LowerName
 		}
 
 	} else {

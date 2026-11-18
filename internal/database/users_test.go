@@ -243,9 +243,10 @@ func usersAuthenticate(t *testing.T, ctx context.Context, s *UsersStore) {
 		require.NoError(t, err)
 		assert.Equal(t, erin.ID, user.ID)
 
-		// Accounts without a login name are bound to their username.
+		// Accounts without a login name are bound to their username, in lowercase
+		// as when signing in with it.
 		source = newSource(t, "mock-bound-3", "frank")
-		frank, err := s.Create(ctx, "frank", "frank@example.com",
+		frank, err := s.Create(ctx, "Frank", "frank@example.com",
 			CreateUserOptions{
 				LoginSource: source.ID,
 			},
