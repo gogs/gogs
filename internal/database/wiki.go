@@ -55,6 +55,13 @@ func (r *Repository) HasWiki() bool {
 	return osx.IsDir(r.WikiPath())
 }
 
+// HasWikiPages returns true if the wiki has a branch of pages. A wiki that a
+// push created before pushing anything, e.g., a dry run, has none.
+func (r *Repository) HasWikiPages(ctx context.Context) bool {
+	wikiPath := r.WikiPath()
+	return git.RepoHasBranch(ctx, wikiPath, WikiBranch(ctx, wikiPath))
+}
+
 // InitWiki initializes a wiki for repository,
 // it does nothing when repository already has wiki.
 func (r *Repository) InitWiki(ctx context.Context) error {

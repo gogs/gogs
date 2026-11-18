@@ -117,7 +117,7 @@ type wikiPage struct {
 }
 
 type repoWikiResponse struct {
-	// HasWiki is false until the first page is created, and the other fields
+	// HasWiki is false until the wiki has a page, and the other fields
 	// are then left out.
 	HasWiki        bool            `json:"hasWiki"`
 	Page           *wikiPage       `json:"page,omitempty"`
@@ -129,7 +129,7 @@ type repoWikiResponse struct {
 func getRepoWiki(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoWikiResponse, err error) {
 	repo := repoCtx.Repo
 	resp = &repoWikiResponse{ViewerCanWrite: viewerCanWriteWiki(repoCtx)}
-	if !repo.HasWiki() {
+	if !repo.HasWikiPages(c.Request().Context()) {
 		return http.StatusOK, resp, nil
 	}
 
@@ -194,7 +194,7 @@ type repoWikiPagesResponse struct {
 func getRepoWikiPages(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoWikiPagesResponse, err error) {
 	repo := repoCtx.Repo
 	resp = &repoWikiPagesResponse{Pages: []repoWikiPageItem{}, ViewerCanWrite: viewerCanWriteWiki(repoCtx)}
-	if !repo.HasWiki() {
+	if !repo.HasWikiPages(c.Request().Context()) {
 		return http.StatusOK, resp, nil
 	}
 
@@ -226,7 +226,7 @@ type repoWikiPageSource struct {
 
 func getRepoWikiPageSource(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoWikiPageSource, err error) {
 	repo := repoCtx.Repo
-	if !repo.HasWiki() {
+	if !repo.HasWikiPages(c.Request().Context()) {
 		return http.StatusNotFound, nil, errors.New("page does not exist")
 	}
 	_, _, commit, err := openWiki(c, repo)
@@ -294,7 +294,7 @@ func patchRepoWikiPage(c flamego.Context, logger *logx.Logger, l i18n.Locale, vi
 		return http.StatusBadRequest, resp, nil
 	}
 	repo := repoCtx.Repo
-	if !repo.HasWiki() {
+	if !repo.HasWikiPages(c.Request().Context()) {
 		return http.StatusNotFound, nil, errors.New("page does not exist")
 	}
 	_, _, commit, err := openWiki(c, repo)
@@ -323,7 +323,7 @@ func patchRepoWikiPage(c flamego.Context, logger *logx.Logger, l i18n.Locale, vi
 
 func deleteRepoWikiPage(c flamego.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext) (statusCode int, resp any, err error) {
 	repo := repoCtx.Repo
-	if !repo.HasWiki() {
+	if !repo.HasWikiPages(c.Request().Context()) {
 		return http.StatusNotFound, nil, errors.New("page does not exist")
 	}
 	_, _, commit, err := openWiki(c, repo)
