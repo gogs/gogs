@@ -116,7 +116,8 @@ func (c *client) sessionValue(key string) any {
 func authenticatedClient(t *testing.T, u *User) *client {
 	t.Helper()
 
-	c := authenticatedClient(t, u)
+	c := newClient(t)
+	c.signIn(u)
 	return c
 }
 
