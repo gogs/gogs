@@ -115,8 +115,8 @@ add_backup_cronjob() {
 		CRONJOB_EXECUTOR_COUNT=$(grep -c "${CRONJOB_EXECUTOR}" "${CRONTAB_FILE}" || exit 0)
 		if [ "${CRONJOB_EXECUTOR_COUNT}" != "0" ]; then
 			echo "Cron job already exists for ${CRONJOB_EXECUTOR}. Updating existing." 1>&2
-			CRONJOB_TASK=$(echo "{CRONJOB_TASK}" | sed 's/\//\\\//g' )
-			CRONJOB_EXECUTOR=$(echo "{CRONJOB_EXECUTOR}" | sed 's/\//\\\//g' )
+			CRONJOB_TASK=$(echo "${CRONJOB_TASK}" | sed 's/\//\\\//g' )
+			CRONJOB_EXECUTOR=$(echo "${CRONJOB_EXECUTOR}" | sed 's/\//\\\//g' )
 			sed -i "/${CRONJOB_EXECUTOR}/c\\${CRONJOB_TASK}" "${CRONTAB_FILE}"
 			return 0
 		fi

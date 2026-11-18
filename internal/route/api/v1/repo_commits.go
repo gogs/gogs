@@ -26,6 +26,7 @@ func getAllCommits(c *apiContext) {
 	commits, err := git.RepoLog(c.Request().Context(), c.Repo.Repository.RepoPath(), "HEAD", git.LogOptions{MaxCount: pageSize})
 	if err != nil {
 		c.Error(err, "git log")
+		return
 	}
 
 	for _, commit := range commits {
