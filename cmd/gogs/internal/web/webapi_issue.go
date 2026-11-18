@@ -863,7 +863,7 @@ func postRepoIssueComment(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 		if root == nil || root.IssueID != issue.ID || root.ReplyToID != 0 ||
 			(root.Type != database.CommentTypeComment && root.Type != database.CommentTypeCode) ||
 			(root.IsPending && root.PosterID != viewer.ID) {
-			return http.StatusUnprocessableEntity, &bindingErrorResponse{Error: l.Tr("repo.issues.reply_not_allowed")}, nil
+			return http.StatusUnprocessableEntity, &bindingErrorResponse{Error: l.Tr("repo::issues.reply_not_allowed")}, nil
 		}
 		comment, err := database.Handle.Reviews().CreateReply(ctx, logger, viewer, repoCtx.Repo, issue, root, req.Content, req.Attachments, req.Pending || root.IsPending)
 		if err != nil {

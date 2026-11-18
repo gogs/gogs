@@ -336,11 +336,17 @@ func commitList(commits []*git.Commit, withBodies bool) string {
 // merged or closed by someone else first.
 var ErrPullRequestNotMergeable = errors.New("pull request has been merged or closed")
 
-// Merge merges pull request to base repository. The message is used for the
-// commit that merge commits and squashing create, and its default is used
-// when its title is empty. It returns ErrPullRequestNotMergeable when the
-// pull request is merged or closed by someone else first.
-func (s *PullRequestsStore) Merge(ctx context.Context, logger *logx.Logger, doer *User, pr *PullRequest, baseGitRepo *git.Repository, mergeStyle MergeStyle, message MergeMessage) (err error) {
+// ErrPullRequestHeadChanged is returned by Merge when the head branch of the
+// pull request no longer points to the commit it was going to merge.
+var ErrPullRequestHeadChanged = errors.New("head branch changed")
+
+// Merge merges pull request to base repository at the head commit, which the
+// head branch must still point to, or returns ErrPullRequestHeadChanged. The
+// message is used for the commit that merge commits and squashing create, and
+// its default is used when its title is empty. It returns
+// ErrPullRequestNotMergeable when the pull request is merged or closed by
+// someone else first.
+func (s *PullRequestsStore) Merge(ctx context.Context, logger *logx.Logger, doer *User, pr *PullRequest, baseGitRepo *git.Repository, headCommitID string, mergeStyle MergeStyle, message MergeMessage) (err error) {
 	// Stopping midway, e.g., when the client disconnects, would leave a
 	// partial change behind.
 	ctx = context.WithoutCancel(ctx)
@@ -387,9 +393,12 @@ func (s *PullRequestsStore) Merge(ctx context.Context, logger *logx.Logger, doer
 	if err != nil {
 		return errors.Newf("get base branch %q commit ID: %v", pr.BaseBranch, err)
 	}
-	headCommitID, err := headGitRepo.BranchCommitID(ctx, pr.HeadBranch)
+	currentHeadCommitID, err := headGitRepo.BranchCommitID(ctx, pr.HeadBranch)
 	if err != nil {
 		return errors.Newf("get head branch %q commit ID: %v", pr.HeadBranch, err)
+	}
+	if currentHeadCommitID != headCommitID {
+		return ErrPullRequestHeadChanged
 	}
 
 	// The temporary repository reads objects of both repositories, so the merge

@@ -443,6 +443,9 @@ function MergeForm({
       window.localStorage.setItem(styleKey, style);
       return router.invalidate();
     },
+    // A refused merge means the pull request changed since the page loaded,
+    // e.g., new commits or reviews, so the page shows it again.
+    onError: () => router.invalidate(),
   });
   const { formError } = formErrors(mutation.error);
   const onSubmit = (e: FormEvent) => {

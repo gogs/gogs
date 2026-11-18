@@ -195,7 +195,7 @@ func viewerCanRequestReviews(repoCtx *repoContext, issue *database.Issue) bool {
 // listReviewerOptions returns the users who can be asked to review the pull
 // request: those who can write to the repository, except who opened it.
 func listReviewerOptions(repo *database.Repository, issue *database.Issue) ([]issueUser, error) {
-	users, err := repo.GetAssignees()
+	users, err := repo.GetWriters()
 	if err != nil {
 		return nil, err
 	}
@@ -320,10 +320,10 @@ func describeThreads(ctx context.Context, cv *commentViewer, gitRepo *git.Reposi
 // commit than the current one, which the viewer has not seen.
 func requireHeadSHA(l i18n.Locale, rng *pullRange, headSHA string) (statusCode int, resp any) {
 	if rng == nil {
-		return http.StatusNotFound, &bindingErrorResponse{Error: l.Tr("repo.pulls.data_broken")}
+		return http.StatusNotFound, &bindingErrorResponse{Error: l.Tr("repo::pulls.data_broken")}
 	}
 	if headSHA != rng.Head {
-		return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("repo.pulls.review.head_changed")}
+		return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("repo::pulls.review.head_changed")}
 	}
 	return 0, nil
 }
@@ -358,7 +358,7 @@ func postRepoPullCodeComment(c flamego.Context, logger *logx.Logger, l i18n.Loca
 		return statusCode, nil, err
 	}
 	if issue.PullRequest.HasMerged || issue.IsClosed {
-		return http.StatusUnprocessableEntity, &bindingErrorResponse{Error: l.Tr("repo.pulls.review.closed")}, nil
+		return http.StatusUnprocessableEntity, &bindingErrorResponse{Error: l.Tr("repo::pulls.review.closed")}, nil
 	}
 	_, rng, _, err := describePull(ctx, repoCtx, issue)
 	if err != nil {
@@ -378,7 +378,7 @@ func postRepoPullCodeComment(c flamego.Context, logger *logx.Logger, l i18n.Loca
 	end := git.HunkContaining(hunks, req.Side == "old", int(req.Line), int(req.Line))
 	start := git.HunkContaining(hunks, req.StartSide == "old", int(req.StartLine), int(req.StartLine))
 	if end == nil || start != end || (req.Side == req.StartSide && req.StartLine > req.Line) {
-		return http.StatusUnprocessableEntity, &bindingErrorResponse{Error: l.Tr("repo.pulls.review.line_not_in_diff")}, nil
+		return http.StatusUnprocessableEntity, &bindingErrorResponse{Error: l.Tr("repo::pulls.review.line_not_in_diff")}, nil
 	}
 
 	comment, err := database.Handle.Reviews().CreateCodeComment(ctx, logger, database.CreateCodeCommentOptions{
@@ -420,10 +420,10 @@ func postRepoPullReview(c flamego.Context, logger *logx.Logger, l i18n.Locale, v
 		"request_changes": database.ReviewStateRequestChanges,
 	}[req.State]
 	if state != database.ReviewStateComment && issue.IsPoster(viewer.ID) {
-		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("repo.pulls.review.own_pull")}, nil
+		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("repo::pulls.review.own_pull")}, nil
 	}
 	if issue.PullRequest.HasMerged || issue.IsClosed {
-		return http.StatusUnprocessableEntity, &bindingErrorResponse{Error: l.Tr("repo.pulls.review.closed")}, nil
+		return http.StatusUnprocessableEntity, &bindingErrorResponse{Error: l.Tr("repo::pulls.review.closed")}, nil
 	}
 	_, rng, _, err := describePull(ctx, repoCtx, issue)
 	if err != nil {

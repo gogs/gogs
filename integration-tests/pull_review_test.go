@@ -1,0 +1,154 @@
+package integrationtests
+
+import (
+	"net/http"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"gogs.io/gogs/internal/database"
+)
+
+func TestPullReviews(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	author := seedUser(t, CreateUserOptions{})
+	reviewer := seedUser(t, CreateUserOptions{})
+	reader := seedUser(t, CreateUserOptions{})
+	org := orgSeed(t, owner.ID)
+	repo := seedRepository(t, org.ID, CreateRepositoryOptions{AutoInit: true})
+	protectedBranchTeam(t, org, repo, database.AccessModeWrite, author.ID, reviewer.ID)
+	protectedBranchTeam(t, org, repo, database.AccessModeRead, reader.ID)
+
+	ownerClient := authenticatedClient(t, owner)
+	status, body := ownerClient.do(http.MethodPut, issueAPIPath(repo, "settings", "branches", "main"), map[string]any{
+		"protected":                    true,
+		"requirePullRequest":           true,
+		"requiredApprovals":            1,
+		"requireResolvedConversations": true,
+	})
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+
+	branch := UniqueName("feature-")
+	file := branch + ".txt"
+	dir := gitClone(t, gitRemoteURL(t, repo, author.Name, author.Password))
+	gitRun(t, dir, "checkout", "-b", branch)
+	gitCommitFile(t, dir, file)
+	gitRun(t, dir, "push", "origin", branch)
+	authorClient := authenticatedClient(t, author)
+	index := pullCreate(t, authorClient, repo, branch, "Change "+branch)
+	pullWaitMergeable(t, authorClient, repo, index)
+
+	type reviewView struct {
+		Reviewers []struct {
+			User struct {
+				Name string `json:"name"`
+			} `json:"user"`
+			State string `json:"state"`
+		} `json:"reviewers"`
+		MergeBlockers       []string        `json:"mergeBlockers"`
+		ViewerPendingReview *map[string]any `json:"viewerPendingReview"`
+		Threads             []struct {
+			ID int64 `json:"id"`
+		} `json:"threads"`
+		Pull struct {
+			Diff struct {
+				Head string `json:"head"`
+			} `json:"diff"`
+		} `json:"pull"`
+	}
+	view := func(c *client) reviewView {
+		t.Helper()
+		var v reviewView
+		c.doJSON(http.MethodGet, issueAPIPath(repo, "pulls", index), nil, http.StatusOK, &v)
+		return v
+	}
+	head := view(authorClient).Pull.Diff.Head
+	path := func(parts ...any) string { return issueAPIPath(repo, append([]any{"pulls", index}, parts...)...) }
+
+	t.Run("review requests", func(t *testing.T) {
+		status, body := authorClient.do(http.MethodPut, path("reviewers", reviewer.Name), map[string]any{})
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+		v := view(authorClient)
+		require.Len(t, v.Reviewers, 1)
+		assert.Equal(t, reviewer.Name, v.Reviewers[0].User.Name)
+		assert.Equal(t, "requested", v.Reviewers[0].State)
+
+		// Reviews count only from writers, so none are requested from others.
+		status, body = authorClient.do(http.MethodPut, path("reviewers", reader.Name), map[string]any{})
+		assert.Equal(t, http.StatusBadRequest, status, "response: %s", body)
+
+		status, body = authorClient.do(http.MethodDelete, path("reviewers", reviewer.Name), map[string]any{})
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+		assert.Empty(t, view(authorClient).Reviewers)
+	})
+
+	reviewerClient := authenticatedClient(t, reviewer)
+	codeComment := func(pending bool) (int, []byte) {
+		return reviewerClient.do(http.MethodPost, path("code-comments"), map[string]any{
+			"path":      file,
+			"side":      "new",
+			"startSide": "new",
+			"startLine": 1,
+			"line":      1,
+			"headSHA":   head,
+			"content":   "Why this line?",
+			"pending":   pending,
+		})
+	}
+
+	t.Run("pending review is discarded", func(t *testing.T) {
+		status, body := codeComment(true)
+		require.Equal(t, http.StatusCreated, status, "response: %s", body)
+		require.NotNil(t, view(reviewerClient).ViewerPendingReview)
+		// Others do not see a pending comment.
+		assert.Empty(t, view(authorClient).Threads)
+
+		status, body = reviewerClient.do(http.MethodDelete, path("reviews", "pending"), map[string]any{})
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+		v := view(reviewerClient)
+		assert.Nil(t, v.ViewerPendingReview)
+		assert.Empty(t, v.Threads)
+	})
+
+	t.Run("lines outside the diff", func(t *testing.T) {
+		status, body := reviewerClient.do(http.MethodPost, path("code-comments"), map[string]any{
+			"path": "README.md", "side": "new", "startSide": "new", "startLine": 1, "line": 1,
+			"headSHA": head, "content": "Not in the diff",
+		})
+		assert.Equal(t, http.StatusUnprocessableEntity, status, "response: %s", body)
+	})
+
+	t.Run("unresolved conversations block the merge", func(t *testing.T) {
+		status, body := codeComment(false)
+		require.Equal(t, http.StatusCreated, status, "response: %s", body)
+		status, body = reviewerClient.do(http.MethodPost, path("reviews"), map[string]any{"state": "approve", "headSHA": head})
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+
+		v := view(ownerClient)
+		require.Len(t, v.Threads, 1)
+		assert.Equal(t, []string{"unresolved_conversations"}, v.MergeBlockers)
+		thread := path("threads", v.Threads[0].ID, "resolved")
+
+		// Readers cannot resolve threads.
+		status, body = authenticatedClient(t, reader).do(http.MethodPut, thread, map[string]any{})
+		assert.Equal(t, http.StatusForbidden, status, "response: %s", body)
+
+		status, body = authorClient.do(http.MethodPut, thread, map[string]any{})
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+		assert.Empty(t, view(ownerClient).MergeBlockers)
+
+		status, body = authorClient.do(http.MethodDelete, thread, map[string]any{})
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+		assert.Equal(t, []string{"unresolved_conversations"}, view(ownerClient).MergeBlockers)
+		status, body = protectedBranchMerge(t, ownerClient, repo, index)
+		assert.Equal(t, http.StatusConflict, status, "response: %s", body)
+
+		status, body = reviewerClient.do(http.MethodPut, thread, map[string]any{})
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+		status, body = protectedBranchMerge(t, ownerClient, repo, index)
+		assert.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	})
+}

@@ -447,9 +447,17 @@ type repoProtectedBranchRequest struct {
 func putRepoProtectedBranch(c flamego.Context, logger *logx.Logger, rc *repoAdminContext, protectBranch *database.ProtectBranch, req repoProtectedBranchRequest) (statusCode int, resp any, err error) {
 	protectBranch.Protected = req.Protected
 	protectBranch.RequirePullRequest = req.RequirePullRequest
-	protectBranch.RequiredApprovals = req.RequiredApprovals
-	protectBranch.DismissStaleApprovals = req.DismissStaleApprovals
-	protectBranch.RequireResolvedConversations = req.RequireResolvedConversations
+	// Reviews only gate pull requests, so without requiring them, writers
+	// would push past the reviews.
+	if req.RequirePullRequest {
+		protectBranch.RequiredApprovals = req.RequiredApprovals
+		protectBranch.DismissStaleApprovals = req.DismissStaleApprovals
+		protectBranch.RequireResolvedConversations = req.RequireResolvedConversations
+	} else {
+		protectBranch.RequiredApprovals = 0
+		protectBranch.DismissStaleApprovals = false
+		protectBranch.RequireResolvedConversations = false
+	}
 	if rc.Owner.IsOrganization() {
 		protectBranch.EnableAllowlist = req.EnableAllowlist
 		// People and teams who cannot write are dropped.

@@ -1610,49 +1610,55 @@ export function RepoBranchProtection({
                     />
                   }
                 />
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="requiredApprovals" className="text-sm font-medium">
-                    {t("repo.settings.protect_required_approvals")}
-                  </label>
-                  <p id="requiredApprovals-desc" className="text-sm text-(--color-muted-foreground)">
-                    {t("repo.settings.protect_required_approvals_desc")}
-                  </p>
-                  <Input
-                    id="requiredApprovals"
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    max={10}
-                    className="w-24"
-                    aria-describedby="requiredApprovals-desc"
-                    value={form.requiredApprovals}
-                    onChange={(e) => set({ requiredApprovals: Math.min(10, Math.max(0, Number(e.target.value) || 0)) })}
-                  />
-                </div>
-                {form.requiredApprovals > 0 ? (
+                {form.requirePullRequest ? (
                   <div className="ml-2 flex flex-col gap-5 border-l-2 border-(--color-border) pl-4">
-                    <CheckboxField
-                      id="dismissStaleApprovals"
-                      checked={form.dismissStaleApprovals}
-                      onChange={(on) => set({ dismissStaleApprovals: on })}
-                      label={
-                        <OptionLabel
-                          title={t("repo.settings.protect_dismiss_stale_approvals")}
-                          desc={t("repo.settings.protect_dismiss_stale_approvals_desc")}
+                    <div className="flex flex-col gap-1.5">
+                      <label htmlFor="requiredApprovals" className="text-sm font-medium">
+                        {t("repo.settings.protect_required_approvals")}
+                      </label>
+                      <p id="requiredApprovals-desc" className="text-sm text-(--color-muted-foreground)">
+                        {t("repo.settings.protect_required_approvals_desc")}
+                      </p>
+                      <Input
+                        id="requiredApprovals"
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        max={10}
+                        className="w-24"
+                        aria-describedby="requiredApprovals-desc"
+                        value={form.requiredApprovals}
+                        onChange={(e) =>
+                          set({ requiredApprovals: Math.min(10, Math.max(0, Number(e.target.value) || 0)) })
+                        }
+                      />
+                    </div>
+                    {form.requiredApprovals > 0 ? (
+                      <div className="ml-2 flex flex-col gap-5 border-l-2 border-(--color-border) pl-4">
+                        <CheckboxField
+                          id="dismissStaleApprovals"
+                          checked={form.dismissStaleApprovals}
+                          onChange={(on) => set({ dismissStaleApprovals: on })}
+                          label={
+                            <OptionLabel
+                              title={t("repo.settings.protect_dismiss_stale_approvals")}
+                              desc={t("repo.settings.protect_dismiss_stale_approvals_desc")}
+                            />
+                          }
                         />
-                      }
-                    />
-                    <CheckboxField
-                      id="requireResolvedConversations"
-                      checked={form.requireResolvedConversations}
-                      onChange={(on) => set({ requireResolvedConversations: on })}
-                      label={
-                        <OptionLabel
-                          title={t("repo.settings.protect_require_resolved_conversations")}
-                          desc={t("repo.settings.protect_require_resolved_conversations_desc")}
+                        <CheckboxField
+                          id="requireResolvedConversations"
+                          checked={form.requireResolvedConversations}
+                          onChange={(on) => set({ requireResolvedConversations: on })}
+                          label={
+                            <OptionLabel
+                              title={t("repo.settings.protect_require_resolved_conversations")}
+                              desc={t("repo.settings.protect_require_resolved_conversations_desc")}
+                            />
+                          }
                         />
-                      }
-                    />
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
                 {isOrg ? (
