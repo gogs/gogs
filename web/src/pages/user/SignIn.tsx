@@ -122,8 +122,6 @@ export function SignIn() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string | null>>({});
   const usernameRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
-  // Where passkeys work, if not here. Visitors here still get to try one, in
-  // case EXTERNAL_URL is set wrong.
   const [passkeyPageURL] = useState(externalPageURL);
   // Visitors sign in with a passkey unless their browser does not support
   // passkeys, passkeys do not work here, or they choose the password.

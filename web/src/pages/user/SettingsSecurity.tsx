@@ -356,8 +356,6 @@ function UserPasskeys({ passkeys }: { passkeys: Credential[] }) {
   const router = useRouter();
   const [name, setName] = useState("");
   const supported = passkeysSupported();
-  // Where passkeys work, if not here. Viewers here can still add one, in case
-  // EXTERNAL_URL is set wrong.
   const [passkeyPageURL] = useState(externalPageURL);
   const [addAnyway, setAddAnyway] = useState(false);
   const add = useMutation({

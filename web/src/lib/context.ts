@@ -19,7 +19,6 @@ export interface WebContext {
   requireAuthenticatedViewer?: boolean;
   // The HTML of the notice banner that every page shows.
   notice?: string;
-  // The EXTERNAL_URL of the site, e.g., "https://gogs.example.com/".
   externalURL: string;
 }
 
