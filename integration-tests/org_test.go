@@ -178,16 +178,25 @@ func TestOrgDelete(t *testing.T) {
 			ID int64 `json:"id"`
 		}
 		ownerClient.doJSON(http.MethodPost, "/api/web/orgs/"+o.Name+"/settings/hooks", map[string]any{
-			"type": "gogs", "url": "http://127.0.0.1:1/hook", "contentType": "json", "events": "push_only", "active": true,
+			"type": "gogs", "url": "http://127.0.0.1:1/hook", "contentType": "json", "events": "send_everything", "active": true,
 		}, http.StatusCreated, &created)
 		hookIDs[o.ID] = created.ID
 	}
+	// An organization with repositories cannot be deleted, but the deliveries
+	// of a repository that is transferred out stay with the webhook.
+	repo := seedRepository(t, org.ID, CreateRepositoryOptions{})
+	apiV1CreateIssue(t, apiV1Client(t, owner), repo, map[string]any{"title": "delivered to the organization"})
+	status, body := ownerClient.do(http.MethodPost, repoSettingsAPIPath(repo, "/settings/transfer"), map[string]any{"repoName": repo.Name, "newOwner": owner.Name})
+	require.Equal(t, http.StatusOK, status, "response: %s", body)
+	tasks, err := database.Handle.HookTasks().ListByWebhook(t.Context(), hookIDs[org.ID], 1, 0)
+	require.NoError(t, err)
+	require.Len(t, tasks, 1)
 
-	status, body := orgSignedIn(t, member).do(http.MethodDelete, path, map[string]any{"password": member.Password})
+	status, body = orgSignedIn(t, member).do(http.MethodDelete, path, map[string]any{"password": member.Password})
 	assert.Equal(t, http.StatusForbidden, status, "member, response: %s", body)
 	status, body = ownerClient.do(http.MethodDelete, path, map[string]any{"password": owner.Password + "x"})
 	assert.Equal(t, http.StatusUnauthorized, status, "wrong password, response: %s", body)
-	_, err := database.Handle.Users().GetByID(t.Context(), org.ID)
+	_, err = database.Handle.Users().GetByID(t.Context(), org.ID)
 	require.NoError(t, err, "organization deleted before the owner confirmed")
 
 	status, body = ownerClient.do(http.MethodDelete, path, map[string]any{"password": owner.Password})
@@ -201,6 +210,9 @@ func TestOrgDelete(t *testing.T) {
 	assert.True(t, database.IsOrganizationMember(other.ID, owner.ID))
 	_, err = database.Handle.Webhooks().GetOfOrg(t.Context(), org.ID, hookIDs[org.ID])
 	assert.True(t, database.IsErrWebhookNotExist(err), "webhook of deleted organization still exists: %v", err)
+	tasks, err = database.Handle.HookTasks().ListByWebhook(t.Context(), hookIDs[org.ID], 1, 0)
+	require.NoError(t, err)
+	assert.Empty(t, tasks, "deliveries of webhooks of deleted organization")
 	_, err = database.Handle.Webhooks().GetOfOrg(t.Context(), other.ID, hookIDs[other.ID])
 	assert.NoError(t, err)
 }

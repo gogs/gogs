@@ -231,6 +231,11 @@ func DeleteOrganization(org *User) error {
 		return err
 	}
 
+	// Deliveries for repositories that have been transferred out are reachable
+	// only through the webhooks, so they go with them.
+	if _, err = sess.Where("hook_id IN (SELECT id FROM webhook WHERE org_id = ?)", org.ID).Delete(new(HookTask)); err != nil {
+		return errors.Newf("delete deliveries of webhooks: %v", err)
+	}
 	if err = deleteByColumn(sess, "org_id", org.ID, new(Team), new(OrgUser), new(TeamUser), new(Webhook)); err != nil {
 		return err
 	}
