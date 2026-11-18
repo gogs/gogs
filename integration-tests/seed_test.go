@@ -10,6 +10,7 @@ package integrationtests
 // conf.AppPath(), which must be the binary of the server under test.
 
 import (
+	"cmp"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
@@ -71,11 +72,13 @@ type User struct {
 type CreateUserOptions struct {
 	Admin    bool
 	Inactive bool
+	// NamePrefix starts the name of the user, "user-" by default.
+	NamePrefix string
 }
 
 // CreateUser creates a user with a unique name.
 func CreateUser(ctx context.Context, opts CreateUserOptions) (*User, error) {
-	name := UniqueName("user-")
+	name := UniqueName(cmp.Or(opts.NamePrefix, "user-"))
 	password := UniqueName("password-")
 	u, err := database.Handle.Users().Create(ctx, name, name+"@example.com", database.CreateUserOptions{
 		Password:  password,
