@@ -7,12 +7,17 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
+	"io"
+	"log"
 	"net"
 	"net/http"
+	"net/http/httputil"
+	neturl "net/url"
 	"os"
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
@@ -31,6 +36,16 @@ var (
 	// forcePrivateServerURL is the URL of another server under test, which only
 	// differs by setting [repository] FORCE_PRIVATE.
 	forcePrivateServerURL string
+	// requireSigninViewServerURL is the URL of another server under test, which
+	// only differs by setting [auth] REQUIRE_SIGNIN_VIEW.
+	requireSigninViewServerURL string
+	// requireSigninViewSSHPort is the port of the builtin SSH server of the
+	// server at requireSigninViewServerURL.
+	requireSigninViewSSHPort int
+	// subpathServerURL is the URL of another server under test, which is served
+	// under subpath behind a reverse proxy that strips it, without a trailing
+	// slash.
+	subpathServerURL string
 	// sshPort is the port of the builtin SSH server of the server under test.
 	sshPort int
 	// sessions reads the sessions the server under test stores in files.
@@ -60,9 +75,12 @@ func TestMain(m *testing.M) {
 	if code == 0 {
 		_ = os.RemoveAll(dir)
 	} else {
-		serverLog, _ := os.ReadFile(filepath.Join(dir, "server.log"))
-		forcePrivateServerLog, _ := os.ReadFile(filepath.Join(dir, "server-force-private.log"))
-		fmt.Fprintf(os.Stderr, "Server log:\n%s\nLog of the server with FORCE_PRIVATE:\n%s\nWork directory %q is left intact for inspection\n", serverLog, forcePrivateServerLog, dir)
+		logs, _ := filepath.Glob(filepath.Join(dir, "server*.log"))
+		for _, path := range logs {
+			serverLog, _ := os.ReadFile(path)
+			fmt.Fprintf(os.Stderr, "%s:\n%s\n", filepath.Base(path), serverLog)
+		}
+		fmt.Fprintf(os.Stderr, "Work directory %q is left intact for inspection\n", dir)
 	}
 	os.Exit(code)
 }
@@ -98,7 +116,7 @@ func run(m *testing.M, dir string) (int, error) {
 	secretKey := make([]byte, 16)
 	_, _ = rand.Read(secretKey)
 	configPath := filepath.Join(dir, "app.ini")
-	if err = writeConfig(dir, configPath, port, sshPort, dbName, hex.EncodeToString(secretKey), false); err != nil {
+	if err = writeConfig(dir, configPath, port, sshPort, dbName, hex.EncodeToString(secretKey), fmt.Sprintf("http://localhost:%d", port), serverOptions{}); err != nil {
 		return 0, errors.Wrap(err, "write configuration")
 	}
 
@@ -132,27 +150,36 @@ func run(m *testing.M, dir string) (int, error) {
 	}
 	defer stopServer()
 
-	// The server with FORCE_PRIVATE shares the database and the repositories, so
-	// tests seed data once and call either server. It starts after the first one
-	// has migrated the database and generated the SSH host keys.
-	forcePrivatePort, err := freePort()
-	if err != nil {
-		return 0, errors.Wrap(err, "find free port")
+	// The variants share the database and the repositories, so tests seed data
+	// once, through the configuration of the first server, and call any server.
+	// They start after the first server has migrated the database and generated
+	// the SSH host keys.
+	var stopVariants []func()
+	defer func() {
+		for _, stop := range stopVariants {
+			stop()
+		}
+	}()
+	for _, v := range []struct {
+		name    string
+		opts    serverOptions
+		url     *string
+		sshPort *int
+	}{
+		{name: "force-private", opts: serverOptions{ForcePrivate: true}, url: &forcePrivateServerURL},
+		{name: "require-signin-view", opts: serverOptions{RequireSigninView: true}, url: &requireSigninViewServerURL, sshPort: &requireSigninViewSSHPort},
+		{name: "subpath", opts: serverOptions{Subpath: "/gogs"}, url: &subpathServerURL},
+	} {
+		url, sshPort, stop, err := startVariant(binary, dir, dbName, hex.EncodeToString(secretKey), spans.url, v.name, v.opts)
+		if err != nil {
+			return 0, errors.Wrapf(err, "start server %q", v.name)
+		}
+		stopVariants = append(stopVariants, stop)
+		*v.url = url
+		if v.sshPort != nil {
+			*v.sshPort = sshPort
+		}
 	}
-	forcePrivateSSHPort, err := freePort()
-	if err != nil {
-		return 0, errors.Wrap(err, "find free SSH port")
-	}
-	forcePrivateConfigPath := filepath.Join(dir, "app-force-private.ini")
-	if err = writeConfig(dir, forcePrivateConfigPath, forcePrivatePort, forcePrivateSSHPort, dbName, hex.EncodeToString(secretKey), true); err != nil {
-		return 0, errors.Wrap(err, "write configuration")
-	}
-	forcePrivateServerURL = fmt.Sprintf("http://localhost:%d", forcePrivatePort)
-	stopForcePrivateServer, err := startServer(binary, forcePrivateConfigPath, forcePrivateServerURL, filepath.Join(dir, "server-force-private.log"), spans.url)
-	if err != nil {
-		return 0, errors.Wrap(err, "start server with FORCE_PRIVATE")
-	}
-	defer stopForcePrivateServer()
 
 	// Git hooks of seeded repositories call the binary at conf.AppPath(), which
 	// is read from the first argument, so they call the server binary rather
@@ -174,7 +201,10 @@ func run(m *testing.M, dir string) (int, error) {
 	}
 	code := m.Run()
 	stopServer()
-	stopForcePrivateServer()
+	for _, stop := range stopVariants {
+		stop()
+	}
+	stopVariants = nil
 	// Only a full run is held to covering every route. A run of some tests,
 	// e.g., with -run, lists the routes left for information.
 	if code == 0 {
@@ -227,10 +257,20 @@ func freePort() (int, error) {
 	return l.Addr().(*net.TCPAddr).Port, nil
 }
 
+// serverOptions are how the configuration of a server under test differs from
+// the default.
+type serverOptions struct {
+	ForcePrivate      bool
+	RequireSigninView bool
+	// Subpath is the path the server is served under, e.g., "/gogs", which the
+	// reverse proxy in front of it strips.
+	Subpath string
+}
+
 // writeConfig writes the configuration of a server under test, which uses the
 // Postgres database of the name on the server the PG* environment variables
-// point to.
-func writeConfig(dir, path string, port, sshPort int, dbName, secretKey string, forcePrivate bool) error {
+// point to, and is reached at the external URL, without a trailing slash.
+func writeConfig(dir, path string, port, sshPort int, dbName, secretKey, externalURL string, opts serverOptions) error {
 	u, err := user.Current()
 	if err != nil {
 		return errors.Wrap(err, "get current user")
@@ -249,7 +289,7 @@ RUN_MODE = dev
 [server]
 ; WebAuthn takes the host of the external URL as the relying party ID, which
 ; cannot be an IP address, so passkeys only work with a domain name.
-EXTERNAL_URL = http://localhost:%[2]d/
+EXTERNAL_URL = %[9]s/
 DOMAIN = 127.0.0.1
 HTTP_ADDR = 127.0.0.1
 HTTP_PORT = %[2]d
@@ -284,14 +324,103 @@ ENABLED = true
 HOST = 127.0.0.1:1
 
 [auth]
+REQUIRE_SIGNIN_VIEW = %[10]t
 DISABLE_REGISTRATION = false
 ENABLE_REGISTRATION_CAPTCHA = true
 
 [log]
 MODE = console
 LEVEL = Info
-`, u.Username, port, filepath.Join(dir, "repositories"), database, secretKey, filepath.Join(dir, "ssh"), sshPort, forcePrivate)
+`, u.Username, port, filepath.Join(dir, "repositories"), database, secretKey, filepath.Join(dir, "ssh"), sshPort, opts.ForcePrivate,
+		externalURL, opts.RequireSigninView)
 	return os.WriteFile(path, []byte(config), 0o600)
+}
+
+// startVariant starts a server under test with the options, which shares the
+// database of the name and the work directory with the first server. It
+// returns the URL where tests call the server, without a trailing slash, and the
+// port of its builtin SSH server. A server with a subpath is behind a reverse
+// proxy that strips the subpath, like deployments under a subpath.
+func startVariant(binary, dir, dbName, secretKey, spansURL, name string, opts serverOptions) (url string, sshPort int, stop func(), _ error) {
+	// The proxy listens before the ports of the server are picked, so they
+	// cannot be the same.
+	var proxyListener net.Listener
+	if opts.Subpath != "" {
+		var err error
+		proxyListener, err = net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			return "", 0, nil, errors.Wrap(err, "listen for reverse proxy")
+		}
+	}
+	port, err := freePort()
+	if err == nil {
+		sshPort, err = freePort()
+	}
+	if err != nil {
+		if proxyListener != nil {
+			_ = proxyListener.Close()
+		}
+		return "", 0, nil, errors.Wrap(err, "find free port")
+	}
+	stopProxy := func() {}
+	url = fmt.Sprintf("http://localhost:%d", port)
+	if proxyListener != nil {
+		stopProxy, err = startSubpathProxy(proxyListener, opts.Subpath, fmt.Sprintf("http://127.0.0.1:%d", port))
+		if err != nil {
+			_ = proxyListener.Close()
+			return "", 0, nil, errors.Wrap(err, "start reverse proxy")
+		}
+		url = fmt.Sprintf("http://localhost:%d%s", proxyListener.Addr().(*net.TCPAddr).Port, opts.Subpath)
+	}
+
+	configPath := filepath.Join(dir, "app-"+name+".ini")
+	if err = writeConfig(dir, configPath, port, sshPort, dbName, secretKey, url, opts); err != nil {
+		stopProxy()
+		return "", 0, nil, errors.Wrap(err, "write configuration")
+	}
+	stopServer, err := startServer(binary, configPath, url, filepath.Join(dir, "server-"+name+".log"), spansURL)
+	if err != nil {
+		stopProxy()
+		return "", 0, nil, err
+	}
+	return url, sshPort, func() {
+		stopServer()
+		stopProxy()
+	}, nil
+}
+
+// startSubpathProxy serves the target under the subpath on the listener, and
+// strips the subpath before passing requests on, like the reverse proxy
+// configurations in the documentation. Like the NGINX one, it sends the host
+// of the target, so the server builds URLs from its external URL rather than
+// from the Host header.
+func startSubpathProxy(l net.Listener, subpath, target string) (stop func(), _ error) {
+	targetURL, err := neturl.Parse(target)
+	if err != nil {
+		return nil, errors.Wrap(err, "parse target")
+	}
+	proxy := &httputil.ReverseProxy{
+		// The proxy fails to connect until the server listens, while the tests
+		// wait for it.
+		ErrorLog: log.New(io.Discard, "", 0),
+		Rewrite: func(r *httputil.ProxyRequest) {
+			r.SetURL(targetURL)
+			r.Out.URL.Path = strings.TrimPrefix(r.In.URL.Path, subpath)
+			r.Out.URL.RawPath = strings.TrimPrefix(r.In.URL.RawPath, subpath)
+			if r.Out.URL.Path == "" {
+				r.Out.URL.Path = "/"
+			}
+		},
+	}
+	server := &http.Server{Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != subpath && !strings.HasPrefix(r.URL.Path, subpath+"/") {
+			http.NotFound(w, r)
+			return
+		}
+		proxy.ServeHTTP(w, r)
+	})}
+	go func() { _ = server.Serve(l) }()
+	return func() { _ = server.Close() }, nil
 }
 
 // createPostgresDatabase creates a database with a unique name on the server
