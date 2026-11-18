@@ -370,7 +370,17 @@ export function SignIn() {
                         i18nKey="auth.passkey_wrong_host"
                         values={{ externalURL: webContext.externalURL }}
                         components={{
-                          url: <a href={passkeyPageURL} className="wrap-anywhere text-(--color-primary) underline" />,
+                          url: (
+                            <a
+                              href={passkeyPageURL}
+                              tabIndex={submitting ? -1 : 6}
+                              aria-disabled={submitting || undefined}
+                              className={`wrap-anywhere text-(--color-primary) underline ${submitting ? "pointer-events-none opacity-50" : ""}`}
+                              onClick={(e) => {
+                                if (submitting) e.preventDefault();
+                              }}
+                            />
+                          ),
                         }}
                       />{" "}
                       <Button type="button" variant="link" size="inline" tabIndex={6} onClick={startPasskey}>

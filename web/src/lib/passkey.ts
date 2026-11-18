@@ -32,8 +32,13 @@ export interface RequestOptionsJSON {
 // manager already saved a new one.
 export function externalPageURL() {
   const { externalURL } = webContext;
-  if (!externalURL) return null;
-  const { origin } = new URL(externalURL);
+  let origin;
+  try {
+    ({ origin } = new URL(externalURL));
+  } catch {
+    // The server accepts an EXTERNAL_URL without a scheme, which is no URL here.
+    return null;
+  }
   if (origin === window.location.origin) return null;
   return origin + window.location.pathname + window.location.search + window.location.hash;
 }
