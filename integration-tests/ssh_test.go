@@ -72,13 +72,22 @@ func sshRemoteURL(repo *Repository) string {
 	return fmt.Sprintf("ssh://git@127.0.0.1:%d/%s/%s.git", sshPort, repo.Owner, repo.Name)
 }
 
+// sshArgs returns the arguments of ssh to connect to the builtin SSH server
+// with the key only. They name the port, so remotes like
+// "git@127.0.0.1:owner/repo.git", which cannot, reach the server too.
+func (k *sshKey) sshArgs() []string {
+	return []string{
+		"-i", k.path, "-p", strconv.Itoa(sshPort),
+		"-o", "IdentitiesOnly=yes", "-o", "IdentityAgent=none", "-o", "BatchMode=yes",
+		"-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-o", "LogLevel=ERROR",
+	}
+}
+
 // command returns a Git command that runs in the directory and connects over
 // SSH with the key only.
 func (k *sshKey) command(dir string, args ...string) *exec.Cmd {
 	cmd := gitCommand(dir, args...)
-	cmd.Env = append(cmd.Env, "GIT_SSH_COMMAND=ssh -i "+k.path+
-		" -o IdentitiesOnly=yes -o IdentityAgent=none -o BatchMode=yes"+
-		" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR")
+	cmd.Env = append(cmd.Env, "GIT_SSH_COMMAND=ssh "+strings.Join(k.sshArgs(), " "))
 	return cmd
 }
 
