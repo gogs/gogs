@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -459,4 +460,153 @@ func TestRepoSettingsWebhooksOfDeletedRepository(t *testing.T) {
 	assert.Len(t, tasks, 1)
 	_, err = database.Handle.Webhooks().GetOfOrg(t.Context(), org.ID, orgHook.ID)
 	assert.NoError(t, err)
+}
+
+// repoSettingsEvent is the event of a webhook delivery and the parts of its
+// payload that tell pushes, creations and deletions apart.
+type repoSettingsEvent struct {
+	Event   string
+	Ref     string
+	RefType string
+	After   string
+	Commits []string
+}
+
+func repoSettingsNextEvent(t *testing.T, deliveries <-chan repoSettingsDelivery) repoSettingsEvent {
+	t.Helper()
+
+	d := repoSettingsNextDelivery(t, deliveries)
+	var payload struct {
+		Ref     string `json:"ref"`
+		RefType string `json:"ref_type"`
+		After   string `json:"after"`
+		Commits []struct {
+			Message string `json:"message"`
+		} `json:"commits"`
+	}
+	require.NoError(t, json.Unmarshal(d.Body, &payload), "payload: %s", d.Body)
+	e := repoSettingsEvent{Event: d.Header.Get("X-Gogs-Event"), Ref: payload.Ref, RefType: payload.RefType, After: payload.After}
+	for _, c := range payload.Commits {
+		e.Commits = append(e.Commits, strings.TrimSpace(c.Message))
+	}
+	return e
+}
+
+// repoSettingsCreateWebhookFor adds a Gogs webhook that sends the events as
+// JSON to the URL, and returns its ID.
+func repoSettingsCreateWebhookFor(t *testing.T, c *client, repo *Repository, url string, active bool, events map[string]bool) int64 {
+	t.Helper()
+
+	var created struct {
+		ID int64 `json:"id"`
+	}
+	c.doJSON(http.MethodPost, repoSettingsAPIPath(repo, "/settings/hooks"), map[string]any{
+		"type":         "gogs",
+		"url":          url,
+		"contentType":  "json",
+		"events":       "choose_events",
+		"chosenEvents": events,
+		"active":       active,
+	}, http.StatusCreated, &created)
+	require.NotZero(t, created.ID)
+	return created.ID
+}
+
+// Pushing over Git delivers push, create and delete events to the active
+// webhooks subscribed to them, and to no others.
+func TestRepoSettingsWebhookGitPush(t *testing.T) {
+	owner := seedUser(t, CreateUserOptions{})
+	for _, name := range []string{"http", "ssh"} {
+		t.Run(name, func(t *testing.T) {
+			repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+			branch := repoSettingsDefaultBranch(t, repo)
+			c := repoSettingsSignedIn(t, owner)
+			allURL, all := repoSettingsWebhookReceiver(t)
+			allID := repoSettingsCreateWebhookFor(t, c, repo, allURL, true, map[string]bool{"push": true, "create": true, "delete": true})
+			createURL, creations := repoSettingsWebhookReceiver(t)
+			createID := repoSettingsCreateWebhookFor(t, c, repo, createURL, true, map[string]bool{"create": true})
+			noneURL, none := repoSettingsWebhookReceiver(t)
+			issuesID := repoSettingsCreateWebhookFor(t, c, repo, noneURL, true, map[string]bool{"issues": true})
+			inactiveID := repoSettingsCreateWebhookFor(t, c, repo, noneURL, false, map[string]bool{"push": true, "create": true, "delete": true})
+
+			remote := gitTransports(t, owner, repo)[name]
+			dir := filepath.Join(t.TempDir(), "clone")
+			out, err := remote.git(filepath.Dir(dir), "clone", remote.url, dir)
+			require.NoError(t, err, "clone: %s", out)
+			push := func(refspecs ...string) {
+				t.Helper()
+				out, err := remote.git(dir, append([]string{"push", "origin"}, refspecs...)...)
+				require.NoError(t, err, "push: %s", out)
+			}
+
+			file := UniqueName("file-") + ".txt"
+			sha := gitCommitFile(t, dir, file)
+			push(branch)
+			assert.Equal(t, repoSettingsEvent{Event: "push", Ref: "refs/heads/" + branch, After: sha, Commits: []string{"Add " + file}}, repoSettingsNextEvent(t, all))
+
+			first := file
+			file = UniqueName("file-") + ".txt"
+			sha = gitCommitFile(t, dir, file)
+			push("HEAD:refs/heads/feature")
+			assert.Equal(t, repoSettingsEvent{Event: "create", Ref: "feature", RefType: "branch"}, repoSettingsNextEvent(t, all))
+			// The push of a new branch lists all its commits, newest first.
+			assert.Equal(t, repoSettingsEvent{Event: "push", Ref: "refs/heads/feature", After: sha, Commits: []string{"Add " + file, "Add " + first, "Initial commit"}}, repoSettingsNextEvent(t, all))
+			assert.Equal(t, repoSettingsEvent{Event: "create", Ref: "feature", RefType: "branch"}, repoSettingsNextEvent(t, creations))
+
+			gitRun(t, dir, "tag", "v1")
+			push("v1")
+			assert.Equal(t, repoSettingsEvent{Event: "create", Ref: "v1", RefType: "tag"}, repoSettingsNextEvent(t, all))
+			assert.Equal(t, repoSettingsEvent{Event: "create", Ref: "v1", RefType: "tag"}, repoSettingsNextEvent(t, creations))
+
+			push(":feature")
+			assert.Equal(t, repoSettingsEvent{Event: "delete", Ref: "feature", RefType: "branch"}, repoSettingsNextEvent(t, all))
+			push(":v1")
+			assert.Equal(t, repoSettingsEvent{Event: "delete", Ref: "v1", RefType: "tag"}, repoSettingsNextEvent(t, all))
+
+			// Every event creates the deliveries of all webhooks at once, so the
+			// others would exist by now.
+			for id, want := range map[int64]int{allID: 6, createID: 2, issuesID: 0, inactiveID: 0} {
+				tasks, err := database.Handle.HookTasks().ListByWebhook(t.Context(), id, 1, 0)
+				require.NoError(t, err)
+				assert.Len(t, tasks, want, "deliveries of webhook %d", id)
+			}
+			for name, deliveries := range map[string]<-chan repoSettingsDelivery{"all": all, "create": creations, "none": none} {
+				select {
+				case d := <-deliveries:
+					t.Errorf("unexpected %q delivery to %s receiver: %s", d.Header.Get("X-Gogs-Event"), name, d.Body)
+				default:
+				}
+			}
+		})
+	}
+}
+
+// Deleting and restoring the head branch of a merged pull request delivers
+// delete and create events.
+func TestRepoSettingsWebhookPullHeadBranch(t *testing.T) {
+	owner := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	c := repoSettingsSignedIn(t, owner)
+	branch := UniqueName("feature-")
+	pullCommitToNewBranch(t, c, repo, branch, "feature.txt", "Hello pull request\n")
+	index := pullCreate(t, c, repo, branch, "Feature")
+	pullWaitMergeable(t, c, repo, index)
+	status, body := c.do(http.MethodPost, issueAPIPath(repo, "pulls", index, "merge"), map[string]any{"style": "create_merge_commit"})
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+
+	url, deliveries := repoSettingsWebhookReceiver(t)
+	id := repoSettingsCreateWebhookFor(t, c, repo, url, true, map[string]bool{"create": true, "delete": true})
+	path := issueAPIPath(repo, "pulls", index, "branch")
+
+	status, body = c.do(http.MethodDelete, path, map[string]any{})
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	assert.Equal(t, repoSettingsEvent{Event: "delete", Ref: branch, RefType: "branch"}, repoSettingsNextEvent(t, deliveries))
+
+	status, body = c.do(http.MethodPost, path, map[string]any{})
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	assert.Equal(t, repoSettingsEvent{Event: "create", Ref: branch, RefType: "branch"}, repoSettingsNextEvent(t, deliveries))
+
+	tasks, err := database.Handle.HookTasks().ListByWebhook(t.Context(), id, 1, 0)
+	require.NoError(t, err)
+	assert.Len(t, tasks, 2)
 }
