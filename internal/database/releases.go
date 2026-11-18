@@ -350,6 +350,14 @@ func (s *ReleasesStore) Update(ctx context.Context, logger *logx.Logger, doer *U
 		if err != nil {
 			return errors.Wrap(err, "update release")
 		}
+		// The release may have been deleted since it was read. Files must not be
+		// attached to it then. The update above waits for a deletion in progress.
+		var count int64
+		if err = tx.Model(new(Release)).Where("id = ?", r.ID).Count(&count).Error; err != nil {
+			return errors.Wrap(err, "count release")
+		} else if count == 0 {
+			return ErrReleaseNotExist{args: map[string]any{"releaseID": r.ID}}
+		}
 
 		// Detach all attachments and attach back those that stay.
 		err = tx.Model(new(Attachment)).Where("release_id = ?", r.ID).Update("release_id", 0).Error

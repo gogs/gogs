@@ -314,6 +314,17 @@ func releasesUpdate(t *testing.T, ctx context.Context, s *ReleasesStore) {
 	bad.IsDraft = false
 	err = s.Update(ctx, logger, doer, gitRepo, bad, true, nil)
 	assert.True(t, IsErrInvalidTagName(err), "got %v", err)
+
+	// Files are not attached to a release that was deleted since it was read.
+	err = s.DeleteByID(ctx, logger, repo.ID, bad.ID)
+	require.NoError(t, err)
+	late := newTestAttachment(t, ctx, attachments, "late", 0, 0, 0)
+	bad.IsDraft = true
+	err = s.Update(ctx, logger, doer, gitRepo, bad, false, []string{late.UUID})
+	assert.True(t, IsErrReleaseNotExist(err), "got %v", err)
+	gotLate, err := attachments.GetByUUID(ctx, late.UUID)
+	require.NoError(t, err)
+	assert.Zero(t, gotLate.ReleaseID)
 }
 
 func releasesDeleteByID(t *testing.T, ctx context.Context, s *ReleasesStore) {

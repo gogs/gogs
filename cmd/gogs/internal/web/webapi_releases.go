@@ -435,6 +435,8 @@ func patchRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, vie
 		case database.IsErrInvalidTagName(err):
 			// The tag name cannot be edited, so it is not a field error.
 			return http.StatusBadRequest, nil, errors.New(l.Tr("repo.release.tag_name_invalid"))
+		case database.IsErrReleaseNotExist(err):
+			return http.StatusNotFound, nil, errors.New("release does not exist")
 		}
 		logger.Error("Failed to update release", "releaseID", rel.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update release")
