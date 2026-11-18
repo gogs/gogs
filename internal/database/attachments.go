@@ -105,12 +105,18 @@ func (s *AttachmentsStore) Create(ctx context.Context, uploaderID int64, name st
 	if err != nil {
 		return nil, errors.Wrap(err, "create file")
 	}
-	defer func() { _ = fw.Close() }()
-
-	if _, err = io.Copy(fw, r); err != nil {
+	_, err = io.Copy(fw, r)
+	if closeErr := fw.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		_ = os.Remove(localPath)
 		return nil, errors.Wrap(err, "write file")
 	}
+
 	if err = s.db.WithContext(ctx).Create(attach).Error; err != nil {
+		// Nothing refers to the file without the row.
+		_ = os.Remove(localPath)
 		return nil, err
 	}
 	return attach, nil

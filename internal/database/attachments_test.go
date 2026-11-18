@@ -2,7 +2,9 @@ package database
 
 import (
 	"context"
+	"io/fs"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -110,6 +112,21 @@ func attachmentsCreate(t *testing.T, ctx context.Context, s *AttachmentsStore) {
 	b, err := s.Create(ctx, 7, "notes.txt", strings.NewReader(""))
 	require.NoError(t, err)
 	assert.NotEqual(t, a.UUID, b.UUID)
+
+	// A file whose attachment fails to save is not kept.
+	canceled, cancel := context.WithCancel(ctx)
+	cancel()
+	_, err = s.Create(canceled, 7, "notes.txt", strings.NewReader("lost"))
+	require.Error(t, err)
+	var files []string
+	err = filepath.WalkDir(conf.Attachment.Path, func(path string, d fs.DirEntry, err error) error {
+		if err == nil && !d.IsDir() {
+			files = append(files, path)
+		}
+		return err
+	})
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{filepath.Clean(a.LocalPath()), filepath.Clean(b.LocalPath())}, files)
 }
 
 func attachmentsGetByUUID(t *testing.T, ctx context.Context, s *AttachmentsStore) {
