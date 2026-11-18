@@ -163,6 +163,21 @@ Primary keys: repo_id, oid
 Primary keys: id
 ```
 
+# Table "mirror"
+
+```
+    Field     |      Column      |          PostgreSQL           |             MySQL             |            SQLite3            
+--------------+------------------+-------------------------------+-------------------------------+-------------------------------
+ ID           | id               | BIGSERIAL                     | BIGINT AUTO_INCREMENT         | INTEGER AUTOINCREMENT         
+ RepoID       | repo_id          | BIGINT                        | BIGINT                        | INTEGER                       
+ Interval     | interval         | BIGINT                        | BIGINT                        | INTEGER                       
+ EnablePrune  | enable_prune     | BOOLEAN NOT NULL DEFAULT TRUE | BOOLEAN NOT NULL DEFAULT TRUE | NUMERIC NOT NULL DEFAULT TRUE 
+ LastSyncUnix | updated_unix     | BIGINT                        | BIGINT                        | INTEGER                       
+ NextSyncUnix | next_update_unix | BIGINT                        | BIGINT                        | INTEGER                       
+
+Primary keys: id
+```
+
 # Table "notice"
 
 ```

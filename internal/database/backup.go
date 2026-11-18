@@ -239,7 +239,6 @@ func importLegacyTables(ctx context.Context, logger *logx.Logger, dirPath string
 	snakeMapper := core.SnakeMapper{}
 
 	skipInsertProcessors := map[string]bool{
-		"mirror":    true,
 		"milestone": true,
 	}
 

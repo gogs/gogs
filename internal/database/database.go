@@ -26,6 +26,7 @@ var Tables = []any{
 	new(Follow),
 	new(HookTask),
 	new(LFSObject), new(LoginSource),
+	new(Mirror),
 	new(Notice),
 	new(Passkey),
 	new(PublicKey),

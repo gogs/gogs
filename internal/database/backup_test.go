@@ -27,7 +27,7 @@ func TestDumpAndImport(t *testing.T) {
 	}
 	t.Parallel()
 
-	const wantTables = 16
+	const wantTables = 17
 	if len(Tables) != wantTables {
 		t.Fatalf("New table has added (want %d got %d), please add new tests for the table and update this check", wantTables, len(Tables))
 	}
@@ -207,6 +207,22 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			UpdatedUnix: 1588572486, // 1 hour later
 		},
 
+		&Mirror{
+			ID:           1,
+			RepoID:       1,
+			Interval:     8,
+			EnablePrune:  true,
+			LastSyncUnix: 1588568886,
+			NextSyncUnix: 1588597686,
+		},
+		&Mirror{
+			ID:           2,
+			RepoID:       2,
+			Interval:     24,
+			LastSyncUnix: 1588568886,
+			NextSyncUnix: 1588655286,
+		},
+
 		&Notice{
 			ID:          1,
 			Type:        NoticeTypeRepository,
@@ -309,6 +325,9 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 		err := db.Create(val).Error
 		require.NoError(t, err)
 	}
+	// Creating leaves out a false EnablePrune for the column default to apply.
+	err := db.Model(new(Mirror)).Where("id = ?", 2).Update("enable_prune", false).Error
+	require.NoError(t, err)
 }
 
 func dumpTables(t *testing.T, db *gorm.DB) {
