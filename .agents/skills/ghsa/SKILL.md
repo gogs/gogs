@@ -9,9 +9,9 @@ Analyze and help fix the GitHub Security Advisory (GHSA) provided as the skill a
 
 Steps:
 1. Fetch the GHSA page using `gh api repos/gogs/gogs/security-advisories` and understand the vulnerability details (description, severity, affected versions, CWE).
-2. Look over existing advisories (including all states) to determine whether the report is first of its kind. If not, stop here.
+2. Look over existing advisories in all states (use `--paginate`) to determine whether the report is the first of its kind. If an earlier advisory reports the same issue, report its ID and stop here.
 3. Verify the reported vulnerability actually exists on latest `main`, and why.
-    - If already fixed on the latest `main`, determine whether it was possible to reproduce on the last revision right before the time of the report.
+    - If already fixed on the latest `main`, determine whether it was possible to reproduce on the last revision right before the time of the report. Report the fixing commit and the result, then stop here.
 4. Identify the affected code in this repository.
 5. Propose a fix with a clear explanation of the root cause and how the fix addresses it. Check for prior art in the codebase to stay consistent with existing patterns.
 6. Implement the fix. Only add tests when there is something meaningful to test at our layer.
