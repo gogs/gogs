@@ -66,6 +66,10 @@ func deployKeysAdd(t *testing.T, ctx context.Context, s *DeployKeysStore) {
 	require.NoError(t, err)
 	assert.Equal(t, key.KeyID, key2.KeyID)
 	assert.NotEqual(t, key.ID, key2.ID)
+	// So do they when the comments of the contents differ.
+	key3, err := s.Add(ctx, logger, 3, "deploy", content+" ci@example.com")
+	require.NoError(t, err)
+	assert.Equal(t, key.KeyID, key3.KeyID)
 
 	_, err = s.Add(ctx, logger, 1, "again", content)
 	assert.True(t, IsErrDeployKeyAlreadyExist(err), "got %v", err)

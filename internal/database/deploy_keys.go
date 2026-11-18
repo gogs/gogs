@@ -2,10 +2,7 @@ package database
 
 import (
 	"context"
-	"database/sql"
-	"math/rand/v2"
 	"slices"
-	"time"
 
 	"github.com/cockroachdb/errors"
 	"github.com/glebarez/go-sqlite"
@@ -27,29 +24,31 @@ func newDeployKeysStore(db *gorm.DB) *DeployKeysStore {
 
 // Add gives the public key of given content read access to the repository as a
 // deploy key. The content must already be checked by CheckPublicKeyString.
-// Repositories that use the same content share one public key. It returns
+// Repositories that use the same key share one public key, whatever the
+// comments of their contents. It returns
 // ErrKeyAlreadyExist when the content is used by a user key,
 // ErrDeployKeyAlreadyExist when the repository already has the key, and
 // ErrDeployKeyNameAlreadyUsed when the repository has a key of the same name.
 func (s *DeployKeysStore) Add(ctx context.Context, logger *logx.Logger, repoID int64, name, content string) (*DeployKey, error) {
-	// Two repositories adding the same new key at the same time would each add
-	// a public key for it. Serializable transactions make one of them fail
-	// instead, and its next attempt finds the public key the other added.
-	const attempts = 5
+	fingerprint, err := publicKeyFingerprint(content)
+	if err != nil {
+		return nil, err
+	}
+
+	// Deploy keys are unique by their fingerprints. Another repository adding
+	// the same key at the same time makes the first attempt violate that, and the
+	// second attempt then finds the public key the other one added.
 	for attempt := 1; ; attempt++ {
-		key, pkey, err := s.add(ctx, repoID, name, content)
+		key, added, err := s.add(ctx, repoID, name, content, fingerprint)
 		if err != nil {
-			if attempt < attempts && isSerializationFailure(err) {
-				// At random, so that the transactions that failed together do not
-				// conflict again.
-				time.Sleep(time.Duration(1+rand.IntN(10*attempt)) * time.Millisecond)
+			if attempt == 1 && isUniqueViolation(err) {
 				continue
 			}
 			return nil, err
 		}
 
-		if pkey != nil {
-			if err = appendAuthorizedKeysToFile(logger, pkey); err != nil {
+		if added != nil {
+			if err = appendAuthorizedKeysToFile(logger, added); err != nil {
 				return nil, errors.Wrap(err, "append to authorized_keys")
 			}
 		}
@@ -58,27 +57,23 @@ func (s *DeployKeysStore) Add(ctx context.Context, logger *logx.Logger, repoID i
 	}
 }
 
-// add adds the deploy key in one serializable transaction, and returns the
-// public key it added, if any.
-func (s *DeployKeysStore) add(ctx context.Context, repoID int64, name, content string) (key *DeployKey, added *PublicKey, _ error) {
+// add adds the deploy key in one transaction, and returns the public key it
+// added, if any.
+func (s *DeployKeysStore) add(ctx context.Context, repoID int64, name, content, fingerprint string) (key *DeployKey, added *PublicKey, _ error) {
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// Locked like lockPublicKeys does, so that deleting the last deploy key of
-		// the public key waits for this one to be added. Locked before any other
-		// read, which takes shared locks on MySQL that this would have to upgrade.
-		pkey := new(PublicKey)
-		err := tx.Where("content = ? AND mode = ? AND type = ?", content, AccessModeRead, KeyTypeDeploy).
-			Order("id").
-			Clauses(clause.Locking{Strength: "UPDATE"}).
-			First(pkey).
-			Error
-		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-			return errors.Wrap(err, "get existing key")
-		}
-		notFound := errors.Is(err, gorm.ErrRecordNotFound)
-		if err = checkKeyContent(tx, content); err != nil {
+		if err := checkKeyContent(tx, content); err != nil {
 			return err
 		}
-		if notFound {
+
+		pkey := new(PublicKey)
+		err := tx.Where("type = ? AND fingerprint = ?", KeyTypeDeploy, fingerprint).First(pkey).Error
+		if err == nil {
+			// Locked like lockPublicKeys does, so that deleting the last deploy key of
+			// the public key waits for this one to be added. The deletion may also
+			// have happened since the public key was found.
+			err = tx.Where("id = ?", pkey.ID).Clauses(clause.Locking{Strength: "UPDATE"}).First(pkey).Error
+		}
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			pkey = &PublicKey{
 				Content: content,
 				Mode:    AccessModeRead,
@@ -88,37 +83,36 @@ func (s *DeployKeysStore) add(ctx context.Context, repoID int64, name, content s
 				return errors.Wrap(err, "add key")
 			}
 			added = pkey
+		} else if err != nil {
+			return errors.Wrap(err, "get existing key")
 		}
 
 		key, err = addDeployKey(tx, pkey.ID, repoID, name, pkey.Fingerprint)
 		return err
-	}, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	})
 	if err != nil {
 		return nil, nil, err
 	}
 	return key, added, nil
 }
 
-// isSerializationFailure returns true when the error is a transaction that the
-// database rolled back for conflicting with another, which succeeds when
-// tried again.
-func isSerializationFailure(err error) bool {
+// isUniqueViolation returns true when the error is an insert that violates a
+// unique index.
+func isUniqueViolation(err error) bool {
 	var sqliteErr *sqlite.Error
 	if errors.As(err, &sqliteErr) {
-		// SQLITE_BUSY and SQLITE_LOCKED, which the shared cache returns without
-		// waiting.
-		code := sqliteErr.Code() & 0xff
-		return code == 5 || code == 6
+		// SQLITE_CONSTRAINT_PRIMARYKEY and SQLITE_CONSTRAINT_UNIQUE.
+		return sqliteErr.Code() == 1555 || sqliteErr.Code() == 2067
 	}
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
-		// serialization_failure and deadlock_detected.
-		return pgErr.Code == "40001" || pgErr.Code == "40P01"
+		// unique_violation.
+		return pgErr.Code == "23505"
 	}
 	var mysqlErr *mysql.MySQLError
 	if errors.As(err, &mysqlErr) {
-		// ER_LOCK_DEADLOCK.
-		return mysqlErr.Number == 1213
+		// ER_DUP_ENTRY.
+		return mysqlErr.Number == 1062
 	}
 	return false
 }

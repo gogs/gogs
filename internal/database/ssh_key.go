@@ -9,7 +9,6 @@ import (
 	"math/big"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -380,22 +379,22 @@ func checkKeyContent(tx *gorm.DB, content string) error {
 // file with appendAuthorizedKeysToFile once the transaction commits, so that a
 // key rolled back leaves no line whose key ID a later key may get.
 func addKey(tx *gorm.DB, key *PublicKey) (err error) {
-	// Calculate fingerprint.
-	tmpPath := strings.ReplaceAll(path.Join(os.TempDir(), fmt.Sprintf("%d", time.Now().Nanosecond()), "id_rsa.pub"), "\\", "/")
-	_ = os.MkdirAll(path.Dir(tmpPath), os.ModePerm)
-	if err = os.WriteFile(tmpPath, []byte(key.Content), 0o644); err != nil {
+	key.Fingerprint, err = publicKeyFingerprint(key.Content)
+	if err != nil {
 		return err
 	}
-
-	stdout, stderr, err := sshKeygenFingerprint(conf.SSH.KeygenPath, tmpPath)
-	if err != nil {
-		return errors.Newf("fail to parse public key: %s - %s", err, stderr)
-	} else if len(stdout) < 2 {
-		return errors.New("not enough output for calculating fingerprint: " + stdout)
-	}
-	key.Fingerprint = strings.Split(stdout, " ")[1]
-
 	return tx.Create(key).Error
+}
+
+// publicKeyFingerprint returns the SHA256 fingerprint of the public key in the
+// authorized_keys format, as "ssh-keygen -l" prints it. Deploy keys are unique
+// by their fingerprints, which the migrations compute the same way.
+func publicKeyFingerprint(content string) (string, error) {
+	key, _, _, _, err := ssh.ParseAuthorizedKey([]byte(content))
+	if err != nil {
+		return "", errors.Wrap(err, "parse public key")
+	}
+	return ssh.FingerprintSHA256(key), nil
 }
 
 // deletePublicKeys does the actual key deletion but does not update authorized_keys file.

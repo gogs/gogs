@@ -126,6 +126,7 @@ All notable changes to Gogs are documented in this file.
 - "New pull request" in a fork that takes pull requests now compares branches of the fork instead of always going to its base repository, and the comparison lets you choose between the fork and its base repository. [#8646](https://github.com/gogs/gogs/pull/8646)
 - Deleting a deploy key or its repository no longer leaves the key in `authorized_keys`, which blocked adding the key again. [#8648](https://github.com/gogs/gogs/pull/8648)
 - Adding an SSH or deploy key that fails, e.g., because the name is taken, no longer leaves the key in `authorized_keys`, where it could sign in as a key added later. [#8648](https://github.com/gogs/gogs/pull/8648)
+- A deploy key added to several repositories with different comments now works for all of them, instead of being denied for all but one. [#8648](https://github.com/gogs/gogs/pull/8648)
 
 ### Removed
 
