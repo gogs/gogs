@@ -1,0 +1,276 @@
+package migrations
+
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"maps"
+	"slices"
+	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
+	"unknwon.dev/x/logx"
+
+	"gogs.io/gogs/internal/dbtest"
+)
+
+// migrationScenario is a database in a state that existing installations are in
+// before they upgrade.
+type migrationScenario struct {
+	name string
+	// legacy is the version of the legacy "version" table to start from, or zero
+	// to start from an empty database.
+	legacy int64
+	// from is the version to run the migrations up to before seeding, or zero to
+	// run none.
+	from int64
+	// seed adds what the installations have at the starting state. It writes
+	// tables without the current models, because they describe today's schema
+	// rather than the one at the starting version.
+	seed func(t *testing.T, db *gorm.DB)
+	// check verifies the data that the migrations change after migrating to the
+	// latest version.
+	check func(t *testing.T, db *gorm.DB)
+}
+
+// TestMigrateScenarios migrates each scenario to the latest version, then checks
+// its data and that its schema is the same as the one of a new installation.
+//
+// Add a scenario for a state that existing installations are in when a new
+// migration may fail on it or change its data in the wrong way, e.g., rows
+// written by a released version that the migration rewrites. Check the data
+// that the migrations decide, not what the database keeps on its own.
+func TestMigrateScenarios(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	t.Parallel()
+
+	newDB := dbtest.NewDB(t, "migrateScenarioNew")
+	require.NoError(t, Migrate(logx.NewNoopLogger(), newDB))
+	newSchema := dumpSchema(t, newDB)
+
+	scenarios := []migrationScenario{
+		{
+			name: "new installation",
+			check: func(t *testing.T, db *gorm.DB) {
+				tables, err := db.Migrator().GetTables()
+				require.NoError(t, err)
+				tables = slices.DeleteFunc(tables, func(name string) bool { return name == "sqlite_sequence" })
+				assert.Len(t, tables, 37) // 36 tables and "goose_db_version"
+				assert.Contains(t, tables, "user")
+				assert.Contains(t, tables, "passkey")
+				assert.NotContains(t, tables, "version")
+				assert.NotContains(t, tables, "protect_branch_whitelist")
+				assert.True(t, db.Migrator().HasIndex("attachment", "UQE_attachment_uuid"))
+				assert.True(t, db.Migrator().HasIndex("public_key", ownerFingerprintIndex))
+			},
+		},
+		{
+			name:   "Gogs 0.12",
+			legacy: 19,
+			seed: func(t *testing.T, db *gorm.DB) {
+				require.NoError(t, db.Table("access_token").Create([]map[string]any{
+					{"id": 1, "uid": 1, "name": "ci", "sha1": "73da7bb9d2a475bbc2ab79da7d4e94940cb9f9d5"},
+					{"id": 2, "uid": 2, "name": "deploy", "sha1": "4c6dc8d6a4b9ed1d0c1b5bfb1b8b1b5b1b8b1b5b"},
+				}).Error)
+				require.NoError(t, db.Table("repository").Create(map[string]any{"id": 1, "owner_id": 1, "lower_name": "example", "name": "example"}).Error)
+			},
+			check: func(t *testing.T, db *gorm.DB) {
+				assert.Equal(t, []string{
+					sha256Hex("73da7bb9d2a475bbc2ab79da7d4e94940cb9f9d5"),
+					sha256Hex("4c6dc8d6a4b9ed1d0c1b5bfb1b8b1b5b1b8b1b5b"),
+				}, accessTokenSHA256s(t, db))
+
+				// Existing repositories stay listed, keep allowing merge commits, do not allow
+				// squashing, keep head branches, and have no message presets.
+				var count int64
+				require.NoError(t, db.Table("repository").
+					Where("is_unlisted = ? AND pulls_allow_merge = ? AND pulls_allow_squash = ? AND pulls_delete_branch = ? AND pulls_merge_message = '' AND pulls_squash_message = ''", false, true, false, false).
+					Count(&count).Error)
+				assert.Equal(t, int64(1), count)
+			},
+		},
+		{
+			// A bug in the legacy runner left some instances of 0.13 and 0.14 at
+			// version 21 and others at 22, which the migrations treat the same.
+			name:   "Gogs 0.13 and 0.14",
+			legacy: 21,
+			seed: func(t *testing.T, db *gorm.DB) {
+				// XORM added the column on startup.
+				require.NoError(t, addRepositoryIsUnlisted(db))
+				require.NoError(t, db.Table("repository").Create(map[string]any{"id": 1, "owner_id": 1, "lower_name": "example", "name": "example", "is_unlisted": true}).Error)
+
+				// Since 0.13, tokens store their SHA-256 and the first 40 characters of it as
+				// SHA-1, so hashing the SHA-1 again breaks them.
+				require.NoError(t, db.Table("access_token").Create(map[string]any{"id": 1, "uid": 1, "name": "ci", "sha1": sha256Hex("token")[:40], "sha256": sha256Hex("token")}).Error)
+			},
+			check: func(t *testing.T, db *gorm.DB) {
+				assert.Equal(t, []string{sha256Hex("token")}, accessTokenSHA256s(t, db))
+
+				var isUnlisted bool
+				require.NoError(t, db.Table("repository").Where("id = 1").Select("is_unlisted").Scan(&isUnlisted).Error)
+				assert.True(t, isUnlisted)
+			},
+		},
+		{
+			// The edge image ships main, where XORM and GORM added these columns and
+			// tables on startup before the migrations did.
+			name:   "main before goose",
+			legacy: 23,
+			seed: func(t *testing.T, db *gorm.DB) {
+				require.NoError(t, addRepositoryIsUnlisted(db))
+				require.NoError(t, addRepositoryPullsAllowMergeAndSquash(db))
+				require.NoError(t, addRepositoryPullsMergeSettings(db))
+				require.NoError(t, addAttachmentUploaderID(db))
+				require.NoError(t, createPasskeyTable(db))
+			},
+		},
+		{
+			// On SQLite, version 20 dropped the index on "access_token.uid" of instances
+			// that the edge image has upgraded since.
+			name:   "main tracked by goose, upgraded from Gogs 0.12",
+			legacy: 19,
+			from:   20261117073704,
+		},
+	}
+	for i, s := range scenarios {
+		t.Run(s.name, func(t *testing.T) {
+			t.Parallel()
+
+			db := dbtest.NewDB(t, fmt.Sprintf("migrateScenario%d", i))
+			if s.legacy > 0 {
+				createLegacyDatabase(t, db, s.legacy)
+			}
+			if s.from > 0 {
+				require.NoError(t, migrateTo(logx.NewNoopLogger(), db, s.from))
+				require.Equal(t, s.from, gooseVersion(t, db))
+			}
+			if s.seed != nil {
+				s.seed(t, db)
+			}
+
+			require.NoError(t, Migrate(logx.NewNoopLogger(), db))
+			assert.Equal(t, latestVersion(db), gooseVersion(t, db))
+			if s.check != nil {
+				s.check(t, db)
+			}
+			assertSameSchema(t, newSchema, dumpSchema(t, db))
+		})
+	}
+}
+
+// createLegacyDatabase turns an empty database into one that the legacy runner
+// left at the given version: the schema of Gogs 0.12 at version 19, changed by
+// the migrations that the legacy runner ran for each later version.
+func createLegacyDatabase(t *testing.T, db *gorm.DB, version int64) {
+	require.NoError(t, createBaselineTables(db))
+
+	// Undo what versions 20 to 23 and the migrations of the columns that XORM used
+	// to add on startup put in the baseline.
+	require.NoError(t, db.Exec("ALTER TABLE repository DROP COLUMN is_unlisted").Error)
+	if db.Name() == "sqlite" {
+		// SQLite cannot drop a column with a UNIQUE constraint.
+		require.NoError(t, db.Migrator().DropTable("access_token"))
+		require.NoError(t, db.Exec("CREATE TABLE `access_token` (`id` integer PRIMARY KEY AUTOINCREMENT, `uid` integer, `name` text, `sha1` VARCHAR(40), `created_unix` integer, `updated_unix` integer, CONSTRAINT `uni_access_token_sha1` UNIQUE (`sha1`))").Error)
+		require.NoError(t, db.Exec("CREATE INDEX `idx_access_token_user_id` ON `access_token`(`uid`)").Error)
+	} else {
+		require.NoError(t, db.Exec("ALTER TABLE access_token DROP COLUMN sha256").Error)
+	}
+	require.NoError(t, db.Migrator().DropIndex("action", "idx_action_user_id"))
+	if db.Name() != "sqlite" {
+		require.NoError(t, db.Migrator().AlterColumn(new(pullRequestPreV23), "MergeBase"))
+		require.NoError(t, db.Migrator().AlterColumn(new(pullRequestPreV23), "MergedCommitID"))
+		require.NoError(t, db.Migrator().AlterColumn(new(releasePreV23), "Sha1"))
+		require.NoError(t, db.Migrator().AlterColumn(new(commentPreV23), "CommitSHA"))
+	}
+
+	legacyMigrations := map[int64]func(*gorm.DB) error{
+		20: migrateAccessTokenToSHA256,
+		21: addIndexToActionUserID,
+		22: func(*gorm.DB) error { return nil },
+		23: widenCommitIDColumns,
+	}
+	for v := int64(minDBVersion + 1); v <= version; v++ {
+		err := legacyMigrations[v](db)
+		if err != errMigrationSkipped {
+			require.NoError(t, err, "legacy version %d", v)
+		}
+	}
+	require.NoError(t, db.Migrator().CreateTable(new(Version)))
+	require.NoError(t, db.Create(&Version{ID: 1, Version: version}).Error)
+}
+
+func sha256Hex(s string) string {
+	sum := sha256.Sum256([]byte(s))
+	return hex.EncodeToString(sum[:])
+}
+
+func accessTokenSHA256s(t *testing.T, db *gorm.DB) []string {
+	var hashes []string
+	require.NoError(t, db.Table("access_token").Order("id").Pluck("sha256", &hashes).Error)
+	return hashes
+}
+
+// dumpSchema returns the columns and indexes of each table in the database, in
+// an order that does not depend on the order of creation.
+func dumpSchema(t *testing.T, db *gorm.DB) map[string]string {
+	tables, err := db.Migrator().GetTables()
+	require.NoError(t, err)
+
+	schema := make(map[string]string, len(tables))
+	for _, table := range tables {
+		// The migrations keep the legacy "version" table of upgraded databases, which
+		// nothing reads anymore.
+		if table == "sqlite_sequence" || table == "version" {
+			continue
+		}
+
+		columns, err := db.Migrator().ColumnTypes(table)
+		require.NoError(t, err)
+		var lines []string
+		for _, c := range columns {
+			typ, _ := c.ColumnType()
+			nullable, _ := c.Nullable()
+			def, hasDefault := c.DefaultValue()
+			primaryKey, _ := c.PrimaryKey()
+			unique, _ := c.Unique()
+			autoIncrement, _ := c.AutoIncrement()
+			line := fmt.Sprintf("column %s %s nullable=%t primary=%t unique=%t autoincrement=%t", c.Name(), strings.ToLower(typ), nullable, primaryKey, unique, autoIncrement)
+			if hasDefault {
+				line += fmt.Sprintf(" default=%q", def)
+			}
+			lines = append(lines, line)
+		}
+
+		indexes, err := db.Migrator().GetIndexes(table)
+		require.NoError(t, err)
+		for _, index := range indexes {
+			unique, _ := index.Unique()
+			primaryKey, _ := index.PrimaryKey()
+			lines = append(lines, fmt.Sprintf("index %s (%s) primary=%t unique=%t", index.Name(), strings.Join(index.Columns(), ", "), primaryKey, unique))
+		}
+		slices.Sort(lines)
+		schema[table] = strings.Join(lines, "\n")
+	}
+	return schema
+}
+
+// assertSameSchema compares the schema of an upgraded database with the one of
+// a new installation table by table, so that a failure shows only the tables
+// that differ.
+func assertSameSchema(t *testing.T, want, got map[string]string) {
+	t.Helper()
+	tables := slices.Sorted(maps.Keys(want))
+	for table := range got {
+		if _, ok := want[table]; !ok {
+			tables = append(tables, table)
+		}
+	}
+	for _, table := range tables {
+		assert.Equal(t, want[table], got[table], "schema differs from a new installation: table %q", table)
+	}
+}
