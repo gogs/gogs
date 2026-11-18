@@ -9,6 +9,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/auth/ldap"
@@ -62,6 +63,8 @@ func (s *LoginSource) BeforeUpdate(tx *gorm.DB) error {
 
 type mockProviderConfig struct {
 	ExternalAccount *auth.ExternalAccount
+	// Login is the only login the mock provider authenticates, if not empty.
+	Login string
 }
 
 // AfterFind implements the GORM query hook.
@@ -113,7 +116,12 @@ func (s *LoginSource) AfterFind(_ *gorm.DB) error {
 			return err
 		}
 		mockProvider := NewMockProvider()
-		mockProvider.AuthenticateFunc.SetDefaultReturn(cfg.ExternalAccount, nil)
+		mockProvider.AuthenticateFunc.SetDefaultHook(func(_ *logx.Logger, login, _ string) (*auth.ExternalAccount, error) {
+			if cfg.Login != "" && login != cfg.Login {
+				return nil, auth.ErrBadCredentials{Args: map[string]any{"login": login}}
+			}
+			return cfg.ExternalAccount, nil
+		})
 		s.Provider = mockProvider
 
 	default:

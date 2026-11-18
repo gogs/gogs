@@ -199,6 +199,63 @@ func usersAuthenticate(t *testing.T, ctx context.Context, s *UsersStore) {
 		assert.Equal(t, bob.Name, user.Name)
 	})
 
+	t.Run("authenticates the login bound to the account", func(t *testing.T) {
+		loginSourcesStore := newLoginSourcesStore(s.db, NewMockLoginSourceFilesStore())
+		newSource := func(t *testing.T, name, sourceLogin string) *LoginSource {
+			source, err := loginSourcesStore.Create(
+				ctx,
+				CreateLoginSourceOptions{
+					Type:      auth.Mock,
+					Name:      name,
+					Activated: true,
+					Config: mockProviderConfig{
+						ExternalAccount: &auth.ExternalAccount{},
+						Login:           sourceLogin,
+					},
+				},
+			)
+			require.NoError(t, err)
+			return source
+		}
+
+		// The login source has another identity whose login is the email of the
+		// account.
+		source := newSource(t, "mock-bound-1", "dave@example.com")
+		dave, err := s.Create(ctx, "dave", "dave@example.com",
+			CreateUserOptions{
+				LoginSource: source.ID,
+				LoginName:   "dave-ldap",
+			},
+		)
+		require.NoError(t, err)
+		_, err = s.Authenticate(ctx, logx.NewNoopLogger(), dave.Email, password, -1)
+		assert.Equal(t, auth.ErrBadCredentials{Args: map[string]any{"login": "dave-ldap"}}, err)
+
+		source = newSource(t, "mock-bound-2", "erin-ldap")
+		erin, err := s.Create(ctx, "erin", "erin@example.com",
+			CreateUserOptions{
+				LoginSource: source.ID,
+				LoginName:   "erin-ldap",
+			},
+		)
+		require.NoError(t, err)
+		user, err := s.Authenticate(ctx, logx.NewNoopLogger(), erin.Email, password, -1)
+		require.NoError(t, err)
+		assert.Equal(t, erin.ID, user.ID)
+
+		// Accounts without a login name are bound to their username.
+		source = newSource(t, "mock-bound-3", "frank")
+		frank, err := s.Create(ctx, "frank", "frank@example.com",
+			CreateUserOptions{
+				LoginSource: source.ID,
+			},
+		)
+		require.NoError(t, err)
+		user, err = s.Authenticate(ctx, logx.NewNoopLogger(), frank.Email, password, -1)
+		require.NoError(t, err)
+		assert.Equal(t, frank.ID, user.ID)
+	})
+
 	t.Run("new user via login source", func(t *testing.T) {
 		loginSourcesStore := newLoginSourcesStore(s.db, NewMockLoginSourceFilesStore())
 		loginSource, err := loginSourcesStore.Create(
