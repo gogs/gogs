@@ -60,8 +60,9 @@ func (s *PublicKeysStore) Add(ctx context.Context, logger *logx.Logger, ownerID 
 		}
 		return nil, errors.Wrap(err, "add key")
 	}
+	// The key is already added, and resyncing SSH keys adds its line.
 	if err = appendAuthorizedKeysToFile(logger, key); err != nil {
-		return nil, errors.Wrap(err, "append to authorized_keys")
+		logger.Error("Failed to append public key to authorized_keys", "keyID", key.ID, "error", err)
 	}
 	return key, nil
 }

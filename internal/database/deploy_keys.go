@@ -49,8 +49,9 @@ func (s *DeployKeysStore) Add(ctx context.Context, logger *logx.Logger, repoID i
 		}
 
 		if added != nil {
+			// The key is already added, and resyncing SSH keys adds its line.
 			if err = appendAuthorizedKeysToFile(logger, added); err != nil {
-				return nil, errors.Wrap(err, "append to authorized_keys")
+				logger.Error("Failed to append deploy key to authorized_keys", "keyID", added.ID, "error", err)
 			}
 		}
 		key.Content = content
