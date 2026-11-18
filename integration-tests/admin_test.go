@@ -26,10 +26,8 @@ import (
 func adminClients(t *testing.T) (admin, nonAdmin, anonymous *client) {
 	t.Helper()
 
-	admin = newClient(t)
-	admin.signIn(seedUser(t, CreateUserOptions{Admin: true}))
-	nonAdmin = newClient(t)
-	nonAdmin.signIn(seedUser(t, CreateUserOptions{}))
+	admin = authenticatedClient(t, seedUser(t, CreateUserOptions{Admin: true}))
+	nonAdmin = authenticatedClient(t, seedUser(t, CreateUserOptions{}))
 	return admin, nonAdmin, newClient(t)
 }
 
@@ -92,6 +90,8 @@ func adminReportValues(t *testing.T, sections []adminReportSection, id string) [
 }
 
 func TestAdminDashboard(t *testing.T) {
+	t.Parallel()
+
 	admin, nonAdmin, anonymous := adminClients(t)
 	adminAssertTurnedAway(t, nonAdmin, anonymous, http.MethodGet, "/api/web/admin/dashboard", nil)
 
@@ -141,6 +141,10 @@ func adminRunOperation(t *testing.T, admin, nonAdmin, anonymous *client, name st
 // resyncing SSH keys are left out: both rewrite the "authorized_keys" file in
 // the SSH root path, which is the ".ssh" directory of the user running the
 // tests.
+//
+// It is the only test that does not run in parallel, because the operations
+// act on every repository, including the ones other tests push to or download
+// archives of at the same time. Go runs it before the parallel tests start.
 func TestAdminOperations(t *testing.T) {
 	admin, nonAdmin, anonymous := adminClients(t)
 	owner := seedUser(t, CreateUserOptions{})
@@ -230,6 +234,8 @@ func TestAdminOperations(t *testing.T) {
 }
 
 func TestAdminConfig(t *testing.T) {
+	t.Parallel()
+
 	admin, nonAdmin, anonymous := adminClients(t)
 	adminAssertTurnedAway(t, nonAdmin, anonymous, http.MethodGet, "/api/web/admin/config", nil)
 
@@ -255,6 +261,8 @@ func TestAdminConfig(t *testing.T) {
 }
 
 func TestAdminTestMail(t *testing.T) {
+	t.Parallel()
+
 	admin, nonAdmin, anonymous := adminClients(t)
 	path := "/api/web/admin/config/test-mail"
 	address := UniqueName("mail-") + "@example.com"
@@ -273,6 +281,8 @@ func TestAdminTestMail(t *testing.T) {
 }
 
 func TestAdminMonitor(t *testing.T) {
+	t.Parallel()
+
 	admin, nonAdmin, anonymous := adminClients(t)
 	adminAssertTurnedAway(t, nonAdmin, anonymous, http.MethodGet, "/api/web/admin/monitor", nil)
 
@@ -314,6 +324,8 @@ func adminSeedOrganization(t *testing.T, ownerID int64) *database.User {
 }
 
 func TestAdminOrgs(t *testing.T) {
+	t.Parallel()
+
 	admin, nonAdmin, anonymous := adminClients(t)
 	owner := seedUser(t, CreateUserOptions{})
 	org := adminSeedOrganization(t, owner.ID)
@@ -345,6 +357,8 @@ func TestAdminOrgs(t *testing.T) {
 }
 
 func TestAdminRepos(t *testing.T) {
+	t.Parallel()
+
 	admin, nonAdmin, anonymous := adminClients(t)
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{Private: true, AutoInit: true})
@@ -405,6 +419,8 @@ func adminNoticeIDs(t *testing.T, prefix string) []int64 {
 }
 
 func TestAdminNotices(t *testing.T) {
+	t.Parallel()
+
 	admin, nonAdmin, anonymous := adminClients(t)
 	prefix := UniqueName("notice-")
 	for _, suffix := range []string{"-first", "-second"} {

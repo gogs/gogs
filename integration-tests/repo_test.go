@@ -2,7 +2,6 @@ package integrationtests
 
 import (
 	"net/http"
-	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,6 +11,8 @@ import (
 )
 
 func TestRepositorySourceVisibility(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	other := seedUser(t, CreateUserOptions{})
 	public := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
@@ -37,10 +38,8 @@ func TestRepositorySourceVisibility(t *testing.T) {
 	}
 
 	anonymous := newClient(t)
-	otherClient := newClient(t)
-	otherClient.signIn(other)
-	ownerClient := newClient(t)
-	ownerClient.signIn(owner)
+	otherClient := authenticatedClient(t, other)
+	ownerClient := authenticatedClient(t, owner)
 
 	for name, c := range map[string]*client{"anonymous": anonymous, "other": otherClient, "owner": ownerClient} {
 		assertREADME(c, public)
@@ -53,38 +52,9 @@ func TestRepositorySourceVisibility(t *testing.T) {
 	}
 }
 
-func TestIssueCreatedThroughAPIV1(t *testing.T) {
-	owner := seedUser(t, CreateUserOptions{})
-	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
-	token, err := CreateAccessToken(t.Context(), owner.ID)
-	require.NoError(t, err)
-
-	api := newClient(t)
-	api.header.Set("Authorization", "token "+token)
-	var created struct {
-		Number int64 `json:"number"`
-	}
-	api.doJSON(http.MethodPost, "/api/v1/repos/"+repo.Owner+"/"+repo.Name+"/issues", map[string]any{
-		"title": "Crash on start",
-		"body":  "It **crashes**.",
-	}, http.StatusCreated, &created)
-
-	var issue struct {
-		Index       int64  `json:"index"`
-		Title       string `json:"title"`
-		ContentHTML string `json:"contentHTML"`
-		Poster      struct {
-			Name string `json:"name"`
-		} `json:"poster"`
-	}
-	newClient(t).doJSON(http.MethodGet, "/api/web/"+repo.Owner+"/"+repo.Name+"/issues/"+strconv.FormatInt(created.Number, 10), nil, http.StatusOK, &issue)
-	assert.Equal(t, created.Number, issue.Index)
-	assert.Equal(t, "Crash on start", issue.Title)
-	assert.Contains(t, issue.ContentHTML, "<strong>crashes</strong>")
-	assert.Equal(t, owner.Name, issue.Poster.Name)
-}
-
 func TestRepositoryExternalWikiAndTracker(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	other := seedUser(t, CreateUserOptions{})
 	collaborator := seedUser(t, CreateUserOptions{})
@@ -95,16 +65,12 @@ func TestRepositoryExternalWikiAndTracker(t *testing.T) {
 	repoSettingsAddCollaborator(t, private, collaborator, database.AccessModeRead)
 	repoSettingsAddCollaborator(t, private, prohibited, database.AccessModeRead)
 
-	ownerClient := newClient(t)
-	ownerClient.signIn(owner)
-	otherClient := newClient(t)
-	otherClient.signIn(other)
-	collaboratorClient := newClient(t)
-	collaboratorClient.signIn(collaborator)
+	ownerClient := authenticatedClient(t, owner)
+	otherClient := authenticatedClient(t, other)
+	collaboratorClient := authenticatedClient(t, collaborator)
 	// The prohibited collaborator stays authenticated by the session they had
 	// before they were prohibited from signing in.
-	prohibitedClient := newClient(t)
-	prohibitedClient.signIn(prohibited)
+	prohibitedClient := authenticatedClient(t, prohibited)
 	prohibitLogin := true
 	require.NoError(t, database.Handle.Users().Update(t.Context(), prohibited.ID, database.UpdateUserOptions{ProhibitLogin: &prohibitLogin}))
 	anonymous := newClient(t)

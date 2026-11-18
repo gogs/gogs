@@ -46,13 +46,13 @@ func issueLabelsOf(t *testing.T, repo *Repository) map[string]*database.Label {
 }
 
 func TestIssueRepositoryLabels(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	other := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
-	ownerClient := newClient(t)
-	ownerClient.signIn(owner)
-	otherClient := newClient(t)
-	otherClient.signIn(other)
+	ownerClient := authenticatedClient(t, owner)
+	otherClient := authenticatedClient(t, other)
 
 	type labelList struct {
 		Items []struct {
@@ -133,13 +133,13 @@ func TestIssueRepositoryLabels(t *testing.T) {
 }
 
 func TestIssueInitializeLabels(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	other := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{})
-	ownerClient := newClient(t)
-	ownerClient.signIn(owner)
-	otherClient := newClient(t)
-	otherClient.signIn(other)
+	ownerClient := authenticatedClient(t, owner)
+	otherClient := authenticatedClient(t, other)
 	path := issueAPIPath(repo, "labels", "initialize")
 
 	status, body := otherClient.do(http.MethodPost, path, map[string]any{"template": "Default"})
@@ -168,13 +168,13 @@ func TestIssueInitializeLabels(t *testing.T) {
 }
 
 func TestIssueMilestones(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	other := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
-	ownerClient := newClient(t)
-	ownerClient.signIn(owner)
-	otherClient := newClient(t)
-	otherClient.signIn(other)
+	ownerClient := authenticatedClient(t, owner)
+	otherClient := authenticatedClient(t, other)
 
 	type milestoneList struct {
 		Items []struct {

@@ -36,6 +36,8 @@ func adminSeedAuthSource(t *testing.T) *database.LoginSource {
 }
 
 func TestAdminUsers(t *testing.T) {
+	t.Parallel()
+
 	admin, nonAdmin, anonymous := adminClients(t)
 
 	name := UniqueName("admin-created-")
@@ -60,8 +62,7 @@ func TestAdminUsers(t *testing.T) {
 		assert.True(t, u.IsActive)
 		assert.False(t, u.IsAdmin)
 
-		c := newClient(t)
-		c.signIn(&User{Name: name, Password: password})
+		c := authenticatedClient(t, &User{Name: name, Password: password})
 		assert.Equal(t, name, c.username())
 
 		status, respBody := admin.do(http.MethodPost, "/api/web/admin/users", body)
@@ -159,8 +160,7 @@ func TestAdminUsers(t *testing.T) {
 		assert.False(t, u.AllowImportLocal)
 		assert.False(t, u.ProhibitLogin)
 
-		c := newClient(t)
-		c.signIn(&User{Name: name, Password: newPassword})
+		c := authenticatedClient(t, &User{Name: name, Password: newPassword})
 		assert.Equal(t, name, c.username())
 
 		// An email of another user is taken.
@@ -197,6 +197,8 @@ func TestAdminUsers(t *testing.T) {
 }
 
 func TestAdminUserOptions(t *testing.T) {
+	t.Parallel()
+
 	admin, nonAdmin, anonymous := adminClients(t)
 	source := adminSeedAuthSource(t)
 	adminAssertTurnedAway(t, nonAdmin, anonymous, http.MethodGet, "/api/web/admin/user-options", nil)
@@ -219,6 +221,8 @@ func TestAdminUserOptions(t *testing.T) {
 }
 
 func TestAdminUserOfAuthSource(t *testing.T) {
+	t.Parallel()
+
 	admin, _, _ := adminClients(t)
 	source := adminSeedAuthSource(t)
 	name := UniqueName("external-")
@@ -262,6 +266,8 @@ func TestAdminUserOfAuthSource(t *testing.T) {
 }
 
 func TestAdminAuthSources(t *testing.T) {
+	t.Parallel()
+
 	admin, nonAdmin, anonymous := adminClients(t)
 	name := UniqueName("auth-")
 	body := map[string]any{
@@ -401,6 +407,8 @@ func TestAdminAuthSources(t *testing.T) {
 }
 
 func TestAdminLDAPAuthSourceBindPassword(t *testing.T) {
+	t.Parallel()
+
 	admin, _, _ := adminClients(t)
 	bindPassword := UniqueName("bind-")
 	body := map[string]any{

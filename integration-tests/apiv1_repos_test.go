@@ -14,6 +14,8 @@ import (
 )
 
 func TestAPIV1CreateRepository(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	api := apiV1Client(t, owner)
 
@@ -61,6 +63,8 @@ func apiV1RepoNames(repos []apiV1Repo) []string {
 }
 
 func TestAPIV1ListUserRepositories(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	public := seedRepository(t, owner.ID, CreateRepositoryOptions{})
 	private := seedRepository(t, owner.ID, CreateRepositoryOptions{Private: true})
@@ -79,6 +83,8 @@ func TestAPIV1ListUserRepositories(t *testing.T) {
 }
 
 func TestAPIV1SearchRepositories(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	public := seedRepository(t, owner.ID, CreateRepositoryOptions{})
 	private := seedRepository(t, owner.ID, CreateRepositoryOptions{Private: true})
@@ -103,6 +109,8 @@ func TestAPIV1SearchRepositories(t *testing.T) {
 }
 
 func TestAPIV1DeleteRepository(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 
@@ -120,6 +128,8 @@ func TestAPIV1DeleteRepository(t *testing.T) {
 }
 
 func TestAPIV1MigrateRepository(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	source := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	api := apiV1Client(t, owner)
@@ -161,6 +171,8 @@ func TestAPIV1MigrateRepository(t *testing.T) {
 }
 
 func TestAPIV1ListForks(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	forker := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
@@ -185,6 +197,8 @@ func TestAPIV1ListForks(t *testing.T) {
 }
 
 func TestAPIV1Releases(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 
@@ -224,6 +238,8 @@ func TestAPIV1Releases(t *testing.T) {
 }
 
 func TestAPIV1RepositorySettings(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	api := apiV1Client(t, owner)
@@ -276,6 +292,8 @@ func TestAPIV1RepositorySettings(t *testing.T) {
 }
 
 func TestAPIV1Collaborators(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	collaborator := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{Private: true})
@@ -326,6 +344,8 @@ func TestAPIV1Collaborators(t *testing.T) {
 }
 
 func TestAPIV1Hooks(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{})
 	api := apiV1Client(t, owner)
@@ -396,6 +416,8 @@ func TestAPIV1Hooks(t *testing.T) {
 }
 
 func TestAPIV1DeployKeys(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{})
 	api := apiV1Client(t, owner)

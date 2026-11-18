@@ -49,9 +49,11 @@ func repoSettingsHead(t *testing.T, repo *Repository, branch string) string {
 }
 
 func TestRepoSettingsNewRepository(t *testing.T) {
+	t.Parallel()
+
 	u := seedUser(t, CreateUserOptions{})
 	other := seedUser(t, CreateUserOptions{})
-	c := repoSettingsSignedIn(t, u)
+	c := authenticatedClient(t, u)
 
 	var options struct {
 		Owners []struct {
@@ -82,9 +84,11 @@ func TestRepoSettingsNewRepository(t *testing.T) {
 }
 
 func TestRepoSettingsCreateRepository(t *testing.T) {
+	t.Parallel()
+
 	u := seedUser(t, CreateUserOptions{})
 	other := seedUser(t, CreateUserOptions{})
-	c := repoSettingsSignedIn(t, u)
+	c := authenticatedClient(t, u)
 	name := UniqueName("created-")
 	request := map[string]any{
 		"name":        name,
@@ -126,11 +130,13 @@ func TestRepoSettingsCreateRepository(t *testing.T) {
 }
 
 func TestRepoSettingsMigrateRepository(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	u := seedUser(t, CreateUserOptions{})
 	source := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	branch := repoSettingsDefaultBranch(t, source)
-	c := repoSettingsSignedIn(t, u)
+	c := authenticatedClient(t, u)
 
 	repo, _ := repoSettingsMigrate(t, c, u, source, false)
 	assert.Equal(t, repoSettingsHead(t, source, branch), repoSettingsHead(t, repo, branch))
@@ -153,11 +159,13 @@ func TestRepoSettingsMigrateRepository(t *testing.T) {
 }
 
 func TestRepoSettingsMirror(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	u := seedUser(t, CreateUserOptions{})
 	source := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	branch := repoSettingsDefaultBranch(t, source)
-	c := repoSettingsSignedIn(t, u)
+	c := authenticatedClient(t, u)
 	mirror, cloneAddr := repoSettingsMigrate(t, c, u, source, true)
 	assert.Equal(t, repoSettingsHead(t, source, branch), repoSettingsHead(t, mirror, branch))
 
@@ -214,16 +222,18 @@ func TestRepoSettingsMirror(t *testing.T) {
 }
 
 func TestRepoSettingsConvertMirror(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	u := seedUser(t, CreateUserOptions{})
 	admin := seedUser(t, CreateUserOptions{})
 	source := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
-	c := repoSettingsSignedIn(t, u)
+	c := authenticatedClient(t, u)
 	mirror, _ := repoSettingsMigrate(t, c, u, source, true)
 	repoSettingsAddCollaborator(t, mirror, admin, database.AccessModeAdmin)
 	path := repoSettingsAPIPath(mirror, "/settings/convert")
 
-	status, body := repoSettingsSignedIn(t, admin).do(http.MethodPost, path, map[string]any{"repoName": mirror.Name})
+	status, body := authenticatedClient(t, admin).do(http.MethodPost, path, map[string]any{"repoName": mirror.Name})
 	require.Equal(t, http.StatusNotFound, status, "response: %s", body)
 	status, body = c.do(http.MethodPost, path, map[string]any{"repoName": mirror.Name + "x"})
 	require.Equal(t, http.StatusBadRequest, status, "response: %s", body)
@@ -252,13 +262,15 @@ func TestRepoSettingsConvertMirror(t *testing.T) {
 }
 
 func TestRepoSettingsFork(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	u := seedUser(t, CreateUserOptions{})
 	outsider := seedUser(t, CreateUserOptions{})
 	base := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	private := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
 	baseID := strconv.FormatInt(base.ID, 10)
-	c := repoSettingsSignedIn(t, u)
+	c := authenticatedClient(t, u)
 
 	var options struct {
 		Base struct {
@@ -278,7 +290,7 @@ func TestRepoSettingsFork(t *testing.T) {
 	assert.Equal(t, u.Name, options.Owners[0].Name)
 
 	// Repositories the viewer cannot read are not found.
-	outsiderClient := repoSettingsSignedIn(t, outsider)
+	outsiderClient := authenticatedClient(t, outsider)
 	privateID := strconv.FormatInt(private.ID, 10)
 	status, body := outsiderClient.do(http.MethodGet, "/api/web/repo/fork/"+privateID, nil)
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
@@ -307,7 +319,7 @@ func TestRepoSettingsFork(t *testing.T) {
 	c.doJSON(http.MethodPost, "/api/web/repo/fork/"+baseID, map[string]any{"name": UniqueName("fork-")}, http.StatusOK, &created)
 	assert.Equal(t, repoSettingsCreated{Owner: u.Name, Name: forkName}, created)
 
-	status, body = repoSettingsSignedIn(t, owner).do(http.MethodPost, "/api/web/repo/fork/"+baseID, map[string]any{"name": UniqueName("fork-")})
+	status, body = authenticatedClient(t, owner).do(http.MethodPost, "/api/web/repo/fork/"+baseID, map[string]any{"name": UniqueName("fork-")})
 	require.Equal(t, http.StatusUnprocessableEntity, status, "response: %s", body)
 	assert.NotEmpty(t, repoSettingsFieldError(t, body, "ownerID"))
 }

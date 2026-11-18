@@ -11,6 +11,8 @@ import (
 )
 
 func TestAPIV1Users(t *testing.T) {
+	t.Parallel()
+
 	u := seedUser(t, CreateUserOptions{})
 	anonymous := newClient(t)
 	api := apiV1Client(t, seedUser(t, CreateUserOptions{}))
@@ -47,6 +49,8 @@ func TestAPIV1Users(t *testing.T) {
 }
 
 func TestAPIV1AccessTokens(t *testing.T) {
+	t.Parallel()
+
 	u := seedUser(t, CreateUserOptions{})
 	path := "/api/v1/users/" + u.Name + "/tokens"
 
@@ -85,6 +89,8 @@ func TestAPIV1AccessTokens(t *testing.T) {
 }
 
 func TestAPIV1AuthenticatedUser(t *testing.T) {
+	t.Parallel()
+
 	u := seedUser(t, CreateUserOptions{})
 
 	var got apiV1User
@@ -96,6 +102,8 @@ func TestAPIV1AuthenticatedUser(t *testing.T) {
 }
 
 func TestAPIV1UserEmails(t *testing.T) {
+	t.Parallel()
+
 	u := seedUser(t, CreateUserOptions{})
 	api := apiV1Client(t, u)
 
@@ -128,6 +136,8 @@ func TestAPIV1UserEmails(t *testing.T) {
 }
 
 func TestAPIV1Following(t *testing.T) {
+	t.Parallel()
+
 	follower := seedUser(t, CreateUserOptions{})
 	followee := seedUser(t, CreateUserOptions{})
 	followerAPI := apiV1Client(t, follower)
@@ -179,6 +189,8 @@ type apiV1PublicKeyResp struct {
 }
 
 func TestAPIV1UserKeys(t *testing.T) {
+	t.Parallel()
+
 	u := seedUser(t, CreateUserOptions{})
 	api := apiV1Client(t, u)
 

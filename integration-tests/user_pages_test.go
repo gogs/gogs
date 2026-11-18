@@ -39,6 +39,8 @@ func userAssertRedirect(t *testing.T, c *client, path string, wantStatus int, wa
 }
 
 func TestUserActivateEmail(t *testing.T) {
+	t.Parallel()
+
 	u := seedUser(t, CreateUserOptions{})
 	address := UniqueName("confirm-") + "@example.com"
 	require.NoError(t, database.Handle.Users().AddEmail(t.Context(), u.ID, address, false))
@@ -75,6 +77,8 @@ func TestUserActivateEmail(t *testing.T) {
 }
 
 func TestUserEmail2User(t *testing.T) {
+	t.Parallel()
+
 	u := seedUser(t, CreateUserOptions{})
 
 	t.Run("unknown email", func(t *testing.T) {
@@ -88,6 +92,8 @@ func TestUserEmail2User(t *testing.T) {
 }
 
 func TestUserPublicKeys(t *testing.T) {
+	t.Parallel()
+
 	u := seedUser(t, CreateUserOptions{})
 	_, content := userSeedSSHKey(t, u.ID, "laptop")
 
@@ -107,6 +113,8 @@ func TestUserPublicKeys(t *testing.T) {
 var userLocaleURL = regexp.MustCompile(`"localeURL":"([^"]+)"`)
 
 func TestUserSiteLocale(t *testing.T) {
+	t.Parallel()
+
 	c := newClient(t)
 	page := userAssertPage(t, c, "/", http.StatusOK)
 	m := userLocaleURL.FindStringSubmatch(page)
@@ -129,6 +137,8 @@ func TestUserSiteLocale(t *testing.T) {
 }
 
 func TestUserSiteCaptchaImage(t *testing.T) {
+	t.Parallel()
+
 	c := newClient(t)
 	status, header, body := c.doRaw(http.MethodGet, "/captcha/image.jpeg", "", nil)
 	require.Equal(t, http.StatusOK, status)
@@ -140,6 +150,8 @@ func TestUserSiteCaptchaImage(t *testing.T) {
 }
 
 func TestUserSiteRedirect(t *testing.T) {
+	t.Parallel()
+
 	c := newClient(t)
 	userAssertRedirect(t, c, "/redirect?to="+url.QueryEscape("/explore/repos?q=x"), http.StatusSeeOther, "/explore/repos?q=x")
 	for _, to := range []string{"https://example.com/", "//example.com/", `/\example.com`, ""} {
@@ -148,12 +160,16 @@ func TestUserSiteRedirect(t *testing.T) {
 }
 
 func TestUserSiteRobotsTxt(t *testing.T) {
+	t.Parallel()
+
 	// The server under test has no custom robots.txt.
 	status, _, body := newClient(t).doRaw(http.MethodGet, "/robots.txt", "", nil)
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 }
 
 func TestUserSiteHealthCheck(t *testing.T) {
+	t.Parallel()
+
 	c := newClient(t)
 	status, header, body := c.doRaw(http.MethodGet, "/healthcheck", "", nil)
 	require.Equal(t, http.StatusOK, status)
@@ -167,6 +183,8 @@ func TestUserSiteHealthCheck(t *testing.T) {
 }
 
 func TestUserSiteMetrics(t *testing.T) {
+	t.Parallel()
+
 	// Metrics are enabled without basic authentication by default.
 	status, header, body := newClient(t).doRaw(http.MethodGet, "/-/metrics", "", nil)
 	require.Equal(t, http.StatusOK, status, "response: %s", body)

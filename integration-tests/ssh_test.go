@@ -23,6 +23,8 @@ import (
 // with the server.
 type sshKey struct {
 	path string
+	// id is the ID of a key of a user, which "gogs serv" takes.
+	id int64
 }
 
 // sshNewKey writes a new private key to a file and returns it with its public
@@ -46,8 +48,9 @@ func sshUserKey(t *testing.T, userID int64) *sshKey {
 	t.Helper()
 
 	key, content := sshNewKey(t)
-	_, err := database.Handle.PublicKeys().Add(t.Context(), logger, userID, UniqueName("key-"), content)
+	added, err := database.Handle.PublicKeys().Add(t.Context(), logger, userID, UniqueName("key-"), content)
 	require.NoError(t, err)
+	key.id = added.ID
 	return key
 }
 
@@ -105,40 +108,20 @@ func (k *sshKey) cloneFails(t *testing.T, repo *Repository) string {
 	return out
 }
 
+// TestSSHCloneAndPush covers what is particular to the builtin SSH server.
+// TestGitPush and TestGitPushWithoutWriteAccess cover pushing over it.
 func TestSSHCloneAndPush(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
-	other := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	ownerKey := sshUserKey(t, owner.ID)
-	otherKey := sshUserKey(t, other.ID)
-
-	dir := ownerKey.clone(t, repo)
-	assert.Equal(t, gitMainOnDisk(t, repo), gitRun(t, dir, "rev-parse", "HEAD"))
-	fileName := UniqueName("file-") + ".txt"
-	want := gitCommitFile(t, dir, fileName)
-	out, err := ownerKey.git(dir, "push", "origin", "main")
-	require.NoError(t, err, "push: %s", out)
-	assert.Equal(t, want, gitMainOnDisk(t, repo))
-
-	// The server records the push in the news feed of the owner, as it does for
-	// a push over HTTP.
-	actions, err := database.Handle.Actions().ListByUser(t.Context(), owner.ID, owner.ID, 0, false)
-	require.NoError(t, err)
-	var pushed *database.Action
-	for _, a := range actions {
-		if a.OpType == database.ActionCommitRepo && a.RepoID == repo.ID {
-			pushed = a
-			break
-		}
-	}
-	require.NotNil(t, pushed, "no push action recorded")
-	assert.Equal(t, owner.ID, pushed.ActUserID)
-	assert.Contains(t, pushed.Content, want)
+	head := gitMainOnDisk(t, repo)
 
 	t.Run("protocol version 2", func(t *testing.T) {
 		cmdOut, err := ownerKey.git(t.TempDir(), "-c", "protocol.version=2", "ls-remote", sshRemoteURL(repo), "refs/heads/main")
 		require.NoError(t, err, "ls-remote: %s", cmdOut)
-		assert.Equal(t, want+"\trefs/heads/main", cmdOut)
+		assert.Equal(t, head+"\trefs/heads/main", cmdOut)
 
 		// The server answers in the version the client asks for through the
 		// GIT_PROTOCOL environment variable.
@@ -149,15 +132,6 @@ func TestSSHCloneAndPush(t *testing.T) {
 		assert.Contains(t, string(trace), "< version 2")
 	})
 
-	t.Run("user without write access", func(t *testing.T) {
-		dir := otherKey.clone(t, repo)
-		gitCommitFile(t, dir, UniqueName("file-")+".txt")
-		out, err := otherKey.git(dir, "push", "origin", "main")
-		require.Error(t, err, "push succeeded: %s", out)
-		assert.Contains(t, out, "You do not have sufficient authorization for this action")
-		assert.Equal(t, want, gitMainOnDisk(t, repo))
-	})
-
 	t.Run("unregistered key", func(t *testing.T) {
 		key, _ := sshNewKey(t)
 		out := key.cloneFails(t, repo)
@@ -166,6 +140,8 @@ func TestSSHCloneAndPush(t *testing.T) {
 }
 
 func TestSSHClonePrivate(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	other := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
@@ -186,6 +162,8 @@ func TestSSHClonePrivate(t *testing.T) {
 }
 
 func TestSSHDeployKey(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
 	head := gitMainOnDisk(t, repo)
@@ -209,53 +187,15 @@ func TestSSHDeployKey(t *testing.T) {
 	})
 }
 
-// servCommand returns a Git command that runs in the directory and connects
+// servProgram writes a program that Git runs in place of ssh, which connects
 // through "gogs serv" with the key of the ID, like OpenSSH does with the
-// command that Gogs writes to the authorized_keys file.
-func servCommand(t *testing.T, keyID int64, dir string, args ...string) *exec.Cmd {
+// command that Gogs writes to the authorized_keys file, and returns its path.
+func servProgram(t *testing.T, keyID int64) string {
 	t.Helper()
 
-	sshProgram := filepath.Join(t.TempDir(), "ssh")
+	path := filepath.Join(t.TempDir(), "ssh")
 	script := fmt.Sprintf("#!/bin/sh\n# The command for the server is the last argument.\nfor command; do :; done\nSSH_ORIGINAL_COMMAND=\"$command\" exec '%s' serv key-%d --config='%s'\n",
 		os.Args[0], keyID, conf.CustomConf)
-	require.NoError(t, os.WriteFile(sshProgram, []byte(script), 0o700))
-	cmd := gitCommand(dir, args...)
-	cmd.Env = append(cmd.Env, "GIT_SSH="+sshProgram)
-	return cmd
-}
-
-func TestSSHServ(t *testing.T) {
-	owner := seedUser(t, CreateUserOptions{})
-	other := seedUser(t, CreateUserOptions{})
-	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
-	remoteURL := fmt.Sprintf("ssh://git@localhost/%s/%s.git", repo.Owner, repo.Name)
-	addKey := func(userID int64) int64 {
-		_, content := sshNewKey(t)
-		key, err := database.Handle.PublicKeys().Add(t.Context(), logger, userID, UniqueName("key-"), content)
-		require.NoError(t, err)
-		return key.ID
-	}
-	ownerKeyID := addKey(owner.ID)
-
-	dir := filepath.Join(t.TempDir(), "clone")
-	out, err := servCommand(t, ownerKeyID, filepath.Dir(dir), "clone", remoteURL, dir).CombinedOutput()
-	require.NoError(t, err, "clone: %s", out)
-	want := gitCommitFile(t, dir, UniqueName("file-")+".txt")
-	out, err = servCommand(t, ownerKeyID, dir, "push", "origin", "main").CombinedOutput()
-	require.NoError(t, err, "push: %s", out)
-	assert.Equal(t, want, gitMainOnDisk(t, repo))
-
-	actions := gitRepoActions(t, owner.ID, repo.ID)
-	require.NotEmpty(t, actions)
-	assert.Equal(t, database.ActionCommitRepo, actions[0].OpType)
-	assert.Equal(t, owner.ID, actions[0].ActUserID)
-	assert.Contains(t, actions[0].Content, want)
-
-	t.Run("user without write access", func(t *testing.T) {
-		gitCommitFile(t, dir, UniqueName("file-")+".txt")
-		out, err := servCommand(t, addKey(other.ID), dir, "push", "origin", "main").CombinedOutput()
-		require.Error(t, err, "push succeeded: %s", out)
-		assert.Contains(t, string(out), "Gogs: You do not have sufficient authorization for this action")
-		assert.Equal(t, want, gitMainOnDisk(t, repo))
-	})
+	require.NoError(t, os.WriteFile(path, []byte(script), 0o700))
+	return path
 }

@@ -35,6 +35,8 @@ func apiV1OrgNames(orgs []apiV1Org) []string {
 }
 
 func TestAPIV1Organizations(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	api := apiV1Client(t, owner)
 	other := apiV1Client(t, seedUser(t, CreateUserOptions{}))

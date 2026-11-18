@@ -13,6 +13,8 @@ import (
 )
 
 func TestAdminTraces(t *testing.T) {
+	t.Parallel()
+
 	admin, nonAdmin, anonymous := adminClients(t)
 	// The server continues the trace a request carries, so the test knows the ID
 	// of the trace it looks for. No other request reaches the overview before

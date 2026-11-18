@@ -92,15 +92,15 @@ func repoCodeSHAs(items []repoCodeCommitItem) []string {
 }
 
 func TestRepoCodeBrowse(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	other := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	private := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
 
-	ownerClient := newClient(t)
-	ownerClient.signIn(owner)
-	otherClient := newClient(t)
-	otherClient.signIn(other)
+	ownerClient := authenticatedClient(t, owner)
+	otherClient := authenticatedClient(t, other)
 	anonymous := newClient(t)
 
 	first := repoCodeGit(t, repo, "rev-parse", "refs/heads/main")
@@ -307,10 +307,11 @@ func TestRepoCodeBrowse(t *testing.T) {
 // TestRepoCodeNotebookAndPDF checks what the code browser gets for a Jupyter
 // notebook and a PDF file, which it shows without vendored libraries.
 func TestRepoCodeNotebookAndPDF(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
-	ownerClient := newClient(t)
-	ownerClient.signIn(owner)
+	ownerClient := authenticatedClient(t, owner)
 	anonymous := newClient(t)
 	api := repoCodeAPI(repo)
 
@@ -425,11 +426,12 @@ func TestRepoCodeNotebookAndPDF(t *testing.T) {
 }
 
 func TestRepoCodeRawAndDiffs(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	private := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
-	ownerClient := newClient(t)
-	ownerClient.signIn(owner)
+	ownerClient := authenticatedClient(t, owner)
 	anonymous := newClient(t)
 
 	first := repoCodeGit(t, repo, "rev-parse", "refs/heads/main")
@@ -486,13 +488,13 @@ func TestRepoCodeRawAndDiffs(t *testing.T) {
 }
 
 func TestRepoCodeEditor(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	other := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
-	ownerClient := newClient(t)
-	ownerClient.signIn(owner)
-	otherClient := newClient(t)
-	otherClient.signIn(other)
+	ownerClient := authenticatedClient(t, owner)
+	otherClient := authenticatedClient(t, other)
 	api := repoCodeAPI(repo)
 	page := repoCodePage(repo)
 
@@ -724,10 +726,11 @@ func TestRepoCodeEditor(t *testing.T) {
 }
 
 func TestRepoCodeEditorUploadDeletedTwice(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
-	c := newClient(t)
-	c.signIn(owner)
+	c := authenticatedClient(t, owner)
 
 	contentType, form := repoCodeMultipart(t, "a.txt", []byte("a"))
 	status, _, body := c.doRaw(http.MethodPost, repoCodeAPI(repo)+"/editor/uploads", contentType, form)
@@ -746,11 +749,12 @@ func TestRepoCodeEditorUploadDeletedTwice(t *testing.T) {
 }
 
 func TestRepoCodeBranches(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	empty := seedRepository(t, owner.ID, CreateRepositoryOptions{})
-	ownerClient := newClient(t)
-	ownerClient.signIn(owner)
+	ownerClient := authenticatedClient(t, owner)
 	status, body := ownerClient.do(http.MethodPost, repoCodeAPI(repo)+"/editor/files", map[string]any{
 		"branch": "main", "newBranch": "feature", "path": "f.txt", "content": "f\n",
 	})
@@ -794,13 +798,13 @@ func TestRepoCodeBranches(t *testing.T) {
 }
 
 func TestRepoCodeReleases(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	other := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
-	ownerClient := newClient(t)
-	ownerClient.signIn(owner)
-	otherClient := newClient(t)
-	otherClient.signIn(other)
+	ownerClient := authenticatedClient(t, owner)
+	otherClient := authenticatedClient(t, other)
 	anonymous := newClient(t)
 	api := repoCodeAPI(repo)
 	head := repoCodeGit(t, repo, "rev-parse", "refs/heads/main")
@@ -926,14 +930,14 @@ func TestRepoCodeReleases(t *testing.T) {
 }
 
 func TestRepoCodeWiki(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	other := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	private := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
-	ownerClient := newClient(t)
-	ownerClient.signIn(owner)
-	otherClient := newClient(t)
-	otherClient.signIn(other)
+	ownerClient := authenticatedClient(t, owner)
+	otherClient := authenticatedClient(t, other)
 	anonymous := newClient(t)
 	api := repoCodeAPI(repo)
 
@@ -1044,6 +1048,8 @@ func TestRepoCodeWiki(t *testing.T) {
 }
 
 func TestRepoCodeForks(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	forker := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
@@ -1079,11 +1085,12 @@ func TestRepoCodeForks(t *testing.T) {
 }
 
 func TestRepoCodeArchive(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	private := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
-	ownerClient := newClient(t)
-	ownerClient.signIn(owner)
+	ownerClient := authenticatedClient(t, owner)
 	repoCodeNewFile(t, ownerClient, repo, "src/app.txt", "app content\n", "Add app")
 	readme := repoCodeGit(t, repo, "show", "main:README.md") + "\n"
 	anonymous := newClient(t)
@@ -1155,6 +1162,8 @@ func TestRepoCodeArchive(t *testing.T) {
 }
 
 func TestRepoCodeGoGet(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	// "go get" sends no credentials, so even a private repository answers.
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{Private: true, AutoInit: true})

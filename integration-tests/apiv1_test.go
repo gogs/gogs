@@ -126,6 +126,8 @@ func apiV1Itoa(i int64) string {
 }
 
 func TestAPIV1Markdown(t *testing.T) {
+	t.Parallel()
+
 	c := newClient(t)
 
 	status, _, body := c.doRaw(http.MethodPost, "/api/v1/markdown", "application/json", strings.NewReader(`{"text": "Hello **world**"}`))
@@ -142,6 +144,8 @@ func TestAPIV1Markdown(t *testing.T) {
 }
 
 func TestAPIV1UnknownRoutes(t *testing.T) {
+	t.Parallel()
+
 	c := newClient(t)
 
 	status, body := c.do(http.MethodOptions, "/api/v1/"+UniqueName("preflight-"), nil)

@@ -97,16 +97,18 @@ type repoSettingsWebhookDetail struct {
 }
 
 func TestRepoSettingsWebhooks(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	other := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	otherRepo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	branch := repoSettingsDefaultBranch(t, repo)
-	c := repoSettingsSignedIn(t, owner)
+	c := authenticatedClient(t, owner)
 	url, deliveries := repoSettingsWebhookReceiver(t)
 	hooksPath := repoSettingsAPIPath(repo, "/settings/hooks")
 
-	status, body := repoSettingsSignedIn(t, other).do(http.MethodPost, hooksPath, map[string]any{
+	status, body := authenticatedClient(t, other).do(http.MethodPost, hooksPath, map[string]any{
 		"type": "gogs", "url": url, "events": "push_only", "active": true,
 	})
 	require.Equal(t, http.StatusNotFound, status, "response: %s", body)
@@ -234,10 +236,12 @@ func TestRepoSettingsWebhooks(t *testing.T) {
 }
 
 func TestRepoSettingsTriggerTask(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	branch := repoSettingsDefaultBranch(t, repo)
-	c := repoSettingsSignedIn(t, owner)
+	c := authenticatedClient(t, owner)
 	url, deliveries := repoSettingsWebhookReceiver(t)
 	id := repoSettingsCreateWebhook(t, c, repo, url, "")
 
@@ -277,9 +281,11 @@ func TestRepoSettingsTriggerTask(t *testing.T) {
 // A webhook is reachable only through the repository or organization it
 // belongs to, even by the admin of another one.
 func TestRepoSettingsWebhooksOfOthers(t *testing.T) {
+	t.Parallel()
+
 	victim := seedUser(t, CreateUserOptions{})
 	victimRepo := seedRepository(t, victim.ID, CreateRepositoryOptions{AutoInit: true})
-	victimClient := repoSettingsSignedIn(t, victim)
+	victimClient := authenticatedClient(t, victim)
 	url, deliveries := repoSettingsWebhookReceiver(t)
 	victimHookID := repoSettingsCreateWebhook(t, victimClient, victimRepo, url, "victim secret")
 	status, body := victimClient.do(http.MethodPost, repoSettingsAPIPath(victimRepo, "/settings/hooks/"+strconv.FormatInt(victimHookID, 10)+"/test"), repoSettingsNoBody)
@@ -301,7 +307,7 @@ func TestRepoSettingsWebhooksOfOthers(t *testing.T) {
 	attacker := seedUser(t, CreateUserOptions{})
 	attackerRepo := seedRepository(t, attacker.ID, CreateRepositoryOptions{AutoInit: true})
 	attackerOrg := orgSeed(t, attacker.ID)
-	c := repoSettingsSignedIn(t, attacker)
+	c := authenticatedClient(t, attacker)
 	api := apiV1Client(t, attacker)
 
 	for _, id := range []int64{victimHookID, victimOrgHook.ID} {
@@ -360,9 +366,11 @@ func TestRepoSettingsWebhooksOfOthers(t *testing.T) {
 // A redelivery that gets no response shows as failed, although the delivery
 // succeeded before.
 func TestRepoSettingsWebhookFailedRedelivery(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
-	c := repoSettingsSignedIn(t, owner)
+	c := authenticatedClient(t, owner)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("received"))
 	}))
@@ -412,11 +420,13 @@ func TestRepoSettingsWebhookFailedRedelivery(t *testing.T) {
 // Deleting a repository deletes its webhooks and their deliveries, and no
 // others.
 func TestRepoSettingsWebhooksOfDeletedRepository(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	org := orgSeed(t, owner.ID)
 	repo := seedRepository(t, org.ID, CreateRepositoryOptions{AutoInit: true})
 	other := seedRepository(t, org.ID, CreateRepositoryOptions{AutoInit: true})
-	c := repoSettingsSignedIn(t, owner)
+	c := authenticatedClient(t, owner)
 	url, deliveries := repoSettingsWebhookReceiver(t)
 	var orgHook struct {
 		ID int64 `json:"id"`
@@ -515,12 +525,14 @@ func repoSettingsCreateWebhookFor(t *testing.T, c *client, repo *Repository, url
 // Pushing over Git delivers push, create and delete events to the active
 // webhooks subscribed to them, and to no others.
 func TestRepoSettingsWebhookGitPush(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	for _, name := range []string{"http", "ssh"} {
 		t.Run(name, func(t *testing.T) {
 			repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 			branch := repoSettingsDefaultBranch(t, repo)
-			c := repoSettingsSignedIn(t, owner)
+			c := authenticatedClient(t, owner)
 			allURL, all := repoSettingsWebhookReceiver(t)
 			allID := repoSettingsCreateWebhookFor(t, c, repo, allURL, true, map[string]bool{"push": true, "create": true, "delete": true})
 			createURL, creations := repoSettingsWebhookReceiver(t)
@@ -584,9 +596,11 @@ func TestRepoSettingsWebhookGitPush(t *testing.T) {
 // Deleting and restoring the head branch of a merged pull request delivers
 // delete and create events.
 func TestRepoSettingsWebhookPullHeadBranch(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
-	c := repoSettingsSignedIn(t, owner)
+	c := authenticatedClient(t, owner)
 	branch := UniqueName("feature-")
 	pullCommitToNewBranch(t, c, repo, branch, "feature.txt", "Hello pull request\n")
 	index := pullCreate(t, c, repo, branch, "Feature")

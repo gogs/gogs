@@ -37,11 +37,13 @@ func repoSettingsGetRepo(t *testing.T, id int64) *database.Repository {
 }
 
 func TestRepoSettingsWatch(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	viewer := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	private := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
-	c := repoSettingsSignedIn(t, viewer)
+	c := authenticatedClient(t, viewer)
 	path := repoSettingsAPIPath(repo, "/watch")
 	before := repoSettingsGetRepo(t, repo.ID).NumWatches
 
@@ -74,11 +76,13 @@ func TestRepoSettingsWatch(t *testing.T) {
 }
 
 func TestRepoSettingsStar(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	viewer := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	private := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
-	c := repoSettingsSignedIn(t, viewer)
+	c := authenticatedClient(t, viewer)
 	path := repoSettingsAPIPath(repo, "/star")
 	assert.Empty(t, repoSettingsPeople(t, c, repoSettingsAPIPath(repo, "/stargazers")))
 
@@ -106,6 +110,8 @@ func TestRepoSettingsStar(t *testing.T) {
 }
 
 func TestRepoSettingsRemoveWatcher(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	watcher := seedUser(t, CreateUserOptions{})
 	admin := seedUser(t, CreateUserOptions{Admin: true})
@@ -115,11 +121,11 @@ func TestRepoSettingsRemoveWatcher(t *testing.T) {
 	path := repoSettingsAPIPath(repo, "/watchers/"+watcher.Name)
 
 	// Only site admins make others stop watching, not even the owner.
-	status, body := repoSettingsSignedIn(t, owner).do(http.MethodDelete, path, repoSettingsNoBody)
+	status, body := authenticatedClient(t, owner).do(http.MethodDelete, path, repoSettingsNoBody)
 	require.Equal(t, http.StatusForbidden, status, "response: %s", body)
 	assert.True(t, database.IsWatching(watcher.ID, repo.ID))
 
-	c := repoSettingsSignedIn(t, admin)
+	c := authenticatedClient(t, admin)
 	var resp struct {
 		WatchCount int `json:"watchCount"`
 	}

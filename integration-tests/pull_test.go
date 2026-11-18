@@ -107,13 +107,13 @@ func pullWaitMergeable(t *testing.T, c *client, repo *Repository, index int64) *
 }
 
 func TestPullLifecycle(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	other := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
-	ownerClient := newClient(t)
-	ownerClient.signIn(owner)
-	otherClient := newClient(t)
-	otherClient.signIn(other)
+	ownerClient := authenticatedClient(t, owner)
+	otherClient := authenticatedClient(t, other)
 	anonymous := newClient(t)
 
 	branch := UniqueName("feature-")
@@ -319,10 +319,11 @@ func TestPullLifecycle(t *testing.T) {
 }
 
 func TestPullCloseAndReopen(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
-	c := newClient(t)
-	c.signIn(owner)
+	c := authenticatedClient(t, owner)
 
 	branch := UniqueName("topic-")
 	pullCommitToNewBranch(t, c, repo, branch, "topic.md", "# Topic\n")
@@ -355,13 +356,13 @@ func TestPullCloseAndReopen(t *testing.T) {
 }
 
 func TestPullPrivateRepository(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	other := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
-	ownerClient := newClient(t)
-	ownerClient.signIn(owner)
-	otherClient := newClient(t)
-	otherClient.signIn(other)
+	ownerClient := authenticatedClient(t, owner)
+	otherClient := authenticatedClient(t, other)
 
 	branch := UniqueName("secret-")
 	pullCommitToNewBranch(t, ownerClient, repo, branch, "secret.txt", "secret\n")

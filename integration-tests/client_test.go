@@ -111,6 +111,16 @@ func (c *client) sessionValue(key string) any {
 	return store.Get(key)
 }
 
+// authenticatedClient returns a new client authenticated as the user, who must
+// not have two-factor authentication enabled.
+func authenticatedClient(t *testing.T, u *User) *client {
+	t.Helper()
+
+	c := newClient(t)
+	c.signIn(u)
+	return c
+}
+
 // signIn signs in as the user, who must not have two-factor authentication
 // enabled.
 func (c *client) signIn(u *User) {

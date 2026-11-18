@@ -34,14 +34,6 @@ func repoSettingsAPIPath(repo *Repository, suffix string) string {
 	return "/api/web/" + repo.Owner + "/" + repo.Name + suffix
 }
 
-func repoSettingsSignedIn(t *testing.T, u *User) *client {
-	t.Helper()
-
-	c := newClient(t)
-	c.signIn(u)
-	return c
-}
-
 // repoSettingsGit runs Git in the directory and returns its trimmed output.
 func repoSettingsGit(t *testing.T, dir string, args ...string) string {
 	t.Helper()
@@ -106,13 +98,15 @@ func repoSettingsFieldError(t *testing.T, body []byte, field string) string {
 }
 
 func TestRepoSettingsGeneral(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	writer := seedUser(t, CreateUserOptions{})
 	other := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	repoSettingsAddCollaborator(t, repo, writer, database.AccessModeWrite)
 
-	ownerClient := repoSettingsSignedIn(t, owner)
+	ownerClient := authenticatedClient(t, owner)
 	var settings struct {
 		Name          string `json:"name"`
 		Description   string `json:"description"`
@@ -130,8 +124,8 @@ func TestRepoSettingsGeneral(t *testing.T) {
 	assert.Nil(t, settings.Mirror)
 
 	for name, c := range map[string]*client{
-		"writer": repoSettingsSignedIn(t, writer),
-		"other":  repoSettingsSignedIn(t, other),
+		"writer": authenticatedClient(t, writer),
+		"other":  authenticatedClient(t, other),
 	} {
 		status, body := c.do(http.MethodGet, repoSettingsAPIPath(repo, "/settings"), nil)
 		assert.Equal(t, http.StatusNotFound, status, "%s, response: %s", name, body)
@@ -176,9 +170,11 @@ func TestRepoSettingsGeneral(t *testing.T) {
 }
 
 func TestRepoSettingsAdvanced(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
-	c := repoSettingsSignedIn(t, owner)
+	c := authenticatedClient(t, owner)
 
 	advanced := map[string]any{
 		"enableWiki":            false,
@@ -229,10 +225,12 @@ func TestRepoSettingsAdvanced(t *testing.T) {
 }
 
 func TestRepoSettingsAvatar(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	other := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{})
-	c := repoSettingsSignedIn(t, owner)
+	c := authenticatedClient(t, owner)
 
 	upload := func(c *client, filename string, data []byte) (int, []byte) {
 		var buf bytes.Buffer
@@ -248,7 +246,7 @@ func TestRepoSettingsAvatar(t *testing.T) {
 	var img bytes.Buffer
 	require.NoError(t, png.Encode(&img, image.NewRGBA(image.Rect(0, 0, 4, 4))))
 
-	status, body := upload(repoSettingsSignedIn(t, other), "avatar.png", img.Bytes())
+	status, body := upload(authenticatedClient(t, other), "avatar.png", img.Bytes())
 	require.Equal(t, http.StatusNotFound, status, "response: %s", body)
 	status, body = upload(c, "avatar.txt", []byte("not an image"))
 	require.Equal(t, http.StatusBadRequest, status, "response: %s", body)
@@ -280,6 +278,8 @@ func TestRepoSettingsAvatar(t *testing.T) {
 }
 
 func TestRepoAvatarAccess(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	reader := seedUser(t, CreateUserOptions{})
 	other := seedUser(t, CreateUserOptions{})
@@ -292,7 +292,7 @@ func TestRepoAvatarAccess(t *testing.T) {
 
 	// The disabled collaborator stays authenticated by the session they had
 	// before their account was disabled.
-	disabledClient := repoSettingsSignedIn(t, disabled)
+	disabledClient := authenticatedClient(t, disabled)
 	prohibitLogin := true
 	require.NoError(t, database.Handle.Users().Update(t.Context(), disabled.ID, database.UpdateUserOptions{ProhibitLogin: &prohibitLogin}))
 
@@ -311,10 +311,10 @@ func TestRepoAvatarAccess(t *testing.T) {
 		repo       *Repository
 		wantStatus int
 	}{
-		{name: "owner of a private repository", client: repoSettingsSignedIn(t, owner), repo: private, wantStatus: http.StatusOK},
-		{name: "reader of a private repository", client: repoSettingsSignedIn(t, reader), repo: private, wantStatus: http.StatusOK},
-		{name: "site admin of a private repository", client: repoSettingsSignedIn(t, admin), repo: private, wantStatus: http.StatusOK},
-		{name: "other user of a private repository", client: repoSettingsSignedIn(t, other), repo: private, wantStatus: http.StatusNotFound},
+		{name: "owner of a private repository", client: authenticatedClient(t, owner), repo: private, wantStatus: http.StatusOK},
+		{name: "reader of a private repository", client: authenticatedClient(t, reader), repo: private, wantStatus: http.StatusOK},
+		{name: "site admin of a private repository", client: authenticatedClient(t, admin), repo: private, wantStatus: http.StatusOK},
+		{name: "other user of a private repository", client: authenticatedClient(t, other), repo: private, wantStatus: http.StatusNotFound},
 		{name: "disabled reader of a private repository", client: disabledClient, repo: private, wantStatus: http.StatusNotFound},
 		{name: "anonymous of a private repository", client: newClient(t), repo: private, wantStatus: http.StatusNotFound},
 		{name: "anonymous of a public repository", client: newClient(t), repo: public, wantStatus: http.StatusOK},
@@ -341,6 +341,8 @@ func TestRepoAvatarAccess(t *testing.T) {
 }
 
 func TestRepoSettingsDelete(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	admin := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
@@ -349,10 +351,10 @@ func TestRepoSettingsDelete(t *testing.T) {
 
 	// Admins who do not own the repository manage its settings but cannot
 	// delete it.
-	status, body := repoSettingsSignedIn(t, admin).do(http.MethodDelete, path, map[string]any{"repoName": repo.Name})
+	status, body := authenticatedClient(t, admin).do(http.MethodDelete, path, map[string]any{"repoName": repo.Name})
 	require.Equal(t, http.StatusNotFound, status, "response: %s", body)
 
-	c := repoSettingsSignedIn(t, owner)
+	c := authenticatedClient(t, owner)
 	status, body = c.do(http.MethodDelete, path, map[string]any{"repoName": repo.Name + "x"})
 	require.Equal(t, http.StatusBadRequest, status, "response: %s", body)
 	assert.NotEmpty(t, repoSettingsFieldError(t, body, "repoName"))
@@ -367,6 +369,8 @@ func TestRepoSettingsDelete(t *testing.T) {
 }
 
 func TestRepoSettingsTransfer(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	admin := seedUser(t, CreateUserOptions{})
 	newOwner := seedUser(t, CreateUserOptions{})
@@ -375,10 +379,10 @@ func TestRepoSettingsTransfer(t *testing.T) {
 	repoSettingsAddCollaborator(t, repo, newOwner, database.AccessModeWrite)
 	path := repoSettingsAPIPath(repo, "/settings/transfer")
 
-	status, body := repoSettingsSignedIn(t, admin).do(http.MethodPost, path, map[string]any{"repoName": repo.Name, "newOwner": newOwner.Name})
+	status, body := authenticatedClient(t, admin).do(http.MethodPost, path, map[string]any{"repoName": repo.Name, "newOwner": newOwner.Name})
 	require.Equal(t, http.StatusNotFound, status, "response: %s", body)
 
-	c := repoSettingsSignedIn(t, owner)
+	c := authenticatedClient(t, owner)
 	status, body = c.do(http.MethodPost, path, map[string]any{"repoName": repo.Name, "newOwner": UniqueName("nobody-")})
 	require.Equal(t, http.StatusBadRequest, status, "response: %s", body)
 	assert.NotEmpty(t, repoSettingsFieldError(t, body, "newOwner"))
@@ -407,6 +411,8 @@ func TestRepoSettingsTransfer(t *testing.T) {
 }
 
 func TestRepoSettingsDeleteWiki(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	admin := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
@@ -417,11 +423,11 @@ func TestRepoSettingsDeleteWiki(t *testing.T) {
 	require.True(t, r.EnableWiki)
 	path := repoSettingsAPIPath(repo, "/settings/wiki")
 
-	status, body := repoSettingsSignedIn(t, admin).do(http.MethodDelete, path, map[string]any{"repoName": repo.Name})
+	status, body := authenticatedClient(t, admin).do(http.MethodDelete, path, map[string]any{"repoName": repo.Name})
 	require.Equal(t, http.StatusNotFound, status, "response: %s", body)
 	assert.True(t, r.HasWiki())
 
-	status, body = repoSettingsSignedIn(t, owner).do(http.MethodDelete, path, map[string]any{"repoName": repo.Name})
+	status, body = authenticatedClient(t, owner).do(http.MethodDelete, path, map[string]any{"repoName": repo.Name})
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 	assert.False(t, r.HasWiki())
 	got, err := getRepository(t, repo.ID)
@@ -430,10 +436,12 @@ func TestRepoSettingsDeleteWiki(t *testing.T) {
 }
 
 func TestRepoSettingsCollaborators(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	collaborator := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
-	c := repoSettingsSignedIn(t, owner)
+	c := authenticatedClient(t, owner)
 	path := repoSettingsAPIPath(repo, "/settings/collaborators")
 
 	type collaborators struct {
@@ -462,7 +470,7 @@ func TestRepoSettingsCollaborators(t *testing.T) {
 	assert.Equal(t, map[string]string{collaborator.Name: "write"}, modes())
 
 	// Collaborators who are not admins do not see the settings.
-	collaboratorClient := repoSettingsSignedIn(t, collaborator)
+	collaboratorClient := authenticatedClient(t, collaborator)
 	status, body = collaboratorClient.do(http.MethodGet, path, nil)
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 
@@ -507,15 +515,17 @@ func repoSettingsSeedDeployKey(t *testing.T, repo *Repository, name string) *dat
 }
 
 func TestRepoSettingsDeployKeys(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	other := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	otherRepo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
-	c := repoSettingsSignedIn(t, owner)
+	c := authenticatedClient(t, owner)
 	path := repoSettingsAPIPath(repo, "/settings/keys")
 
 	content := repoSettingsPublicKey(t)
-	status, body := repoSettingsSignedIn(t, other).do(http.MethodPost, path, map[string]any{"title": "deploy", "content": content})
+	status, body := authenticatedClient(t, other).do(http.MethodPost, path, map[string]any{"title": "deploy", "content": content})
 	require.Equal(t, http.StatusNotFound, status, "response: %s", body)
 	status, body = c.do(http.MethodPost, path, map[string]any{"title": "deploy", "content": content})
 	require.Equal(t, http.StatusCreated, status, "response: %s", body)
@@ -548,7 +558,7 @@ func TestRepoSettingsDeployKeys(t *testing.T) {
 	assert.Equal(t, "deploy", resp.Items[0].Name)
 	assert.Equal(t, key.Fingerprint, resp.Items[0].Fingerprint)
 
-	status, body = repoSettingsSignedIn(t, other).do(http.MethodGet, path, nil)
+	status, body = authenticatedClient(t, other).do(http.MethodGet, path, nil)
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 
 	// Keys of other repositories are not found.
@@ -567,6 +577,8 @@ func TestRepoSettingsDeployKeys(t *testing.T) {
 }
 
 func TestRepoSettingsBranches(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	writer := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
@@ -575,7 +587,7 @@ func TestRepoSettingsBranches(t *testing.T) {
 	const branch = "release/v1"
 	repoPath := database.RepoPath(repo.Owner, repo.Name)
 	repoSettingsGit(t, repoPath, "branch", branch, defaultBranch)
-	c := repoSettingsSignedIn(t, owner)
+	c := authenticatedClient(t, owner)
 
 	type branchSettings struct {
 		IsEmpty           bool     `json:"isEmpty"`
@@ -590,7 +602,7 @@ func TestRepoSettingsBranches(t *testing.T) {
 	assert.ElementsMatch(t, []string{defaultBranch, branch}, settings.Branches)
 	assert.Empty(t, settings.ProtectedBranches)
 
-	status, body := repoSettingsSignedIn(t, writer).do(http.MethodGet, repoSettingsAPIPath(repo, "/settings/branches"), nil)
+	status, body := authenticatedClient(t, writer).do(http.MethodGet, repoSettingsAPIPath(repo, "/settings/branches"), nil)
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 
 	t.Run("protected branch", func(t *testing.T) {
@@ -638,9 +650,11 @@ func TestRepoSettingsBranches(t *testing.T) {
 }
 
 func TestRepoSettingsGitHooks(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
-	c := repoSettingsSignedIn(t, owner)
+	c := authenticatedClient(t, owner)
 	path := repoSettingsAPIPath(repo, "/settings/githooks")
 
 	// Git hooks run code on the server, which takes the permission of a site
@@ -694,11 +708,13 @@ func TestRepoSettingsGitHooks(t *testing.T) {
 }
 
 func TestRepoSettingsGitHooksRunOnPush(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	allow := true
 	require.NoError(t, database.Handle.Users().Update(t.Context(), owner.ID, database.UpdateUserOptions{AllowGitHook: &allow}))
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
-	c := repoSettingsSignedIn(t, owner)
+	c := authenticatedClient(t, owner)
 	path := repoSettingsAPIPath(repo, "/settings/githooks")
 	hooksDir := filepath.Join(database.RepoPath(repo.Owner, repo.Name), "hooks")
 

@@ -49,13 +49,15 @@ func apiV1IssueTitles(issues []apiV1Issue) []string {
 }
 
 func TestAPIV1Issues(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	api := apiV1Client(t, owner)
 
 	var milestone apiV1Milestone
 	api.doJSON(http.MethodPost, apiV1RepoPath(repo, "/milestones"), map[string]any{"title": "v1"}, http.StatusCreated, &milestone)
-	open := apiV1CreateIssue(t, api, repo, map[string]any{"title": "Open issue", "body": "Body", "assignee": owner.Name})
+	open := apiV1CreateIssue(t, api, repo, map[string]any{"title": "Open issue", "body": "It **crashes**.", "assignee": owner.Name})
 	closed := apiV1CreateIssue(t, api, repo, map[string]any{"title": "Closed issue", "closed": true})
 
 	var issues []apiV1Issue
@@ -69,11 +71,17 @@ func TestAPIV1Issues(t *testing.T) {
 	api.doJSON(http.MethodGet, apiV1RepoPath(repo, "/issues/"+apiV1Itoa(open)), nil, http.StatusOK, &issue)
 	assert.Equal(t, open, issue.Number)
 	assert.Equal(t, "Open issue", issue.Title)
-	assert.Equal(t, "Body", issue.Body)
+	assert.Equal(t, "It **crashes**.", issue.Body)
 	assert.Equal(t, "open", issue.State)
 	assert.Equal(t, owner.Name, issue.User.UserName)
 	require.NotNil(t, issue.Assignee)
 	assert.Equal(t, owner.Name, issue.Assignee.UserName)
+
+	// The web app shows the issue as created through API v1.
+	v := issueGet(t, newClient(t), repo, open)
+	assert.Equal(t, "Open issue", v.Title)
+	assert.Contains(t, v.ContentHTML, "<strong>crashes</strong>")
+	assert.Equal(t, owner.Name, v.Poster.Name)
 
 	other := seedUser(t, CreateUserOptions{})
 	otherAPI := apiV1Client(t, other)
@@ -108,6 +116,8 @@ func TestAPIV1Issues(t *testing.T) {
 }
 
 func TestAPIV1AssignedIssues(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	assignee := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{})
@@ -138,6 +148,8 @@ type apiV1Comment struct {
 }
 
 func TestAPIV1IssueComments(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	commenter := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{})
@@ -186,6 +198,8 @@ func TestAPIV1IssueComments(t *testing.T) {
 }
 
 func TestAPIV1Labels(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{})
 	api := apiV1Client(t, owner)
@@ -231,6 +245,8 @@ func TestAPIV1Labels(t *testing.T) {
 }
 
 func TestAPIV1IssueLabels(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{})
 	api := apiV1Client(t, owner)
@@ -279,6 +295,8 @@ func TestAPIV1IssueLabels(t *testing.T) {
 }
 
 func TestAPIV1Milestones(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{})
 	api := apiV1Client(t, owner)
