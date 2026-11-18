@@ -688,7 +688,7 @@ func (p *parser) tryATXHeading() int {
 	h.level = int32(level)
 	content := p.line[p.offset:]
 	start := p.lineStart + p.offset
-	content = bytes.TrimRight(content, " \t")
+	content = trimRightSpace(content, false)
 	end := len(content)
 	j := end
 	for j > 0 && content[j-1] == '#' {
@@ -697,7 +697,7 @@ func (p *parser) tryATXHeading() int {
 	if j < end && (j == 0 || content[j-1] == ' ' || content[j-1] == '\t') {
 		end = j
 	}
-	content = bytes.TrimRight(content[:end], " \t")
+	content = trimRightSpace(content[:end], false)
 	lead := len(content) - len(bytes.TrimLeft(content, " \t"))
 	p.segs = append(p.segs, seg{start: int32(start + lead), end: int32(start + len(content)), eol: int32(p.lineEOL)})
 	h.segEnd = int32(len(p.segs))
@@ -725,7 +725,7 @@ func (p *parser) tryFencedCode() int {
 	b.fenceChar = c
 	b.fenceLen = int32(n)
 	b.fenceOffset = int32(p.indent)
-	b.text = bytes.Trim(info, " \t")
+	b.text = trimSpace(info)
 	p.advanceNextNonspace()
 	p.advanceOffset(len(p.line)-p.offset, false)
 	return startLeaf
@@ -901,4 +901,30 @@ func (p *parser) blankBetweenChildren(b *node) bool {
 		prev, prevLast = c, int(c.lastLine)
 	}
 	return false
+}
+
+// trimRightSpace returns b without trailing spaces and tabs, and also line
+// endings if eol is true. Unlike bytes.TrimRight, it builds no character set.
+func trimRightSpace(b []byte, eol bool) []byte {
+	for len(b) > 0 {
+		switch b[len(b)-1] {
+		case ' ', '\t':
+		case '\r', '\n':
+			if !eol {
+				return b
+			}
+		default:
+			return b
+		}
+		b = b[:len(b)-1]
+	}
+	return b
+}
+
+// trimSpace returns b without leading and trailing spaces and tabs.
+func trimSpace(b []byte) []byte {
+	for len(b) > 0 && (b[0] == ' ' || b[0] == '\t') {
+		b = b[1:]
+	}
+	return trimRightSpace(b, false)
 }

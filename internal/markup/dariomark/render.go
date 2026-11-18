@@ -368,7 +368,7 @@ func (p *parser) taskItem(item *node) (task, checked bool) {
 	}
 	s := p.segs[b.segStart]
 	line := p.src[s.start:s.end]
-	line = bytes.TrimRight(line, " \t\r\n")
+	line = trimRightSpace(line, true)
 	if len(line) < 3 || line[0] != '[' || line[2] != ']' || len(line) > 3 && line[3] != ' ' && line[3] != '\t' {
 		return false, false
 	}

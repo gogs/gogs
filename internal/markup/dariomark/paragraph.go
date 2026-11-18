@@ -83,7 +83,7 @@ func (p *parser) finalizeParagraph(b *node) {
 }
 
 func (p *parser) trimParagraph(content []byte) []byte {
-	return bytes.TrimRight(content, " \t\r\n")
+	return trimRightSpace(content, true)
 }
 
 func (p *parser) trySetextHeading(container *node) int {

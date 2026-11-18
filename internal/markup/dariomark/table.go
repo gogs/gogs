@@ -6,7 +6,7 @@ import (
 
 // parseDelimiterRow parses a table delimiter row, e.g., "| :-- | --: |".
 func parseDelimiterRow(line []byte, aligns []alignment) ([]alignment, bool) {
-	line = bytes.Trim(line, " \t")
+	line = trimSpace(line)
 	line = bytes.TrimPrefix(line, []byte("|"))
 	line = bytes.TrimSuffix(line, []byte("|"))
 	if len(line) == 0 {
@@ -23,7 +23,7 @@ func parseDelimiterRow(line []byte, aligns []alignment) ([]alignment, bool) {
 		} else {
 			line = nil
 		}
-		cell = bytes.Trim(cell, " \t")
+		cell = trimSpace(cell)
 		if len(cell) == 0 {
 			return nil, false
 		}
@@ -61,7 +61,7 @@ func parseDelimiterRow(line []byte, aligns []alignment) ([]alignment, bool) {
 // splitTableRow splits a table row into trimmed cells. It stops after limit
 // cells, if limit is positive.
 func splitTableRow(line []byte, cells [][]byte, limit int) [][]byte {
-	line = bytes.Trim(line, " \t")
+	line = trimSpace(line)
 	line = bytes.TrimPrefix(line, []byte("|"))
 	if isBlankBytes(line) {
 		// A row of a pipe and whitespace has no cells.
@@ -71,7 +71,7 @@ func splitTableRow(line []byte, cells [][]byte, limit int) [][]byte {
 	start := 0
 	for i := 0; i < len(line); i++ {
 		if line[i] == '|' && (i == 0 || line[i-1] != '\\') {
-			cells = append(cells, bytes.Trim(line[start:i], " \t"))
+			cells = append(cells, trimSpace(line[start:i]))
 			if len(cells) == limit {
 				return cells
 			}
@@ -82,7 +82,7 @@ func splitTableRow(line []byte, cells [][]byte, limit int) [][]byte {
 		// Another pipe at the end does not start a cell, e.g., "a||".
 		return cells
 	}
-	return append(cells, bytes.Trim(line[start:], " \t"))
+	return append(cells, trimSpace(line[start:]))
 }
 
 // extractTable looks for a table in the lines of a paragraph. When found,
