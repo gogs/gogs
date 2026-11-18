@@ -2,9 +2,11 @@ package database
 
 import (
 	"context"
+	"slices"
 
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"unknwon.dev/x/logx"
 )
 
@@ -46,6 +48,21 @@ func (s *DeployKeysStore) Add(ctx context.Context, logger *logx.Logger, repoID i
 
 	var key *DeployKey
 	err = db.Transaction(func(tx *gorm.DB) error {
+		if has {
+			locked, err := lockPublicKeys(tx, pkey.ID)
+			if err != nil {
+				return errors.Wrap(err, "lock public key")
+			}
+			// The last repository that used the key deleted it after it was found.
+			if len(locked) == 0 {
+				has = false
+				pkey = &PublicKey{
+					Content: content,
+					Mode:    AccessModeRead,
+					Type:    KeyTypeDeploy,
+				}
+			}
+		}
 		if !has {
 			if err := addKey(logger, tx, pkey); err != nil {
 				return errors.Wrap(err, "add key")
@@ -164,23 +181,16 @@ func (s *DeployKeysStore) Delete(ctx context.Context, logger *logx.Logger, doer 
 
 	var publicKeyDeleted bool
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		err := tx.Where("id = ?", key.ID).Delete(new(DeployKey)).Error
+		_, err := lockPublicKeys(tx, key.KeyID)
+		if err != nil {
+			return errors.Wrap(err, "lock public key")
+		}
+		err = tx.Where("id = ?", key.ID).Delete(new(DeployKey)).Error
 		if err != nil {
 			return errors.Wrap(err, "delete deploy key")
 		}
-
-		var count int64
-		err = tx.Model(new(DeployKey)).Where("key_id = ?", key.KeyID).Count(&count).Error
-		if err != nil {
-			return errors.Wrap(err, "count deploy keys")
-		} else if count > 0 {
-			return nil
-		}
-		if err = deletePublicKeys(tx, key.KeyID); err != nil {
-			return err
-		}
-		publicKeyDeleted = true
-		return nil
+		publicKeyDeleted, err = deleteUnusedPublicKeys(tx, key.KeyID)
+		return err
 	})
 	if err != nil {
 		return err
@@ -191,4 +201,56 @@ func (s *DeployKeysStore) Delete(ctx context.Context, logger *logx.Logger, doer 
 		return nil
 	}
 	return newPublicKeysStore(s.db).RewriteAuthorizedKeys()
+}
+
+// lockPublicKeys locks the public keys of given IDs until the transaction ends,
+// and returns the IDs of those that exist. Deploy keys are only added and
+// deleted while their public keys are locked, so that a public key is deleted
+// exactly when its last deploy key is.
+func lockPublicKeys(tx *gorm.DB, ids ...int64) ([]int64, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	var locked []int64
+	err := tx.Model(new(PublicKey)).
+		Where("id IN ?", ids).
+		Order("id").
+		Clauses(clause.Locking{Strength: "UPDATE"}).
+		Pluck("id", &locked).
+		Error
+	return locked, err
+}
+
+// deleteUnusedPublicKeys deletes the public keys of given IDs that no deploy
+// key uses, which must be locked by lockPublicKeys, and reports whether it
+// deleted any.
+func deleteUnusedPublicKeys(tx *gorm.DB, ids ...int64) (bool, error) {
+	if len(ids) == 0 {
+		return false, nil
+	}
+
+	// A locking read sees deploy keys committed after the transaction started,
+	// which a plain read on MySQL does not.
+	var used []int64
+	err := tx.Model(new(DeployKey)).
+		Where("key_id IN ?", ids).
+		Clauses(clause.Locking{Strength: "UPDATE"}).
+		Pluck("key_id", &used).
+		Error
+	if err != nil {
+		return false, errors.Wrap(err, "list deploy keys")
+	}
+
+	unused := slices.DeleteFunc(slices.Clone(ids), func(id int64) bool {
+		return slices.Contains(used, id)
+	})
+	if len(unused) == 0 {
+		return false, nil
+	}
+	result := tx.Where("id IN ?", unused).Delete(new(PublicKey))
+	if result.Error != nil {
+		return false, errors.Wrap(result.Error, "delete public keys")
+	}
+	return result.RowsAffected > 0, nil
 }
