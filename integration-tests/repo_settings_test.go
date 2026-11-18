@@ -423,6 +423,34 @@ func TestRepoSettingsDeleteAttachments(t *testing.T) {
 	}
 }
 
+// Deleting a repository deletes its labels and the labels of its issues.
+func TestRepoSettingsDeleteLabels(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	label := &database.Label{RepoID: repo.ID, Name: "bug", Color: "#ee0701"}
+	require.NoError(t, database.Handle.Labels().Create(t.Context(), label))
+	c := authenticatedClient(t, owner)
+	var created struct {
+		Index int64 `json:"index"`
+	}
+	c.doJSON(http.MethodPost, repoSettingsAPIPath(repo, "/issues"), map[string]any{"title": "Broken", "labelIDs": []int64{label.ID}}, http.StatusCreated, &created)
+	issue := issueFromDatabase(t, repo, created.Index)
+	labels, err := database.Handle.Labels().ListByIssueID(t.Context(), issue.ID)
+	require.NoError(t, err)
+	require.Len(t, labels, 1)
+
+	status, body := c.do(http.MethodDelete, repoSettingsAPIPath(repo, ""), map[string]any{"repoName": repo.Name})
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	labels, err = database.Handle.Labels().ListByRepoID(t.Context(), repo.ID)
+	require.NoError(t, err)
+	assert.Empty(t, labels)
+	var issueLabels int64
+	require.NoError(t, gormDB.Model(new(database.IssueLabel)).Where("issue_id = ?", issue.ID).Count(&issueLabels).Error)
+	assert.Zero(t, issueLabels)
+}
+
 func TestRepoSettingsTransfer(t *testing.T) {
 	t.Parallel()
 

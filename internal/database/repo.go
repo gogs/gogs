@@ -1817,6 +1817,7 @@ func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 		"star",
 		"mirror",
 		"issue_user",
+		"label",
 		"milestone",
 		"release",
 		"collaboration",
@@ -1860,7 +1861,7 @@ func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 		for _, row := range rows {
 			attachmentPaths = append(attachmentPaths, AttachmentLocalPath(string(row["uuid"])))
 		}
-		if err = deleteByColumn(sess, "issue_id", issues[i].ID, "attachment"); err != nil {
+		if err = deleteByColumn(sess, "issue_id", issues[i].ID, "attachment", "issue_label"); err != nil {
 			return err
 		}
 	}
