@@ -52,13 +52,15 @@ func TestOverrideHTTPPort(t *testing.T) {
 		name        string
 		externalURL string
 		httpPort    int
+		port        int
 		want        string
 	}{
-		{name: "served directly", externalURL: "http://localhost:3000/", httpPort: 3000, want: "http://localhost:3001/"},
-		{name: "served directly under a subpath", externalURL: "http://[::1]:3000/gogs/", httpPort: 3000, want: "http://[::1]:3001/gogs/"},
-		{name: "served directly on the default port", externalURL: "http://localhost/", httpPort: 80, want: "http://localhost:3001/"},
-		{name: "behind a proxy on another port", externalURL: "https://git.example.com:1443/", httpPort: 3000, want: "https://git.example.com:1443/"},
-		{name: "behind a proxy on the default port", externalURL: "https://git.example.com/", httpPort: 3000, want: "https://git.example.com/"},
+		{name: "served directly", externalURL: "http://localhost:3000/", httpPort: 3000, port: 3001, want: "http://localhost:3001/"},
+		{name: "served directly under a subpath", externalURL: "http://[::1]:3000/gogs/", httpPort: 3000, port: 3001, want: "http://[::1]:3001/gogs/"},
+		{name: "served directly on the default port", externalURL: "http://localhost/", httpPort: 80, port: 3001, want: "http://localhost:3001/"},
+		{name: "served directly on the configured port", externalURL: "https://git.example.com/", httpPort: 443, port: 443, want: "https://git.example.com/"},
+		{name: "behind a proxy on another port", externalURL: "https://git.example.com:1443/", httpPort: 3000, port: 3001, want: "https://git.example.com:1443/"},
+		{name: "behind a proxy on the default port", externalURL: "https://git.example.com/", httpPort: 3000, port: 3001, want: "https://git.example.com/"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -66,10 +68,10 @@ func TestOverrideHTTPPort(t *testing.T) {
 			require.NoError(t, err)
 			conf.SetMockServer(t, conf.ServerOpts{ExternalURL: test.externalURL, URL: u, HTTPPort: test.httpPort})
 
-			overrideHTTPPort(3001)
+			overrideHTTPPort(test.port)
 			assert.Equal(t, test.want, conf.Server.ExternalURL)
 			assert.Equal(t, test.want, conf.Server.URL.String())
-			assert.Equal(t, 3001, conf.Server.HTTPPort)
+			assert.Equal(t, test.port, conf.Server.HTTPPort)
 		})
 	}
 }

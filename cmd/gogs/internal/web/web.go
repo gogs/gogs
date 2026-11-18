@@ -261,7 +261,7 @@ func overrideHTTPPort(port int) {
 	if externalPort == "" {
 		externalPort = map[string]string{"http": "80", "https": "443"}[conf.Server.URL.Scheme]
 	}
-	if externalPort == strconv.Itoa(conf.Server.HTTPPort) {
+	if port != conf.Server.HTTPPort && externalPort == strconv.Itoa(conf.Server.HTTPPort) {
 		conf.Server.URL.Host = net.JoinHostPort(conf.Server.URL.Hostname(), strconv.Itoa(port))
 		conf.Server.ExternalURL = conf.Server.URL.String()
 	}
