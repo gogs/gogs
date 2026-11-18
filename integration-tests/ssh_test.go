@@ -189,6 +189,108 @@ func TestSSHDeployKey(t *testing.T) {
 	})
 }
 
+// TestSSHKeyWithAnotherComment covers that a user key is the same key whatever
+// its comment, so that the key always signs in as the user who added it first.
+func TestSSHKeyWithAnotherComment(t *testing.T) {
+	t.Parallel()
+
+	alice := seedUser(t, CreateUserOptions{})
+	bob := seedUser(t, CreateUserOptions{})
+	aliceRepo := seedRepository(t, alice.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
+	bobRepo := seedRepository(t, bob.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
+	aliceAPI := apiV1Client(t, alice)
+	bobAPI := apiV1Client(t, bob)
+	key, content := sshNewKey(t)
+	addKey := func(c *client, path, content string) (int, []byte) {
+		return c.do(http.MethodPost, path, map[string]any{"title": UniqueName("key-"), "key": content})
+	}
+
+	status, body := addKey(aliceAPI, "/api/v1/user/keys", content+" alice@laptop")
+	require.Equal(t, http.StatusCreated, status, "response: %s", body)
+
+	for _, test := range []struct {
+		name    string
+		c       *client
+		path    string
+		content string
+	}{
+		{"another user", bobAPI, "/api/v1/user/keys", content + " bob@desk"},
+		{"another user without a comment", bobAPI, "/api/v1/user/keys", content},
+		{"same user", aliceAPI, "/api/v1/user/keys", content + " alice@desktop"},
+		{"deploy key", bobAPI, apiV1RepoPath(bobRepo, "/keys"), content + " ci@example.com"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			status, body := addKey(test.c, test.path, test.content)
+			assert.Equal(t, http.StatusUnprocessableEntity, status, "response: %s", body)
+			assert.Contains(t, string(body), "Key content has been used as non-deploy key")
+		})
+	}
+
+	bobKeys, err := database.Handle.PublicKeys().List(t.Context(), bob.ID)
+	require.NoError(t, err)
+	assert.Empty(t, bobKeys)
+	bobDeployKeys, err := database.Handle.DeployKeys().List(t.Context(), bobRepo.ID)
+	require.NoError(t, err)
+	assert.Empty(t, bobDeployKeys)
+
+	dir := key.clone(t, aliceRepo)
+	assert.Equal(t, gitMainOnDisk(t, aliceRepo), gitRun(t, dir, "rev-parse", "HEAD"))
+	out := key.cloneFails(t, bobRepo)
+	assert.Contains(t, out, "Repository does not exist or you do not have access")
+}
+
+// TestSSHDeployKeyWithAnotherComment covers that repositories share a deploy
+// key whatever its comment, so that the key works for each of them.
+func TestSSHDeployKeyWithAnotherComment(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
+	otherRepo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
+	api := apiV1Client(t, owner)
+	key, content := sshNewKey(t)
+	addDeployKey := func(repo *Repository, title, content string) (int, []byte) {
+		return api.do(http.MethodPost, apiV1RepoPath(repo, "/keys"), map[string]any{"title": title, "key": content})
+	}
+
+	title := UniqueName("deploy-")
+	status, body := addDeployKey(repo, title, content+" ci@one")
+	require.Equal(t, http.StatusCreated, status, "response: %s", body)
+	status, body = addDeployKey(otherRepo, UniqueName("deploy-"), content+" ci@two")
+	require.Equal(t, http.StatusCreated, status, "response: %s", body)
+
+	t.Run("same repository", func(t *testing.T) {
+		status, body := addDeployKey(repo, UniqueName("deploy-"), content+" ci@three")
+		assert.Equal(t, http.StatusUnprocessableEntity, status, "response: %s", body)
+		assert.Contains(t, string(body), "Key has already been added to this repository")
+	})
+
+	t.Run("same title", func(t *testing.T) {
+		_, otherContent := sshNewKey(t)
+		status, body := addDeployKey(repo, title, otherContent)
+		assert.Equal(t, http.StatusUnprocessableEntity, status, "response: %s", body)
+		assert.Contains(t, string(body), "Key title has been used")
+	})
+
+	keys, err := database.Handle.DeployKeys().List(t.Context(), repo.ID)
+	require.NoError(t, err)
+	require.Len(t, keys, 1)
+	otherKeys, err := database.Handle.DeployKeys().List(t.Context(), otherRepo.ID)
+	require.NoError(t, err)
+	require.Len(t, otherKeys, 1)
+	assert.Equal(t, keys[0].KeyID, otherKeys[0].KeyID, "repositories do not share the public key")
+
+	for _, r := range []*Repository{repo, otherRepo} {
+		head := gitMainOnDisk(t, r)
+		dir := key.clone(t, r)
+		assert.Equal(t, head, gitRun(t, dir, "rev-parse", "HEAD"), "builtin SSH server, %s", r.Name)
+
+		out, err := sshServLsRemote(t, keys[0].KeyID, r)
+		require.NoError(t, err, "ls-remote: %s", out)
+		assert.Equal(t, head+"\trefs/heads/main", out, "gogs serv, %s", r.Name)
+	}
+}
+
 // sshServLsRemote lists the main branch of the repository through "gogs serv"
 // with the key ID, as OpenSSH does with the line of the key in the
 // authorized_keys file.

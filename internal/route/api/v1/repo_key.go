@@ -60,7 +60,9 @@ func handleAddKeyError(c *apiContext, err error) {
 	switch {
 	case database.IsErrKeyAlreadyExist(err):
 		c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("Key content has been used as non-deploy key"))
-	case database.IsErrKeyNameAlreadyUsed(err):
+	case database.IsErrDeployKeyAlreadyExist(err):
+		c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("Key has already been added to this repository"))
+	case database.IsErrKeyNameAlreadyUsed(err), database.IsErrDeployKeyNameAlreadyUsed(err):
 		c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("Key title has been used"))
 	default:
 		c.Error(err, "add key")
