@@ -49,7 +49,6 @@ export function CommitAuthors({
             </PopoverTrigger>
             <PopoverContent
               align="start"
-              avoidCollisions={false}
               collisionPadding={16}
               className="flex max-h-[min(20rem,var(--radix-popover-content-available-height))] w-64 flex-col p-1 text-sm"
             >

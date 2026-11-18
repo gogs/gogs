@@ -284,7 +284,6 @@ function GitignorePicker({
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        avoidCollisions={false}
         collisionPadding={16}
         className="flex max-h-(--radix-popover-content-available-height) flex-col w-(--radix-popover-trigger-width) p-2"
       >

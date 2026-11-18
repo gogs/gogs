@@ -48,7 +48,6 @@ export function ContextSwitcher({ data, page }: { data: DashboardContextData; pa
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        avoidCollisions={false}
         collisionPadding={16}
         className="flex max-h-(--radix-popover-content-available-height) flex-col w-(--radix-popover-trigger-width) min-w-56 p-1"
       >
