@@ -41,7 +41,8 @@ export function RepoSearch({ owner, name, data }: { owner: string; name: string;
     });
 
   let message: string | null = null;
-  if (data.keyword && data.timedOut) message = t("repo.code_search.timed_out");
+  if (data.keyword && data.busy) message = t("repo.code_search.busy");
+  else if (data.keyword && data.timedOut) message = t("repo.code_search.timed_out");
   else if (data.keyword && !data.files.length) message = t("repo.code_search.no_results");
 
   return (
@@ -96,7 +97,9 @@ export function RepoSearch({ owner, name, data }: { owner: string; name: string;
           <CodeSearchHelp hint={t("repo.code_search.hint", { ref: data.ref })} />
         ) : message ? (
           <p className="glass flex items-center justify-center gap-2 rounded-md border border-(--color-border) px-4 py-10 text-center text-sm text-(--color-muted-foreground)">
-            {data.timedOut ? <TriangleAlert className="size-4 shrink-0 text-(--color-warning)" aria-hidden /> : null}
+            {data.timedOut || data.busy ? (
+              <TriangleAlert className="size-4 shrink-0 text-(--color-warning)" aria-hidden />
+            ) : null}
             <span className="wrap-anywhere">{message}</span>
           </p>
         ) : (

@@ -15,7 +15,6 @@ import (
 
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
-	"gogs.io/gogs/internal/i18n"
 )
 
 const (
@@ -163,7 +162,10 @@ type repoSearchResponse struct {
 	// Truncated is set when more lines matched than the response lists.
 	Truncated bool `json:"truncated"`
 	// TimedOut is set when the search took too long and listed nothing.
-	TimedOut bool     `json:"timedOut"`
+	TimedOut bool `json:"timedOut"`
+	// Busy is set when other searches took every slot for too long, so this
+	// one did not run.
+	Busy     bool     `json:"busy"`
 	Branches []string `json:"branches"`
 	Tags     []string `json:"tags"`
 }
@@ -174,7 +176,7 @@ type repoSearchResponse struct {
 // every matching line of a file rather than the first few, and gets higher
 // limits. Only authenticated viewers can search exhaustively, since such a
 // search holds a slot for long.
-func getRepoSearch(c flamego.Context, logger *logx.Logger, l i18n.Locale, repoCtx *repoContext) (statusCode int, _ any, err error) {
+func getRepoSearch(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoSearchResponse, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
 	gitRepo, err := openRepoGit(repoCtx)
@@ -194,7 +196,7 @@ func getRepoSearch(c flamego.Context, logger *logx.Logger, l i18n.Locale, repoCt
 	// A smaller limit, e.g., for showing a few matches as the viewer types,
 	// makes the search stop sooner.
 	limit := max(1, min(c.QueryInt("limit", codeSearchMaxResults), codeSearchMaxResults))
-	resp := &repoSearchResponse{
+	resp = &repoSearchResponse{
 		Ref:        ref.Name,
 		RefType:    ref.Type,
 		Query:      strings.TrimSpace(c.Query("q")),
@@ -203,12 +205,16 @@ func getRepoSearch(c flamego.Context, logger *logx.Logger, l i18n.Locale, repoCt
 		MatchCase:  c.QueryBool("matchCase"),
 		Files:      []repoSearchFile{},
 	}
+	var release func()
 	if query.Keyword != "" {
-		release, err := acquireCodeSearchSlot(ctx)
+		release, err = acquireCodeSearchSlot(ctx)
 		if err != nil {
-			logger.Error("Failed to wait for a code search slot", "repoID", repo.ID, "error", err)
-			return http.StatusServiceUnavailable, &bindingErrorResponse{Error: l.Tr("repo.code_search.busy")}, nil
+			// The page still lists what it can and says why there are no results.
+			logger.Warn("Failed to wait for a code search slot", "repoID", repo.ID, "error", err)
+			resp.Busy = true
 		}
+	}
+	if release != nil {
 		timeout := codeSearchTimeout
 		opts := git.GrepOptions{
 			MaxResults:        limit,
@@ -261,15 +267,18 @@ type codeSearchResponse struct {
 	// TimedOut is set when the search took too long, and the repositories
 	// left were not searched.
 	TimedOut bool `json:"timedOut"`
+	// Busy is set when other searches took every slot for too long, so this
+	// one did not run.
+	Busy bool `json:"busy"`
 }
 
 // getCodeSearch searches the default branches of the repositories the viewer
 // can read for lines that contain the "q" query, narrowed down by its
 // qualifiers. With "matchCase=true", letter case must match.
-func getCodeSearch(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User) (statusCode int, _ any, err error) {
+func getCodeSearch(c flamego.Context, logger *logx.Logger, viewer *database.User) (statusCode int, resp *codeSearchResponse, err error) {
 	ctx := c.Request().Context()
 	query := parseCodeQuery(c.Query("q"))
-	resp := &codeSearchResponse{
+	resp = &codeSearchResponse{
 		Query:     strings.TrimSpace(c.Query("q")),
 		Keyword:   query.Keyword,
 		MatchCase: c.QueryBool("matchCase"),
@@ -287,8 +296,9 @@ func getCodeSearch(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer
 
 	release, err := acquireCodeSearchSlot(ctx)
 	if err != nil {
-		logger.Error("Failed to wait for a code search slot", "error", err)
-		return http.StatusServiceUnavailable, &bindingErrorResponse{Error: l.Tr("repo.code_search.busy")}, nil
+		logger.Warn("Failed to wait for a code search slot", "error", err)
+		resp.Busy = true
+		return http.StatusOK, resp, nil
 	}
 	defer release()
 	searchCtx, cancel := context.WithTimeout(ctx, codeSearchTimeout)
