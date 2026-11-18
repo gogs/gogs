@@ -140,8 +140,10 @@ func mergePublicKeys(tx *gorm.DB) error {
 		removed[strconv.FormatInt(pkey.ID, 10)] = true
 	}
 
-	// Before the transaction commits, so that its keys are still in the file
-	// when it fails.
+	// Before the transaction commits, so that failing to update the file rolls
+	// back the deletions. Should the commit fail after, the keys stay without
+	// their lines until SSH keys are resynced, which is safer than lines of keys
+	// that no longer exist.
 	return errors.Wrap(removeAuthorizedKeys(removed), "remove merged keys from authorized_keys")
 }
 
