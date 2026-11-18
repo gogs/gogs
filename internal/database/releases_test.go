@@ -90,6 +90,10 @@ func countTestHookTasks(t *testing.T, s *ReleasesStore) int64 {
 }
 
 func releasesCreate(t *testing.T, ctx context.Context, s *ReleasesStore) {
+	// Webhook payloads of releases have links, which read the server and SSH
+	// settings that other suites mock.
+	conf.SetMockServer(t, conf.ServerOpts{})
+	conf.SetMockSSH(t, conf.SSHOpts{})
 	conf.SetMockRepository(t, conf.RepositoryOpts{Root: t.TempDir()})
 	setMockAttachmentPath(t)
 	logger := logx.NewNoopLogger()
@@ -247,6 +251,10 @@ func releasesLoadAttributes(t *testing.T, ctx context.Context, s *ReleasesStore)
 }
 
 func releasesUpdate(t *testing.T, ctx context.Context, s *ReleasesStore) {
+	// Webhook payloads of releases have links, which read the server and SSH
+	// settings that other suites mock.
+	conf.SetMockServer(t, conf.ServerOpts{})
+	conf.SetMockSSH(t, conf.SSHOpts{})
 	conf.SetMockRepository(t, conf.RepositoryOpts{Root: t.TempDir()})
 	setMockAttachmentPath(t)
 	logger := logx.NewNoopLogger()
@@ -298,6 +306,10 @@ func releasesUpdate(t *testing.T, ctx context.Context, s *ReleasesStore) {
 }
 
 func releasesDeleteByID(t *testing.T, ctx context.Context, s *ReleasesStore) {
+	// Webhook payloads of releases have links, which read the server and SSH
+	// settings that other suites mock.
+	conf.SetMockServer(t, conf.ServerOpts{})
+	conf.SetMockSSH(t, conf.SSHOpts{})
 	conf.SetMockRepository(t, conf.RepositoryOpts{Root: t.TempDir()})
 	logger := logx.NewNoopLogger()
 
