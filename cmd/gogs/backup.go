@@ -59,7 +59,7 @@ func runBackup(ctx context.Context, cmd *cli.Command) error {
 		return errors.Wrap(err, "init logging")
 	}
 
-	conn, err := database.SetEngine(logger, false)
+	conn, err := database.SetEngine(logger.Scoped("db"), false)
 	if err != nil {
 		return errors.Wrap(err, "set engine")
 	}
@@ -97,7 +97,7 @@ func runBackup(ctx context.Context, cmd *cli.Command) error {
 
 	// Database
 	dbDir := filepath.Join(rootDir, "db")
-	if err = database.DumpDatabase(ctx, logger, conn, dbDir, cmd.Bool("verbose")); err != nil {
+	if err = database.DumpDatabase(ctx, logger.Scoped("db"), conn, dbDir, cmd.Bool("verbose")); err != nil {
 		logger.FatalContext(ctx, "Failed to dump database", "error", err)
 	}
 	if err = z.AddDir(archiveRootDir+"/db", dbDir); err != nil {

@@ -89,7 +89,7 @@ func setup(logger *logx.Logger, cmd *cli.Command, logFile string, connectDB bool
 		_ = os.Chdir(conf.WorkDir())
 	}
 
-	if _, err := database.SetEngine(logger, !conf.IsProdMode()); err != nil {
+	if _, err := database.SetEngine(logger.Scoped("db"), !conf.IsProdMode()); err != nil {
 		fail(logger, "Internal error", "Failed to set database engine: %v", err)
 	}
 	return logger

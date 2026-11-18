@@ -635,7 +635,7 @@ func initServices(logger *logx.Logger, customConf string) (*logx.Logger, error) 
 	email.NewContext(logger)
 
 	markup.NewSanitizer()
-	if err := database.NewEngine(logger); err != nil {
+	if err := database.NewEngine(logger.Scoped("db")); err != nil {
 		return logger, errors.Wrap(err, "initialize ORM engine")
 	}
 
