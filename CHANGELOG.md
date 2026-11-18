@@ -190,6 +190,8 @@ All notable changes to Gogs are documented in this file.
 - The API now lists no commits for an empty repository instead of failing. [#8582](https://github.com/gogs/gogs/pull/8582)
 - Changing or resetting the password signs out every other session of the user. [#8579](https://github.com/gogs/gogs/pull/8579)
 - Listing releases through the API no longer shows drafts to users without write access. [#8571](https://github.com/gogs/gogs/pull/8571)
+- Listing releases through the API no longer fails when the user who published one of them was deleted. [#8571](https://github.com/gogs/gogs/pull/8571)
+- A release of a tag that already exists is now dated by the tag's commit instead of when the release was created, so it no longer always shows as the newest release. [#8571](https://github.com/gogs/gogs/pull/8571)
 
 ### Removed
 

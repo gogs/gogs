@@ -570,6 +570,9 @@ func releases(c *apiContext) {
 	apiReleases := make([]*v1types.RepositoryRelease, 0, len(releases))
 	for _, r := range releases {
 		publisher, err := database.Handle.Users().GetByID(c.Request().Context(), r.PublisherID)
+		if database.IsErrUserNotExist(err) {
+			publisher, err = database.NewGhostUser(), nil
+		}
 		if err != nil {
 			c.Error(err, "get release publisher")
 			return
