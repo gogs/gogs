@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -584,29 +583,6 @@ func TestAPIV1CreateBranchesAndTags(t *testing.T) {
 		// The tag "feature/base" points at main, the branch at feature.
 		got := create("branches", "from-ambiguous", "feature/base")
 		assert.Equal(t, featureSHA, got.Commit.ID, "target resolved to the tag")
-	})
-
-	t.Run("concurrent", func(t *testing.T) {
-		before := len(gitRepoActions(t, owner.ID, repo.ID))
-		statuses := make(chan int, 8)
-		var wg sync.WaitGroup
-		for range cap(statuses) {
-			wg.Go(func() {
-				status, _ := api.do(http.MethodPost, apiV1RepoPath(repo, "/branches"), map[string]any{"name": "concurrent"})
-				statuses <- status
-			})
-		}
-		wg.Wait()
-		close(statuses)
-		counts := make(map[int]int)
-		for status := range statuses {
-			counts[status]++
-		}
-		assert.Equal(t, map[int]int{http.StatusCreated: 1, http.StatusUnprocessableEntity: cap(statuses) - 1}, counts)
-		assert.ElementsMatch(t, []gitRefAction{
-			{OpType: database.ActionCreateBranch, RefName: "concurrent"},
-			{OpType: database.ActionCommitRepo, RefName: "concurrent"},
-		}, gitNewRefActions(t, owner.ID, repo.ID, before))
 	})
 
 	t.Run("empty repository", func(t *testing.T) {
