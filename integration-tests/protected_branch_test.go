@@ -393,7 +393,7 @@ func TestProtectedBranchTransferToUser(t *testing.T) {
 	moved.Owner = owner.Name
 
 	// Settings of user repositories have no allowlist, so one left enabled
-	// would keep everyone out of the branch.
+	// would keep out everyone not listed by name, e.g., the new owner.
 	out, ok = protectedBranchPush(t, &moved, owner)
 	assert.True(t, ok, "push after transfer failed: %s", out)
 

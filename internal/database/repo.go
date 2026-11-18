@@ -1516,7 +1516,8 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 		}
 
 		// Repositories of users have no push allowlist to manage, and one left
-		// enabled would keep everyone from pushing to the branch.
+		// enabled would keep out everyone not listed by name, e.g., the new
+		// owner.
 		if _, err = sess.Exec("UPDATE protect_branch SET enable_whitelist = ? WHERE repo_id = ?", false, repo.ID); err != nil {
 			return errors.Wrap(err, "disable push allowlists")
 		}

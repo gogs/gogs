@@ -117,7 +117,10 @@ func createReference(c *apiContext, prefix string, r createReferenceRequest) *gi
 			return nil
 		}
 		// A protected branch keeps its protection after it is deleted.
-		if !checkBranchProtection(c, r.Name) {
+		if ok, err := checkBranchProtection(c, r.Name); err != nil {
+			c.Errorf(err, "check protection of branch %q", r.Name)
+			return nil
+		} else if !ok {
 			return nil
 		}
 	}
@@ -134,20 +137,20 @@ func createReference(c *apiContext, prefix string, r createReferenceRequest) *gi
 }
 
 // checkBranchProtection returns whether the protection of the branch lets the
-// user push to it, and writes the 403 response when it does not.
-func checkBranchProtection(c *apiContext, branch string) bool {
+// user push to it, and writes the 403 response when it does not. The caller
+// reports the error.
+func checkBranchProtection(c *apiContext, branch string) (bool, error) {
 	denial, err := database.Handle.ProtectBranches().CheckPushByName(c.Request().Context(), c.Repo.Repository.ID, branch, c.User.ID, false)
 	if err != nil {
-		c.Error(err, "check branch protection")
-		return false
+		return false, err
 	}
 	switch denial {
 	case database.PushDeniedNotInAllowlist:
 		c.ErrorStatus(http.StatusForbidden, errors.Newf("Branch %q is protected and you are not in the push allowlist.", branch))
-		return false
+		return false, nil
 	case database.PushDeniedRequiresPullRequest:
 		c.ErrorStatus(http.StatusForbidden, errors.Newf("Branch %q is protected and commits must be merged through a pull request.", branch))
-		return false
+		return false, nil
 	}
-	return true
+	return true, nil
 }
