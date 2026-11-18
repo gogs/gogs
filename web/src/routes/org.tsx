@@ -28,8 +28,7 @@ interface RouterContext {
 }
 
 // loadOrgPage loads the organization for the header along with the page, and
-// maps the errors to router signals. Like the server-rendered pages, only
-// members see them.
+// maps the errors to router signals. Only members see them.
 async function loadOrgPage<T>(queryClient: QueryClient, org: string, load: () => Promise<T>): Promise<T> {
   try {
     const [, data] = await Promise.all([queryClient.ensureQueryData(userProfileQuery(org)), load()]);
@@ -43,8 +42,8 @@ async function loadOrgPage<T>(queryClient: QueryClient, org: string, load: () =>
   }
 }
 
-// requireOwner turns away members who are not owners, like the
-// server-rendered pages, once the organization is loaded.
+// requireOwner turns away members who are not owners, once the organization
+// is loaded.
 async function requireOwner(queryClient: QueryClient, org: string) {
   const profile = await queryClient.ensureQueryData(userProfileQuery(org));
   if (profile.kind !== "organization" || !profile.viewerIsOwner) {
@@ -183,8 +182,7 @@ export function createOrgRoutes(rootRoute: AnyRoute) {
     getParentRoute: () => rootRoute,
     path: "/org/create",
     loader: ({ context }) => {
-      // Like the server-rendered page, only users allowed to create
-      // organizations get here.
+      // Only users allowed to create organizations get here.
       if (!(context as RouterContext).user?.canCreateOrganization) {
         // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
         throw notFound();

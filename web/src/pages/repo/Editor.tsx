@@ -61,8 +61,7 @@ function EditorLayout({
   );
 }
 
-// srcURL links to a file or a directory of a branch, which the server still
-// renders.
+// srcURL links to a file or a directory of a branch.
 function srcURL(owner: string, name: string, branch: string, path: string) {
   return subUrl(`/${owner}/${name}/src/${refPath(branch)}${path ? `/${refPath(path)}` : ""}`);
 }

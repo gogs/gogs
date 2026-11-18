@@ -63,7 +63,7 @@ type Store interface {
 	// than the "loginSourceID".
 	//
 	// When the "loginSourceID" is positive, it tries to authenticate via given
-	// login source and creates a new user when not yet exists in the database.
+	// login source and creates a new user when it does not exist in the database yet.
 	AuthenticateUser(ctx context.Context, login, password string, loginSourceID int64) (*database.User, error)
 }
 

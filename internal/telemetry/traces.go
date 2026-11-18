@@ -51,8 +51,8 @@ const (
 	// RouteKindRoute is a matched route pattern, e.g.,
 	// "GET /api/web/{owner}/{repo}/header".
 	RouteKindRoute RouteKind = "route"
-	// RouteKindOther groups the requests whose route is not known, e.g., pages
-	// served by Macaron, under their method.
+	// RouteKindOther groups the requests whose route is not known, e.g., those
+	// that matched no route pattern, under their method.
 	RouteKindOther RouteKind = "other"
 	// RouteKindBackground is work that no request started, e.g., a mirror sync,
 	// named after what it ran.

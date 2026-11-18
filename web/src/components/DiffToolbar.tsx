@@ -40,14 +40,14 @@ export interface DiffToolbarProps {
   onExpandAll: () => void;
   onCollapseAll: () => void;
   // Slot for the always-visible in-diff search box. Rendered between the
-  // left-side stats and the right-side controls on desktop; wraps to its own
-  // line on narrow viewports.
+  // left-side stats and the right-side controls on desktop, and wraps to its
+  // own line on narrow viewports.
   search?: ReactNode;
   // Mobile sheet trigger: opens the slide-over file tree below `lg` since
   // the desktop sidebar doesn't render at that breakpoint.
   onShowTreeMobile?: () => void;
   // Desktop sidebar toggle: shows when the sidebar is collapsed, hides
-  // when it's open. Same icon slot as the mobile trigger; CSS picks which
+  // when it's open. Same icon slot as the mobile trigger. CSS picks which
   // one shows at each breakpoint.
   onToggleTreeDesktop?: () => void;
   desktopTreeOpen?: boolean;
@@ -133,10 +133,10 @@ export function DiffToolbar({
       </div>
 
       {search ? (
-        // `order-last` on mobile + `lg:order-none` on desktop puts the search
+        // `order-last` on mobile and `lg:order-none` on desktop put the search
         // box on its own row at narrow viewports (after the right-side
         // controls wrap) and inline next to the right controls on wide ones.
-        // `basis-full` on mobile forces the row break; `lg:ml-auto` on
+        // `basis-full` on mobile forces the row break, and `lg:ml-auto` on
         // desktop pushes the search box to the right side of the toolbar.
         <div className="order-last basis-full lg:order-none lg:ml-auto lg:basis-auto">{search}</div>
       ) : null}

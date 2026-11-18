@@ -22,7 +22,7 @@ import (
 
 // loginSourceFilesStore is the in-memory interface for login source files stored on file system.
 type loginSourceFilesStore interface {
-	// GetByID returns a clone of login source by given ID.
+	// GetByID returns the login source with given ID.
 	GetByID(id int64) (*LoginSource, error)
 	// Len returns number of login sources.
 	Len() int
@@ -130,7 +130,7 @@ func loadLoginSourceFiles(logger *logx.Logger, authdPath string, clock func() ti
 			return errors.Wrap(err, "load file")
 		}
 
-		// Set general attributes
+		// Set general attributes.
 		s := authSource.Section("")
 		loginSource := &LoginSource{
 			ID:        s.Key("id").MustInt64(),
@@ -149,7 +149,7 @@ func loadLoginSourceFiles(logger *logx.Logger, authdPath string, clock func() ti
 		}
 		loginSource.Updated = fi.ModTime()
 
-		// Parse authentication source file
+		// Parse authentication source file.
 		authType := s.Key("type").String()
 		cfgSection := authSource.Section("config")
 		switch authType {

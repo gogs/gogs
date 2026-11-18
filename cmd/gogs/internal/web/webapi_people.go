@@ -11,8 +11,7 @@ import (
 )
 
 // toPeople converts a page of users listed as followers, stargazers or
-// watchers, with the website, location and join date the server-rendered
-// cards showed.
+// watchers, with their website, location and join date.
 func toPeople(users []*database.User) []exploreUser {
 	items := make([]exploreUser, 0, len(users))
 	for _, u := range users {
@@ -82,7 +81,7 @@ func getRepoWatchers(logger *logx.Logger, c flamego.Context, repoCtx *repoContex
 }
 
 // deleteRepoWatcher lets site admins make another user stop watching the
-// repository, like the unwatch button of the server-rendered watchers page.
+// repository.
 func deleteRepoWatcher(logger *logx.Logger, c flamego.Context, viewer *database.User, repoCtx *repoContext) (statusCode int, resp *repoWatchResponse, err error) {
 	if viewer == nil || !viewer.IsAdmin {
 		return http.StatusForbidden, nil, errors.New("site admin required")

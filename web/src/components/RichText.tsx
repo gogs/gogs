@@ -4,9 +4,9 @@ import type { ReactNode } from "react";
 const MARKUP = /(<a\b[^>]*>.*?<\/a>|<code>.*?<\/code>|<b>.*?<\/b>|<strong>.*?<\/strong>|<span\b[^>]*>.*?<\/span>)/;
 const LINK_CLASS = "text-(--color-primary) underline underline-offset-2";
 
-// RichText renders a translated sentence that carries the markup the
-// server-rendered pages used: links, inline code, and bold or highlighted text. Translations
-// keep Go placeholders in that markup, so links take their targets from
+// RichText renders a translated sentence that carries HTML markup: links,
+// inline code, and bold or highlighted text. Translations keep Go
+// placeholders in that markup, so links take their targets from
 // `links`, in order, and code takes its content from `code`, or from each of
 // `code` in order. App paths navigate within the app.
 export function RichText({ text, links = [], code }: { text: string; links?: string[]; code?: string | string[] }) {

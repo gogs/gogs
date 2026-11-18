@@ -34,7 +34,7 @@ func (r *Repository) Path() string {
 const logFormatHashOnly = `format:%H`
 
 // parsePrettyFormatLogToList returns a list of commits parsed from given logs
-// that are formatted in LogFormatHashOnly.
+// that are formatted in logFormatHashOnly.
 func (r *Repository) parsePrettyFormatLogToList(ctx context.Context, logs []byte) ([]*Commit, error) {
 	if len(logs) == 0 {
 		return []*Commit{}, nil
@@ -270,7 +270,7 @@ func (r *Repository) ShowNameStatus(ctx context.Context, rev string) (_ *NameSta
 	args := []string{"show", "--name-status", "--pretty=format:''", "--end-of-options", rev}
 
 	err = pipe(ctx, r.path, args, nil, w)
-	_ = w.Close() // Close writer to exit parsing goroutine
+	_ = w.Close() // Close writer to exit parsing goroutine.
 	if err != nil {
 		return nil, err
 	}

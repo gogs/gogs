@@ -93,9 +93,8 @@ func (ip *inlineParser) typographer(c byte) bool {
 }
 
 // fraction replaces the fraction at the current position and reports whether
-// it did. A fraction is
-// surrounded by fractionBoundary bytes, and its numerator does not start
-// with "0".
+// it did. A fraction is surrounded by fractionBoundary bytes, and its
+// numerator does not start with "0".
 func (ip *inlineParser) fraction() bool {
 	src := ip.src
 	i := ip.pos
@@ -103,8 +102,8 @@ func (ip *inlineParser) fraction() bool {
 		return false
 	}
 	if !ip.p.opts.Typographer.Fractions {
-		// Only "1/2", "1/4" and "3/4" are replaced. "1/4th" and "3/4ths" are
-		// ordinals.
+		// Only "1/2", "1/4" and "3/4" are replaced, also in ordinals like
+		// "1/4th" and "3/4ths".
 		rest := src[i:]
 		var ok bool
 		switch {

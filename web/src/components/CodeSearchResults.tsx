@@ -173,7 +173,7 @@ function Snippet({
   lineURL: (line: number) => string;
 }) {
   const { t } = useTranslation();
-  // The lines are colored together, so that e.g. a comment that spans them
+  // The lines are colored together, so that, e.g., a comment that spans them
   // is colored as one.
   const tokens = useMemo<ThemedToken[][] | null>(() => {
     if (!highlighter) return null;

@@ -62,7 +62,7 @@ func funcMap() template.FuncMap {
 }
 
 // Recognized mail-template file extensions. A template's name is its path
-// relative to the "mail" directory, without extension (e.g. "auth/activate").
+// relative to the "mail" directory, without extension (e.g., "auth/activate").
 var mailTemplateExts = []string{".tmpl", ".html"}
 
 // loadMailTemplates parses every mail template under the embedded "mail" tree
@@ -152,9 +152,8 @@ func render(tpl string, data map[string]any) (string, error) {
 // mailTemplateSet returns the parsed template set. When assets are loaded from
 // disk, templates are reloaded on every call so admin edits under
 // <work>/templates/mail or <custom>/templates/mail take effect without a
-// restart — matching the hot-reload behavior of the previous macaron renderer
-// for non-production environments. When assets are embedded, the set is loaded
-// once and cached for the process lifetime.
+// restart. When assets are embedded, the set is loaded once and cached for the
+// process lifetime.
 func mailTemplateSet() (*template.Template, error) {
 	if conf.Server.LoadAssetsFromDisk {
 		return loadMailTemplates()

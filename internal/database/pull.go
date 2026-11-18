@@ -70,7 +70,7 @@ func (pr *PullRequest) BeforeUpdate() {
 	pr.MergedUnix = pr.Merged.Unix()
 }
 
-// Note: don't try to get Issue because will end up recursive querying.
+// Note: don't try to get Issue because it will end up in recursive querying.
 func (pr *PullRequest) AfterSet(colName string, _ xorm.Cell) {
 	switch colName {
 	case "merged_unix":
@@ -82,7 +82,7 @@ func (pr *PullRequest) AfterSet(colName string, _ xorm.Cell) {
 	}
 }
 
-// Note: don't try to get Issue because will end up recursive querying.
+// Note: don't try to get Issue because it will end up in recursive querying.
 func (pr *PullRequest) loadAttributes(e Engine) (err error) {
 	if pr.HeadRepo == nil {
 		pr.HeadRepo, err = getRepositoryByID(legacyTx(e), pr.HeadRepoID)
@@ -124,11 +124,12 @@ func (pr *PullRequest) LoadIssue() (err error) {
 	return err
 }
 
-// This method assumes following fields have been assigned with valid values:
+// APIFormat returns the API format of the pull request. It assumes the
+// following fields have been assigned with valid values:
 // Required - Issue, BaseRepo
 // Optional - HeadRepo, Merger
 func (pr *PullRequest) APIFormat(logger *logx.Logger) *apiv1types.PullRequest {
-	// In case of head repo has been deleted.
+	// In case the head repo has been deleted.
 	var apiHeadRepo *apiv1types.Repository
 	if pr.HeadRepo == nil {
 		apiHeadRepo = &apiv1types.Repository{
@@ -376,7 +377,8 @@ func commitList(commits []*git.Commit, withBodies bool) string {
 // Merge merges pull request to base repository. The message is used for the
 // commit that merge commits and squashing create, and its default is used
 // when its title is empty.
-// FIXME: add repoWorkingPull make sure two merges does not happen at same time.
+//
+// FIXME: use repoWorkingPool to make sure two merges do not happen at same time.
 func (pr *PullRequest) Merge(ctx context.Context, logger *logx.Logger, doer *User, baseGitRepo *git.Repository, mergeStyle MergeStyle, message MergeMessage) (err error) {
 	// Stopping midway, e.g., when the client disconnects, would leave a
 	// partial change behind.
@@ -436,7 +438,7 @@ func (pr *PullRequest) Merge(ctx context.Context, logger *logx.Logger, doer *Use
 	committer := &git.Signature{Name: doer.DisplayName(), Email: doer.Email}
 	var mergedCommitID string
 	switch mergeStyle {
-	case MergeStyleRegular: // Create merge commit
+	case MergeStyleRegular: // Create merge commit.
 		// There is nothing to merge when the base branch already has the head branch.
 		merged, err := tmpRepo.IsAncestor(ctx, headCommitID, baseCommitID)
 		if err != nil {
@@ -460,13 +462,13 @@ func (pr *PullRequest) Merge(ctx context.Context, logger *logx.Logger, doer *Use
 			return errors.Newf("commit tree: %v", err)
 		}
 
-	case MergeStyleRebase: // Rebase before merging
+	case MergeStyleRebase: // Rebase before merging.
 		mergedCommitID, err = tmpRepo.Rebase(ctx, baseCommitID, headCommitID, committer)
 		if err != nil {
 			return errors.Newf("rebase [%s on %s]: %v", pr.HeadBranch, pr.BaseBranch, err)
 		}
 
-	case MergeStyleSquash: // Squash all changes into one commit on top of the base branch
+	case MergeStyleSquash: // Squash all changes into one commit on top of the base branch.
 		merged, err := tmpRepo.IsAncestor(ctx, headCommitID, baseCommitID)
 		if err != nil {
 			return errors.Newf("check if head branch is merged: %v", err)
@@ -546,9 +548,10 @@ func (pr *PullRequest) Merge(ctx context.Context, logger *logx.Logger, doer *Use
 		return nil
 	}
 
-	// NOTE: It is possible that head branch is not fully sync with base branch
-	// for merge commits, so we need to get latest head commit and append merge
-	// commit manually to avoid strange diff commits produced.
+	// NOTE: It is possible that head branch is not fully synced with base branch
+	// for merge commits, so we need to get the latest commit of the base branch
+	// and add it as the merge commit manually to avoid strange diff commits
+	// produced.
 	mergeCommit, err := baseGitRepo.BranchCommit(ctx, pr.BaseBranch)
 	if err != nil {
 		logger.Error("Failed to get base branch commit", "baseBranch", pr.BaseBranch, "error", err)
@@ -586,7 +589,6 @@ func (pr *PullRequest) Merge(ctx context.Context, logger *logx.Logger, doer *Use
 }
 
 // testPatch checks if patch can be merged to base repository without conflict.
-// FIXME: make a mechanism to clean up stable local copies.
 func (pr *PullRequest) testPatch(ctx context.Context, logger *logx.Logger) (err error) {
 	if pr.BaseRepo == nil {
 		pr.BaseRepo, err = getRepositoryByID(Handle.db, pr.BaseRepoID)
@@ -600,7 +602,7 @@ func (pr *PullRequest) testPatch(ctx context.Context, logger *logx.Logger) (err 
 		return errors.Newf("BaseRepo.PatchPath: %v", err)
 	}
 
-	// Fast fail if patch does not exist, this assumes data is corrupted.
+	// Fast fail if patch does not exist, which means data is corrupted.
 	if !osx.IsFile(patchPath) {
 		logger.Debug("Skipped testing patch because the patch file does not exist", "pullRequestID", pr.ID)
 		return nil
@@ -731,7 +733,7 @@ func GetUnmergedPullRequest(headRepoID, baseRepoID int64, headBranch, baseBranch
 	return pr, nil
 }
 
-// GetUnmergedPullRequestsByHeadInfo returns all pull requests that are open and has not been merged
+// GetUnmergedPullRequestsByHeadInfo returns all pull requests that are open and have not been merged
 // by given head information (repo and branch).
 func GetUnmergedPullRequestsByHeadInfo(repoID int64, branch string) ([]*PullRequest, error) {
 	prs := make([]*PullRequest, 0, 2)
@@ -740,7 +742,7 @@ func GetUnmergedPullRequestsByHeadInfo(repoID int64, branch string) ([]*PullRequ
 		Join("INNER", "issue", "issue.id = pull_request.issue_id").Find(&prs)
 }
 
-// GetUnmergedPullRequestsByBaseInfo returns all pull requests that are open and has not been merged
+// GetUnmergedPullRequestsByBaseInfo returns all pull requests that are open and have not been merged
 // by given base information (repo and branch).
 func GetUnmergedPullRequestsByBaseInfo(repoID int64, branch string) ([]*PullRequest, error) {
 	prs := make([]*PullRequest, 0, 2)
@@ -808,7 +810,7 @@ func (pr *PullRequest) Update() error {
 	return err
 }
 
-// Update updates specific fields of pull request.
+// UpdateCols updates specific fields of pull request.
 func (pr *PullRequest) UpdateCols(cols ...string) error {
 	_, err := x.Id(pr.ID).Cols(cols...).Update(pr)
 	return err
@@ -880,7 +882,7 @@ func (pr *PullRequest) PushToBaseRepo(ctx context.Context, logger *logx.Logger) 
 		return errors.Newf("add remote %q [repo_id: %d]: %v", tmpRemote, pr.HeadRepoID, err)
 	}
 
-	// Make sure to remove the remote even if the push fails
+	// Make sure to remove the remote even if the push fails.
 	defer func() {
 		if err := headGitRepo.RemoteRemove(ctx, tmpRemote); err != nil {
 			logger.Error("Failed to remove temporary remote", "remote", tmpRemote, "repoID", pr.HeadRepoID, "error", err)
@@ -921,7 +923,7 @@ func (prs PullRequestList) loadAttributes(e Engine) (err error) {
 		return nil
 	}
 
-	// Load issues
+	// Load issues.
 	set := make(map[int64]*Issue)
 	for i := range prs {
 		set[prs[i].IssueID] = nil
@@ -941,7 +943,6 @@ func (prs PullRequestList) loadAttributes(e Engine) (err error) {
 		prs[i].Issue = set[prs[i].IssueID]
 	}
 
-	// Load attributes
 	for i := range prs {
 		if err = prs[i].loadAttributes(e); err != nil {
 			return errors.Newf("loadAttributes [%d]: %v", prs[i].ID, err)
@@ -975,8 +976,9 @@ func addHeadRepoTasks(logger *logx.Logger, prs []*PullRequest) {
 	}
 }
 
-// AddTestPullRequestTask adds new test tasks by given head/base repository and head/base branch,
-// and generate new patch for testing as needed.
+// AddTestPullRequestTask adds new test tasks for pull requests whose head or
+// base is the given repository and branch, and generates new patches for
+// testing as needed.
 func AddTestPullRequestTask(logger *logx.Logger, doer *User, repoID int64, branch string, isSync bool) {
 	logger.Debug("Finding pull requests by head branch", "headRepoID", repoID, "headBranch", branch)
 	prs, err := GetUnmergedPullRequestsByHeadInfo(repoID, branch)
@@ -1024,8 +1026,8 @@ func AddTestPullRequestTask(logger *logx.Logger, doer *User, repoID int64, branc
 	}
 }
 
-// checkAndUpdateStatus checks if pull request is possible to leaving checking status,
-// and set to be either conflict or mergeable.
+// checkAndUpdateStatus checks if pull request is possible to leave checking
+// status, and sets it to be either conflict or mergeable.
 func (pr *PullRequest) checkAndUpdateStatus(logger *logx.Logger) {
 	// Status is not changed to conflict means mergeable.
 	if pr.Status == PullRequestStatusChecking {

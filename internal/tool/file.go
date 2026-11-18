@@ -46,7 +46,7 @@ func humanateBytes(s uint64, base float64, sizes []string) string {
 	return fmt.Sprintf(f+" %s", val, suffix)
 }
 
-// FileSize calculates the file size and generate user-friendly string.
+// FileSize calculates the file size and generates a user-friendly string.
 func FileSize(s int64) string {
 	sizes := []string{"B", "KB", "MB", "GB", "TB", "PB", "EB"}
 	return humanateBytes(uint64(s), 1024, sizes)

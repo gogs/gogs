@@ -44,9 +44,9 @@ func (p *SlackPayload) JSONPayload() ([]byte, error) {
 	return data, nil
 }
 
-// see: https://api.slack.com/docs/formatting
+// SlackTextFormatter escapes the control characters of Slack, see
+// https://api.slack.com/docs/formatting.
 func SlackTextFormatter(s string) string {
-	// replace & < >
 	s = strings.ReplaceAll(s, "&", "&amp;")
 	s = strings.ReplaceAll(s, "<", "&lt;")
 	s = strings.ReplaceAll(s, ">", "&gt;")
@@ -55,7 +55,6 @@ func SlackTextFormatter(s string) string {
 
 func SlackShortTextFormatter(s string) string {
 	s = strings.Split(s, "\n")[0]
-	// replace & < >
 	s = strings.ReplaceAll(s, "&", "&amp;")
 	s = strings.ReplaceAll(s, "<", "&lt;")
 	s = strings.ReplaceAll(s, ">", "&gt;")
@@ -66,7 +65,7 @@ func SlackLinkFormatter(url, text string) string {
 	return fmt.Sprintf("<%s|%s>", url, SlackTextFormatter(text))
 }
 
-// getSlackCreatePayload composes Slack payload for create new branch or tag.
+// getSlackCreatePayload composes Slack payload for creating a new branch or tag.
 func getSlackCreatePayload(p *apiv1types.WebhookCreatePayload) *SlackPayload {
 	refName := git.RefShortName(p.Ref)
 	repoLink := SlackLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
@@ -77,7 +76,7 @@ func getSlackCreatePayload(p *apiv1types.WebhookCreatePayload) *SlackPayload {
 	}
 }
 
-// getSlackDeletePayload composes Slack payload for delete a branch or tag.
+// getSlackDeletePayload composes Slack payload for deleting a branch or tag.
 func getSlackDeletePayload(p *apiv1types.WebhookDeletePayload) *SlackPayload {
 	refName := git.RefShortName(p.Ref)
 	repoLink := SlackLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
@@ -87,7 +86,7 @@ func getSlackDeletePayload(p *apiv1types.WebhookDeletePayload) *SlackPayload {
 	}
 }
 
-// getSlackForkPayload composes Slack payload for forked by a repository.
+// getSlackForkPayload composes Slack payload for forking a repository.
 func getSlackForkPayload(p *apiv1types.WebhookForkPayload) *SlackPayload {
 	baseLink := SlackLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
 	forkLink := SlackLinkFormatter(p.Forkee.HTMLURL, p.Forkee.FullName)
@@ -121,10 +120,10 @@ func getSlackPushPayload(p *apiv1types.WebhookPushPayload, slack *SlackMeta) *Sl
 	text := fmt.Sprintf("[%s:%s] %s pushed by %s", repoLink, branchLink, commitString, p.Pusher.UserName)
 
 	var attachmentText strings.Builder
-	// for each commit, generate attachment text
+	// For each commit, generate attachment text.
 	for i, commit := range p.Commits {
 		fmt.Fprintf(&attachmentText, "%s: %s - %s", SlackLinkFormatter(commit.URL, commit.ID[:7]), SlackShortTextFormatter(commit.Message), SlackTextFormatter(commit.Author.Name))
-		// add linebreak to each commit but the last
+		// Add linebreak to each commit but the last.
 		if i < len(p.Commits)-1 {
 			attachmentText.WriteString("\n")
 		}

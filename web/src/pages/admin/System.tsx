@@ -96,8 +96,6 @@ function Report({ section, children }: { section: AdminReportSection; children?:
   return (
     <Section id={section.id} title={section.title}>
       {section.groups.map((group, i) => (
-        // The gap between groups replaces the dividers of the server-rendered
-        // page.
         <div key={i} className={i > 0 ? "mt-6" : undefined}>
           <Facts ruled={i === 0}>
             {group.map((row) => (

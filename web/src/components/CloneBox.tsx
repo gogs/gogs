@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import type { RepoCloneLinks } from "@/lib/queries/repo";
 import { cn } from "@/lib/utils";
 
-// The server-rendered pages remember the protocol under the same key.
+// PROTOCOL_KEY keeps the protocol the viewer last picked, across repositories.
 const PROTOCOL_KEY = "repo-clone-protocol";
 
 // CloneBox shows the clone URL of a repository in the protocol the viewer

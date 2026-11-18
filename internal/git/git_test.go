@@ -33,7 +33,7 @@ func TestMain(m *testing.M) {
 
 	ctx := context.Background()
 
-	// Set up the test repository
+	// Set up the test repository.
 	if !isDir(repoPath) {
 		if err := Clone(ctx, "https://github.com/gogs/git-module-testrepo.git", repoPath, CloneOptions{
 			Bare: true,

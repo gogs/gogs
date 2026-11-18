@@ -168,7 +168,7 @@ type activityFeed struct {
 }
 
 // activityHeadline returns the localized sentence that follows the actor's
-// name, in the same form as the server-rendered feeds.
+// name.
 func activityHeadline(l i18n.Locale, act *database.Action) string {
 	esc := html.EscapeString
 	repoLink := esc(act.GetRepoLink())
@@ -220,14 +220,12 @@ func activityHeadline(l i18n.Locale, act *database.Action) string {
 	case database.ActionMirrorSyncDelete:
 		headline = l.Tr("action.mirror_sync_delete", repoLink, ref, repoPath)
 	}
-	// Translations are community-maintained, so sanitize them like the
-	// server-rendered feeds did.
+	// Translations are community-maintained, so they are sanitized.
 	return markup.Sanitize(headline)
 }
 
-// toActivityFeed converts a page of actions as listed from the database. Like
-// the server-rendered feeds, it leaves out actions of users that no longer
-// exist.
+// toActivityFeed converts a page of actions as listed from the database. It
+// leaves out actions of users that no longer exist.
 func toActivityFeed(ctx context.Context, logger *logx.Logger, l i18n.Locale, actions []*database.Action) (*activityFeed, error) {
 	feed := &activityFeed{Items: make([]activityItem, 0, len(actions))}
 	// A shorter page than requested is the last one.
@@ -332,7 +330,6 @@ func userFollowAction(ctx context.Context, logger *logx.Logger, viewer *database
 	if puser.IsOrganization() {
 		return http.StatusNotFound, nil, errors.New("user does not exist")
 	}
-	// Match the authentication requirement of the server-rendered follow form.
 	if viewer == nil {
 		return http.StatusUnauthorized, nil, errors.New("authentication required")
 	}
@@ -394,7 +391,7 @@ type orgProfile struct {
 }
 
 // orgMembersShown is the number of members listed on the home page of an
-// organization, matching the server-rendered page.
+// organization.
 const orgMembersShown = 12
 
 func getOrgProfile(logger *logx.Logger, viewer *database.User, org *profileUser) (statusCode int, resp *orgProfile, err error) {

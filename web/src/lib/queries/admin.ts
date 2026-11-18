@@ -168,7 +168,7 @@ export interface AdminReportRow {
 export interface AdminReportSection {
   id: string;
   title: string;
-  // Groups are shown with a divider between them.
+  // Groups are shown with a gap between them.
   groups: AdminReportRow[][];
 }
 
@@ -348,9 +348,9 @@ export type AdminSpanKind = "request" | "git" | "db" | "other";
 
 // AdminTraceRoute is what the traces of a route are grouped under. A "route" is
 // a matched route pattern, e.g., "GET /api/web/{owner}/{repo}/header". "other"
-// groups the requests whose route is not known, e.g., pages served by Macaron,
-// under their method, which is the name. "background" is work that no request
-// started, e.g., a mirror sync, named after what it ran.
+// groups the requests whose route is not known, e.g., those that matched no
+// route pattern, under their method, which is the name. "background" is work
+// that no request started, e.g., a mirror sync, named after what it ran.
 export interface AdminTraceRoute {
   name: string;
   kind: "route" | "other" | "background";

@@ -12,8 +12,8 @@ export interface WebContext {
   error?: string;
   // The version of Gogs, for site admins on a server error.
   version?: string;
-  // Where visitors who are not signed in land instead of the home page, if
-  // anywhere else, e.g., "/explore/repos".
+  // Where unauthenticated visitors land instead of the home page, if anywhere
+  // else, e.g., "/explore/repos".
   landingURL?: string;
   // Whether viewers must be authenticated to view any content.
   requireAuthenticatedViewer?: boolean;

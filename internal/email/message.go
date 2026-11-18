@@ -133,9 +133,9 @@ var mailQueue chan *message
 
 // NewContext initializes settings for mailer.
 func NewContext(logger *logx.Logger) {
-	// Need to check if mailQueue is nil because in during reinstall (user had installed
-	// before but switched install lock off), this function will be called again
-	// while mail queue is already processing tasks, and produces a race condition.
+	// Need to check if mailQueue is nil because during reinstall (user had installed
+	// before but switched install lock off), this function is called again while
+	// the mail queue is already processing tasks, which produces a race condition.
 	if !conf.Email.Enabled || mailQueue != nil {
 		return
 	}
@@ -146,7 +146,7 @@ func NewContext(logger *logx.Logger) {
 
 // send puts new message object into mail queue.
 // It returns without confirmation (mail processed asynchronously) in normal cases,
-// but waits/blocks under hook mode to make sure mail has been sent.
+// but blocks in hook mode to make sure mail has been sent.
 func send(msg *message) {
 	if !conf.Email.Enabled {
 		return

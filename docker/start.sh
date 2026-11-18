@@ -1,7 +1,7 @@
 #!/bin/sh
 
 create_socat_links() {
-    # Bind linked docker container to localhost socket using socat
+    # Bind linked Docker containers to localhost sockets using socat.
     USED_PORT="3000:22"
     while read -r NAME ADDR PORT; do
         if test -z "$NAME$ADDR$PORT"; then
@@ -24,21 +24,21 @@ EOT
 }
 
 cleanup() {
-    # Cleanup SOCAT services and s6 event folder
-    # On start and on shutdown in case container has been killed
+    # Clean up socat services and s6 event folders on start, and on shutdown in
+    # docker/s6/.s6-svscan/finish, in case the container has been killed.
     rm -rf "$(find /app/gogs/docker/s6/ -name 'event')"
     rm -rf /app/gogs/docker/s6/SOCAT_*
 }
 
 create_volume_subfolder() {
-    # only change ownership if needed, if using an nfs mount this could be expensive
+    # Only change ownership if needed, because it could be expensive on an NFS mount.
     if [ "$USER:$USER" != "$(stat /data -c '%U:%G')" ]
     then
-        # Modify the owner of /data dir, make $USER(git) user have permission to create sub-dir in /data.
+        # Make $USER (git) the owner of /data, so it can create subdirectories in /data.
         chown -R "$USER:$USER" /data
     fi
 
-    # Create VOLUME subfolder
+    # Create the subdirectories of the /data volume.
     for f in /data/gogs/data /data/gogs/conf /data/gogs/log /data/git /data/ssh; do
         if ! test -d $f; then
             gosu "$USER" mkdir -p $f
@@ -71,11 +71,11 @@ if [ "$CROND" = "true" ] || [ "$CROND" = "1" ]; then
     rm -f /app/gogs/docker/s6/crond/down
     /bin/sh /app/gogs/docker/runtime/backup-init.sh "${PUID}"
 else
-    # Tell s6 not to run the crond service
+    # Tell s6 not to run the crond service.
     touch /app/gogs/docker/s6/crond/down
 fi
 
-# Exec CMD or S6 by default if nothing present
+# Exec the given command, or s6 when there is none.
 if [ $# -gt 0 ];then
     exec "$@"
 else

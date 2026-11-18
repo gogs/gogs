@@ -108,18 +108,14 @@ func extractTypeFromBase64Key(key string) (string, error) {
 
 // parseKeyString parses any key string in OpenSSH or SSH2 format to clean OpenSSH string (RFC4253).
 func parseKeyString(content string) (string, error) {
-	// Transform all legal line endings to a single "\n"
-
-	// Replace all windows full new lines ("\r\n")
+	// Transform all legal line endings to a single "\n".
 	content = strings.ReplaceAll(content, "\r\n", "\n")
-
-	// Replace all windows half new lines ("\r"), if it happen not to match replace above
 	content = strings.ReplaceAll(content, "\r", "\n")
 
-	// Replace ending new line as its may cause unwanted behaviour (extra line means not a single line key | OpenSSH key)
+	// Remove ending new lines as they may cause unwanted behaviour (an extra
+	// line means it is not a single-line OpenSSH key).
 	content = strings.TrimRight(content, "\n")
 
-	// split lines
 	lines := strings.Split(content, "\n")
 
 	var keyType, keyContent, keyComment string
@@ -158,8 +154,8 @@ func parseKeyString(content string) (string, error) {
 		for _, line := range lines {
 			// Skip lines that:
 			// 1) are a continuation of the previous line,
-			// 2) contain ":" as that are comment lines
-			// 3) contain "-" as that are begin and end tags
+			// 2) contain ":" as those are comment lines, or
+			// 3) contain "-" as those are begin and end tags.
 			if continuationLine || strings.ContainsAny(line, ":-") {
 				continuationLine = strings.HasSuffix(line, "\\")
 			} else {
@@ -217,7 +213,7 @@ func SSHKeygenParsePublicKey(logger *logx.Logger, key, keyTestPath, keygenPath s
 	return strings.ToLower(keyType), length, nil
 }
 
-// SSHNativeParsePublicKey extracts the key type and length using the golang SSH library.
+// SSHNativeParsePublicKey extracts the key type and length using the Go SSH library.
 func SSHNativeParsePublicKey(keyLine string) (string, int, error) {
 	fields := strings.Fields(keyLine)
 	if len(fields) < 2 {
@@ -248,7 +244,7 @@ func SSHNativeParsePublicKey(keyLine string) (string, int, error) {
 		if err := ssh.Unmarshal(pkey.Marshal(), &rawPub); err != nil {
 			return "", 0, err
 		}
-		return "rsa", rawPub.N.BitLen(), nil // use N as per crypto/rsa/rsa.go (is bits)
+		return "rsa", rawPub.N.BitLen(), nil // Use N as per crypto/rsa/rsa.go (is bits).
 	case ssh.KeyAlgoECDSA256:
 		return "ecdsa", 256, nil
 	case ssh.KeyAlgoECDSA384:
@@ -278,7 +274,7 @@ func CheckPublicKeyString(logger *logx.Logger, content string) (_ string, err er
 		return "", errors.New("only a single line with a single key please")
 	}
 
-	// Remove any unnecessary whitespace
+	// Remove any unnecessary whitespace.
 	content = strings.TrimSpace(content)
 
 	if !conf.SSH.MinimumKeySizeCheck {
@@ -322,7 +318,7 @@ func appendAuthorizedKeysToFile(logger *logx.Logger, keys ...*PublicKey) error {
 	}
 	defer f.Close()
 
-	// Note: chmod command does not support in Windows.
+	// Note: Windows does not support chmod.
 	if !conf.IsWindowsRuntime() {
 		fi, err := f.Stat()
 		if err != nil {
@@ -346,8 +342,8 @@ func appendAuthorizedKeysToFile(logger *logx.Logger, keys ...*PublicKey) error {
 	return nil
 }
 
-// checkKeyContent onlys checks if key content has been used as public key,
-// it is OK to use same key as deploy key for multiple repositories/users.
+// checkKeyContent only checks if key content has been used as a user public
+// key. It is OK to use same key as deploy key for multiple repositories.
 func checkKeyContent(tx *gorm.DB, content string) error {
 	var count int64
 	err := tx.Model(new(PublicKey)).Where("content = ? AND type = ?", content, KeyTypeUser).Count(&count).Error
@@ -375,7 +371,6 @@ func addKey(logger *logx.Logger, tx *gorm.DB, key *PublicKey) (err error) {
 	}
 	key.Fingerprint = strings.Split(stdout, " ")[1]
 
-	// Save SSH key.
 	if err = tx.Create(key).Error; err != nil {
 		return err
 	}

@@ -21,16 +21,15 @@ import (
 )
 
 // withIssueTracker lets through viewers who can read the repository, and
-// everyone else when its issues are public, like the server-rendered labels
-// and milestones pages.
+// everyone else when its issues are public.
 func withIssueTracker(c flamego.Context, repoCtx *repoContext) {
 	if !repoCtx.Viewer.CanRead() && !repoCtx.Repo.CanGuestViewIssues() {
 		writeErrorResponse(c.ResponseWriter(), http.StatusNotFound, errors.New("repository does not exist"))
 	}
 }
 
-// withRepoWriter lets through viewers who can write to the repository. Like
-// the server-rendered pages, the repository is not found for others.
+// withRepoWriter lets through viewers who can write to the repository. The
+// repository is not found for others.
 func withRepoWriter(c flamego.Context, repoCtx *repoContext) {
 	if !repoCtx.Viewer.CanWrite() {
 		writeErrorResponse(c.ResponseWriter(), http.StatusNotFound, errors.New("repository does not exist"))

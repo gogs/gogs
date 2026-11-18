@@ -173,7 +173,7 @@ type putContentsRequest struct {
 	Branch  string `json:"branch"`
 }
 
-// PUT /repos/:username/:reponame/contents/*
+// PUT /repos/{username}/{reponame}/contents/{**}
 func putContents(c *apiContext, r putContentsRequest) {
 	content, err := base64.StdEncoding.DecodeString(r.Content)
 	if err != nil {

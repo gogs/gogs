@@ -76,7 +76,7 @@ export function RepoListItem({ repo, showOwner = false }: { repo: RepoListItemDa
 }
 
 // RepoMarker shows the first applicable of private, unlisted, fork and mirror,
-// in the same precedence as the legacy list.
+// in that precedence.
 function RepoMarker({ repo }: { repo: RepoListItemData }) {
   const { t } = useTranslation();
   let marker: { icon: ComponentType<{ className?: string }>; label: string } | null = null;

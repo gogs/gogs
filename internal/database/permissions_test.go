@@ -42,7 +42,7 @@ func TestPerms(t *testing.T) {
 }
 
 func permsAccessMode(t *testing.T, ctx context.Context, s *PermissionsStore) {
-	// Set up permissions
+	// Set up permissions.
 	err := s.SetRepoPerms(ctx, 1,
 		map[int64]AccessMode{
 			2: AccessModeWrite,
@@ -153,7 +153,7 @@ func permsAccessMode(t *testing.T, ctx context.Context, s *PermissionsStore) {
 }
 
 func permsAuthorize(t *testing.T, ctx context.Context, s *PermissionsStore) {
-	// Set up permissions
+	// Set up permissions.
 	err := s.SetRepoPerms(ctx, 1,
 		map[int64]AccessMode{
 			1: AccessModeRead,
@@ -287,7 +287,7 @@ func permsSetRepoPerms(t *testing.T, ctx context.Context, s *PermissionsStore) {
 	err := s.db.Order("user_id, repo_id").Find(&accesses).Error
 	require.NoError(t, err)
 
-	// Ignore ID fields
+	// Ignore ID fields.
 	for _, a := range accesses {
 		a.ID = 0
 	}

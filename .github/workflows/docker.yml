@@ -187,7 +187,7 @@ jobs:
           image-ref: ttl.sh/gogs/gogs-next-${{ steps.short-sha.outputs.sha }}:7d
           exit-code: '1'
 
-  # Updates to the following section needs to be synced to all release branches within their lifecycles.
+  # Updates to the following section need to be synced to all release branches within their lifecycles.
   buildx-release:
     if: ${{ github.event_name == 'release' }}
     runs-on: ubuntu-latest
@@ -221,7 +221,7 @@ jobs:
             HIGHEST_STABLE=$(echo "$STABLE_TAGS" | sort -V | tail -n 1)
             MINOR_TAG=$(echo "$IMAGE_TAG" | cut -d. -f1,2)
             # `|| true` keeps the step running when `grep` finds no matches,
-            # since bash runs with `-e -o pipefail` in GitHub Actions.
+            # even if the step runs with `-o pipefail`, e.g., under `shell: bash`.
             HIGHEST_IN_MINOR=$(echo "$STABLE_TAGS" | { grep "^${MINOR_TAG}\." || true; } | sort -V | tail -n 1)
 
             if [[ "$IMAGE_TAG" == "$HIGHEST_IN_MINOR" ]]; then
@@ -283,7 +283,7 @@ jobs:
           smtp_username: ${{ secrets.SMTP_USERNAME }}
           smtp_password: ${{ secrets.SMTP_PASSWORD }}
 
-  # Updates to the following section needs to be synced to all release branches within their lifecycles.
+  # Updates to the following section need to be synced to all release branches within their lifecycles.
   buildx-next-release:
     if: ${{ github.event_name == 'release' }}
     runs-on: ubuntu-latest
@@ -317,7 +317,7 @@ jobs:
             HIGHEST_STABLE=$(echo "$STABLE_TAGS" | sort -V | tail -n 1)
             MINOR_TAG=$(echo "$IMAGE_TAG" | cut -d. -f1,2)
             # `|| true` keeps the step running when `grep` finds no matches,
-            # since bash runs with `-e -o pipefail` in GitHub Actions.
+            # even if the step runs with `-o pipefail`, e.g., under `shell: bash`.
             HIGHEST_IN_MINOR=$(echo "$STABLE_TAGS" | { grep "^${MINOR_TAG}\." || true; } | sort -V | tail -n 1)
 
             if [[ "$IMAGE_TAG" == "$HIGHEST_IN_MINOR" ]]; then

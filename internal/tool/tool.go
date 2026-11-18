@@ -59,20 +59,19 @@ func BasicAuthDecode(encoded string) (string, string, error) {
 	return auth[0], auth[1], nil
 }
 
-// verify time limit code
+// VerifyTimeLimitCode returns true if the code is a valid time limit code for
+// the given data that has not expired.
 func VerifyTimeLimitCode(data string, minutes int, code string) bool {
 	if len(code) <= 18 {
 		return false
 	}
 
-	// split code
 	start := code[:12]
 	lives, err := strconv.Atoi(code[12:18])
 	if err != nil || lives <= 0 {
 		return false
 	}
 
-	// right active code
 	retCode := CreateTimeLimitCode(data, lives, start)
 	if !hmac.Equal([]byte(retCode), []byte(code)) {
 		return false
@@ -88,8 +87,9 @@ func VerifyTimeLimitCode(data string, minutes int, code string) bool {
 const TimeLimitCodeLength = 12 + 6 + 64
 
 // CreateTimeLimitCode generates a time limit code based on given input data.
-// Format: 12 length date time string + 6 minutes string + 64 HMAC-SHA256 encoded
-// string.
+// Format: 12-character date time string + 6-digit minutes string + 64-character
+// hex-encoded HMAC-SHA256 string. A nil startInf starts the code now, otherwise
+// it is the date time string to start the code from.
 func CreateTimeLimitCode(data string, minutes int, startInf any) string {
 	format := "200601021504"
 
@@ -97,11 +97,9 @@ func CreateTimeLimitCode(data string, minutes int, startInf any) string {
 	var startStr, endStr string
 
 	if startInf == nil {
-		// Use now time create code
 		start = time.Now()
 		startStr = start.Format(format)
 	} else {
-		// use start string create code
 		startStr = startInf.(string)
 		start, _ = time.ParseInLocation(format, startStr, time.Local)
 		startStr = start.Format(format)
@@ -124,9 +122,10 @@ func HashEmail(email string) string {
 	return cryptox.MD5(strings.ToLower(strings.TrimSpace(email)))
 }
 
-// AvatarLink returns relative avatar link to the site domain by given email,
-// which includes app sub-url as prefix. However, it is possible
-// to return full URL if user enables Gravatar-like service.
+// AvatarLink returns the avatar link of the given email. It is a Libravatar
+// link when federated avatars are enabled, otherwise a Gravatar link unless
+// Gravatar is disabled. When neither applies, it is the link of the default
+// avatar relative to the site domain, with the subpath as prefix.
 func AvatarLink(logger *logx.Logger, email string) (url string) {
 	if conf.Picture.EnableFederatedAvatar && conf.Picture.LibravatarService != nil &&
 		strings.Contains(email, "@") {
@@ -221,7 +220,7 @@ func computeTimeDiff(diff int64) (int64, string) {
 	return diff, diffStr
 }
 
-// TimeSincePro calculates the time interval and generate full user-friendly string.
+// TimeSincePro calculates the time interval and generates a full user-friendly string.
 func TimeSincePro(then time.Time) string {
 	now := time.Now()
 	diff := now.Unix() - then.Unix()
@@ -257,7 +256,7 @@ func Int64sToStrings(ints []int64) []string {
 	return strs
 }
 
-// Int64sToMap converts a slice of int64 to a int64 map.
+// Int64sToMap converts a slice of int64 to an int64 map.
 func Int64sToMap(ints []int64) map[int64]bool {
 	m := make(map[int64]bool)
 	for _, i := range ints {

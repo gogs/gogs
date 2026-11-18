@@ -72,8 +72,8 @@ func runImportLocale(_ context.Context, cmd *cli.Command) error {
 			continue
 		}
 
-		// Crowdin surrounds double quotes for strings contain quotes inside,
-		// this breaks INI parser, we need to fix that.
+		// Crowdin surrounds strings that contain quotes with double quotes, which
+		// breaks the INI parser, so the surrounding quotes are stripped.
 		sr, err := os.Open(source)
 		if err != nil {
 			return errors.Newf("open: %v", err)
@@ -89,7 +89,7 @@ func runImportLocale(_ context.Context, cmd *cli.Command) error {
 			line = scanner.Bytes()
 			idx := bytes.Index(line, badChars)
 			if idx > -1 && line[len(line)-1] == '"' {
-				// We still want the "=" sign
+				// Keep the "=" sign.
 				line = append(line[:idx+1], line[idx+2:len(line)-1]...)
 				line = bytes.ReplaceAll(line, escapedQuotes, regularQuotes)
 			}
@@ -99,8 +99,8 @@ func runImportLocale(_ context.Context, cmd *cli.Command) error {
 		_ = sr.Close()
 		_ = tw.Close()
 
-		// Modification time of files from Crowdin often ahead of current,
-		// so we need to set back to current.
+		// The modification time of files from Crowdin is often ahead of the
+		// current time, so it is set back to the current time.
 		_ = os.Chtimes(target, now, now)
 	}
 

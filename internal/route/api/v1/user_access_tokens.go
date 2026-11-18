@@ -68,11 +68,11 @@ func (h *accessTokensHandler) Create() flamego.Handler {
 // endpoints. This interface is meant to abstract away and limit the exposure of
 // the underlying data layer to the handler through a thin-wrapper.
 type AccessTokensStore interface {
-	// CreateAccessToken creates a new access token and persist to database. It
+	// CreateAccessToken creates a new access token and persists to database. It
 	// returns database.ErrAccessTokenAlreadyExist when an access token with same
 	// name already exists for the user.
 	CreateAccessToken(ctx gocontext.Context, userID int64, name string) (*database.AccessToken, error)
-	// ListAccessTokens returns all access tokens belongs to given user.
+	// ListAccessTokens returns all access tokens that belong to given user.
 	ListAccessTokens(ctx gocontext.Context, userID int64) ([]*database.AccessToken, error)
 }
 

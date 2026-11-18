@@ -32,10 +32,10 @@ type Store interface {
 	// verified by another user.
 	CreateUser(ctx context.Context, username, email string, opts database.CreateUserOptions) (*database.User, error)
 	// AuthenticateUser validates username and password via given login source ID.
-	// It returns database.ErrUserNotExist when the user was not found.
+	// It returns auth.ErrBadCredentials when the credentials are not valid.
 	//
-	// When the "loginSourceID" is negative, it aborts the process and returns
-	// database.ErrUserNotExist if the user was not found in the database.
+	// When the "loginSourceID" is not positive, it aborts the process and returns
+	// auth.ErrBadCredentials if the user was not found in the database.
 	//
 	// When the "loginSourceID" is non-negative, it returns
 	// database.ErrLoginSourceMismatch if the user has different login source ID

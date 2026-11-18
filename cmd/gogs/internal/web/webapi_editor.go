@@ -47,8 +47,8 @@ func repoUploadLimits() attachmentLimits {
 }
 
 // withRepoEditor lets through the writers of a repository that has commits
-// and is not a mirror, who can change its files in the browser. Like the
-// server-rendered pages, the repository is not found for others.
+// and is not a mirror, who can change its files in the browser. The repository
+// is not found for others.
 func withRepoEditor(c flamego.Context, repoCtx *repoContext) {
 	repo := repoCtx.Repo
 	if !repoCtx.Viewer.CanWrite() || repo.IsEmpty || !repo.CanEnableEditor() {
@@ -85,7 +85,7 @@ type repoEditorTarget struct {
 // getRepoEditorTarget describes the branch and the path in the route, which
 // is the branch name followed by the path, for the pages that change files.
 // Branch names can have slashes, so the shortest leading part of the route
-// that names a branch is the branch, like the server-rendered pages.
+// that names a branch is the branch.
 func getRepoEditorTarget(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoEditorTarget, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo

@@ -8,8 +8,8 @@ import (
 var localCIDRs []*net.IPNet
 
 func init() {
-	// Parsing hardcoded CIDR strings should never fail, if in case it does, let's
-	// fail it at start.
+	// Parsing hardcoded CIDR strings should never fail. In case it does, fail at
+	// start.
 	rawCIDRs := []string{
 		// https://datatracker.ietf.org/doc/html/rfc5735:
 		"127.0.0.0/8",        // Loopback
@@ -45,8 +45,8 @@ func init() {
 }
 
 // IsBlockedLocalHostname returns true if given hostname is resolved to a local
-// network address that is implicitly blocked (i.e. not exempted from the
-// allowlist).
+// network address that is implicitly blocked (i.e., not exempted by the
+// allowlist). A hostname that cannot be resolved is also considered blocked.
 func IsBlockedLocalHostname(hostname string, allowlist []string) bool {
 	for _, allow := range allowlist {
 		if hostname == allow || allow == "*" {

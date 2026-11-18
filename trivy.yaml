@@ -1,7 +1,7 @@
 scan:
   skip-files:
     - "usr/sbin/gosu" # CVE patching is far behind and out of our control.
-    - "app/gogs/gogs" # False positives on main builds
+    - "app/gogs/gogs" # False positives on main builds.
 
 severity:
   - CRITICAL

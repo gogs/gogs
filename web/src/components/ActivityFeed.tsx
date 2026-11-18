@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import type { ActivityItem } from "@/lib/queries/user";
 import { subUrl } from "@/lib/url";
 
-// Icons by `ActionType`, after the octicons of the server-rendered feeds.
+// Icons by `ActionType`.
 const ICONS: Record<number, ComponentType<{ className?: string }>> = {
   1: BookMarked,
   2: BookMarked,

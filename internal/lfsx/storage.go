@@ -17,7 +17,7 @@ var (
 	ErrOIDMismatch    = errors.New("content hash does not match OID")
 )
 
-// Storager is an storage backend for uploading and downloading LFS objects.
+// Storager is a storage backend for uploading and downloading LFS objects.
 type Storager interface {
 	// Storage returns the name of the storage backend.
 	Storage() Storage
@@ -25,8 +25,8 @@ type Storager interface {
 	// The reader is closed once upload is finished. ErrInvalidOID is returned
 	// if the given oid is not valid.
 	Upload(oid OID, rc io.ReadCloser) (int64, error)
-	// Download streams content of given oid to the io.Writer. It is caller's
-	// responsibility the close the writer when needed. ErrObjectNotExist is
+	// Download streams content of given oid to the io.Writer. It is the caller's
+	// responsibility to close the writer when needed. ErrObjectNotExist is
 	// returned if the given oid does not exist.
 	Download(oid OID, w io.Writer) error
 }
@@ -40,7 +40,7 @@ const (
 
 var _ Storager = (*LocalStorage)(nil)
 
-// LocalStorage is a LFS storage backend on local file system.
+// LocalStorage is an LFS storage backend on the local file system.
 type LocalStorage struct {
 	// The root path for storing LFS objects.
 	Root string

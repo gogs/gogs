@@ -22,9 +22,8 @@ type dashboardOwner struct {
 }
 
 // withDashboardOwner maps the organization named by the `org` path parameter
-// as *dashboardOwner, or the authenticated user when there is none. Like the
-// server-rendered dashboard, only members see the dashboard of an
-// organization.
+// as *dashboardOwner, or the authenticated user when there is none. Only
+// members see the dashboard of an organization.
 func withDashboardOwner(logger *logx.Logger, c flamego.Context, viewer *database.User) {
 	w := c.ResponseWriter()
 	name := c.Param("org")
@@ -288,8 +287,8 @@ func getDashboardPulls(logger *logx.Logger, c flamego.Context, viewer *database.
 }
 
 // listDashboardIssues lists the issues or pull requests of the dashboard owner,
-// filtered and sorted like the server-rendered page by the `type`, `repo`,
-// `state`, `sort` and `page` query parameters.
+// filtered and sorted by the `type`, `repo`, `state`, `sort` and `page` query
+// parameters.
 func listDashboardIssues(logger *logx.Logger, c flamego.Context, viewer *database.User, owner *dashboardOwner, isPull bool) (statusCode int, resp *dashboardIssues, err error) {
 	filterMode := database.FilterModeYourRepos
 	if !owner.IsOrganization() {

@@ -47,9 +47,9 @@ type Options struct {
 
 // Localizer loads the locale files and returns the middleware that maps the
 // Locale of each request. The language comes from the "lang" query parameter,
-// then the "lang" cookie, then the Accept-Language header. A language chosen by
-// the query parameter is remembered in the cookie, and the viewer is redirected
-// to the same path without the query.
+// then the "lang" cookie, then the Accept-Language header. A language not read
+// from the cookie is remembered in it. When the language is chosen by the query
+// parameter, the viewer is redirected to the same path without the query.
 func Localizer(opts Options) (flamego.Handler, error) {
 	if len(opts.Langs) != len(opts.Names) {
 		return nil, errors.New("number of languages and names do not match")

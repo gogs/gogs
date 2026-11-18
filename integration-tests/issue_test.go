@@ -141,7 +141,7 @@ func TestIssueCreateAndView(t *testing.T) {
 		anonymous.doJSON(http.MethodGet, issueAPIPath(repo, "issues")+"?state=closed", nil, http.StatusOK, &list)
 		assert.Empty(t, list.Items)
 
-		// Lists about the viewer need a signed-in viewer.
+		// Lists about the viewer need an authenticated viewer.
 		status, body := anonymous.do(http.MethodGet, issueAPIPath(repo, "issues")+"?type=created_by", nil)
 		assert.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
 		ownerClient.doJSON(http.MethodGet, issueAPIPath(repo, "issues")+"?type=created_by", nil, http.StatusOK, &list)

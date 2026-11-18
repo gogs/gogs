@@ -40,7 +40,7 @@ func ParseRemoteAddr(options ParseRemoteAddrOptions) (string, error) {
 		if len(options.AuthUsername)+len(options.AuthPassword) > 0 {
 			u.User = url.UserPassword(options.AuthUsername, options.AuthPassword)
 		}
-		// To prevent CRLF injection in git protocol, see https://github.com/gogs/gogs/issues/6413
+		// To prevent CRLF injection in Git protocol, see https://github.com/gogs/gogs/issues/6413.
 		if u.Scheme == "git" && (strings.Contains(remoteAddr, "%0d") || strings.Contains(remoteAddr, "%0a")) {
 			return "", database.ErrInvalidCloneAddr{IsURLError: true}
 		}

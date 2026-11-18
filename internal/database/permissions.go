@@ -8,7 +8,7 @@ import (
 	"unknwon.dev/x/logx"
 )
 
-// Access represents the highest access level of a user has to a repository. The
+// Access represents the highest access level that a user has to a repository. The
 // only access type that is not in this table is the real owner of a repository.
 // In case of an organization repository, the members of the owners team are in
 // this table.
@@ -19,7 +19,7 @@ type Access struct {
 	Mode   AccessMode `gorm:"not null"`
 }
 
-// AccessMode is the access mode of a user has to a repository.
+// AccessMode is the access mode that a user has to a repository.
 type AccessMode int
 
 const (
@@ -71,7 +71,7 @@ type AccessModeOptions struct {
 	Private bool  // Whether the repository is private.
 }
 
-// AccessMode returns the access mode of given user has to the repository.
+// AccessMode returns the access mode that given user has to the repository.
 func (s *PermissionsStore) AccessMode(ctx context.Context, logger *logx.Logger, userID, repoID int64, opts AccessModeOptions) (mode AccessMode) {
 	if repoID <= 0 {
 		return AccessModeNone
@@ -102,7 +102,7 @@ func (s *PermissionsStore) AccessMode(ctx context.Context, logger *logx.Logger, 
 	return access.Mode
 }
 
-// Authorize returns true if the user has as good as desired access mode to the
+// Authorize returns true if the user has at least the desired access mode to the
 // repository.
 func (s *PermissionsStore) Authorize(ctx context.Context, logger *logx.Logger, userID, repoID int64, desired AccessMode, opts AccessModeOptions) bool {
 	return desired <= s.AccessMode(ctx, logger, userID, repoID, opts)

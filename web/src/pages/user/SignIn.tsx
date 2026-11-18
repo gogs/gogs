@@ -31,7 +31,7 @@ interface SignInErrorResponse {
   fields?: Record<string, string | null>;
 }
 
-// Field display order; the first key with a server-side error gets focus.
+// Field display order. The first key with a server-side error gets focus.
 const FIELD_ORDER = ["username", "password"] as const;
 
 // How many times signing in with a passkey is tried in a row before the

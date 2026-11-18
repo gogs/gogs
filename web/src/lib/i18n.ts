@@ -52,7 +52,7 @@ try {
     translations: {
       unmodifiedLines: `{count, plural, one {${t("repo.diff.unmodified_line", { count: "#" })}} other {${t("repo.diff.unmodified_lines", { count: "#" })}}}`,
       // Intentionally blank. The `[data-unmodified-lines]:empty` rule in the
-      // commit page's diff CSS keeps the separator clickable without a label.
+      // diff CSS of DiffWorkspace keeps the separator clickable without a label.
       unknownUnmodifiedLines: "",
       expandAll: t("repo.diff.expand_all"),
       noNewlineAtEndOfFile: t("repo.diff.no_newline_at_eof"),

@@ -11,7 +11,7 @@ import (
 
 type Type int
 
-// Note: New type must append to the end of list to maintain backward compatibility.
+// Note: New types must be appended to the end of the list to maintain backward compatibility.
 const (
 	None  Type = iota
 	Plain      // 1
@@ -56,7 +56,7 @@ func (ErrBadCredentials) NotFound() bool {
 	return true
 }
 
-// ExternalAccount contains queried information returned by an authenticate provider
+// ExternalAccount contains queried information returned by an authentication provider
 // for an external account.
 type ExternalAccount struct {
 	// REQUIRED: The login to be used for authenticating against the provider.
@@ -75,19 +75,19 @@ type ExternalAccount struct {
 	Admin bool
 }
 
-// Provider defines an authenticate provider which provides ability to authentication against
-// an external identity provider and query external account information.
+// Provider defines an authentication provider which authenticates against an
+// external identity provider and queries external account information.
 type Provider interface {
 	// Authenticate performs authentication against an external identity provider
 	// using given credentials and returns queried information of the external account.
 	Authenticate(logger *logx.Logger, login, password string) (*ExternalAccount, error)
 
-	// Config returns the underlying configuration of the authenticate provider.
+	// Config returns the underlying configuration of the authentication provider.
 	Config() any
-	// HasTLS returns true if the authenticate provider supports TLS.
+	// HasTLS returns true if the authentication provider supports TLS.
 	HasTLS() bool
-	// UseTLS returns true if the authenticate provider is configured to use TLS.
+	// UseTLS returns true if the authentication provider is configured to use TLS.
 	UseTLS() bool
-	// SkipTLSVerify returns true if the authenticate provider is configured to skip TLS verify.
+	// SkipTLSVerify returns true if the authentication provider is configured to skip TLS verification.
 	SkipTLSVerify() bool
 }

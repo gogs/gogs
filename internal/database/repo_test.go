@@ -32,7 +32,7 @@ func TestRepository_ComposeMetas(t *testing.T) {
 		metas := repo.ComposeMetas()
 		assert.Equal(t, metas["repoLink"], repo.Link())
 
-		// Should not have format and style if no external tracker is configured
+		// Should not have format and style if no external tracker is configured.
 		_, ok := metas["format"]
 		assert.False(t, ok)
 		_, ok = metas["style"]
@@ -43,7 +43,7 @@ func TestRepository_ComposeMetas(t *testing.T) {
 		repo.ExternalMetas = nil
 		repo.EnableExternalTracker = true
 
-		// Default to numeric issue style
+		// Default to numeric issue style.
 		assert.Equal(t, markup.IssueNameStyleNumeric, repo.ComposeMetas()["style"])
 		repo.ExternalMetas = nil
 

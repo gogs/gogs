@@ -115,7 +115,7 @@ func TestRepository_RemoteAdd(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Add testrepo as the mirror remote and fetch right away
+	// Add testrepo as the mirror remote and fetch right away.
 	err = r.RemoteAdd(ctx, "origin", testrepo.Path(), RemoteAddOptions{
 		Fetch:       true,
 		MirrorFetch: true,
@@ -124,7 +124,7 @@ func TestRepository_RemoteAdd(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Check a non-default branch: release-1.0
+	// Check a non-default branch, i.e., "release-1.0".
 	assert.True(t, r.hasReference(ctx, RefsHeads+"release-1.0"))
 }
 

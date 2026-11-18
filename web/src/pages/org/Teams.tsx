@@ -125,8 +125,7 @@ export function TeamCounts({
   );
 }
 
-// TeamMembershipButton lets members leave a team, and owners join one, like
-// the server-rendered pages.
+// TeamMembershipButton lets members leave a team, and owners join one.
 export function TeamMembershipButton({
   org,
   team,

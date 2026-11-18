@@ -45,7 +45,6 @@ export function RepoForks({ owner, name, forks }: { owner: string; name: string;
                     {fork.owner}
                   </Link>
                   <span className="text-(--color-muted-foreground)"> / </span>
-                  {/* The home page of a repository is still served by the server-rendered pages. */}
                   <a
                     href={subUrl(`/${fork.owner}/${fork.name}`)}
                     className="font-semibold text-(--color-primary) hover:underline"

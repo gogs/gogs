@@ -26,7 +26,7 @@ func (t *Tree) TreeEntry(ctx context.Context, subpath string) (_ *TreeEntry, err
 	paths := strings.Split(subpath, "/")
 	tree := t
 	for i, name := range paths {
-		// Reached end of the loop
+		// The last path component is the entry itself.
 		if i == len(paths)-1 {
 			entries, err := tree.Entries(ctx)
 			if err != nil {

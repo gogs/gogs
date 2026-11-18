@@ -17,7 +17,7 @@ import (
 )
 
 // withRepoPulls lets through readers of a repository that takes pull
-// requests. Like the server-rendered pages, they are not found otherwise.
+// requests. The pull requests are not found otherwise.
 func withRepoPulls(c flamego.Context, repoCtx *repoContext) {
 	if !repoCtx.Viewer.CanRead() || !repoCtx.Repo.AllowsPulls() {
 		writeErrorResponse(c.ResponseWriter(), http.StatusNotFound, errors.New("repository does not exist"))
@@ -48,7 +48,7 @@ type repoPullInfo struct {
 	HeadBranch string `json:"headBranch"`
 	BaseBranch string `json:"baseBranch"`
 	// HeadLabel and BaseLabel name the branches after their owners, or are
-	// "deleted" for a branch that is gone, like the server-rendered page.
+	// "deleted" for a branch that is gone.
 	HeadLabel string `json:"headLabel"`
 	BaseLabel string `json:"baseLabel"`
 	// HeadRepoLink is the repository of the head branch, unless it is gone.

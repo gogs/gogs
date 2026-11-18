@@ -56,7 +56,7 @@ type HookEvents struct {
 	Release      bool `json:"release"`
 }
 
-// HookEvent represents events that will delivery hook.
+// HookEvent represents events that trigger hook deliveries.
 type HookEvent struct {
 	PushOnly       bool `json:"push_only"`
 	SendEverything bool `json:"send_everything"`
@@ -73,7 +73,7 @@ const (
 	HookStatusFailed
 )
 
-// Webhook represents a web hook object.
+// Webhook represents a webhook object.
 type Webhook struct {
 	ID           int64
 	RepoID       int64
@@ -82,12 +82,12 @@ type Webhook struct {
 	ContentType  HookContentType `gorm:"size:32"`
 	Secret       string          `gorm:"type:TEXT"`
 	Events       string          `gorm:"type:TEXT"`
-	*HookEvent   `gorm:"-"`      // LEGACY [1.0]: Cannot ignore JSON (i.e. json:"-") here, it breaks old backup archive
+	*HookEvent   `gorm:"-"`      // LEGACY [1.0]: Cannot ignore JSON (i.e., json:"-") here, it breaks old backup archive.
 	IsSSL        bool
 	IsActive     bool
 	HookTaskType HookTaskType `gorm:"size:32"`
-	Meta         string       `gorm:"type:TEXT"` // store hook-specific attributes
-	LastStatus   HookStatus   `gorm:"size:32"`   // Last delivery status
+	Meta         string       `gorm:"type:TEXT"` // Hook-specific attributes.
+	LastStatus   HookStatus   `gorm:"size:32"`   // Last delivery status.
 
 	Created     time.Time `json:"-" gorm:"-"`
 	CreatedUnix int64

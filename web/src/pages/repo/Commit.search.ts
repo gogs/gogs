@@ -1,13 +1,13 @@
-// Search-param schema for the commit diff route. Defined here (and not in
-// router.tsx) so both the route definition and the page component can import
-// from it without forming a circular dependency through router.tsx.
+// Search-param schema for the diff routes. Defined here (and not in
+// routes/repo.tsx) so both the route definitions and the page components can
+// import from it without forming a circular dependency through the routes.
 //
 // All diff page toggles serialize through the URL so the view is shareable
 // and survives reload. Defaults are implicit (omitted from the URL).
 //
-// `w` rides with the loader because whitespace handling lives in `git diff`,
-// not in the parsed-patch client code. Keep `WhitespaceMode` in sync with
-// `whitespaceFlag` in `internal/route/repo/commit.go`.
+// `whitespace` rides with the loader because whitespace handling lives in
+// `git diff`, not in the parsed-patch client code. Keep `WhitespaceUrlValue`
+// in sync with `whitespaceFlag` in `cmd/gogs/internal/web/web_repo.go`.
 
 // URL-side whitespace value: the page treats `undefined` as "show", so it
 // never appears in the URL. The toolbar uses a richer enum (see DiffToolbar)

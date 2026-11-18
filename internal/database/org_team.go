@@ -13,7 +13,7 @@ import (
 
 const ownerTeamName = "Owners"
 
-// Team represents a organization team.
+// Team represents an organization team.
 type Team struct {
 	ID          int64
 	OrgID       int64 `xorm:"INDEX"`
@@ -47,7 +47,7 @@ func (t *Team) HasWriteAccess() bool {
 	return t.Authorize >= AccessModeWrite
 }
 
-// IsTeamMember returns true if given user is a member of team.
+// IsMember returns true if given user is a member of team.
 func (t *Team) IsMember(userID int64) bool {
 	return IsTeamMember(t.OrgID, t.ID, userID)
 }
@@ -99,7 +99,7 @@ func (t *Team) hasRepository(e Engine, repoID int64) bool {
 	return hasTeamRepo(e, t.OrgID, t.ID, repoID)
 }
 
-// HasRepository returns true if given repository belong to team.
+// HasRepository returns true if given repository belongs to team.
 func (t *Team) HasRepository(repoID int64) bool {
 	return t.hasRepository(x, repoID)
 }
@@ -160,7 +160,7 @@ func (t *Team) removeRepository(e Engine, repo *Repository, recalculate bool) (e
 		return err
 	}
 
-	// Don't need to recalculate when delete a repository from organization.
+	// No need to recalculate when deleting a repository from organization.
 	if recalculate {
 		if err = repo.recalculateTeamAccesses(e, t.ID); err != nil {
 			return err
@@ -174,7 +174,7 @@ func (t *Team) removeRepository(e Engine, repo *Repository, recalculate bool) (e
 	// TODO: Delete me when this method is migrated to use GORM.
 	userAccessMode := func(e Engine, userID int64, repo *Repository) (AccessMode, error) {
 		mode := AccessModeNone
-		// Everyone has read access to public repository
+		// Everyone has read access to public repository.
 		if !repo.IsPrivate {
 			mode = AccessModeRead
 		}
@@ -246,7 +246,7 @@ var reservedTeamNames = map[string]struct{}{
 	"new": {},
 }
 
-// IsUsableTeamName return an error if given name is a reserved name or pattern.
+// IsUsableTeamName returns an error if given name is a reserved name or pattern.
 func IsUsableTeamName(name string) error {
 	return isNameAllowed(reservedTeamNames, nil, name)
 }
@@ -356,7 +356,7 @@ func getTeamsByOrgID(e Engine, orgID int64) ([]*Team, error) {
 	return teams, e.Where("org_id = ?", orgID).Find(&teams)
 }
 
-// GetTeamsByOrgID returns all teams belong to given organization.
+// GetTeamsByOrgID returns all teams that belong to given organization.
 func GetTeamsByOrgID(orgID int64) ([]*Team, error) {
 	return getTeamsByOrgID(x, orgID)
 }
@@ -413,7 +413,6 @@ func DeleteTeam(t *Team) error {
 		return err
 	}
 
-	// Get organization.
 	org, err := Handle.Users().GetByID(context.TODO(), t.OrgID)
 	if err != nil {
 		return err
@@ -432,12 +431,10 @@ func DeleteTeam(t *Team) error {
 		}
 	}
 
-	// Delete team-user.
 	if _, err = sess.Where("org_id=?", org.ID).Where("team_id=?", t.ID).Delete(new(TeamUser)); err != nil {
 		return err
 	}
 
-	// Delete team.
 	if _, err = sess.ID(t.ID).Delete(new(Team)); err != nil {
 		return err
 	}
@@ -456,7 +453,7 @@ func DeleteTeam(t *Team) error {
 //   |____| \___  >____  /__|_|  /______//____  >\___  >__|
 //              \/     \/      \/             \/     \/
 
-// TeamUser represents an team-user relation.
+// TeamUser represents a team-user relation.
 type TeamUser struct {
 	ID     int64
 	OrgID  int64 `xorm:"INDEX"`
@@ -563,7 +560,7 @@ func AddTeamMember(orgID, teamID, userID int64) error {
 		}
 	}
 
-	// We make sure it exists before.
+	// AddOrgUser above makes sure it exists.
 	ou := new(OrgUser)
 	if _, err = sess.Where("uid = ?", userID).And("org_id = ?", orgID).Get(ou); err != nil {
 		return err
@@ -601,7 +598,6 @@ func removeTeamMember(e Engine, orgID, teamID, uid int64) error {
 		return err
 	}
 
-	// Get organization.
 	org, err := newUsersStore(legacyTx(e)).GetByID(context.TODO(), orgID)
 	if err != nil {
 		return err
@@ -661,7 +657,7 @@ func RemoveTeamMember(orgID, teamID, uid int64) error {
 //   |____| \___  >____  /__|_|  /____|_  /\___  >   __/ \____/
 //              \/     \/      \/       \/     \/|__|
 
-// TeamRepo represents an team-repository relation.
+// TeamRepo represents a team-repository relation.
 type TeamRepo struct {
 	ID     int64
 	OrgID  int64 `xorm:"INDEX"`

@@ -9,16 +9,17 @@
 
 # pid so we know we're running
 PIDFILE="/opt/var/run/gogs.pid"
-# will need shadow users and groups, sorry - this adds complexity.
+# Will need shadow users and groups, which adds complexity.
 USER="gogs"
 # go paths
 GOROOT="/opt/bin/go"
 GOPATH="/opt/go"
 # gogs binary location
 GOGSBIN="$GOPATH/src/github.com/gogs/gogs/gogs"
-# in case you need to see logs for this daemonized gog
+# In case you need to see logs for this daemonized Gogs.
 DAEMONIZE_LOG="/tmp/gogs.daemon.log"
-# SQL can start up slower than normal on DDWRT, use this string to validate if it's up (/opt/bin/netstat -ln |grep "THE STRING YOU SET FOR BELOW VARIABLE"
+# SQL can start up slower than normal on DD-WRT. This string is matched against the output of
+# "/opt/bin/netstat -ln" to check whether it is up.
 SQL_STRING=" 127.0.0.1:3306 "
 
 # items for start

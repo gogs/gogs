@@ -16,7 +16,7 @@ import (
 type Commit struct {
 	// The ID of the commit.
 	ID OID
-	//  The author of the commit.
+	// The author of the commit.
 	Author *Signature
 	// The committer of the commit.
 	Committer *Signature
@@ -52,7 +52,7 @@ func (c *Commit) ParentID(n int) (OID, error) {
 }
 
 // Parent returns the n-th parent commit (0-based) of this commit. It returns
-// ErrRevisionNotExist if no such parent exists.
+// ErrParentNotExist if no such parent exists.
 func (c *Commit) Parent(ctx context.Context, n int) (_ *Commit, err error) {
 	ctx, span := tracer.Start(ctx, "git.Commit.Parent", trace.WithAttributes(attribute.String("git.commit", c.ID.String())))
 	defer func() { endSpan(span, err) }()
@@ -158,7 +158,7 @@ func (w *limitWriter) Write(p []byte) (int, error) {
 	n, err := w.W.Write(p[:limit])
 	w.N -= int64(n)
 
-	// Prevent "short write" error
+	// Report the whole input as written to prevent a "short write" error.
 	return len(p), err
 }
 

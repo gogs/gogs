@@ -15,11 +15,11 @@ interface RouterContext {
 
 function requireUnauthenticated({ context }: { context: RouterContext }) {
   if (!context.user) return;
-  // Bounce authenticated visits to "/" via full navigation so the server-rendered
-  // dashboard handler runs.
+  // Bounce authenticated visits to their dashboard at "/" with a full page
+  // load.
   window.location.assign(subUrl("/"));
-  // The thrown redirect is a sentinel to halt loader execution;
-  // the document-level navigation above is what actually moves the user.
+  // The thrown redirect is a sentinel to halt loader execution. The
+  // document-level navigation above is what actually moves the user.
   // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
   throw redirect({ to: "/", replace: true });
 }
@@ -87,9 +87,8 @@ export function createUserRoutes(rootRoute: AnyRoute) {
       }
       const res = await fetch(subUrl("/api/web/user/activate"), { credentials: "same-origin" });
       if (res.status === 404) {
-        // Already-active user hit a stale activation link. Send them home via
-        // a full navigation so the server-rendered dashboard handler decides
-        // where to land.
+        // Already-active user hit a stale activation link. Send them home with
+        // a full page load.
         window.location.assign(subUrl("/"));
         return { code, email: "", codeLifetimeHours: 0 };
       }
@@ -108,9 +107,9 @@ export function createUserRoutes(rootRoute: AnyRoute) {
     loader: async (): Promise<{ pending: boolean }> => {
       const res = await fetch(subUrl("/api/web/user/mfa"), { credentials: "same-origin" });
       if (res.status === 404) {
-        // No pending MFA challenge. Fall through to the server-rendered home,
-        // which will redirect to sign-in for anonymous visitors and to the
-        // dashboard for signed-in ones.
+        // No pending MFA challenge. Go home with a full page load, which
+        // decides where unauthenticated visitors land and shows authenticated
+        // users their dashboard.
         window.location.assign(subUrl("/"));
         return { pending: false };
       }

@@ -1,5 +1,5 @@
 // Date formatting helpers used by commit metadata and similar timestamps.
-//   - Relative time matches `internal/tool/tool.go`'s `timeSince` thresholds
+//   - Relative time matches the thresholds of `computeTimeDiff` in `internal/tool/tool.go`
 //     (now / seconds / minutes / hours / days / weeks / months / years ago).
 //     Strings come from Gogs's `[tool]` section so the SPA reuses the existing
 //     community translations. Quantity templates carry `%d` (count) and `%s`
@@ -22,7 +22,7 @@ const YEAR = 12 * MONTH;
 // Substitute Go-style printf placeholders. Quantity templates may use either
 // the simple `%d` / `%s` form (English, most locales) or the positional
 // `%[1]d` / `%[2]s` form used by community translations that need to reorder
-// the count and suffix (e.g. German: `%[2]s %[1]d Jahren`).
+// the count and suffix (e.g., German: `%[2]s %[1]d Jahren`).
 function fillQuantity(template: string, count: number, suffix: string): string {
   return template.replace(/%(?:\[1\])?d/g, String(count)).replace(/%(?:\[2\])?s/g, suffix);
 }

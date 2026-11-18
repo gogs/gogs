@@ -103,7 +103,7 @@ func serveReferenceSHA(c *apiContext, ref string) {
 	c.PlainText(http.StatusOK, sha)
 }
 
-// gitCommitToApiCommit is a helper function to convert git commit object to API commit.
+// gitCommitToAPICommit converts a Git commit to an API commit.
 func gitCommitToAPICommit(commit *git.Commit, c *apiContext) (*types.Commit, error) {
 	// Retrieve author and committer information
 	var apiAuthor, apiCommitter *types.User

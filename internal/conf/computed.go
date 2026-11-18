@@ -11,7 +11,7 @@ import (
 
 // ℹ️ README: This file contains configuration values that require computation to be useful.
 
-// IsWindowsRuntime returns true if the current runtime in Windows.
+// IsWindowsRuntime returns true if the current runtime is Windows.
 func IsWindowsRuntime() bool {
 	return runtime.GOOS == "windows"
 }
@@ -71,8 +71,8 @@ var (
 )
 
 // CustomDir returns the absolute path of the custom directory that contains local overrides.
-// It reads the value of environment variable GOGS_CUSTOM. When not set, it uses the work
-// directory returned by WorkDir function.
+// It reads the value of environment variable GOGS_CUSTOM. When not set, it uses the "custom"
+// directory under the work directory returned by WorkDir function.
 func CustomDir() string {
 	customDirOnce.Do(func() {
 		customDir = os.Getenv("GOGS_CUSTOM")

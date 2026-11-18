@@ -43,7 +43,7 @@ func writeError(w http.ResponseWriter, status int, text string) {
 	}
 }
 
-// askCredentials responses HTTP header and status which informs client to provide credentials.
+// askCredentials responds with the HTTP header and status that inform the client to provide credentials.
 func askCredentials(c flamego.Context, status int, text string) {
 	c.ResponseWriter().Header().Set("WWW-Authenticate", "Basic realm=\".\"")
 	writeError(c.ResponseWriter(), status, text)

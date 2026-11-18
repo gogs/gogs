@@ -92,8 +92,8 @@ func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOver
 	health := newHealth(traceStore)
 	go health.Run(ctx)
 
-	// Flag for port number in case first time run conflict. Apply it before
-	// anything reads the external URL.
+	// The port override works around a port conflict on the first run. Apply it
+	// before anything reads the external URL.
 	if portOverride > 0 {
 		port := strconv.Itoa(portOverride)
 		conf.Server.URL.Host = strings.Replace(conf.Server.URL.Host, ":"+conf.Server.URL.Port(), ":"+port, 1)

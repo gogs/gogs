@@ -38,10 +38,10 @@ type AuthStore interface {
 	// verified by another user.
 	CreateUser(ctx context.Context, username, email string, opts database.CreateUserOptions) (*database.User, error)
 	// AuthenticateUser validates username and password via given login source ID.
-	// It returns database.ErrUserNotExist when the user was not found.
+	// It returns auth.ErrBadCredentials when the credentials are not valid.
 	//
-	// When the "loginSourceID" is negative, it aborts the process and returns
-	// database.ErrUserNotExist if the user was not found in the database.
+	// When the "loginSourceID" is not positive, it aborts the process and returns
+	// auth.ErrBadCredentials if the user was not found in the database.
 	//
 	// When the "loginSourceID" is non-negative, it returns
 	// database.ErrLoginSourceMismatch if the user has different login source ID
@@ -68,7 +68,6 @@ func authenticatedUserID(logger *logx.Logger, store AuthStore, r *http.Request, 
 			}
 		}
 
-		// Let's see if token is valid.
 		if len(tokenSHA) > 0 {
 			t, err := store.GetAccessTokenBySHA1(r.Context(), tokenSHA)
 			if err != nil {
@@ -223,7 +222,7 @@ func isRequestFromTrustedProxy(req *http.Request) bool {
 	if ip == nil {
 		return false
 	}
-	// Normalize IPv4-mapped IPv6 (e.g. "::ffff:127.0.0.1" on dual-stack listeners)
+	// Normalize IPv4-mapped IPv6 (e.g., "::ffff:127.0.0.1" on dual-stack listeners)
 	// to its IPv4 form so it matches IPv4 CIDRs like 127.0.0.0/8.
 	if v4 := ip.To4(); v4 != nil {
 		ip = v4

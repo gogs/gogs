@@ -51,8 +51,8 @@ func askCredentials(logger *logx.Logger, w http.ResponseWriter) {
 	})
 }
 
-// authenticate tries to authenticate user via HTTP Basic Auth. It first tries to authenticate
-// as plain username and password, then use username as access token if previous step failed.
+// authenticate tries to authenticate the user via HTTP Basic Auth. It first tries to authenticate
+// with plain username and password, then uses the username as an access token if that failed.
 // A request without credentials continues as an anonymous user, whose ID is 0,
 // unless signing in is required to view anything.
 func authenticate(logger *logx.Logger, store Store) flamego.Handler {
@@ -184,13 +184,13 @@ func authorize(logger *logx.Logger, store Store, mode database.AccessMode) flame
 
 		logger.Debug("Authorized user", "userName", actor.Name, "ownerName", username, "repoName", reponame)
 
-		c.Map(owner) // NOTE: Override actor
+		c.Map(owner) // NOTE: Override actor, i.e., later handlers get the owner as *database.User.
 		c.Map(repo)
 	}
 }
 
 // verifyHeader checks if the HTTP header contains given value.
-// When not, response given "failCode" as status code.
+// When not, it responds with "failCode" as the status code.
 func verifyHeader(logger *logx.Logger, key, value string, failCode int) flamego.Handler {
 	return func(c flamego.Context) {
 		vals := c.Request().Header.Values(key)

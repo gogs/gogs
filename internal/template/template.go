@@ -51,7 +51,7 @@ func RenderCommitMessage(full bool, msg, urlPrefix string, metas map[string]stri
 	} else if !full {
 		return msgLines[0]
 	} else if numLines == 1 || (numLines >= 2 && msgLines[1] == "") {
-		// First line is a header, standalone or followed by empty line
+		// First line is a header, standalone or followed by an empty line.
 		header := fmt.Sprintf("<h3>%s</h3>", msgLines[0])
 		if numLines >= 2 {
 			fullMessage = header + fmt.Sprintf("\n<pre>%s</pre>", strings.Join(msgLines[2:], "\n"))
@@ -59,7 +59,7 @@ func RenderCommitMessage(full bool, msg, urlPrefix string, metas map[string]stri
 			fullMessage = header
 		}
 	} else {
-		// Non-standard git message, there is no header line
+		// Non-standard Git message, there is no header line.
 		fullMessage = fmt.Sprintf("<h4>%s</h4>", strings.Join(msgLines, "<br>"))
 	}
 	return fullMessage

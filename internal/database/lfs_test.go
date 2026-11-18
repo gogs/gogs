@@ -45,41 +45,35 @@ func TestLFS(t *testing.T) {
 }
 
 func lfsCreateObject(t *testing.T, ctx context.Context, s *LFSStore) {
-	// Create first LFS object
 	repoID := int64(1)
 	oid := lfsx.OID("ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f")
 	err := s.CreateObject(ctx, repoID, oid, 12, lfsx.StorageLocal)
 	require.NoError(t, err)
 
-	// Get it back and check the CreatedAt field
 	object, err := s.GetObjectByOID(ctx, repoID, oid)
 	require.NoError(t, err)
 	assert.Equal(t, s.db.NowFunc().Format(time.RFC3339), object.CreatedAt.UTC().Format(time.RFC3339))
 
-	// Try to create second LFS object with same oid should fail
+	// A second LFS object with the same OID cannot be created.
 	err = s.CreateObject(ctx, repoID, oid, 12, lfsx.StorageLocal)
 	assert.Error(t, err)
 }
 
 func lfsGetObjectByOID(t *testing.T, ctx context.Context, s *LFSStore) {
-	// Create a LFS object
 	repoID := int64(1)
 	oid := lfsx.OID("ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f")
 	err := s.CreateObject(ctx, repoID, oid, 12, lfsx.StorageLocal)
 	require.NoError(t, err)
 
-	// We should be able to get it back
 	_, err = s.GetObjectByOID(ctx, repoID, oid)
 	require.NoError(t, err)
 
-	// Try to get a non-existent object
 	_, err = s.GetObjectByOID(ctx, repoID, "bad_oid")
 	expErr := ErrLFSObjectNotExist{args: errx.Args{"repoID": repoID, "oid": lfsx.OID("bad_oid")}}
 	assert.Equal(t, expErr, err)
 }
 
 func lfsGetObjectsByOIDs(t *testing.T, ctx context.Context, s *LFSStore) {
-	// Create two LFS objects
 	repoID := int64(1)
 	oid1 := lfsx.OID("ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f")
 	oid2 := lfsx.OID("ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64g")
@@ -88,7 +82,7 @@ func lfsGetObjectsByOIDs(t *testing.T, ctx context.Context, s *LFSStore) {
 	err = s.CreateObject(ctx, repoID, oid2, 12, lfsx.StorageLocal)
 	require.NoError(t, err)
 
-	// We should be able to get them back and ignore non-existent ones
+	// Non-existent OIDs are ignored.
 	objects, err := s.GetObjectsByOIDs(ctx, repoID, oid1, oid2, "bad_oid")
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(objects), "number of objects")

@@ -30,7 +30,7 @@ func ParsePostgreSQLHostPort(info string) (host, port string) {
 
 // NewDSN takes given database options and returns parsed DSN.
 func NewDSN(opts conf.DatabaseOpts) (dsn string, err error) {
-	// In case the database name contains "?" with some parameters
+	// In case the database name contains "?" with some parameters.
 	concate := "?"
 	if strings.Contains(opts.Name, concate) {
 		concate = "&"

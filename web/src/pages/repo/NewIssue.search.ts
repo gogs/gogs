@@ -1,5 +1,5 @@
 export interface RepoNewIssueSearch {
-  // title and content prefill the form, like on the server-rendered page.
+  // title and content prefill the form.
   title?: string;
   content?: string;
   // template is the file of the issue template to open the issue with, and

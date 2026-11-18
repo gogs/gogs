@@ -161,7 +161,7 @@ func getMilestoneByRepoID(e Engine, repoID, id int64) (*Milestone, error) {
 	return m, nil
 }
 
-// GetWebhookByRepoID returns the milestone in a repository.
+// GetMilestoneByRepoID returns the milestone with given ID in a repository.
 func GetMilestoneByRepoID(repoID, id int64) (*Milestone, error) {
 	return getMilestoneByRepoID(x, repoID, id)
 }

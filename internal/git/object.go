@@ -1,6 +1,6 @@
 package git
 
-// ObjectType is the type of a Git objet.
+// ObjectType is the type of a Git object.
 type ObjectType string
 
 // A list of object types.

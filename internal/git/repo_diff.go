@@ -15,7 +15,7 @@ import (
 //
 // Docs: https://git-scm.com/docs/git-diff#Documentation/git-diff.txt---full-index
 type DiffOptions struct {
-	// The commit ID to used for computing diff between a range of commits (base,
+	// The commit ID to use for computing diff between a range of commits (base,
 	// revision]. When not set, only computes diff for a single commit at revision.
 	Base string
 }
@@ -59,7 +59,7 @@ func (r *Repository) parseDiff(ctx context.Context, logger *logx.Logger, args, e
 	go streamParseDiff(logger, stdout, done, maxFiles, maxFileLines, maxLineChars)
 
 	err := pipe(ctx, r.path, args, envs, w)
-	_ = w.Close() // Close writer to exit parsing goroutine
+	_ = w.Close() // Close writer to exit parsing goroutine.
 	if err != nil {
 		return nil, err
 	}

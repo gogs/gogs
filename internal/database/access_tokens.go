@@ -69,7 +69,7 @@ func (err ErrAccessTokenAlreadyExist) Error() string {
 	return fmt.Sprintf("access token already exists: %v", err.args)
 }
 
-// Create creates a new access token and persist to database. It returns
+// Create creates a new access token and persists it to database. It returns
 // ErrAccessTokenAlreadyExist when an access token with same name already exists
 // for the user.
 func (s *AccessTokensStore) Create(ctx context.Context, userID int64, name string) (*AccessToken, error) {
@@ -145,7 +145,7 @@ func (s *AccessTokensStore) GetBySHA1(ctx context.Context, sha1 string) (*Access
 	return token, nil
 }
 
-// List returns all access tokens belongs to given user.
+// List returns all access tokens that belong to given user.
 func (s *AccessTokensStore) List(ctx context.Context, userID int64) ([]*AccessToken, error) {
 	var tokens []*AccessToken
 	return tokens, s.db.WithContext(ctx).Where("uid = ?", userID).Order("id ASC").Find(&tokens).Error

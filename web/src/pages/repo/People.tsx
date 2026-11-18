@@ -41,7 +41,7 @@ export function RepoPeople({
         <UserList
           data={data}
           action={
-            // Site admins can make anyone stop watching, like on the server-rendered page.
+            // Site admins can make anyone stop watching.
             list === "watchers" && user?.isAdmin
               ? (watcher) => <UnwatchButton owner={owner} name={name} watcher={watcher} />
               : undefined

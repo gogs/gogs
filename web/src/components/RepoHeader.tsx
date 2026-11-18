@@ -67,8 +67,8 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
     `/user/sign-in?redirect_to=${encodeURIComponent(window.location.pathname + window.location.search + window.location.hash)}`,
   );
 
-  // Merge each mutation's response into the cached `repoInfo` so the button
-  // labels and counts update without a refetch. The new `viewer*` flag is
+  // Merge each mutation's response into the cached repository header so the
+  // button labels and counts update without a refetch. The new `viewer*` flag is
   // derived from the action that was just dispatched, since the server's
   // outcome is unambiguous (POST always watches/stars, DELETE always undoes).
   const applyWatchResult = (result: RepoWatchResult, nextViewerIsWatching: boolean) => {
@@ -244,7 +244,7 @@ function RepoTabs({
 }) {
   const tabs = buildTabs(repo, repoLink, t);
 
-  // On mobile, only `MOBILE_INLINE_LIMIT` tabs are shown inline; the rest
+  // On mobile, only `MOBILE_INLINE_LIMIT` tabs are shown inline. The rest
   // fold into a hamburger overflow in their original order. If the active tab
   // is past the cutoff, it takes the last inline slot so the indicator stays
   // visible without opening the menu.
@@ -351,25 +351,25 @@ interface SplitActionButtonProps {
   // When set, the action half fires this callback on click (used for
   // authenticated viewers with a real mutation in flight).
   onAction?: () => void;
-  // Fallback href for the action half when `onAction` is not set (legacy
-  // page-navigation actions like Fork). Only used when the viewer is
-  // authenticated; `signInHref` takes over when unauthenticated.
+  // Fallback href for the action half when `onAction` is not set (actions
+  // that open a page, like Fork). Only used when the viewer is authenticated.
+  // `signInHref` takes over when unauthenticated.
   actionHref?: string;
   // Where to send unauthenticated viewers when they click the action half. The
   // half renders disabled-looking but stays clickable so the affordance
   // works without forcing the viewer to dig for a sign-in button.
   signInHref?: string;
   // Whether the viewer is authenticated. Drives both the click target and the
-  // disabled-looking styling + sign-in tooltip below.
+  // disabled-looking styling and sign-in tooltip below.
   authenticated?: boolean;
   // Tooltip text shown when unauthenticated. Should explain the gated action,
-  // e.g. "Sign in to watch this repository".
+  // e.g., "Sign in to watch this repository".
   signInTooltip?: string;
   icon: ComponentType<{ className?: string; "aria-hidden"?: boolean; fill?: string }>;
   label: string;
   count: number;
   ariaLabel: string;
-  // Accessible name for the count half (e.g. "View watchers"). The visible
+  // Accessible name for the count half (e.g., "View watchers"). The visible
   // text is just the number, so this label tells assistive tech what the
   // link goes to.
   countAriaLabel: string;

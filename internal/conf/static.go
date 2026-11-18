@@ -15,7 +15,7 @@ import (
 
 // ℹ️ README: This file contains static values that should only be set at initialization time.
 //
-// ⚠️ WARNING: After changing any options, do not forget to update template of
+// ⚠️ WARNING: After changing any options, do not forget to update the
 // "/admin/config" page as well.
 
 // HasMinWinSvc is whether the application is built with Windows Service support.
@@ -178,7 +178,7 @@ var (
 
 	// Git settings
 	Git struct {
-		// ⚠️ WARNING: Should only be set by "internal/db/repo.go".
+		// ⚠️ WARNING: Should only be set by "internal/database/repo.go".
 		Version string `ini:"-"`
 
 		DisableDiffHighlight bool
@@ -236,7 +236,7 @@ type CacheOptions struct {
 var Cache CacheOptions
 
 type AppOpts struct {
-	// ⚠️ WARNING: Should only be set by the main package (i.e. "cmd/gogs/main.go").
+	// ⚠️ WARNING: Should only be set by the main package (i.e., "cmd/gogs/main.go").
 	Version string `ini:"-"`
 
 	BrandName string
@@ -291,7 +291,7 @@ type ServerOpts struct {
 
 	// Derived from other static values
 	URL            *url.URL    `ini:"-"` // Parsed URL object of ExternalURL.
-	Subpath        string      `ini:"-"` // Subpath found the ExternalURL. Should be empty when not found.
+	Subpath        string      `ini:"-"` // Subpath found in the ExternalURL. Should be empty when not found.
 	SubpathDepth   int         `ini:"-"` // The number of slashes found in the Subpath.
 	UnixSocketMode os.FileMode `ini:"-"` // Parsed file mode of UnixSocketPermission.
 }
@@ -507,7 +507,7 @@ func checkInvalidOptions(config *ini.File) (warnings []string) {
 }
 
 // HookMode indicates whether program starts as Git server-side hook callback.
-// All operations should be done synchronously to prevent program exits before finishing.
+// All operations should be done synchronously to prevent the program from exiting before finishing.
 //
 // ⚠️ WARNING: Should only be set by "cmd/gogs/serv.go".
 var HookMode bool

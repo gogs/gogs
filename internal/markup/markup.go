@@ -22,7 +22,7 @@ func IsReadmeFile(name string) bool {
 	return strings.HasPrefix(strings.ToLower(name), "readme")
 }
 
-// IsIPythonNotebook reports whether name looks like a IPython notebook based on its extension.
+// IsIPythonNotebook reports whether name looks like an IPython notebook based on its extension.
 func IsIPythonNotebook(name string) bool {
 	return strings.HasSuffix(name, ".ipynb")
 }
@@ -33,26 +33,26 @@ const (
 )
 
 var (
-	// MentionPattern matches string that mentions someone, e.g. @Unknwon
+	// MentionPattern matches string that mentions someone, e.g., @Unknwon
 	MentionPattern = lazyregexp.New(`(\s|^|\W)@[0-9a-zA-Z-_\.]+`)
 
 	// CommitPattern matches link to certain commit with or without trailing hash,
-	// e.g. https://try.gogs.io/gogs/gogs/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2
+	// e.g., https://try.gogs.io/gogs/gogs/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2
 	CommitPattern = lazyregexp.New(`(\s|^)https?.*commit/[0-9a-zA-Z]+(#+[0-9a-zA-Z-]*)?`)
 
 	// IssueFullPattern matches link to an issue with or without trailing hash,
-	// e.g. https://try.gogs.io/gogs/gogs/issues/4#issue-685
+	// e.g., https://try.gogs.io/gogs/gogs/issues/4#issue-685
 	IssueFullPattern = lazyregexp.New(`(\s|^)https?.*issues/[0-9]+(#+[0-9a-zA-Z-]*)?`)
-	// IssueNumericPattern matches string that references to a numeric issue, e.g. #1287
+	// IssueNumericPattern matches string that references a numeric issue, e.g., #1287
 	IssueNumericPattern = lazyregexp.New(`( |^|\(|\[)#[0-9]+\b`)
-	// IssueAlphanumericPattern matches string that references to an alphanumeric issue, e.g. ABC-1234
+	// IssueAlphanumericPattern matches string that references an alphanumeric issue, e.g., ABC-1234
 	IssueAlphanumericPattern = lazyregexp.New(`( |^|\(|\[)[A-Z]{1,10}-[1-9][0-9]*\b`)
-	// CrossReferenceIssueNumericPattern matches string that references a numeric issue in a difference repository
-	// e.g. gogs/gogs#12345
+	// CrossReferenceIssueNumericPattern matches string that references a numeric issue in a different repository,
+	// e.g., gogs/gogs#12345
 	CrossReferenceIssueNumericPattern = lazyregexp.New(`( |^)[0-9a-zA-Z-_\.]+/[0-9a-zA-Z-_\.]+#[0-9]+\b`)
 
-	// Sha1CurrentPattern matches string that represents a commit SHA, e.g. d8a994ef243349f321568f9e36d5c3f444b99cae
-	// FIXME: this pattern matches pure numbers as well, right now we do a hack to check in RenderSha1CurrentPattern by converting string to a number.
+	// Sha1CurrentPattern matches string that represents a commit SHA, e.g., d8a994ef243349f321568f9e36d5c3f444b99cae
+	// FIXME: This pattern matches pure numbers as well, so findSha1s skips matches that parse as positive numbers.
 	// Only full SHA-256 commit IDs are longer than 40, so other hex strings, e.g.,
 	// checksums of 41 to 63 characters, are not mistaken for commit IDs. Those of
 	// 64 characters are only linked in SHA-256 repositories.
@@ -95,8 +95,8 @@ func findMentions(text []byte) []linkSpan {
 	return spans
 }
 
-// cutoutVerbosePrefix cutouts URL prefix including sub-path to
-// return a clean unified string of request URL path.
+// cutoutVerbosePrefix cuts out the URL prefix including the subpath to return
+// a clean unified string of request URL path.
 func cutoutVerbosePrefix(prefix string) string {
 	if prefix == "" || prefix[0] != '/' {
 		return prefix
@@ -273,8 +273,8 @@ func findSha1s(text []byte, metas map[string]string, skip []linkSpan) []linkSpan
 	return mergeSpans(skip, spans)
 }
 
-// RenderSha1CurrentPattern renders commit IDs to corresponding links that assumes
-// in the same repository, i.e., metas["repoLink"]. Hex strings of 64 characters
+// RenderSha1CurrentPattern renders commit IDs to corresponding links, assuming
+// they are in the same repository, i.e., metas["repoLink"]. Hex strings of 64 characters
 // are only rendered when metas["objectFormat"] is "sha256".
 func RenderSha1CurrentPattern(rawBytes []byte, metas map[string]string) []byte {
 	return replaceSpans(rawBytes, findSha1s(rawBytes, metas, nil))
@@ -317,9 +317,8 @@ var (
 
 var noEndTags = []string{"input", "br", "hr", "img"}
 
-// wrapImgWithLink warps link to standalone <img> tags.
+// wrapImgWithLink wraps standalone <img> tags with a link to the image.
 func wrapImgWithLink(urlPrefix string, buf *bytes.Buffer, token html.Token) {
-	// Extract "src" and "alt" attributes
 	var src, alt string
 	for i := range token.Attr {
 		switch token.Attr[i].Key {
@@ -330,19 +329,17 @@ func wrapImgWithLink(urlPrefix string, buf *bytes.Buffer, token html.Token) {
 		}
 	}
 
-	// Skip in case the "src" is empty
 	if src == "" {
 		buf.WriteString(token.String())
 		return
 	}
 
-	// Skip in case the "src" is data url
 	if strings.HasPrefix(src, "data:") {
 		buf.WriteString(token.String())
 		return
 	}
 
-	// Prepend repository base URL for internal links
+	// Prepend repository base URL for internal links.
 	needPrepend := !isLink([]byte(src))
 	if needPrepend {
 		urlPrefix = strings.Replace(urlPrefix, "/src/", "/raw/", 1)
@@ -410,7 +407,6 @@ outerLoop:
 				for html.ErrorToken != tokenizer.Next() {
 					token = tokenizer.Token()
 
-					// Copy the token to the output verbatim
 					buf.WriteString(token.String())
 
 					// Stack number doesn't increase for tags without end tags.
@@ -418,7 +414,7 @@ outerLoop:
 						stackNum++
 					}
 
-					// If this is the close tag to the outer-most, we are done
+					// If this is the close tag of the outermost tag, we are done.
 					if token.Type == html.EndTagToken {
 						stackNum--
 						if stackNum <= 0 && strings.EqualFold(tagName, token.Data) {
@@ -522,7 +518,7 @@ func renderInput(typ Type, input any, urlPrefix string, metas map[string]string,
 	}
 
 	if typ != TypeMarkdown && typ != TypeOrgMode {
-		return rawBytes // Do nothing if syntax type is not recognized
+		return rawBytes // Do nothing if syntax type is not recognized.
 	}
 	rawBytes = bytes.TrimPrefix(rawBytes, utf8BOM)
 	return guardRender(rawBytes, func() []byte {

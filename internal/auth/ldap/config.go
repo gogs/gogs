@@ -1,5 +1,6 @@
-// Package ldap provide functions & structure to query a LDAP ldap directory.
-// For now, it's mainly tested again an MS Active Directory service, see README.md for more information.
+// Package ldap provides functions and structures to query an LDAP directory.
+// It is mainly tested against an MS Active Directory service. See README.md for
+// more information.
 package ldap
 
 import (
@@ -12,10 +13,10 @@ import (
 	"unknwon.dev/x/logx"
 )
 
-// SecurityProtocol is the security protocol when the authenticate provider talks to LDAP directory.
+// SecurityProtocol is the security protocol when the authentication provider talks to the LDAP directory.
 type SecurityProtocol int
 
-// ⚠️ WARNING: new type must be added at the end of list to maintain compatibility.
+// ⚠️ WARNING: New types must be added at the end of the list to maintain compatibility.
 const (
 	SecurityProtocolUnencrypted SecurityProtocol = iota
 	SecurityProtocolLDAPS
@@ -108,7 +109,6 @@ func (*Config) sanitizedGroupDN(logger *logx.Logger, groupDn string) (string, bo
 func (c *Config) findUserDN(logger *logx.Logger, l *ldap.Conn, name string) (string, bool) {
 	logger.Debug("Searching for user", "username", name)
 	if len(c.BindDN) > 0 && len(c.BindPassword) > 0 {
-		// Replace placeholders with username
 		bindDN := strings.ReplaceAll(c.BindDN, "%s", name)
 		err := l.Bind(bindDN, c.BindPassword)
 		if err != nil {
@@ -120,7 +120,6 @@ func (c *Config) findUserDN(logger *logx.Logger, l *ldap.Conn, name string) (str
 		logger.Debug("Proceeding with anonymous search")
 	}
 
-	// A search for the user.
 	userFilter, ok := c.sanitizedUserQuery(logger, name)
 	if !ok {
 		return "", false
@@ -131,7 +130,6 @@ func (c *Config) findUserDN(logger *logx.Logger, l *ldap.Conn, name string) (str
 		c.UserBase, ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0,
 		false, userFilter, []string{}, nil)
 
-	// Ensure we found a user
 	sr, err := l.Search(search)
 	if err != nil || len(sr.Entries) < 1 {
 		logger.Debug("Failed to search for user DN", "userFilter", userFilter, "error", err)
@@ -187,7 +185,9 @@ func bindUser(logger *logx.Logger, l *ldap.Conn, userDN, passwd string) error {
 	return err
 }
 
-// searchEntry searches an LDAP source if an entry (name, passwd) is valid and in the specific filter.
+// searchEntry checks against the LDAP source whether the entry (name, passwd) is
+// valid and matches the configured filters. It returns the username, first name,
+// surname, email, whether the user is an admin, and whether the check succeeded.
 func (c *Config) searchEntry(logger *logx.Logger, name, passwd string, directBind bool) (string, string, string, string, bool, bool) {
 	// See https://tools.ietf.org/search/rfc4513#section-5.1.2
 	if passwd == "" {
@@ -221,7 +221,8 @@ func (c *Config) searchEntry(logger *logx.Logger, name, passwd string, directBin
 	}
 
 	if directBind || !c.AttributesInBind {
-		// binds user (checking password) before looking-up attributes in user context
+		// Bind as the user (checking the password) before looking up attributes in
+		// the user context.
 		err = bindUser(logger, l, userDN, passwd)
 		if err != nil {
 			return "", "", "", "", false, false
@@ -329,7 +330,8 @@ func (c *Config) searchEntry(logger *logx.Logger, name, passwd string, directBin
 	}
 
 	if !directBind && c.AttributesInBind {
-		// binds user (checking password) after looking-up attributes in BindDN context
+		// Bind as the user (checking the password) after looking up attributes in
+		// the bind DN context.
 		err = bindUser(logger, l, userDN, passwd)
 		if err != nil {
 			return "", "", "", "", false, false

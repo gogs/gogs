@@ -5,10 +5,10 @@
 :: or copy it to the gogs path.
 :: https://nssm.cc/download
 :: This script itself should run in the gogs path, too.
-:: In case of startup failure, please read carefully the log file.
-:: Make sure Gogs work running manually with "gogs web" before running
+:: In case of startup failure, please read the log file carefully.
+:: Make sure Gogs works when running manually with "gogs web" before running
 :: this script.
-:: And, please, read carefully the installation docs first:
+:: And, please, read the installation docs carefully first:
 :: https://gogs.io/fine-tuning/run-as-service#windows
 :: To uninstall the service, run "nssm remove gogs" and restart Windows.
 

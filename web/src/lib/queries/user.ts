@@ -134,8 +134,8 @@ export interface DashboardRepo {
   starCount: number;
 }
 
-// The owner of a dashboard page, and the organizations of the authenticated user to
-// switch to, whichever dashboard this is.
+// The owner of a dashboard page, and the organizations of the authenticated
+// user to switch to, whichever dashboard this is.
 export interface DashboardContextData {
   kind: "user" | "organization";
   id: number;
@@ -210,7 +210,7 @@ export interface DashboardIssuesData extends DashboardContextData {
 }
 
 // fetchDashboardIssues lists the issues or pull requests of a dashboard, with
-// the query parameters of the server-rendered page, e.g., `state=closed`.
+// the query parameters of the dashboard page, e.g., `state=closed`.
 export function fetchDashboardIssues(
   org: string | undefined,
   kind: "issues" | "pulls",

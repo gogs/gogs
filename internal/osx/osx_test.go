@@ -89,14 +89,12 @@ func TestCurrentUsername(t *testing.T) {
 }
 
 func TestIsSymlink(t *testing.T) {
-	// Create a temporary file
 	tempFile, err := os.CreateTemp("", "symlink-test-*")
 	require.NoError(t, err, "create temporary file")
 	tempFilePath := tempFile.Name()
 	_ = tempFile.Close()
 	defer func() { _ = os.Remove(tempFilePath) }()
 
-	// Create a temporary symlink
 	tempSymlinkPath := tempFilePath + "-symlink"
 	err = os.Symlink(tempFilePath, tempSymlinkPath)
 	require.NoError(t, err, "create temporary symlink")

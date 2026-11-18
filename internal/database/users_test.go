@@ -290,7 +290,7 @@ func usersChangeUsername(t *testing.T, ctx context.Context, s *UsersStore) {
 	err = os.MkdirAll(repox.UserPath(alice.Name), os.ModePerm)
 	require.NoError(t, err)
 
-	// Make sure mock data is set up correctly
+	// Make sure mock data is set up correctly.
 	// TODO: Use PullRequests.GetByID to replace SQL hack when the method is available.
 	var headUserName string
 	err = s.db.Model(&PullRequest{}).Select("head_user_name").Row().Scan(&headUserName)
@@ -321,7 +321,7 @@ func usersChangeUsername(t *testing.T, ctx context.Context, s *UsersStore) {
 	assert.Equal(t, newUsername, alice.Name)
 	assert.Equal(t, s.db.NowFunc().Unix(), alice.UpdatedUnix)
 
-	// Change the cases of the username should just be fine
+	// Changing the cases of the username should just be fine.
 	err = s.ChangeUsername(ctx, alice.ID, strings.ToUpper(newUsername))
 	require.NoError(t, err)
 	alice, err = s.GetByID(ctx, alice.ID)
@@ -330,7 +330,7 @@ func usersChangeUsername(t *testing.T, ctx context.Context, s *UsersStore) {
 }
 
 func usersCount(t *testing.T, ctx context.Context, s *UsersStore) {
-	// Has no user initially
+	// Has no user initially.
 	got := s.Count(ctx)
 	assert.Equal(t, int64(0), got)
 
@@ -339,7 +339,7 @@ func usersCount(t *testing.T, ctx context.Context, s *UsersStore) {
 	got = s.Count(ctx)
 	assert.Equal(t, int64(1), got)
 
-	// Create an organization shouldn't count
+	// Organizations shouldn't count.
 	// TODO: Use Orgs.Create to replace SQL hack when the method is available.
 	org1, err := s.Create(ctx, "org1", "org1@example.com", CreateUserOptions{})
 	require.NoError(t, err)
@@ -481,7 +481,7 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 	testUser, err := s.Create(ctx, "testUser", "testUser@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 
-	// Mock watches, stars and follows
+	// Mock watches, stars and follows.
 	err = reposStore.Watch(ctx, testUser.ID, repo2.ID)
 	require.NoError(t, err)
 	err = reposStore.Star(ctx, testUser.ID, repo2.ID)
@@ -491,7 +491,7 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 	err = s.Follow(ctx, frank.ID, testUser.ID)
 	require.NoError(t, err)
 
-	// Mock "authorized_keys" file
+	// Mock "authorized_keys" file.
 	// TODO: Use PublicKeys.Add to replace SQL hack when the method is available.
 	publicKey := &PublicKey{
 		OwnerID:     testUser.ID,
@@ -506,7 +506,7 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 	err = newPublicKeysStore(s.db).RewriteAuthorizedKeys()
 	require.NoError(t, err)
 
-	// Mock issue assignee
+	// Mock issue assignee.
 	// TODO: Use Issues.Assign to replace SQL hack when the method is available.
 	issue := &Issue{
 		RepoID:     repo2.ID,
@@ -518,7 +518,7 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 	err = s.db.Create(issue).Error
 	require.NoError(t, err)
 
-	// Mock random entries in related tables
+	// Mock random entries in related tables.
 	for _, table := range []any{
 		&AccessToken{UserID: testUser.ID},
 		&Passkey{UserID: testUser.ID},
@@ -532,14 +532,14 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 		require.NoError(t, err, "table for %T", table)
 	}
 
-	// Mock user directory
+	// Mock user directory.
 	tempRepositoryRoot := filepath.Join(os.TempDir(), "usersDeleteByID-tempRepositoryRoot")
 	conf.SetMockRepository(t, conf.RepositoryOpts{Root: tempRepositoryRoot})
 	tempUserPath := repox.UserPath(testUser.Name)
 	err = os.MkdirAll(tempUserPath, os.ModePerm)
 	require.NoError(t, err)
 
-	// Mock user custom avatar
+	// Mock user custom avatar.
 	tempPictureAvatarUploadPath := filepath.Join(os.TempDir(), "usersDeleteByID-tempPictureAvatarUploadPath")
 	conf.SetMockPicture(t, conf.PictureOpts{AvatarUploadPath: tempPictureAvatarUploadPath})
 	err = os.MkdirAll(tempPictureAvatarUploadPath, os.ModePerm)
@@ -548,7 +548,7 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 	err = os.WriteFile(tempCustomAvatarPath, []byte("test"), 0o600)
 	require.NoError(t, err)
 
-	// Verify mock data
+	// Verify mock data.
 	repo2, err = reposStore.GetByID(ctx, repo2.ID)
 	require.NoError(t, err)
 	assert.Equal(t, 2, repo2.NumWatches) // The owner is watching the repo by default.
@@ -594,11 +594,10 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 	assert.True(t, osx.Exist(tempUserPath))
 	assert.True(t, osx.Exist(tempCustomAvatarPath))
 
-	// Pull the trigger
 	err = s.DeleteByID(ctx, testUser.ID, false)
 	require.NoError(t, err)
 
-	// Verify after-the-fact data
+	// Verify after-the-fact data.
 	repo2, err = reposStore.GetByID(ctx, repo2.ID)
 	require.NoError(t, err)
 	assert.Equal(t, 1, repo2.NumWatches) // The owner is watching the repo by default.
@@ -648,14 +647,14 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 }
 
 func usersDeleteInactivated(t *testing.T, ctx context.Context, s *UsersStore) {
-	// User with repository ownership should be skipped
+	// User with repository ownership should be skipped.
 	alice, err := s.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	reposStore := newReposStore(s.db)
 	_, err = reposStore.Create(ctx, alice.ID, CreateRepoOptions{Name: "repo1"})
 	require.NoError(t, err)
 
-	// User with organization membership should be skipped
+	// User with organization membership should be skipped.
 	bob, err := s.Create(ctx, "bob", "bob@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	// TODO: Use Orgs.Create to replace SQL hack when the method is available.
@@ -670,11 +669,11 @@ func usersDeleteInactivated(t *testing.T, ctx context.Context, s *UsersStore) {
 	err = s.db.Exec(`INSERT INTO org_user (uid, org_id) VALUES (?, ?)`, bob.ID, org1.ID).Error
 	require.NoError(t, err)
 
-	// User activated state should be skipped
+	// Activated user should be skipped.
 	_, err = s.Create(ctx, "cindy", "cindy@example.com", CreateUserOptions{Activated: true})
 	require.NoError(t, err)
 
-	// User meant to be deleted
+	// User meant to be deleted.
 	david, err := s.Create(ctx, "david", "david@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 
@@ -721,7 +720,7 @@ func usersGetByEmail(t *testing.T, ctx context.Context, s *UsersStore) {
 		wantErr := ErrUserNotExist{args: errx.Args{"email": alice.Email}}
 		assert.Equal(t, wantErr, err)
 
-		// Mark user as activated
+		// Mark user as activated.
 		// TODO: Use UserEmails.Verify to replace SQL hack when the method is available.
 		err = s.db.Model(&User{}).Where("id", alice.ID).UpdateColumn("is_active", true).Error
 		require.NoError(t, err)
@@ -875,7 +874,7 @@ func usersList(t *testing.T, ctx context.Context, s *UsersStore) {
 	bob, err := s.Create(ctx, "bob", "bob@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 
-	// Create an organization shouldn't count
+	// Organizations shouldn't count.
 	// TODO: Use Orgs.Create to replace SQL hack when the method is available.
 	org1, err := s.Create(ctx, "org1", "org1@example.com", CreateUserOptions{})
 	require.NoError(t, err)
@@ -920,13 +919,13 @@ func usersListFollowers(t *testing.T, ctx context.Context, s *UsersStore) {
 	err = s.Follow(ctx, bob.ID, john.ID)
 	require.NoError(t, err)
 
-	// First page only has bob
+	// First page only has bob.
 	got, err = s.ListFollowers(ctx, john.ID, 1, 1)
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	assert.Equal(t, bob.ID, got[0].ID)
 
-	// Second page only has alice
+	// Second page only has alice.
 	got, err = s.ListFollowers(ctx, john.ID, 2, 1)
 	require.NoError(t, err)
 	require.Len(t, got, 1)
@@ -951,13 +950,13 @@ func usersListFollowings(t *testing.T, ctx context.Context, s *UsersStore) {
 	err = s.Follow(ctx, john.ID, bob.ID)
 	require.NoError(t, err)
 
-	// First page only has bob
+	// First page only has bob.
 	got, err = s.ListFollowings(ctx, john.ID, 1, 1)
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	assert.Equal(t, bob.ID, got[0].ID)
 
-	// Second page only has alice
+	// Second page only has alice.
 	got, err = s.ListFollowings(ctx, john.ID, 2, 1)
 	require.NoError(t, err)
 	require.Len(t, got, 1)
@@ -1106,7 +1105,7 @@ func usersUpdate(t *testing.T, ctx context.Context, s *UsersStore) {
 	}
 	assertValues()
 
-	// Test ignored values
+	// Empty options leave the values unchanged.
 	err = s.Update(ctx, alice.ID, UpdateUserOptions{})
 	require.NoError(t, err)
 
@@ -1187,11 +1186,11 @@ func usersGetEmail(t *testing.T, ctx context.Context, s *UsersStore) {
 	require.NoError(t, err)
 	assert.Equal(t, testEmail, got.Email)
 
-	// Should not return if we ask for a different user
+	// Should not return if we ask for a different user.
 	_, err = s.GetEmail(ctx, testUserID+1, testEmail, false)
 	assert.Equal(t, wantErr, err)
 
-	// Should not return if we only want activated emails
+	// Should not return if we only want activated emails.
 	_, err = s.GetEmail(ctx, testUserID, testEmail, true)
 	assert.Equal(t, wantErr, err)
 
@@ -1262,12 +1261,12 @@ func usersMarkEmailPrimary(t *testing.T, ctx context.Context, s *UsersStore) {
 	err = s.AddEmail(ctx, alice.ID, "alice2@example.com", false)
 	require.NoError(t, err)
 
-	// Should fail because email not verified
+	// Should fail because email not verified.
 	gotError := s.MarkEmailPrimary(ctx, alice.ID, "alice2@example.com")
 	wantError := ErrEmailNotVerified{args: errx.Args{"email": "alice2@example.com"}}
 	assert.Equal(t, wantError, gotError)
 
-	// Mark email as verified and should succeed
+	// Mark email as verified and should succeed.
 	err = s.MarkEmailActivated(ctx, alice.ID, "alice2@example.com")
 	require.NoError(t, err)
 	err = s.MarkEmailPrimary(ctx, alice.ID, "alice2@example.com")
@@ -1276,7 +1275,7 @@ func usersMarkEmailPrimary(t *testing.T, ctx context.Context, s *UsersStore) {
 	require.NoError(t, err)
 	assert.Equal(t, "alice2@example.com", gotAlice.Email)
 
-	// Former primary email should be preserved
+	// Former primary email should be preserved.
 	gotEmail, err := s.GetEmail(ctx, alice.ID, "alice@example.com", false)
 	require.NoError(t, err)
 	assert.False(t, gotEmail.IsActivated)
@@ -1308,7 +1307,7 @@ func usersFollow(t *testing.T, ctx context.Context, s *UsersStore) {
 	err = s.Follow(ctx, alice.ID, bob.ID)
 	require.NoError(t, err)
 
-	// It is OK to follow multiple times and just be noop.
+	// It is OK to follow multiple times and just be no-op.
 	err = s.Follow(ctx, alice.ID, bob.ID)
 	require.NoError(t, err)
 
@@ -1352,7 +1351,7 @@ func usersUnfollow(t *testing.T, ctx context.Context, s *UsersStore) {
 	err = s.Follow(ctx, alice.ID, bob.ID)
 	require.NoError(t, err)
 
-	// It is OK to unfollow multiple times and just be noop.
+	// It is OK to unfollow multiple times and just be no-op.
 	err = s.Unfollow(ctx, alice.ID, bob.ID)
 	require.NoError(t, err)
 	err = s.Unfollow(ctx, alice.ID, bob.ID)

@@ -8,20 +8,20 @@ import (
 )
 
 var (
-	// File name should ignore highlight.
+	// File names that should not be highlighted.
 	ignoreFileNames = map[string]bool{
 		"license": true,
 		"copying": true,
 	}
 
-	// File names that are representing highlight classes.
+	// File names that represent highlight classes.
 	highlightFileNames = map[string]bool{
 		"cmakelists.txt": true,
 		"dockerfile":     true,
 		"makefile":       true,
 	}
 
-	// Extensions that are same as highlight classes.
+	// Extensions that are the same as highlight classes.
 	highlightExts = map[string]bool{
 		".arm":    true,
 		".as":     true,
@@ -61,7 +61,7 @@ var (
 		".yaml":   true,
 	}
 
-	// Extensions that are not same as highlight classes.
+	// Extensions that are not the same as highlight classes.
 	highlightMapping = map[string]string{
 		".txt": "nohighlight",
 	}

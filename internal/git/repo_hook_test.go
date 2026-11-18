@@ -17,7 +17,7 @@ func TestRepository_Hooks(t *testing.T) {
 		}
 	})
 
-	// Save "post-receive" hook with some content
+	// Save "post-receive" hook with some content.
 	postReceiveHook, err := testrepo.Hook("hooks", HookPostReceive)
 	require.NoError(t, err)
 	defer func() {

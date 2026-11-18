@@ -49,7 +49,7 @@ var urlSchemePolicies = map[string]func(*url.URL) bool{
 // markdown.go. URL schemes are not copied: Dariomark asks allowURLScheme.
 func NewSanitizer() {
 	sanitizer.init.Do(func() {
-		// We only want to allow HighlightJS specific classes for code blocks
+		// Only allow highlight.js language classes for code blocks.
 		sanitizer.policy.AllowAttrs("class").Matching(codeClassPattern.Regexp()).OnElements("code")
 
 		// Checkboxes
@@ -87,7 +87,7 @@ func NewSanitizer() {
 			sanitizer.policy.AllowURLSchemeWithCustomPolicy(scheme, allow)
 		}
 
-		// Custom URL-Schemes
+		// Custom URL schemes
 		sanitizer.policy.AllowURLSchemes(conf.Markdown.CustomURLSchemes...)
 
 		// The schemes that bluemonday.UGCPolicy allows, plus the custom ones.
@@ -113,12 +113,12 @@ func IsSafeDataURI(u *url.URL) bool {
 	return false
 }
 
-// Sanitize takes a string that contains a HTML fragment or document and applies policy allowlist.
+// Sanitize takes a string that contains an HTML fragment or document and applies policy allowlist.
 func Sanitize(s string) string {
 	return sanitizer.policy.Sanitize(s)
 }
 
-// SanitizeBytes takes a []byte slice that contains a HTML fragment or document and applies policy allowlist.
+// SanitizeBytes takes a []byte slice that contains an HTML fragment or document and applies policy allowlist.
 func SanitizeBytes(b []byte) []byte {
 	return sanitizer.policy.SanitizeBytes(b)
 }

@@ -141,8 +141,8 @@ func protectedBranchNames(ctx context.Context, repoID int64) (map[string]bool, e
 
 // getRepoBranches lists the branches of a view of the branches page, which is
 // given by the "view" query parameter: "overview" (the default), "yours",
-// "active", "stale" or "all". Every view but the overview is paged. Signed-out
-// viewers have no branches of their own, so "yours" is empty for them.
+// "active", "stale" or "all". Every view but the overview is paged.
+// Unauthenticated viewers have no branches of their own, so "yours" is empty for them.
 func getRepoBranches(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoBranchesResponse, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
@@ -236,7 +236,7 @@ func getRepoBranches(c flamego.Context, logger *logx.Logger, repoCtx *repoContex
 }
 
 // withRepoBranchSettings lets through the repositories whose branches can be
-// managed. Like the server-rendered pages, mirrors have no branch settings.
+// managed. Mirrors have no branch settings.
 func withRepoBranchSettings(c flamego.Context, rc *repoAdminContext) {
 	if rc.Repo.IsMirror {
 		writeErrorResponse(c.ResponseWriter(), http.StatusNotFound, errors.New("repository does not exist"))

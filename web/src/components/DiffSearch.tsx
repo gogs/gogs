@@ -132,7 +132,7 @@ export function DiffSearch<L, Caret>({ items, viewRef }: Props<L, Caret>) {
 
   // Window-level Cmd/Ctrl-F intercept. First press focuses the diff search.
   // A second press within 500ms falls through to the browser's native
-  // find-in-page, so users can still search outside the diff (e.g. their
+  // find-in-page, so users can still search outside the diff (e.g., their
   // own comment text) without having to remap muscle memory.
   useEffect(() => {
     let lastFindAt = 0;

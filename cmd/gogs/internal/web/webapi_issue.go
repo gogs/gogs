@@ -26,8 +26,8 @@ import (
 )
 
 // withRepoIssues lets through viewers who can see the issues of the
-// repository. Like the server-rendered pages, the issues are not found when the
-// repository has no issue tracker of its own.
+// repository. The issues are not found when the repository has no issue tracker
+// of its own.
 func withRepoIssues(c flamego.Context, repoCtx *repoContext) {
 	repo := repoCtx.Repo
 	if !repo.EnableIssues || repo.EnableExternalTracker || (!repoCtx.Viewer.CanRead() && !repo.CanGuestViewIssues()) {
@@ -334,8 +334,7 @@ func toRepoIssueView(ctx context.Context, logger *logx.Logger, viewer *database.
 	participants := []*database.User{issue.Poster}
 	for _, comment := range issue.Comments {
 		typ, ok := issueCommentTypes[comment.Type]
-		// Like the server-rendered page, references from comments and pull
-		// requests are not shown.
+		// References from comments and pull requests are not shown.
 		if !ok {
 			continue
 		}
@@ -351,8 +350,7 @@ func toRepoIssueView(ctx context.Context, logger *logx.Logger, viewer *database.
 		case database.CommentTypeComment:
 			item.ContentHTML = string(markup.Markdown(comment.Content, repo.Link(), metas))
 			item.Attachments = toIssueAttachments(comment.Attachments, comment.Content)
-			// Like the server-rendered page, the poster and admins can change a
-			// comment.
+			// The poster and admins can change a comment.
 			if viewer != nil && (comment.PosterID == viewer.ID || repoCtx.Viewer.CanAdminister()) {
 				item.ViewerCanEdit = true
 				item.Content = comment.Content
@@ -465,9 +463,8 @@ func setRepoIssueClosed(c flamego.Context, logger *logx.Logger, l i18n.Locale, v
 		if pull.HasMerged {
 			return http.StatusNotFound, nil, errors.New("pull request has been merged")
 		}
-		// Like the server-rendered page, a pull request only reopens when no
-		// other one merges the same branches, and it is checked for conflicts
-		// again.
+		// A pull request only reopens when no other one merges the same
+		// branches, and it is checked for conflicts again.
 		if !closed {
 			other, err := database.GetUnmergedPullRequest(pull.HeadRepoID, pull.BaseRepoID, pull.HeadBranch, pull.BaseBranch)
 			if err != nil && !database.IsErrPullRequestNotExist(err) {
@@ -544,8 +541,7 @@ type repoIssueIDRequest struct {
 }
 
 // checkIssueMilestone returns the status code and the error to answer with
-// when the milestone, unless 0, is not one of the repository. Unlike the
-// server-rendered pages, a milestone of another repository is turned away.
+// when the milestone, unless 0, is not one of the repository.
 func checkIssueMilestone(repo *database.Repository, id int64) (statusCode int, err error) {
 	if id == 0 {
 		return 0, nil
@@ -560,8 +556,7 @@ func checkIssueMilestone(repo *database.Repository, id int64) (statusCode int, e
 }
 
 // checkIssueAssignee returns the status code and the error to answer with when
-// issues of the repository cannot be assigned to the user, unless 0. Unlike
-// the server-rendered pages, only those the issue can be assigned to are.
+// issues of the repository cannot be assigned to the user, unless 0.
 func checkIssueAssignee(repo *database.Repository, id int64) (statusCode int, err error) {
 	if id == 0 {
 		return 0, nil
@@ -619,9 +614,8 @@ type repoIssueCommentRequest struct {
 }
 
 // checkNewAttachments returns the status code and the error to answer with
-// when the files cannot be attached. Unlike the server-rendered pages, only
-// files that are not attached yet can be, so an issue or a comment cannot take
-// over those of others.
+// when the files cannot be attached. Only files that are not attached yet can
+// be, so an issue or a comment cannot take over those of others.
 func checkNewAttachments(lim attachmentLimits, uuids []string) (statusCode int, err error) {
 	if len(uuids) == 0 {
 		return 0, nil
@@ -648,7 +642,7 @@ func checkNewAttachments(lim attachmentLimits, uuids []string) (statusCode int, 
 }
 
 func postRepoIssueComment(logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, issue *database.Issue, req repoIssueCommentRequest) (statusCode int, resp any, err error) {
-	// Like the server-rendered page, a comment can be only attachments.
+	// A comment can be only attachments.
 	if strings.TrimSpace(req.Content) == "" && len(req.Attachments) == 0 {
 		msg := l.Tr("form.Content") + l.Tr("form.require_error")
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
@@ -669,7 +663,7 @@ func postRepoIssueComment(logger *logx.Logger, l i18n.Locale, viewer *database.U
 }
 
 // withIssueComment injects the comment of the issue in the route, which only
-// its poster and admins can change, like on the server-rendered page.
+// its poster and admins can change.
 func withIssueComment(c flamego.Context, logger *logx.Logger, repoCtx *repoContext, issue *database.Issue) {
 	w := c.ResponseWriter()
 	comment, err := database.GetCommentByID(idParam(c))
@@ -910,7 +904,7 @@ func loadIssueTemplates(ctx context.Context, repoCtx *repoContext) (*issuetempla
 	}
 	commit, err := gitRepo.BranchCommit(ctx, repoCtx.Repo.DefaultBranch)
 	if err != nil {
-		// Like the server-rendered page, a broken default branch has no templates.
+		// A broken default branch has no templates.
 		return none, nil
 	}
 	ts, err := issuetemplate.LoadIssueTemplates(ctx, commit)
@@ -1001,8 +995,7 @@ func getRepoNewIssue(c flamego.Context, logger *logx.Logger, repoCtx *repoContex
 type repoNewIssueRequest struct {
 	Title   string `json:"title"`
 	Content string `json:"content"`
-	// LabelIDs, MilestoneID and AssigneeID are only set by writers, like on
-	// the server-rendered page.
+	// LabelIDs, MilestoneID and AssigneeID are only set by writers.
 	LabelIDs    []int64 `json:"labelIDs"`
 	MilestoneID int64   `json:"milestoneID"`
 	AssigneeID  int64   `json:"assigneeID"`
@@ -1066,8 +1059,7 @@ func newIssueFromRequest(l i18n.Locale, viewer *database.User, repoCtx *repoCont
 		Poster:   viewer,
 		Content:  req.Content,
 	}
-	// Like the server-rendered page, what only writers can set is left out for
-	// others.
+	// What only writers can set is left out for others.
 	if repoCtx.Viewer.CanWrite() {
 		for _, id := range req.LabelIDs {
 			if _, err = database.GetLabelOfRepoByID(repo.ID, id); err != nil {

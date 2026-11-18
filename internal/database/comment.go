@@ -20,18 +20,18 @@ import (
 type CommentType int
 
 const (
-	// Plain comment, can be associated with a commit (CommitID > 0) and a line (LineNum > 0)
+	// Plain comment, can be associated with a commit (CommitID > 0) and a line (Line > 0).
 	CommentTypeComment CommentType = iota
 	CommentTypeReopen
 	CommentTypeClose
 
 	// References.
 	CommentTypeIssueRef
-	// Reference from a commit (not part of a pull request)
+	// Reference from a commit (not part of a pull request).
 	CommentTypeCommitRef
-	// Reference from a comment
+	// Reference from a comment.
 	CommentTypeCommentRef
-	// Reference from a pull request
+	// Reference from a pull request.
 	CommentTypePullRef
 )
 
@@ -133,7 +133,8 @@ func (c *Comment) HTMLURL() string {
 	return fmt.Sprintf("%s#issuecomment-%d", c.Issue.HTMLURL(), c.ID)
 }
 
-// This method assumes following fields have been assigned with valid values:
+// APIFormat returns the API format of the comment. It assumes the following
+// fields have been assigned with valid values:
 // Required - Poster, Issue
 func (c *Comment) APIFormat() *apiv1types.IssueComment {
 	return &apiv1types.IssueComment{
@@ -199,7 +200,7 @@ func createComment(logger *logx.Logger, e *xorm.Session, opts *CreateCommentOpti
 	}
 
 	// Compose comment action, could be plain comment, close or reopen issue/pull request.
-	// This object will be used to notify watchers in the end of function.
+	// This object will be used to notify watchers at the end of function.
 	act := &Action{
 		ActUserID:    opts.Doer.ID,
 		ActUserName:  opts.Doer.Name,
@@ -210,7 +211,6 @@ func createComment(logger *logx.Logger, e *xorm.Session, opts *CreateCommentOpti
 		IsPrivate:    opts.Repo.IsPrivate,
 	}
 
-	// Check comment type.
 	switch opts.Type {
 	case CommentTypeComment:
 		act.OpType = ActionCommentIssue
@@ -227,7 +227,7 @@ func createComment(logger *logx.Logger, e *xorm.Session, opts *CreateCommentOpti
 		for i := range attachments {
 			attachments[i].IssueID = opts.Issue.ID
 			attachments[i].CommentID = comment.ID
-			// No assign value could be 0, so ignore AllCols().
+			// None of the assigned values can be 0, so AllCols() is not needed.
 			if _, err = e.ID(attachments[i].ID).Update(attachments[i]); err != nil {
 				return nil, errors.Newf("update attachment [%d]: %v", attachments[i].ID, err)
 			}
@@ -357,7 +357,7 @@ func CreateRefComment(logger *logx.Logger, doer *User, repo *Repository, issue *
 		return errors.Newf("cannot create reference with empty commit SHA")
 	}
 
-	// Check if same reference from same commit has already existed.
+	// Check if same reference from same commit already exists.
 	has, err := x.Get(&Comment{
 		Type:      CommentTypeCommitRef,
 		IssueID:   issue.ID,

@@ -28,10 +28,9 @@ type webLocale struct {
 var webLocales map[string]webLocale
 
 // loadWebLocales flattens the locale files of every language into JSON objects
-// keyed by "section.key", or the bare key for those above any section. Like the
-// server-rendered pages, each language reads en-US first, then its own file,
-// then its override under the custom directory, so keys missing from a language
-// fall back to en-US. customDir is the directory of the overrides.
+// keyed by "section.key", or the bare key for those above any section. Each
+// language reads en-US first, then its own file, then its override under the
+// custom directory, so keys missing from a language fall back to en-US. customDir is the directory of the overrides.
 func loadWebLocales(customDir string, langs []string) (map[string]webLocale, error) {
 	readSources := func(lang string) ([]any, error) {
 		name := "locale_" + lang + ".ini"

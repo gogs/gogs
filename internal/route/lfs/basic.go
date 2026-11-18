@@ -39,7 +39,7 @@ func (h *basicHandler) Storager(storage lfsx.Storage) lfsx.Storager {
 	return h.storagers[storage]
 }
 
-// GET /{owner}/{repo}.git/info/lfs/object/basic/{oid}
+// GET /{owner}/{repo}.git/info/lfs/objects/basic/{oid}
 func (h *basicHandler) serveDownload(c flamego.Context, repo *database.Repository, oid lfsx.OID) {
 	object, err := h.store.GetLFSObjectByOID(c.Request().Context(), repo.ID, oid)
 	if err != nil {
@@ -72,9 +72,9 @@ func (h *basicHandler) serveDownload(c flamego.Context, repo *database.Repositor
 	}
 }
 
-// PUT /{owner}/{repo}.git/info/lfs/object/basic/{oid}
+// PUT /{owner}/{repo}.git/info/lfs/objects/basic/{oid}
 func (h *basicHandler) serveUpload(c flamego.Context, repo *database.Repository, oid lfsx.OID) {
-	// NOTE: LFS client will retry upload the same object if there was a partial failure,
+	// NOTE: LFS client will retry uploading the same object if there was a partial failure,
 	// therefore we would like to skip ones that already exist.
 	_, err := h.store.GetLFSObjectByOID(c.Request().Context(), repo.ID, oid)
 	if err == nil {
@@ -117,7 +117,7 @@ func (h *basicHandler) serveUpload(c flamego.Context, repo *database.Repository,
 	h.logger.Debug("Object created", "oid", oid)
 }
 
-// POST /{owner}/{repo}.git/info/lfs/object/basic/verify
+// POST /{owner}/{repo}.git/info/lfs/objects/basic/verify
 func (h *basicHandler) serveVerify(c flamego.Context, repo *database.Repository) {
 	var request basicVerifyRequest
 	defer func() { _ = c.Request().Request.Body.Close() }()

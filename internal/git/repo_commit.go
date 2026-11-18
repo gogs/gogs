@@ -17,7 +17,6 @@ import (
 // message.
 func parseCommit(data []byte) (*Commit, error) {
 	commit := new(Commit)
-	// we now have the contents of the commit object. Let's investigate.
 	nextline := 0
 loop:
 	for {
@@ -35,7 +34,7 @@ loop:
 				}
 				commit.Tree = &Tree{id: id}
 			case "parent":
-				// A commit can have one or more parents
+				// A commit can have one or more parents.
 				id, err := newIDFromString(string(line[spacepos+1:]))
 				if err != nil {
 					return nil, err
@@ -173,11 +172,12 @@ func RepoTagCommit(ctx context.Context, repoPath, tag string) (*Commit, error) {
 type LogOptions struct {
 	// The maximum number of commits to output.
 	MaxCount int
-	// The number commits skipped before starting to show the commit output.
+	// The number of commits skipped before starting to show the commit output.
 	Skip int
 	// The regular expression to filter commits by their messages.
 	GrepPattern string
-	// Indicates whether to ignore letter case when match the regular expression.
+	// Indicates whether to ignore letter case when matching the regular
+	// expression.
 	RegexpIgnoreCase bool
 	// The relative path of the repository.
 	Path string
@@ -188,7 +188,8 @@ func escapePath(path string) string {
 		return path
 	}
 
-	// Path starts with ':' must be escaped.
+	// A path that starts with ':' must be escaped, or Git takes it as pathspec
+	// magic.
 	if path[0] == ':' {
 		path = `\` + path
 	}

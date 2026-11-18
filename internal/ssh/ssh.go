@@ -153,10 +153,10 @@ func listen(logger *logx.Logger, config *ssh.ServerConfig, host string, port int
 			continue
 		}
 
-		// Before use, a handshake must be performed on the incoming net.Conn.
-		// It must be handled in a separate goroutine,
-		// otherwise one user could easily block entire loop.
-		// For example, user could be asked to trust server key fingerprint and hangs.
+		// Before use, a handshake must be performed on the incoming net.Conn. It
+		// must be handled in a separate goroutine, otherwise one user could easily
+		// block the entire loop. For example, a user could be asked to trust the
+		// server key fingerprint and hang.
 		go func() {
 			logger.Debug("Handshaking", "remoteAddr", conn.RemoteAddr())
 			if err := conn.SetDeadline(time.Now().Add(15 * time.Second)); err != nil {
@@ -187,7 +187,7 @@ func listen(logger *logx.Logger, config *ssh.ServerConfig, host string, port int
 	}
 }
 
-// Listen starts a SSH server listens on given port.
+// Listen starts an SSH server listening on the given host and port.
 func Listen(logger *logx.Logger, opts conf.SSHOpts, appDataPath string) {
 	config := &ssh.ServerConfig{
 		Ciphers: opts.ServerCiphers,
