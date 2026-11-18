@@ -1,9 +1,9 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { CaseSensitive, ListChecks, TriangleAlert } from "lucide-react";
+import { CaseSensitive, ListChecks } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { CodeSearchForm, CodeSearchHelp, CodeSearchResults } from "@/components/CodeSearchResults";
+import { CodeSearchForm, CodeSearchHelp, CodeSearchResults, CodeSearchWarning } from "@/components/CodeSearchResults";
 import { RefPicker } from "@/components/RefPicker";
 import { RepoHeader } from "@/components/RepoHeader";
 import { usePageTitle } from "@/lib/page-title";
@@ -40,10 +40,9 @@ export function RepoSearch({ owner, name, data }: { owner: string; name: string;
       },
     });
 
-  let message: string | null = null;
-  if (data.keyword && data.busy) message = t("repo.code_search.busy");
-  else if (data.keyword && data.timedOut) message = t("repo.code_search.timed_out");
-  else if (data.keyword && !data.files.length) message = t("repo.code_search.no_results");
+  let warning: string | null = null;
+  if (data.busy) warning = t("repo.code_search.busy");
+  else if (data.timedOut) warning = t("repo.code_search.timed_out");
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -95,12 +94,11 @@ export function RepoSearch({ owner, name, data }: { owner: string; name: string;
 
         {!data.keyword ? (
           <CodeSearchHelp hint={t("repo.code_search.hint", { ref: data.ref })} />
-        ) : message ? (
-          <p className="glass flex items-center justify-center gap-2 rounded-md border border-(--color-border) px-4 py-10 text-center text-sm text-(--color-muted-foreground)">
-            {data.timedOut || data.busy ? (
-              <TriangleAlert className="size-4 shrink-0 text-(--color-warning)" aria-hidden />
-            ) : null}
-            <span className="wrap-anywhere">{message}</span>
+        ) : warning ? (
+          <CodeSearchWarning>{warning}</CodeSearchWarning>
+        ) : !data.files.length ? (
+          <p className="glass rounded-md border border-(--color-border) px-4 py-10 text-center text-sm text-(--color-muted-foreground)">
+            {t("repo.code_search.no_results")}
           </p>
         ) : (
           <>

@@ -1,6 +1,6 @@
 import { type DiffsHighlighter, type ThemedToken, getFiletypeFromFileName, getSharedHighlighter } from "@pierre/diffs";
 import { useQuery } from "@tanstack/react-query";
-import { FileCode, type LucideIcon } from "lucide-react";
+import { FileCode, type LucideIcon, TriangleAlert } from "lucide-react";
 import { type ReactNode, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -327,6 +327,21 @@ export function CodeSearchHelp({ hint, global }: { hint: string; global?: boolea
           </div>
         ))}
       </dl>
+    </div>
+  );
+}
+
+// CodeSearchWarning tells why a search listed nothing or only part of the
+// results, e.g., because it took too long.
+export function CodeSearchWarning({ children }: { children: ReactNode }) {
+  return (
+    // The tint is on an inner layer because the glass marker sets the panel's
+    // own background color.
+    <div className="glass mb-4 rounded-md border !border-(--color-warning)">
+      <p className="flex items-center gap-2 rounded-[inherit] bg-(--color-warning)/10 px-4 py-2 text-sm">
+        <TriangleAlert className="size-4 shrink-0 text-(--color-warning)" aria-hidden />
+        <span className="wrap-anywhere">{children}</span>
+      </p>
     </div>
   );
 }
