@@ -224,9 +224,9 @@ func toIssueLabel(label *database.Label) dashboardIssueLabel {
 
 // newPullRequestURL returns where the viewer proposes a pull request from the
 // default branch of the repository, or an empty string when they cannot
-// propose one. Writers propose
-// between branches, or to the base repository of a fork, and those who forked
-// the repository propose from their fork.
+// propose one. Writers propose between branches of a repository that takes
+// pull requests, or otherwise to the base repository of a fork, and those who
+// forked the repository propose from their fork.
 func newPullRequestURL(c flamego.Context, viewer *database.User, repoCtx *repoContext) (string, error) {
 	repo := repoCtx.Repo
 	isWriter := repoCtx.Viewer.CanWrite()
@@ -242,7 +242,11 @@ func newPullRequestURL(c flamego.Context, viewer *database.User, repoCtx *repoCo
 
 	allowed := false
 	base, head := repo, repo.DefaultBranch
-	if repo.IsFork {
+	if isWriter && repo.AllowsPulls() {
+		// Forks that take pull requests propose between their own branches,
+		// and the comparison offers their base repository too.
+		allowed = true
+	} else if repo.IsFork {
 		if repo.BaseRepo.AllowsPulls() {
 			allowed = true
 			if isWriter {
