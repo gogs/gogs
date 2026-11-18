@@ -174,14 +174,17 @@ func TestAPIV1SearchRepositoriesPages(t *testing.T) {
 	assert.Equal(t, want, got, "pages of the search")
 
 	t.Run("past the last page", func(t *testing.T) {
-		status, header, body := anonymous.doRaw(http.MethodGet, search+"&page=10", "", nil)
-		require.Equal(t, http.StatusOK, status, "response: %s", body)
-		assert.JSONEq(t, `{"ok": true, "data": []}`, string(body))
 		// Page 3 is the last one with repositories, and the one before page 10.
 		page := func(n string) string {
 			return "/api/v1/repos/search?limit=2&page=" + n + "&uid=" + apiV1Itoa(owner.ID)
 		}
-		assert.Equal(t, map[string]string{"first": page("1"), "prev": page("3"), "last": page("3")}, apiV1Links(t, header))
+		// A page whose offset overflows an int64 is past the last page too.
+		for _, n := range []string{"10", "99999999999999999999"} {
+			status, header, body := anonymous.doRaw(http.MethodGet, page(n), "", nil)
+			require.Equal(t, http.StatusOK, status, "page %s, response: %s", n, body)
+			assert.JSONEq(t, `{"ok": true, "data": []}`, string(body), "page %s", n)
+			assert.Equal(t, map[string]string{"first": page("1"), "prev": page("3"), "last": page("3")}, apiV1Links(t, header), "page %s", n)
+		}
 	})
 }
 

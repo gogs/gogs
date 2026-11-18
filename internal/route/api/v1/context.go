@@ -3,6 +3,7 @@ package v1
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -218,11 +219,19 @@ func (c *apiContext) webNotFoundOrError(err error, msg string) {
 	c.webError(err, msg)
 }
 
+// queryPage returns the requested page, at least 1. It caps the page so that
+// page*pageSize, the end of the page, fits in an int. An offset that overflows
+// to a negative number is silently dropped by the database, which returns the
+// first page instead.
+func (c *apiContext) queryPage(pageSize int) int {
+	return min(max(c.QueryInt("page"), 1), math.MaxInt/max(pageSize, 1))
+}
+
 // SetLinkHeader sets pagination link header by given total number and page size.
 func (c *apiContext) SetLinkHeader(total, pageSize int) {
 	// The paginater clamps the page to the last one, but the list it describes
 	// does not, e.g., page 10 of 3 pages is empty and comes after page 3.
-	current := max(c.QueryInt("page"), 1)
+	current := c.queryPage(pageSize)
 	page := paginater.New(total, pageSize, current, 0)
 	// Links keep the other query parameters, e.g., the search keyword and the
 	// page size, so that every page belongs to the same list.
