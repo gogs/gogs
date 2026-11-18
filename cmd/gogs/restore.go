@@ -114,13 +114,10 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 	// back by hand, whereas a failed database import cannot be undone.
 	if !cmd.Bool("database-only") {
 		// Custom files
-		if osx.IsDir(conf.CustomDir()) {
-			if err = moveAside(conf.CustomDir()); err != nil {
-				logger.FatalContext(ctx, "Failed to backup current 'custom'", "error", err)
+		if srcDir := filepath.Join(archivePath, "custom"); osx.IsDir(srcDir) {
+			if err = restoreCustomDir(srcDir, conf.CustomDir()); err != nil {
+				logger.FatalContext(ctx, "Failed to import 'custom'", "error", err)
 			}
-		}
-		if err = os.Rename(filepath.Join(archivePath, "custom"), conf.CustomDir()); err != nil {
-			logger.FatalContext(ctx, "Failed to import 'custom'", "error", err)
 		}
 
 		// Data files
@@ -172,4 +169,34 @@ func moveAside(path string) error {
 		return errors.Newf("'%s' already exists, probably from an earlier restore. Move or remove it, then run the restore again", path+".bak")
 	}
 	return os.Rename(path, path+".bak")
+}
+
+// restoreCustomDir moves each entry of srcDir into customDir, keeping the current one as "<path>.bak". Entries
+// that are not in srcDir stay in place. The "data" entry is never touched, the same as in backups, because it is
+// the app data directory in the Docker setup, which holds the open SQLite database and is restored separately.
+func restoreCustomDir(srcDir, customDir string) error {
+	entries, err := os.ReadDir(srcDir)
+	if err != nil {
+		return errors.Wrap(err, "list entries")
+	}
+	if err = os.MkdirAll(customDir, os.ModePerm); err != nil {
+		return errors.Wrap(err, "create custom directory")
+	}
+
+	for _, e := range entries {
+		if e.Name() == "data" {
+			continue
+		}
+
+		dstPath := filepath.Join(customDir, e.Name())
+		if osx.Exist(dstPath) {
+			if err = moveAside(dstPath); err != nil {
+				return errors.Wrapf(err, "back up '%s'", e.Name())
+			}
+		}
+		if err = os.Rename(filepath.Join(srcDir, e.Name()), dstPath); err != nil {
+			return errors.Wrapf(err, "move '%s'", e.Name())
+		}
+	}
+	return nil
 }
