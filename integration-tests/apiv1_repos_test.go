@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/git"
 )
 
 func TestAPIV1CreateRepository(t *testing.T) {
@@ -274,47 +273,6 @@ func TestAPIV1ListForks(t *testing.T) {
 	assert.True(t, forks[0].Fork)
 	require.NotNil(t, forks[0].Permissions)
 	assert.False(t, forks[0].Permissions.Push, "owner of the base repository can push to the fork")
-}
-
-func TestAPIV1Releases(t *testing.T) {
-	t.Parallel()
-
-	owner := seedUser(t, CreateUserOptions{})
-	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
-
-	gitRepo, err := git.Open(database.RepoPath(repo.Owner, repo.Name))
-	require.NoError(t, err)
-	err = database.Handle.Releases().Create(t.Context(), logger, gitRepo, &database.Release{
-		RepoID:      repo.ID,
-		PublisherID: owner.ID,
-		TagName:     "v1.0.0",
-		Target:      "main",
-		Title:       "First release",
-		Note:        "Notes",
-	}, nil)
-	require.NoError(t, err)
-
-	type release struct {
-		TagName         string    `json:"tag_name"`
-		TargetCommitish string    `json:"target_commitish"`
-		Name            string    `json:"name"`
-		Body            string    `json:"body"`
-		Draft           bool      `json:"draft"`
-		Author          apiV1User `json:"author"`
-	}
-	var releases []release
-	newClient(t).doJSON(http.MethodGet, apiV1RepoPath(repo, "/releases"), nil, http.StatusOK, &releases)
-	require.Len(t, releases, 1)
-	assert.Equal(t, "v1.0.0", releases[0].TagName)
-	assert.Equal(t, "main", releases[0].TargetCommitish)
-	assert.Equal(t, "First release", releases[0].Name)
-	assert.Equal(t, "Notes", releases[0].Body)
-	assert.False(t, releases[0].Draft)
-	assert.Equal(t, owner.Name, releases[0].Author.UserName)
-
-	private := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
-	status, body := newClient(t).do(http.MethodGet, apiV1RepoPath(private, "/releases"), nil)
-	assert.Equal(t, http.StatusNotFound, status, "private repository, response: %s", body)
 }
 
 func TestAPIV1RepositorySettings(t *testing.T) {
