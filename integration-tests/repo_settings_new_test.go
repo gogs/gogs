@@ -15,6 +15,8 @@ import (
 	"gogs.io/gogs/internal/database"
 )
 
+const sshCloneAddrError = "SSH clone addresses are not supported, use the HTTP or HTTPS address with a username and password instead."
+
 type repoSettingsCreated struct {
 	Owner string `json:"owner"`
 	Name  string `json:"name"`
@@ -156,6 +158,16 @@ func TestRepoSettingsMigrateRepository(t *testing.T) {
 	assert.NotEmpty(t, repoSettingsFieldError(t, body, "cloneAddr"))
 	_, err = getRepositoryByName(t, u.ID, name)
 	assert.True(t, database.IsErrRepoNotExist(err), "repository migrated from a local path: %v", err)
+
+	// An SSH address is not a path on the server, so it is not refused as one.
+	status, body = c.do(http.MethodPost, "/api/web/repo/migrate", map[string]any{
+		"cloneAddr": "git@gitlab.example.com:owner/repo.git",
+		"name":      name,
+	})
+	require.Equal(t, http.StatusBadRequest, status, "response: %s", body)
+	assert.Equal(t, sshCloneAddrError, repoSettingsFieldError(t, body, "cloneAddr"))
+	_, err = getRepositoryByName(t, u.ID, name)
+	assert.True(t, database.IsErrRepoNotExist(err), "repository migrated from an SSH address: %v", err)
 }
 
 func TestRepoSettingsMirror(t *testing.T) {
@@ -202,6 +214,18 @@ func TestRepoSettingsMirror(t *testing.T) {
 	c.doJSON(http.MethodGet, repoSettingsAPIPath(mirror, "/settings"), nil, http.StatusOK, &settings)
 	require.NotNil(t, settings.Mirror)
 	assert.Equal(t, mirrorSettings{Address: cloneAddr, Interval: 24}, *settings.Mirror)
+
+	status, body = c.do(http.MethodPut, repoSettingsAPIPath(mirror, "/settings/mirror"), map[string]any{
+		"address":     "ssh://git@gitlab.example.com/owner/repo.git",
+		"interval":    24,
+		"enablePrune": false,
+	})
+	require.Equal(t, http.StatusBadRequest, status, "response: %s", body)
+	assert.Equal(t, sshCloneAddrError, repoSettingsFieldError(t, body, "address"))
+	settings.Mirror = nil
+	c.doJSON(http.MethodGet, repoSettingsAPIPath(mirror, "/settings"), nil, http.StatusOK, &settings)
+	require.NotNil(t, settings.Mirror)
+	assert.Equal(t, cloneAddr, settings.Mirror.Address)
 
 	mirrorPath := database.RepoPath(mirror.Owner, mirror.Name)
 	sourcePath := database.RepoPath(source.Owner, source.Name)
