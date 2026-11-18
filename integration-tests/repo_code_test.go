@@ -158,6 +158,10 @@ func TestRepoCodeBrowse(t *testing.T) {
 			CommitCount int64 `json:"commitCount"`
 		} `json:"summary"`
 		Branches []string `json:"branches"`
+		Overview []struct {
+			Kind string `json:"kind"`
+			HTML string `json:"html"`
+		} `json:"overview"`
 	}
 
 	t.Run("src", func(t *testing.T) {
@@ -177,6 +181,11 @@ func TestRepoCodeBrowse(t *testing.T) {
 		assert.Equal(t, repoCodeGit(t, repo, "rev-list", "--count", "main"), "2")
 		assert.EqualValues(t, 2, root.Summary.CommitCount)
 		assert.Equal(t, []string{"main"}, root.Branches)
+		// The page links headings to themselves by these ids. The text of the
+		// heading may vary, e.g., the hex of the name can link to a commit.
+		require.Len(t, root.Overview, 1)
+		assert.Equal(t, "readme", root.Overview[0].Kind)
+		assert.Contains(t, root.Overview[0].HTML, `<h1 id="user-content-`+repo.Name+`">`)
 
 		var dir srcResponse
 		anonymous.doJSON(http.MethodGet, api+"/src/main/docs", nil, http.StatusOK, &dir)
@@ -194,6 +203,7 @@ func TestRepoCodeBrowse(t *testing.T) {
 		assert.Equal(t, "markup", file.File.Kind)
 		require.NotNil(t, file.File.Content)
 		assert.Equal(t, "# Guide\n\nRead **this** first.\n", *file.File.Content)
+		assert.Contains(t, file.File.HTML, `<h1 id="user-content-guide">Guide</h1>`)
 		assert.Contains(t, file.File.HTML, "<strong>this</strong>")
 
 		// The first commit has no guide yet.
@@ -1056,7 +1066,7 @@ func TestRepoCodeWiki(t *testing.T) {
 	assert.Equal(t, "Home", created.Name)
 	ownerClient.doJSON(http.MethodPost, api+"/wiki", map[string]any{
 		"title":   "Getting started",
-		"content": "Install it.",
+		"content": "## Install it\n\nRun the binary.",
 	}, http.StatusCreated, &created)
 	assert.Equal(t, "Getting started", created.Name)
 
@@ -1086,6 +1096,8 @@ func TestRepoCodeWiki(t *testing.T) {
 	// Links written like GitHub's reach the page with spaces.
 	anonymous.doJSON(http.MethodGet, api+"/wiki?page=Getting-started", nil, http.StatusOK, &wiki)
 	assert.Equal(t, "Getting started", wiki.Page.Name)
+	// The page links headings to themselves by these ids.
+	assert.Contains(t, wiki.Page.HTML, `<h2 id="user-content-install-it">Install it</h2>`)
 	status, body = anonymous.do(http.MethodGet, api+"/wiki?page=Missing", nil)
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 
