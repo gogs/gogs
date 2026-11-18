@@ -133,7 +133,7 @@ All notable changes to Gogs are documented in this file.
 - A user can no longer add the same SSH key twice by changing its comment. When upgrading, such duplicates are merged into the key added first. [#8648](https://github.com/gogs/gogs/pull/8648)
 - The API repository search returned only repositories with a dot in their name or description when no search query was given. [#8587](https://github.com/gogs/gogs/pull/8587)
 - The pagination links of the API repository search and issue list keep the query of the request, e.g., the search keyword and page size, instead of leading to pages of another list. The links of a page past the last one lead back to the last page, and a very large page number, e.g., `page=99999999999999999999`, returns an empty page instead of the first one. Pages of both lists no longer repeat or skip items. [#8587](https://github.com/gogs/gogs/pull/8587)
-- SSH keys of security keys, e.g., `sk-ssh-ed25519@openssh.com` keys of a YubiKey, can be added. Instances with their own `[ssh.minimum_key_sizes]` need to add `ED25519-SK = 256` and `ECDSA-SK = 256` to it. [#8580](https://github.com/gogs/gogs/pull/8580)
+- SSH keys of security keys, e.g., `sk-ssh-ed25519@openssh.com` keys of a YubiKey, can be added when `[server] MINIMUM_KEY_SIZE_CHECK` is enabled. To keep rejecting them, set `ED25519-SK` and `ECDSA-SK` under `[ssh.minimum_key_sizes]` to `-1`. [#8580](https://github.com/gogs/gogs/pull/8580)
 
 ### Removed
 
