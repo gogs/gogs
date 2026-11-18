@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"net/url"
-	"strings"
 	"testing"
 	"time"
 
@@ -157,8 +155,8 @@ func TestAPIV1SearchRepositoriesPages(t *testing.T) {
 	// page keeps the query of the first one.
 	anonymous := newClient(t)
 	got := []string{}
-	next := "/api/v1/repos/search?limit=2&uid=" + apiV1Itoa(owner.ID)
-	for pages := 0; next != ""; pages++ {
+	search := "/api/v1/repos/search?limit=2&uid=" + apiV1Itoa(owner.ID)
+	for pages, next := 0, search; next != ""; pages++ {
 		require.Less(t, pages, 3, "more pages than the repositories fill")
 
 		status, header, body := anonymous.doRaw(http.MethodGet, next, "", nil)
@@ -170,17 +168,21 @@ func TestAPIV1SearchRepositoriesPages(t *testing.T) {
 		require.LessOrEqual(t, len(resp.Data), 2)
 		got = append(got, apiV1RepoNames(resp.Data)...)
 
-		next = ""
-		for _, link := range strings.Split(header.Get("Link"), ",") {
-			if target, ok := strings.CutSuffix(link, `>; rel="next"`); ok {
-				u, err := url.Parse(strings.TrimPrefix(target, "<"))
-				require.NoError(t, err)
-				next = u.RequestURI()
-			}
-		}
+		next = apiV1Links(t, header)["next"]
 	}
 	// Repositories are listed in the order they were created, each once.
 	assert.Equal(t, want, got, "pages of the search")
+
+	t.Run("past the last page", func(t *testing.T) {
+		status, header, body := anonymous.doRaw(http.MethodGet, search+"&page=10", "", nil)
+		require.Equal(t, http.StatusOK, status, "response: %s", body)
+		assert.JSONEq(t, `{"ok": true, "data": []}`, string(body))
+		// Page 3 is the last one with repositories, and the one before page 10.
+		page := func(n string) string {
+			return "/api/v1/repos/search?limit=2&page=" + n + "&uid=" + apiV1Itoa(owner.ID)
+		}
+		assert.Equal(t, map[string]string{"first": page("1"), "prev": page("3"), "last": page("3")}, apiV1Links(t, header))
+	})
 }
 
 func TestAPIV1DeleteRepository(t *testing.T) {

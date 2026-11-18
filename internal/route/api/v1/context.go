@@ -220,7 +220,10 @@ func (c *apiContext) webNotFoundOrError(err error, msg string) {
 
 // SetLinkHeader sets pagination link header by given total number and page size.
 func (c *apiContext) SetLinkHeader(total, pageSize int) {
-	page := paginater.New(total, pageSize, c.QueryInt("page"), 0)
+	// The paginater clamps the page to the last one, but the list it describes
+	// does not, e.g., page 10 of 3 pages is empty and comes after page 3.
+	current := max(c.QueryInt("page"), 1)
+	page := paginater.New(total, pageSize, current, 0)
 	// Links keep the other query parameters, e.g., the search keyword and the
 	// page size, so that every page belongs to the same list.
 	query := c.Request().URL.Query()
@@ -232,14 +235,12 @@ func (c *apiContext) SetLinkHeader(total, pageSize int) {
 	if page.HasNext() {
 		links = append(links, link(page.Next(), "next"))
 	}
-	if !page.IsLast() {
+	if current != page.TotalPages() {
 		links = append(links, link(page.TotalPages(), "last"))
 	}
-	if !page.IsFirst() {
+	if current > 1 {
 		links = append(links, link(1, "first"))
-	}
-	if page.HasPrevious() {
-		links = append(links, link(page.Previous(), "prev"))
+		links = append(links, link(min(current-1, page.TotalPages()), "prev"))
 	}
 
 	if len(links) > 0 {

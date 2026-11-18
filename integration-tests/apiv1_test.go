@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"testing"
@@ -123,6 +124,27 @@ func apiV1CreateIssue(t *testing.T, c *client, repo *Repository, body map[string
 
 func apiV1Itoa(i int64) string {
 	return strconv.FormatInt(i, 10)
+}
+
+// apiV1Links returns the request URI of each pagination link in the Link
+// header by its relation, e.g., "next".
+func apiV1Links(t *testing.T, header http.Header) map[string]string {
+	t.Helper()
+
+	links := map[string]string{}
+	if header.Get("Link") == "" {
+		return links
+	}
+	for _, link := range strings.Split(header.Get("Link"), ",") {
+		target, rel, ok := strings.Cut(link, `>; rel=`)
+		require.True(t, ok, "link %q", link)
+		rel, err := strconv.Unquote(rel)
+		require.NoError(t, err, "link %q", link)
+		u, err := url.Parse(strings.TrimPrefix(target, "<"))
+		require.NoError(t, err)
+		links[rel] = u.RequestURI()
+	}
+	return links
 }
 
 func TestAPIV1Markdown(t *testing.T) {

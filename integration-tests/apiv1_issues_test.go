@@ -1,7 +1,10 @@
 package integrationtests
 
 import (
+	"encoding/json"
 	"net/http"
+	"slices"
+	"strconv"
 	"testing"
 	"time"
 
@@ -113,6 +116,41 @@ func TestAPIV1Issues(t *testing.T) {
 	private := seedRepository(t, owner.ID, CreateRepositoryOptions{Private: true})
 	status, body = otherAPI.do(http.MethodGet, apiV1RepoPath(private, "/issues"), nil)
 	assert.Equal(t, http.StatusNotFound, status, "private repository of another user, response: %s", body)
+}
+
+func TestAPIV1IssuesPages(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{})
+	api := apiV1Client(t, owner)
+
+	// One more closed issue than fits on a page of ISSUE_PAGING_NUM = 10, so the
+	// second page only exists among closed issues.
+	apiV1CreateIssue(t, api, repo, map[string]any{"title": "Open"})
+	want := []string{}
+	for i := range 11 {
+		title := "Closed " + strconv.Itoa(i)
+		apiV1CreateIssue(t, api, repo, map[string]any{"title": title, "closed": true})
+		want = append(want, title)
+	}
+
+	got := []string{}
+	pages := 0
+	for next := apiV1RepoPath(repo, "/issues?state=closed"); next != ""; pages++ {
+		require.Less(t, pages, 2, "more pages than the issues fill")
+
+		status, header, body := api.doRaw(http.MethodGet, next, "", nil)
+		require.Equal(t, http.StatusOK, status, "response: %s", body)
+		var issues []apiV1Issue
+		require.NoError(t, json.Unmarshal(body, &issues))
+		got = append(got, apiV1IssueTitles(issues)...)
+		next = apiV1Links(t, header)["next"]
+	}
+	assert.Equal(t, 2, pages)
+	// Newest first, each once, though most issues are created in the same second.
+	slices.Reverse(want)
+	assert.Equal(t, want, got, "pages of closed issues")
 }
 
 func TestAPIV1AssignedIssues(t *testing.T) {
