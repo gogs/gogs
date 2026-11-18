@@ -261,6 +261,11 @@ func TestRenderCommitMessage(t *testing.T) {
 			want:  "Signed-off-by: Alice &lt;alice@example.com&gt;",
 		},
 		{
+			name:  "mentions in URLs are not links",
+			input: "See https://medium.com/@alice/post and HTTP://npmjs.com/package/@scope/pkg, thanks (@bob)",
+			want:  `See https://medium.com/@alice/post and HTTP://npmjs.com/package/@scope/pkg, thanks (<a href="/bob" rel="nofollow">@bob</a>)`,
+		},
+		{
 			name:  "line breaks are kept",
 			input: "Subject\n\nSee #1\n  indented & <tag>",
 			want:  "Subject\n\nSee <a href=\"/user/repo/issues/1\" rel=\"nofollow\">#1</a>\n  indented &amp; &lt;tag&gt;",
