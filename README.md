@@ -100,11 +100,6 @@ Other acknowledgments:
 - Thanks [Crowdin](https://crowdin.com) for sponsoring open source translation plan.
 - Thanks [Buildkite](https://buildkite.com) for sponsoring open source CI/CD plan.
 
-## 👋 Contributors
-
-- See [contributors page](https://github.com/gogs/gogs/graphs/contributors) for top 100 contributors.
-- See [TRANSLATORS](conf/locale/TRANSLATORS) for public list of translators.
-
 ## ⚖️ License
 
 This project is under the MIT License. See the [LICENSE](https://github.com/gogs/gogs/blob/main/LICENSE) file for the full license text.
