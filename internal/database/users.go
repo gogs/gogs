@@ -51,16 +51,17 @@ func (err ErrLoginSourceMismatch) Error() string {
 }
 
 // Authenticate validates username and password via given login source ID. It
-// returns ErrUserNotExist when the user was not found.
+// returns auth.ErrBadCredentials when the credentials are invalid.
 //
-// When the "loginSourceID" is negative, it aborts the process and returns
-// ErrUserNotExist if the user was not found in the database.
+// When the "loginSourceID" is not positive, it aborts the process and returns
+// auth.ErrBadCredentials if the user was not found in the database.
 //
 // When the "loginSourceID" is non-negative, it returns ErrLoginSourceMismatch
 // if the user has different login source ID than the "loginSourceID".
 //
 // When the "loginSourceID" is positive, it tries to authenticate via given
-// login source and creates a new user when not yet exists in the database.
+// login source and creates a new user when the user does not yet exist in the
+// database.
 func (s *UsersStore) Authenticate(ctx context.Context, logger *logx.Logger, login, password string, loginSourceID int64) (*User, error) {
 	login = strings.ToLower(login)
 
@@ -77,13 +78,13 @@ func (s *UsersStore) Authenticate(ctx context.Context, logger *logx.Logger, logi
 		return nil, errors.Wrap(err, "get user")
 	}
 
-	var authSourceID int64 // The login source ID will be used to authenticate the user
-	createNewUser := false // Whether to create a new user after successful authentication
+	var authSourceID int64 // The login source ID will be used to authenticate the user.
+	createNewUser := false // Whether to create a new user after successful authentication.
 
-	// User found in the database
+	// User found in the database.
 	if err == nil {
-		// Note: This check is unnecessary but to reduce user confusion at login page
-		// and make it more consistent from user's perspective.
+		// Note: This check is unnecessary but reduces user confusion at login page
+		// and makes it more consistent from user's perspective.
 		if loginSourceID >= 0 && user.LoginSource != loginSourceID {
 			return nil, ErrLoginSourceMismatch{args: errx.Args{"expect": loginSourceID, "actual": user.LoginSource}}
 		}
@@ -175,12 +176,12 @@ func (s *UsersStore) ChangeUsername(ctx context.Context, userID int64, newUserna
 			return errors.Wrap(err, "update user name")
 		}
 
-		// Stop here if it's just a case-change of the username
+		// Stop here if it's just a case-change of the username.
 		if strings.EqualFold(user.Name, newUsername) {
 			return nil
 		}
 
-		// Update all references to the user name in pull requests
+		// Update all references to the user name in pull requests.
 		err = tx.Model(&PullRequest{}).
 			Where("head_user_name = ?", user.LowerName).
 			Update("head_user_name", strings.ToLower(newUsername)).
@@ -189,7 +190,7 @@ func (s *UsersStore) ChangeUsername(ctx context.Context, userID int64, newUserna
 			return errors.Wrap(err, `update "pull_request.head_user_name"`)
 		}
 
-		// Rename user directory if exists
+		// Rename user directory if it exists.
 		userPath := repox.UserPath(user.Name)
 		if osx.Exist(userPath) {
 			newUserPath := repox.UserPath(newUsername)
@@ -256,7 +257,7 @@ func (err ErrEmailAlreadyUsed) Error() string {
 	return fmt.Sprintf("email has been used: %v", err.args)
 }
 
-// Create creates a new user and persists to database. It returns
+// Create creates a new user and persists it to database. It returns
 // ErrNameNotAllowed if the given name or pattern of the name is not allowed as
 // a username, or ErrUserAlreadyExist when a user with same name already exists,
 // or ErrEmailAlreadyUsed if the email has been verified by another user.
@@ -317,7 +318,7 @@ func (s *UsersStore) Create(ctx context.Context, username, email string, opts Cr
 }
 
 // DeleteCustomAvatar deletes the current user custom avatar and falls back to
-// use look up avatar by email.
+// looking up avatar by email.
 func (s *UsersStore) DeleteCustomAvatar(ctx context.Context, userID int64) error {
 	_ = os.Remove(userx.CustomAvatarPath(userID))
 	return s.db.WithContext(ctx).
@@ -529,7 +530,7 @@ func (s *UsersStore) DeleteByID(ctx context.Context, userID int64, skipRewriteAu
 // DeleteInactivated deletes all inactivated users.
 //
 // NOTE: We do not take context.Context here because this operation in practice
-// could much longer than the general request timeout (e.g. one minute).
+// could take much longer than the general request timeout (e.g., one minute).
 func (s *UsersStore) DeleteInactivated() error {
 	var userIDs []int64
 	err := s.db.Model(&User{}).Where("is_active = ?", false).Pluck("id", &userIDs).Error
@@ -540,7 +541,7 @@ func (s *UsersStore) DeleteInactivated() error {
 	for _, userID := range userIDs {
 		err = s.DeleteByID(context.Background(), userID, true)
 		if err != nil {
-			// Skip users that may had set to inactivated by admins.
+			// Skip users that may have been set to inactivated by admins.
 			if IsErrUserOwnRepos(err) || IsErrUserHasOrgs(err) {
 				continue
 			}
@@ -619,7 +620,7 @@ func (s *UsersStore) Follow(ctx context.Context, userID, followID int64) error {
 	})
 }
 
-// Unfollow removes the mark the user to follow the other user.
+// Unfollow removes the mark of the user following the other user.
 func (s *UsersStore) Unfollow(ctx context.Context, userID, followID int64) error {
 	if userID == followID {
 		return nil
@@ -850,7 +851,7 @@ func searchUserByName(ctx context.Context, db *gorm.DB, userType UserType, keywo
 
 // SearchByName returns a list of users whose username or full name matches the
 // given keyword case-insensitively. Results are paginated by given page and
-// page size, and sorted by the given order (e.g. "id DESC"). A total count of
+// page size, and sorted by the given order (e.g., "id DESC"). A total count of
 // all results is also returned. If the order is not given, it's up to the
 // database to decide.
 func (s *UsersStore) SearchByName(ctx context.Context, keyword string, page, pageSize int, orderBy string) ([]*User, int64, error) {
@@ -1037,7 +1038,7 @@ func (ErrEmailNotExist) NotFound() bool {
 // GetEmail returns the email address of the given user. If `needsActivated` is
 // true, only activated email will be returned, otherwise, it may return
 // inactivated email addresses. It returns ErrEmailNotExist when no qualified
-// email is not found.
+// email is found.
 func (s *UsersStore) GetEmail(ctx context.Context, userID int64, email string, needsActivated bool) (*EmailAddress, error) {
 	tx := s.db.WithContext(ctx).Where("uid = ? AND email = ?", userID, email)
 	if needsActivated {
@@ -1127,7 +1128,7 @@ func (err ErrEmailNotVerified) Error() string {
 
 // MarkEmailPrimary marks the email address of the given user as primary. It
 // returns ErrEmailNotExist when the email is not found for the user, and
-// ErrEmailNotActivated when the email is not activated.
+// ErrEmailNotVerified when the email is not activated.
 func (s *UsersStore) MarkEmailPrimary(ctx context.Context, userID int64, email string) error {
 	var emailAddress EmailAddress
 	err := s.db.WithContext(ctx).Where("uid = ? AND email = ?", userID, email).First(&emailAddress).Error
@@ -1183,7 +1184,7 @@ func (s *UsersStore) DeleteEmail(ctx context.Context, userID int64, email string
 type UserType int
 
 const (
-	UserTypeIndividual UserType = iota // NOTE: Historic reason to make it starts at 0.
+	UserTypeIndividual UserType = iota // NOTE: It starts at 0 for historic reasons.
 	UserTypeOrganization
 )
 
@@ -1193,7 +1194,7 @@ type User struct {
 	LowerName string `xorm:"UNIQUE NOT NULL" gorm:"unique;not null"`
 	Name      string `xorm:"UNIQUE NOT NULL" gorm:"not null"`
 	FullName  string
-	// Email is the primary email address (to be used for communication)
+	// Email is the primary email address (to be used for communication).
 	Email       string `xorm:"NOT NULL" gorm:"not null"`
 	Password    string `xorm:"passwd NOT NULL" gorm:"column:passwd;not null"`
 	LoginSource int64  `xorm:"NOT NULL DEFAULT 0" gorm:"not null;default:0"`
@@ -1209,16 +1210,16 @@ type User struct {
 	Updated     time.Time `xorm:"-" gorm:"-" json:"-"`
 	UpdatedUnix int64
 
-	// Remember visibility choice for convenience, true for private
+	// Remember visibility choice for convenience, true for private.
 	LastRepoVisibility bool
-	// Maximum repository creation limit, -1 means use global default
+	// Maximum repository creation limit, -1 means use global default.
 	MaxRepoCreation int `xorm:"NOT NULL DEFAULT -1" gorm:"not null;default:-1"`
 
 	// Permissions
-	IsActive         bool // Activate primary email
+	IsActive         bool // Whether the primary email is activated.
 	IsAdmin          bool
 	AllowGitHook     bool
-	AllowImportLocal bool // Allow migrate repository by local path
+	AllowImportLocal bool // Allow migrating repositories by local path.
 	ProhibitLogin    bool
 
 	// Avatar
@@ -1279,8 +1280,8 @@ func (u *User) APIFormat() *apiv1types.User {
 	}
 }
 
-// maxNumRepos returns the maximum number of repositories that the user can have
-// direct ownership.
+// maxNumRepos returns the maximum number of repositories that the user can own
+// directly.
 func (u *User) maxNumRepos() int {
 	if u.MaxRepoCreation <= -1 {
 		return conf.Repository.MaxCreationLimit
@@ -1428,7 +1429,7 @@ func (u *User) ShortName(length int) string {
 	return strx.Ellipsis(u.Name, length)
 }
 
-// NewGhostUser creates and returns a fake user for people who has deleted their
+// NewGhostUser creates and returns a fake user for people who have deleted their
 // accounts.
 //
 // TODO: Once migrated to unknwon.dev/i18n, pass in the `i18n.Locale` to

@@ -210,7 +210,7 @@ func postAdminOperation(logger *logx.Logger, c flamego.Context, l i18n.Locale, a
 	if err = op.run(logger); err != nil {
 		logger.Error("Failed to run admin operation", "operation", name, "error", err)
 		// Admins need the reason to fix what failed, e.g., the repository that
-		// could not be collected, as the server-rendered dashboard showed it.
+		// could not be collected.
 		return http.StatusInternalServerError, &bindingErrorResponse{Error: err.Error()}, nil
 	}
 	logger.Debug("Admin operation run", "operation", name, "adminName", admin.Name)
@@ -332,7 +332,6 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 	sec := conf.Security
 	sections = append(sections, r.section("security", "admin.config.security_config", rows(
 		r.code("admin.config.security.login_remember_days", sec.LoginRememberDays),
-		r.flag("admin.config.security.cookie_secure", sec.CookieSecure),
 		r.flag("admin.config.security.enable_login_status_cookie", sec.EnableLoginStatusCookie),
 		r.code("admin.config.security.login_status_cookie_name", sec.LoginStatusCookieName),
 		r.list("admin.config.security.local_network_allowlist", sec.LocalNetworkAllowlist),
@@ -396,8 +395,8 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 		r.codeUnit("admin.config.session.max_life_time", sess.MaxLifeTime, l.Tr("tool.raw_seconds")),
 	)))
 
-	// The cache host is left out: it can hold credentials, e.g., a Redis
-	// password, and the server-rendered page never showed it.
+	// The cache host is left out because it can hold credentials, e.g., a
+	// Redis password.
 	sections = append(sections, r.section("cache", "admin.config.cache_config", rows(
 		r.code("admin.config.cache.adapter", conf.Cache.Adapter),
 		r.codeUnit("admin.config.cache.interval", conf.Cache.Interval, l.Tr("tool.raw_seconds")),
@@ -446,17 +445,11 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 	git := conf.Git
 	sections = append(sections, r.section("git", "admin.config.git_config",
 		rows(
-			r.flag("admin.config.git.disable_diff_highlight", git.DisableDiffHighlight),
-			r.code("admin.config.git.max_diff_lines", git.MaxDiffLines),
-			r.code("admin.config.git.max_diff_line_characters", git.MaxDiffLineChars),
-			r.code("admin.config.git.max_diff_files", git.MaxDiffFiles),
 			r.optional("admin.config.git.gc_args", strings.Join(git.GCArgs, " ")),
 		),
 		rows(
 			r.codeUnit("admin.config.git.migrate_timeout", git.Timeout.Migrate, l.Tr("tool.raw_seconds")),
 			r.codeUnit("admin.config.git.mirror_timeout", git.Timeout.Mirror, l.Tr("tool.raw_seconds")),
-			r.codeUnit("admin.config.git.clone_timeout", git.Timeout.Clone, l.Tr("tool.raw_seconds")),
-			r.codeUnit("admin.config.git.pull_timeout", git.Timeout.Pull, l.Tr("tool.raw_seconds")),
 			r.codeUnit("admin.config.git.gc_timeout", git.Timeout.GC, l.Tr("tool.raw_seconds")),
 		),
 	))

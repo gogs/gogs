@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// Signature represents a author or committer.
+// Signature represents an author or committer.
 type Signature struct {
 	// The name of the person.
 	Name string
@@ -23,7 +23,7 @@ type Signature struct {
 //	author Patrick Gundlach <gundlach@speedata.de> 1378823654 +0200
 //	author Patrick Gundlach <gundlach@speedata.de> Thu Apr 07 22:13:13 2005 +0200
 //
-// This method should only be used for parsing author and committer.
+// This function should only be used for parsing author and committer.
 func parseSignature(line []byte) (*Signature, error) {
 	emailStart := bytes.IndexByte(line, '<')
 	emailEnd := bytes.IndexByte(line, '>')

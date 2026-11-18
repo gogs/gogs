@@ -1346,7 +1346,7 @@ const DARK_CONTRAST_CSS = `[data-line] span[style*="--diffs-token-dark:#636363"]
 }`;
 
 // SourceView shows a text file highlighted, with line numbers that select
-// lines into the URL hash, e.g., "#L5-L9" like the server-rendered pages.
+// lines into the URL hash, e.g., "#L5-L9".
 function SourceView({ file }: { file: RepoFile }) {
   const { theme } = useTheme();
   const [selected, setSelected] = useState(() => selectedLinesOf(window.location.hash));

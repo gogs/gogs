@@ -52,7 +52,7 @@ func TestAddRepositoryIsUnlisted(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, repositoryWithIsUnlisted{ID: 1, OwnerID: 1, LowerName: "example", IsPrivate: true}, got)
 
-	// Re-run should be skipped
+	// Re-run should be skipped.
 	err = addRepositoryIsUnlisted(db)
 	require.Equal(t, errMigrationSkipped, err)
 }

@@ -37,7 +37,7 @@ func userGet(t *testing.T, id int64) *database.User {
 	return u
 }
 
-// userAssertSignInRequired asserts that every route answers a signed-out
+// userAssertSignInRequired asserts that every route answers an unauthenticated
 // visitor with 401.
 func userAssertSignInRequired(t *testing.T, routes ...string) {
 	t.Helper()

@@ -657,7 +657,7 @@ function NewComment({
       uploads.clear();
       setRound((n) => n + 1);
       await router.invalidate();
-      // Show the new comment, like the server-rendered page did.
+      // Scroll to the new comment.
       if (id) {
         newAnchor.current = `issuecomment-${id}`;
         await router.navigate({ to: ".", hash: newAnchor.current, params: true, search: true, resetScroll: false });

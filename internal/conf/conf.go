@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/cockroachdb/errors"
 	"github.com/gogs/go-libravatar"
@@ -24,7 +23,7 @@ import (
 var File *ini.File
 
 // Init initializes configuration from conf assets and given custom configuration file.
-// If `customConf` is empty, it falls back to default location, i.e. "<WORK DIR>/custom".
+// If `customConf` is empty, it falls back to default location, i.e., "<CUSTOM DIR>/conf/app.ini".
 // It is safe to call this function multiple times with desired `customConf`, but it is
 // not concurrent safe.
 //
@@ -92,7 +91,7 @@ func Init(logger *logx.Logger, customConf string) error {
 		return errors.Wrapf(err, "parse '[server] EXTERNAL_URL' %q", err)
 	}
 
-	// Subpath should start with '/' and end without '/', i.e. '/{subpath}'.
+	// Subpath should start with '/' and end without '/', i.e., '/{subpath}'.
 	Server.Subpath = strings.TrimRight(Server.URL.Path, "/")
 	Server.SubpathDepth = strings.Count(Server.Subpath, "/")
 
@@ -128,9 +127,9 @@ func Init(logger *logx.Logger, customConf string) error {
 			SSH.RewriteAuthorizedKeysAtStart = false
 		}
 
-		// Check if server is eligible for minimum key size check when user choose to enable.
-		// Windows server and OpenSSH version lower than 5.1 are forced to be disabled because
-		// the "ssh-keygen" in Windows does not print key type.
+		// Check if server is eligible for minimum key size check when user chooses to enable it.
+		// It is forced to be disabled on Windows servers and with OpenSSH versions lower than 5.1
+		// because the "ssh-keygen" in Windows does not print key type.
 		// See https://github.com/gogs/gogs/issues/4507.
 		if SSH.MinimumKeySizeCheck {
 			sshVersion, err := openSSHVersion(logger)
@@ -223,7 +222,7 @@ func Init(logger *logx.Logger, customConf string) error {
 	if err = File.Section("auth").MapTo(&Auth); err != nil {
 		return errors.Wrap(err, "mapping [auth] section")
 	}
-	// Reset before re-parsing so repeated Init calls (e.g. via the web installer)
+	// Reset before re-parsing so repeated Init calls (e.g., via the web installer)
 	// do not carry over CIDRs from a previous configuration.
 	Auth.TrustedProxyCIDRs = nil
 	for _, raw := range Auth.TrustedProxyIPs {
@@ -271,35 +270,6 @@ func Init(logger *logx.Logger, customConf string) error {
 		return errors.Wrap(err, "mapping [attachment] section")
 	}
 	Attachment.Path = ensureAbs(Attachment.Path)
-
-	// *************************
-	// ----- Time settings -----
-	// *************************
-
-	if err = File.Section("time").MapTo(&Time); err != nil {
-		return errors.Wrap(err, "mapping [time] section")
-	}
-
-	Time.FormatLayout = map[string]string{
-		"ANSIC":       time.ANSIC,
-		"UnixDate":    time.UnixDate,
-		"RubyDate":    time.RubyDate,
-		"RFC822":      time.RFC822,
-		"RFC822Z":     time.RFC822Z,
-		"RFC850":      time.RFC850,
-		"RFC1123":     time.RFC1123,
-		"RFC1123Z":    time.RFC1123Z,
-		"RFC3339":     time.RFC3339,
-		"RFC3339Nano": time.RFC3339Nano,
-		"Kitchen":     time.Kitchen,
-		"Stamp":       time.Stamp,
-		"StampMilli":  time.StampMilli,
-		"StampMicro":  time.StampMicro,
-		"StampNano":   time.StampNano,
-	}[Time.Format]
-	if Time.FormatLayout == "" {
-		Time.FormatLayout = time.RFC3339
-	}
 
 	// ****************************
 	// ----- Picture settings -----
@@ -361,7 +331,6 @@ func Init(logger *logx.Logger, customConf string) error {
 	if err = File.Section("i18n").MapTo(I18n); err != nil {
 		return errors.Wrap(err, "mapping [i18n] section")
 	}
-	I18n.dateLangs = File.Section("i18n.datelang").KeyValues()
 
 	// *************************
 	// ----- LFS settings -----
@@ -406,8 +375,6 @@ func Init(logger *logx.Logger, customConf string) error {
 		return errors.Wrap(err, "mapping [prometheus] section")
 	} else if err = File.Section("tracing").MapTo(&Tracing); err != nil {
 		return errors.Wrap(err, "mapping [tracing] section")
-	} else if err = File.Section("other").MapTo(&Other); err != nil {
-		return errors.Wrap(err, "mapping [other] section")
 	}
 
 	HasRobotsTxt = osx.IsFile(filepath.Join(CustomDir(), "robots.txt"))

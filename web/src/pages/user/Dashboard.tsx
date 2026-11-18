@@ -13,8 +13,8 @@ import { subUrl } from "@/lib/url";
 import { useUserInfo } from "@/lib/use-user-info";
 import { cn } from "@/lib/utils";
 
-// Dashboard is the home page of authenticated users, for themselves or for one of
-// their organizations.
+// Dashboard is the home page of authenticated users, for themselves or for one
+// of their organizations.
 export function Dashboard({ org }: { org?: string }) {
   const { t } = useTranslation();
   const { data } = useSuspenseQuery(dashboardQuery(org));

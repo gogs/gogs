@@ -67,7 +67,7 @@ func DiscordSHALinkFormatter(url, text string) string {
 	return fmt.Sprintf("[`%s`](%s)", text, url)
 }
 
-// getDiscordCreatePayload composes Discord payload for create new branch or tag.
+// getDiscordCreatePayload composes Discord payload for creating a new branch or tag.
 func getDiscordCreatePayload(p *apiv1types.WebhookCreatePayload) *DiscordPayload {
 	refName := git.RefShortName(p.Ref)
 	repoLink := DiscordLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
@@ -85,7 +85,7 @@ func getDiscordCreatePayload(p *apiv1types.WebhookCreatePayload) *DiscordPayload
 	}
 }
 
-// getDiscordDeletePayload composes Discord payload for delete a branch or tag.
+// getDiscordDeletePayload composes Discord payload for deleting a branch or tag.
 func getDiscordDeletePayload(p *apiv1types.WebhookDeletePayload) *DiscordPayload {
 	refName := git.RefShortName(p.Ref)
 	repoLink := DiscordLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
@@ -102,7 +102,7 @@ func getDiscordDeletePayload(p *apiv1types.WebhookDeletePayload) *DiscordPayload
 	}
 }
 
-// getDiscordForkPayload composes Discord payload for forked by a repository.
+// getDiscordForkPayload composes Discord payload for forking a repository.
 func getDiscordForkPayload(p *apiv1types.WebhookForkPayload) *DiscordPayload {
 	baseLink := DiscordLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
 	forkLink := DiscordLinkFormatter(p.Forkee.HTMLURL, p.Forkee.FullName)
@@ -144,10 +144,10 @@ func getDiscordPushPayload(p *apiv1types.WebhookPushPayload, slack *SlackMeta) *
 	var content strings.Builder
 	fmt.Fprintf(&content, "Pushed %s to %s/%s\n", commitString, repoLink, branchLink)
 
-	// for each commit, generate attachment text
+	// For each commit, generate attachment text.
 	for i, commit := range p.Commits {
 		fmt.Fprintf(&content, "%s %s - %s", DiscordSHALinkFormatter(commit.URL, commit.ID[:7]), DiscordTextFormatter(commit.Message), commit.Author.Name)
-		// add linebreak to each commit but the last
+		// Add linebreak to each commit but the last.
 		if i < len(p.Commits)-1 {
 			content.WriteString("\n")
 		}

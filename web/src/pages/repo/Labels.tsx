@@ -26,8 +26,7 @@ import { formErrors } from "@/lib/queries/request";
 import { subUrl } from "@/lib/url";
 import { cn } from "@/lib/utils";
 
-// The colors offered next to the color picker, the same as on the
-// server-rendered page.
+// The colors offered next to the color picker.
 const PRESET_COLORS = [
   "#e11d21",
   "#eb6420",
@@ -108,7 +107,7 @@ export function IssueTrackerLayout({
 }
 
 // labelTextColor picks black or white text for the color of a label, the same
-// way as the server-rendered pages.
+// way as `Label.ForegroundColor` on the server.
 function labelTextColor(color: string) {
   if (!HEX_COLOR.test(color)) return "#000";
   const n = parseInt(color.slice(1), 16);
@@ -219,7 +218,6 @@ function LabelRow({
       <div className="min-w-0 flex-1 basis-48">
         <LabelChip name={label.name} color={label.color} />
       </div>
-      {/* The issue list is still served by the server-rendered pages. */}
       <a
         href={subUrl(`/${owner}/${name}/issues?labels=${label.id}`)}
         className="inline-flex items-center gap-1.5 text-sm text-(--color-muted-foreground) hover:text-(--color-foreground) hover:underline"

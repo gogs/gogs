@@ -26,7 +26,7 @@ export function createProfileRoutes(rootRoute: AnyRoute) {
         if (deps.tab === "activity") {
           const profile = await routerContext.queryClient.ensureQueryData(userProfileQuery(params.username));
           if (profile.kind === "organization") {
-            // Organizations have no activity tab, like the server-rendered page.
+            // Organizations have no activity tab.
             // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
             throw redirect({ to: "/$username", params: { username: params.username }, search: {}, replace: true });
           }

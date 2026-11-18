@@ -7,9 +7,8 @@ import { cn } from "@/lib/utils";
 
 // SettingsLayout puts the links between the settings pages of a user, an
 // organization or a repository, or the pages of the admin panel, beside the
-// page. On narrow
-// screens they move into a dropdown above the page, named after the current
-// page.
+// page. On narrow screens they move into a dropdown above the page, named
+// after the current page.
 export function SettingsLayout({
   label,
   current,

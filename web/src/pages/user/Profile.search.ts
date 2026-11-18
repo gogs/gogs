@@ -2,8 +2,7 @@
 // page component) so both the route definition and the page can import from it.
 
 // The repositories tab and the first page stay implicit, so they never appear
-// in the URL. Like the server-rendered page, any other `tab` value shows the
-// repositories.
+// in the URL. Any other `tab` value shows the repositories.
 export interface ProfileSearch {
   tab?: "activity";
   page?: number;

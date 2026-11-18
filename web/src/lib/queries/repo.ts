@@ -581,7 +581,7 @@ export interface RepoIssuesData {
 }
 
 // fetchRepoIssues lists the issues or pull requests of a repository, with the
-// query parameters of the server-rendered page, e.g., `state=closed`.
+// query parameters of the list page, e.g., `state=closed`.
 export function fetchRepoIssues(
   owner: string,
   name: string,

@@ -55,7 +55,7 @@ func (p *Provider) Authenticate(logger *logx.Logger, login, password string) (*a
 	if err := p.config.doAuth(smtpAuth); err != nil {
 		logger.Debug("Authentication failed", "error", err)
 
-		// Check standard error format first, then fallback to the worse case.
+		// Check standard error format first, then fall back to the worse case.
 		tperr, ok := err.(*textproto.Error)
 		if (ok && tperr.Code == 535) ||
 			strings.Contains(err.Error(), "Username and Password not accepted") {

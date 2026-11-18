@@ -27,10 +27,10 @@ SERVICENAME="Gogs"
 LOCKFILE=/var/lock/subsys/gogs
 LOGPATH=${GOGS_HOME}/log
 LOGFILE=${LOGPATH}/error.log
-# gogs creates its own gogs.log from stdout
+# Gogs writes its own gogs.log when [log] MODE includes "file", so stdout goes to error.log.
 RETVAL=0
 
-# Read configuration from /etc/sysconfig/gogs to override defaults
+# Read configuration from /etc/sysconfig/gogs to override defaults.
 [ -r /etc/sysconfig/$NAME ] && . /etc/sysconfig/$NAME
 
 # Don't do anything if nothing is installed
@@ -38,7 +38,7 @@ test -x ${GOGS_PATH} || { echo "$NAME not installed";
 	if [ "$1" = "stop" ]; then exit 0;
 	else exit 5; fi; }
 
-# exit if logpath dir is not created.
+# Exit if the log path directory does not exist.
 test -r ${LOGPATH} || { echo "$LOGPATH not existing";
 	if [ "$1" = "stop" ]; then exit 0;
 	else exit 6; fi; }

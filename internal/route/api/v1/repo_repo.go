@@ -79,7 +79,7 @@ func listReposOfUser(c *apiContext, username string) {
 	}
 
 	// Only list public repositories if user requests someone else's repository list,
-	// or an organization isn't a member of.
+	// or an organization the user isn't a member of.
 	var ownRepos []*database.Repository
 	if user.IsOrganization() {
 		ownRepos, _, err = user.GetUserRepositories(c.User.ID, 1, user.NumRepos)

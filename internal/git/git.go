@@ -20,7 +20,7 @@ var tracer = otel.Tracer("gogs.io/gogs/internal/git")
 var (
 	// logOutput is the writer to write logs. When not set, no log will be produced.
 	logOutput io.Writer
-	// logPrefix is the prefix prepend to each log entry.
+	// logPrefix is the prefix prepended to each log entry.
 	logPrefix = "[git] "
 )
 
@@ -41,7 +41,8 @@ func logf(format string, args ...any) {
 
 var (
 	// gitVersion stores the Git binary version.
-	// NOTE: To check Git version should call BinVersion not this global variable.
+	// NOTE: Call BinVersion to check the Git version instead of reading this
+	// variable.
 	gitVersion    string
 	gitVersionMu  sync.Mutex
 	gitVersionSet bool

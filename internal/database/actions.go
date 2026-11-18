@@ -57,7 +57,7 @@ func (s *ActionsStore) listByOrganization(ctx context.Context, orgID, actorID, a
 	return s.db.WithContext(ctx).
 		Where("user_id = ?", orgID).
 		Where(s.db.
-			// Not apply when afterID is not given
+			// Does not apply when afterID is not given.
 			Where("?", afterID <= 0).
 			Or("id < ?", afterID),
 		).
@@ -98,12 +98,13 @@ func (s *ActionsStore) listByUser(ctx context.Context, userID, actorID, afterID 
 	return s.db.WithContext(ctx).
 		Where("user_id = ?", userID).
 		Where(s.db.
-			// Not apply when afterID is not given
+			// Does not apply when afterID is not given.
 			Where("?", afterID <= 0).
 			Or("id < ?", afterID),
 		).
 		Where(s.db.
-			// Not apply when in not profile page or the user is viewing own profile
+			// Does not apply when not on the profile page or the user is viewing
+			// their own profile.
 			Where("?", !isProfile || actorID == userID).
 			Or("is_private = ? AND act_user_id = ?", false, userID),
 		).
@@ -126,14 +127,13 @@ func (s *ActionsStore) notifyWatchers(ctx context.Context, act *Action) error {
 		return errors.Wrap(err, "list watches")
 	}
 
-	// Clone returns a deep copy of the action with UserID assigned
 	clone := func(userID int64) *Action {
 		tmp := *act
 		tmp.UserID = userID
 		return &tmp
 	}
 
-	// Plus one for the actor
+	// Plus one for the actor.
 	actions := make([]*Action, 0, len(watches)+1)
 	actions = append(actions, clone(act.ActUserID))
 
@@ -329,11 +329,11 @@ func updateCommitReferencesToIssues(logger *logx.Logger, doer *User, repo *Repos
 				continue
 			}
 
-			// Add repo name if missing
+			// Add repo name if missing.
 			if ref[0] == '#' {
 				ref = fmt.Sprintf("%s%s", repo.FullName(), ref)
 			} else if !strings.Contains(ref, "/") {
-				// FIXME: We don't support User#ID syntax yet
+				// FIXME: We don't support User#ID syntax yet.
 				continue
 			}
 
@@ -377,11 +377,11 @@ func updateCommitReferencesToIssues(logger *logx.Logger, doer *User, repo *Repos
 				continue
 			}
 
-			// Add repo name if missing
+			// Add repo name if missing.
 			if ref[0] == '#' {
 				ref = fmt.Sprintf("%s%s", repo.FullName(), ref)
 			} else if !strings.Contains(ref, "/") {
-				// FIXME: We don't support User#ID syntax yet
+				// FIXME: We don't support User#ID syntax yet.
 				continue
 			}
 
@@ -407,7 +407,8 @@ func updateCommitReferencesToIssues(logger *logx.Logger, doer *User, repo *Repos
 			}
 		}
 
-		// It is conflict to have close and reopen at same time, so refsMarkd doesn't need to reinit here.
+		// Closing and reopening the same issue in one commit conflict, so refMarked
+		// does not need to be reset here.
 		for _, ref := range issueReopenKeywordsPattern.FindAllString(c.Message, -1) {
 			ref = ref[strings.IndexByte(ref, byte(' '))+1:]
 			ref = strings.TrimRightFunc(ref, trimRightNonDigits)
@@ -416,12 +417,11 @@ func updateCommitReferencesToIssues(logger *logx.Logger, doer *User, repo *Repos
 				continue
 			}
 
-			// Add repo name if missing
+			// Add repo name if missing.
 			if ref[0] == '#' {
 				ref = fmt.Sprintf("%s%s", repo.FullName(), ref)
 			} else if !strings.Contains(ref, "/") {
-				// We don't support User#ID syntax yet
-				// return ErrNotImplemented
+				// FIXME: We don't support User#ID syntax yet.
 				continue
 			}
 
@@ -461,7 +461,7 @@ type CommitRepoOptions struct {
 }
 
 // CommitRepo creates actions for pushing commits to the repository. An action
-// with the type ActionDeleteBranch is created if the push deletes a branch; an
+// with the type ActionDeleteBranch is created if the push deletes a branch. An
 // action with the type ActionCommitRepo is created for a regular push. If the
 // regular push also creates a new branch, then another action with type
 // ActionCreateBranch is created.
@@ -479,7 +479,7 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, logger *logx.Logger, opts
 	isNewRef := git.IsEmptyID(opts.OldCommitID)
 	isDelRef := git.IsEmptyID(opts.NewCommitID)
 
-	// If not the first commit, set the compare URL.
+	// Only a push that updates an existing branch has commits to compare.
 	if !isNewRef && !isDelRef {
 		opts.Commits.CompareURL = repox.CompareCommitsPath(opts.Owner.Name, opts.Repo.Name, opts.OldCommitID, opts.NewCommitID)
 	}
@@ -519,11 +519,11 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, logger *logx.Logger, opts
 			return errors.Wrap(err, "notify watchers")
 		}
 
-		// Delete branch doesn't have anything to push or compare
+		// Deleting a branch has nothing to push or compare.
 		return nil
 	}
 
-	// Only update issues via commits when internal issue tracker is enabled
+	// Only update issues via commits when internal issue tracker is enabled.
 	if opts.Repo.EnableIssues && !opts.Repo.EnableExternalTracker {
 		if err = updateCommitReferencesToIssues(logger, pusher, opts.Repo, opts.Commits.Commits); err != nil {
 			logger.Error("Failed to update commit references to issues", "error", err)

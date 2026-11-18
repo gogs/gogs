@@ -51,9 +51,9 @@ func mountWebAppRoutes(logger *logx.Logger, f *flamego.Flame) (http.Handler, err
 			return
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		// The body is rewritten per request (lang injection, future
-		// runtime config), so caching it would serve stale content to
-		// any user whose request resolves to a different locale. Use
+		// The body is rewritten per request (e.g., the language and the web
+		// context), so caching it would serve stale content to any user
+		// whose request resolves to a different locale. Use
 		// no-store rather than no-cache so the browser cannot keep a
 		// copy at all, not even for revalidation. Static assets keep
 		// their normal caching via flamego.Static.

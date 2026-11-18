@@ -297,13 +297,12 @@ func postUserSignIn(logger *logx.Logger, r *http.Request, w http.ResponseWriter,
 	return http.StatusOK, &userSignInResponse{}, nil
 }
 
-// completeSignIn finalizes the sign-in session for u: writes the auth session,
-// clears any in-flight MFA state, and sets the login-status cookie. The
-// caller is responsible for navigating to a post-login destination via
-// /redirect?to=.
+// completeSignIn signs in u under a new session, which drops any in-flight MFA
+// state, and sets the login-status cookie when it is enabled. The caller is
+// responsible for navigating to a post-login destination via /redirect?to=.
 func completeSignIn(w http.ResponseWriter, r *http.Request, store session.Store, sess session.Session, u *database.User) error {
 	// Sign in under a new session ID, so a session ID planted in the browser
-	// before signing in (session fixation) is not signed in too. The old
+	// before signing in (session fixation) is not authenticated too. The old
 	// session is deleted rather than carried over.
 	if err := store.Destroy(r.Context(), sess.ID()); err != nil {
 		return errors.Wrap(err, "destroy session")

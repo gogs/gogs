@@ -21,8 +21,8 @@ import (
 	"gogs.io/gogs/internal/repox"
 )
 
-// adminClients returns clients signed in as a new site admin and as a new
-// user who is not one, and a client that is not signed in.
+// adminClients returns clients authenticated as a new site admin and as a new
+// user who is not one, and a client that is unauthenticated.
 func adminClients(t *testing.T) (admin, nonAdmin, anonymous *client) {
 	t.Helper()
 
@@ -31,8 +31,8 @@ func adminClients(t *testing.T) (admin, nonAdmin, anonymous *client) {
 	return admin, nonAdmin, newClient(t)
 }
 
-// adminAssertTurnedAway asserts that the API route turns away a signed-in user
-// who is not an admin and a visitor who is not signed in.
+// adminAssertTurnedAway asserts that the API route turns away an authenticated
+// user who is not an admin and an unauthenticated visitor.
 func adminAssertTurnedAway(t *testing.T, nonAdmin, anonymous *client, method, path string, body any) {
 	t.Helper()
 
@@ -138,9 +138,7 @@ func adminRunOperation(t *testing.T, admin, nonAdmin, anonymous *client, name st
 // TestAdminOperations runs the operations that act on repositories of the
 // whole site, which only fix up or tidy what other tests leave behind, and
 // checks their effect on repositories seeded here. Deleting inactive users and
-// resyncing SSH keys are left out: both rewrite the "authorized_keys" file in
-// the SSH root path, which is the ".ssh" directory of the user running the
-// tests.
+// resyncing SSH keys are left out.
 //
 // It is the only test that does not run in parallel, because the operations
 // act on every repository, including the ones other tests push to or download

@@ -158,7 +158,8 @@ func (r *Repository) HasTag(ctx context.Context, tag string) bool {
 	return r.hasReference(ctx, RefsTags+tag)
 }
 
-// SymbolicRefOptions contains optional arguments for get and set symbolic ref.
+// SymbolicRefOptions contains optional arguments for getting and setting a
+// symbolic ref.
 type SymbolicRefOptions struct {
 	// The name of the symbolic ref. When not set, default ref "HEAD" is used.
 	Name string
@@ -167,7 +168,7 @@ type SymbolicRefOptions struct {
 	Ref string
 }
 
-// SymbolicRef returns the reference name (e.g., "refs/heads/master") pointed by
+// SymbolicRef returns the reference name (e.g., "refs/heads/master") pointed to by
 // the symbolic ref. It returns an empty string and nil error when doing set
 // operation.
 func (r *Repository) SymbolicRef(ctx context.Context, opts ...SymbolicRefOptions) (_ string, err error) {

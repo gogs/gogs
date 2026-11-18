@@ -14,7 +14,7 @@ import (
 	"gogs.io/gogs/internal/strx"
 )
 
-// POST /{owner}/{repo}.git/info/lfs/object/batch
+// POST /{owner}/{repo}.git/info/lfs/objects/batch
 func serveBatch(logger *logx.Logger, store Store) flamego.Handler {
 	return func(c flamego.Context, owner *database.User, repo *database.Repository) {
 		var request batchRequest
@@ -27,9 +27,9 @@ func serveBatch(logger *logx.Logger, store Store) flamego.Handler {
 			return
 		}
 
-		// NOTE: We only support basic transfer as of now.
+		// NOTE: Only the basic transfer is supported.
 		transfer := transferBasic
-		// Example: https://try.gogs.io/gogs/gogs.git/info/lfs/object/basic
+		// Example: https://try.gogs.io/gogs/gogs.git/info/lfs/objects/basic
 		baseHref := fmt.Sprintf("%s%s/%s.git/info/lfs/objects/basic", conf.Server.ExternalURL, owner.Name, repo.Name)
 
 		objects := make([]batchObject, 0, len(request.Objects))

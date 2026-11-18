@@ -9,7 +9,7 @@ import (
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 
-// Collaboration represent the relation between an individual and a repository.
+// Collaboration represents the relation between an individual and a repository.
 type Collaboration struct {
 	ID     int64      `gorm:"primary_key"`
 	UserID int64      `xorm:"UNIQUE(s) INDEX NOT NULL" gorm:"uniqueIndex:collaboration_user_repo_unique;index;not null"`
@@ -120,7 +120,7 @@ func (r *Repository) getCollaborators(e Engine) ([]*Collaborator, error) {
 	return collaborators, nil
 }
 
-// GetCollaborators returns the collaborators for a repository
+// GetCollaborators returns the collaborators for a repository.
 func (r *Repository) GetCollaborators() ([]*Collaborator, error) {
 	return r.getCollaborators(x)
 }
@@ -155,7 +155,7 @@ func (r *Repository) ChangeCollaborationAccessMode(actorMode AccessMode, userID 
 	}
 	collaboration.Mode = mode
 
-	// If it's an organizational repository, merge with team access level for highest permission
+	// If it's an organizational repository, merge with team access level for highest permission.
 	if r.Owner.IsOrganization() {
 		teams, err := GetUserTeams(r.OwnerID, userID)
 		if err != nil {

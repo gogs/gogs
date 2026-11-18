@@ -65,12 +65,12 @@ var repoWorkingPool = sync.NewExclusivePool()
 var (
 	Gitignores, Licenses, Readmes, LabelTemplates []string
 
-	// Maximum items per page in forks, watchers and stars of a repo
+	// Maximum items per page in forks, watchers and stars of a repo.
 	ItemsPerPage = 40
 )
 
 func LoadRepoConfig(logger *logx.Logger) {
-	// Load .gitignore and license files and readme templates.
+	// Load .gitignore, license, readme and label template files.
 	types := []string{"gitignore", "license", "readme", "label"}
 	typeFiles := make([][]string, 4)
 	for i, t := range types {
@@ -150,7 +150,7 @@ func NewRepoContext(logger *logx.Logger) {
 		logger.Info("Git config set", "configKey", configKey, "configValue", defaultValue)
 	}
 
-	// Set git some configurations.
+	// Set some Git configurations.
 	if err = git.SetGlobalConfig(context.TODO(), "core.quotepath", "false"); err != nil {
 		logger.FatalContext(context.Background(), "Failed to set Git config", "configKey", "core.quotepath", "error", err)
 	}
@@ -187,9 +187,7 @@ type Repository struct {
 	NumOpenMilestones   int `xorm:"-" gorm:"-" json:"-"`
 	NumTags             int `xorm:"-" gorm:"-" json:"-"`
 
-	IsPrivate bool
-	// TODO: When migrate to GORM, make sure to do a loose migration with `HasColumn` and `AddColumn`,
-	// see docs in https://gorm.io/docs/migration.html.
+	IsPrivate  bool
 	IsUnlisted bool `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:FALSE"`
 	// Stored as "is_bare" and encoded as "IsBare" to stay compatible with
 	// existing databases and backup archives.
@@ -258,7 +256,7 @@ func (r *Repository) AfterSet(colName string, _ xorm.Cell) {
 	}
 }
 
-// IsPartialPublic returns true if repository is public or allow public access to wiki or issues.
+// IsPartialPublic returns true if repository is public or allows public access to wiki or issues.
 func (r *Repository) IsPartialPublic() bool {
 	return !r.IsPrivate || r.AllowPublicWiki || r.AllowPublicIssues
 }
@@ -315,8 +313,8 @@ func (r *Repository) CustomAvatarPath() string {
 }
 
 // RelAvatarLink returns relative avatar link to the site domain,
-// which includes app sub-url as prefix.
-// Since Gravatar support not needed here - just check for image path.
+// which includes app sub-url as prefix, or an empty string when the
+// repository has no custom avatar. Repositories do not use Gravatar.
 func (r *Repository) RelAvatarLink() string {
 	defaultImgURL := ""
 	if !osx.Exist(r.CustomAvatarPath()) {
@@ -369,7 +367,8 @@ func (r *Repository) DeleteAvatar(logger *logx.Logger) error {
 	return UpdateRepository(logger, r, false)
 }
 
-// This method assumes following fields have been assigned with valid values:
+// APIFormatLegacy returns the API format of the repository. It assumes the
+// following fields have been assigned with valid values:
 // Required - BaseRepo (if fork)
 // Arguments that are allowed to be nil: permission
 //
@@ -513,8 +512,8 @@ func (r *Repository) getUsersWithAccesMode(e Engine, mode AccessMode) (_ []*User
 		return nil, err
 	}
 
-	// Leave a seat for owner itself to append later, but if owner is an organization
-	// and just waste 1 unit is cheaper than re-allocate memory once.
+	// Leave a seat for owner itself to append later. If owner is an organization,
+	// wasting 1 unit is cheaper than re-allocating memory once.
 	users := make([]*User, 0, len(accesses)+1)
 	if len(accesses) > 0 {
 		userIDs := make([]int64, len(accesses))
@@ -544,12 +543,13 @@ func (r *Repository) getAssignees(e Engine) (_ []*User, err error) {
 }
 
 // GetAssignees returns all users that have read access and can be assigned to issues
-// of the repository,
+// of the repository.
 func (r *Repository) GetAssignees() (_ []*User, err error) {
 	return r.getAssignees(x)
 }
 
-// GetAssigneeByID returns the user that has write access of repository by given ID.
+// GetAssigneeByID returns the user with given ID when they have read access to
+// the repository.
 func (r *Repository) GetAssigneeByID(logger *logx.Logger, userID int64) (*User, error) {
 	ctx := context.TODO()
 	if !Handle.Permissions().Authorize(
@@ -636,7 +636,7 @@ func (r *Repository) CanEnablePulls() bool {
 	return !r.IsMirror && !r.IsEmpty
 }
 
-// AllowPulls returns true if repository meets the requirements of accepting pulls and has them enabled.
+// AllowsPulls returns true if repository meets the requirements of accepting pulls and has them enabled.
 func (r *Repository) AllowsPulls() bool {
 	return r.CanEnablePulls() && r.EnablePulls
 }
@@ -652,7 +652,7 @@ func (r *Repository) NextIssueIndex() int64 {
 	return int64(r.NumIssues+r.NumPulls) + 1
 }
 
-// PatchPath returns corresponding patch file path of repository by given issue ID.
+// PatchPath returns corresponding patch file path of repository by given issue index.
 func (r *Repository) PatchPath(index int64) (string, error) {
 	if err := r.GetOwner(); err != nil {
 		return "", err
@@ -661,7 +661,7 @@ func (r *Repository) PatchPath(index int64) (string, error) {
 	return filepath.Join(RepoPath(r.Owner.Name, r.Name), "pulls", strconv.FormatInt(index, 10)+".patch"), nil
 }
 
-// SavePatch saves patch data to corresponding location by given issue ID.
+// SavePatch saves patch data to corresponding location by given issue index.
 func (r *Repository) SavePatch(index int64, patch []byte) error {
 	patchPath, err := r.PatchPath(index)
 	if err != nil {
@@ -686,7 +686,7 @@ func isRepositoryExist(e Engine, u *User, repoName string) (bool, error) {
 	return has && osx.IsDir(RepoPath(u.Name, repoName)), err
 }
 
-// IsRepositoryExist returns true if the repository with given name under user has already existed.
+// IsRepositoryExist returns true if the repository with given name under user already exists.
 func IsRepositoryExist(u *User, repoName string) (bool, error) {
 	return isRepositoryExist(x, u, repoName)
 }
@@ -744,7 +744,7 @@ func wikiRemoteURL(remote string) string {
 	return ""
 }
 
-// MigrateRepository migrates a existing repository from other project hosting.
+// MigrateRepository migrates an existing repository from other project hosting.
 func MigrateRepository(ctx context.Context, logger *logx.Logger, doer, owner *User, opts MigrateRepoOptions) (*Repository, error) {
 	// Stopping midway, e.g., when the client disconnects, would leave a
 	// partial change behind.
@@ -1013,7 +1013,8 @@ func syncRepoDelegateHooks(db *gorm.DB, r *Repository) error {
 	return nil
 }
 
-// Finish migrating repository and/or wiki with things that don't need to be done for mirrors.
+// CleanUpMigrateInfo finishes migrating repository and/or wiki with things that
+// don't need to be done for mirrors.
 func CleanUpMigrateInfo(logger *logx.Logger, repo *Repository) (*Repository, error) {
 	if err := cleanUpMigrateGitConfig(repo.GitConfigPath()); err != nil {
 		return repo, errors.Newf("cleanUpMigrateGitConfig: %v", err)
@@ -1133,14 +1134,13 @@ func prepareRepoCommit(repo *Repository, opts CreateRepoOptionsLegacy) (map[stri
 	return files, nil
 }
 
-// initRepository performs initial commit with chosen setup files on behave of doer.
+// initRepository performs initial commit with chosen setup files on behalf of doer.
 func initRepository(ctx context.Context, logger *logx.Logger, e Engine, repoPath string, doer *User, repo *Repository, opts CreateRepoOptionsLegacy) (err error) {
-	// Init bare new repository.
 	if err = git.Init(ctx, repoPath, git.InitOptions{Bare: true, ObjectFormat: opts.ObjectFormat}); err != nil {
 		return errors.Newf("init repository: %v", err)
 	}
 
-	// Set default branch
+	// Set default branch.
 	_, err = git.RepoSymbolicRef(
 		ctx,
 		repoPath,
@@ -1176,7 +1176,7 @@ func initRepository(ctx context.Context, logger *logx.Logger, e Engine, repoPath
 	}
 
 	// Re-fetch the repository from database before updating it (else it would
-	// override changes that were done earlier with sql)
+	// override changes that were done earlier with SQL).
 	saved, err := getRepositoryByID(legacyTx(e), repo.ID)
 	if err != nil {
 		return errors.Newf("getRepositoryByID: %v", err)
@@ -1207,7 +1207,7 @@ var (
 	}
 )
 
-// isRepoNameAllowed return an error if given name is a reserved name or pattern for repositories.
+// isRepoNameAllowed returns an error if given name is a reserved name or pattern for repositories.
 func isRepoNameAllowed(name string) error {
 	return isNameAllowed(reservedRepoNames, reservedRepoPatterns, name)
 }
@@ -1242,7 +1242,7 @@ func createRepository(e *xorm.Session, doer, owner *User, repo *Repository) (err
 			return errors.Newf("addRepository: %v", err)
 		}
 	} else {
-		// Organization automatically called this in addRepository method.
+		// For organizations, the addRepository method calls this.
 		if err = repo.recalculateAccesses(e); err != nil {
 			return errors.Newf("recalculateAccesses: %v", err)
 		}
@@ -1342,7 +1342,7 @@ func CreateRepository(ctx context.Context, logger *logx.Logger, doer, owner *Use
 		return nil, err
 	}
 
-	// Remember visibility preference
+	// Remember visibility preference.
 	err = Handle.Users().Update(ctx, owner.ID, UpdateUserOptions{LastRepoVisibility: &repo.IsPrivate})
 	if err != nil {
 		return nil, errors.Wrap(err, "update user")
@@ -1387,7 +1387,8 @@ func Repositories(page, pageSize int) (_ []*Repository, err error) {
 	return repos, x.Limit(pageSize, (page-1)*pageSize).Asc("id").Find(&repos)
 }
 
-// RepositoriesWithUsers returns number of repos in given page.
+// RepositoriesWithUsers returns repositories in given page with their owners
+// loaded.
 func RepositoriesWithUsers(page, pageSize int) (_ []*Repository, err error) {
 	repos, err := Repositories(page, pageSize)
 	if err != nil {
@@ -1404,7 +1405,7 @@ func RepositoriesWithUsers(page, pageSize int) (_ []*Repository, err error) {
 }
 
 // FilterRepositoryWithIssues selects repositories that are using internal issue tracker
-// and has disabled external tracker from given set.
+// and have disabled external tracker from given set.
 // It returns nil if result set is empty.
 func FilterRepositoryWithIssues(repoIDs []int64) ([]int64, error) {
 	if len(repoIDs) == 0 {
@@ -1438,7 +1439,7 @@ func RepoPath(userName, repoName string) string {
 	return repox.RepositoryPath(userName, repoName)
 }
 
-// TransferOwnership transfers all corresponding setting from old user to new one.
+// TransferOwnership transfers all corresponding settings from old user to new one.
 func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error {
 	newOwner, err := Handle.Users().GetByUsername(context.TODO(), newOwnerName)
 	if err != nil {
@@ -1466,7 +1467,6 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 	repo.OwnerID = newOwner.ID
 	repo.Owner = newOwner
 
-	// Update repository.
 	if _, err := sess.ID(repo.ID).Update(repo); err != nil {
 		return errors.Newf("update owner: %v", err)
 	}
@@ -1514,7 +1514,7 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 			return errors.Newf("add to owner team: %v", err)
 		}
 	} else {
-		// Organization called this in addRepository method.
+		// For organizations, the addRepository method calls this.
 		if err = repo.recalculateAccesses(sess); err != nil {
 			return errors.Newf("recalculateAccesses: %v", err)
 		}
@@ -1558,7 +1558,7 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 		return errors.Newf("transferRepoAction: %v", err)
 	}
 
-	// Rename remote repository to new path.
+	// Move repository to new path.
 	if err = os.MkdirAll(repox.UserPath(newOwner.Name), os.ModePerm); err != nil {
 		return err
 	}
@@ -1566,7 +1566,7 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 		return errors.Newf("rename repository directory: %v", err)
 	}
 
-	// Rename remote wiki repository to new path.
+	// Move wiki repository to new path.
 	wikiPath := WikiPath(owner.Name, repo.Name)
 	if osx.Exist(wikiPath) {
 		if err = os.Rename(wikiPath, WikiPath(newOwner.Name, repo.Name)); err != nil {
@@ -1577,7 +1577,7 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 	return sess.Commit()
 }
 
-// ChangeRepositoryName changes all corresponding setting from old repository name to new one.
+// ChangeRepositoryName changes all corresponding settings from old repository name to new one.
 func ChangeRepositoryName(u *User, oldRepoName, newRepoName string) (err error) {
 	oldRepoName = strings.ToLower(oldRepoName)
 	newRepoName = strings.ToLower(newRepoName)
@@ -1598,7 +1598,7 @@ func ChangeRepositoryName(u *User, oldRepoName, newRepoName string) (err error) 
 	}
 	repo.Owner = u
 
-	// Change repository directory name
+	// Change repository directory name.
 	if err = os.Rename(repo.RepoPath(), RepoPath(u.Name, newRepoName)); err != nil {
 		return errors.Newf("rename repository directory: %v", err)
 	}
@@ -1627,7 +1627,7 @@ func getNonMirrorRepositories(e Engine) ([]*Repository, error) {
 	return repos, e.Where("is_mirror = ?", false).Find(&repos)
 }
 
-// GetRepositoriesMirror returns only mirror repositories with user.
+// GetNonMirrorRepositories returns all repositories that are not mirrors.
 func GetNonMirrorRepositories() ([]*Repository, error) {
 	return getNonMirrorRepositories(x)
 }
@@ -1651,13 +1651,13 @@ func updateRepository(logger *logx.Logger, e Engine, repo *Repository, visibilit
 			return errors.Newf("getOwner: %v", err)
 		}
 		if repo.Owner.IsOrganization() {
-			// Organization repository need to recalculate access table when visibility is changed
+			// Organization repository needs to recalculate access table when visibility is changed.
 			if err = repo.recalculateTeamAccesses(e, 0); err != nil {
 				return errors.Newf("recalculateTeamAccesses: %v", err)
 			}
 		}
 
-		// Create/Remove git-daemon-export-ok for git-daemon
+		// Create/Remove git-daemon-export-ok for git-daemon.
 		daemonExportFile := path.Join(repo.RepoPath(), "git-daemon-export-ok")
 		if repo.IsPrivate && osx.Exist(daemonExportFile) {
 			if err = os.Remove(daemonExportFile); err != nil {
@@ -1683,7 +1683,7 @@ func updateRepository(logger *logx.Logger, e Engine, repo *Repository, visibilit
 			}
 		}
 
-		// Change visibility of generated actions
+		// Change visibility of generated actions.
 		if _, err = e.Where("repo_id = ?", repo.ID).Cols("is_private").Update(&Action{IsPrivate: repo.IsPrivate || repo.IsUnlisted}); err != nil {
 			return errors.Newf("change action visibility of repository: %v", err)
 		}
@@ -1716,7 +1716,7 @@ func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 		return ErrRepoNotExist{args: map[string]any{"ownerID": ownerID, "repoID": repoID}}
 	}
 
-	// In case is a organization.
+	// In case it is an organization.
 	org, err := Handle.Users().GetByID(context.TODO(), ownerID)
 	if err != nil {
 		return err
@@ -1887,7 +1887,7 @@ func GetUserRepositories(opts *UserRepoOptions) ([]*Repository, error) {
 	return repos, sess.Find(&repos)
 }
 
-// GetUserRepositories returns a list of mirror repositories of given user.
+// GetUserMirrorRepositories returns a list of mirror repositories of given user.
 func GetUserMirrorRepositories(userID int64) ([]*Repository, error) {
 	repos := make([]*Repository, 0, 10)
 	return repos, x.Where("owner_id = ?", userID).And("is_mirror = ?", true).Find(&repos)
@@ -1920,11 +1920,11 @@ func GetUserAndCollaborativeRepositories(userID int64) ([]*Repository, error) {
 type SearchRepoOptions struct {
 	Keyword  string
 	OwnerID  int64
-	UserID   int64 // When set results will contain all public/private repositories user has access to
+	UserID   int64 // When set, results will contain all public/private repositories user has access to.
 	OrderBy  string
-	Private  bool // Include private repositories in results
+	Private  bool // Include private repositories in results.
 	Page     int
-	PageSize int // Can be smaller than or equal to setting.ExplorePagingNum
+	PageSize int // Can be smaller than or equal to conf.UI.ExplorePagingNum.
 }
 
 // SearchRepositoryByName takes keyword and part of repository name to search,
@@ -1942,7 +1942,7 @@ func SearchRepositoryByName(opts *SearchRepoOptions) (repos []*Repository, count
 		sess.Join("LEFT", "access", "access.repo_id = repo.id").
 			Where("repo.owner_id = ? OR access.user_id = ? OR (repo.is_private = ? AND repo.is_unlisted = ?) OR (repo.is_private = ? AND (repo.allow_public_wiki = ? OR repo.allow_public_issues = ?))", opts.UserID, opts.UserID, false, false, true, true, true)
 	} else {
-		// Only return public repositories if opts.Private is not set
+		// Only return public repositories if opts.Private is not set.
 		if !opts.Private {
 			sess.And("(repo.is_private = ? AND repo.is_unlisted = ?) OR (repo.is_private = ? AND (repo.allow_public_wiki = ? OR repo.allow_public_issues = ?))", false, false, true, true, true)
 		}
@@ -2367,14 +2367,14 @@ func watchRepo(e Engine, userID, repoID int64, watch bool) (err error) {
 	return err
 }
 
-// Watch or unwatch repository.
+// WatchRepo watches or unwatches repository.
 //
-// Deprecated: Use Watches.Watch instead.
+// Deprecated: Use Repositories.Watch instead.
 func WatchRepo(userID, repoID int64, watch bool) (err error) {
 	return watchRepo(x, userID, repoID, watch)
 }
 
-// Deprecated: Use Repos.ListByRepo instead.
+// Deprecated: Use Repositories.ListWatches instead.
 func getWatchers(e Engine, repoID int64) ([]*Watch, error) {
 	watches := make([]*Watch, 0, 10)
 	return watches, e.Find(&watches, &Watch{RepoID: repoID})
@@ -2382,12 +2382,12 @@ func getWatchers(e Engine, repoID int64) ([]*Watch, error) {
 
 // GetWatchers returns all watchers of given repository.
 //
-// Deprecated: Use Repos.ListByRepo instead.
+// Deprecated: Use Repositories.ListWatches instead.
 func GetWatchers(repoID int64) ([]*Watch, error) {
 	return getWatchers(x, repoID)
 }
 
-// Repository.GetWatchers returns range of users watching given repository.
+// GetWatchers returns a page of users watching the repository.
 func (r *Repository) GetWatchers(page int) ([]*User, error) {
 	users := make([]*User, 0, ItemsPerPage)
 	sess := x.Limit(ItemsPerPage, (page-1)*ItemsPerPage).Where("watch.repo_id=?", r.ID)
@@ -2411,10 +2411,10 @@ func notifyWatchers(e Engine, act *Action) error {
 		return errors.Newf("getWatchers: %v", err)
 	}
 
-	// Reset ID to reuse Action object
+	// Reset ID to reuse Action object.
 	act.ID = 0
 
-	// Add feed for actioner.
+	// Add feed for the actor.
 	act.UserID = act.ActUserID
 	if _, err = e.Insert(act); err != nil {
 		return errors.Newf("insert new action: %v", err)
@@ -2454,9 +2454,9 @@ type Star struct {
 	RepoID int64 `xorm:"UNIQUE(s)" gorm:"uniqueIndex:star_user_repo_unique;not null"`
 }
 
-// Star or unstar repository.
+// StarRepo stars or unstars repository.
 //
-// Deprecated: Use Stars.Star instead.
+// Deprecated: Use Repositories.Star instead.
 func StarRepo(userID, repoID int64, star bool) (err error) {
 	if star {
 		if IsStarring(userID, repoID) {
@@ -2573,7 +2573,7 @@ func ForkRepository(ctx context.Context, logger *logx.Logger, doer, owner *User,
 		return nil, errors.Newf("commit: %v", err)
 	}
 
-	// Remember visibility preference
+	// Remember visibility preference.
 	err = Handle.Users().Update(ctx, owner.ID, UpdateUserOptions{LastRepoVisibility: &repo.IsPrivate})
 	if err != nil {
 		return nil, errors.Wrap(err, "update user")
@@ -2604,7 +2604,7 @@ func (r *Repository) GetForks() ([]*Repository, error) {
 	return forks, nil
 }
 
-// Deprecated: Use Perms.SetRepoPerms instead.
+// Deprecated: Use Permissions.SetRepoPerms instead.
 func (r *Repository) refreshAccesses(e Engine, accessMap map[int64]AccessMode) (err error) {
 	newAccesses := make([]Access, 0, len(accessMap))
 	for userID, mode := range accessMap {
@@ -2637,8 +2637,8 @@ func (r *Repository) refreshCollaboratorAccesses(e Engine, accessMap map[int64]A
 }
 
 // recalculateTeamAccesses recalculates new accesses for teams of an organization
-// except the team whose ID is given. It is used to assign a team ID when
-// remove repository from that team.
+// except the team whose ID is given. A team ID is given when removing the
+// repository from that team.
 func (r *Repository) recalculateTeamAccesses(e Engine, ignTeamID int64) (err error) {
 	accessMap := make(map[int64]AccessMode, 20)
 
@@ -2671,8 +2671,8 @@ func (r *Repository) recalculateTeamAccesses(e Engine, ignTeamID int64) (err err
 			continue
 		}
 
-		// Owner team gets owner access, and skip for teams that do not
-		// have relations with repository.
+		// Owner team gets owner access, and teams that do not have relations
+		// with repository are skipped.
 		if t.IsOwnerTeam() {
 			t.Authorize = AccessModeOwner
 		} else if !t.hasRepository(e, r.ID) {

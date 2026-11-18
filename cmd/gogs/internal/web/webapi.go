@@ -147,11 +147,11 @@ func apiV1Injector(c flamego.Context) {
 	c.Map(req.user, req.info, req.locale)
 }
 
-// requireViewAccess turns away the same viewers as the sign-in toggle of the
-// server-rendered pages: disabled users and, when the site requires signing in
-// to view any content (`[auth] REQUIRE_SIGNIN_VIEW`), anonymous visitors. Mount
-// it on every route that serves site content, but not on the routes visitors
-// need to sign in.
+// requireViewAccess turns away users prohibited from signing in, users who have
+// not confirmed their email when that is required, and, when the site requires
+// signing in to view any content (`[auth] REQUIRE_SIGNIN_VIEW`), anonymous
+// visitors. Mount it on every route that serves site content, but not on the
+// routes visitors need to sign in.
 func requireViewAccess(c flamego.Context, viewer *database.User) {
 	w := c.ResponseWriter()
 	switch {
@@ -201,7 +201,7 @@ func enforceWebAPIMaxBodySize(c flamego.Context) {
 
 // webAPIValidator is the shared validator instance used by every webapi
 // binding. Registering the json-tag name function makes validation errors
-// carry the wire field name (e.g. "recoveryCode") via ve.Field(), so the
+// carry the wire field name (e.g., "recoveryCode") via ve.Field(), so the
 // 400 payload keys match what the React client sends and reads.
 var webAPIValidator = func() *validator.Validate {
 	v := validator.New()
@@ -220,10 +220,10 @@ var webAPIValidator = func() *validator.Validate {
 
 var alphaDashDotInvalid = lazyregexp.New(`[^\d\w\-_\.]`)
 
-// bindJSON binds the request body to T. On binding or validation failure it
-// short-circuits with a 400 carrying the standard renderBindingErrors payload,
-// so downstream handlers can drop the `if len(bindErrs) > 0` boilerplate and
-// the binding.Errors parameter entirely.
+// bindJSON binds the request body to the type of model. On binding or
+// validation failure it short-circuits with a 400 carrying the standard
+// renderBindingErrors payload, so downstream handlers do not need to check for
+// binding errors.
 func bindJSON(model any) flamego.Handler {
 	return binding.JSON(model, binding.Options{
 		Validator: webAPIValidator,
@@ -543,15 +543,15 @@ type fieldErrors map[string]*string
 
 // bindingErrorResponse carries form-validation failures. Error is the top-level
 // message shown as a banner above the form (used when the failure is not tied
-// to a specific input, e.g. malformed body, bad credentials).
+// to a specific input, e.g., malformed body, bad credentials).
 type bindingErrorResponse struct {
 	Error  string      `json:"error,omitempty"`
 	Fields fieldErrors `json:"fields,omitempty"`
 }
 
 // ruleSuffixKeys maps a validator tag to the shared "form.*_error" suffix key
-// (e.g. "max" -> "form.max_size_error"). Messages are composed as
-// <field label> + <suffix>, mirroring the legacy Macaron binding behavior.
+// (e.g., "max" -> "form.max_size_error"). Messages are composed as
+// <field label> + <suffix>.
 var ruleSuffixKeys = map[string]string{
 	"required":     "form.require_error",
 	"max":          "form.max_size_error",
@@ -564,9 +564,10 @@ var ruleSuffixKeys = map[string]string{
 
 // renderBindingErrors maps binding.Errors to the response shape, looking up
 // localized messages via the request's locale. The per-field label comes from
-// "form.<StructField>" (e.g. "form.UserName"); the rule suffix comes from
-// ruleSuffixKeys. Rule parameters (e.g. "254" for `max=254`) are passed
-// through to the suffix translation for %s expansion. Always HTTP 400.
+// "form.<StructField>" (e.g., "form.UserName"), and the rule suffix comes from
+// ruleSuffixKeys. Rule parameters (e.g., "254" for `max=254`) are passed
+// through to the suffix translation for %s expansion. The caller responds with
+// HTTP 400.
 func renderBindingErrors(l i18n.Locale, errs binding.Errors) *bindingErrorResponse {
 	for _, e := range errs {
 		if e.Category == binding.ErrorCategoryDeserialization {

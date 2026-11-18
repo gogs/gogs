@@ -107,7 +107,7 @@ func noticesDeleteByIDs(t *testing.T, ctx context.Context, s *NoticesStore) {
 		ids = append(ids, notice.ID)
 	}
 
-	// Non-existing IDs should be ignored
+	// Non-existing IDs should be ignored.
 	ids = append(ids, 404)
 	err = s.DeleteByIDs(ctx, ids...)
 	require.NoError(t, err)

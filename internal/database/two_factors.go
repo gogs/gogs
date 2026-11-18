@@ -41,7 +41,7 @@ func newTwoFactorsStore(db *gorm.DB) *TwoFactorsStore {
 
 // Create creates a new 2FA token and recovery codes for given user. The "key"
 // is used to encrypt and later decrypt given "secret", which should be
-// configured in site-level and change of the "key" will break all existing 2FA
+// configured at site level. Changing the "key" will break all existing 2FA
 // tokens.
 func (s *TwoFactorsStore) Create(ctx context.Context, userID int64, key, secret string) error {
 	encrypted, err := cryptox.AESGCMEncrypt(cryptox.MD5Bytes(key), []byte(secret))
@@ -171,7 +171,7 @@ func (s *TwoFactorsStore) RegenerateRecoveryCodes(ctx context.Context, userID in
 	})
 }
 
-// generateRecoveryCodes generates N number of recovery codes for 2FA.
+// generateRecoveryCodes generates n recovery codes for 2FA.
 func generateRecoveryCodes(userID int64, n int) ([]*TwoFactorRecoveryCode, error) {
 	recoveryCodes := make([]*TwoFactorRecoveryCode, n)
 	for i := range n {

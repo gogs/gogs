@@ -12,7 +12,7 @@ import (
 // HookName is the name of a Git hook.
 type HookName string
 
-// A list of Git server hooks' name that are supported.
+// A list of names of Git server hooks that are supported.
 const (
 	HookPreReceive  HookName = "pre-receive"
 	HookUpdate      HookName = "update"

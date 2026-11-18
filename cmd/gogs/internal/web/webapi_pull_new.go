@@ -43,9 +43,9 @@ func (p *pullCompare) head(repo *database.Repository) string {
 }
 
 // comparePull compares the head branch, written as "[<owner>:]<branch>", with
-// the base branch of the repository. Like the server-rendered page, the head
-// branch is of the repository or of the fork its owner has, and only those
-// who can write to it, or site admins, can compare it.
+// the base branch of the repository. The head branch is of the repository or
+// of the fork its owner has, and only those who can write to it, or site
+// admins, can compare it.
 func comparePull(ctx context.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, base, head string) (_ *pullCompare, statusCode int, err error) {
 	repo := repoCtx.Repo
 	errNotExist := errors.New("branch does not exist")
@@ -234,8 +234,8 @@ func getRepoNewPull(c flamego.Context, logger *logx.Logger, viewer *database.Use
 			return http.StatusInternalServerError, nil, err
 		}
 	}
-	// Like the server-rendered page, the templates are read from the default
-	// branch of the repository to merge into.
+	// The templates are read from the default branch of the repository to
+	// merge into.
 	defaultCommit, err := baseGitRepo.BranchCommit(ctx, repo.DefaultBranch)
 	if err == nil {
 		resp.Template, err = readTemplate(ctx, defaultCommit, pullRequestTemplateFiles)

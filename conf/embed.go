@@ -7,7 +7,7 @@ import (
 //go:embed app.ini **/*
 var Files embed.FS
 
-// FileNames returns a list of filenames exists in the given direction within
+// FileNames returns a list of filenames that exist in the given directory within
 // Files. The list includes names of subdirectories.
 func FileNames(dir string) ([]string, error) {
 	entries, err := Files.ReadDir(dir)

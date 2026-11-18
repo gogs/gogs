@@ -94,8 +94,8 @@ function focusOnError(err: Error, order: readonly string[]) {
   if (first) requestAnimationFrame(() => document.getElementById(first)?.focus());
 }
 
-// notice turns a line of the warnings of the server-rendered pages, which
-// start with a dash, into a list item.
+// notice turns a line of a translated warning, which starts with a dash, into
+// a list item.
 function notice(text: string) {
   return text.replace(/^-\s*/, "");
 }
@@ -815,9 +815,7 @@ function DangerZone({ owner, name, settings }: { owner: string; name: string; se
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const refresh = useRefresh(owner, name);
-  const repoHome = (repoOwner: string, repoName: string) =>
-    // The repository pages are still served by the server.
-    window.location.assign(subUrl(`/${repoOwner}/${repoName}`));
+  const repoHome = (repoOwner: string, repoName: string) => window.location.assign(subUrl(`/${repoOwner}/${repoName}`));
 
   return (
     <div className="rounded-md border border-(--color-destructive)">

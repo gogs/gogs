@@ -31,7 +31,7 @@ func mustNames(fsys fs.FS) []string {
 }
 
 // MailFileNames returns the embedded template file paths under "mail/",
-// each relative to the "mail" directory (e.g. "auth/activate.tmpl").
+// each relative to the "mail" directory (e.g., "auth/activate.tmpl").
 func MailFileNames() []string {
 	var names []string
 	for _, name := range mustNames(files) {
@@ -48,7 +48,8 @@ func ReadMailFile(name string) ([]byte, error) {
 	return files.ReadFile(path.Join("mail", name))
 }
 
-// ReadInjectFile returns the content of the named injection template.
+// ReadInjectFile returns the content of the named injection template, preferring
+// the copy in the "inject" directory under customDir over the embedded one.
 func ReadInjectFile(customDir, name string) ([]byte, error) {
 	fpath := path.Join(customDir, "inject", name)
 	if osx.IsFile(fpath) {

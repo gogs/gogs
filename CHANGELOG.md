@@ -123,6 +123,7 @@ All notable changes to Gogs are documented in this file.
 - The `/debug`, `/debug/pprof/*`, `/debug/profile/*`, and `/urlmap.json` endpoints. [#8271](https://github.com/gogs/gogs/pull/8271)
 - CSRF protection and the `[session] CSRF_COOKIE_NAME` configuration option. [#8300](https://github.com/gogs/gogs/pull/8300)
 - Support for DSA public keys. The `DSA` entry under `[ssh.minimum_key_sizes]` is no longer recognized. [#8313](https://github.com/gogs/gogs/pull/8313)
+- The configuration options that no longer had any effect: `[security] COOKIE_SECURE` (use `[session] COOKIE_SECURE`), `[time] FORMAT`, `[git] DISABLE_DIFF_HIGHLIGHT`, `[git] MAX_GIT_DIFF_FILES`, `[git] MAX_GIT_DIFF_LINES`, `[git] MAX_GIT_DIFF_LINE_CHARACTERS`, `[git.timeout] CLONE`, `[git.timeout] PULL`, `[git.timeout] DIFF`, `[ui] THEME_COLOR_META_TAG`, `[other] SHOW_FOOTER_TEMPLATE_LOAD_TIME`, and the `[highlight.mapping]` and `[i18n.datelang]` sections. [#8666](https://github.com/gogs/gogs/pull/8666)
 
 ## 0.14.4
 

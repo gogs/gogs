@@ -8,6 +8,9 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
+	"gogs.io/gogs/internal/tool"
+	"golang.org/x/net/html/charset"
+	"golang.org/x/text/transform"
 	"unknwon.dev/x/logx"
 )
 
@@ -163,7 +166,8 @@ func (f *DiffFile) IsSubmodule() bool {
 	return f.isSubmodule
 }
 
-// IsIncomplete returns true if the file is incomplete to the file diff.
+// IsIncomplete returns true if the diff of the file was cut short because it
+// exceeded the line limits.
 func (f *DiffFile) IsIncomplete() bool {
 	return f.isIncomplete
 }
@@ -193,7 +197,8 @@ func (d *Diff) TotalDeletions() int {
 	return d.totalDeletions
 }
 
-// IsIncomplete returns true if the file is incomplete to the entire diff.
+// IsIncomplete returns true if the diff was cut short because it exceeded the
+// file limit, or any of its files is incomplete.
 func (d *Diff) IsIncomplete() bool {
 	return d.isIncomplete
 }
@@ -231,7 +236,6 @@ func (p *diffParser) readLine() error {
 		p.isEOF = true
 	}
 
-	// Remove line break
 	if len(p.buffer) > 0 && p.buffer[len(p.buffer)-1] == '\n' {
 		p.buffer = p.buffer[:len(p.buffer)-1]
 	}
@@ -427,7 +431,7 @@ func (p *diffParser) parseSection() (_ *DiffSection, isIncomplete bool, _ error)
 			continue
 		}
 
-		// Make sure we're still in the section. If not, we're done with this section.
+		// Any line other than context, an addition or a deletion ends the section.
 		if p.buffer[0] != ' ' &&
 			p.buffer[0] != '+' &&
 			p.buffer[0] != '-' {
@@ -531,7 +535,7 @@ func (p *diffParser) parse() (*Diff, error) {
 			continue
 		}
 
-		// Loop until we found section header
+		// Skip lines until the section header.
 		if p.buffer[0] != '@' {
 			p.buffer = nil
 			continue
@@ -566,7 +570,7 @@ func (p *diffParser) parse() (*Diff, error) {
 // streamParseDiff parses the diff read from the given io.Reader. It does
 // parse-on-read to minimize the time spent on huge diffs. It accepts a channel
 // to notify and send error (if any) to the caller when the process is done.
-// Therefore, this method should be called in a goroutine asynchronously.
+// Therefore, this function should be called in a goroutine asynchronously.
 func streamParseDiff(logger *logx.Logger, r io.Reader, done chan<- streamParseDiffResult, maxFiles, maxFileLines, maxLineChars int) {
 	p := &diffParser{
 		Reader:       bufio.NewReader(r),
@@ -581,5 +585,37 @@ func streamParseDiff(logger *logx.Logger, r io.Reader, done chan<- streamParseDi
 	done <- streamParseDiffResult{
 		Diff: diff,
 		Err:  err,
+	}
+}
+
+// decodeCharsets converts the content of each file in the diff to UTF-8 when
+// the file is detected to be in another encoding.
+func decodeCharsets(logger *logx.Logger, diff *Diff) {
+	var buf bytes.Buffer
+	for _, file := range diff.Files {
+		buf.Reset()
+		for _, section := range file.Sections {
+			for _, line := range section.Lines {
+				buf.WriteString(line.Content)
+				buf.WriteString("\n")
+			}
+		}
+
+		charsetLabel, err := tool.DetectEncoding(logger, buf.Bytes())
+		if charsetLabel == "UTF-8" || err != nil {
+			continue
+		}
+		encoding, _ := charset.Lookup(charsetLabel)
+		if encoding == nil {
+			continue
+		}
+		d := encoding.NewDecoder()
+		for _, section := range file.Sections {
+			for _, line := range section.Lines {
+				if c, _, err := transform.String(d, line.Content); err == nil {
+					line.Content = c
+				}
+			}
+		}
 	}
 }

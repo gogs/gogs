@@ -37,9 +37,9 @@ var servCommand = cli.Command{
 	},
 }
 
-// fail prints user message to the Git client (i.e. os.Stderr) and
-// logs error message on the server side. When not in "prod" mode,
-// error message is also printed to the client for easier debugging.
+// fail prints the user message to the Git client (i.e., os.Stderr), logs the
+// error message on the server side, and exits the process. When not in "prod"
+// mode, the error message is also printed to the client for easier debugging.
 func fail(logger *logx.Logger, userMessage, errMessage string, args ...any) {
 	_, _ = fmt.Fprintln(os.Stderr, "Gogs:", userMessage)
 

@@ -10,10 +10,10 @@ export function ServerError({ error, version }: { error: unknown; version?: stri
   usePageTitle(t("status.internal_server_error"));
   const path = typeof window === "undefined" ? "/" : window.location.pathname;
 
-  // Prefer the structured `error` field from the webapi JSON response; fall
-  // back to the raw body when the upstream returned non-JSON (e.g. a proxy
-  // error page); fall back again to the generic message when nothing useful
-  // was carried over.
+  // Prefer the structured `error` field from the webapi JSON response. Fall
+  // back to the raw body when the upstream returned non-JSON (e.g., a proxy
+  // error page), and to the generic message when nothing useful was carried
+  // over.
   let detail = t("status.internal_server_error");
   if (error instanceof LoaderResponseError) {
     if (error.errorField) {

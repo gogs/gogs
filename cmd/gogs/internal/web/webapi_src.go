@@ -597,8 +597,7 @@ func editorconfigIndent(ctx context.Context, commit *git.Commit, filePath string
 }
 
 // pullRequestTarget returns where the viewer can propose the changes of the
-// branch, like the server-rendered pages: writers and those who forked the
-// repository can, when the repository, or its base for a fork, takes pull
+// branch: writers and those who forked the repository can, when the repository, or its base for a fork, takes pull
 // requests.
 func pullRequestTarget(ctx context.Context, logger *logx.Logger, repoCtx *repoContext, branch string) *repoPullRequestTarget {
 	repo := repoCtx.Repo

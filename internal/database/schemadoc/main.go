@@ -127,7 +127,9 @@ type tableInfo struct {
 	Indexes     []schema.Index
 }
 
-// This function is derived from gorm.io/gorm/migrator/migrator.go:Migrator.CreateTable.
+// generate returns the information of each table in database.Tables as the
+// given dialect defines it. It is derived from
+// gorm.io/gorm/migrator/migrator.go:Migrator.CreateTable.
 func generate(dialector gorm.Dialector) ([]*tableInfo, error) {
 	conn, err := gorm.Open(dialector,
 		&gorm.Config{

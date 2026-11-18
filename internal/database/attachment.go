@@ -16,7 +16,7 @@ import (
 	"gogs.io/gogs/internal/errx"
 )
 
-// Attachment represent a attachment of issue/comment/release.
+// Attachment represents an attachment of issue/comment/release.
 type Attachment struct {
 	ID        int64
 	UUID      string `xorm:"uuid UNIQUE"`
@@ -116,8 +116,9 @@ func getAttachmentByUUID(e Engine, uuid string) (*Attachment, error) {
 }
 
 // unboundAttachmentCond matches attachments that are not yet linked to any
-// issue, comment, or release. Attachments carry no owner, so only unbound ones
-// may be linked to prevent claiming attachments of other repositories by UUID.
+// issue, comment, or release. Attachments do not record their repository, so
+// only unbound ones may be linked to prevent claiming attachments of other
+// repositories by UUID.
 const unboundAttachmentCond = "issue_id = 0 AND comment_id = 0 AND release_id = 0"
 
 func getUnboundAttachmentsByUUIDs(e Engine, uuids []string) ([]*Attachment, error) {
@@ -125,7 +126,7 @@ func getUnboundAttachmentsByUUIDs(e Engine, uuids []string) ([]*Attachment, erro
 		return []*Attachment{}, nil
 	}
 
-	// Silently drop invalid and already bound uuids.
+	// Silently drop invalid and already bound UUIDs.
 	attachments := make([]*Attachment, 0, len(uuids))
 	return attachments, e.Where(unboundAttachmentCond).In("uuid", uuids).Find(&attachments)
 }

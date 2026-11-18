@@ -26,7 +26,7 @@ import (
 )
 
 // getTableType returns the type name of a table definition without package name,
-// e.g. *database.LFSObject -> LFSObject.
+// e.g., *database.LFSObject -> LFSObject.
 func getTableType(t any) string {
 	return strings.TrimPrefix(fmt.Sprintf("%T", t), "*database.")
 }
@@ -204,7 +204,7 @@ func importTable(ctx context.Context, db *gorm.DB, table any, r io.Reader) error
 
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
-		// PostgreSQL does not like the null characters (U+0000)
+		// PostgreSQL does not like the null characters (U+0000).
 		cleaned := bytes.ReplaceAll(scanner.Bytes(), []byte("\\u0000"), []byte(""))
 
 		elem := reflect.New(reflect.TypeOf(table).Elem())
@@ -225,7 +225,7 @@ func importTable(ctx context.Context, db *gorm.DB, table any, r io.Reader) error
 		}
 	}
 
-	// PostgreSQL needs manually reset table sequence for auto increment keys
+	// PostgreSQL needs manually reset table sequence for auto increment keys.
 	if conf.UsePostgreSQL && !skipResetIDSeq[rawTableName] {
 		seqName := rawTableName + "_id_seq"
 		if err = db.WithContext(ctx).Exec(fmt.Sprintf(`SELECT setval('%s', COALESCE((SELECT MAX(id)+1 FROM "%s"), 1), false)`, seqName, rawTableName)).Error; err != nil {
@@ -290,7 +290,7 @@ func importLegacyTables(ctx context.Context, logger *logx.Logger, dirPath string
 				logger.Error("Failed to unmarshal to map", "error", err)
 			}
 
-			// Reset created_unix back to the date save in archive because Insert method updates its value
+			// Reset created_unix back to the date saved in archive because Insert method updates its value.
 			if isInsertProcessor && !skipInsertProcessors[rawTableName] {
 				if _, err = x.Exec("UPDATE `"+rawTableName+"` SET created_unix=? WHERE id=?", meta.CreatedUnix, meta.ID); err != nil {
 					logger.Error("Failed to reset 'created_unix'", "tableName", rawTableName, "error", err)
@@ -305,7 +305,7 @@ func importLegacyTables(ctx context.Context, logger *logx.Logger, dirPath string
 			}
 		}
 
-		// PostgreSQL needs manually reset table sequence for auto increment keys
+		// PostgreSQL needs manually reset table sequence for auto increment keys.
 		if conf.UsePostgreSQL {
 			rawTableName := snakeMapper.Obj2Table(tableName)
 			seqName := rawTableName + "_id_seq"

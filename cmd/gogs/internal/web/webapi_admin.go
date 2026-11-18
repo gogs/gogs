@@ -44,7 +44,7 @@ func unixTime(unix int64) time.Time {
 }
 
 // searchAdminUsers lists users or organizations by ID, or searches them by
-// name when the keyword is not empty, like the server-rendered admin pages.
+// name when the keyword is not empty.
 func searchAdminUsers(ctx context.Context, typ database.UserType, keyword string, page, pageSize int) ([]*database.User, int64, error) {
 	if keyword != "" {
 		if typ == database.UserTypeOrganization {

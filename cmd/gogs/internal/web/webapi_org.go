@@ -23,8 +23,7 @@ type orgMembership struct {
 }
 
 // withOrgMembership maps the organization named by the `org` path parameter
-// as *orgMembership. Like the server-rendered pages, only members see the
-// pages of an organization.
+// as *orgMembership. Only members see the pages of an organization.
 func withOrgMembership(logger *logx.Logger, c flamego.Context, viewer *database.User) {
 	w := c.ResponseWriter()
 	name := c.Param("org")
@@ -89,8 +88,8 @@ func getOrgMembers(logger *logx.Logger, m *orgMembership) (statusCode int, resp 
 	return http.StatusOK, resp, nil
 }
 
-// getUserByParam returns the user named by the `username` path parameter, or
-// a 404 response with the localized message of the server-rendered forms.
+// getUserByParam returns the user with the name, or the status code and the
+// error to answer with, which is localized when the user does not exist.
 func getUserByParam(ctx context.Context, l i18n.Locale, name string) (*database.User, int, error) {
 	u, err := database.Handle.Users().GetByUsername(ctx, name)
 	if err != nil {
@@ -234,8 +233,7 @@ type orgTeam struct {
 }
 
 // withOrgTeam maps the team named by the `team` path parameter as *orgTeam.
-// Like the server-rendered pages, members other than owners only see their
-// own teams.
+// Members other than owners only see their own teams.
 func withOrgTeam(logger *logx.Logger, c flamego.Context, viewer *database.User, m *orgMembership) {
 	w := c.ResponseWriter()
 	teams, err := m.visibleTeams(viewer.ID)
@@ -287,8 +285,7 @@ func getOrgTeam(l i18n.Locale, viewer *database.User, team *orgTeam) (statusCode
 		Name:        team.Name,
 		LowerName:   team.LowerName,
 		Description: team.Description,
-		// Translations are community-maintained, so sanitize them like the
-		// server-rendered page did.
+		// Translations are community-maintained, so they are sanitized.
 		PermissionHTML: markup.Sanitize(permission),
 		MemberCount:    team.NumMembers,
 		RepoCount:      team.NumRepos,

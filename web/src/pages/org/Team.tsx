@@ -195,7 +195,7 @@ function TeamRepos({
           org={org}
           label={t("org.teams.add_team_repository")}
           placeholder={t("org.teams.search_repo_placeholder")}
-          // Like the server-rendered form, accept "owner/name" as well as a name.
+          // Accept "owner/name" as well as a name.
           add={(name) => addOrgTeamRepo(org, team.lowerName, name.slice(name.lastIndexOf("/") + 1))}
         />
       ) : null}

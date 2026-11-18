@@ -104,7 +104,6 @@ func PushUpdate(ctx context.Context, logger *logx.Logger, opts PushUpdateOptions
 		return errors.Newf("UpdateSize: %v", err)
 	}
 
-	// Push tags
 	if strings.HasPrefix(opts.FullRefspec, git.RefsTags) {
 		err := Handle.Actions().PushTag(ctx, logger,
 			PushTagOptions{
@@ -129,9 +128,8 @@ func PushUpdate(ctx context.Context, logger *logx.Logger, opts PushUpdateOptions
 	}
 
 	var commits []*git.Commit
-	// Skip read parent commits when delete branch
+	// Deleting a branch has no commits to read.
 	if !isDelRef {
-		// Push new branch
 		newCommit, err := git.RepoCatFileCommit(ctx, repoPath, opts.NewCommitID)
 		if err != nil {
 			return errors.Newf("GetCommit [commit_id: %s]: %v", opts.NewCommitID, err)

@@ -34,7 +34,7 @@ func TriggerTask(logger *logx.Logger, c flamego.Context) {
 	}
 
 	// 🚨 SECURITY: No need to check existence of the repository if the client
-	// can't even get the valid secret. Mostly likely not a legitimate request.
+	// can't even get the valid secret. Most likely not a legitimate request.
 	if secret != cryptox.MD5(owner.Salt) {
 		writeError(c.ResponseWriter(), http.StatusBadRequest, "Invalid secret")
 		return

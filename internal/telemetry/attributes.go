@@ -8,7 +8,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// SetUser records the signed-in user of a request on the span of the request.
+// SetUser records the authenticated user of a request on the span of the request.
 func SetUser(ctx context.Context, id int64) {
 	trace.SpanFromContext(ctx).SetAttributes(attribute.Int64("enduser.id", id))
 }

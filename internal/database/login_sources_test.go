@@ -183,7 +183,6 @@ func TestLoginSources(t *testing.T) {
 }
 
 func loginSourcesCreate(t *testing.T, ctx context.Context, s *LoginSourcesStore) {
-	// Create first login source with name "Corp PAM"
 	source, err := s.Create(ctx,
 		CreateLoginSourceOptions{
 			Type:      auth.PAM,
@@ -197,13 +196,12 @@ func loginSourcesCreate(t *testing.T, ctx context.Context, s *LoginSourcesStore)
 	)
 	require.NoError(t, err)
 
-	// Get it back and check the Created field
 	source, err = s.GetByID(ctx, source.ID)
 	require.NoError(t, err)
 	assert.Equal(t, s.db.NowFunc().Format(time.RFC3339), source.Created.UTC().Format(time.RFC3339))
 	assert.Equal(t, s.db.NowFunc().Format(time.RFC3339), source.Updated.UTC().Format(time.RFC3339))
 
-	// Try to create second login source with same name should fail.
+	// A second login source with the same name cannot be created.
 	_, err = s.Create(ctx, CreateLoginSourceOptions{Name: source.Name})
 	wantErr := ErrLoginSourceAlreadyExist{args: errx.Args{"name": source.Name}}
 	assert.Equal(t, wantErr, err)
@@ -218,7 +216,7 @@ func setMockLoginSourceFilesStore(t *testing.T, s *LoginSourcesStore, mock login
 }
 
 func loginSourcesCount(t *testing.T, ctx context.Context, s *LoginSourcesStore) {
-	// Create two login sources, one in database and one as source file.
+	// One login source is in the database, and two are source files.
 	_, err := s.Create(ctx,
 		CreateLoginSourceOptions{
 			Type:      auth.PAM,
@@ -254,7 +252,6 @@ func loginSourcesDeleteByID(t *testing.T, ctx context.Context, s *LoginSourcesSt
 		)
 		require.NoError(t, err)
 
-		// Create a user that uses this login source
 		_, err = newUsersStore(s.db).Create(ctx, "alice", "",
 			CreateUserOptions{
 				LoginSource: source.ID,
@@ -262,7 +259,7 @@ func loginSourcesDeleteByID(t *testing.T, ctx context.Context, s *LoginSourcesSt
 		)
 		require.NoError(t, err)
 
-		// Delete the login source will result in error
+		// A login source that a user uses cannot be deleted.
 		err = s.DeleteByID(ctx, source.ID)
 		wantErr := ErrLoginSourceInUse{args: errx.Args{"id": source.ID}}
 		assert.Equal(t, wantErr, err)
@@ -274,7 +271,6 @@ func loginSourcesDeleteByID(t *testing.T, ctx context.Context, s *LoginSourcesSt
 	})
 	setMockLoginSourceFilesStore(t, s, mock)
 
-	// Create a login source with name "Corp PAM2"
 	source, err := s.Create(ctx,
 		CreateLoginSourceOptions{
 			Type:      auth.PAM,
@@ -288,19 +284,16 @@ func loginSourcesDeleteByID(t *testing.T, ctx context.Context, s *LoginSourcesSt
 	)
 	require.NoError(t, err)
 
-	// Delete a non-existent ID is noop
+	// Deleting a non-existent ID is a no-op.
 	err = s.DeleteByID(ctx, 9999)
 	require.NoError(t, err)
 
-	// We should be able to get it back
 	_, err = s.GetByID(ctx, source.ID)
 	require.NoError(t, err)
 
-	// Now delete this login source with ID
 	err = s.DeleteByID(ctx, source.ID)
 	require.NoError(t, err)
 
-	// We should get token not found error
 	_, err = s.GetByID(ctx, source.ID)
 	wantErr := ErrLoginSourceNotExist{args: errx.Args{"id": source.ID}}
 	assert.Equal(t, wantErr, err)
@@ -320,7 +313,6 @@ func loginSourcesGetByID(t *testing.T, ctx context.Context, s *LoginSourcesStore
 		ServiceName: "login",
 	}
 
-	// Create a login source with name "Corp PAM"
 	source, err := s.Create(ctx,
 		CreateLoginSourceOptions{
 			Type:      auth.PAM,
@@ -332,12 +324,12 @@ func loginSourcesGetByID(t *testing.T, ctx context.Context, s *LoginSourcesStore
 	)
 	require.NoError(t, err)
 
-	// Get the one in the database and test the read/write hooks
+	// Get the one in the database and test the read/write hooks.
 	source, err = s.GetByID(ctx, source.ID)
 	require.NoError(t, err)
 	assert.Equal(t, expConfig, source.Provider.Config())
 
-	// Get the one in source file store
+	// Get the one in source file store.
 	_, err = s.GetByID(ctx, 101)
 	require.NoError(t, err)
 }
@@ -357,7 +349,7 @@ func loginSourcesList(t *testing.T, ctx context.Context, s *LoginSourcesStore) {
 	})
 	setMockLoginSourceFilesStore(t, s, mock)
 
-	// Create two login sources in database, one activated and the other one not
+	// Create two login sources in database, one activated and the other one not.
 	_, err := s.Create(ctx,
 		CreateLoginSourceOptions{
 			Type: auth.PAM,
@@ -384,12 +376,10 @@ func loginSourcesList(t *testing.T, ctx context.Context, s *LoginSourcesStore) {
 		auth.Removed, "GitHub", true, `{"APIEndpoint":"https://api.github.com/"}`).Error
 	require.NoError(t, err)
 
-	// List all login sources
 	sources, err := s.List(ctx, ListLoginSourceOptions{})
 	require.NoError(t, err)
 	assert.Equal(t, 4, len(sources), "number of sources")
 
-	// Only list activated login sources
 	sources, err = s.List(ctx, ListLoginSourceOptions{OnlyActivated: true})
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(sources), "number of sources")
@@ -411,7 +401,7 @@ func loginSourcesResetNonDefault(t *testing.T, ctx context.Context, s *LoginSour
 	})
 	setMockLoginSourceFilesStore(t, s, mock)
 
-	// Create two login sources both have default on
+	// Create two login sources that both are default.
 	source1, err := s.Create(ctx,
 		CreateLoginSourceOptions{
 			Type:    auth.PAM,
@@ -436,11 +426,9 @@ func loginSourcesResetNonDefault(t *testing.T, ctx context.Context, s *LoginSour
 	)
 	require.NoError(t, err)
 
-	// Set source 1 as default
 	err = s.ResetNonDefault(ctx, source1)
 	require.NoError(t, err)
 
-	// Verify the default state
 	source1, err = s.GetByID(ctx, source1.ID)
 	require.NoError(t, err)
 	assert.True(t, source1.IsDefault)
@@ -452,7 +440,6 @@ func loginSourcesResetNonDefault(t *testing.T, ctx context.Context, s *LoginSour
 
 func loginSourcesSave(t *testing.T, ctx context.Context, s *LoginSourcesStore) {
 	t.Run("save to database", func(t *testing.T) {
-		// Create a login source with name "Corp PAM"
 		source, err := s.Create(ctx,
 			CreateLoginSourceOptions{
 				Type:      auth.PAM,

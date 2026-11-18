@@ -55,7 +55,7 @@ func (r *apiRepository) IsWriter() bool {
 	return r.AccessMode >= database.AccessModeWrite
 }
 
-// HasAccess returns true if the current user has at least read access for this repository
+// HasAccess returns true if the current user has at least read access for this repository.
 func (r *apiRepository) HasAccess() bool {
 	return r.AccessMode >= database.AccessModeRead
 }
@@ -76,7 +76,7 @@ type apiContext struct {
 	IsBasicAuth bool
 	IsTokenAuth bool
 
-	// BaseURL is the base URL of API v1 endpoints, e.g. https://try.gogs.io/api/v1
+	// BaseURL is the base URL of API v1 endpoints, e.g., https://try.gogs.io/api/v1.
 	BaseURL string
 	// Link is the current request path without the trailing slash.
 	Link string
@@ -197,9 +197,8 @@ func (c *apiContext) Errorf(err error, format string, args ...any) {
 	c.Error(err, fmt.Sprintf(format, args...))
 }
 
-// NotFoundOrError use error check function to determine if the error
-// is about not found. It responses with 404 status code for not found error,
-// or error context description for logging purpose of 500 server error.
+// NotFoundOrError responds with 404 when the error satisfies errx.IsNotFound.
+// Otherwise, it responds with 500 and logs the error with msg as its context.
 func (c *apiContext) NotFoundOrError(err error, msg string) {
 	if errx.IsNotFound(err) {
 		c.NotFound()

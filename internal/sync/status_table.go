@@ -4,7 +4,7 @@ import (
 	"sync"
 )
 
-// StatusTable is a table maintains true/false values.
+// StatusTable is a table that maintains true/false values.
 //
 // This table is particularly useful for un/marking and checking values
 // in different goroutines.

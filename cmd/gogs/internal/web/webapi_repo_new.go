@@ -21,8 +21,8 @@ import (
 var errRepoOwnerNotAllowed = errors.New("not allowed to create repositories for this owner")
 
 // repoOwner returns the user or organization that a repository is created
-// for. Like the server-rendered pages, it is the viewer when ownerID is zero,
-// their own ID or no user, and otherwise an organization they own. Site admins
+// for. It is the viewer when ownerID is zero, their own ID or no user, and
+// otherwise an organization they own. Site admins
 // may use any organization.
 func repoOwner(ctx context.Context, viewer *database.User, ownerID int64) (*database.User, error) {
 	if ownerID == 0 || ownerID == viewer.ID {

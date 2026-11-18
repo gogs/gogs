@@ -158,9 +158,9 @@ func frontMatterDelimiter(b []byte) int {
 
 // frontMatter renders the front matter n, which starts the document: a mapping
 // as a table with a row for each key and its value, and invalid YAML as a code
-// block of n. The HTML goes to the output directly,
-// escaped as the sanitizer escapes text, so that post-processing and
-// sanitizing skip it, see Result.FrontMatterSize.
+// block of n. The HTML goes to the output directly, escaped as the sanitizer
+// escapes text, so that post-processing and sanitizing skip it, see
+// Result.FrontMatterSize.
 func (r *renderer) frontMatter(n *node) {
 	out := r.plain[:0]
 	if v := &r.p.frontMatter; v.kind == frontMatterMapping {

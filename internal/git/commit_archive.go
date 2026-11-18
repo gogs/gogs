@@ -12,7 +12,7 @@ import (
 // ArchiveFormat is the format of an archive.
 type ArchiveFormat string
 
-// A list of formats can be created by Git for an archive.
+// A list of formats that Git can create an archive in.
 const (
 	ArchiveZip   ArchiveFormat = "zip"
 	ArchiveTarGz ArchiveFormat = "tar.gz"

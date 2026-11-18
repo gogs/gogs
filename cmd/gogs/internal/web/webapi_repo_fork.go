@@ -15,8 +15,8 @@ import (
 
 var errForkBaseNotFound = errors.New("repository not found")
 
-// forkBaseRepo returns the repository to fork. Like the server-rendered page,
-// repositories that are empty or that the viewer cannot read are not found.
+// forkBaseRepo returns the repository to fork. Repositories that are empty or
+// that the viewer cannot read are not found.
 func forkBaseRepo(ctx context.Context, logger *logx.Logger, viewer *database.User, id int64) (*database.Repository, error) {
 	repos := database.Handle.Repositories()
 	repo, err := repos.GetByID(ctx, id)

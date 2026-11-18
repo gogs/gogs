@@ -90,7 +90,6 @@ func NewConnection(logger *logx.Logger, logQueries bool) (*gorm.DB, error) {
 		return nil, errors.Wrap(err, "load login source files")
 	}
 
-	// Initialize the database handle.
 	Handle = &DB{db: db, logger: logger}
 	return db, nil
 }

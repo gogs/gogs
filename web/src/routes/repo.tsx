@@ -96,10 +96,10 @@ import {
 import { RepoWiki, RepoWikiEditor, RepoWikiPages } from "@/pages/repo/Wiki";
 import { wikiPageName } from "@/pages/repo/Wiki.path";
 
-// Match the legacy server-side route constraint (see `web.go` near the
-// `/commit/:sha([a-f0-9]{7,64})$` declaration). The server enforces the same
-// shape for SEO and to skip the SPA shell for malformed paths; this client
-// check short-circuits the loader so we render 404 without a wasted fetch.
+// Match the shape of the commit IDs that the web API takes (see the
+// `/commit/{sha: /[0-9a-f]{7,64}/}` route in `webapi.go`). This client check
+// short-circuits the loader, so a malformed path renders 404 without a wasted
+// fetch.
 const SHA_RE = /^[a-f0-9]{7,64}$/;
 const COMPARE_RANGE_RE = /^([a-f0-9]{40}|[a-f0-9]{64})\.\.\.([a-f0-9]{40}|[a-f0-9]{64})$/;
 
@@ -607,7 +607,7 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     path: "/$owner/$repo/milestones/new",
     loader: ({ params, context }) =>
       loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, async () => {
-        // Like the server-rendered page, only writers find it.
+        // Only writers find it.
         const { viewerCanWrite } = await fetchRepoMilestones(params.owner, params.repo, false);
         if (!viewerCanWrite) {
           // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.

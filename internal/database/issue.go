@@ -41,7 +41,7 @@ type Issue struct {
 	Assignee        *User `xorm:"-" json:"-" gorm:"-"`
 	IsClosed        bool
 	IsRead          bool         `xorm:"-" json:"-" gorm:"-"`
-	IsPull          bool         // Indicates whether is a pull request or not.
+	IsPull          bool         // Indicates whether it is a pull request or not.
 	PullRequest     *PullRequest `xorm:"-" json:"-" gorm:"-"`
 	NumComments     int
 
@@ -165,8 +165,9 @@ func (issue *Issue) State() apiv1types.IssueStateType {
 	return apiv1types.IssueStateOpen
 }
 
-// This method assumes some fields assigned with values:
-// Required - Poster, Labels,
+// APIFormat returns the API format of the issue. It assumes some fields have
+// been assigned with values:
+// Required - Poster, Labels
 // Optional - Milestone, Assignee, PullRequest
 func (issue *Issue) APIFormat() *apiv1types.Issue {
 	apiLabels := make([]*apiv1types.IssueLabel, len(issue.Labels))
@@ -368,7 +369,7 @@ func (issue *Issue) ClearLabels(logger *logx.Logger, doer *User) (err error) {
 	return nil
 }
 
-// ReplaceLabels removes all current labels and add new labels to the issue.
+// ReplaceLabels removes all current labels and adds new labels to the issue.
 func (issue *Issue) ReplaceLabels(labels []*Label) (err error) {
 	sess := x.NewSession()
 	defer sess.Close()
@@ -414,7 +415,7 @@ func UpdateIssueCols(issue *Issue, cols ...string) error {
 }
 
 func (issue *Issue) changeStatus(logger *logx.Logger, e *xorm.Session, doer *User, repo *Repository, isClosed bool) (err error) {
-	// Nothing should be performed if current status is same as target status
+	// Nothing should be performed if current status is same as target status.
 	if issue.IsClosed == isClosed {
 		return nil
 	}
@@ -426,7 +427,7 @@ func (issue *Issue) changeStatus(logger *logx.Logger, e *xorm.Session, doer *Use
 		return err
 	}
 
-	// Update issue count of labels
+	// Update issue count of labels.
 	if err = issue.getLabels(e); err != nil {
 		return err
 	}
@@ -441,12 +442,11 @@ func (issue *Issue) changeStatus(logger *logx.Logger, e *xorm.Session, doer *Use
 		}
 	}
 
-	// Update issue count of milestone
+	// Update issue count of milestone.
 	if err = changeMilestoneIssueStats(e, issue); err != nil {
 		return err
 	}
 
-	// New action comment
 	if _, err = createStatusComment(logger, e, doer, repo, issue); err != nil {
 		return err
 	}
@@ -602,7 +602,7 @@ func (issue *Issue) ChangeAssignee(logger *logx.Logger, doer *User, assigneeID i
 		return nil
 	}
 
-	// Error not nil here means user does not exist, which is remove assignee.
+	// Error not nil here means user does not exist, i.e., the assignee is removed.
 	isRemoveAssignee := err != nil
 	if issue.IsPull {
 		issue.PullRequest.Issue = issue
@@ -678,7 +678,7 @@ func newIssue(e *xorm.Session, opts NewIssueOptions) (err error) {
 			opts.Issue.AssigneeID = assignee.ID
 			opts.Issue.Assignee = assignee
 		} else {
-			// The assignee does not exist, drop it
+			// The assignee does not exist, drop it.
 			opts.Issue.AssigneeID = 0
 		}
 	}
@@ -698,7 +698,7 @@ func newIssue(e *xorm.Session, opts NewIssueOptions) (err error) {
 	}
 
 	if len(opts.LableIDs) > 0 {
-		// During the session, SQLite3 driver cannot handle retrieve objects after update something.
+		// During the session, SQLite3 driver cannot handle retrieving objects after updating something.
 		// So we have to get all needed labels first.
 		labels := make([]*Label, 0, len(opts.LableIDs))
 		if err = e.In("id", opts.LableIDs).Find(&labels); err != nil {
@@ -807,7 +807,7 @@ func (ErrIssueNotExist) NotFound() bool {
 	return true
 }
 
-// GetIssueByRef returns an Issue specified by a GFM reference, e.g. owner/repo#123.
+// GetIssueByRef returns an Issue specified by a GFM reference, e.g., owner/repo#123.
 func GetIssueByRef(ref string) (*Issue, error) {
 	before, after, ok := strings.Cut(ref, "#")
 	if !ok {
@@ -1105,7 +1105,7 @@ func SuggestIssues(opts SuggestIssuesOptions) ([]*Issue, error) {
 	return issues, nil
 }
 
-// GetParticipantsByIssueID returns all users who are participated in comments of an issue.
+// GetParticipantsByIssueID returns all users who participated in comments of an issue.
 func GetParticipantsByIssueID(e Engine, issueID int64) ([]*User, error) {
 	userIDs := make([]int64, 0, 5)
 	if err := e.Table("comment").Cols("poster_id").
@@ -1152,8 +1152,8 @@ func newIssueUsers(e *xorm.Session, repo *Repository, issue *Issue) error {
 	// Poster can be anyone, append later if not one of assignees.
 	isPosterAssignee := false
 
-	// Leave a seat for poster itself to append later, but if poster is one of assignee
-	// and just waste 1 unit is cheaper than re-allocate memory once.
+	// Leave a seat for poster itself to append later. If poster is one of the
+	// assignees, wasting 1 unit is cheaper than re-allocating memory once.
 	issueUsers := make([]*IssueUser, 0, len(assignees)+1)
 	for _, assignee := range assignees {
 		isPoster := assignee.ID == issue.PosterID
@@ -1198,7 +1198,8 @@ func NewIssueUsers(repo *Repository, issue *Issue) (err error) {
 	return sess.Commit()
 }
 
-// PairsContains returns true when pairs list contains given issue.
+// PairsContains returns the index of the pair of given issue and user in the
+// pairs list, or -1 when the list does not contain it.
 func PairsContains(ius []*IssueUser, issueID, uid int64) int {
 	for i := range ius {
 		if ius[i].IssueID == issueID &&

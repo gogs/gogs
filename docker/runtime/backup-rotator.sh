@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
-# This is very simple, yet effective backup rotation script.
-# Using find command, all files that are older than BACKUP_RETENTION_DAYS are accumulated and deleted using rm.
+# Deletes the backup archives under BACKUP_PATH that match the find expression derived from
+# BACKUP_RETENTION, which defaults to the ones older than 7 days.
 main() {
 	BACKUP_PATH="${1:-}"
 	FIND_EXPRESSION="${2:-mtime +7}"

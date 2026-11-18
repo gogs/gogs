@@ -8,17 +8,16 @@ linters:
   settings:
     govet:
       disable:
-        # printf: non-constant format string in call to fmt.Errorf (govet)
-        # showing up since golangci-lint version 1.60.1
+        # printf reports "non-constant format string" for calls such as fmt.Errorf(msg).
         - printf
     staticcheck:
       checks:
         - all
         - "-SA1019" # This project is under active refactoring and not all code is up to date.
-        - "-QF1001" # I'm a math noob
-        - "-ST1016" # Some legit code uses this pattern
+        - "-QF1001" # Applying De Morgan's law does not always make a condition easier to read.
+        - "-ST1016" # Some code uses different receiver names for methods of the same type.
     nakedret:
-      max-func-lines: 0 # Disallow any unnamed return statement
+      max-func-lines: 0 # Disallow naked returns in functions of any length.
   exclusions:
     generated: lax
     presets:

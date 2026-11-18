@@ -7,7 +7,7 @@ import (
 )
 
 // Compare returns true if the comparison is true for given versions. It returns false if
-// comparison is false, or failed to parse one or both versions as Semantic Versions.
+// the comparison is false, or it failed to parse one or both versions as Semantic Versions.
 //
 // See https://github.com/Masterminds/semver#basic-comparisons for supported comparisons.
 func Compare(version1, comparison, version2 string) bool {

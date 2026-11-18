@@ -76,7 +76,7 @@ func generateTimeLimitedUserCode(purpose codePurpose, userID int64, email, name,
 		nil,
 	)
 
-	// Add tailing hex username
+	// Add trailing hex username.
 	code += hex.EncodeToString([]byte(strings.ToLower(name)))
 	return code
 }

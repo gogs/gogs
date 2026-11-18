@@ -15,7 +15,7 @@ var ErrExecTimeout = errors.New("process execution timeout")
 
 const defaultTimeout = 60 * time.Second
 
-// Process represents a running process calls shell command.
+// Process represents a running process of a shell command.
 type Process struct {
 	PID         int64
 	Description string
@@ -26,7 +26,8 @@ type Process struct {
 type pidCounter struct {
 	sync.Mutex
 
-	// The current number of pid, initial is 0, and increase 1 every time it's been used.
+	// The last PID handed out. It starts at 0 and is incremented every time a
+	// new PID is needed.
 	pid int64
 }
 
@@ -70,7 +71,8 @@ func Remove(pid int64) bool {
 	return false
 }
 
-// Exec starts executing a shell command in given path, it tracks corresponding process and timeout.
+// ExecDir executes a shell command in the given directory and tracks the
+// corresponding process and timeout. A timeout of -1 uses the default timeout.
 func ExecDir(logger *logx.Logger, timeout time.Duration, dir, desc, cmdName string, args ...string) (string, string, error) {
 	return ExecDirEnv(logger, timeout, dir, nil, desc, cmdName, args...)
 }
@@ -118,7 +120,8 @@ func ExecDirEnv(logger *logx.Logger, timeout time.Duration, dir string, env []st
 	return bufOut.String(), bufErr.String(), err
 }
 
-// Exec starts executing a shell command, it tracks corresponding process and timeout.
+// ExecTimeout executes a shell command and tracks the corresponding process and
+// timeout.
 func ExecTimeout(logger *logx.Logger, timeout time.Duration, desc, cmdName string, args ...string) (string, string, error) {
 	return ExecDir(logger, timeout, "", desc, cmdName, args...)
 }
@@ -130,7 +133,8 @@ func ExecTimeoutEnv(logger *logx.Logger, timeout time.Duration, env []string, de
 	return ExecDirEnv(logger, timeout, "", env, desc, cmdName, args...)
 }
 
-// Exec starts executing a shell command, it tracks corresponding its process and use default timeout.
+// Exec executes a shell command and tracks the corresponding process using the
+// default timeout.
 func Exec(logger *logx.Logger, desc, cmdName string, args ...string) (string, string, error) {
 	return ExecDir(logger, -1, "", desc, cmdName, args...)
 }

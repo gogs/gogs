@@ -8,30 +8,6 @@ import (
 	"unknwon.dev/ini/v2"
 )
 
-func Test_i18n_DateLang(t *testing.T) {
-	c := &i18nConf{
-		dateLangs: map[string]string{
-			"en-US": "en",
-			"zh-CN": "zh",
-		},
-	}
-
-	tests := []struct {
-		lang string
-		want string
-	}{
-		{lang: "en-US", want: "en"},
-		{lang: "zh-CN", want: "zh"},
-
-		{lang: "jp-JP", want: "en"},
-	}
-	for _, test := range tests {
-		t.Run("", func(t *testing.T) {
-			assert.Equal(t, test.want, c.DateLang(test.lang))
-		})
-	}
-}
-
 func TestCheckInvalidOptions(t *testing.T) {
 	cfg := ini.Empty()
 	_, _ = cfg.Section("mailer").NewKey("ENABLED", "true")
@@ -68,6 +44,7 @@ func TestCheckInvalidOptions(t *testing.T) {
 		"option [server] ROOT_URL is invalid",
 		"option [server] LANDING_PAGE is invalid",
 		"option [server] NONEXISTENT_OPTION is invalid",
+		"option [other] SHOW_FOOTER_TEMPLATE_LOAD_TIME is invalid",
 	}
 
 	gotWarnings := checkInvalidOptions(cfg)

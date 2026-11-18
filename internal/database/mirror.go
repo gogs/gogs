@@ -46,7 +46,7 @@ type Mirror struct {
 	Interval    int         // Hour.
 	EnablePrune bool        `xorm:"NOT NULL DEFAULT true"`
 
-	// Last and next sync time of Git data from upstream
+	// Last and next sync time of Git data from upstream.
 	LastSync     time.Time `xorm:"-" json:"-" gorm:"-"`
 	LastSyncUnix int64     `xorm:"updated_unix" gorm:"column:updated_unix"`
 	NextSync     time.Time `xorm:"-" json:"-" gorm:"-"`
@@ -97,9 +97,10 @@ func (m *Mirror) readAddress(logger *logx.Logger) {
 	m.address = cfg.Subsection("remote", "origin").Key("url").Value()
 }
 
-// HandleMirrorCredentials replaces user credentials from HTTP/HTTPS URL
-// with placeholder <credentials>.
-// It returns original string if protocol is not HTTP/HTTPS.
+// HandleMirrorCredentials replaces user credentials in the URL with the
+// placeholder <credentials> when mosaics is true, and removes them otherwise.
+// It returns the original string if the URL has no scheme or no "@".
+//
 // TODO(unknwon): Use url.Parse.
 func HandleMirrorCredentials(url string, mosaics bool) string {
 	i := strings.Index(url, "@")
@@ -161,7 +162,7 @@ func (m *Mirror) SaveAddress(ctx context.Context, addr string) error {
 
 const gitShortEmptyID = "0000000"
 
-// mirrorSyncResult contains information of a updated reference.
+// mirrorSyncResult contains information of an updated reference.
 // If the oldCommitID is "0000000", it means a new reference, the value of newCommitID is empty.
 // If the newCommitID is "0000000", it means the reference is deleted, the value of oldCommitID is empty.
 type mirrorSyncResult struct {
@@ -175,7 +176,7 @@ func parseRemoteUpdateOutput(logger *logx.Logger, output string) []*mirrorSyncRe
 	results := make([]*mirrorSyncResult, 0, 3)
 	lines := strings.Split(output, "\n")
 	for i := range lines {
-		// Make sure reference name is presented before continue
+		// Make sure reference name is present before continuing.
 		idx := strings.Index(lines[i], "-> ")
 		if idx == -1 {
 			continue
@@ -304,8 +305,8 @@ func (m *Mirror) runSync(logger *logx.Logger) ([]*mirrorSyncResult, bool) {
 		return nil, false
 	}
 
-	// Do a fast-fail testing against on repository URL to ensure it is accessible under
-	// good condition to prevent long blocking on URL resolution without syncing anything.
+	// Do a fast-fail test against the repository URL to ensure it is accessible,
+	// to prevent long blocking on URL resolution without syncing anything.
 	if !isMirrorURLAccessible(time.Minute, rawAddr) {
 		desc := fmt.Sprintf("Source URL of mirror repository '%s' is not accessible: %s", m.Repo.FullName(), m.MosaicsAddress())
 		if err := Handle.Notices().Create(context.TODO(), NoticeTypeRepository, desc); err != nil {
@@ -332,7 +333,7 @@ func (m *Mirror) runSync(logger *logx.Logger) ([]*mirrorSyncResult, bool) {
 	}
 
 	if m.Repo.HasWiki() {
-		// Even if wiki sync failed, we still want results from the main repository
+		// Even if wiki sync failed, we still want results from the main repository.
 		if _, err := mirrorRemoteUpdate(timeout, wikiPath, true); err != nil {
 			logger.Error("Failed to update mirror wiki repository", "wikiPath", wikiPath, "error", err)
 			if err = Handle.Notices().Create(
@@ -403,6 +404,7 @@ func MirrorUpdate(logger *logx.Logger) {
 }
 
 // SyncMirrors checks and syncs mirrors.
+//
 // TODO: sync more mirrors at same time.
 func SyncMirrors(logger *logx.Logger) {
 	ctx := context.Background()
@@ -469,7 +471,7 @@ func SyncMirrors(logger *logx.Logger) {
 		}
 
 		for _, result := range results {
-			// Discard GitHub pull requests, i.e. refs/pull/*
+			// Discard GitHub pull requests, i.e., refs/pull/*.
 			if strings.HasPrefix(result.refName, "refs/pull/") {
 				continue
 			}

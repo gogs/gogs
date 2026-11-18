@@ -55,7 +55,7 @@ func (s *OrganizationsStore) List(ctx context.Context, opts ListOrgsOptions) ([]
 
 // SearchByName returns a list of organizations whose username or full name
 // matches the given keyword case-insensitively. Results are paginated by given
-// page and page size, and sorted by the given order (e.g. "id DESC"). A total
+// page and page size, and sorted by the given order (e.g., "id DESC"). A total
 // count of all results is also returned. If the order is not given, it's up to
 // the database to decide.
 func (s *OrganizationsStore) SearchByName(ctx context.Context, keyword string, page, pageSize int, orderBy string) ([]*Organization, int64, error) {

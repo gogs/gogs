@@ -380,8 +380,6 @@ func patchRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, vie
 	if resp := textFieldError(l, "title", "repo.release.title", req.Title, 255); resp != nil {
 		return http.StatusBadRequest, resp, nil
 	}
-	// The files already attached to the release stay unless left out, the
-	// others must be new.
 	// The editor sends the downloads it keeps and the new files. The files the
 	// note no longer links to and the downloads the editor removed are deleted
 	// rather than left without a release, and the others stay. Files the note

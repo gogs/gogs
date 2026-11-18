@@ -117,10 +117,10 @@ func shortenAutoLink(link []byte, urlPrefix string) ([]byte, bool) {
 		fullRepoURL := conf.Server.ExternalURL + strings.TrimPrefix(urlPrefix, "/")
 		html := append([]byte(`<a href="`), dariomark.AppendEscaped(nil, m)...)
 		if bytes.HasPrefix(m, []byte(fullRepoURL)) {
-			// Use a short issue reference if the URL refers to this repository
+			// Use a short issue reference if the URL refers to this repository.
 			html = append(html, `">#`...)
 		} else {
-			// Use a cross-repository issue reference if the URL refers to a different repository
+			// Use a cross-repository issue reference if the URL refers to a different repository.
 			if i-1 < len(conf.Server.ExternalURL) {
 				// There is no repository path, e.g., "/issues/1".
 				return nil, false

@@ -34,8 +34,7 @@ type Fields = Record<string, string | null>;
 type Shared = Pick<RepoCreateForm, "ownerID" | "name" | "description" | "private" | "unlisted">;
 
 // useNewRepoMutation submits a new repository form, focuses the first field
-// the server rejects, and opens the repository once it exists. The repository
-// pages are still served by the server.
+// the server rejects, and opens the repository once it exists.
 function useNewRepoMutation(
   submit: () => Promise<{ owner: string; name: string }>,
   fieldOrder: string[],

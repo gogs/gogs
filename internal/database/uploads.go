@@ -16,14 +16,14 @@ import (
 	"gogs.io/gogs/internal/pathx"
 )
 
-// Upload represent a uploaded file to a repo to be deleted when moved
+// Upload represents an uploaded file to a repo to be deleted when moved.
 type Upload struct {
 	ID   int64
 	UUID string `gorm:"size:40;uniqueIndex:UQE_upload_uuid"`
 	Name string `gorm:"size:255"`
 }
 
-// UploadLocalPath returns where uploads is stored in local file system based on given UUID.
+// UploadLocalPath returns where the upload is stored in local file system based on given UUID.
 func UploadLocalPath(uuid string) string {
 	return path.Join(conf.Repository.Upload.TempPath, uuid[0:1], uuid[1:2], uuid)
 }

@@ -76,7 +76,7 @@ func TestAddIndexToActionUserID(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, db.Migrator().HasIndex(&actionV21{}, "UserID"))
 
-	// Re-run should be skipped
+	// Re-run should be skipped.
 	err = addIndexToActionUserID(db)
 	require.Equal(t, errMigrationSkipped, err)
 }

@@ -54,7 +54,7 @@ function Tree({
     paths,
     icons: ICON_OPTIONS,
     initialExpansion: "closed",
-    // A directory the page shows is open too; a file in the list is ignored.
+    // A directory the page shows is open too. A file in the list is ignored.
     initialExpandedPaths: path ? [...ancestorsOf(path), path] : [],
     initialSelectedPaths: path ? [path] : [],
     flattenEmptyDirectories: true,

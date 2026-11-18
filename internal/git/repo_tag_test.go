@@ -45,7 +45,7 @@ func TestRepository_Tag(t *testing.T) {
 
 func TestRepository_Tags(t *testing.T) {
 	ctx := context.Background()
-	// Make sure it does not blow up
+	// Make sure it does not blow up.
 	tags, err := testrepo.Tags(ctx)
 	if err != nil {
 		t.Fatal(err)

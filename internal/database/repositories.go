@@ -170,7 +170,7 @@ func (s *RepositoriesStore) Create(ctx context.Context, ownerID int64, opts Crea
 
 // GetByCollaboratorID returns a list of repositories that the given
 // collaborator has access to. Results are limited to the given limit and sorted
-// by the given order (e.g. "updated_unix DESC"). Repositories that are owned
+// by the given order (e.g., "updated_unix DESC"). Repositories that are owned
 // directly by the given collaborator are not included.
 func (s *RepositoriesStore) GetByCollaboratorID(ctx context.Context, collaboratorID int64, limit int, orderBy string) ([]*Repository, error) {
 	/*
@@ -472,7 +472,7 @@ func (s *RepositoriesStore) Watch(ctx context.Context, userID, repoID int64) err
 	})
 }
 
-// HasForkedBy returns true if the given repository has forked by the given user.
+// HasForkedBy returns true if the given repository has been forked by the given user.
 func (s *RepositoriesStore) HasForkedBy(ctx context.Context, repoID, userID int64) bool {
 	var count int64
 	s.db.WithContext(ctx).Model(new(Repository)).Where("owner_id = ? AND fork_id = ?", userID, repoID).Count(&count)

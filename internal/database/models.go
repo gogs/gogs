@@ -107,7 +107,7 @@ func getEngine() (*xorm.Engine, error) {
 	switch conf.Database.Type {
 	case "mysql":
 		conf.UseMySQL = true
-		if conf.Database.Host[0] == '/' { // looks like a unix socket
+		if conf.Database.Host[0] == '/' { // Looks like a Unix socket.
 			connStr = fmt.Sprintf("%s:%s@unix(%s)/%s%scharset=utf8mb4&parseTime=true",
 				conf.Database.User, conf.Database.Password, conf.Database.Host, conf.Database.Name, Param)
 		} else {

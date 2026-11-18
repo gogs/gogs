@@ -143,7 +143,7 @@ func actionsCommitRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
 	now := time.Unix(1588568886, 0).UTC()
 
 	conf.SetMockSSH(t, conf.SSHOpts{})
-	// NOTE: We set a noop mock here to avoid data race with other tests that writes
+	// NOTE: We set a noop mock here to avoid data race with other tests that write
 	// to the mock repository because this function holds a lock.
 	conf.SetMockRepository(t, conf.RepositoryOpts{})
 	conf.SetMockUI(t, conf.UIOpts{
@@ -586,7 +586,7 @@ func actionsMirrorSyncDelete(t *testing.T, ctx context.Context, s *ActionsStore)
 }
 
 func actionsMirrorSyncPush(t *testing.T, ctx context.Context, s *ActionsStore) {
-	// NOTE: We set a noop mock here to avoid data race with other tests that writes
+	// NOTE: We set a noop mock here to avoid data race with other tests that write
 	// to the mock repository because this function holds a lock.
 	conf.SetMockRepository(t, conf.RepositoryOpts{})
 	conf.SetMockUI(t, conf.UIOpts{
@@ -741,7 +741,7 @@ func actionsNewRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
 }
 
 func actionsPushTag(t *testing.T, ctx context.Context, s *ActionsStore) {
-	// NOTE: We set a noop mock here to avoid data race with other tests that writes
+	// NOTE: We set a noop mock here to avoid data race with other tests that write
 	// to the mock server because this function holds a lock.
 	conf.SetMockServer(t, conf.ServerOpts{})
 	conf.SetMockSSH(t, conf.SSHOpts{})

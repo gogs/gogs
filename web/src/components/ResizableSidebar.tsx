@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 interface Props {
   children: ReactNode;
-  /** Width in pixels. Resets to this on every mount; not persisted. */
+  /** Width in pixels. Resets to this on every mount, since it is not persisted. */
   defaultWidth?: number;
   minWidth?: number;
   maxWidth?: number;

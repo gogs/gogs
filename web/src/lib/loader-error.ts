@@ -5,7 +5,7 @@ import { webContext } from "@/lib/context";
 // LoaderResponseError carries enough of a failed loader fetch for the route
 // error component to render a useful message: the HTTP status, the parsed
 // `error` field when the body is JSON-shaped like the webapi 4xx/5xx
-// responses, and the raw body as a fallback for non-JSON responses (e.g. a
+// responses, and the raw body as a fallback for non-JSON responses (e.g., a
 // reverse proxy error page).
 export class LoaderResponseError extends Error {
   status: number;
@@ -31,7 +31,7 @@ export async function loaderResponseError(res: Response): Promise<LoaderResponse
         errorField = parsed.error;
       }
     } catch {
-      // Body is not JSON; fall back to raw body in ServerError.
+      // Body is not JSON. ServerError falls back to the raw body.
     }
   }
   return new LoaderResponseError(res.status, body, errorField);

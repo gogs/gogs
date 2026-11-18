@@ -5,8 +5,7 @@ import { useTranslation } from "react-i18next";
 
 import { cn } from "@/lib/utils";
 
-// Number of page links shown around the current page, matching the legacy
-// server-rendered pagination (`paginater.New(..., 5)`).
+// Number of page links shown around the current page.
 const WINDOW_SIZE = 5;
 
 // pageWindow returns the page numbers to link, with `null` marking a gap

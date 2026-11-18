@@ -36,7 +36,7 @@ func TestInit(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			// Make sure it does not blow up
+			// Make sure it does not blow up.
 			path := tempPath()
 			defer func() {
 				_ = os.RemoveAll(path)
@@ -75,7 +75,7 @@ func TestClone(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			// Make sure it does not blow up
+			// Make sure it does not blow up.
 			path := tempPath()
 			defer func() {
 				_ = os.RemoveAll(path)
@@ -132,7 +132,7 @@ func TestRepository_Push(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			// Make sure it does not blow up
+			// Make sure it does not blow up.
 			if err := r.Push(ctx, test.remote, test.branch, test.opt); err != nil {
 				t.Fatal(err)
 			}
@@ -230,7 +230,7 @@ func TestRepository_RevParse(t *testing.T) {
 
 func TestRepository_CountObjects(t *testing.T) {
 	ctx := context.Background()
-	// Make sure it does not blow up
+	// Make sure it does not blow up.
 	_, err := testrepo.CountObjects(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -239,7 +239,7 @@ func TestRepository_CountObjects(t *testing.T) {
 
 func TestRepository_Fsck(t *testing.T) {
 	ctx := context.Background()
-	// Make sure it does not blow up
+	// Make sure it does not blow up.
 	err := testrepo.Fsck(ctx, FsckOptions{})
 	if err != nil {
 		t.Fatal(err)

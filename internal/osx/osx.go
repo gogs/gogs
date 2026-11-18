@@ -5,7 +5,7 @@ import (
 	"os/user"
 )
 
-// IsFile returns true if given path exists as a file (i.e. not a directory)
+// IsFile returns true if given path exists as a file (i.e., not a directory)
 // following any symlinks.
 func IsFile(path string) bool {
 	f, e := os.Stat(path)

@@ -11,9 +11,9 @@ export interface FileHeaderMenuProps {
   viewFileHref: string;
   rawFileHref: string;
   historyHref: string;
-  // Edit/Delete only make sense when the diff is anchored to a branch (e.g.
-  // PR diffs). Omit on commit pages, since gogs' editor needs a branch ref
-  // and routing through a SHA returns 404.
+  // Edit/Delete only make sense when the diff is anchored to a branch, since
+  // the editor needs a branch ref and routing through a SHA returns 404.
+  // DiffWorkspace leaves them out.
   editFileHref?: string;
   deleteFileHref?: string;
 }
@@ -104,8 +104,9 @@ export function FileHeaderMenu({
 
 // Pierre's `renderHeaderMetadata` callback returns the node into a slot inside
 // its rendered header. Radix's `asChild` needs the trigger to accept a ref so
-// the popover can attach its trigger refs and ARIA wiring; on React 19 that is
+// the popover can attach its trigger refs and ARIA wiring. On React 19 that is
 // a regular `ref` prop.
+//
 // Pierre's `<diffs-container>` attaches gesture handlers higher up the tree
 // that interpret clicks anywhere inside the file header. Without stopping
 // propagation, clicking the kebab triggers Pierre's header click path,

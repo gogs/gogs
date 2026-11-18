@@ -136,8 +136,8 @@ func (c *client) signIn(u *User) {
 	require.False(c.t, resp.MFA)
 }
 
-// username returns the name of the signed-in user, or an empty string when the
-// client is not signed in.
+// username returns the name of the authenticated user, or an empty string when
+// the client is unauthenticated.
 func (c *client) username() string {
 	c.t.Helper()
 

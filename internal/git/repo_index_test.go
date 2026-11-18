@@ -523,7 +523,7 @@ func TestCheckIndexPath(t *testing.T) {
 		{path: ".git./hooks", wantErr: true},
 		{path: "dir/.git.", wantErr: true},
 
-		// Windows also strips trailing spaces from each path component
+		// Windows also strips trailing spaces from each path component.
 		{path: ".git ", wantErr: true},
 		{path: ".git /hooks/pre-commit", wantErr: true},
 		{path: ".git /hooks", wantErr: true},
@@ -535,7 +535,7 @@ func TestCheckIndexPath(t *testing.T) {
 		{path: ".git .", wantErr: true},
 		{path: ".git. /hooks", wantErr: true},
 
-		// NTFS alternate data streams resolve to the stream owner
+		// NTFS alternate data streams resolve to the stream owner.
 		{path: ".git::$INDEX_ALLOCATION", wantErr: true},
 		{path: ".git::$INDEX_ALLOCATION/hooks/pre-commit", wantErr: true},
 		{path: `.git::$INDEX_ALLOCATION\hooks\pre-commit`, wantErr: true},

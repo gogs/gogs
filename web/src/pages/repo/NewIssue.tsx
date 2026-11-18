@@ -74,8 +74,7 @@ export function RepoNewIssue({
             label={t("repo.issues.new")}
             submitLabel={t("repo.issues.create")}
             title={search.title ?? options.template?.title ?? ""}
-            // Like the server-rendered page, the issue template wins over the
-            // content in the URL.
+            // The issue template wins over the content in the URL.
             content={options.template ? options.template.body : options.content || (search.content ?? "")}
             create={(form) => createRepoIssue(repo.owner, repo.name, form)}
             onCreated={(index) =>

@@ -44,8 +44,8 @@ func (rc *repoAdminContext) viewerCanManage(viewer *database.User, allowSiteAdmi
 }
 
 // withRepoAdmin injects the repoAdminContext of the repository, which only its
-// admins and site admins can see. Like the server-rendered pages, the settings
-// of the repository are not found for others.
+// admins and site admins can see. The settings of the repository are not found
+// for others.
 func withRepoAdmin(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) {
 	w := c.ResponseWriter()
 	if !repoCtx.Viewer.CanAdminister() {
@@ -294,8 +294,7 @@ func putRepoMirror(r *http.Request, logger *logx.Logger, l i18n.Locale, viewer *
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get mirror")
 	}
 
-	// Like the server-rendered page, an interval below an hour leaves the
-	// schedule as it was.
+	// An interval below an hour leaves the schedule as it was.
 	if req.Interval > 0 {
 		mirror.EnablePrune = req.EnablePrune
 		mirror.Interval = req.Interval

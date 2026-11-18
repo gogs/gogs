@@ -8,7 +8,7 @@ import (
 
 var _ errx.NotFound = (*Error)(nil)
 
-// Error is a wrapper of an OS error, which handles not found.
+// Error is a wrapper of an OS error, which reports os.ErrNotExist as not found.
 type Error struct {
 	error
 }

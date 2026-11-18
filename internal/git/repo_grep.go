@@ -45,9 +45,9 @@ type GrepResult struct {
 
 // Grep searches the text files in the tree of the given revision for lines
 // that contain the keyword, ignoring case unless opts.MatchCase is set. The
-// keyword is matched literally, not as a pattern. Binary files are skipped. Results are ordered by path, then
-// by line. The second return value reports whether matching lines were left
-// out because of opts.MaxResults.
+// keyword is matched literally, not as a pattern. Binary files are skipped.
+// Results are ordered by path, then by line. The second return value reports
+// whether matching lines were left out because of opts.MaxResults.
 func (r *Repository) Grep(ctx context.Context, rev, keyword string, opts ...GrepOptions) (_ []*GrepResult, _ bool, err error) {
 	ctx, span := tracer.Start(ctx, "git.Repository.Grep", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.revision", rev)))
 	defer func() { endSpan(span, err) }()

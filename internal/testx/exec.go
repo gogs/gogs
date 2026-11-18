@@ -8,7 +8,8 @@ import (
 	"github.com/cockroachdb/errors"
 )
 
-// Exec executes "go test" on given helper with supplied environment variables.
+// Exec re-runs the current test binary for the given helper test with supplied
+// environment variables.
 // It is useful to mock "os/exec" functions in tests. When succeeded, it returns
 // the result produced by the test helper.
 // The test helper should:
@@ -24,12 +25,11 @@ func Exec(helper string, envs ...string) (string, error) {
 	out, err := cmd.CombinedOutput()
 	str := string(out)
 
-	// The error is quite confusing even when tests passed, so let's check whether
-	// it is passed first.
+	// The error is quite confusing even when tests passed, so check whether it
+	// passed first.
 	if strings.Contains(str, "no tests to run") {
 		return "", errors.New("no tests to run")
 	} else if before, _, ok := strings.Cut(str, "PASS"); ok {
-		// Collect helper result
 		return strings.TrimSpace(before), nil
 	}
 

@@ -400,7 +400,7 @@ func TestRepoSettingsTransfer(t *testing.T) {
 	assert.Equal(t, newOwner.ID, got.OwnerID)
 	assert.DirExists(t, database.RepoPath(newOwner.Name, repo.Name))
 	assert.NoDirExists(t, database.RepoPath(owner.Name, repo.Name))
-	// The new owner stops being a collaborator, the others stay.
+	// The new owner stops being a collaborator, and the others stay.
 	collaborators, err := got.GetCollaborators()
 	require.NoError(t, err)
 	var names []string

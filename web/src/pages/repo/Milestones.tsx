@@ -158,7 +158,6 @@ function MilestoneRow({
   return (
     <li className="flex flex-col gap-3 border-t border-(--color-border) px-4 py-4 md:flex-row md:gap-8">
       <div className="min-w-0 md:flex-1">
-        {/* The issue list is still served by the server-rendered pages. */}
         <a
           href={subUrl(`/${owner}/${name}/issues?state=${state}&milestone=${milestone.id}`)}
           className="text-lg font-semibold wrap-anywhere hover:underline"

@@ -63,7 +63,7 @@ func (r *spanReceiver) serveHTTP(w http.ResponseWriter, req *http.Request) {
 		for _, ss := range rs.ScopeSpans {
 			for _, s := range ss.Spans {
 				// Spans of requests are the ones without a parent in the
-				// server, e.g., rather than spans of Git operations.
+				// server, unlike the spans of Git operations.
 				if len(s.ParentSpanId) == 0 {
 					r.names[s.Name] = true
 				}

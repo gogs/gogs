@@ -42,7 +42,7 @@ func getUserProfile(c *apiContext) {
 		return
 	}
 
-	// Hide user e-mail when API caller isn't signed in.
+	// Hide user e-mail when API caller is unauthenticated.
 	if !c.IsLogged {
 		u.Email = ""
 	}

@@ -11,7 +11,7 @@ import (
 
 var orgModeExtensions = []string{".org"}
 
-// IsOrgModeFile reports whether name looks like a Org-mode file based on its extension.
+// IsOrgModeFile reports whether name looks like an Org-mode file based on its extension.
 func IsOrgModeFile(name string) bool {
 	extension := strings.ToLower(filepath.Ext(name))
 	for _, ext := range orgModeExtensions {

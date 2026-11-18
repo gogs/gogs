@@ -264,7 +264,7 @@ func (t *HookTask) deliver(ctx context.Context, logger *logx.Logger, webhooks *W
 	}
 	defer resp.Body.Close()
 
-	// Status code is 20x can be seen as succeed.
+	// Any 2xx status code counts as a success.
 	t.IsSucceed = resp.StatusCode/100 == 2
 	t.ResponseInfo.Status = resp.StatusCode
 	for k, vals := range resp.Header {
@@ -281,6 +281,7 @@ func (t *HookTask) deliver(ctx context.Context, logger *logx.Logger, webhooks *W
 
 // DeliverHooks delivers the deliveries that have not been made, and then
 // those of each repository that is queued.
+//
 // TODO: shoot more hooks at same time.
 func DeliverHooks(logger *logx.Logger) {
 	ctx := context.Background()
@@ -483,8 +484,8 @@ func (s *WebhooksStore) prepareHookTasks(ctx context.Context, logger *logx.Logge
 	}
 
 	// It's safe to fail when the whole function is called during hook execution
-	// because resource released after exit. Also, there is no process started to
-	// consume this input during hook execution.
+	// because resources are released after exit. Also, there is no process
+	// started to consume this input during hook execution.
 	go HookQueue.Add(repo.ID)
 	logger.Debug("Prepared webhook deliveries", "repoID", repo.ID, "event", event)
 	return nil

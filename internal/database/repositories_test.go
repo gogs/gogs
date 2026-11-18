@@ -281,7 +281,6 @@ func reposTouch(t *testing.T, ctx context.Context, s *RepositoriesStore) {
 	require.NoError(t, err)
 	assert.True(t, got.IsEmpty)
 
-	// Touch it
 	err = s.Touch(ctx, repo.ID)
 	require.NoError(t, err)
 
@@ -320,7 +319,7 @@ func reposWatch(t *testing.T, ctx context.Context, s *RepositoriesStore) {
 	err = s.Watch(ctx, 2, repo1.ID)
 	require.NoError(t, err)
 
-	// It is OK to watch multiple times and just be noop.
+	// It is OK to watch multiple times and just be no-op.
 	err = s.Watch(ctx, 2, repo1.ID)
 	require.NoError(t, err)
 

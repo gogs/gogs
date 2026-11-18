@@ -37,8 +37,8 @@ be skipped and remain unchanged.`,
 	},
 }
 
-// lastSupportedVersionOfFormat returns the last supported version of the backup archive
-// format that is able to import.
+// lastSupportedVersionOfFormat maps each retired backup archive format version
+// to the last Gogs version that is able to import it.
 var lastSupportedVersionOfFormat = map[int]string{}
 
 func runRestore(ctx context.Context, cmd *cli.Command) error {
@@ -51,7 +51,7 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 	}
 	archivePath := path.Join(tmpDir, archiveRootDir)
 
-	// Make sure there was no leftover and also clean up afterwards
+	// Make sure there is no leftover and also clean up afterwards.
 	err := os.RemoveAll(archivePath)
 	if err != nil {
 		logger.FatalContext(ctx, "Failed to clean up previous leftover", "archiveDir", archivePath, "error", err)
@@ -126,7 +126,7 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 		// Data files
 		_ = os.MkdirAll(conf.Server.AppDataPath, os.ModePerm)
 		for _, dir := range backupDataDirs {
-			// Skip if backup archive does not have corresponding data
+			// Skip if the backup archive does not have the corresponding data.
 			srcPath := filepath.Join(archivePath, "data", dir)
 			if !osx.IsDir(srcPath) {
 				continue

@@ -754,7 +754,8 @@ export function DiffWorkspace({
       const rawFileHref = `${repoLink}/raw/${newRef}/${path}`;
       // File history is `/commits/{ref}/{path}`. A commit SHA is a valid ref.
       const historyHref = `${repoLink}/commits/${newRef}/${path}`;
-      // Edit/Delete need a branch ref. A commit SHA 404s in the editor.
+      // The menu leaves out Edit/Delete, which need a branch ref. A commit SHA
+      // 404s in the editor.
       const counts = richById[item.id] ? lineCounts.get(item.id) : undefined;
       return (
         <span className="inline-flex items-center gap-[1ch]">

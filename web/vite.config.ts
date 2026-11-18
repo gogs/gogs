@@ -59,7 +59,7 @@ export default defineConfig({
     // The dev page is served by the Go server (e.g., https://gogs.localhost)
     // which reverse-proxies HTTP to this Vite dev server. That proxy is
     // HTTP-only, so the HMR client's WebSocket can't tunnel through it. Point
-    // HMR's WS directly at the Vite dev port instead, bypassing gogs entirely.
+    // HMR's WS directly at the Vite dev port instead, bypassing Gogs entirely.
     hmr: {
       protocol: "ws",
       host: "localhost",

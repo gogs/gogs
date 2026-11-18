@@ -18,7 +18,7 @@ import (
 
 // NewDB creates a new test database and initializes the given list of tables
 // for the suite. The test database is dropped after testing is completed unless
-// failed.
+// the test failed, in which case it is left intact for inspection.
 func NewDB(t *testing.T, suite string, tables ...any) *gorm.DB {
 	dbType := os.Getenv("GOGS_DATABASE_TYPE")
 
@@ -41,7 +41,6 @@ func NewDB(t *testing.T, suite string, tables ...any) *gorm.DB {
 		sqlDB, err := sql.Open("mysql", dsn)
 		require.NoError(t, err)
 
-		// Set up test database
 		dbName = fmt.Sprintf("gogs-%s-%d", suite, time.Now().Unix())
 		_, err = sqlDB.Exec(fmt.Sprintf("DROP DATABASE IF EXISTS `%s`", dbName))
 		require.NoError(t, err)
@@ -77,7 +76,6 @@ func NewDB(t *testing.T, suite string, tables ...any) *gorm.DB {
 		sqlDB, err := sql.Open("pgx", dsn)
 		require.NoError(t, err)
 
-		// Set up test database
 		dbName = fmt.Sprintf("gogs-%s-%d", suite, time.Now().Unix())
 		_, err = sqlDB.Exec(fmt.Sprintf("DROP DATABASE IF EXISTS %q", dbName))
 		require.NoError(t, err)

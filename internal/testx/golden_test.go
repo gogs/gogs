@@ -37,7 +37,7 @@ func TestUpdate(t *testing.T) {
 }
 
 func TestAssertGolden(t *testing.T) {
-	// Make sure it does not blow up
+	// Make sure it does not blow up.
 	AssertGolden(t, filepath.Join("testdata", "golden"), false, "{\n  \"Message\": \"This is a golden file.\"\n}")
 	AssertGolden(t, filepath.Join("testdata", "golden"), false, []byte("{\n  \"Message\": \"This is a golden file.\"\n}"))
 

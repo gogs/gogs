@@ -196,7 +196,7 @@ type repoCommitsResponse struct {
 
 // getRepoCommits lists the commits of the ref in the route, newest first:
 // those that changed the path after the ref, or those whose messages match
-// the "q" query when the path is "search", like the server-rendered page.
+// the "q" query when the path is "search".
 func getRepoCommits(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoCommitsResponse, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo

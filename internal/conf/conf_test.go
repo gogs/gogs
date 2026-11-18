@@ -51,7 +51,6 @@ func TestInitHelper(_ *testing.T) {
 		{"user", &User},
 		{"session", &Session},
 		{"attachment", &Attachment},
-		{"time", &Time},
 		{"picture", &Picture},
 		{"mirror", &Mirror},
 		{"i18n", &I18n},

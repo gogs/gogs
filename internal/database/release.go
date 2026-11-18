@@ -87,7 +87,8 @@ func (r *Release) LoadAttributes() error {
 	return r.loadAttributes(x)
 }
 
-// This method assumes some fields assigned with values:
+// APIFormat returns the API format of the release. It assumes some fields have
+// been assigned with values:
 // Required - Publisher
 func (r *Release) APIFormat() *apiv1types.RepositoryRelease {
 	return &apiv1types.RepositoryRelease{
@@ -117,7 +118,7 @@ func createTag(ctx context.Context, gitRepo *git.Repository, r *Release) error {
 	// partial change behind.
 	ctx = context.WithoutCancel(ctx)
 
-	// Only actual create when publish.
+	// Only actually create the tag when publishing.
 	if !r.IsDraft {
 		if !gitRepo.HasTag(ctx, r.TagName) {
 			commit, err := gitRepo.BranchCommit(ctx, r.Target)
@@ -194,7 +195,7 @@ func NewRelease(ctx context.Context, logger *logx.Logger, gitRepo *git.Repositor
 		return errors.Newf("commit: %v", err)
 	}
 
-	// Only send webhook when actually published, skip drafts
+	// Only send webhook when actually published, skip drafts.
 	if r.IsDraft {
 		return nil
 	}
@@ -225,7 +226,7 @@ func (ErrReleaseNotExist) NotFound() bool {
 	return true
 }
 
-// GetRelease returns release by given ID.
+// GetRelease returns the release with given tag name in the repository.
 func GetRelease(repoID int64, tagName string) (*Release, error) {
 	isExist, err := IsReleaseExist(repoID, tagName)
 	if err != nil {
@@ -322,7 +323,7 @@ func UpdateRelease(ctx context.Context, logger *logx.Logger, doer *User, gitRepo
 		return errors.Newf("Update: %v", err)
 	}
 
-	// Unlink all current attachments and link back later if still valid
+	// Unlink all current attachments and link back later if still valid.
 	if _, err = sess.Exec("UPDATE attachment SET release_id = 0 WHERE release_id = ?", r.ID); err != nil {
 		return errors.Newf("unlink current attachments: %v", err)
 	}
@@ -356,7 +357,7 @@ func DeleteReleaseOfRepoByID(ctx context.Context, repoID, id int64) error {
 		return errors.Newf("GetReleaseByID: %v", err)
 	}
 
-	// Mark sure the delete operation against same repository.
+	// Make sure the delete operation is against the same repository.
 	if repoID != rel.RepoID {
 		return nil
 	}

@@ -15,7 +15,7 @@ import (
 
 // ℹ️ README: This file contains static values that should only be set at initialization time.
 //
-// ⚠️ WARNING: After changing any options, do not forget to update template of
+// ⚠️ WARNING: After changing any options, do not forget to update the
 // "/admin/config" page as well.
 
 // HasMinWinSvc is whether the application is built with Windows Service support.
@@ -39,7 +39,6 @@ var (
 	Security struct {
 		SecretKey               string
 		LoginRememberDays       int
-		CookieSecure            bool
 		EnableLoginStatusCookie bool
 		LoginStatusCookieName   string
 		LocalNetworkAllowlist   []string `delim:","`
@@ -107,14 +106,6 @@ var (
 		} `ini:"release.attachment"`
 	}
 
-	// Time settings
-	Time struct {
-		Format string
-
-		// Derived from other static values
-		FormatLayout string `ini:"-"` // Actual layout of the Format.
-	}
-
 	// Mirror settings
 	Mirror struct {
 		DefaultInterval int
@@ -178,20 +169,13 @@ var (
 
 	// Git settings
 	Git struct {
-		// ⚠️ WARNING: Should only be set by "internal/db/repo.go".
+		// ⚠️ WARNING: Should only be set by "internal/database/repo.go".
 		Version string `ini:"-"`
 
-		DisableDiffHighlight bool
-		MaxDiffFiles         int      `ini:"MAX_GIT_DIFF_FILES"`
-		MaxDiffLines         int      `ini:"MAX_GIT_DIFF_LINES"`
-		MaxDiffLineChars     int      `ini:"MAX_GIT_DIFF_LINE_CHARACTERS"`
-		GCArgs               []string `ini:"GC_ARGS" delim:" "`
-		Timeout              struct {
+		GCArgs  []string `ini:"GC_ARGS" delim:" "`
+		Timeout struct {
 			Migrate int
 			Mirror  int
-			Clone   int
-			Pull    int
-			Diff    int
 			GC      int `ini:"GC"`
 		} `ini:"git.timeout"`
 	}
@@ -218,11 +202,6 @@ var (
 		SamplesPerRoutePerMinute int
 	}
 
-	// Other settings
-	Other struct {
-		ShowFooterTemplateLoadTime bool
-	}
-
 	// Global setting
 	HasRobotsTxt bool
 )
@@ -236,7 +215,7 @@ type CacheOptions struct {
 var Cache CacheOptions
 
 type AppOpts struct {
-	// ⚠️ WARNING: Should only be set by the main package (i.e. "cmd/gogs/main.go").
+	// ⚠️ WARNING: Should only be set by the main package (i.e., "cmd/gogs/main.go").
 	Version string `ini:"-"`
 
 	BrandName string
@@ -291,7 +270,7 @@ type ServerOpts struct {
 
 	// Derived from other static values
 	URL            *url.URL    `ini:"-"` // Parsed URL object of ExternalURL.
-	Subpath        string      `ini:"-"` // Subpath found the ExternalURL. Should be empty when not found.
+	Subpath        string      `ini:"-"` // Subpath found in the ExternalURL. Should be empty when not found.
 	SubpathDepth   int         `ini:"-"` // The number of slashes found in the Subpath.
 	UnixSocketMode os.FileMode `ini:"-"` // Parsed file mode of UnixSocketPermission.
 }
@@ -388,7 +367,6 @@ type UIOpts struct {
 	ExplorePagingNum   int
 	IssuePagingNum     int
 	FeedMaxCommitNum   int
-	ThemeColorMetaTag  string
 	MaxDisplayFileSize int64
 
 	Admin struct {
@@ -418,18 +396,8 @@ type PictureOpts struct {
 var Picture PictureOpts
 
 type i18nConf struct {
-	Langs     []string          `delim:","`
-	Names     []string          `delim:","`
-	dateLangs map[string]string `ini:"-"`
-}
-
-// DateLang transforms standard language locale name to corresponding value in datetime plugin.
-func (c *i18nConf) DateLang(lang string) string {
-	name, ok := c.dateLangs[lang]
-	if ok {
-		return name
-	}
-	return "en"
+	Langs []string `delim:","`
+	Names []string `delim:","`
 }
 
 // I18n settings
@@ -507,7 +475,7 @@ func checkInvalidOptions(config *ini.File) (warnings []string) {
 }
 
 // HookMode indicates whether program starts as Git server-side hook callback.
-// All operations should be done synchronously to prevent program exits before finishing.
+// All operations should be done synchronously to prevent the program from exiting before finishing.
 //
 // ⚠️ WARNING: Should only be set by "cmd/gogs/serv.go".
 var HookMode bool

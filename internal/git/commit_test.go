@@ -74,7 +74,7 @@ func TestCommit_CommitByPath(t *testing.T) {
 		{
 			id: "2a52e96389d02209b451ae1ddf45d645b42d744c",
 			opt: CommitByRevisionOptions{
-				Path: "", // No path gets back to the commit itself
+				Path: "", // No path gets back to the commit itself.
 			},
 			expCommitID: "2a52e96389d02209b451ae1ddf45d645b42d744c",
 		},
@@ -114,7 +114,7 @@ func commitsToIDs(commits []*Commit) []string {
 
 func TestCommit_CommitsByPage(t *testing.T) {
 	ctx := context.Background()
-	// There are at most 5 commits can be used for pagination before this commit.
+	// At most 5 commits before this commit can be used for pagination.
 	c, err := testrepo.CatFileCommit(ctx, "f5ed01959cffa4758ca0a49bf4c34b138d7eab0a")
 	if err != nil {
 		t.Fatal(err)

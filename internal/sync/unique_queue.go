@@ -4,12 +4,12 @@ import (
 	"fmt"
 )
 
-// UniqueQueue is a queue which guarantees only one instance of same
-// identity is in the line. Instances with same identity will be
-// discarded if there is already one in the line.
+// UniqueQueue is a queue which guarantees only one instance of the same
+// identity is in the line. Instances with the same identity are discarded if
+// there is already one in the line.
 //
-// This queue is particularly useful for preventing duplicated task
-// of same purpose.
+// This queue is particularly useful for preventing duplicated tasks of the
+// same purpose.
 type UniqueQueue struct {
 	table *StatusTable
 	queue chan string
@@ -32,8 +32,7 @@ func (q *UniqueQueue) Queue() <-chan string {
 	return q.queue
 }
 
-// Exist returns true if there is an instance with given identity
-// exists in the queue.
+// Exist returns true if an instance with given identity exists in the queue.
 func (q *UniqueQueue) Exist(id any) bool {
 	return q.table.IsRunning(fmt.Sprintf("%v", id))
 }

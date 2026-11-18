@@ -3,7 +3,6 @@ set -e
 
 BACKUP_PATH="/backup"
 
-# Make sure that required directories exist
 mkdir -p "${BACKUP_PATH}"
 mkdir -p "/etc/crontabs"
 chown git:git /backup
@@ -22,8 +21,8 @@ if [ -z "${BACKUP_RETENTION}" ]; then
 fi
 
 # Parse BACKUP_INTERVAL environment variable and generate appropriate cron expression. Backup cron task will be run as scheduled.
-# Expected format: nu (n - number, u - unit) (eg. 3d means 3 days)
-# Supported units: h - hours, d - days, M - months
+# Expected format: nu (n - number, u - unit), e.g., 3d means 3 days.
+# Supported units: h - hours, d - days, M - months.
 parse_generate_cron_expression() {
 	CRON_EXPR_MINUTES="*"
 	CRON_EXPR_HOURS="*"
@@ -71,8 +70,8 @@ parse_generate_cron_expression() {
 }
 
 # Parse BACKUP_RETENTION environment variable and generate appropriate find command expression.
-# Expected format: nu (n - number, u - unit) (eg. 3d means 3 days)
-# Supported units: m - minutes, d - days
+# Expected format: nu (n - number, u - unit), e.g., 3d means 3 days.
+# Supported units: m - minutes, d - days.
 parse_generate_retention_expression() {
 	FIND_TIME_EXPR='mtime'
 
@@ -116,21 +115,19 @@ add_backup_cronjob() {
 		CRONJOB_EXECUTOR_COUNT=$(grep -c "${CRONJOB_EXECUTOR}" "${CRONTAB_FILE}" || exit 0)
 		if [ "${CRONJOB_EXECUTOR_COUNT}" != "0" ]; then
 			echo "Cron job already exists for ${CRONJOB_EXECUTOR}. Updating existing." 1>&2
-			CRONJOB_TASK=$(echo "{CRONJOB_TASK}" | sed 's/\//\\\//g' )
-			CRONJOB_EXECUTOR=$(echo "{CRONJOB_EXECUTOR}" | sed 's/\//\\\//g' )
+			CRONJOB_TASK=$(echo "${CRONJOB_TASK}" | sed 's/\//\\\//g' )
+			CRONJOB_EXECUTOR=$(echo "${CRONJOB_EXECUTOR}" | sed 's/\//\\\//g' )
 			sed -i "/${CRONJOB_EXECUTOR}/c\\${CRONJOB_TASK}" "${CRONTAB_FILE}"
 			return 0
 		fi
 	fi
 
-	# Finally append new line with cron task expression
 	echo "${CRONJOB_TASK}" >>"${CRONTAB_FILE}"
 }
 
 CRONTAB_USER=$(awk -v val="${PUID}" -F ":" '$3==val{print $1}' /etc/passwd)
 
-# Up to this point, it was desirable that interpreter handles the command errors and halts execution upon any error.
-# From now, we handle the errors our self.
+# From here on, errors are handled explicitly instead of halting on the first one.
 set +e
 RETENTION_EXPRESSION="$(parse_generate_retention_expression)"
 
@@ -139,6 +136,6 @@ if [ -z "${RETENTION_EXPRESSION}" ]; then
 	exit 1
 fi
 
-# Backup rotator cron will run every 5 minutes
+# Backup rotator cron will run every 5 minutes.
 add_backup_cronjob "${CRONTAB_USER}" "*/5 * * * *" "/app/gogs/docker/runtime/backup-rotator.sh" "'${BACKUP_PATH}' '${RETENTION_EXPRESSION}'"
 add_backup_cronjob "${CRONTAB_USER}" "$(parse_generate_cron_expression)" "/app/gogs/docker/runtime/backup-job.sh" "'${BACKUP_PATH}'"

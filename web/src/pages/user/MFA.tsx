@@ -22,8 +22,8 @@ export function MFA() {
   const { t } = useTranslation();
   usePageTitle(t("auth.mfa_title"));
   const navigate = useNavigate();
-  // When no challenge is pending the loader has already kicked off a full
-  // navigation away; the early return keeps this page from flashing.
+  // When no challenge is pending, the loader has already kicked off a full
+  // navigation away. The early return keeps this page from flashing.
   const { pending } = route.useLoaderData();
 
   const [mode, setMode] = useState<Mode>("passcode");
@@ -83,7 +83,7 @@ export function MFA() {
             setFormError(t("auth.mfa_verify_failed"));
           }
           setSubmitting(false);
-          // Focus after React re-enables the fieldset; .focus() is a no-op
+          // Focus after React re-enables the fieldset. .focus() is a no-op
           // while the input is still inside a disabled fieldset, so we defer
           // past the commit with rAF.
           requestAnimationFrame(() => {

@@ -23,7 +23,6 @@ func RandomImageWithSize(size int, data []byte) (image.Image, error) {
 		backColorIndex = randExtent - 1
 	}
 
-	// Define size, background, and forecolor
 	imgMaker, err := identicon.New(size,
 		palette.WebSafe[backColorIndex], palette.WebSafe[colorIndex:colorIndex+32]...)
 	if err != nil {

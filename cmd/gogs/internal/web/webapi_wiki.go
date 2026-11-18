@@ -34,8 +34,8 @@ func viewerCanWriteWiki(repoCtx *repoContext) bool {
 	return repoCtx.Viewer.CanWrite() && !repoCtx.Repo.IsMirror
 }
 
-// withWikiWriter lets through the viewers who can change the wiki. Like the
-// server-rendered pages, the wiki is not found for others.
+// withWikiWriter lets through the viewers who can change the wiki. The wiki is
+// not found for others.
 func withWikiWriter(c flamego.Context, repoCtx *repoContext) {
 	if !viewerCanWriteWiki(repoCtx) {
 		writeErrorResponse(c.ResponseWriter(), http.StatusNotFound, errors.New("wiki does not exist"))

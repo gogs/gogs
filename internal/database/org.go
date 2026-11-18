@@ -31,7 +31,7 @@ func (org *User) getTeam(e Engine, name string) (*Team, error) {
 	return getTeamOfOrgByName(e, org.ID, name)
 }
 
-// GetTeamOfOrgByName returns named team of organization.
+// GetTeam returns named team of organization.
 func (org *User) GetTeam(name string) (*Team, error) {
 	return org.getTeam(x, name)
 }
@@ -271,7 +271,7 @@ func IsOrganizationMember(orgID, uid int64) bool {
 	return has
 }
 
-// IsPublicMembership returns true if given user public his/her membership.
+// IsPublicMembership returns true if given user has made their membership public.
 func IsPublicMembership(orgID, uid int64) bool {
 	has, _ := x.Where("uid=?", uid).And("org_id=?", orgID).And("is_public=?", true).Get(new(OrgUser))
 	return has
@@ -298,13 +298,13 @@ func getOwnedOrgsByUserID(sess *xorm.Session, userID int64) ([]*User, error) {
 		Join("INNER", "`org_user`", "`org_user`.org_id=`user`.id").Find(&orgs)
 }
 
-// GetOwnedOrgsByUserID returns a list of organizations are owned by given user ID.
+// GetOwnedOrgsByUserID returns a list of organizations that are owned by given user ID.
 func GetOwnedOrgsByUserID(userID int64) ([]*User, error) {
 	sess := x.NewSession()
 	return getOwnedOrgsByUserID(sess, userID)
 }
 
-// GetOwnedOrganizationsByUserIDDesc returns a list of organizations are owned by
+// GetOwnedOrgsByUserIDDesc returns a list of organizations that are owned by
 // given user ID, ordered descending by the given condition.
 func GetOwnedOrgsByUserIDDesc(userID int64, desc string) ([]*User, error) {
 	sess := x.NewSession()
@@ -431,7 +431,7 @@ func RemoveOrgUser(orgID, userID int64) error {
 		}
 	}
 
-	// Delete member in his/her teams.
+	// Remove the member from their teams.
 	teams, err := getUserTeams(sess, org.ID, user.ID)
 	if err != nil {
 		return err
@@ -466,7 +466,7 @@ func (org *User) getUserTeams(e Engine, userID int64, cols ...string) ([]*Team, 
 		Cols(cols...).Find(&teams)
 }
 
-// GetUserTeamIDs returns of all team IDs of the organization that user is member of.
+// GetUserTeamIDs returns all team IDs of the organization that user is member of.
 func (org *User) GetUserTeamIDs(userID int64) ([]int64, error) {
 	teams, err := org.getUserTeams(x, userID, "team.id")
 	if err != nil {
@@ -480,7 +480,7 @@ func (org *User) GetUserTeamIDs(userID int64) ([]int64, error) {
 	return teamIDs, nil
 }
 
-// GetTeams returns all teams that belong to organization,
+// GetUserTeams returns all teams that belong to organization,
 // and that the user has joined.
 func (org *User) GetUserTeams(userID int64) ([]*Team, error) {
 	return org.getUserTeams(x, userID)
@@ -494,8 +494,8 @@ func (org *User) GetUserRepositories(userID int64, page, pageSize int) ([]*Repos
 		return nil, 0, errors.Newf("GetUserTeamIDs: %v", err)
 	}
 	if len(teamIDs) == 0 {
-		// user has no team but "IN ()" is invalid SQL
-		teamIDs = []int64{-1} // there is no team with id=-1
+		// User has no team but "IN ()" is invalid SQL.
+		teamIDs = []int64{-1} // There is no team with id=-1.
 	}
 
 	var teamRepoIDs []int64
@@ -503,8 +503,8 @@ func (org *User) GetUserRepositories(userID int64, page, pageSize int) ([]*Repos
 		return nil, 0, errors.Newf("get team repository IDs: %v", err)
 	}
 	if len(teamRepoIDs) == 0 {
-		// team has no repo but "IN ()" is invalid SQL
-		teamRepoIDs = []int64{-1} // there is no repo with id=-1
+		// Team has no repo but "IN ()" is invalid SQL.
+		teamRepoIDs = []int64{-1} // There is no repo with id=-1.
 	}
 
 	if page <= 0 {
@@ -549,15 +549,15 @@ func (org *User) GetUserMirrorRepositories(userID int64) ([]*Repository, error) 
 		return nil, errors.Newf("get team repository ids: %v", err)
 	}
 	if len(teamRepoIDs) == 0 {
-		// team has no repo but "IN ()" is invalid SQL
-		teamRepoIDs = []int64{-1} // there is no repo with id=-1
+		// Team has no repo but "IN ()" is invalid SQL.
+		teamRepoIDs = []int64{-1} // There is no repo with id=-1.
 	}
 
 	repos := make([]*Repository, 0, 10)
 	if err = x.Where("owner_id = ?", org.ID).
 		And("is_private = ?", false).
 		Or(builder.In("id", teamRepoIDs)).
-		And("is_mirror = ?", true). // Don't move up because it's an independent condition
+		And("is_mirror = ?", true). // Don't move up because it's an independent condition.
 		Desc("updated_unix").
 		Find(&repos); err != nil {
 		return nil, errors.Newf("get user repositories: %v", err)

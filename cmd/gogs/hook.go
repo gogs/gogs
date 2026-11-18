@@ -109,10 +109,10 @@ func runHookPreReceive(ctx context.Context, cmd *cli.Command) error {
 			continue
 		}
 
-		// Allowlist users can bypass require pull request check
+		// When the allowlist is enabled, only users in it can push, and they can
+		// bypass the require pull request check.
 		bypassRequirePullRequest := false
 
-		// Check if user is in allowlist when enabled
 		userID, _ := strconv.ParseInt(os.Getenv(database.EnvAuthUserID), 10, 64)
 		if protectBranch.EnableAllowlist {
 			inAllowlist, err := database.Handle.ProtectBranches().IsUserInAllowlist(ctx, protectBranch, userID)
@@ -126,17 +126,15 @@ func runHookPreReceive(ctx context.Context, cmd *cli.Command) error {
 			bypassRequirePullRequest = true
 		}
 
-		// Check if branch allows direct push
 		if !bypassRequirePullRequest && protectBranch.RequirePullRequest {
 			fail(logger, fmt.Sprintf("Branch '%s' is protected and commits must be merged through pull request", branchName), "")
 		}
 
-		// check and deletion
 		if git.IsEmptyID(newCommitID) {
 			fail(logger, fmt.Sprintf("Branch '%s' is protected from deletion", branchName), "")
 		}
 
-		// Check force push
+		// A push that removes commits from the branch is a force push.
 		repoPath := database.RepoPath(os.Getenv(database.EnvRepoOwnerName), os.Getenv(database.EnvRepoName))
 		removedCommits, err := git.RepoRevListCount(ctx, repoPath, []string{oldCommitID, "^" + newCommitID})
 		if err != nil {

@@ -304,7 +304,7 @@ func (r *Repository) UpdateRepoFile(ctx context.Context, logger *logx.Logger, do
 	defer repoWorkingPool.CheckOut(strconv.FormatInt(r.ID, 10))
 
 	if opts.OldBranch != opts.NewBranch {
-		// Directly return error if new branch already exists in the server
+		// Directly return error if new branch already exists in the server.
 		if git.RepoHasBranch(ctx, r.RepoPath(), opts.NewBranch) {
 			return BranchAlreadyExists{Name: opts.NewBranch}
 		}

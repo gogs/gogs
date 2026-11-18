@@ -15,10 +15,10 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// EntryMode is the unix file mode of a tree entry.
+// EntryMode is the Unix file mode of a tree entry.
 type EntryMode int
 
-// There are only a few file modes in Git. They look like unix file modes, but
+// There are only a few file modes in Git. They look like Unix file modes, but
 // they can only be one of these.
 const (
 	EntryTree    EntryMode = 0040000
@@ -41,7 +41,7 @@ type TreeEntry struct {
 	sizeSet bool
 }
 
-// Mode returns the entry mode if the tree entry.
+// Mode returns the entry mode of the tree entry.
 func (e *TreeEntry) Mode() EntryMode {
 	return e.mode
 }
@@ -170,7 +170,7 @@ type CommitsInfoOptions struct {
 var defaultConcurrency = runtime.GOMAXPROCS(0)
 
 // CommitsInfo returns a list of commit information for these tree entries in
-// the state of given commit and subpath. It takes advantages of concurrency to
+// the state of given commit and subpath. It takes advantage of concurrency to
 // speed up the process. The returned list has the same number of items as tree
 // entries, so the caller can access them via slice indices.
 func (es Entries) CommitsInfo(ctx context.Context, commit *Commit, opts ...CommitsInfoOptions) (_ []*EntryCommitInfo, err error) {
@@ -199,7 +199,7 @@ func (es Entries) CommitsInfo(ctx context.Context, commit *Commit, opts ...Commi
 	hasErrored := func() bool {
 		return errored.Load() != 0
 	}
-	// Only count for the first error, discard the rest
+	// Only the first error is kept, the rest are discarded.
 	setError := func(err error) {
 		if !errored.CompareAndSwap(0, 1) {
 			return
@@ -211,13 +211,13 @@ func (es Entries) CommitsInfo(ctx context.Context, commit *Commit, opts ...Commi
 	wg.Add(len(es))
 	go func() {
 		for i, e := range es {
-			// Shrink down the counter and exit when there is an error
+			// Shrink down the counter and exit when there is an error.
 			if hasErrored() {
 				wg.Add(i - len(es))
 				return
 			}
 
-			// Block until there is an empty slot to control the maximum concurrency
+			// Block until there is an empty slot to control the maximum concurrency.
 			bucket <- struct{}{}
 
 			go func(e *TreeEntry, i int) {
@@ -226,7 +226,7 @@ func (es Entries) CommitsInfo(ctx context.Context, commit *Commit, opts ...Commi
 					<-bucket
 				}()
 
-				// Avoid expensive operations if has errored
+				// Avoid expensive operations once an error occurred.
 				if hasErrored() {
 					return
 				}
@@ -246,9 +246,8 @@ func (es Entries) CommitsInfo(ctx context.Context, commit *Commit, opts ...Commi
 					return
 				}
 
-				// Get extra information for submodules
 				if e.IsCommit() {
-					// Be tolerant to implicit submodules
+					// Be tolerant to submodules that are missing from ".gitmodules".
 					info.Submodule, err = commit.Submodule(ctx, epath)
 					if err != nil {
 						info.Submodule = &Submodule{Name: epath}

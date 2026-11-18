@@ -25,7 +25,7 @@ interface Props {
   items: readonly CodeViewItem<undefined>[];
   // Selecting a row in the tree fires this with the CodeViewItem id so the
   // page can drive the diff view's scroll. The callback abstraction lets us
-  // avoid plumbing the diff view's `LAnnotation` generic through forwardRef.
+  // avoid plumbing the diff view's `LAnnotation` generic through a ref.
   onSelectItem: (itemId: string) => void;
   // Show or hide Pierre's built-in search row. The model itself stays around,
   // so toggling does not lose tree state.
@@ -46,7 +46,7 @@ const TREE_UNSAFE_CSS = `
     ~ *:not([data-file-tree-list]):not([role="tree"]) {
     display: none !important;
   }
-  /* The search input lives inside a wrapper row; hide that whole row when
+  /* The search input lives inside a wrapper row. Hide that whole row when
      closed so we don't leave an empty band of padding. */
   :host([data-search-open="false"]) [data-file-tree-search] {
     display: none !important;
@@ -111,7 +111,7 @@ function findSearchInput(root: ParentNode | null | undefined): HTMLInputElement 
   return null;
 }
 
-// Walk path segments to collect every directory prefix (e.g. "a/b/c.ts" →
+// Walk path segments to collect every directory prefix (e.g., "a/b/c.ts" →
 // ["a", "a/b"]). Used to drive expand-all/collapse-all from the toolbar
 // because @pierre/trees doesn't ship a one-shot bulk-toggle API.
 function collectDirectoryPaths(paths: readonly string[]): string[] {
@@ -181,7 +181,7 @@ export function DiffFileTree({ items, onSelectItem, searchOpen = true, header, c
   // Build a comparator that orders tree rows the same way the patch lists
   // them, so the file tree always agrees with what `CodeView` renders below.
   // Without this, Pierre's default alpha sort places root-level files
-  // (e.g. go.mod, go.sum) in a different spot than the diff body shows them.
+  // (e.g., go.mod, go.sum) in a different spot than the diff body shows them.
   // Each directory's index is the patch index of the earliest file under it,
   // so a directory sorts to the position of its first appearing child.
   const patchOrder = useMemo(() => {
@@ -225,7 +225,7 @@ export function DiffFileTree({ items, onSelectItem, searchOpen = true, header, c
     unsafeCSS: TREE_UNSAFE_CSS,
   });
 
-  // When the patch changes (e.g. navigating to a different commit without
+  // When the patch changes (e.g., navigating to a different commit without
   // unmounting), reset the tree contents and refresh git status and labels
   // without recreating the model.
   const pathsRef = useRef(paths);

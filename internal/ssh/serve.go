@@ -45,7 +45,7 @@ func serveError(userMessage, format string, args ...any) error {
 
 // ServeOptions contains the options of Serve.
 type ServeOptions struct {
-	// The ID of the public key that the client signed in with.
+	// The ID of the public key that the client authenticated with.
 	KeyID int64
 	// The command that the client asks to run, e.g., "git-upload-pack
 	// 'owner/repo.git'".
@@ -114,7 +114,6 @@ func Serve(ctx context.Context, logger *logx.Logger, opts ServeOptions) error {
 		return serveError("Unknown git command", "Unknown git command '%s'", verb)
 	}
 
-	// Prohibit push to mirror repositories.
 	if requestMode > database.AccessModeRead && repo.IsMirror {
 		return serveError("Mirror repository is read-only", "")
 	}
@@ -132,7 +131,6 @@ func Serve(ctx context.Context, logger *logx.Logger, opts ServeOptions) error {
 	)
 
 	if requestMode == database.AccessModeWrite || repo.IsPrivate {
-		// Check deploy key or user key.
 		if key.IsDeployKey() {
 			if key.Mode < requestMode {
 				return serveError("Key permission denied", "Cannot push with deployment key: %d", key.ID)
@@ -167,10 +165,11 @@ func Serve(ctx context.Context, logger *logx.Logger, opts ServeOptions) error {
 			}
 		}
 	} else {
-		// Check if the key can access to the repository in case of it is a deploy key (a deploy keys != user key).
-		// A deploy key doesn't represent a signed in user, so in a site with Auth.RequireSignInView enabled,
-		// we should give read access only in repositories where this deploy key is in use. In other cases,
-		// a server or system using an active deploy key can get read access to all repositories on a Gogs instance.
+		// A deploy key doesn't represent an authenticated user, so in a site with
+		// Auth.RequireSigninView enabled, it only gets read access to repositories
+		// where it is in use, and a user key must belong to a user who is not
+		// disabled. Otherwise, a server or system using an active deploy key can get
+		// read access to all public repositories on a Gogs instance.
 		if conf.Auth.RequireSigninView {
 			if key.IsDeployKey() {
 				if err = checkDeployKey(ctx, key, repo); err != nil {
@@ -188,7 +187,6 @@ func Serve(ctx context.Context, logger *logx.Logger, opts ServeOptions) error {
 		}
 	}
 
-	// Update user key activity.
 	if key.ID > 0 {
 		if err = database.Handle.PublicKeys().Touch(ctx, key.ID); err != nil {
 			return serveError("Internal error", "Touch public key: %v", err)

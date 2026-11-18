@@ -14,7 +14,6 @@ import (
 // object. It assumes "\n\n" separates the header from the rest of the message.
 func parseTag(data []byte) (*Tag, error) {
 	tag := new(Tag)
-	// We now have the contents of the tag object. Let's investigate.
 	nextline := 0
 l:
 	for {
@@ -247,7 +246,8 @@ func tagsAfter(all []string, after string, limit int) *TagsPage {
 		tags = all
 	}
 
-	// If all tags after match is equal to the limit, it reaches the oldest tag as well.
+	// When the tags after the match fit in the limit, the page reaches the
+	// oldest tag.
 	if limit == 0 || len(tags) <= limit {
 		return &TagsPage{
 			Tags:          tags,

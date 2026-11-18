@@ -253,7 +253,7 @@ func TestLFSAccess(t *testing.T) {
 	t.Run("user without access", func(t *testing.T) {
 		c := lfsClient(t, other)
 
-		// Anyone signed in reads objects of a public repository.
+		// Any authenticated user reads objects of a public repository.
 		status, _, body := c.doRaw(http.MethodGet, lfsBasePath(public)+"/basic/"+oid, "", nil)
 		require.Equal(t, http.StatusOK, status, "response: %s", body)
 		assert.Equal(t, content, body)

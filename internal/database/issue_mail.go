@@ -102,7 +102,7 @@ func NewMailerIssue(issue *Issue) email.Issue {
 }
 
 // mailIssueCommentToParticipants can be used for both new issue creation and comment.
-// This functions sends two list of emails:
+// This function sends two lists of emails:
 // 1. Repository watchers, users who participated in comments and the assignee.
 // 2. Users who are not in 1. but get mentioned in current issue/comment.
 func mailIssueCommentToParticipants(logger *logx.Logger, e Engine, issue *Issue, doer *User, mentions []string) error {
@@ -121,13 +121,13 @@ func mailIssueCommentToParticipants(logger *logx.Logger, e Engine, issue *Issue,
 		return errors.Newf("GetParticipantsByIssueID [issue_id: %d]: %v", issue.ID, err)
 	}
 
-	// In case the issue poster is not watching the repository,
-	// even if we have duplicated in watchers, can be safely filtered out.
+	// Add the issue poster in case they are not watching the repository.
+	// Duplicates of watchers are safely filtered out below.
 	if issue.PosterID != doer.ID {
 		participants = append(participants, issue.Poster)
 	}
 
-	tos := make([]string, 0, len(watchers)) // List of email addresses
+	tos := make([]string, 0, len(watchers)) // List of email addresses.
 	names := make([]string, 0, len(watchers))
 	for i := range watchers {
 		if watchers[i].UserID == doer.ID {
@@ -167,7 +167,7 @@ func mailIssueCommentToParticipants(logger *logx.Logger, e Engine, issue *Issue,
 
 	// Mail mentioned people and exclude watchers.
 	names = append(names, doer.Name)
-	toUsernames := make([]string, 0, len(mentions)) // list of user names.
+	toUsernames := make([]string, 0, len(mentions)) // List of user names.
 	for i := range mentions {
 		if strx.ContainsFold(names, mentions[i]) {
 			continue

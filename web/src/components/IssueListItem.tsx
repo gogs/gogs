@@ -77,7 +77,6 @@ export function IssueListItem({
               {issue.title}
             </Link>
           ) : (
-            // The pull request page is still served by the server-rendered pages.
             <a href={subUrl(`/${issue.repo}/pulls/${issue.index}`)} className={titleClass}>
               {issue.title}
             </a>

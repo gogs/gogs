@@ -51,8 +51,7 @@ type repoIssues struct {
 
 func getRepoIssues(c flamego.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext) (statusCode int, resp *repoIssues, err error) {
 	repo := repoCtx.Repo
-	// Like the server-rendered page, guests can list the issues of a
-	// repository when its issues are public.
+	// Guests can list the issues of a repository when its issues are public.
 	if !repo.EnableIssues || repo.EnableExternalTracker || (!repoCtx.Viewer.CanRead() && !repo.CanGuestViewIssues()) {
 		return http.StatusNotFound, nil, errors.New("repository does not exist")
 	}
@@ -67,8 +66,8 @@ func getRepoPulls(c flamego.Context, logger *logx.Logger, viewer *database.User,
 }
 
 // listRepoIssues lists the issues or pull requests of the repository, filtered
-// and sorted like the server-rendered page by the `type`, `labels`,
-// `milestone`, `assignee`, `state`, `sort` and `page` query parameters.
+// and sorted by the `type`, `labels`, `milestone`, `assignee`, `state`, `sort`
+// and `page` query parameters.
 func listRepoIssues(c flamego.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, isPull bool) (statusCode int, resp *repoIssues, err error) {
 	repo := repoCtx.Repo
 	filterMode := database.FilterModeYourRepos
@@ -110,7 +109,7 @@ func listRepoIssues(c flamego.Context, logger *logx.Logger, viewer *database.Use
 	if isClosed {
 		total = stats.ClosedCount
 	}
-	// A page past the end lists the last page, like the server-rendered page.
+	// A page past the end lists the last page.
 	pageSize := int64(max(conf.UI.IssuePagingNum, 1))
 	page = min(page, max(int((total+pageSize-1)/pageSize), 1))
 
@@ -224,8 +223,8 @@ func toIssueLabel(label *database.Label) dashboardIssueLabel {
 }
 
 // newPullRequestURL returns where the viewer proposes a pull request from the
-// default branch of the repository, the same way as the server-rendered
-// pages, or an empty string when they cannot propose one. Writers propose
+// default branch of the repository, or an empty string when they cannot
+// propose one. Writers propose
 // between branches, or to the base repository of a fork, and those who forked
 // the repository propose from their fork.
 func newPullRequestURL(c flamego.Context, viewer *database.User, repoCtx *repoContext) (string, error) {
@@ -255,8 +254,7 @@ func newPullRequestURL(c flamego.Context, viewer *database.User, repoCtx *repoCo
 	} else if repo.AllowsPulls() {
 		allowed = true
 	}
-	// The pull request list prefers the viewer's fork as the head, like the
-	// server-rendered page.
+	// The pull request list prefers the viewer's fork as the head.
 	if forked {
 		allowed = true
 		head = viewer.Name + ":" + repo.DefaultBranch
@@ -277,7 +275,7 @@ type repoFork struct {
 // getRepoForks lists the forks of the repository that the viewer can see.
 func getRepoForks(c flamego.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext) (statusCode int, resp map[string][]repoFork, err error) {
 	repo := repoCtx.Repo
-	// Like the server-rendered page, an empty repository has no forks page.
+	// An empty repository has no forks page.
 	if !repoCtx.Viewer.CanRead() || repo.IsEmpty {
 		return http.StatusNotFound, nil, errors.New("repository does not exist")
 	}

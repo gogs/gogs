@@ -279,7 +279,7 @@ LOCAL_NETWORK_ALLOWLIST = 127.0.0.1,localhost
 [session]
 PROVIDER = file
 
-; Mail goes nowhere, port 1 refuses connections. Tests read the codes mailed,
+; Mail goes nowhere because port 1 refuses connections. Tests read the codes mailed,
 ; e.g., to reset a password, from the database.
 [email]
 ENABLED = true
