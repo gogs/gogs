@@ -1649,6 +1649,7 @@
                   },
                   "name": {
                     "type": "string",
+                    "maxLength": 255,
                     "description": "Title of the release"
                   },
                   "body": {
@@ -1683,13 +1684,13 @@
             }
           },
           "403": {
-            "description": "No write access to the repository."
+            "description": "No write access to the repository, or the repository is a mirror."
           },
           "404": {
             "description": "Resource not found."
           },
           "422": {
-            "description": "Invalid tag name, a release of the tag already exists, or the target branch does not exist."
+            "description": "Missing or invalid tag name, a name longer than 255 characters, a release of the tag already exists, or the target branch does not exist."
           }
         }
       }
@@ -5815,6 +5816,7 @@
                 "properties": {
                   "name": {
                     "type": "string",
+                    "maxLength": 255,
                     "description": "Title of the release"
                   },
                   "body": {
@@ -5852,7 +5854,7 @@
             "description": "Resource not found."
           },
           "422": {
-            "description": "A published release cannot become a draft."
+            "description": "The name is longer than 255 characters, a published release cannot become a draft, or publishing a draft fails because its tag name is invalid or its target branch no longer exists."
           }
         }
       },
