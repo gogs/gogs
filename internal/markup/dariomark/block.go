@@ -444,6 +444,19 @@ func (p *parser) incorporateLine() {
 	p.prevBlankIn, p.curBlankIn = p.curBlankIn, nil
 	p.emptiedParagraph = false
 	p.oldtip = p.tip
+	if tip := p.tip; tip.kind == kindParagraph && tip.parent == p.doc && !tip.tableRows {
+		// A line that continues a top-level paragraph and cannot start a
+		// block, or be a table delimiter row, skips the general block rules.
+		p.findNextNonspace()
+		if !p.blank && p.indent < 4 && !maybeSpecial(p.line[p.nextNonspace]) {
+			p.allClosed = true
+			p.lastMatchedContainer = tip
+			p.advanceNextNonspace()
+			p.addLine()
+			p.touch(tip)
+			return
+		}
+	}
 	var marked *node
 
 	container := p.doc
