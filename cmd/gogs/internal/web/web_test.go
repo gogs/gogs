@@ -56,6 +56,7 @@ func TestOverrideHTTPPort(t *testing.T) {
 	}{
 		{name: "served directly", externalURL: "http://localhost:3000/", httpPort: 3000, want: "http://localhost:3001/"},
 		{name: "served directly under a subpath", externalURL: "http://[::1]:3000/gogs/", httpPort: 3000, want: "http://[::1]:3001/gogs/"},
+		{name: "served directly on the default port", externalURL: "http://localhost/", httpPort: 80, want: "http://localhost:3001/"},
 		{name: "behind a proxy on another port", externalURL: "https://git.example.com:1443/", httpPort: 3000, want: "https://git.example.com:1443/"},
 		{name: "behind a proxy on the default port", externalURL: "https://git.example.com/", httpPort: 3000, want: "https://git.example.com/"},
 	}
