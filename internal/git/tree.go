@@ -41,6 +41,11 @@ func (t *Tree) Subtree(ctx context.Context, subpath string) (_ *Tree, err error)
 		if err != nil {
 			return nil, err
 		}
+		// A path through a file, symlink, or submodule does not exist in the
+		// tree, even when Git could list the object of a submodule.
+		if !e.IsTree() {
+			return nil, ErrRevisionNotExist
+		}
 
 		g = &Tree{
 			id:     e.id,
