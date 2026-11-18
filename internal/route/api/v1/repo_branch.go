@@ -112,7 +112,7 @@ func createReference(c *apiContext, prefix string, r createReferenceRequest) *gi
 	}
 
 	err = repo.CreateReference(ctx, c.Logger, c.User, prefix+r.Name, commit.ID.String())
-	if errors.Is(err, database.ErrReferenceTaken) {
+	if errors.Is(err, git.ErrReferenceConflict) {
 		c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("The %s name %q is already taken.", kind, r.Name))
 		return nil
 	} else if err != nil {

@@ -180,6 +180,20 @@ type PushOptions struct {
 	ExpectedOldID string
 }
 
+// ErrReferenceConflict is returned when a push with an expected old ID finds
+// the remote reference elsewhere, or cannot create it next to another
+// reference, e.g., "refs/heads/a" next to "refs/heads/a/b".
+var ErrReferenceConflict = errors.New("reference conflict")
+
+// pushConflictReasons are the reasons "git push --porcelain" gives for
+// rejecting a reference that ErrReferenceConflict covers.
+var pushConflictReasons = []string{
+	"(stale info)",
+	"(reference already exists)",
+	"(refname conflict)",
+	"(incorrect old value provided)",
+}
+
 // Push pushes local changes to given remote and branch for the repository.
 func (r *Repository) Push(ctx context.Context, remote, branch string, opts ...PushOptions) (err error) {
 	ctx, span := tracer.Start(ctx, "git.Repository.Push", trace.WithAttributes(attribute.String("git.dir", r.path), attribute.String("git.remote", remote), attribute.String("git.branch", branch)))
@@ -190,17 +204,37 @@ func (r *Repository) Push(ctx context.Context, remote, branch string, opts ...Pu
 		opt = opts[0]
 	}
 
-	args := []string{"push"}
-	if opt.ExpectedOldID != "" {
-		_, dst, _ := strings.Cut(branch, ":")
-		expected := opt.ExpectedOldID
-		if IsEmptyID(expected) {
-			expected = ""
-		}
-		args = append(args, "--force-with-lease="+dst+":"+expected)
+	if opt.ExpectedOldID == "" {
+		_, err = exec(ctx, r.path, []string{"push", "--end-of-options", remote, branch}, opt.Envs)
+		return err
 	}
-	args = append(args, "--end-of-options", remote, branch)
-	_, err = exec(ctx, r.path, args, opt.Envs)
+
+	_, dst, _ := strings.Cut(branch, ":")
+	expected := opt.ExpectedOldID
+	if IsEmptyID(expected) {
+		expected = ""
+	}
+	args := []string{"push", "--porcelain", "--force-with-lease=" + dst + ":" + expected, "--end-of-options", remote, branch}
+	stdout := new(bytes.Buffer)
+	_, err = run(ctx, r.path, args, opt.Envs, nil, stdout)
+	// Each reference gets a line of a flag, the refspec and a summary, e.g.,
+	// "!\t<src>:<dst>\t[rejected] (stale info)". A reference already at the new ID
+	// is "up to date" with the flag "=", and Git exits with 0 although the
+	// expected old ID differs.
+	for line := range strings.Lines(stdout.String()) {
+		fields := strings.SplitN(strings.TrimSpace(line), "\t", 3)
+		if len(fields) < 3 || !strings.HasSuffix(fields[1], ":"+dst) {
+			continue
+		}
+		if fields[0] == "=" {
+			return ErrReferenceConflict
+		}
+		for _, reason := range pushConflictReasons {
+			if strings.HasSuffix(fields[2], reason) {
+				return ErrReferenceConflict
+			}
+		}
+	}
 	return err
 }
 

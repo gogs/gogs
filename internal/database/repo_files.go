@@ -191,39 +191,19 @@ func (r *Repository) commitToBranch(ctx context.Context, logger *logx.Logger, do
 	return nil
 }
 
-// ErrReferenceTaken is returned when a reference exists, or cannot be created
-// next to another one.
-var ErrReferenceTaken = errors.New("reference is taken")
-
 // CreateReference creates the reference, e.g., "refs/heads/feature", at the
 // commit by pushing it as the doer, which runs the hooks of the repository, and
-// records the push. It returns ErrReferenceTaken when the reference is taken.
+// records the push. It returns git.ErrReferenceConflict when the reference
+// exists or cannot be created next to another one.
 func (r *Repository) CreateReference(ctx context.Context, logger *logx.Logger, doer *User, ref, commitID string) error {
 	// Stopping midway, e.g., when the client disconnects, would skip the hooks or
 	// recording the push.
 	ctx = context.WithoutCancel(ctx)
 
-	// A push of the same commit to a reference that already points at it succeeds
-	// without changing anything, so concurrent requests would each record it.
-	repoWorkingPool.CheckIn(strconv.FormatInt(r.ID, 10))
-	defer repoWorkingPool.CheckOut(strconv.FormatInt(r.ID, 10))
-
-	gitRepo, err := git.Open(r.RepoPath())
-	if err != nil {
-		return errors.Wrap(err, "open repository")
-	}
-	taken, err := gitRepo.IsReferenceTaken(ctx, ref)
-	if err != nil {
-		return errors.Wrap(err, "check reference")
-	} else if taken {
-		return ErrReferenceTaken
-	}
-
 	format, err := git.RepoObjectFormat(ctx, r.RepoPath())
 	if err != nil {
 		return errors.Wrap(err, "get object format")
 	}
-	// The push is rejected when another one creates the reference in the meantime.
 	update := git.RefUpdate{OldID: format.EmptyID(), NewID: commitID, RefName: ref}
 
 	tmpRepo, cleanup, err := newTemporaryRepository(ctx, r.RepoPath())
@@ -241,10 +221,15 @@ func (r *Repository) CreateReference(ctx context.Context, logger *logx.Logger, d
 		RepoPath:  r.RepoPath(),
 	})
 	err = tmpRepo.Push(ctx, r.RepoPath(), commitID+":"+ref, git.PushOptions{Envs: envs, ExpectedOldID: update.OldID})
-	if err != nil {
-		// A Git push over HTTP or SSH may have created it in the meantime.
-		if taken, _ := gitRepo.IsReferenceTaken(ctx, ref); taken {
-			return ErrReferenceTaken
+	if errors.Is(err, git.ErrReferenceConflict) {
+		return err
+	} else if err != nil {
+		// Git before 2.51 rejects a conflict with the same reason as any other
+		// failure to update the reference.
+		if gitRepo, openErr := git.Open(r.RepoPath()); openErr == nil {
+			if taken, _ := gitRepo.IsReferenceTaken(ctx, ref); taken {
+				return git.ErrReferenceConflict
+			}
 		}
 		return errors.Wrapf(err, "push %s", ref)
 	}
