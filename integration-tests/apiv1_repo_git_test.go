@@ -3,6 +3,7 @@ package integrationtests
 import (
 	"encoding/base64"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -208,30 +209,62 @@ func TestAPIV1GitObjects(t *testing.T) {
 	require.NotEmpty(t, readme.Sha)
 	require.NotEmpty(t, docs.Sha)
 
+	// Executables, symlinks, and submodules are blobs or commits with modes
+	// other than a regular file.
+	dir := gitClone(t, gitRemoteURL(t, repo, owner.Name, owner.Password))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "run.sh"), []byte("#!/bin/sh\n"), 0o600))
+	gitRun(t, dir, "add", "run.sh")
+	gitRun(t, dir, "update-index", "--chmod=+x", "run.sh")
+	require.NoError(t, os.Symlink("README.md", filepath.Join(dir, "link")))
+	gitRun(t, dir, "add", "link")
+	gitRun(t, dir, "update-index", "--add", "--cacheinfo", "160000,"+commitSHA+",sub")
+	gitRun(t, dir, "commit", "-m", "Add special entries")
+	gitRun(t, dir, "push", "origin", "main")
+	headSHA := gitRun(t, dir, "rev-parse", "HEAD")
+
 	type treeEntry struct {
 		Path string `json:"path"`
 		Mode string `json:"mode"`
 		Type string `json:"type"`
 		Sha  string `json:"sha"`
+		URL  string `json:"url"`
 	}
 	var tree struct {
 		Sha  string      `json:"sha"`
 		Tree []treeEntry `json:"tree"`
 	}
-	api.doJSON(http.MethodGet, apiV1RepoPath(repo, "/git/trees/"+commitSHA), nil, http.StatusOK, &tree)
-	assert.Equal(t, commitSHA, tree.Sha)
-	require.Len(t, tree.Tree, 2)
-	entries := make(map[string]treeEntry)
-	for _, e := range tree.Tree {
-		entries[e.Path] = e
+	api.doJSON(http.MethodGet, apiV1RepoPath(repo, "/git/trees/"+headSHA), nil, http.StatusOK, &tree)
+	assert.Equal(t, headSHA, tree.Sha)
+	gitURL := serverURL + apiV1RepoPath(repo, "/git")
+	entry := func(path, mode, typ, sha string) treeEntry {
+		kind := "/blobs/"
+		if typ != "blob" {
+			kind = "/trees/"
+		}
+		return treeEntry{Path: path, Mode: mode, Type: typ, Sha: sha, URL: gitURL + kind + sha}
 	}
-	assert.Equal(t, "blob", entries["README.md"].Type)
-	assert.Equal(t, readme.Sha, entries["README.md"].Sha)
-	assert.Equal(t, "tree", entries["docs"].Type)
-	assert.Equal(t, "040000", entries["docs"].Mode)
-	assert.Equal(t, docs.Sha, entries["docs"].Sha)
-	t.Run("blob mode", func(t *testing.T) {
-		assert.Equal(t, "100644", entries["README.md"].Mode)
+	runSHA := gitRun(t, dir, "rev-parse", "HEAD:run.sh")
+	linkSHA := gitRun(t, dir, "rev-parse", "HEAD:link")
+	assert.ElementsMatch(t, []treeEntry{
+		entry("README.md", "100644", "blob", readme.Sha),
+		entry("run.sh", "100755", "blob", runSHA),
+		entry("link", "120000", "blob", linkSHA),
+		entry("docs", "040000", "tree", docs.Sha),
+		entry("sub", "160000", "commit", commitSHA),
+	}, tree.Tree)
+
+	t.Run("entry URLs", func(t *testing.T) {
+		for _, e := range tree.Tree {
+			// The commit of a submodule is in another repository.
+			if e.Type == "commit" {
+				continue
+			}
+			var got struct {
+				Sha string `json:"sha"`
+			}
+			api.doJSON(http.MethodGet, strings.TrimPrefix(e.URL, serverURL), nil, http.StatusOK, &got)
+			assert.Equal(t, e.Sha, got.Sha, "entry %q", e.Path)
+		}
 	})
 
 	var blob struct {

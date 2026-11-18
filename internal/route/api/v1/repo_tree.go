@@ -34,7 +34,8 @@ func getRepoGitTree(c *apiContext) {
 		Tree []*repoGitTreeEntry `json:"tree"`
 	}
 
-	treesURL := fmt.Sprintf("%s/repos/%s/%s/git/trees", c.BaseURL, c.Param("username"), c.Param("reponame"))
+	gitURL := fmt.Sprintf("%s/repos/%s/%s/git", c.BaseURL, c.Param("username"), c.Param("reponame"))
+	treesURL := gitURL + "/trees"
 
 	if len(entries) == 0 {
 		c.JSONSuccess(&repoGitTree{
@@ -46,13 +47,17 @@ func getRepoGitTree(c *apiContext) {
 
 	children := make([]*repoGitTreeEntry, 0, len(entries))
 	for _, entry := range entries {
+		url := treesURL + "/" + entry.ID().String()
+		if entry.Type() == git.ObjectBlob {
+			url = gitURL + "/blobs/" + entry.ID().String()
+		}
 		children = append(children, &repoGitTreeEntry{
 			Path: entry.Name(),
 			Mode: fmt.Sprintf("%06o", entry.Mode()),
 			Type: string(entry.Type()),
 			Size: entry.Size(c.Request().Context()),
 			Sha:  entry.ID().String(),
-			URL:  fmt.Sprintf(treesURL+"/%s", entry.ID().String()),
+			URL:  url,
 		})
 	}
 	c.JSONSuccess(&repoGitTree{
