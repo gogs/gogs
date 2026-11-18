@@ -6,7 +6,7 @@ import (
 
 // addIndexToAccessRepoID indexes access.repo_id. Recalculating the accesses
 // of a repository deletes its rows by repo_id, which without the index scans
-// and locks the whole table.
+// the whole table and, on MySQL, locks every row of it.
 func addIndexToAccessRepoID(db *gorm.DB) error {
 	type access struct {
 		RepoID int64 `gorm:"index"`

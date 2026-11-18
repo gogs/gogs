@@ -51,7 +51,7 @@ func TestAddIndexToAccessRepoID(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, accessWithoutRepoIDIndex{ID: 1, UserID: 1, RepoID: 2, Mode: 2}, got)
 
-	// Re-run should be skipped
+	// Re-run should be skipped.
 	err = addIndexToAccessRepoID(db)
 	require.Equal(t, errMigrationSkipped, err)
 }

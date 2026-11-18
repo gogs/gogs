@@ -58,8 +58,10 @@ func TestAPIV1CreateRepository(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, status, "private repository of another user, response: %s", body)
 }
 
-// Repositories created at the same time each give the members of their owner
-// teams access, and giving it to one does not take it from another.
+// Repositories created at the same time each give their creators and the
+// members of their owner teams access. The tests run on PostgreSQL, which never
+// failed these creations, so this guards the accesses rather than the locks
+// MySQL takes.
 func TestAPIV1CreateRepositoriesAtTheSameTime(t *testing.T) {
 	t.Parallel()
 
