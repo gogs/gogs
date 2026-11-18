@@ -48,6 +48,7 @@ All notable changes to Gogs are documented in this file.
 - Git hooks placed in a repository's `custom_hooks` directory directly on disk, rather than saved in the repository settings, now only run after an admin runs `gogs admin resync-hooks`. [#8552](https://github.com/gogs/gogs/pull/8552)
 - Uploading files in the web editor fails with a message when one of them would go into the `.git` directory, e.g., a file named `.git`. Previously the other files were committed and that one was silently left out. [#8655](https://github.com/gogs/gogs/pull/8655)
 - Avatars hosted by Gogs are now served from `/-/avatars/<id>` and `/-/repo-avatars/<id>`, so they no longer hide the pages of users named `avatars` or `repo-avatars`. Links to the old `/avatars/<id>` and `/repo-avatars/<id>` paths, e.g., in chat messages sent by webhooks, no longer load. [#8650](https://github.com/gogs/gogs/pull/8650)
+- External wiki and issue tracker URLs must start with `http://` or `https://`. Saving another URL, e.g., `javascript:alert(1)`, fails with a message, and repositories that already have one link to their own wiki and issues instead. [#8638](https://github.com/gogs/gogs/pull/8638)
 
 ### Fixed
 
