@@ -10,43 +10,20 @@ on:
       - 'pnpm-workspace.yaml'
       - 'package.json'
       - '.github/workflows/web.yml'
-  # Pull requests have no "paths" filter on purpose. A workflow skipped by one
-  # never reports its checks, which blocks merging when they are required. The
-  # "changes" job decides whether the other jobs have work to do instead.
   pull_request:
+    paths:
+      - 'web/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'package.json'
+      - '.github/workflows/web.yml'
 
 permissions:
   contents: read
 
 jobs:
-  changes:
-    name: Detect changes
-    if: ${{ github.event_name == 'pull_request' }}
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: read
-    outputs:
-      skip: ${{ steps.detect.outputs.skip }}
-    steps:
-      - name: Detect changes to the web app
-        id: detect
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          files=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/files" --jq '.[] | .filename, .previous_filename // empty')
-          if grep -qE '^web/|^pnpm-lock\.yaml$|^pnpm-workspace\.yaml$|^package\.json$|^\.github/workflows/web\.yml$' <<<"$files"; then
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          fi
-
   web:
     name: Lint and build
-    needs: changes
-    # Runs unless the pull request is known to have nothing for this job, which
-    # includes pushes and failed detection. A skipped job satisfies a required check.
-    if: ${{ !cancelled() && needs.changes.outputs.skip != 'true' }}
     runs-on: ubuntu-latest
     env:
       MOON_COLOR: "true"

@@ -9,10 +9,12 @@ on:
       - 'go.mod'
       - '.golangci.yml'
       - '.github/workflows/go.yml'
-  # Pull requests have no "paths" filter on purpose. A workflow skipped by one
-  # never reports its checks, which blocks merging when they are required. The
-  # "changes" job decides whether the other jobs have work to do instead.
   pull_request:
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - '.golangci.yml'
+      - '.github/workflows/go.yml'
 env:
   GOPROXY: "https://proxy.golang.org"
 
@@ -20,37 +22,11 @@ permissions:
   contents: read
 
 jobs:
-  changes:
-    name: Detect changes
-    if: ${{ github.event_name == 'pull_request' }}
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: read
-    outputs:
-      skip: ${{ steps.detect.outputs.skip }}
-    steps:
-      - name: Detect changes to Go code
-        id: detect
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          files=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/files" --jq '.[] | .filename, .previous_filename // empty')
-          if grep -qE '\.go$|^go\.mod$|^\.golangci\.yml$|^\.github/workflows/go\.yml$' <<<"$files"; then
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          fi
-
   lint:
     permissions:
       contents: read       # for actions/checkout to fetch code
       pull-requests: read  # for golangci/golangci-lint-action to fetch pull requests
     name: Lint
-    needs: changes
-    # Runs unless the pull request is known to have nothing for this job, which
-    # includes pushes and failed detection. A skipped job satisfies a required check.
-    if: ${{ !cancelled() && needs.changes.outputs.skip != 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
@@ -77,14 +53,8 @@ jobs:
           version: latest
           args: --timeout=30m
 
-  # The jobs with a matrix skip their steps instead of the whole job. A skipped
-  # matrix job reports a single check without the matrix values in its name,
-  # e.g., "Test" instead of "Test (1.27.x, ubuntu-latest)", which leaves a
-  # required check pending. They also run when detection fails or is skipped.
   test:
     name: Test
-    needs: changes
-    if: ${{ !cancelled() }}
     strategy:
       matrix:
         go-version: [ 1.27.x ]
@@ -92,18 +62,15 @@ jobs:
     runs-on: ${{ matrix.platform }}
     steps:
       - name: Check out code
-        if: ${{ needs.changes.outputs.skip != 'true' }}
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       - name: Install Go
-        if: ${{ needs.changes.outputs.skip != 'true' }}
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version: ${{ matrix.go-version }}
       - name: Run tests with coverage
-        if: ${{ needs.changes.outputs.skip != 'true' }}
         run: go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic -json ./... > test-report.json
       - name: Show test report
-        if: ${{ !cancelled() && needs.changes.outputs.skip != 'true' }}
+        if: ${{ !cancelled() }}
         run: |
           go install github.com/mfridman/tparse@latest
           tparse -all -file=test-report.json
@@ -118,8 +85,6 @@ jobs:
   # see https://github.com/golang/go/issues/46099 for details.
   test-windows:
     name: Test Windows
-    needs: changes
-    if: ${{ !cancelled() }}
     strategy:
       matrix:
         go-version: [ 1.27.x ]
@@ -127,15 +92,12 @@ jobs:
     runs-on: ${{ matrix.platform }}
     steps:
       - name: Check out code
-        if: ${{ needs.changes.outputs.skip != 'true' }}
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       - name: Install Go
-        if: ${{ needs.changes.outputs.skip != 'true' }}
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version: ${{ matrix.go-version }}
       - name: Run tests with coverage
-        if: ${{ needs.changes.outputs.skip != 'true' }}
         run: go test -shuffle=on -v -coverprofile=coverage -covermode=atomic ./...
       - name: Send email on failure
         uses: unknwon/send-email-on-failure@89339a1bc93f4ad1d30f3b7e4911fcba985c9adb # v1
@@ -146,8 +108,6 @@ jobs:
 
   postgres:
     name: Postgres
-    needs: changes
-    if: ${{ !cancelled() }}
     strategy:
       matrix:
         go-version: [ 1.27.x ]
@@ -167,15 +127,12 @@ jobs:
           - 5432:5432
     steps:
       - name: Check out code
-        if: ${{ needs.changes.outputs.skip != 'true' }}
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       - name: Install Go
-        if: ${{ needs.changes.outputs.skip != 'true' }}
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version: ${{ matrix.go-version }}
       - name: Run tests with coverage
-        if: ${{ needs.changes.outputs.skip != 'true' }}
         run: go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic -json ./internal/database/... > test-report.json
         env:
           GOGS_DATABASE_TYPE: postgres
@@ -185,15 +142,13 @@ jobs:
           PGPASSWORD: postgres
           PGSSLMODE: disable
       - name: Show test report
-        if: ${{ !cancelled() && needs.changes.outputs.skip != 'true' }}
+        if: ${{ !cancelled() }}
         run: |
           go install github.com/mfridman/tparse@latest
           tparse -all -file=test-report.json
 
   mysql:
     name: MySQL
-    needs: changes
-    if: ${{ !cancelled() }}
     strategy:
       matrix:
         go-version: [ 1.27.x ]
@@ -201,18 +156,14 @@ jobs:
     runs-on: ${{ matrix.platform }}
     steps:
       - name: Start MySQL server
-        if: ${{ needs.changes.outputs.skip != 'true' }}
         run: sudo systemctl start mysql
       - name: Check out code
-        if: ${{ needs.changes.outputs.skip != 'true' }}
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       - name: Install Go
-        if: ${{ needs.changes.outputs.skip != 'true' }}
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version: ${{ matrix.go-version }}
       - name: Run tests with coverage
-        if: ${{ needs.changes.outputs.skip != 'true' }}
         run: go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic -json ./internal/database/... > test-report.json
         env:
           GOGS_DATABASE_TYPE: mysql
@@ -221,7 +172,7 @@ jobs:
           MYSQL_HOST: localhost
           MYSQL_PORT: 3306
       - name: Show test report
-        if: ${{ !cancelled() && needs.changes.outputs.skip != 'true' }}
+        if: ${{ !cancelled() }}
         run: |
           go install github.com/mfridman/tparse@latest
           tparse -all -file=test-report.json
