@@ -1,7 +1,10 @@
-import { type AriaAttributes, type ReactElement, type ReactNode, cloneElement } from "react";
+import { CircleHelp } from "lucide-react";
+import { type AriaAttributes, type ReactElement, type ReactNode, cloneElement, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 // FormField labels an input and shows its error, or its helper text when there
@@ -102,8 +105,7 @@ export function RadioField({
   onChange,
   label,
   disabled,
-  description,
-  descriptionId,
+  hint,
 }: {
   id: string;
   name: string;
@@ -111,12 +113,12 @@ export function RadioField({
   onChange: () => void;
   label: ReactNode;
   disabled?: boolean;
-  // description shows below the label, e.g., why the choice is disabled.
-  description?: ReactNode;
-  descriptionId?: string;
+  // hint explains the choice in a tooltip next to its label, e.g., why it is
+  // disabled.
+  hint?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex items-start gap-1">
       <label
         htmlFor={id}
         className={cn(
@@ -131,16 +133,47 @@ export function RadioField({
           checked={checked}
           onChange={onChange}
           disabled={disabled}
-          aria-describedby={description ? descriptionId : undefined}
           className="mt-0.5 size-4 shrink-0 cursor-pointer accent-(--color-primary) disabled:cursor-not-allowed"
         />
         <span>{label}</span>
       </label>
-      {description ? (
-        <p id={descriptionId} className="ml-6.5 text-sm text-(--color-destructive)">
-          {description}
-        </p>
-      ) : null}
+      {hint ? <HelpTooltip>{hint}</HelpTooltip> : null}
     </div>
+  );
+}
+
+// HelpTooltip is a question mark that shows its content in a tooltip on
+// hover, on keyboard focus, and on a tap.
+function HelpTooltip({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const isTouchRef = useRef(false);
+  return (
+    <Tooltip open={open} onOpenChange={setOpen}>
+      <TooltipTrigger asChild>
+        {/* The tooltip ignores touch and closes on a press, so a tap opens it
+            here instead. */}
+        <button
+          type="button"
+          aria-label={t("help")}
+          className="-mt-0.5 inline-flex size-6 shrink-0 items-center justify-center rounded-md text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground) focus-visible:outline-2 focus-visible:outline-(--color-ring)"
+          onPointerDown={(event) => {
+            isTouchRef.current = event.pointerType === "touch";
+            if (isTouchRef.current) event.preventDefault();
+          }}
+          onClick={() => {
+            if (isTouchRef.current) setOpen(true);
+          }}
+        >
+          <CircleHelp className="size-4" aria-hidden />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent
+        collisionPadding={8}
+        className="max-w-[min(18rem,calc(100vw-1rem))] text-pretty [&_code]:bg-(--color-background)/20 [&_code]:text-(--color-background)"
+      >
+        {children}
+      </TooltipContent>
+    </Tooltip>
   );
 }

@@ -231,9 +231,8 @@ function CommitForm({
             name="commit-to"
             checked={!value.toNewBranch}
             onChange={() => set({ toNewBranch: false })}
-            disabled={Boolean(target.directCommitRefused)}
-            descriptionId="commit-direct-refused"
-            description={directRefused ? <RichText text={directRefused} code={target.branch} /> : undefined}
+            disabled={Boolean(directRefused)}
+            hint={directRefused ? <RichText text={directRefused} code={target.branch} /> : undefined}
             label={
               <>
                 {before}
