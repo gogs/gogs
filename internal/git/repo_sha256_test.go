@@ -129,4 +129,10 @@ func TestSHA256Repository(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, tagCommitID, c.ID.String())
 	})
+
+	t.Run("RawDiff", func(t *testing.T) {
+		var buf bytes.Buffer
+		require.NoError(t, r.RawDiff(ctx, headCommitID, RawDiffNormal, &buf))
+		assert.Regexp(t, `(?m)^index [0-9a-f]{64}\.\.[0-9a-f]{64}`, buf.String())
+	})
 }

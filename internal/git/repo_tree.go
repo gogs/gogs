@@ -9,38 +9,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// unescapeChars reverses escaped characters in quoted output from Git.
-func unescapeChars(in []byte) []byte {
-	if !bytes.ContainsRune(in, '\\') {
-		return in
-	}
-
-	out := make([]byte, 0, len(in))
-	for i := 0; i < len(in); i++ {
-		if in[i] == '\\' && i+1 < len(in) {
-			switch in[i+1] {
-			case '\\':
-				out = append(out, '\\')
-				i++
-			case '"':
-				out = append(out, '"')
-				i++
-			case 't':
-				out = append(out, '\t')
-				i++
-			case 'n':
-				out = append(out, '\n')
-				i++
-			default:
-				out = append(out, in[i])
-			}
-		} else {
-			out = append(out, in[i])
-		}
-	}
-	return out
-}
-
 // TreePaths returns the paths of every file in the tree of the revision and
 // its subtrees, in the order Git lists them. Submodules are left out, since
 // they have no content in the tree.
