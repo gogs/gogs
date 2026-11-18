@@ -144,6 +144,8 @@ All notable changes to Gogs are documented in this file.
 - When SSH keys are checked with `ssh-keygen`, adding a key it cannot read no longer shows paths of temporary files on the server, and a failure to run the check is reported as a server error instead of an invalid key. [#8641](https://github.com/gogs/gogs/pull/8641)
 - Adding an SSH or deploy key while SSH is disabled now says that SSH is disabled, instead of saying that the key is invalid. [#8641](https://github.com/gogs/gogs/pull/8641)
 - Listing releases through the API no longer shows drafts to users without write access. [#8571](https://github.com/gogs/gogs/pull/8571)
+- Listing releases through the API no longer fails when the user who published one of them was deleted. [#8571](https://github.com/gogs/gogs/pull/8571)
+- A release of a tag that already exists is now dated by the tag's commit instead of when the release was created, so it no longer always shows as the newest release. [#8571](https://github.com/gogs/gogs/pull/8571)
 
 ### Removed
 
