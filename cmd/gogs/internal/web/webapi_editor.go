@@ -296,9 +296,9 @@ func checkEditorCommit(c flamego.Context, l i18n.Locale, repoCtx *repoContext, g
 	}
 	switch denial {
 	case database.PushDeniedNotInAllowlist:
-		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("repo.editor.protected_branch_not_in_allowlist", target)}, nil
+		return http.StatusForbidden, &bindingErrorResponse{Error: strings.ReplaceAll(l.Tr("repo.editor.protected_branch_not_in_allowlist"), "{branch}", target)}, nil
 	case database.PushDeniedRequiresPullRequest:
-		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("repo.editor.protected_branch_requires_pull_request", target)}, nil
+		return http.StatusForbidden, &bindingErrorResponse{Error: strings.ReplaceAll(l.Tr("repo.editor.protected_branch_requires_pull_request"), "{branch}", target)}, nil
 	}
 	return 0, nil, nil
 }
