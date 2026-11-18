@@ -105,7 +105,7 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 		return errors.Wrap(err, "init logging")
 	}
 
-	conn, err := database.SetEngine(logger, false)
+	conn, err := database.SetEngine(logger.Scoped("db"), false)
 	if err != nil {
 		return errors.Wrap(err, "set engine")
 	}
@@ -146,7 +146,7 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 
 	// Database
 	dbDir := path.Join(archivePath, "db")
-	if err = database.ImportDatabase(ctx, logger, conn, dbDir, cmd.Bool("verbose")); err != nil {
+	if err = database.ImportDatabase(ctx, logger.Scoped("db"), conn, dbDir, cmd.Bool("verbose")); err != nil {
 		logger.FatalContext(ctx, "Failed to import database", "error", err)
 	}
 

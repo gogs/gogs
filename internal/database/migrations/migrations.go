@@ -35,7 +35,7 @@ const minDBVersion = 19
 func newMigrations(logger *logx.Logger, db *gorm.DB) []*goose.Migration {
 	return []*goose.Migration{
 		newMigration(logger, db, 19, "create missing tables", createBaselineTables),
-		newMigration(logger, db, 20, "migrate access tokens to store SHA56", migrateAccessTokenToSHA256),
+		newMigration(logger, db, 20, "migrate access tokens to store SHA256", migrateAccessTokenToSHA256),
 		newMigration(logger, db, 21, "add index to action.user_id", addIndexToActionUserID),
 		// NOTE: There was a bug in calculating the value of the legacy
 		// "version.version" column after a migration is done, thus some instances are
@@ -62,10 +62,10 @@ func newMigration(logger *logx.Logger, db *gorm.DB, version int64, description s
 		&goose.GoFunc{
 			// Migrations manage their own transactions through the given GORM handle.
 			RunDB: func(ctx context.Context, _ *sql.DB) error {
-				logger.Info("Running migration", "description", description)
+				logger.Info("Running migration", "version", version, "description", description)
 				err := migrate(db.WithContext(ctx))
 				if err == errMigrationSkipped {
-					logger.Debug("Migration skipped", "description", description)
+					logger.Debug("Migration skipped", "version", version, "description", description)
 					return nil
 				}
 				return err
