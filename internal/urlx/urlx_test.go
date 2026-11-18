@@ -48,3 +48,32 @@ func TestIsSameSite(t *testing.T) {
 		})
 	}
 }
+
+func TestIsHTTP(t *testing.T) {
+	tests := []struct {
+		url  string
+		want bool
+	}{
+		{url: "https://wiki.example.com/doku.php?id=start#intro", want: true},
+		{url: "http://tracker.example.com", want: true},
+		{url: "HTTPS://wiki.example.com", want: true},
+
+		{url: "", want: false},
+		{url: "javascript:alert(1)", want: false},
+		{url: "JavaScript:alert(1)", want: false},
+		{url: " javascript:alert(1)", want: false},
+		{url: "data:text/html,<script>alert(1)</script>", want: false},
+		{url: "wiki.example.com", want: false},
+		{url: "//wiki.example.com", want: false},
+		{url: "/wiki", want: false},
+		{url: "https://", want: false},
+		{url: "https:wiki.example.com", want: false},
+		{url: " https://wiki.example.com", want: false},
+		{url: "https://wiki.example.com/\n", want: false},
+	}
+	for _, test := range tests {
+		t.Run(test.url, func(t *testing.T) {
+			assert.Equal(t, test.want, IsHTTP(test.url))
+		})
+	}
+}

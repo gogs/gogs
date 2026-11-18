@@ -726,8 +726,17 @@ export function createRepoRoutes(rootRoute: AnyRoute) {
     loader: ({ params, context }) =>
       loadRepoPage((context as RouterContext).queryClient, params.owner, params.repo, () =>
         otherwiseRedirect(fetchRepoIssue(params.owner, params.repo, issueIndex(params.index)), () =>
-          fetchRepoPull(params.owner, params.repo, issueIndex(params.index)).then(() =>
-            redirect({ to: "/$owner/$repo/pulls/$index", params, replace: true }),
+          fetchRepoPull(params.owner, params.repo, issueIndex(params.index)).then(
+            () => redirect({ to: "/$owner/$repo/pulls/$index", params, replace: true }),
+            // Links within the app, e.g., in the lists of the dashboard, do not
+            // reach the server, which sends issues to the external tracker.
+            async (err: unknown) => {
+              const header = await (context as RouterContext).queryClient.ensureQueryData(
+                repoHeaderQuery(params.owner, params.repo),
+              );
+              if (!header.externalTrackerURL) throw err;
+              return redirect({ href: header.externalTrackerURL, replace: true });
+            },
           ),
         ),
       ),

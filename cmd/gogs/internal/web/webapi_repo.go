@@ -96,12 +96,8 @@ func getRepoHeader(logger *logx.Logger, repoCtx *repoContext) (statusCode int, r
 	if repoCtx.Viewer.CanRead() {
 		resp.DefaultBranch = repo.DefaultBranch
 		resp.CloneLinks = repoCloneLinksOf(owner.Name, repo.Name, false)
-		if repo.EnableIssues && repo.EnableExternalTracker {
-			resp.ExternalTrackerURL = repo.ExternalTrackerURL
-		}
-		if repo.EnableWiki && repo.EnableExternalWiki {
-			resp.ExternalWikiURL = repo.ExternalWikiURL
-		}
+		resp.ExternalTrackerURL = repo.ExternalTrackerLink()
+		resp.ExternalWikiURL = repo.ExternalWikiLink()
 	}
 
 	if repo.IsMirror {
