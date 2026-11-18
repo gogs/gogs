@@ -180,6 +180,7 @@ All notable changes to Gogs are documented in this file.
 - Migrating a repository from an SSH clone address now explains that SSH is not supported instead of reporting that importing local repositories is not allowed. [#8584](https://github.com/gogs/gogs/pull/8584)
 - Files listed by the Git trees API now link to their blobs instead of a tree URL that responded with 500. [#8611](https://github.com/gogs/gogs/pull/8611)
 - `gogs backup` no longer needs free space in the system temporary directory for the whole archive, and respects `--tempdir`. [#8614](https://github.com/gogs/gogs/pull/8614)
+- `gogs backup --exclude-mirror-repos` no longer fails when the name of a repository or its owner has upper case letters, and now includes the wikis of the repositories. [#6497](https://github.com/gogs/gogs/issues/6497)
 
 ### Removed
 

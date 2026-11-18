@@ -20,6 +20,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/osx"
+	"gogs.io/gogs/internal/repox"
 )
 
 var backupCommand = cli.Command{
@@ -196,9 +197,21 @@ func addRepositoriesToBackup(ctx context.Context, z *archiveWriter, excludeMirro
 			return errors.Wrap(err, "get non-mirror repositories")
 		}
 		for _, r := range nonMirrors {
-			name := r.FullName() + ".git"
-			if err = repos.add(path.Join(baseDir, name), filepath.Join(conf.Repository.Root, name)); err != nil {
-				return errors.Wrapf(err, "add %q", name)
+			// Directories are named in lower case, unlike repositories and their
+			// owners.
+			owner := r.MustOwner().Name
+			repoPaths := []string{repox.RepositoryPath(owner, r.Name)}
+			if wikiPath := database.WikiPath(owner, r.Name); osx.IsDir(wikiPath) {
+				repoPaths = append(repoPaths, wikiPath)
+			}
+			for _, repoPath := range repoPaths {
+				rel, err := filepath.Rel(conf.Repository.Root, repoPath)
+				if err != nil {
+					return errors.Wrap(err, "get relative path")
+				}
+				if err = repos.add(path.Join(baseDir, filepath.ToSlash(rel)), repoPath); err != nil {
+					return errors.Wrapf(err, "add %q", rel)
+				}
 			}
 		}
 	} else if err = repos.add(baseDir, conf.Repository.Root); err != nil {
