@@ -104,6 +104,7 @@ All notable changes to Gogs are documented in this file.
 - Avatars are no longer shown to unauthenticated visitors when the site requires signing in, and the avatar of a private repository is only shown to those who can read the repository. [#8650](https://github.com/gogs/gogs/pull/8650)
 - A webhook redelivery that fails now shows as failed, and so does its webhook, even when an earlier delivery succeeded. [#8501](https://github.com/gogs/gogs/pull/8501)
 - A Discord webhook created through the API no longer makes pushes, comments, and other events of its repository fail to reach the repository's other webhooks. [#8501](https://github.com/gogs/gogs/pull/8501)
+- Discord webhooks without a username now deliver, instead of every delivery being rejected by Discord. [#8501](https://github.com/gogs/gogs/pull/8501)
 - A webhook delivery to an invalid payload URL or to a blocked local network address now shows as failed with the reason, instead of staying pending and being retried on every delivery run. [#8501](https://github.com/gogs/gogs/pull/8501)
 
 ### Removed

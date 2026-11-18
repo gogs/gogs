@@ -320,5 +320,7 @@ func webhooksPrepareDiscordWithoutSettings(t *testing.T, ctx context.Context, s 
 	require.Len(t, tasks, 2)
 	assert.Equal(t, discord.ID, tasks[0].HookID)
 	assert.Contains(t, tasks[0].PayloadContent, "Pushed 0 new commits")
+	assert.NotContains(t, tasks[0].PayloadContent, `"username"`)
+	assert.NotContains(t, tasks[0].PayloadContent, `"avatar_url"`)
 	assert.Equal(t, after.ID, tasks[1].HookID)
 }

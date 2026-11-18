@@ -39,9 +39,11 @@ type DiscordEmbedObject struct {
 }
 
 type DiscordPayload struct {
-	Content   string                `json:"content"`
-	Username  string                `json:"username"`
-	AvatarURL string                `json:"avatar_url"`
+	Content string `json:"content"`
+	// Discord rejects an empty username, so it is left out to use the name
+	// set on the webhook in Discord.
+	Username  string                `json:"username,omitempty"`
+	AvatarURL string                `json:"avatar_url,omitempty"`
 	Embeds    []*DiscordEmbedObject `json:"embeds"`
 }
 
