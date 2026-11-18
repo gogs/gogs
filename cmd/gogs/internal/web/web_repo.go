@@ -14,6 +14,7 @@ import (
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/repox"
 	"gogs.io/gogs/internal/tool"
@@ -225,4 +226,75 @@ func getRepoRawFile(logger *logx.Logger, c flamego.Context, repoCtx *repoContext
 	}
 
 	_, _ = w.Write(data)
+}
+
+// readableRepo returns the repository in the path when the viewer can read
+// it, and nil otherwise. It writes nothing, so the web app renders the page and
+// tells the viewer what is wrong.
+func readableRepo(c flamego.Context, logger *logx.Logger, viewer *database.User) *database.Repository {
+	if viewer == nil && conf.Auth.RequireSigninView || viewer != nil && (viewer.ProhibitLogin || viewer.IsDisabled()) {
+		return nil
+	}
+
+	ctx := c.Request().Context()
+	ownerName := c.Param("owner")
+	repoName := c.Param("repo")
+	owner, err := database.Handle.Users().GetByUsername(ctx, ownerName)
+	if err != nil {
+		if !database.IsErrUserNotExist(err) {
+			logger.Error("Failed to get repository owner by username", "ownerName", ownerName, "error", err)
+		}
+		return nil
+	}
+	repo, err := database.Handle.Repositories().GetByName(ctx, owner.ID, repoName)
+	if err != nil {
+		if !database.IsErrRepoNotExist(err) {
+			logger.Error("Failed to get repository by name", "ownerName", ownerName, "repoName", repoName, "error", err)
+		}
+		return nil
+	}
+	if !newViewer(ctx, logger, viewer, owner, repo).CanRead() {
+		return nil
+	}
+	return repo
+}
+
+// maybeRedirectToExternalTracker sends the pages of issues to the external
+// issue tracker of the repository when it has one. Pull requests share their
+// numbers with issues and keep their pages here.
+func maybeRedirectToExternalTracker(c flamego.Context, logger *logx.Logger, viewer *database.User) {
+	repo := readableRepo(c, logger, viewer)
+	if repo == nil {
+		return
+	}
+	link := repo.ExternalTrackerLink()
+	if link == "" {
+		return
+	}
+	if index := c.ParamInt64("index"); index > 0 {
+		issue, err := database.GetRawIssueByIndex(repo.ID, index)
+		switch {
+		case database.IsErrIssueNotExist(err):
+		case err != nil:
+			logger.Error("Failed to get issue by index", "repoID", repo.ID, "index", index, "error", err)
+			return
+		case issue.IsPull:
+			return
+		}
+	}
+	// The URL is used as is, so that its query and fragment reach the external site.
+	c.Redirect(link)
+}
+
+// maybeRedirectToExternalWiki sends the pages of the wiki to the external wiki
+// of the repository when it has one.
+func maybeRedirectToExternalWiki(c flamego.Context, logger *logx.Logger, viewer *database.User) {
+	repo := readableRepo(c, logger, viewer)
+	if repo == nil {
+		return
+	}
+	if link := repo.ExternalWikiLink(); link != "" {
+		// The URL is used as is, so that its query and fragment reach the external site.
+		c.Redirect(link)
+	}
 }

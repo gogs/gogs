@@ -20,6 +20,10 @@ export interface RepoHeaderData {
   issuesEnabled: boolean;
   pullRequestsEnabled: boolean;
   wikiEnabled: boolean;
+  // externalTrackerURL and externalWikiURL are set when the issues or the
+  // wiki are kept elsewhere, for viewers who can read the code.
+  externalTrackerURL?: string;
+  externalWikiURL?: string;
   watchCount: number;
   starCount: number;
   forkCount: number;

@@ -515,7 +515,7 @@ function AdvancedSettings({ owner, name, settings }: { owner: string; name: stri
       await refresh();
     },
   });
-  const { formError } = formErrors(save.error);
+  const { fields, formError } = formErrors(save.error);
   const set = (change: Partial<RepoAdvancedSettings>) => setForm({ ...form, ...change });
   const noMergeMethod = form.enablePulls && !form.pullsAllowMerge && !form.pullsAllowSquash && !form.pullsAllowRebase;
 
@@ -566,7 +566,8 @@ function AdvancedSettings({ owner, name, settings }: { owner: string; name: stri
                   id="externalWikiURL"
                   label={t("repo.settings.external_wiki_url")}
                   helper={t("repo.settings.external_wiki_url_desc")}
-                  invalid={false}
+                  error={fields.externalWikiURL}
+                  invalid={"externalWikiURL" in fields}
                 >
                   <Input
                     id="externalWikiURL"
@@ -616,7 +617,8 @@ function AdvancedSettings({ owner, name, settings }: { owner: string; name: stri
                   id="externalTrackerURL"
                   label={t("repo.settings.external_tracker_url")}
                   helper={t("repo.settings.external_tracker_url_desc")}
-                  invalid={false}
+                  error={fields.externalTrackerURL}
+                  invalid={"externalTrackerURL" in fields}
                 >
                   <Input
                     id="externalTrackerURL"

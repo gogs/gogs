@@ -16,6 +16,7 @@ import (
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/i18n"
 	"gogs.io/gogs/internal/tool"
+	"gogs.io/gogs/internal/urlx"
 )
 
 // repoAdminContext is the repository whose settings a repository admin
@@ -339,6 +340,16 @@ func postRepoMirrorSync(rc *repoAdminContext) (statusCode int, resp any, err err
 func putRepoAdvanced(logger *logx.Logger, l i18n.Locale, rc *repoAdminContext, req repoAdvancedSettings) (statusCode int, resp any, err error) {
 	if req.EnablePulls && !req.PullsAllowMerge && !req.PullsAllowSquash && !req.PullsAllowRebase {
 		return http.StatusUnprocessableEntity, &bindingErrorResponse{Error: l.Tr("repo.settings.pulls.no_merge_method")}, nil
+	}
+	// Browsers are sent to these URLs, which must not run script, e.g., a
+	// "javascript:" URL.
+	if req.EnableWiki && req.EnableExternalWiki && !urlx.IsHTTP(req.ExternalWikiURL) {
+		msg := l.Tr("repo.settings.external_wiki_url") + l.Tr("form.url_error")
+		return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"externalWikiURL": &msg}}, nil
+	}
+	if req.EnableIssues && req.EnableExternalTracker && !urlx.IsHTTP(req.ExternalTrackerURL) {
+		msg := l.Tr("repo.settings.external_tracker_url") + l.Tr("form.url_error")
+		return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"externalTrackerURL": &msg}}, nil
 	}
 	repo := rc.Repo
 	repo.EnableWiki = req.EnableWiki

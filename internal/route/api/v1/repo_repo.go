@@ -11,6 +11,7 @@ import (
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/route/api/v1/types"
+	"gogs.io/gogs/internal/urlx"
 )
 
 func searchRepos(c *apiContext) {
@@ -450,6 +451,12 @@ func issueTracker(c *apiContext, form editIssueTrackerRequest) {
 	if form.TrackerIssueStyle != nil {
 		repo.ExternalTrackerStyle = *form.TrackerIssueStyle
 	}
+	// Browsers are sent to the URL, which must not run script, e.g., a
+	// "javascript:" URL.
+	if repo.EnableIssues && repo.EnableExternalTracker && !urlx.IsHTTP(repo.ExternalTrackerURL) {
+		c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("external_tracker_url must be an HTTP or HTTPS URL"))
+		return
+	}
 
 	if err := database.UpdateRepository(c.Logger, repo, false); err != nil {
 		c.Error(err, "update repository")
@@ -483,6 +490,12 @@ func wiki(c *apiContext, form editWikiRequest) {
 	}
 	if form.ExternalWikiURL != nil {
 		repo.ExternalWikiURL = *form.ExternalWikiURL
+	}
+	// Browsers are sent to the URL, which must not run script, e.g., a
+	// "javascript:" URL.
+	if repo.EnableWiki && repo.EnableExternalWiki && !urlx.IsHTTP(repo.ExternalWikiURL) {
+		c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("external_wiki_url must be an HTTP or HTTPS URL"))
+		return
 	}
 	if err := database.UpdateRepository(c.Logger, repo, false); err != nil {
 		c.Error(err, "update repository")

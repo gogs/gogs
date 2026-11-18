@@ -38,6 +38,7 @@ import (
 	"gogs.io/gogs/internal/semverx"
 	"gogs.io/gogs/internal/strx"
 	"gogs.io/gogs/internal/sync"
+	"gogs.io/gogs/internal/urlx"
 )
 
 // RepoAvatarURLPrefix is the path prefix to repository avatars. It is under
@@ -268,6 +269,26 @@ func (r *Repository) CanGuestViewWiki() bool {
 
 func (r *Repository) CanGuestViewIssues() bool {
 	return r.EnableIssues && !r.EnableExternalTracker && r.AllowPublicIssues
+}
+
+// ExternalTrackerLink returns the URL of the external issue tracker when the
+// repository uses one, and an empty string otherwise or when the URL is not an
+// HTTP or HTTPS URL.
+func (r *Repository) ExternalTrackerLink() string {
+	if r.EnableIssues && r.EnableExternalTracker && urlx.IsHTTP(r.ExternalTrackerURL) {
+		return r.ExternalTrackerURL
+	}
+	return ""
+}
+
+// ExternalWikiLink returns the URL of the external wiki when the repository
+// uses one, and an empty string otherwise or when the URL is not an HTTP or
+// HTTPS URL.
+func (r *Repository) ExternalWikiLink() string {
+	if r.EnableWiki && r.EnableExternalWiki && urlx.IsHTTP(r.ExternalWikiURL) {
+		return r.ExternalWikiURL
+	}
+	return ""
 }
 
 // MustOwner always returns a valid *User object to avoid conceptually impossible error handling.

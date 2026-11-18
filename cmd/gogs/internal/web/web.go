@@ -397,7 +397,11 @@ func newRoutingHandler(logger *logx.Logger, localizer, sessioner, authenticate f
 		f.Group("/{owner}/{repo}", func() {
 			f.Get("", serveGoGet, webApp.ServeHTTP)
 			f.Get("/archive/{**}", requireViewAccess, withRepoContext, getRepoArchive)
+			f.Get("/issues", maybeRedirectToExternalTracker, webApp.ServeHTTP)
+			f.Get("/issues/{index}", maybeRedirectToExternalTracker, webApp.ServeHTTP)
+			f.Get("/wiki", maybeRedirectToExternalWiki, webApp.ServeHTTP)
 			f.Get("/wiki/{page}",
+				maybeRedirectToExternalWiki,
 				func(c flamego.Context) {
 					if isWikiPageName(c.Param("page")) {
 						webApp.ServeHTTP(c.ResponseWriter(), c.Request().Request)
@@ -405,6 +409,7 @@ func newRoutingHandler(logger *logx.Logger, localizer, sessioner, authenticate f
 				},
 				requireViewAccess, withRepoContext, withRepoWiki, getRepoWikiFile, webApp.ServeHTTP,
 			)
+			f.Get("/wiki/{page}/_edit", maybeRedirectToExternalWiki, webApp.ServeHTTP)
 		})
 		f.Any("/api/v1/{**}", apiV1Access, apiV1Bridger(newAPIV1Handler(logger)))
 	},
