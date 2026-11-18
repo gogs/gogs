@@ -1,5 +1,6 @@
 import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useRouter } from "@tanstack/react-router";
+import type { TFunction } from "i18next";
 import {
   CircleCheck,
   CircleDot,
@@ -513,10 +514,10 @@ export function CommentCard({
 
 // deleteDescription asks before deleting a comment, and says how many replies
 // are deleted with it.
-function deleteDescription(t: (key: string) => string, comment: IssueComment) {
+function deleteDescription(t: TFunction, comment: IssueComment) {
   const replies = comment.replies?.length ?? 0;
   return replies > 0
-    ? t("repo.issues.delete_thread_confirm").replace("%d", String(replies))
+    ? t("repo.issues.delete_thread_confirm", { count: replies })
     : t("repo.issues.delete_comment_confirm");
 }
 

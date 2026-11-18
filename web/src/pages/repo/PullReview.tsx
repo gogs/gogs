@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { Link, useRouter } from "@tanstack/react-router";
+import type { TFunction } from "i18next";
 import {
   Check,
   ChevronDown,
@@ -12,7 +13,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { type FormEvent, type ReactNode, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import type { DiffLineTarget } from "@/components/DiffWorkspace";
@@ -74,10 +75,9 @@ export function PullTimelineItem({
   const { t } = useTranslation();
   if (comment.type === "review_request" || comment.type === "review_request_removed") {
     const removed = comment.type === "review_request_removed";
-    const text = t(removed ? "repo.pulls.review.event_request_removed" : "repo.pulls.review.event_requested").replace(
-      "%s",
-      comment.target?.name ?? "",
-    );
+    const text = t(removed ? "repo.pulls.review.event_request_removed" : "repo.pulls.review.event_requested", {
+      name: comment.target?.name ?? "",
+    });
     return (
       <EventRow
         anchor={`event-${comment.id}`}
@@ -183,10 +183,10 @@ function EventRow({
   );
 }
 
-function linesLabel(t: (key: string) => string, thread: NonNullable<IssueComment["thread"]>) {
+function linesLabel(t: TFunction, thread: NonNullable<IssueComment["thread"]>) {
   return thread.startLine === thread.line && thread.startSide === thread.side
-    ? t("repo.pulls.review.on_line").replace("%s", String(thread.line))
-    : t("repo.pulls.review.on_lines").replace("%s", String(thread.startLine)).replace("%s", String(thread.line));
+    ? t("repo.pulls.review.on_line", { line: thread.line })
+    : t("repo.pulls.review.on_lines", { start: thread.startLine, end: thread.line });
 }
 
 // ReviewThread shows a thread of comments on lines of the diff: in the
@@ -246,18 +246,11 @@ export function ReviewThread({
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-2 text-sm">
           <Check className="size-4 text-(--color-muted-foreground)" aria-hidden />
           <span className="min-w-0 flex-1 text-(--color-muted-foreground)">
-            {t("repo.pulls.review.resolved_by")
-              .split("%s")
-              .map((part, i) =>
-                i === 0 ? (
-                  part
-                ) : (
-                  <span key={i}>
-                    <span className="font-semibold text-(--color-foreground)">{thread.resolvedBy?.name}</span>
-                    {part}
-                  </span>
-                ),
-              )}
+            <Trans
+              i18nKey="repo.pulls.review.resolved_by"
+              values={{ name: thread.resolvedBy.name }}
+              components={{ name: <span className="font-semibold text-(--color-foreground)" /> }}
+            />
           </span>
           <Button
             type="button"
@@ -365,10 +358,11 @@ export function CodeCommentForm({
   const sign = (side: "old" | "new") => (side === "old" ? "-" : "+");
   const title =
     target.startLine === target.line && target.startSide === target.side
-      ? t("repo.pulls.review.comment_on_line").replace("%s", `${sign(target.side)}${target.line}`)
-      : t("repo.pulls.review.comment_on_lines")
-          .replace("%s", `${sign(target.startSide)}${target.startLine}`)
-          .replace("%s", `${sign(target.side)}${target.line}`);
+      ? t("repo.pulls.review.comment_on_line", { line: `${sign(target.side)}${target.line}` })
+      : t("repo.pulls.review.comment_on_lines", {
+          start: `${sign(target.startSide)}${target.startLine}`,
+          end: `${sign(target.side)}${target.line}`,
+        });
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
     mutation.mutate(true);
@@ -646,9 +640,7 @@ export function ReviewStatusRows({ data }: { data: RepoPullData }): ReactNode {
       icon: Clock,
       className: "text-(--color-muted-foreground)",
       title: t("repo.pulls.review.decision_review_required"),
-      desc: t("repo.pulls.review.blocker_approvals")
-        .replace("%s", String(approvals))
-        .replace("%s", String(data.requiredApprovals ?? 0)),
+      desc: t("repo.pulls.review.blocker_approvals", { approvals, required: data.requiredApprovals ?? 0 }),
     });
   } else if (data.reviewDecision === "approved") {
     rows.push({
