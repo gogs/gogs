@@ -77,8 +77,28 @@ func TestAPIV1ListUserRepositories(t *testing.T) {
 	other := apiV1Client(t, seedUser(t, CreateUserOptions{}))
 	other.doJSON(http.MethodGet, "/api/v1/users/"+owner.Name+"/repos", nil, http.StatusOK, &repos)
 	assert.Equal(t, []string{public.Name}, apiV1RepoNames(repos), "private repository listed to another user")
+	require.NotNil(t, repos[0].Permissions)
+	assert.False(t, repos[0].Permissions.Admin, "another user is admin of the repository")
+	assert.False(t, repos[0].Permissions.Push, "another user can push to the repository")
+	assert.True(t, repos[0].Permissions.Pull)
 
-	status, body := newClient(t).do(http.MethodGet, "/api/v1/users/"+owner.Name+"/repos", nil)
+	collaborator := seedUser(t, CreateUserOptions{})
+	status, body := apiV1Client(t, owner).do(http.MethodPut, apiV1RepoPath(public, "/collaborators/"+collaborator.Name), map[string]any{"permission": "write"})
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	repos = nil
+	apiV1Client(t, collaborator).doJSON(http.MethodGet, "/api/v1/users/"+owner.Name+"/repos", nil, http.StatusOK, &repos)
+	require.Len(t, repos, 1)
+	require.NotNil(t, repos[0].Permissions)
+	assert.False(t, repos[0].Permissions.Admin, "collaborator with write access is admin of the repository")
+	assert.True(t, repos[0].Permissions.Push, "collaborator with write access cannot push to the repository")
+
+	repos = nil
+	apiV1Client(t, seedUser(t, CreateUserOptions{Admin: true})).doJSON(http.MethodGet, "/api/v1/users/"+owner.Name+"/repos", nil, http.StatusOK, &repos)
+	assert.ElementsMatch(t, []string{public.Name}, apiV1RepoNames(repos))
+	require.NotNil(t, repos[0].Permissions)
+	assert.True(t, repos[0].Permissions.Admin, "site admin is not admin of the repository")
+
+	status, body = newClient(t).do(http.MethodGet, "/api/v1/users/"+owner.Name+"/repos", nil)
 	assert.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
 }
 

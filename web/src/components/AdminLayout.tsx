@@ -5,7 +5,6 @@ import {
   BookMarked,
   Building2,
   Clock,
-  Cpu,
   HeartPulse,
   LayoutDashboard,
   type LucideIcon,
@@ -29,9 +28,8 @@ export type AdminPage =
   | "auths"
   | "config"
   | "notices"
-  | "cron"
+  | "jobs"
   | "health"
-  | "processes"
   | "traces";
 
 type NavItem = { page: AdminPage; path: string; label: string; icon: LucideIcon };
@@ -58,7 +56,6 @@ const NAV: { title?: string; items: NavItem[] }[] = [
     title: "admin.group_monitoring",
     items: [
       { page: "health", path: "/health", label: "admin.health", icon: HeartPulse },
-      { page: "processes", path: "/processes", label: "admin.processes", icon: Cpu },
       { page: "traces", path: "/traces", label: "admin.traces", icon: Activity },
       { page: "notices", path: "/notices", label: "admin.notices", icon: Bell },
     ],
@@ -67,7 +64,7 @@ const NAV: { title?: string; items: NavItem[] }[] = [
     title: "admin.group_maintenance",
     items: [
       { page: "operations", path: "/operations", label: "admin.dashboard.operations", icon: Play },
-      { page: "cron", path: "/cron", label: "admin.monitor.cron", icon: Clock },
+      { page: "jobs", path: "/jobs", label: "admin.monitor.cron", icon: Clock },
     ],
   },
 ];

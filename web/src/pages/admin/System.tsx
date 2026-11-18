@@ -22,7 +22,7 @@ import {
   sendAdminTestMail,
 } from "@/lib/queries/admin";
 import { formErrors } from "@/lib/queries/request";
-import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
+import { formatAbsoluteTime } from "@/lib/relative-time";
 import { cn } from "@/lib/utils";
 
 const ROW_CLASS = "border-b border-(--color-border) py-3";
@@ -306,11 +306,11 @@ function Empty() {
   );
 }
 
-// AdminCron lists the scheduled tasks of the server.
-export function AdminCron({ monitor }: { monitor: AdminMonitorData }) {
+// AdminJobs lists the background jobs of the server and their schedules.
+export function AdminJobs({ monitor }: { monitor: AdminMonitorData }) {
   const { t } = useTranslation();
   return (
-    <AdminLayout active="cron">
+    <AdminLayout active="jobs">
       <h1 className="mb-4 text-xl font-semibold">{t("admin.monitor.cron")}</h1>
       {monitor.cronTasks.length > 0 ? (
         <ul className="glass-list border-t border-(--color-border)">
@@ -330,32 +330,6 @@ export function AdminCron({ monitor }: { monitor: AdminMonitorData }) {
                   {task.prev ? formatAbsoluteTime(task.prev) : <NotAvailable />}
                 </Detail>
                 <Detail label={t("admin.monitor.execute_times")}>{task.execTimes}</Detail>
-              </Details>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <Empty />
-      )}
-    </AdminLayout>
-  );
-}
-
-// AdminProcesses lists the Git processes running now.
-export function AdminProcesses({ monitor }: { monitor: AdminMonitorData }) {
-  const { t } = useTranslation();
-  return (
-    <AdminLayout active="processes">
-      <h1 className="mb-4 text-xl font-semibold">{t("admin.processes")}</h1>
-      {monitor.processes.length > 0 ? (
-        <ul className="glass-list border-t border-(--color-border)">
-          {monitor.processes.map((proc) => (
-            <li key={proc.pid} className={ROW_CLASS}>
-              <p className="font-mono text-sm wrap-anywhere">{proc.description}</p>
-              <Details>
-                <Detail label="PID">{proc.pid}</Detail>
-                <Detail label={t("admin.monitor.start")}>{formatAbsoluteTime(proc.start)}</Detail>
-                <Detail label={t("admin.monitor.execute_time")}>{formatRelativeTime(t, proc.start)}</Detail>
               </Details>
             </li>
           ))}

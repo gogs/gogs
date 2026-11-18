@@ -1,14 +1,16 @@
 package conf
 
 import (
+	"bytes"
+	"context"
+	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/cockroachdb/errors"
-	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/osx"
-	"gogs.io/gogs/internal/process"
 )
 
 // cleanUpOpenSSHVersion cleans up the raw output of "ssh -V" and returns a clean version string.
@@ -19,14 +21,19 @@ func cleanUpOpenSSHVersion(raw string) string {
 }
 
 // openSSHVersion returns string representation of OpenSSH version via command "ssh -V".
-func openSSHVersion(logger *logx.Logger) (string, error) {
+func openSSHVersion() (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
 	// NOTE: Somehow the version is printed to stderr.
-	_, stderr, err := process.Exec(logger, "conf.openSSHVersion", "ssh", "-V")
-	if err != nil {
-		return "", errors.Wrap(err, stderr)
+	var stderr bytes.Buffer
+	cmd := exec.CommandContext(ctx, "ssh", "-V")
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return "", errors.Wrap(err, stderr.String())
 	}
 
-	return cleanUpOpenSSHVersion(stderr), nil
+	return cleanUpOpenSSHVersion(stderr.String()), nil
 }
 
 // ensureAbs prepends the WorkDir to the given path if it is not an absolute path.

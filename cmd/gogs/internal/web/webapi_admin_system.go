@@ -19,7 +19,6 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/i18n"
-	"gogs.io/gogs/internal/process"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -499,15 +498,8 @@ type adminCronTask struct {
 	ExecTimes int        `json:"execTimes"`
 }
 
-type adminProcess struct {
-	PID         int64     `json:"pid"`
-	Description string    `json:"description"`
-	Start       time.Time `json:"start"`
-}
-
 type adminMonitor struct {
 	CronTasks []adminCronTask `json:"cronTasks"`
-	Processes []adminProcess  `json:"processes"`
 }
 
 func getAdminMonitor() (statusCode int, resp *adminMonitor, err error) {
@@ -528,9 +520,5 @@ func getAdminMonitor() (statusCode int, resp *adminMonitor, err error) {
 			ExecTimes:   e.ExecTimes,
 		})
 	}
-	procs := make([]adminProcess, 0, len(process.Processes))
-	for _, p := range process.Processes {
-		procs = append(procs, adminProcess{PID: p.PID, Description: p.Description, Start: p.Start})
-	}
-	return http.StatusOK, &adminMonitor{CronTasks: tasks, Processes: procs}, nil
+	return http.StatusOK, &adminMonitor{CronTasks: tasks}, nil
 }

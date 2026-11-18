@@ -132,7 +132,7 @@ func Init(logger *logx.Logger, customConf string) error {
 		// because the "ssh-keygen" in Windows does not print key type.
 		// See https://github.com/gogs/gogs/issues/4507.
 		if SSH.MinimumKeySizeCheck {
-			sshVersion, err := openSSHVersion(logger)
+			sshVersion, err := openSSHVersion()
 			if err != nil {
 				return errors.Wrap(err, "get OpenSSH version")
 			}

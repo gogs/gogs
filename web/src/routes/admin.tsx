@@ -32,7 +32,7 @@ import {
 import { AdminAuthSourceEdit, AdminAuthSourceNew } from "@/pages/admin/Auths";
 import { AdminServerHealth } from "@/pages/admin/Health";
 import { AdminAuthSources, AdminNotices, AdminOrgs, AdminRepos, AdminUsers } from "@/pages/admin/Lists";
-import { AdminConfig, AdminCron, AdminDashboard, AdminOperations, AdminProcesses } from "@/pages/admin/System";
+import { AdminConfig, AdminDashboard, AdminJobs, AdminOperations } from "@/pages/admin/System";
 import { AdminTraceOverview, AdminTraceSearch, AdminTraceView } from "@/pages/admin/Traces";
 import { AdminUserEdit, AdminUserNew } from "@/pages/admin/Users";
 
@@ -61,21 +61,12 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
     },
   });
 
-  const cronRoute = createRoute({
+  const jobsRoute = createRoute({
     getParentRoute: () => rootRoute,
-    path: "/admin/cron",
+    path: "/admin/jobs",
     loader: () => loadAuthenticatedPage(fetchAdminMonitor),
-    component: function Cron() {
-      return <AdminCron monitor={cronRoute.useLoaderData()} />;
-    },
-  });
-
-  const processesRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/admin/processes",
-    loader: () => loadAuthenticatedPage(fetchAdminMonitor),
-    component: function Processes() {
-      return <AdminProcesses monitor={processesRoute.useLoaderData()} />;
+    component: function Jobs() {
+      return <AdminJobs monitor={jobsRoute.useLoaderData()} />;
     },
   });
 
@@ -247,9 +238,8 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
     dashboardRoute,
     operationsRoute,
     configRoute,
-    cronRoute,
+    jobsRoute,
     healthRoute,
-    processesRoute,
     tracesRoute,
     traceRoute,
     usersRoute,
