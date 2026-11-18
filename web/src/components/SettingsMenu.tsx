@@ -43,7 +43,7 @@ export function SettingsMenu() {
       </PopoverTrigger>
       <PopoverContent
         align="end"
-        className="w-64 p-0 focus:outline-none"
+        className="flex max-h-(--radix-popover-content-available-height) flex-col w-64 p-0 focus:outline-none"
         // Focus the popover container itself rather than the first focusable
         // child (the Light theme toggle) so an Enter/Space press right after
         // opening the menu does not accidentally change the theme. Keyboard

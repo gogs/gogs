@@ -4,14 +4,15 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 // ScrollArea grows with its content up to the max height its className sets,
-// then scrolls with a thin scrollbar that follows the theme. The viewport
-// shrinks to that height as a flex item, and its content is a block instead of
-// the table Radix renders, so long rows still truncate.
+// then scrolls with a thin scrollbar that follows the theme. In a flex column,
+// such as a popover capped at the height left on screen, it also shrinks to
+// the space left. Its content is a block instead of the table Radix renders,
+// so long rows still truncate.
 function ScrollArea({ className, children, ...props }: React.ComponentProps<typeof ScrollAreaPrimitive.Root>) {
   return (
     <ScrollAreaPrimitive.Root
       data-slot="scroll-area"
-      className={cn("relative flex flex-col overflow-hidden", className)}
+      className={cn("relative flex min-h-0 flex-col overflow-hidden", className)}
       {...props}
     >
       <ScrollAreaPrimitive.Viewport

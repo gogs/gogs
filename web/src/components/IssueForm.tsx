@@ -270,7 +270,11 @@ export function SidebarSection({
               </button>
             </PopoverTrigger>
           </h2>
-          <PopoverContent align="end" collisionPadding={16} className="w-75 max-w-[calc(100vw-2rem)] p-0">
+          <PopoverContent
+            align="end"
+            collisionPadding={16}
+            className="flex max-h-(--radix-popover-content-available-height) flex-col w-75 max-w-[calc(100vw-2rem)] p-0"
+          >
             {editor(() => setOpen(false))}
           </PopoverContent>
         </Popover>
@@ -322,7 +326,7 @@ function Picker<T extends { id: number; name: string }>({
     }))
     .filter((group) => group.items.length);
   return (
-    <div className="flex flex-col text-sm">
+    <div className="flex min-h-0 flex-col text-sm">
       <p className="border-b border-(--color-border) px-3 py-2 text-xs font-semibold">{heading}</p>
       <div className="border-b border-(--color-border) p-2">
         <Input

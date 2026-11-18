@@ -54,7 +54,7 @@ export function CommitAuthors({
               <p className="px-2 py-1.5 text-xs text-(--color-muted-foreground)">
                 {t("repo.authors_people", { count: people.length })}
               </p>
-              <ScrollArea className="min-h-0">
+              <ScrollArea>
                 {people.map((person) => (
                   <span key={person.email} className="flex items-center gap-2 rounded-sm px-2 py-1.5">
                     <img src={person.avatarURL} alt="" className="size-5 shrink-0 rounded-full" />

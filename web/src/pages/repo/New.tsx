@@ -282,7 +282,10 @@ function GitignorePicker({
         )}
         <ChevronDown className="size-4 shrink-0 text-(--color-muted-foreground)" aria-hidden />
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-(--radix-popover-trigger-width) p-2">
+      <PopoverContent
+        align="start"
+        className="flex max-h-(--radix-popover-content-available-height) flex-col w-(--radix-popover-trigger-width) p-2"
+      >
         <Input
           aria-label={t("explore.search")}
           placeholder={t("explore.search")}

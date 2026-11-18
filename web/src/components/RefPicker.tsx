@@ -62,7 +62,11 @@ export function RefPicker({
           <ChevronDown className="size-4 shrink-0" aria-hidden />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" collisionPadding={16} className="w-80 max-w-[calc(100vw-2rem)] p-0">
+      <PopoverContent
+        align="start"
+        collisionPadding={16}
+        className="flex max-h-(--radix-popover-content-available-height) flex-col w-80 max-w-[calc(100vw-2rem)] p-0"
+      >
         <div className="relative border-b border-(--color-border) p-2">
           <Search
             className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-(--color-muted-foreground)"

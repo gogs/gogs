@@ -875,7 +875,7 @@ function OutlineMenu({ headings }: { headings: OutlineHeading[] }) {
       </Tooltip>
       <PopoverContent
         align="end"
-        className="w-80 max-w-[calc(100vw-2rem)] p-2"
+        className="flex max-h-(--radix-popover-content-available-height) flex-col w-80 max-w-[calc(100vw-2rem)] p-2"
         onCloseAutoFocus={(e) => {
           if (choseHeading.current) e.preventDefault();
           choseHeading.current = false;

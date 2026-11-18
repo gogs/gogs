@@ -46,7 +46,10 @@ export function ContextSwitcher({ data, page }: { data: DashboardContextData; pa
         <span className="min-w-0 flex-1 truncate text-left font-semibold">{data.name}</span>
         <ChevronDown className="size-4 shrink-0 text-(--color-muted-foreground)" aria-hidden />
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-(--radix-popover-trigger-width) min-w-56 p-1">
+      <PopoverContent
+        align="start"
+        className="flex max-h-(--radix-popover-content-available-height) flex-col w-(--radix-popover-trigger-width) min-w-56 p-1"
+      >
         <p className="px-2 py-1.5 text-xs text-(--color-muted-foreground)">{t("home.switch_dashboard_context")}</p>
         <ScrollArea className="max-h-80">
           <ul>
