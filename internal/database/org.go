@@ -203,11 +203,16 @@ func Organizations(page, pageSize int) ([]*User, error) {
 	return orgs, x.Limit(pageSize, (page-1)*pageSize).Where("type=1").Asc("id").Find(&orgs)
 }
 
-// deleteBeans deletes all given beans, beans should contain delete conditions.
-func deleteBeans(e Engine, beans ...any) (err error) {
-	for i := range beans {
-		if _, err = e.Delete(beans[i]); err != nil {
-			return err
+// deleteByColumn deletes the rows of the tables of given beans whose column
+// has the ID. A non-positive ID is refused, because a column with 0 means "none"
+// in some tables, e.g., webhooks of organizations have repo_id 0.
+func deleteByColumn(e Engine, column string, id int64, beans ...any) error {
+	if id <= 0 {
+		return errors.Newf("delete by %s: invalid ID %d", column, id)
+	}
+	for _, bean := range beans {
+		if _, err := e.Where(column+" = ?", id).Delete(bean); err != nil {
+			return errors.Newf("delete %T by %s: %v", bean, column, err)
 		}
 	}
 	return nil
@@ -226,12 +231,8 @@ func DeleteOrganization(org *User) error {
 		return err
 	}
 
-	if err = deleteBeans(sess,
-		&Team{OrgID: org.ID},
-		&OrgUser{OrgID: org.ID},
-		&TeamUser{OrgID: org.ID},
-	); err != nil {
-		return errors.Newf("deleteBeans: %v", err)
+	if err = deleteByColumn(sess, "org_id", org.ID, new(Team), new(OrgUser), new(TeamUser)); err != nil {
+		return err
 	}
 	return sess.Commit()
 }

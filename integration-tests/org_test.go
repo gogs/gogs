@@ -169,6 +169,8 @@ func TestOrgDelete(t *testing.T) {
 
 	org := orgSeed(t, owner.ID)
 	orgAddMember(t, org, member.ID)
+	other := orgSeed(t, owner.ID)
+	orgAddMember(t, other, member.ID)
 	path := "/api/web/orgs/" + org.Name
 
 	status, body := orgSignedIn(t, member).do(http.MethodDelete, path, map[string]any{"password": member.Password})
@@ -182,6 +184,11 @@ func TestOrgDelete(t *testing.T) {
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 	_, err = database.Handle.Users().GetByID(t.Context(), org.ID)
 	assert.True(t, database.IsErrUserNotExist(err), "organization still exists: %v", err)
+	// Only the memberships of the deleted organization are gone.
+	assert.False(t, database.IsOrganizationMember(org.ID, member.ID))
+	assert.False(t, database.IsOrganizationMember(org.ID, owner.ID))
+	assert.True(t, database.IsOrganizationMember(other.ID, member.ID))
+	assert.True(t, database.IsOrganizationMember(other.ID, owner.ID))
 }
 
 func TestOrgWebhooks(t *testing.T) {

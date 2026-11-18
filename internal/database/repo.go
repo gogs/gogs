@@ -1456,12 +1456,9 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 		return errors.Newf("getCollaborators: %v", err)
 	}
 
-	// Dummy object.
-	collaboration := &Collaboration{RepoID: repo.ID}
 	for _, c := range collaborators {
-		collaboration.UserID = c.ID
 		if c.ID == newOwner.ID || newOwner.IsOrgMember(c.ID) {
-			if _, err = sess.Delete(collaboration); err != nil {
+			if _, err = sess.Where("repo_id = ? AND user_id = ?", repo.ID, c.ID).Delete(new(Collaboration)); err != nil {
 				return errors.Newf("remove collaborator '%d': %v", c.ID, err)
 			}
 		}
@@ -1690,8 +1687,8 @@ func UpdateRepository(logger *logx.Logger, repo *Repository, visibilityChanged b
 
 // DeleteRepository deletes a repository for a user or organization.
 func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
-	repo := &Repository{ID: repoID, OwnerID: ownerID}
-	has, err := x.Get(repo)
+	repo := new(Repository)
+	has, err := x.Where("id = ? AND owner_id = ?", repoID, ownerID).Get(repo)
 	if err != nil {
 		return err
 	} else if !has {
@@ -1725,24 +1722,28 @@ func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 		}
 	}
 
-	if err = deleteBeans(sess,
-		&Repository{ID: repoID},
-		&Access{RepoID: repo.ID},
-		&Action{RepoID: repo.ID},
-		&Watch{RepoID: repoID},
-		&Star{RepoID: repoID},
-		&Mirror{RepoID: repoID},
-		&IssueUser{RepoID: repoID},
-		&Milestone{RepoID: repoID},
-		&Release{RepoID: repoID},
-		&Collaboration{RepoID: repoID},
-		&PullRequest{BaseRepoID: repoID},
-		&ProtectBranch{RepoID: repoID},
-		&Webhook{RepoID: repoID},
-		&HookTask{RepoID: repoID},
-		&LFSObject{RepoID: repoID},
+	if _, err = sess.Where("id = ?", repoID).Delete(new(Repository)); err != nil {
+		return errors.Newf("delete repository: %v", err)
+	}
+	if _, err = sess.Where("base_repo_id = ?", repoID).Delete(new(PullRequest)); err != nil {
+		return errors.Newf("delete pull requests: %v", err)
+	}
+	if err = deleteByColumn(sess, "repo_id", repoID,
+		new(Access),
+		new(Action),
+		new(Watch),
+		new(Star),
+		new(Mirror),
+		new(IssueUser),
+		new(Milestone),
+		new(Release),
+		new(Collaboration),
+		new(ProtectBranch),
+		new(Webhook),
+		new(HookTask),
+		new(LFSObject),
 	); err != nil {
-		return errors.Newf("deleteBeans: %v", err)
+		return err
 	}
 
 	// Delete comments and attachments.
@@ -1752,7 +1753,7 @@ func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 		return err
 	}
 	for i := range issues {
-		if _, err = sess.Delete(&Comment{IssueID: issues[i].ID}); err != nil {
+		if _, err = sess.Where("issue_id = ?", issues[i].ID).Delete(new(Comment)); err != nil {
 			return err
 		}
 
@@ -1764,12 +1765,12 @@ func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 			attachmentPaths = append(attachmentPaths, attachments[j].LocalPath())
 		}
 
-		if _, err = sess.Delete(&Attachment{IssueID: issues[i].ID}); err != nil {
+		if _, err = sess.Where("issue_id = ?", issues[i].ID).Delete(new(Attachment)); err != nil {
 			return err
 		}
 	}
 
-	if _, err = sess.Delete(&Issue{RepoID: repoID}); err != nil {
+	if _, err = sess.Where("repo_id = ?", repoID).Delete(new(Issue)); err != nil {
 		return err
 	}
 

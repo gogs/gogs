@@ -407,3 +407,56 @@ func TestRepoSettingsWebhookFailedRedelivery(t *testing.T) {
 	assert.False(t, detail.Deliveries[0].Succeeded)
 	assert.Equal(t, "failed", lastStatus())
 }
+
+// Deleting a repository deletes its webhooks and their deliveries, and no
+// others.
+func TestRepoSettingsWebhooksOfDeletedRepository(t *testing.T) {
+	owner := seedUser(t, CreateUserOptions{})
+	org := orgSeed(t, owner.ID)
+	repo := seedRepository(t, org.ID, CreateRepositoryOptions{AutoInit: true})
+	other := seedRepository(t, org.ID, CreateRepositoryOptions{AutoInit: true})
+	c := repoSettingsSignedIn(t, owner)
+	url, deliveries := repoSettingsWebhookReceiver(t)
+	var orgHook struct {
+		ID int64 `json:"id"`
+	}
+	c.doJSON(http.MethodPost, "/api/web/orgs/"+org.Name+"/settings/hooks", map[string]any{
+		"type": "gogs", "url": url, "contentType": "json", "events": "push_only", "active": true,
+	}, http.StatusCreated, &orgHook)
+	hookIDs := map[int64]int64{}
+	for _, r := range []*Repository{repo, other} {
+		id := repoSettingsCreateWebhook(t, c, r, url, "")
+		hookIDs[r.ID] = id
+		status, body := c.do(http.MethodPost, repoSettingsAPIPath(r, "/settings/hooks/"+strconv.FormatInt(id, 10)+"/test"), repoSettingsNoBody)
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+		uuid := repoSettingsNextDelivery(t, deliveries).Header.Get("X-Gogs-Delivery")
+		require.Eventually(t, func() bool {
+			task, err := database.Handle.HookTasks().GetByUUID(t.Context(), id, uuid)
+			return err == nil && task.Delivered > 0
+		}, 30*time.Second, 200*time.Millisecond, "delivery not recorded")
+	}
+
+	// A repository is deleted only with its own owner and ID.
+	for _, ids := range [][2]int64{{owner.ID, repo.ID}, {0, repo.ID}, {org.ID, 0}} {
+		assert.True(t, database.IsErrRepoNotExist(database.DeleteRepository(logger, ids[0], ids[1])), "owner %d, repository %d", ids[0], ids[1])
+	}
+	for _, r := range []*Repository{repo, other} {
+		_, err := database.Handle.Repositories().GetByID(t.Context(), r.ID)
+		require.NoError(t, err)
+	}
+
+	require.NoError(t, database.DeleteRepository(logger, org.ID, repo.ID))
+	_, err := database.Handle.Webhooks().GetOfRepo(t.Context(), repo.ID, hookIDs[repo.ID])
+	assert.True(t, database.IsErrWebhookNotExist(err), "webhook not deleted: %v", err)
+	tasks, err := database.Handle.HookTasks().ListByWebhook(t.Context(), hookIDs[repo.ID], 1, 10)
+	require.NoError(t, err)
+	assert.Empty(t, tasks)
+
+	_, err = database.Handle.Webhooks().GetOfRepo(t.Context(), other.ID, hookIDs[other.ID])
+	assert.NoError(t, err)
+	tasks, err = database.Handle.HookTasks().ListByWebhook(t.Context(), hookIDs[other.ID], 1, 10)
+	require.NoError(t, err)
+	assert.Len(t, tasks, 1)
+	_, err = database.Handle.Webhooks().GetOfOrg(t.Context(), org.ID, orgHook.ID)
+	assert.NoError(t, err)
+}
