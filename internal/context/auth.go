@@ -25,6 +25,9 @@ type AuthStore interface {
 	// the current time.
 	TouchAccessTokenByID(ctx context.Context, id int64) error
 
+	// IsTwoFactorEnabled returns true if the user has enabled 2FA.
+	IsTwoFactorEnabled(ctx context.Context, userID int64) bool
+
 	// GetUserByID returns the user with given ID. It returns
 	// database.ErrUserNotExist when not found.
 	GetUserByID(ctx context.Context, id int64) (*database.User, error)
@@ -137,7 +140,9 @@ func AuthenticatedUser(logger *logx.Logger, store AuthStore, r *http.Request, se
 					}
 					return nil, false, false
 				}
-				if u.IsDisabled() {
+				// A password alone must not stand in for a sign-in that also asks for
+				// the second factor. Such users authenticate with an access token.
+				if u.IsDisabled() || store.IsTwoFactorEnabled(r.Context(), u.ID) {
 					return nil, false, false
 				}
 

@@ -19,6 +19,9 @@ type Store interface {
 	// the current time.
 	TouchAccessTokenByID(ctx context.Context, id int64) error
 
+	// IsTwoFactorEnabled returns true if the user has enabled 2FA.
+	IsTwoFactorEnabled(ctx context.Context, userID int64) bool
+
 	// GetUserByID returns the user with given ID. It returns
 	// database.ErrUserNotExist when not found.
 	GetUserByID(ctx context.Context, id int64) (*database.User, error)
@@ -61,6 +64,10 @@ func (*store) GetAccessTokenBySHA1(ctx context.Context, sha1 string) (*database.
 
 func (*store) TouchAccessTokenByID(ctx context.Context, id int64) error {
 	return database.Handle.AccessTokens().Touch(ctx, id)
+}
+
+func (s *store) IsTwoFactorEnabled(ctx context.Context, userID int64) bool {
+	return database.Handle.TwoFactors().IsEnabled(ctx, s.logger, userID)
 }
 
 func (*store) GetUserByID(ctx context.Context, id int64) (*database.User, error) {

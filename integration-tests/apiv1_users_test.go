@@ -316,3 +316,34 @@ func TestAPIV1UserKeys(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 	})
 }
+
+func TestAPIV1BasicAuthTwoFactor(t *testing.T) {
+	t.Parallel()
+
+	u := seedUser(t, CreateUserOptions{})
+	_, err := EnableTwoFactor(t.Context(), u.ID)
+	require.NoError(t, err)
+
+	// The password alone would otherwise create an access token, which skips the
+	// second factor for good.
+	basic := apiV1BasicClient(t, u.Name, u.Password)
+	tokensPath := "/api/v1/users/" + u.Name + "/tokens"
+	for _, req := range []struct {
+		method, path string
+		body         any
+	}{
+		{http.MethodGet, tokensPath, nil},
+		{http.MethodPost, tokensPath, map[string]any{"name": UniqueName("token-")}},
+	} {
+		status, body := basic.do(req.method, req.path, req.body)
+		assert.Equal(t, http.StatusUnauthorized, status, "%s %s, response: %s", req.method, req.path, body)
+	}
+	tokens, err := database.Handle.AccessTokens().List(t.Context(), u.ID)
+	require.NoError(t, err)
+	assert.Empty(t, tokens)
+
+	// Access tokens keep working.
+	var me apiV1User
+	apiV1Client(t, u).doJSON(http.MethodGet, "/api/v1/user", nil, http.StatusOK, &me)
+	assert.Equal(t, u.Name, me.UserName)
+}

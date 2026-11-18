@@ -53,6 +53,10 @@ There are two ways to authenticate through the Gogs API. Requests that require a
     <Warning>
       Basic authentication should only be used to generate access tokens. Do not use it for regular API requests.
     </Warning>
+
+    <Note>
+      Users with two-factor authentication enabled cannot use basic authentication. Create access tokens in user settings instead.
+    </Note>
   </Tab>
   <Tab title="Access token">
     Personal access tokens must be sent via the `Authorization` request header.

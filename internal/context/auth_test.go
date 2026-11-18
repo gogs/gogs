@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/flamego/flamego"
@@ -102,8 +103,11 @@ func TestAuthenticatedUserIDAccessToken(t *testing.T) {
 
 type basicAuthStore struct {
 	AuthStore
-	user *database.User
+	user      *database.User
+	twoFactor bool
 }
+
+func (s basicAuthStore) IsTwoFactorEnabled(context.Context, int64) bool { return s.twoFactor }
 
 func (s basicAuthStore) AuthenticateUser(_ context.Context, login, password string, _ int64) (*database.User, error) {
 	if login != s.user.Name || password != "secret" {
@@ -113,13 +117,17 @@ func (s basicAuthStore) AuthenticateUser(_ context.Context, login, password stri
 }
 
 func TestAuthenticatedUserBasicAuth(t *testing.T) {
-	store := basicAuthStore{user: &database.User{ID: 7, Name: "alice", IsActive: true}}
+	user := &database.User{ID: 7, Name: "alice", IsActive: true}
 
 	tests := []struct {
-		path     string
-		wantUser bool
+		name      string
+		path      string
+		twoFactor bool
+		wantUser  bool
 	}{
 		{path: "/api/v1/user", wantUser: true},
+		{name: "two-factor authentication enabled", path: "/api/v1/user", twoFactor: true, wantUser: false},
+		{name: "two-factor authentication enabled", path: "/alice/repo/raw/main/README.md", twoFactor: true, wantUser: false},
 		{path: "/alice/repo/raw/main/README.md", wantUser: true},
 		{path: "/api/web/user/settings/two-factor", wantUser: false},
 		{path: "/api/web/user/settings/passkeys/registration", wantUser: false},
@@ -128,7 +136,8 @@ func TestAuthenticatedUserBasicAuth(t *testing.T) {
 		{path: "/%2Fapi/web/user/settings/two-factor", wantUser: false},
 	}
 	for _, tc := range tests {
-		t.Run(tc.path, func(t *testing.T) {
+		t.Run(strings.TrimSpace(tc.name+" "+tc.path), func(t *testing.T) {
+			store := basicAuthStore{user: user, twoFactor: tc.twoFactor}
 			f := flamego.New()
 			f.Use(session.Sessioner())
 			var got *database.User
