@@ -27,7 +27,7 @@ func TestDumpAndImport(t *testing.T) {
 	}
 	t.Parallel()
 
-	const wantTables = 20
+	const wantTables = 22
 	if len(Tables) != wantTables {
 		t.Fatalf("New table has added (want %d got %d), please add new tests for the table and update this check", wantTables, len(Tables))
 	}
@@ -205,6 +205,21 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			LabelID: 1,
 		},
 
+		&Label{
+			ID:              1,
+			RepoID:          1,
+			Name:            "bug",
+			Color:           "#ee0701",
+			NumIssues:       3,
+			NumClosedIssues: 1,
+		},
+		&Label{
+			ID:     2,
+			RepoID: 1,
+			Name:   "Help wanted",
+			Color:  "#128a0c",
+		},
+
 		&LFSObject{
 			RepoID:    1,
 			OID:       "ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f",
@@ -229,6 +244,28 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			}),
 			CreatedUnix: 1588568886,
 			UpdatedUnix: 1588572486, // 1 hour later
+		},
+
+		&Milestone{
+			ID:              1,
+			RepoID:          1,
+			Name:            "v1.0",
+			Content:         "The first milestone.",
+			NumIssues:       4,
+			NumClosedIssues: 1,
+			Completeness:    25,
+			DeadlineUnix:    1588568886,
+		},
+		&Milestone{
+			ID:              2,
+			RepoID:          1,
+			Name:            "v0.9",
+			IsClosed:        true,
+			NumIssues:       2,
+			NumClosedIssues: 2,
+			Completeness:    100,
+			DeadlineUnix:    253402300799,
+			ClosedDateUnix:  1588572486,
 		},
 
 		&Mirror{

@@ -681,18 +681,15 @@ func newIssue(e *xorm.Session, opts NewIssueOptions) (err error) {
 	if len(opts.LableIDs) > 0 {
 		// During the session, SQLite3 driver cannot handle retrieving objects after updating something.
 		// So we have to get all needed labels first.
-		labels := make([]*Label, 0, len(opts.LableIDs))
-		if err = e.In("id", opts.LableIDs).Find(&labels); err != nil {
-			return errors.Newf("find all labels [label_ids: %v]: %v", opts.LableIDs, err)
+		labels := newLabelsStore(legacyTx(e))
+		// Labels of other repositories are silently dropped.
+		list, err := labels.ListByIDs(context.TODO(), opts.Repo.ID, opts.LableIDs)
+		if err != nil {
+			return errors.Wrapf(err, "list labels %v", opts.LableIDs)
 		}
 
-		for _, label := range labels {
-			// Silently drop invalid labels.
-			if label.RepoID != opts.Repo.ID {
-				continue
-			}
-
-			if err = newLabelsStore(legacyTx(e)).addToIssue(context.TODO(), opts.Issue, label); err != nil {
+		for _, label := range list {
+			if err = labels.addToIssue(context.TODO(), opts.Issue, label); err != nil {
 				return errors.Wrapf(err, "add label %d", label.ID)
 			}
 		}

@@ -167,6 +167,23 @@ Indexes:
 	"UQE_issue_label_s" UNIQUE (issue_id, label_id)
 ```
 
+# Table "label"
+
+```
+      Field      |      Column       | PostgreSQL |         MySQL         |        SQLite3        
+-----------------+-------------------+------------+-----------------------+-----------------------
+ ID              | id                | BIGSERIAL  | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ RepoID          | repo_id           | BIGINT     | BIGINT                | INTEGER               
+ Name            | name              | TEXT       | LONGTEXT              | TEXT                  
+ Color           | color             | VARCHAR(7) | VARCHAR(7)            | VARCHAR(7)            
+ NumIssues       | num_issues        | BIGINT     | BIGINT                | INTEGER               
+ NumClosedIssues | num_closed_issues | BIGINT     | BIGINT                | INTEGER               
+
+Primary keys: id
+Indexes: 
+	"IDX_label_repo_id" (repo_id)
+```
+
 # Table "lfs_object"
 
 ```
@@ -196,6 +213,27 @@ Primary keys: repo_id, oid
  UpdatedUnix | updated_unix | BIGINT           | BIGINT                | INTEGER               
 
 Primary keys: id
+```
+
+# Table "milestone"
+
+```
+      Field      |      Column       | PostgreSQL |         MySQL         |        SQLite3        
+-----------------+-------------------+------------+-----------------------+-----------------------
+ ID              | id                | BIGSERIAL  | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ RepoID          | repo_id           | BIGINT     | BIGINT                | INTEGER               
+ Name            | name              | TEXT       | LONGTEXT              | TEXT                  
+ Content         | content           | TEXT       | TEXT                  | TEXT                  
+ IsClosed        | is_closed         | BOOLEAN    | BOOLEAN               | NUMERIC               
+ NumIssues       | num_issues        | BIGINT     | BIGINT                | INTEGER               
+ NumClosedIssues | num_closed_issues | BIGINT     | BIGINT                | INTEGER               
+ Completeness    | completeness      | BIGINT     | BIGINT                | INTEGER               
+ DeadlineUnix    | deadline_unix     | BIGINT     | BIGINT                | INTEGER               
+ ClosedDateUnix  | closed_date_unix  | BIGINT     | BIGINT                | INTEGER               
+
+Primary keys: id
+Indexes: 
+	"IDX_milestone_repo_id" (repo_id)
 ```
 
 # Table "mirror"

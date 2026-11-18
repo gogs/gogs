@@ -238,10 +238,6 @@ func importTable(ctx context.Context, db *gorm.DB, table any, r io.Reader) error
 func importLegacyTables(ctx context.Context, logger *logx.Logger, dirPath string, verbose bool) error {
 	snakeMapper := core.SnakeMapper{}
 
-	skipInsertProcessors := map[string]bool{
-		"milestone": true,
-	}
-
 	for _, table := range legacyTables {
 		select {
 		case <-ctx.Done():
@@ -280,26 +276,17 @@ func importLegacyTables(ctx context.Context, logger *logx.Logger, dirPath string
 			}
 
 			var meta struct {
-				ID             int64
-				CreatedUnix    int64
-				DeadlineUnix   int64
-				ClosedDateUnix int64
+				ID          int64
+				CreatedUnix int64
 			}
 			if err = json.Unmarshal(scanner.Bytes(), &meta); err != nil {
 				logger.Error("Failed to unmarshal to map", "error", err)
 			}
 
 			// Reset created_unix back to the date saved in archive because Insert method updates its value.
-			if isInsertProcessor && !skipInsertProcessors[rawTableName] {
+			if isInsertProcessor {
 				if _, err = x.Exec("UPDATE `"+rawTableName+"` SET created_unix=? WHERE id=?", meta.CreatedUnix, meta.ID); err != nil {
 					logger.Error("Failed to reset 'created_unix'", "tableName", rawTableName, "error", err)
-				}
-			}
-
-			switch rawTableName {
-			case "milestone":
-				if _, err = x.Exec("UPDATE `"+rawTableName+"` SET deadline_unix=?, closed_date_unix=? WHERE id=?", meta.DeadlineUnix, meta.ClosedDateUnix, meta.ID); err != nil {
-					logger.Error("Failed to reset 'milestone.deadline_unix', 'milestone.closed_date_unix'", "error", err)
 				}
 			}
 		}
