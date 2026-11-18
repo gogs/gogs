@@ -33,7 +33,6 @@ import {
   userActivityQuery,
   userProfileQuery,
 } from "@/lib/queries/user";
-import { subUrl } from "@/lib/url";
 import { useUserInfo } from "@/lib/use-user-info";
 import { OrgHome } from "@/pages/org/Home";
 
@@ -125,8 +124,8 @@ export function ProfileSidebar({ profile }: { profile: UserProfileData }) {
     <aside className="glass min-w-0 glass-ui:self-start glass-ui:border glass-ui:p-4">
       <div className="flex items-center gap-4 md:block">
         {profile.viewerIsSelf ? (
-          <a
-            href={subUrl("/user/settings")}
+          <Link
+            to="/user/settings"
             aria-label={t("user.change_avatar")}
             className="group relative block size-18 shrink-0 overflow-hidden rounded-full border border-(--color-border) outline-none focus-visible:ring-2 focus-visible:ring-(--color-ring) focus-visible:ring-offset-2 focus-visible:ring-offset-(--color-background) md:size-auto md:w-full"
           >
@@ -135,7 +134,7 @@ export function ProfileSidebar({ profile }: { profile: UserProfileData }) {
               <Camera className="size-3.5" aria-hidden />
               {t("user.change_avatar")}
             </span>
-          </a>
+          </Link>
         ) : (
           <img
             src={profile.avatarURL}
@@ -225,13 +224,13 @@ export function ProfileSidebar({ profile }: { profile: UserProfileData }) {
               <li key={org.name}>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <a href={subUrl(`/${org.name}`)} aria-label={org.name} className="block rounded-md">
+                    <Link to={`/${org.name}`} aria-label={org.name} className="block rounded-md">
                       <img
                         src={org.avatarURL}
                         alt=""
                         className="size-8 rounded-md border border-(--color-border) object-cover"
                       />
-                    </a>
+                    </Link>
                   </TooltipTrigger>
                   <TooltipContent>{org.name}</TooltipContent>
                 </Tooltip>

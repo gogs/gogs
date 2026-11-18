@@ -11,6 +11,13 @@ export function subUrl(path: string): string {
   return url.length > 1 ? url.replace(/\/+$/, "") : url;
 }
 
+// routePath turns an internal URL the server built with the deployment
+// subpath, e.g., "/gogs/alice/demo", into the path a router link takes, i.e.,
+// "/alice/demo". The router adds the subpath back.
+export function routePath(url: string): string {
+  return url.startsWith(webContext.subURL + "/") ? url.slice(webContext.subURL.length) : url;
+}
+
 // Navigate to the current page with new query params, preserving the hash so
 // deep-linked anchors (PR comment IDs, headings, file rows) stay intact.
 // Assigning to `window.location.search` directly would drop the hash.

@@ -1,4 +1,4 @@
-import { getRouteApi, useNavigate } from "@tanstack/react-router";
+import { Link, getRouteApi, useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 
@@ -147,7 +147,7 @@ export function SignUp() {
             />
           </p>
           <Button variant="link" size="inline" asChild className="self-center">
-            <a href={subUrl("/user/sign-in")}>{t("auth.back_to_sign_in")}</a>
+            <Link to="/user/sign-in">{t("auth.back_to_sign_in")}</Link>
           </Button>
         </div>
       );
@@ -309,8 +309,8 @@ export function SignUp() {
                 {submitting ? t("auth.sign_up_submitting") : t("auth.create_new_account")}
               </Button>
               <Button variant="link" size="inline" asChild className="self-center">
-                <a
-                  href={subUrl("/user/sign-in")}
+                <Link
+                  to="/user/sign-in"
                   tabIndex={submitting ? -1 : 10}
                   aria-disabled={submitting || undefined}
                   className={submitting ? "pointer-events-none opacity-50" : undefined}
@@ -319,7 +319,7 @@ export function SignUp() {
                   }}
                 >
                   {t("auth.register_hepler_msg")}
-                </a>
+                </Link>
               </Button>
             </div>
           </div>

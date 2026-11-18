@@ -1,5 +1,6 @@
 import { type DiffsHighlighter, type ThemedToken, getFiletypeFromFileName, getSharedHighlighter } from "@pierre/diffs";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { FileCode, type LucideIcon } from "lucide-react";
 import { type ReactNode, useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -130,9 +131,9 @@ export function CodeSearchResults({
             <FileCode className="size-4 shrink-0 text-(--color-muted-foreground)" aria-hidden />
             <span className="min-w-0 wrap-anywhere">
               {headerOf?.(file)}
-              <a href={urlOf(file)} className="font-mono font-semibold text-(--color-primary) hover:underline">
+              <Link to={urlOf(file)} className="font-mono font-semibold text-(--color-primary) hover:underline">
                 {file.path}
-              </a>
+              </Link>
             </span>
           </h2>
           <div className="divide-y divide-dashed divide-(--color-border) overflow-x-auto bg-(--color-field) font-mono text-xs/5">
@@ -203,13 +204,13 @@ function Snippet({
           : [{ start: 0, text: line.text }];
         return (
           <li key={line.line} className={cn("flex", line.isMatch && "bg-(--color-warning)/5")}>
-            <a
-              href={lineURL(line.line)}
+            <Link
+              to={lineURL(line.line)}
               aria-label={t("repo.code_search.line", { line: line.line })}
               className="sticky left-0 w-14 shrink-0 bg-(--color-field) pr-3 glass-ui:backdrop-blur-xl text-right text-(--color-muted-foreground) tabular-nums hover:text-(--color-primary) hover:underline"
             >
               {line.line}
-            </a>
+            </Link>
             <span className="pr-4 whitespace-pre">
               {line.isMatch
                 ? renderLine(line.text, pieces, keyword, matchCase)

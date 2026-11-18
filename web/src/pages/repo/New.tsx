@@ -1,4 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { ChevronDown } from "lucide-react";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -574,12 +575,9 @@ export function RepoFork({ id, options }: { id: number; options: RepoForkOptions
     >
       <div className="flex flex-col gap-1.5 text-sm">
         <span className="font-medium">{t("repo.fork_from")}</span>
-        <a
-          href={subUrl(`/${baseName}`)}
-          className="w-fit text-(--color-primary) underline underline-offset-2 wrap-anywhere"
-        >
+        <Link to={`/${baseName}`} className="w-fit text-(--color-primary) underline underline-offset-2 wrap-anywhere">
           {baseName}
-        </a>
+        </Link>
       </div>
       <OwnerField
         owners={options.owners}

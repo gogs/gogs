@@ -33,34 +33,22 @@ export function Navbar() {
   return (
     <header className="glass-bar sticky top-0 z-10 border-b border-(--color-border) bg-(--color-background)">
       <nav className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 text-sm sm:gap-4 sm:px-6">
-        <a href={subUrl("/")} className="flex shrink-0 items-center" aria-label="Gogs">
+        <Link to="/" className="flex shrink-0 items-center" aria-label="Gogs">
           <img src={subUrl("/img/favicon.png")} alt="" width="28" height="28" className="size-7" />
-        </a>
+        </Link>
 
         <div className="hidden flex-1 items-center gap-1 sm:flex">
           {user ? (
             <>
-              <NavLink href="/" spa>
-                {t("dashboard")}
-              </NavLink>
-              <NavLink href="/issues" spa>
-                {t("issues")}
-              </NavLink>
-              <NavLink href="/pulls" spa>
-                {t("pull_requests")}
-              </NavLink>
-              <NavLink href="/explore/repos" spa>
-                {t("explore")}
-              </NavLink>
+              <NavLink href="/">{t("dashboard")}</NavLink>
+              <NavLink href="/issues">{t("issues")}</NavLink>
+              <NavLink href="/pulls">{t("pull_requests")}</NavLink>
+              <NavLink href="/explore/repos">{t("explore")}</NavLink>
             </>
           ) : (
             <>
-              <NavLink href="/" spa>
-                {t("home")}
-              </NavLink>
-              <NavLink href="/explore/repos" spa>
-                {t("explore")}
-              </NavLink>
+              <NavLink href="/">{t("home")}</NavLink>
+              <NavLink href="/explore/repos">{t("explore")}</NavLink>
               <NavLink href="https://gogs.io" external>
                 {t("help")}
               </NavLink>
@@ -100,12 +88,8 @@ export function Navbar() {
             </>
           ) : (
             <>
-              <NavLink href="/user/sign-in" spa>
-                {t("sign_in")}
-              </NavLink>
-              <NavLink href="/user/sign-up" spa>
-                {t("register")}
-              </NavLink>
+              <NavLink href="/user/sign-in">{t("sign_in")}</NavLink>
+              <NavLink href="/user/sign-up">{t("register")}</NavLink>
             </>
           )}
         </div>
@@ -138,19 +122,19 @@ export function Navbar() {
                       </MobileLink>
                     )}
                     <li className="my-1 h-px bg-(--color-border)" />
-                    <MobileLink href="/" spa onClick={() => setOpen(false)}>
+                    <MobileLink href="/" onClick={() => setOpen(false)}>
                       {t("dashboard")}
                     </MobileLink>
-                    <MobileLink href="/issues" spa onClick={() => setOpen(false)}>
+                    <MobileLink href="/issues" onClick={() => setOpen(false)}>
                       {t("issues")}
                     </MobileLink>
-                    <MobileLink href="/pulls" spa onClick={() => setOpen(false)}>
+                    <MobileLink href="/pulls" onClick={() => setOpen(false)}>
                       {t("pull_requests")}
                     </MobileLink>
-                    <MobileLink href="/explore/repos" spa onClick={() => setOpen(false)}>
+                    <MobileLink href="/explore/repos" onClick={() => setOpen(false)}>
                       {t("explore")}
                     </MobileLink>
-                    <MobileLink href="/search" spa onClick={() => setOpen(false)}>
+                    <MobileLink href="/search" onClick={() => setOpen(false)}>
                       {t("repo.code_search")}
                     </MobileLink>
                     <li className="my-1 h-px bg-(--color-border)" />
@@ -183,23 +167,23 @@ export function Navbar() {
                   </>
                 ) : (
                   <>
-                    <MobileLink href="/" spa onClick={() => setOpen(false)}>
+                    <MobileLink href="/" onClick={() => setOpen(false)}>
                       {t("home")}
                     </MobileLink>
-                    <MobileLink href="/explore/repos" spa onClick={() => setOpen(false)}>
+                    <MobileLink href="/explore/repos" onClick={() => setOpen(false)}>
                       {t("explore")}
                     </MobileLink>
-                    <MobileLink href="/search" spa onClick={() => setOpen(false)}>
+                    <MobileLink href="/search" onClick={() => setOpen(false)}>
                       {t("repo.code_search")}
                     </MobileLink>
                     <MobileLink href="https://gogs.io" external onClick={() => setOpen(false)}>
                       {t("help")}
                     </MobileLink>
                     <li className="my-1 h-px bg-(--color-border)" />
-                    <MobileLink href="/user/sign-in" spa onClick={() => setOpen(false)}>
+                    <MobileLink href="/user/sign-in" onClick={() => setOpen(false)}>
                       {t("sign_in")}
                     </MobileLink>
-                    <MobileLink href="/user/sign-up" spa onClick={() => setOpen(false)}>
+                    <MobileLink href="/user/sign-up" onClick={() => setOpen(false)}>
                       {t("register")}
                     </MobileLink>
                   </>
@@ -330,46 +314,37 @@ function MenuLink({
   onSelect?: () => void;
   children: React.ReactNode;
 }) {
-  return (
-    <a
-      href={external ? href : subUrl(href)}
-      onClick={onSelect}
-      {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-      className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-(--color-foreground) hover:bg-(--color-surface)"
-    >
-      {icon}
-      {children}
-    </a>
-  );
-}
-
-function NavLink({
-  href,
-  external,
-  spa,
-  children,
-}: {
-  href: string;
-  external?: boolean;
-  spa?: boolean;
-  children: React.ReactNode;
-}) {
-  const className = "inline-flex rounded-md px-3 py-1.5 text-(--color-foreground) hover:bg-(--color-surface)";
-  if (spa) {
+  const className =
+    "flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-(--color-foreground) hover:bg-(--color-surface)";
+  if (external) {
     return (
-      <Link to={href} className={className}>
+      <a href={href} onClick={onSelect} target="_blank" rel="noopener noreferrer" className={className}>
+        {icon}
         {children}
-      </Link>
+      </a>
     );
   }
   return (
-    <a
-      href={external ? href : subUrl(href)}
-      {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-      className={className}
-    >
+    <Link to={href} onClick={onSelect} className={className}>
+      {icon}
       {children}
-    </a>
+    </Link>
+  );
+}
+
+function NavLink({ href, external, children }: { href: string; external?: boolean; children: React.ReactNode }) {
+  const className = "inline-flex rounded-md px-3 py-1.5 text-(--color-foreground) hover:bg-(--color-surface)";
+  if (external) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
+        {children}
+      </a>
+    );
+  }
+  return (
+    <Link to={href} className={className}>
+      {children}
+    </Link>
   );
 }
 
@@ -392,32 +367,25 @@ function SignOutForm({ children }: { children: React.ReactNode }) {
 function MobileLink({
   href,
   external,
-  spa,
   onClick,
   children,
 }: {
   href: string;
   external?: boolean;
-  spa?: boolean;
   onClick?: () => void;
   children: React.ReactNode;
 }) {
   const className = "flex w-full rounded-sm px-2 py-1.5 text-(--color-foreground) hover:bg-(--color-surface)";
   return (
     <li>
-      {spa ? (
+      {external ? (
+        <a href={href} onClick={onClick} target="_blank" rel="noopener noreferrer" className={className}>
+          {children}
+        </a>
+      ) : (
         <Link to={href} onClick={onClick} className={className}>
           {children}
         </Link>
-      ) : (
-        <a
-          href={external ? href : subUrl(href)}
-          onClick={onClick}
-          {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-          className={className}
-        >
-          {children}
-        </a>
       )}
     </li>
   );

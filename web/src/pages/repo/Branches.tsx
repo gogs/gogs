@@ -27,7 +27,6 @@ import {
   refPath,
   repoHeaderQuery,
 } from "@/lib/queries/repo";
-import { subUrl } from "@/lib/url";
 import { useUserInfo } from "@/lib/use-user-info";
 import { cn } from "@/lib/utils";
 
@@ -284,7 +283,6 @@ function BranchRow({
   data: RepoBranchesData;
 }) {
   const { t } = useTranslation();
-  const repoLink = `/${owner}/${name}`;
   const isDefault = branch.name === data.defaultBranch;
   let action: ReactNode = null;
   if (isDefault) {
@@ -300,13 +298,13 @@ function BranchRow({
   } else if (data.viewerCanWrite && data.allowsPulls) {
     action = (
       <Button asChild variant="outline" size="sm">
-        <a
-          href={subUrl(`${repoLink}/compare/${refPath(data.defaultBranch)}...${refPath(branch.name)}`)}
+        <Link
+          to={`/${owner}/${name}/compare/${refPath(data.defaultBranch)}...${refPath(branch.name)}`}
           aria-label={`${t("repo.pulls.new")}: ${branch.name}`}
         >
           <GitPullRequest className="size-4" aria-hidden />
           {t("repo.pulls.new")}
-        </a>
+        </Link>
       </Button>
     );
   }
@@ -315,12 +313,12 @@ function BranchRow({
     <li className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
       <div className="flex min-w-0 flex-1 basis-64 flex-col gap-1">
         <div className="flex flex-wrap items-center gap-2">
-          <a
-            href={subUrl(`${repoLink}/src/${refPath(branch.name)}`)}
+          <Link
+            to={`/${owner}/${name}/src/${refPath(branch.name)}`}
             className="rounded bg-(--color-surface) px-1.5 py-0.5 font-mono text-sm wrap-anywhere text-(--color-primary) hover:underline"
           >
             {branch.name}
-          </a>
+          </Link>
           {branch.isProtected ? (
             <span className="inline-flex items-center gap-1 rounded-full border border-(--color-border) px-2 text-xs leading-5 font-medium text-(--color-muted-foreground)">
               <ShieldCheck className="size-3.5" aria-hidden />

@@ -75,7 +75,7 @@ import {
 } from "@/lib/queries/repo";
 import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
 import { resolveTheme, useTheme } from "@/lib/theme-context";
-import { subUrl } from "@/lib/url";
+import { routePath, subUrl } from "@/lib/url";
 import { cn } from "@/lib/utils";
 
 const PdfView = lazy(() => import("@/components/PdfView"));
@@ -174,15 +174,15 @@ export function RepoCode({
   const compareButton = data.pullRequest ? (
     <Tooltip>
       <TooltipTrigger asChild>
-        <a
-          href={subUrl(
+        <Link
+          to={routePath(
             `${data.pullRequest.repoLink}/compare/${refPath(data.pullRequest.baseBranch)}...${refPath(data.pullRequest.head).replace(/%3A/g, ":")}`,
           )}
           aria-label={t("repo.pulls.compare_changes")}
           className="glass-control grid size-8 shrink-0 place-items-center rounded-md border border-(--color-border) hover:bg-(--color-surface)"
         >
           <GitPullRequestArrow className="size-4 text-(--color-success)" aria-hidden />
-        </a>
+        </Link>
       </TooltipTrigger>
       <TooltipContent>{t("repo.pulls.compare_changes")}</TooltipContent>
     </Tooltip>

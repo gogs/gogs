@@ -23,7 +23,6 @@ import {
   updateRepoLabel,
 } from "@/lib/queries/repo";
 import { formErrors } from "@/lib/queries/request";
-import { subUrl } from "@/lib/url";
 import { cn } from "@/lib/utils";
 
 // The colors offered next to the color picker.
@@ -218,13 +217,13 @@ function LabelRow({
       <div className="min-w-0 flex-1 basis-48">
         <LabelChip name={label.name} color={label.color} />
       </div>
-      <a
-        href={subUrl(`/${owner}/${name}/issues?labels=${label.id}`)}
+      <Link
+        to={`/${owner}/${name}/issues?labels=${label.id}`}
         className="inline-flex items-center gap-1.5 text-sm text-(--color-muted-foreground) hover:text-(--color-foreground) hover:underline"
       >
         <CircleDot className="size-4" aria-hidden />
         {t("repo.issues.label_open_issues").replace(/%(?:\[1\])?d/, String(label.openIssueCount))}
-      </a>
+      </Link>
       {canWrite ? (
         <div className="flex gap-2">
           <Button

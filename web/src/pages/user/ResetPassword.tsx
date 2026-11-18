@@ -1,4 +1,4 @@
-import { getRouteApi, useNavigate } from "@tanstack/react-router";
+import { Link, getRouteApi, useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 
@@ -47,8 +47,8 @@ function FormActions({
         {submitLabel}
       </Button>
       <Button variant="link" size="inline" asChild className="self-center">
-        <a
-          href={backHref}
+        <Link
+          to={backHref}
           tabIndex={submitting ? -1 : submitTabIndex + 1}
           aria-disabled={submitting || undefined}
           className={submitting ? "pointer-events-none opacity-50" : undefined}
@@ -57,7 +57,7 @@ function FormActions({
           }}
         >
           {backLabel}
-        </a>
+        </Link>
       </Button>
     </div>
   );
@@ -173,7 +173,7 @@ export function ResetPassword() {
             )}
           </p>
           <Button variant="link" size="inline" asChild className="self-center">
-            <a href={subUrl("/user/sign-in")}>{t("auth.back_to_sign_in")}</a>
+            <Link to="/user/sign-in">{t("auth.back_to_sign_in")}</Link>
           </Button>
         </div>
       );
@@ -212,7 +212,7 @@ export function ResetPassword() {
               submitTabIndex={3}
               submitting={submitting}
               backLabel={t("auth.back_to_sign_in")}
-              backHref={subUrl("/user/sign-in")}
+              backHref="/user/sign-in"
             />
           </div>
         </fieldset>
@@ -228,7 +228,7 @@ export function ResetPassword() {
             {t("auth.invalid_code")}
           </p>
           <Button variant="link" size="inline" asChild className="self-center">
-            <a href={subUrl("/user/sign-in")}>{t("auth.back_to_sign_in")}</a>
+            <Link to="/user/sign-in">{t("auth.back_to_sign_in")}</Link>
           </Button>
         </div>
       );
@@ -287,7 +287,7 @@ export function ResetPassword() {
               submitTabIndex={5}
               submitting={submitting}
               backLabel={t("auth.back_to_sign_in")}
-              backHref={subUrl("/user/sign-in")}
+              backHref="/user/sign-in"
             />
           </div>
         </fieldset>

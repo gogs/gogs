@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePageTitle } from "@/lib/page-title";
 import { type RepoIssuesData, repoHeaderQuery } from "@/lib/queries/repo";
+import { routePath } from "@/lib/url";
 import { useUserInfo } from "@/lib/use-user-info";
 import { cn } from "@/lib/utils";
 import type { RepoIssuesSearch } from "@/pages/repo/Issues.search";
@@ -78,10 +79,10 @@ export function RepoIssues({
             </Button>
           ) : data.newPullRequestURL ? (
             <Button asChild variant="outline" size="sm">
-              <a href={data.newPullRequestURL}>
+              <Link to={routePath(data.newPullRequestURL)}>
                 <Plus className="size-4" aria-hidden />
                 {t("repo.pulls.new")}
-              </a>
+              </Link>
             </Button>
           ) : null}
         </div>

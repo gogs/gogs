@@ -313,12 +313,12 @@ export function UserRepoSettings({ repos }: { repos: SettingsRepo[] }) {
             >
               <span className="flex min-w-0 flex-1 basis-48 items-center gap-3">
                 <RepoIcon repo={repo} />
-                <a
-                  href={subUrl(`/${fullName}`)}
+                <Link
+                  to={`/${fullName}`}
                   className="min-w-0 font-semibold wrap-anywhere text-(--color-primary) hover:underline"
                 >
                   {fullName}
-                </a>
+                </Link>
                 <span className="shrink-0 text-xs text-(--color-muted-foreground)">{repo.size}</span>
               </span>
               {repo.isOwner ? null : (

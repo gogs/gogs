@@ -1,4 +1,4 @@
-import { getRouteApi } from "@tanstack/react-router";
+import { Link, getRouteApi } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 
@@ -106,7 +106,7 @@ export function Activate() {
               {t("auth.invalid_code")}
             </p>
             <Button variant="link" size="inline" asChild className="self-center">
-              <a href={subUrl("/user/sign-in")}>{t("auth.back_to_sign_in")}</a>
+              <Link to="/user/sign-in">{t("auth.back_to_sign_in")}</Link>
             </Button>
           </div>
         );
@@ -123,7 +123,7 @@ export function Activate() {
         <div className="flex flex-col gap-4 text-center">
           <p className="text-sm text-(--color-foreground)">{t("auth.check_activation_email")}</p>
           <Button variant="link" size="inline" asChild className="self-center">
-            <a href={subUrl("/user/sign-in")}>{t("auth.back_to_sign_in")}</a>
+            <Link to="/user/sign-in">{t("auth.back_to_sign_in")}</Link>
           </Button>
         </div>
       );

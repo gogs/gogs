@@ -8,7 +8,6 @@ import { RepoListItem } from "@/components/RepoListItem";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { OrgProfileData, OwnerReposPage } from "@/lib/queries/user";
-import { subUrl } from "@/lib/url";
 
 // OrgHome is the home page of an organization, at the same path as the
 // profiles of individual users.
@@ -87,10 +86,10 @@ export function OrgHome({ org, repos }: { org: OrgProfileData; repos: OwnerRepos
             </Button>
             {org.viewerIsOwner ? (
               <Button asChild variant="outline" size="sm">
-                <a href={subUrl(`/repo/create?org=${org.id}`)}>
+                <Link to={`/repo/create?org=${org.id}`}>
                   <Plus className="size-4" aria-hidden />
                   {t("new_repo")}
-                </a>
+                </Link>
               </Button>
             ) : null}
           </div>
@@ -120,13 +119,13 @@ export function OrgHome({ org, repos }: { org: OrgProfileData; repos: OwnerRepos
                   <li key={member.name}>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <a href={subUrl(`/${member.name}`)} aria-label={member.name} className="block rounded-full">
+                        <Link to={`/${member.name}`} aria-label={member.name} className="block rounded-full">
                           <img
                             src={member.avatarURL}
                             alt=""
                             className="size-8 rounded-full border border-(--color-border) object-cover"
                           />
-                        </a>
+                        </Link>
                       </TooltipTrigger>
                       <TooltipContent>
                         {member.fullName ? `${member.name} (${member.fullName})` : member.name}

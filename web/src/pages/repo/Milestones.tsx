@@ -23,7 +23,6 @@ import {
 } from "@/lib/queries/repo";
 import { formErrors } from "@/lib/queries/request";
 import { formatRelativeTime } from "@/lib/relative-time";
-import { subUrl } from "@/lib/url";
 import { cn } from "@/lib/utils";
 import { IssueTrackerLayout } from "@/pages/repo/Labels";
 
@@ -158,12 +157,12 @@ function MilestoneRow({
   return (
     <li className="flex flex-col gap-3 border-t border-(--color-border) px-4 py-4 md:flex-row md:gap-8">
       <div className="min-w-0 md:flex-1">
-        <a
-          href={subUrl(`/${owner}/${name}/issues?state=${state}&milestone=${milestone.id}`)}
+        <Link
+          to={`/${owner}/${name}/issues?state=${state}&milestone=${milestone.id}`}
           className="text-lg font-semibold wrap-anywhere hover:underline"
         >
           {milestone.name}
-        </a>
+        </Link>
         <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-(--color-muted-foreground)">
           {milestone.isClosed && milestone.closedAt ? (
             <span className="inline-flex items-center gap-1.5">

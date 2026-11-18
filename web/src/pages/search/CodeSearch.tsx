@@ -5,7 +5,6 @@ import { useTranslation } from "react-i18next";
 import { CodeSearchForm, CodeSearchHelp, CodeSearchResults } from "@/components/CodeSearchResults";
 import { usePageTitle } from "@/lib/page-title";
 import { refPath } from "@/lib/queries/repo";
-import { subUrl } from "@/lib/url";
 
 const route = getRouteApi("/search");
 
@@ -66,7 +65,7 @@ export function CodeSearch() {
               keyword={data.keyword}
               matchCase={data.matchCase}
               urlOf={(file, line) =>
-                subUrl(`/${file.repo}/src/${refPath(`${file.ref}/${file.path}`)}${line ? `#L${line}` : ""}`)
+                `/${file.repo}/src/${refPath(`${file.ref}/${file.path}`)}${line ? `#L${line}` : ""}`
               }
               headerOf={(file) => {
                 const [owner, name] = (file.repo ?? "").split("/");

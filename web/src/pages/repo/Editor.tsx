@@ -1,5 +1,6 @@
 import { MultiFileDiff } from "@pierre/diffs/react";
 import { keepPreviousData, useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { FileX, GitBranch, Upload } from "lucide-react";
 import { type AriaAttributes, type FormEvent, type ReactNode, useId, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
@@ -29,7 +30,6 @@ import {
 } from "@/lib/queries/repo";
 import { FormError, formErrors } from "@/lib/queries/request";
 import { resolveTheme, useTheme } from "@/lib/theme-context";
-import { subUrl } from "@/lib/url";
 import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { useUserInfo } from "@/lib/use-user-info";
 import { cn } from "@/lib/utils";
@@ -64,7 +64,7 @@ function EditorLayout({
 
 // srcURL links to a file or a directory of a branch.
 function srcURL(owner: string, name: string, branch: string, path: string) {
-  return subUrl(`/${owner}/${name}/src/${refPath(branch)}${path ? `/${refPath(path)}` : ""}`);
+  return `/${owner}/${name}/src/${refPath(branch)}${path ? `/${refPath(path)}` : ""}`;
 }
 
 function splitPath(path: string) {
@@ -282,7 +282,7 @@ function CommitForm({
             {t("repo.editor.commit_changes")}
           </Button>
           <Button asChild variant="outline">
-            <a href={cancelURL}>{t("cancel")}</a>
+            <Link to={cancelURL}>{t("cancel")}</Link>
           </Button>
         </div>
       </div>
