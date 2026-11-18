@@ -123,6 +123,9 @@ func TestAuthenticatedUserBasicAuth(t *testing.T) {
 		{path: "/alice/repo/raw/main/README.md", wantUser: true},
 		{path: "/api/web/user/settings/two-factor", wantUser: false},
 		{path: "/api/web/user/settings/passkeys/registration", wantUser: false},
+		{path: "//api/web/user/settings/two-factor", wantUser: false},
+		{path: "///api/web/user/settings/two-factor", wantUser: false},
+		{path: "/%2Fapi/web/user/settings/two-factor", wantUser: false},
 	}
 	for _, tc := range tests {
 		t.Run(tc.path, func(t *testing.T) {

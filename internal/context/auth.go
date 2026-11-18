@@ -118,9 +118,12 @@ func AuthenticatedUser(logger *logx.Logger, store AuthStore, r *http.Request, se
 		// Check with basic auth. The web API under "/api/web" serves the browser,
 		// which signs in with the session, and includes the routes that change
 		// the credentials and two-factor authentication of an account. A password
-		// alone, without the second factor, must not reach them.
+		// alone, without the second factor, must not reach them. The router
+		// ignores leading slashes when matching routes, e.g., "//api/web/...", so
+		// must the check.
+		routePath := "/" + strings.TrimLeft(r.URL.Path, "/")
 		baHead := r.Header.Get("Authorization")
-		if len(baHead) > 0 && !strings.HasPrefix(r.URL.Path, "/api/web/") {
+		if len(baHead) > 0 && !strings.HasPrefix(routePath, "/api/web/") {
 			auths := strings.Fields(baHead)
 			if len(auths) == 2 && auths[0] == "Basic" {
 				uname, passwd, _ := tool.BasicAuthDecode(auths[1])
