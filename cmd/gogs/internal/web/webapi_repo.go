@@ -35,6 +35,10 @@ type repoHeader struct {
 	PullRequestsEnabled  bool   `json:"pullRequestsEnabled"`
 	OpenPullRequestCount int    `json:"openPullRequestCount"`
 	WikiEnabled          bool   `json:"wikiEnabled"`
+	// ExternalTrackerURL and ExternalWikiURL are set when the issues or the
+	// wiki are kept elsewhere, for viewers who can read the code.
+	ExternalTrackerURL string `json:"externalTrackerURL,omitempty"`
+	ExternalWikiURL    string `json:"externalWikiURL,omitempty"`
 
 	// ViewerCanRead is false for visitors who only see the public issues or
 	// wiki of a repository.
@@ -92,6 +96,12 @@ func getRepoHeader(logger *logx.Logger, repoCtx *repoContext) (statusCode int, r
 	if repoCtx.Viewer.CanRead() {
 		resp.DefaultBranch = repo.DefaultBranch
 		resp.CloneLinks = repoCloneLinksOf(owner.Name, repo.Name, false)
+		if repo.EnableIssues && repo.EnableExternalTracker {
+			resp.ExternalTrackerURL = repo.ExternalTrackerURL
+		}
+		if repo.EnableWiki && repo.EnableExternalWiki {
+			resp.ExternalWikiURL = repo.ExternalWikiURL
+		}
 	}
 
 	if repo.IsMirror {

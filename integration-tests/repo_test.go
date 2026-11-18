@@ -81,3 +81,71 @@ func TestIssueCreatedThroughAPIV1(t *testing.T) {
 	assert.Contains(t, issue.ContentHTML, "<strong>crashes</strong>")
 	assert.Equal(t, owner.Name, issue.Poster.Name)
 }
+
+func TestRepositoryExternalWikiAndTracker(t *testing.T) {
+	owner := seedUser(t, CreateUserOptions{})
+	other := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	private := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
+
+	ownerClient := newClient(t)
+	ownerClient.signIn(owner)
+	otherClient := newClient(t)
+	otherClient.signIn(other)
+	anonymous := newClient(t)
+
+	pullCommitToNewBranch(t, ownerClient, repo, "feature", "feature.txt", "Feature.\n")
+	pull := pullCreate(t, ownerClient, repo, "feature", "Feature")
+
+	// The query and fragment must reach the external site unescaped.
+	const trackerURL = "https://tracker.example.com/issues?project=x#open"
+	const wikiURL = "https://wiki.example.com/doku.php?id=start&do=show#intro"
+	api := apiV1Client(t, owner)
+	for _, r := range []*Repository{repo, private} {
+		status, body := api.do(http.MethodPatch, apiV1RepoPath(r, "/issue-tracker"), map[string]any{
+			"enable_issues":           true,
+			"enable_external_tracker": true,
+			"external_tracker_url":    trackerURL,
+		})
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+		status, body = api.do(http.MethodPatch, apiV1RepoPath(r, "/wiki"), map[string]any{
+			"enable_wiki":          true,
+			"enable_external_wiki": true,
+			"external_wiki_url":    wikiURL,
+		})
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	}
+
+	for name, c := range map[string]*client{"anonymous": anonymous, "owner": ownerClient} {
+		t.Run(name, func(t *testing.T) {
+			for _, elems := range [][]any{{"issues"}, {"issues", "new"}, {"issues", pull + 1}} {
+				userAssertRedirect(t, c, issuePagePath(repo, elems...), http.StatusFound, trackerURL)
+			}
+			for _, elems := range [][]any{{"wiki"}, {"wiki", "Home"}, {"wiki", "_pages"}, {"wiki", "_new"}, {"wiki", "Home", "_edit"}} {
+				userAssertRedirect(t, c, issuePagePath(repo, elems...), http.StatusFound, wikiURL)
+			}
+			// Pull requests share their numbers with issues and stay here.
+			userAssertPage(t, c, issuePagePath(repo, "issues", pull), http.StatusOK)
+
+			var header struct {
+				ExternalTrackerURL string `json:"externalTrackerURL"`
+				ExternalWikiURL    string `json:"externalWikiURL"`
+			}
+			c.doJSON(http.MethodGet, issueAPIPath(repo, "header"), nil, http.StatusOK, &header)
+			assert.Equal(t, trackerURL, header.ExternalTrackerURL)
+			assert.Equal(t, wikiURL, header.ExternalWikiURL)
+		})
+	}
+
+	// Viewers who cannot read the repository do not learn where its issues and
+	// wiki are kept.
+	userAssertRedirect(t, ownerClient, issuePagePath(private, "wiki"), http.StatusFound, wikiURL)
+	for name, c := range map[string]*client{"anonymous": anonymous, "other": otherClient} {
+		for _, elems := range [][]any{{"issues"}, {"wiki"}} {
+			path := issuePagePath(private, elems...)
+			status, header, body := c.doRaw(http.MethodGet, path, "", nil)
+			assert.NotEqual(t, http.StatusFound, status, "%s viewer, GET %s, response: %s", name, path, body)
+			assert.Empty(t, header.Get("Location"), "%s viewer, GET %s", name, path)
+		}
+	}
+}

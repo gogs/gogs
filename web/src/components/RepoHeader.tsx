@@ -207,10 +207,10 @@ function buildTabs(repo: RepoHeaderData, repoLink: string, t: TFunction): TabDes
   if (repo.issuesEnabled !== false) {
     tabs.push({
       key: "issues",
-      href: `${repoLink}/issues`,
+      href: repo.externalTrackerURL ?? `${repoLink}/issues`,
       icon: CircleDot,
       label: t("issues"),
-      badge: repo.openIssueCount,
+      badge: repo.externalTrackerURL ? undefined : repo.openIssueCount,
     });
   }
   if (repo.pullRequestsEnabled !== false) {
@@ -223,7 +223,7 @@ function buildTabs(repo: RepoHeaderData, repoLink: string, t: TFunction): TabDes
     });
   }
   if (repo.wikiEnabled !== false) {
-    tabs.push({ key: "wiki", href: `${repoLink}/wiki`, icon: FileText, label: t("repo.wiki") });
+    tabs.push({ key: "wiki", href: repo.externalWikiURL ?? `${repoLink}/wiki`, icon: FileText, label: t("repo.wiki") });
   }
   if (repo.viewerCanAdminister) {
     tabs.push({ key: "settings", href: `${repoLink}/settings`, icon: Settings, label: t("repo.settings") });

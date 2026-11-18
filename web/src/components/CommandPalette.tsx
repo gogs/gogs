@@ -577,11 +577,15 @@ function PaletteBody({
     if (ref !== undefined) {
       out.push({ key: "r-files", label: t("repo.files"), keywords: "code source browse", icon: Code, to: base });
     }
-    if (r.issuesEnabled) out.push({ key: "r-issues", label: t("issues"), icon: CircleDot, to: `${base}/issues` });
+    if (r.externalTrackerURL) {
+      out.push({ key: "r-issues", label: t("issues"), icon: CircleDot, external: r.externalTrackerURL });
+    } else if (r.issuesEnabled) {
+      out.push({ key: "r-issues", label: t("issues"), icon: CircleDot, to: `${base}/issues` });
+    }
     if (r.pullRequestsEnabled) {
       out.push({ key: "r-pulls", label: t("pull_requests"), icon: GitPullRequest, to: `${base}/pulls` });
     }
-    if (r.issuesEnabled && user) {
+    if (r.issuesEnabled && !r.externalTrackerURL && user) {
       out.push({ key: "r-new-issue", label: t("repo.issues.new"), icon: Plus, to: `${base}/issues/new` });
     }
     if (ref !== undefined) {
@@ -597,7 +601,11 @@ function PaletteBody({
         { key: "r-releases", label: t("repo.releases"), keywords: "tags", icon: Tag, to: `${base}/releases` },
       );
     }
-    if (r.wikiEnabled) out.push({ key: "r-wiki", label: t("repo.wiki"), icon: FileText, to: `${base}/wiki` });
+    if (r.externalWikiURL) {
+      out.push({ key: "r-wiki", label: t("repo.wiki"), icon: FileText, external: r.externalWikiURL });
+    } else if (r.wikiEnabled) {
+      out.push({ key: "r-wiki", label: t("repo.wiki"), icon: FileText, to: `${base}/wiki` });
+    }
     if (r.issuesEnabled) {
       out.push(
         { key: "r-labels", label: t("repo.labels"), icon: Tag, to: `${base}/labels` },
@@ -616,7 +624,7 @@ function PaletteBody({
     if (ref !== undefined && r.viewerCanWrite) {
       out.push({ key: "r-new-release", label: t("repo.release.new_release"), icon: Plus, to: `${base}/releases/new` });
     }
-    if (r.wikiEnabled && r.viewerCanWrite) {
+    if (r.wikiEnabled && !r.externalWikiURL && r.viewerCanWrite) {
       out.push({ key: "r-new-wiki", label: t("repo.wiki.new_page"), icon: Plus, to: `${base}/wiki/_new` });
     }
     const copy = (url: string) => () =>
