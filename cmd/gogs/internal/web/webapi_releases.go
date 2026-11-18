@@ -313,7 +313,7 @@ func postRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, view
 
 	// An existing tag keeps the time it was made, a new one is made now.
 	var tagCreatedUnix int64
-	if tag, err := gitRepo.Tag(ctx, git.RefsTags+req.TagName); err == nil {
+	if tag, err := gitRepo.Tag(ctx, req.TagName); err == nil {
 		if commit, err := tag.Commit(ctx); err == nil {
 			tagCreatedUnix = commit.Author.When.Unix()
 		}
