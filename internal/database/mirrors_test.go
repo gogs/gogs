@@ -34,6 +34,7 @@ func TestMirrors(t *testing.T) {
 		{"DeleteByRepoID", mirrorsDeleteByRepoID},
 		{"listDueRepoIDs", mirrorsListDueRepoIDs},
 		{"markSynced", mirrorsMarkSynced},
+		{"scheduleNextSync", mirrorsScheduleNextSync},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
@@ -182,6 +183,49 @@ func mirrorsMarkSynced(t *testing.T, ctx context.Context, s *MirrorsStore) {
 	got, err = s.GetByRepoID(ctx, m2.RepoID)
 	require.NoError(t, err)
 	assert.NotEqual(t, syncedAt.Unix(), got.LastSync.Unix())
+}
+
+func mirrorsScheduleNextSync(t *testing.T, ctx context.Context, s *MirrorsStore) {
+	nextSync := time.Unix(1_800_000_000, 0)
+	m1 := newTestMirror(t, ctx, s, "repo1", 8, nextSync)
+	m2 := newTestMirror(t, ctx, s, "repo2", 8, nextSync)
+	syncedAt := time.Unix(1_700_000_000, 0)
+	err := s.markSynced(ctx, m1.RepoID, syncedAt)
+	require.NoError(t, err)
+
+	// Settings saved while the mirror synced.
+	saved, err := s.GetByRepoID(ctx, m1.RepoID)
+	require.NoError(t, err)
+	saved.Interval = 3
+	saved.EnablePrune = false
+	err = s.Update(ctx, saved)
+	require.NoError(t, err)
+
+	after := time.Unix(1_750_000_000, 0)
+	err = s.scheduleNextSync(ctx, m1.RepoID, after)
+	require.NoError(t, err)
+
+	got, err := s.GetByRepoID(ctx, m1.RepoID)
+	require.NoError(t, err)
+	assert.Equal(t, after.Add(3*time.Hour).Unix(), got.NextSync.Unix())
+	assert.Equal(t, 3, got.Interval)
+	assert.False(t, got.EnablePrune)
+	assert.Equal(t, syncedAt.Unix(), got.LastSync.Unix())
+
+	got, err = s.GetByRepoID(ctx, m2.RepoID)
+	require.NoError(t, err)
+	assert.Equal(t, nextSync.Unix(), got.NextSync.Unix(), "next sync of another mirror changed")
+
+	// Times past 2038 and long intervals do not fit in 32 bits.
+	saved.Interval = 1_000_000
+	err = s.Update(ctx, saved)
+	require.NoError(t, err)
+	after = time.Unix(2_200_000_000, 0)
+	err = s.scheduleNextSync(ctx, m1.RepoID, after)
+	require.NoError(t, err)
+	got, err = s.GetByRepoID(ctx, m1.RepoID)
+	require.NoError(t, err)
+	assert.Equal(t, after.Unix()+1_000_000*60*60, got.NextSyncUnix)
 }
 
 func TestParseRemoteUpdateOutput(t *testing.T) {

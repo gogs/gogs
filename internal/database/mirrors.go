@@ -12,6 +12,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"unknwon.dev/ini/v2"
 	"unknwon.dev/x/logx"
 
@@ -75,11 +76,6 @@ func (m *Mirror) AfterFind(_ *gorm.DB) error {
 	m.LastSync = time.Unix(m.LastSyncUnix, 0).Local()
 	m.NextSync = time.Unix(m.NextSyncUnix, 0).Local()
 	return nil
-}
-
-// ScheduleNextSync calculates and sets next sync time based on repository mirror setting.
-func (m *Mirror) ScheduleNextSync() {
-	m.NextSync = time.Now().Add(time.Duration(m.Interval) * time.Hour)
 }
 
 func (m *Mirror) readAddress(logger *logx.Logger) {
@@ -269,6 +265,25 @@ func (s *MirrorsStore) listDueRepoIDs(ctx context.Context, logger *logx.Logger, 
 		dueRepoIDs = append(dueRepoIDs, m.RepoID)
 	}
 	return dueRepoIDs, nil
+}
+
+// scheduleNextSync sets the next sync of the mirror of the repository with
+// given ID to one interval after given time. Only that column is written, so
+// settings saved while the mirror synced are kept. When the interval changed
+// since it was read, the save that changed it already set the next sync.
+func (s *MirrorsStore) scheduleNextSync(ctx context.Context, repoID int64, after time.Time) error {
+	db := s.db.WithContext(ctx)
+	m := new(Mirror)
+	err := db.Where("repo_id = ?", repoID).Take(m).Error
+	if err != nil {
+		return errors.Wrap(err, "get mirror")
+	}
+	// Computed in Go, because the interval column is 32-bit on PostgreSQL.
+	nextSync := after.Unix() + int64(m.Interval)*60*60
+	return db.Model(new(Mirror)).
+		Where("repo_id = ? AND ? = ?", repoID, clause.Column{Name: "interval"}, m.Interval).
+		UpdateColumn("next_update_unix", nextSync).
+		Error
 }
 
 // markSynced records that the mirror of the repository with given ID synced at
@@ -513,9 +528,8 @@ func SyncMirrors(logger *logx.Logger) {
 			continue
 		}
 
-		m.ScheduleNextSync()
-		if err = mirrors.Update(ctx, m); err != nil {
-			logger.Error("Failed to update mirror", "repoID", m.RepoID, "error", err)
+		if err = mirrors.scheduleNextSync(ctx, m.RepoID, time.Now()); err != nil {
+			logger.Error("Failed to schedule next sync of mirror", "repoID", m.RepoID, "error", err)
 			continue
 		}
 
