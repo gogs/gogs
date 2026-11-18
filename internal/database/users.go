@@ -80,6 +80,7 @@ func (s *UsersStore) Authenticate(ctx context.Context, logger *logx.Logger, logi
 
 	var authSourceID int64 // The login source ID will be used to authenticate the user.
 	createNewUser := false // Whether to create a new user after successful authentication.
+	sourceLogin := login   // The login to authenticate with in the login source.
 
 	// User found in the database.
 	if err == nil {
@@ -100,6 +101,14 @@ func (s *UsersStore) Authenticate(ctx context.Context, logger *logx.Logger, logi
 
 		authSourceID = user.LoginSource
 
+		// The user is found by the name or email of the account, which may be
+		// another identity in the login source, e.g., an LDAP entry whose uid is
+		// the email. Authenticate the identity the account is bound to instead.
+		sourceLogin = user.LoginName
+		if sourceLogin == "" {
+			sourceLogin = user.LowerName
+		}
+
 	} else {
 		// Non-local login source is always greater than 0.
 		if loginSourceID <= 0 {
@@ -119,7 +128,7 @@ func (s *UsersStore) Authenticate(ctx context.Context, logger *logx.Logger, logi
 		return nil, errors.Errorf("login source %d is not activated", source.ID)
 	}
 
-	extAccount, err := source.Provider.Authenticate(logger, login, password)
+	extAccount, err := source.Provider.Authenticate(logger, sourceLogin, password)
 	if err != nil {
 		return nil, err
 	}

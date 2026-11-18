@@ -104,6 +104,40 @@ func TestAPIV1AdminUsers(t *testing.T) {
 	})
 }
 
+func TestAPIV1AdminUserOfAuthSource(t *testing.T) {
+	t.Parallel()
+
+	admin := apiV1Client(t, seedUser(t, CreateUserOptions{Admin: true}))
+	source := adminSeedAuthSource(t)
+	name := UniqueName("external-")
+
+	body := map[string]any{
+		"username":  name,
+		"email":     name + "@example.com",
+		"source_id": source.ID,
+	}
+	status, respBody := admin.do(http.MethodPost, "/api/v1/admin/users", body)
+	assert.Equal(t, http.StatusUnprocessableEntity, status, "without login name, response: %s", respBody)
+
+	body["login_name"] = name
+	var created apiV1User
+	admin.doJSON(http.MethodPost, "/api/v1/admin/users", body, http.StatusCreated, &created)
+	u, err := database.Handle.Users().GetByUsername(t.Context(), name)
+	require.NoError(t, err)
+	assert.Equal(t, source.ID, u.LoginSource)
+	assert.Equal(t, name, u.LoginName)
+
+	edit := map[string]any{
+		"email":     name + "@example.com",
+		"source_id": source.ID,
+	}
+	status, respBody = admin.do(http.MethodPatch, "/api/v1/admin/users/"+name, edit)
+	assert.Equal(t, http.StatusUnprocessableEntity, status, "without login name, response: %s", respBody)
+	u, err = database.Handle.Users().GetByUsername(t.Context(), name)
+	require.NoError(t, err)
+	assert.Equal(t, name, u.LoginName)
+}
+
 func TestAPIV1AdminCreateForUser(t *testing.T) {
 	t.Parallel()
 
