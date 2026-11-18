@@ -50,7 +50,8 @@ func TestSSHParsePublicKey(t *testing.T) {
 			content:   "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICGYutovQfTewtcodVN1E1UUzMk4GQfiRI5ZoP/kTlDb nocomment",
 			expType:   "ed25519",
 			expLength: 256,
-		}, {
+		},
+		{
 			name:      "ed25519-sk-256",
 			content:   "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIEeWTbZ8dSRinHt2mlR+f8pW2TjINxeV0pD9opoJYBN7AAAABHNzaDo= nocomment",
 			expType:   "ed25519-sk",

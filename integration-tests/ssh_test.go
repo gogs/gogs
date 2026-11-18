@@ -1,14 +1,21 @@
 package integrationtests
 
 import (
+	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha256"
 	"encoding/pem"
 	"fmt"
+	"math/big"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -16,6 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/agent"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
@@ -27,6 +35,9 @@ type sshKey struct {
 	path string
 	// id is the ID of a key of a user, which "gogs serv" takes.
 	id int64
+	// agentSocket is the socket of the SSH agent that holds the private key,
+	// in which case path is the public key file.
+	agentSocket string
 }
 
 // sshNewKey writes a new private key to a file and returns it with its public
@@ -75,9 +86,13 @@ func sshRemoteURL(repo *Repository) string {
 // command returns a Git command that runs in the directory and connects over
 // SSH with the key only.
 func (k *sshKey) command(dir string, args ...string) *exec.Cmd {
+	agentSocket := "none"
+	if k.agentSocket != "" {
+		agentSocket = k.agentSocket
+	}
 	cmd := gitCommand(dir, args...)
 	cmd.Env = append(cmd.Env, "GIT_SSH_COMMAND=ssh -i "+k.path+
-		" -o IdentitiesOnly=yes -o IdentityAgent=none -o BatchMode=yes"+
+		" -o IdentitiesOnly=yes -o IdentityAgent="+agentSocket+" -o BatchMode=yes"+
 		" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR")
 	return cmd
 }
@@ -380,4 +395,143 @@ func servProgram(t *testing.T, keyID int64) string {
 		os.Args[0], keyID, conf.CustomConf)
 	require.NoError(t, os.WriteFile(path, []byte(script), 0o700))
 	return path
+}
+
+// sshSecurityKeyAgent is an SSH agent that holds the key of a FIDO security
+// key, e.g., a YubiKey, and signs as the security key does when touched.
+type sshSecurityKeyAgent struct {
+	// OpenSSH only lists the keys of the agent and asks it to sign.
+	agent.Agent
+	key  ssh.PublicKey
+	sign func(message []byte) ([]byte, error)
+}
+
+func (a *sshSecurityKeyAgent) List() ([]*agent.Key, error) {
+	return []*agent.Key{{Format: a.key.Type(), Blob: a.key.Marshal()}}, nil
+}
+
+// Sign signs the data as described in PROTOCOL.u2f of OpenSSH.
+func (a *sshSecurityKeyAgent) Sign(_ ssh.PublicKey, data []byte) (*ssh.Signature, error) {
+	const userPresent = 0x01
+	counter := []byte{0, 0, 0, 1}
+	application := sha256.Sum256([]byte(sshSecurityKeyApplication))
+	digest := sha256.Sum256(data)
+	blob, err := a.sign(slices.Concat(application[:], []byte{userPresent}, counter, digest[:]))
+	if err != nil {
+		return nil, err
+	}
+	return &ssh.Signature{Format: a.key.Type(), Blob: blob, Rest: slices.Concat([]byte{userPresent}, counter)}, nil
+}
+
+// sshSecurityKeyApplication is the application that ssh-keygen creates keys of
+// security keys for by default.
+const sshSecurityKeyApplication = "ssh:"
+
+// sshNewSecurityKey starts an SSH agent that holds a new key of a security key
+// of the algorithm, and returns the key with its public key in the
+// authorized_keys format.
+func sshNewSecurityKey(t *testing.T, algorithm string) (*sshKey, string) {
+	t.Helper()
+
+	a := &sshSecurityKeyAgent{}
+	var wire []byte
+	switch algorithm {
+	case ssh.KeyAlgoSKED25519:
+		pub, priv, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+		wire = ssh.Marshal(struct {
+			Name        string
+			Key         []byte
+			Application string
+		}{algorithm, pub, sshSecurityKeyApplication})
+		a.sign = func(message []byte) ([]byte, error) { return ed25519.Sign(priv, message), nil }
+	case ssh.KeyAlgoSKECDSA256:
+		priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		require.NoError(t, err)
+		pub, err := priv.PublicKey.ECDH()
+		require.NoError(t, err)
+		wire = ssh.Marshal(struct {
+			Name        string
+			Curve       string
+			Key         []byte
+			Application string
+		}{algorithm, "nistp256", pub.Bytes(), sshSecurityKeyApplication})
+		a.sign = func(message []byte) ([]byte, error) {
+			digest := sha256.Sum256(message)
+			r, s, err := ecdsa.Sign(rand.Reader, priv, digest[:])
+			if err != nil {
+				return nil, err
+			}
+			return ssh.Marshal(struct{ R, S *big.Int }{r, s}), nil
+		}
+	default:
+		t.Fatalf("unsupported algorithm %q", algorithm)
+	}
+	var err error
+	a.key, err = ssh.ParsePublicKey(wire)
+	require.NoError(t, err)
+
+	// The path of a Unix socket is limited to about 100 bytes, which the
+	// directory of t.TempDir() exceeds for long test names.
+	dir, err := os.MkdirTemp("", "agent-")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = os.RemoveAll(dir) })
+	socket := filepath.Join(dir, "agent.sock")
+	listener, err := net.Listen("unix", socket)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = listener.Close() })
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				return
+			}
+			go func() {
+				defer func() { _ = conn.Close() }()
+				_ = agent.ServeAgent(a, conn)
+			}()
+		}
+	}()
+
+	content := strings.TrimSpace(string(ssh.MarshalAuthorizedKey(a.key)))
+	path := filepath.Join(dir, "id.pub")
+	require.NoError(t, os.WriteFile(path, []byte(content+"\n"), 0o600))
+	return &sshKey{path: path, agentSocket: socket}, content
+}
+
+func TestSSHSecurityKey(t *testing.T) {
+	t.Parallel()
+
+	u, c := userSignedIn(t)
+	repo := seedRepository(t, u.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
+	head := gitMainOnDisk(t, repo)
+	addKey := func(content string) (int, []byte) {
+		t.Helper()
+		return c.do(http.MethodPost, "/api/web/user/settings/ssh-keys", map[string]any{
+			"title":   UniqueName("key-"),
+			"content": content,
+		})
+	}
+
+	for _, algorithm := range []string{ssh.KeyAlgoSKED25519, ssh.KeyAlgoSKECDSA256} {
+		t.Run(algorithm, func(t *testing.T) {
+			key, content := sshNewSecurityKey(t, algorithm)
+			status, body := addKey(content + " user@example.com")
+			require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+
+			dir := key.clone(t, repo)
+			assert.Equal(t, head, gitRun(t, dir, "rev-parse", "HEAD"))
+		})
+	}
+
+	// Keys too short for their type are rejected, so the size check is on.
+	t.Run("short RSA key", func(t *testing.T) {
+		priv, err := rsa.GenerateKey(rand.Reader, 1536)
+		require.NoError(t, err)
+		pub, err := ssh.NewPublicKey(&priv.PublicKey)
+		require.NoError(t, err)
+		status, body := addKey(strings.TrimSpace(string(ssh.MarshalAuthorizedKey(pub))))
+		assert.Equal(t, http.StatusBadRequest, status, "response: %s", body)
+		assert.Contains(t, string(body), "key length is not enough")
+	})
 }
