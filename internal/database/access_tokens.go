@@ -108,9 +108,9 @@ func (s *AccessTokensStore) DeleteByID(ctx context.Context, userID, id int64) er
 
 var _ errx.NotFound = (*ErrAccessTokenNotExist)(nil)
 
-type ErrAccessTokenNotExist struct {
-	args errx.Args
-}
+// ErrAccessTokenNotExist does not carry the access token it was looked up by,
+// so logging the error never writes out a token.
+type ErrAccessTokenNotExist struct{}
 
 // IsErrAccessTokenNotExist returns true if the underlying error has the type
 // ErrAccessTokenNotExist.
@@ -118,8 +118,8 @@ func IsErrAccessTokenNotExist(err error) bool {
 	return errors.As(errors.Cause(err), &ErrAccessTokenNotExist{})
 }
 
-func (err ErrAccessTokenNotExist) Error() string {
-	return fmt.Sprintf("access token does not exist: %v", err.args)
+func (ErrAccessTokenNotExist) Error() string {
+	return "access token does not exist"
 }
 
 func (ErrAccessTokenNotExist) NotFound() bool {
@@ -131,14 +131,14 @@ func (ErrAccessTokenNotExist) NotFound() bool {
 func (s *AccessTokensStore) GetBySHA1(ctx context.Context, sha1 string) (*AccessToken, error) {
 	// No need to waste a query for an empty SHA1.
 	if sha1 == "" {
-		return nil, ErrAccessTokenNotExist{args: errx.Args{"sha": sha1}}
+		return nil, ErrAccessTokenNotExist{}
 	}
 
 	sha256 := cryptox.SHA256(sha1)
 	token := new(AccessToken)
 	err := s.db.WithContext(ctx).Where("sha256 = ?", sha256).First(token).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, ErrAccessTokenNotExist{args: errx.Args{"sha": sha1}}
+		return nil, ErrAccessTokenNotExist{}
 	} else if err != nil {
 		return nil, err
 	}

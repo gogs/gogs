@@ -28,7 +28,9 @@ import (
 // authMethod is how the authenticated user of a request authenticated.
 type authMethod struct {
 	basicAuth bool
-	tokenAuth bool
+	// tokenID is the ID of the access token the user authenticated with, 0 when
+	// the user does not use token authentication.
+	tokenID int64
 }
 
 // authenticator returns the middleware that maps the authenticated user
@@ -37,11 +39,11 @@ type authMethod struct {
 // authentication header, or HTTP Basic Authentication.
 func authenticator(store context.Store) flamego.Handler {
 	return func(c flamego.Context, logger *logx.Logger, sess session.Session) {
-		user, isBasicAuth, isTokenAuth := context.AuthenticatedUser(logger, store, c.Request().Request, sess)
+		user, isBasicAuth, tokenID := context.AuthenticatedUser(logger, store, c.Request().Request, sess)
 		if user != nil {
 			telemetry.SetUser(c.Request().Context(), user.ID)
 		}
-		c.Map(user, authMethod{basicAuth: isBasicAuth, tokenAuth: isTokenAuth})
+		c.Map(user, authMethod{basicAuth: isBasicAuth, tokenID: tokenID})
 	}
 }
 
@@ -120,10 +122,11 @@ func apiV1Bridger(apiHandler http.Handler) flamego.Handler {
 		req := r.WithContext(stdctx.WithValue(r.Context(), apiV1RequestKey{}, apiV1Request{
 			user: user,
 			info: apiv1.RequestInfo{
-				IsBasicAuth: method.basicAuth,
-				IsTokenAuth: method.tokenAuth,
-				Path:        r.URL.Path,
-				WebNotFound: func() { pages.NotFound(c) },
+				IsBasicAuth:   method.basicAuth,
+				IsTokenAuth:   method.tokenID > 0,
+				AccessTokenID: method.tokenID,
+				Path:          r.URL.Path,
+				WebNotFound:   func() { pages.NotFound(c) },
 				WebError: func(err error, msg string) {
 					logger.Error("Internal server error", "method", r.Method, "path", r.URL.Path, "operation", msg, "error", err)
 					pages.Error(w, r, user, err)
