@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -368,10 +369,10 @@ func (s *ReleasesStore) Update(ctx context.Context, logger *logx.Logger, doer *U
 	return nil
 }
 
-// DeleteByID deletes the release with given ID and its tag when it belongs to
-// the repository with given ID. Its attachments are kept. It returns
+// DeleteByID deletes the release with given ID, its tag and its attachments
+// when it belongs to the repository with given ID. It returns
 // ErrReleaseNotExist when the release does not exist.
-func (s *ReleasesStore) DeleteByID(ctx context.Context, repoID, id int64) error {
+func (s *ReleasesStore) DeleteByID(ctx context.Context, logger *logx.Logger, repoID, id int64) error {
 	// Stopping midway, e.g., when the client disconnects, would leave the
 	// release without its tag.
 	ctx = context.WithoutCancel(ctx)
@@ -391,5 +392,36 @@ func (s *ReleasesStore) DeleteByID(ctx context.Context, repoID, id int64) error 
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		return errors.Wrap(err, "delete tag")
 	}
-	return s.db.WithContext(ctx).Delete(new(Release), r.ID).Error
+	// The release row is deleted first, which waits for an edit of the release
+	// that is in progress. The attachments are listed after that, so that the
+	// rows deleted and the files removed include those the edit attached.
+	var attachments []*Attachment
+	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		err := tx.Delete(new(Release), r.ID).Error
+		if err != nil {
+			return errors.Wrap(err, "delete release")
+		}
+		if err = tx.Where("release_id = ?", r.ID).Find(&attachments).Error; err != nil {
+			return errors.Wrap(err, "list attachments")
+		}
+		for _, a := range attachments {
+			if err = tx.Delete(new(Attachment), a.ID).Error; err != nil {
+				return errors.Wrapf(err, "delete attachment %d", a.ID)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	// Files are removed only once their rows are gone, so a failure cannot leave
+	// rows whose files are missing. The release is gone by then, so failing to
+	// remove a file does not fail the deletion.
+	for _, a := range attachments {
+		if err = os.Remove(a.LocalPath()); err != nil && !os.IsNotExist(err) {
+			logger.Error("Failed to remove file of attachment", "attachmentID", a.ID, "error", err)
+		}
+	}
+	return nil
 }

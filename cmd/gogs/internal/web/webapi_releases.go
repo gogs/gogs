@@ -446,7 +446,7 @@ func patchRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, vie
 }
 
 func deleteRepoRelease(c flamego.Context, logger *logx.Logger, repoCtx *repoContext, rel *database.Release) (statusCode int, resp any, err error) {
-	if err = database.Handle.Releases().DeleteByID(c.Request().Context(), repoCtx.Repo.ID, rel.ID); err != nil {
+	if err = database.Handle.Releases().DeleteByID(c.Request().Context(), logger, repoCtx.Repo.ID, rel.ID); err != nil {
 		logger.Error("Failed to delete release", "releaseID", rel.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete release")
 	}

@@ -2,7 +2,9 @@ package database
 
 import (
 	"context"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -311,6 +313,7 @@ func releasesDeleteByID(t *testing.T, ctx context.Context, s *ReleasesStore) {
 	conf.SetMockServer(t, conf.ServerOpts{})
 	conf.SetMockSSH(t, conf.SSHOpts{})
 	conf.SetMockRepository(t, conf.RepositoryOpts{Root: t.TempDir()})
+	setMockAttachmentPath(t)
 	logger := logx.NewNoopLogger()
 
 	repo, gitRepo := newTestReleaseRepo(t, ctx, s, "rel-delete")
@@ -320,28 +323,45 @@ func releasesDeleteByID(t *testing.T, ctx context.Context, s *ReleasesStore) {
 	other := &Release{RepoID: repo.ID, PublisherID: repo.OwnerID, TagName: "v2.0", Target: "main"}
 	err = s.Create(ctx, logger, gitRepo, other, nil)
 	require.NoError(t, err)
+	attachments := newAttachmentsStore(s.db)
+	// A file that cannot be removed does not stop the deletion.
+	stuck := newTestAttachment(t, ctx, attachments, "stuck", 0, 0, r.ID)
+	err = os.Remove(stuck.LocalPath())
+	require.NoError(t, err)
+	err = os.MkdirAll(filepath.Join(stuck.LocalPath(), "child"), os.ModePerm)
+	require.NoError(t, err)
+	ofRelease := newTestAttachment(t, ctx, attachments, "of-release", 0, 0, r.ID)
+	ofOther := newTestAttachment(t, ctx, attachments, "of-other", 0, 0, other.ID)
 
 	// A release of another repository is left alone.
-	err = s.DeleteByID(ctx, 9999, r.ID)
+	err = s.DeleteByID(ctx, logger, 9999, r.ID)
 	require.NoError(t, err)
 	_, err = s.GetByID(ctx, r.ID)
 	require.NoError(t, err)
 	assert.True(t, gitRepo.HasTag(ctx, "v1.0"), "tag deleted")
 
-	err = s.DeleteByID(ctx, repo.ID, r.ID)
+	err = s.DeleteByID(ctx, logger, repo.ID, r.ID)
 	require.NoError(t, err)
 	_, err = s.GetByID(ctx, r.ID)
 	assert.True(t, IsErrReleaseNotExist(err), "got %v", err)
 	assert.False(t, gitRepo.HasTag(ctx, "v1.0"), "tag not deleted")
 	assert.True(t, gitRepo.HasTag(ctx, "v2.0"), "tag of other release deleted")
+	_, err = attachments.GetByUUID(ctx, ofRelease.UUID)
+	assert.True(t, IsErrAttachmentNotExist(err), "attachment not deleted: %v", err)
+	assert.NoFileExists(t, ofRelease.LocalPath())
+	_, err = attachments.GetByUUID(ctx, stuck.UUID)
+	assert.True(t, IsErrAttachmentNotExist(err), "attachment not deleted: %v", err)
+	_, err = attachments.GetByUUID(ctx, ofOther.UUID)
+	assert.NoError(t, err, "attachment of other release deleted")
+	assert.FileExists(t, ofOther.LocalPath())
 
-	err = s.DeleteByID(ctx, repo.ID, r.ID)
+	err = s.DeleteByID(ctx, logger, repo.ID, r.ID)
 	assert.True(t, IsErrReleaseNotExist(err), "got %v", err)
 
 	// A release whose tag is gone is still deleted.
 	err = git.RepoDeleteTag(ctx, repo.RepoPath(), "v2.0")
 	require.NoError(t, err)
-	err = s.DeleteByID(ctx, repo.ID, other.ID)
+	err = s.DeleteByID(ctx, logger, repo.ID, other.ID)
 	require.NoError(t, err)
 	_, err = s.GetByID(ctx, other.ID)
 	assert.True(t, IsErrReleaseNotExist(err), "got %v", err)
