@@ -72,11 +72,33 @@ func TestUserActivateEmail(t *testing.T) {
 	})
 
 	t.Run("activated", func(t *testing.T) {
-		status, header, body := c.doRaw(http.MethodGet, activatePath(code, address), "", nil)
-		require.Equal(t, http.StatusFound, status, "response: %s", body)
-		assert.True(t, strings.HasPrefix(header.Get("Location"), "/user/settings/email"), header.Get("Location"))
+		userAssertRedirect(t, c, activatePath(code, address), http.StatusFound, "/user/settings/email?activated=1")
 		assert.True(t, activated())
 	})
+}
+
+func TestUserActivateEmailSeveral(t *testing.T) {
+	t.Parallel()
+
+	u := seedUser(t, CreateUserOptions{})
+	addresses := []string{UniqueName("first-") + "@example.com", UniqueName("second-") + "@example.com"}
+	// Both links are mailed before either is opened, like when a user adds
+	// several addresses at once.
+	stored := userGet(t, u.ID)
+	codes := make([]string, len(addresses))
+	for i, address := range addresses {
+		require.NoError(t, database.Handle.Users().AddEmail(t.Context(), u.ID, address, false))
+		codes[i] = userx.GenerateConfirmEmailCode(stored.ID, address, stored.LowerName, stored.Password, stored.Rands)
+	}
+
+	c := newClient(t)
+	for i, address := range addresses {
+		path := "/user/activate_email?" + url.Values{"code": {codes[i]}, "email": {address}}.Encode()
+		userAssertRedirect(t, c, path, http.StatusFound, "/user/settings/email?activated=1")
+		e, err := database.Handle.Users().GetEmail(t.Context(), u.ID, address, false)
+		require.NoError(t, err)
+		assert.True(t, e.IsActivated, "%s not activated", address)
+	}
 }
 
 func TestUserEmail2User(t *testing.T) {
