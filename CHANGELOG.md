@@ -103,7 +103,7 @@ All notable changes to Gogs are documented in this file.
 - Members who join a team in the push allowlist of a protected branch can push to it right away, and members who leave the team lose access right away, without saving the branch protection again. [#8619](https://github.com/gogs/gogs/pull/8619)
 - Protecting a branch no longer also protects a tag of the same name, and pushing a protected branch again after it was deleted no longer fails with "Internal error".
 - People in the push allowlist of a protected branch that requires pull requests can edit its files in the browser, as they can push to it. Others can no longer open the editor on a branch they cannot push to.
-- Updating a file through the contents API on a protected branch you cannot push to responds with 403 and the reason instead of 500.
+- Updating a file through the contents API, or creating a branch through the API, on a protected branch you cannot push to responds with 403 and the reason instead of 500.
 - After a repository moves to another organization, members of the teams of the old organization are no longer in the push allowlist of its protected branches.
 - Repositories transferred from an organization to a user, which have no push allowlist in their settings, no longer keep an allowlist that blocked every push to a protected branch.
 - A long word in a commit message body, e.g., a file path, no longer runs past the commit page. [#8606](https://github.com/gogs/gogs/pull/8606)

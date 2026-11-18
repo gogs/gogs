@@ -111,6 +111,11 @@ func createReference(c *apiContext, prefix string, r createReferenceRequest) *gi
 		return nil
 	}
 
+	// A protected branch keeps its protection after it is deleted.
+	if prefix == git.RefsHeads && !checkBranchProtection(c, r.Name) {
+		return nil
+	}
+
 	err = repo.CreateReference(ctx, c.Logger, c.User, prefix+r.Name, commit.ID.String())
 	if errors.Is(err, git.ErrReferenceConflict) {
 		c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("The %s name %q is already taken.", kind, r.Name))
@@ -120,4 +125,23 @@ func createReference(c *apiContext, prefix string, r createReferenceRequest) *gi
 		return nil
 	}
 	return commit
+}
+
+// checkBranchProtection returns whether the protection of the branch lets the
+// user push to it, and writes the 403 response when it does not.
+func checkBranchProtection(c *apiContext, branch string) bool {
+	denial, err := database.Handle.ProtectBranches().CheckPushByName(c.Request().Context(), c.Repo.Repository.ID, branch, c.User.ID, false)
+	if err != nil {
+		c.Error(err, "check branch protection")
+		return false
+	}
+	switch denial {
+	case database.PushDeniedNotInAllowlist:
+		c.ErrorStatus(http.StatusForbidden, errors.Newf("Branch %q is protected and you are not in the push allowlist.", branch))
+		return false
+	case database.PushDeniedRequiresPullRequest:
+		c.ErrorStatus(http.StatusForbidden, errors.Newf("Branch %q is protected and commits must be merged through pull request.", branch))
+		return false
+	}
+	return true
 }

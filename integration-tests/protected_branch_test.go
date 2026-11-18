@@ -182,6 +182,8 @@ func TestProtectedBranchAllowlist(t *testing.T) {
 }
 
 func TestProtectedBranchRules(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	listed := seedUser(t, CreateUserOptions{})
 	unlisted := seedUser(t, CreateUserOptions{})
@@ -189,7 +191,7 @@ func TestProtectedBranchRules(t *testing.T) {
 	repo := seedRepository(t, org.ID, CreateRepositoryOptions{AutoInit: true})
 	protectedBranchTeam(t, org, repo, database.AccessModeWrite, listed.ID, unlisted.ID)
 
-	ownerClient := orgSignedIn(t, owner)
+	ownerClient := authenticatedClient(t, owner)
 	protect := func(t *testing.T, branch string, body map[string]any) {
 		t.Helper()
 		status, resp := ownerClient.do(http.MethodPut, issueAPIPath(repo, "settings", "branches", branch), body)
@@ -207,7 +209,7 @@ func TestProtectedBranchRules(t *testing.T) {
 			var resp struct {
 				Editor string `json:"editor"`
 			}
-			orgSignedIn(t, u).doJSON(http.MethodGet, issueAPIPath(repo, "src", "main"), nil, http.StatusOK, &resp)
+			authenticatedClient(t, u).doJSON(http.MethodGet, issueAPIPath(repo, "src", "main"), nil, http.StatusOK, &resp)
 			return resp.Editor
 		}
 		// People in the allowlist push past the pull request requirement, so
@@ -257,4 +259,68 @@ func TestProtectedBranchRules(t *testing.T) {
 		assert.Error(t, err, "delete succeeded: %s", out)
 		assert.Contains(t, string(out), "is protected from deletion")
 	})
+
+	t.Run("API creates branches and tags under protected names", func(t *testing.T) {
+		dir := gitClone(t, gitRemoteURL(t, repo, listed.Name, listed.Password))
+		gitRun(t, dir, "push", "origin", "main:refs/heads/hotfix")
+		protect(t, "hotfix", map[string]any{
+			"protected":        true,
+			"enableAllowlist":  true,
+			"allowlistUserIDs": []int64{listed.ID},
+		})
+		gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(repo.Owner, repo.Name), "branch", "-D", "hotfix")
+		create := func(u *User, kind, name string) (int, []byte) {
+			return apiV1Client(t, u).do(http.MethodPost, apiV1RepoPath(repo, "/"+kind), map[string]any{"name": name})
+		}
+
+		status, body := create(unlisted, "tags", "hotfix")
+		assert.Equal(t, http.StatusCreated, status, "create tag: %s", body)
+
+		status, body = create(unlisted, "branches", "hotfix")
+		assert.Equal(t, http.StatusForbidden, status, "response: %s", body)
+		assert.Contains(t, string(body), "you are not in the push allowlist")
+		_, err := gitCommand(t.TempDir(), "--git-dir", database.RepoPath(repo.Owner, repo.Name), "rev-parse", "--verify", "refs/heads/hotfix").CombinedOutput()
+		assert.Error(t, err, "branch was created")
+
+		status, body = create(listed, "branches", "hotfix")
+		assert.Equal(t, http.StatusCreated, status, "response: %s", body)
+	})
+}
+
+func TestProtectedBranchTransferToUser(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	listed := seedUser(t, CreateUserOptions{})
+	org := orgSeed(t, owner.ID)
+	repo := seedRepository(t, org.ID, CreateRepositoryOptions{AutoInit: true})
+	protectedBranchTeam(t, org, repo, database.AccessModeWrite, listed.ID)
+
+	ownerClient := authenticatedClient(t, owner)
+	status, body := ownerClient.do(http.MethodPut, issueAPIPath(repo, "settings", "branches", "main"), map[string]any{
+		"protected":        true,
+		"enableAllowlist":  true,
+		"allowlistUserIDs": []int64{listed.ID},
+	})
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	out, ok := protectedBranchPush(t, repo, owner)
+	require.False(t, ok, "push before transfer succeeded: %s", out)
+
+	status, body = ownerClient.do(http.MethodPost, issueAPIPath(repo, "settings", "transfer"), map[string]any{"repoName": repo.Name, "newOwner": owner.Name})
+	require.Equal(t, http.StatusOK, status, "response: %s", body)
+	moved := *repo
+	moved.Owner = owner.Name
+
+	// Settings of user repositories have no allowlist, so one left enabled
+	// would keep everyone out of the branch.
+	out, ok = protectedBranchPush(t, &moved, owner)
+	assert.True(t, ok, "push after transfer failed: %s", out)
+
+	var got struct {
+		Protected       bool `json:"protected"`
+		EnableAllowlist bool `json:"enableAllowlist"`
+	}
+	authenticatedClient(t, owner).doJSON(http.MethodGet, issueAPIPath(&moved, "settings", "branches", "main"), nil, http.StatusOK, &got)
+	assert.True(t, got.Protected)
+	assert.False(t, got.EnableAllowlist)
 }
