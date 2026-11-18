@@ -355,6 +355,65 @@ func TestPullCloseAndReopen(t *testing.T) {
 	pullWaitMergeable(t, c, repo, index)
 }
 
+func TestPullMergeConcurrently(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	c := authenticatedClient(t, owner)
+
+	branch := UniqueName("topic-")
+	pullCommitToNewBranch(t, c, repo, branch, "topic.md", "# Topic\n")
+	index := pullCreate(t, c, repo, branch, "Topic")
+	pullWaitMergeable(t, c, repo, index)
+
+	issue := issueFromDatabase(t, repo, index)
+	merge := lockedRequest{http.MethodPost, issueAPIPath(repo, "pulls", index, "merge"), map[string]any{}}
+	statuses := c.doBothWhileLocked("SELECT id FROM issue WHERE id = ? FOR UPDATE", issue.ID, merge, merge)
+	assert.ElementsMatch(t, []int{http.StatusNoContent, http.StatusNotFound}, statuses)
+
+	comments, err := database.Handle.Comments().ListByIssueID(t.Context(), issue.ID, 0)
+	require.NoError(t, err)
+	var closes int
+	for _, comment := range comments {
+		if comment.Type == database.CommentTypeClose {
+			closes++
+		}
+	}
+	assert.Equal(t, 1, closes, "pull request closed more than once")
+
+	t.Run("while closing it", func(t *testing.T) {
+		branch := UniqueName("other-")
+		pullCommitToNewBranch(t, c, repo, branch, "other.md", "# Other\n")
+		index := pullCreate(t, c, repo, branch, "Other")
+		pullWaitMergeable(t, c, repo, index)
+
+		// Whichever request runs second finds the pull request closed and does
+		// nothing.
+		issue := issueFromDatabase(t, repo, index)
+		statuses := c.doBothWhileLocked("SELECT id FROM issue WHERE id = ? FOR UPDATE", issue.ID,
+			lockedRequest{http.MethodPut, issueAPIPath(repo, "pulls", index, "closed"), map[string]any{}},
+			lockedRequest{http.MethodPost, issueAPIPath(repo, "pulls", index, "merge"), map[string]any{}})
+		assert.Equal(t, []int{http.StatusNoContent, http.StatusNotFound}, statuses)
+
+		pr, err := database.Handle.PullRequests().GetByIssueID(t.Context(), issue.ID)
+		require.NoError(t, err)
+		assert.False(t, pr.HasMerged)
+		comments, err := database.Handle.Comments().ListByIssueID(t.Context(), issue.ID, 0)
+		require.NoError(t, err)
+		var closes int
+		for _, comment := range comments {
+			if comment.Type == database.CommentTypeClose {
+				closes++
+			}
+		}
+		assert.Equal(t, 1, closes, "pull request closed more than once")
+		got, err := database.Handle.Repositories().GetByID(t.Context(), repo.ID)
+		require.NoError(t, err)
+		assert.Equal(t, 2, got.NumClosedPulls)
+	})
+}
+
 func TestPullPrivateRepository(t *testing.T) {
 	t.Parallel()
 

@@ -346,6 +346,9 @@ func postRepoPullMerge(c flamego.Context, logger *logx.Logger, l i18n.Locale, vi
 		return http.StatusUnprocessableEntity, &bindingErrorResponse{Error: l.Tr("repo.pulls.merge_style_not_allowed")}, nil
 	}
 	if err = database.Handle.PullRequests().Merge(c.Request().Context(), logger, viewer, pull, gitRepo, style, database.MergeMessage{Title: req.Title, Body: req.Body}); err != nil {
+		if errors.Is(err, database.ErrPullRequestNotMergeable) {
+			return http.StatusNotFound, nil, errors.New("pull request cannot be merged")
+		}
 		logger.Error("Failed to merge pull request", "pullID", pull.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "merge")
 	}

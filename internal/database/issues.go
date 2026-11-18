@@ -334,7 +334,52 @@ func (s *IssuesStore) Create(ctx context.Context, logger *logx.Logger, repo *Rep
 func (s *IssuesStore) create(ctx context.Context, opts NewIssueOptions) error {
 	db := s.db.WithContext(ctx)
 	opts.Issue.Title = strings.TrimSpace(opts.Issue.Title)
-	opts.Issue.Index = opts.Repo.NextIssueIndex()
+
+	// Lock the labels by name, then the milestone, then the repository, the
+	// order that closing an issue, adding labels and closing a milestone use,
+	// so they cannot deadlock. Skipped on SQLite, which locks the whole
+	// database on the first write: reading the labels before it would deadlock
+	// concurrent creates.
+	var err error
+	var labels []*Label
+	if len(opts.LableIDs) > 0 && !conf.UseSQLite3 {
+		labels, err = newLabelsStore(s.db).ListByIDs(ctx, opts.Repo.ID, opts.LableIDs)
+		if err != nil {
+			return errors.Wrap(err, "list labels")
+		}
+		for _, label := range labels {
+			err = db.Exec("UPDATE label SET num_issues = num_issues WHERE id = ?", label.ID).Error
+			if err != nil {
+				return errors.Wrap(err, "lock label")
+			}
+		}
+	}
+	if opts.Issue.MilestoneID > 0 {
+		err = db.Exec("UPDATE milestone SET num_issues = num_issues WHERE id = ?", opts.Issue.MilestoneID).Error
+		if err != nil {
+			return errors.Wrap(err, "lock milestone")
+		}
+	}
+
+	// Bumping the counter locks the repository row until commit, so concurrent
+	// creates get distinct numbers.
+	if opts.IsPull {
+		err = db.Exec("UPDATE repository SET num_pulls = num_pulls + 1 WHERE id = ?", opts.Repo.ID).Error
+	} else {
+		err = db.Exec("UPDATE repository SET num_issues = num_issues + 1 WHERE id = ?", opts.Repo.ID).Error
+	}
+	if err != nil {
+		return errors.Wrap(err, "count issue")
+	}
+	var counts struct {
+		NumIssues int64
+		NumPulls  int64
+	}
+	err = db.Table("repository").Select("num_issues", "num_pulls").Where("id = ?", opts.Repo.ID).Take(&counts).Error
+	if err != nil {
+		return errors.Wrap(err, "get issue counts")
+	}
+	opts.Issue.Index = counts.NumIssues + counts.NumPulls
 
 	if opts.Issue.MilestoneID > 0 {
 		milestones := newMilestonesStore(s.db)
@@ -347,8 +392,12 @@ func (s *IssuesStore) create(ctx context.Context, opts NewIssueOptions) error {
 		if milestone != nil {
 			opts.Issue.MilestoneID = milestone.ID
 			opts.Issue.Milestone = milestone
-			if err = milestones.assignIssue(ctx, opts.Issue, -1); err != nil {
-				return errors.Wrap(err, "assign milestone")
+			closedIssues := 0
+			if opts.Issue.IsClosed {
+				closedIssues = 1
+			}
+			if err = milestones.addToCounts(ctx, milestone, 1, closedIssues); err != nil {
+				return errors.Wrap(err, "count issues of milestone")
 			}
 		}
 	}
@@ -366,24 +415,17 @@ func (s *IssuesStore) create(ctx context.Context, opts NewIssueOptions) error {
 		}
 	}
 
-	err := db.Create(opts.Issue).Error
+	err = db.Create(opts.Issue).Error
 	if err != nil {
 		return errors.Wrap(err, "insert issue")
 	}
 
-	if opts.IsPull {
-		err = db.Exec("UPDATE repository SET num_pulls = num_pulls + 1 WHERE id = ?", opts.Issue.RepoID).Error
-	} else {
-		err = db.Exec("UPDATE repository SET num_issues = num_issues + 1 WHERE id = ?", opts.Issue.RepoID).Error
-	}
-	if err != nil {
-		return errors.Wrap(err, "count issue")
-	}
-
 	if len(opts.LableIDs) > 0 {
-		labels, err := newLabelsStore(s.db).ListByIDs(ctx, opts.Repo.ID, opts.LableIDs)
-		if err != nil {
-			return errors.Wrap(err, "list labels")
+		if conf.UseSQLite3 {
+			labels, err = newLabelsStore(s.db).ListByIDs(ctx, opts.Repo.ID, opts.LableIDs)
+			if err != nil {
+				return errors.Wrap(err, "list labels")
+			}
 		}
 		err = newLabelsStore(s.db).addToIssue(ctx, opts.Issue, labels...)
 		if err != nil {
@@ -914,7 +956,9 @@ func (s *IssuesStore) ChangeStatus(ctx context.Context, logger *logx.Logger, doe
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		return newIssuesStore(tx).changeStatus(ctx, logger, doer, repo, issue, isClosed)
 	})
-	if err != nil {
+	if errors.Is(err, errIssueStatusUnchanged) {
+		return nil
+	} else if err != nil {
 		return err
 	}
 
@@ -926,6 +970,10 @@ func (s *IssuesStore) ChangeStatus(ctx context.Context, logger *logx.Logger, doe
 	return nil
 }
 
+// errIssueStatusUnchanged is returned by changeStatus when the issue already
+// has the status, e.g., because a concurrent change set it first.
+var errIssueStatusUnchanged = errors.New("issue already has the status")
+
 // changeStatus is ChangeStatus without a transaction of its own and webhooks.
 func (s *IssuesStore) changeStatus(ctx context.Context, logger *logx.Logger, doer *User, repo *Repository, issue *Issue, isClosed bool) (err error) {
 	if issue.IsClosed == isClosed {
@@ -933,12 +981,17 @@ func (s *IssuesStore) changeStatus(ctx context.Context, logger *logx.Logger, doe
 	}
 	issue.IsClosed = isClosed
 
-	if err = s.updateCols(ctx, issue, "is_closed"); err != nil {
-		return errors.Wrap(err, "update issue")
-	}
-	err = s.db.WithContext(ctx).Exec("UPDATE issue_user SET is_closed = ? WHERE issue_id = ?", isClosed, issue.ID).Error
-	if err != nil {
-		return errors.Wrap(err, "update issue users")
+	// Update only if the status still differs. This locks the row, so a
+	// concurrent change, e.g., closing a pull request while it is merged, waits
+	// here and then updates nothing.
+	issue.UpdatedUnix = time.Now().Unix()
+	result := s.db.WithContext(ctx).Model(&Issue{}).
+		Where("id = ? AND is_closed = ?", issue.ID, !isClosed).
+		UpdateColumns(map[string]any{"is_closed": isClosed, "updated_unix": issue.UpdatedUnix})
+	if result.Error != nil {
+		return errors.Wrap(result.Error, "update issue")
+	} else if result.RowsAffected == 0 {
+		return errIssueStatusUnchanged
 	}
 
 	labels := newLabelsStore(s.db)
@@ -965,6 +1018,14 @@ func (s *IssuesStore) changeStatus(ctx context.Context, logger *logx.Logger, doe
 	_, err = newCommentsStore(s.db).createStatus(ctx, logger, doer, repo, issue)
 	if err != nil {
 		return errors.Wrap(err, "create comment")
+	}
+
+	// Update issue_user last: it has no index on issue_id, so MySQL locks the
+	// whole table, which would deadlock with an issue creation holding the
+	// labels.
+	err = s.db.WithContext(ctx).Exec("UPDATE issue_user SET is_closed = ? WHERE issue_id = ?", isClosed, issue.ID).Error
+	if err != nil {
+		return errors.Wrap(err, "update issue users")
 	}
 	return nil
 }

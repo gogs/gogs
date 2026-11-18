@@ -626,12 +626,6 @@ func (r *Repository) CanEnableEditor() bool {
 	return !r.IsMirror
 }
 
-// FIXME: should have a mutex to prevent producing same index for two issues that are created
-// closely enough.
-func (r *Repository) NextIssueIndex() int64 {
-	return int64(r.NumIssues+r.NumPulls) + 1
-}
-
 // PatchPath returns corresponding patch file path of repository by given issue index.
 func (r *Repository) PatchPath(index int64) (string, error) {
 	if err := r.GetOwner(); err != nil {
@@ -1778,6 +1772,11 @@ func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 		}
 	}
 
+	// Delete labels and milestones before the repository, the order issue
+	// creation locks them in, so the two cannot deadlock.
+	if err = deleteByColumn(sess, "repo_id", repoID, "label", "milestone"); err != nil {
+		return err
+	}
 	if _, err = sess.Where("id = ?", repoID).Delete(new(Repository)); err != nil {
 		return errors.Newf("delete repository: %v", err)
 	}
@@ -1791,8 +1790,6 @@ func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 		"star",
 		"mirror",
 		"issue_user",
-		"label",
-		"milestone",
 		"release",
 		"collaboration",
 		"protect_branch",

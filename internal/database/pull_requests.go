@@ -332,11 +332,14 @@ func commitList(commits []*git.Commit, withBodies bool) string {
 	return strings.Join(items, sep)
 }
 
+// ErrPullRequestNotMergeable is returned by Merge when the pull request is
+// merged or closed by someone else first.
+var ErrPullRequestNotMergeable = errors.New("pull request has been merged or closed")
+
 // Merge merges pull request to base repository. The message is used for the
 // commit that merge commits and squashing create, and its default is used
-// when its title is empty.
-//
-// FIXME: use repoWorkingPool to make sure two merges do not happen at same time.
+// when its title is empty. It returns ErrPullRequestNotMergeable when the
+// pull request is merged or closed by someone else first.
 func (s *PullRequestsStore) Merge(ctx context.Context, logger *logx.Logger, doer *User, pr *PullRequest, baseGitRepo *git.Repository, mergeStyle MergeStyle, message MergeMessage) (err error) {
 	// Stopping midway, e.g., when the client disconnects, would leave a
 	// partial change behind.
@@ -353,7 +356,19 @@ func (s *PullRequestsStore) Merge(ctx context.Context, logger *logx.Logger, doer
 	}
 	defer tx.Rollback()
 
-	if err = newIssuesStore(tx).changeStatus(ctx, logger, doer, pr.Issue.Repo, pr.Issue, true); err != nil {
+	// Claim the pull request first. This locks its row, so a concurrent merge
+	// waits here and then finds it merged.
+	result := tx.Model(&PullRequest{}).Where("id = ? AND has_merged = ?", pr.ID, false).UpdateColumn("has_merged", true)
+	if result.Error != nil {
+		return errors.Wrap(result.Error, "claim pull request")
+	} else if result.RowsAffected == 0 {
+		return ErrPullRequestNotMergeable
+	}
+
+	err = newIssuesStore(tx).changeStatus(ctx, logger, doer, pr.Issue.Repo, pr.Issue, true)
+	if errors.Is(err, errIssueStatusUnchanged) {
+		return ErrPullRequestNotMergeable
+	} else if err != nil {
 		return errors.Wrap(err, "close issue")
 	}
 
@@ -1000,7 +1015,11 @@ func (s *PullRequestsStore) UpdatePatch(ctx context.Context, logger *logx.Logger
 	pr.MergeBase, err = headGitRepo.MergeBase(ctx, remoteBranch, pr.HeadBranch)
 	if err != nil {
 		return errors.Newf("get merge base: %v", err)
-	} else if err = s.Update(ctx, pr); err != nil {
+	}
+	// Save only the merge base, so a merge that finished meanwhile is not
+	// overwritten.
+	err = s.db.WithContext(ctx).Model(pr).UpdateColumn("merge_base", pr.MergeBase).Error
+	if err != nil {
 		return errors.Wrap(err, "update pull request")
 	}
 
