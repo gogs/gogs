@@ -165,20 +165,27 @@ func (s *AttachmentsStore) Bind(ctx context.Context, issueID, commentID int64, u
 // ListByIssueID returns the attachments of the issue with given ID, excluding
 // those of its comments.
 func (s *AttachmentsStore) ListByIssueID(ctx context.Context, issueID int64) ([]*Attachment, error) {
-	attachments := make([]*Attachment, 0, 5)
-	return attachments, s.db.WithContext(ctx).Where("issue_id = ? AND comment_id = 0", issueID).Order("id").Find(&attachments).Error
+	return s.listBy(ctx, "issue_id = ? AND comment_id = 0", issueID)
 }
 
 // ListByCommentID returns the attachments of the comment with given ID.
 func (s *AttachmentsStore) ListByCommentID(ctx context.Context, commentID int64) ([]*Attachment, error) {
-	attachments := make([]*Attachment, 0, 5)
-	return attachments, s.db.WithContext(ctx).Where("comment_id = ?", commentID).Order("id").Find(&attachments).Error
+	return s.listBy(ctx, "comment_id = ?", commentID)
 }
 
 // ListByReleaseID returns the attachments of the release with given ID.
 func (s *AttachmentsStore) ListByReleaseID(ctx context.Context, releaseID int64) ([]*Attachment, error) {
-	attachments := make([]*Attachment, 0, 10)
-	return attachments, s.db.WithContext(ctx).Where("release_id = ?", releaseID).Order("id").Find(&attachments).Error
+	return s.listBy(ctx, "release_id = ?", releaseID)
+}
+
+// listBy returns the attachments that match the condition on given ID. An ID
+// that is not positive matches none, because 0 means "not attached to one".
+func (s *AttachmentsStore) listBy(ctx context.Context, cond string, id int64) ([]*Attachment, error) {
+	attachments := make([]*Attachment, 0, 5)
+	if id <= 0 {
+		return attachments, nil
+	}
+	return attachments, s.db.WithContext(ctx).Where(cond, id).Order("id").Find(&attachments).Error
 }
 
 // Delete deletes given attachments, and their files when remove is true.

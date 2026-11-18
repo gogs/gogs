@@ -206,6 +206,15 @@ func attachmentsList(t *testing.T, ctx context.Context, s *AttachmentsStore) {
 	require.NoError(t, err)
 	assert.NotNil(t, got)
 	assert.Empty(t, got)
+
+	// An ID of 0 lists no attachments, rather than those not attached to one.
+	for name, list := range map[string]func(context.Context, int64) ([]*Attachment, error){
+		"issue": s.ListByIssueID, "comment": s.ListByCommentID, "release": s.ListByReleaseID,
+	} {
+		got, err = list(ctx, 0)
+		require.NoError(t, err, name)
+		assert.Empty(t, got, name)
+	}
 }
 
 func attachmentsDelete(t *testing.T, ctx context.Context, s *AttachmentsStore) {
@@ -253,7 +262,14 @@ func attachmentsDeleteByCommentID(t *testing.T, ctx context.Context, s *Attachme
 	issue := newTestAttachment(t, ctx, s, "issue", 1, 0, 0)
 	otherComment := newTestAttachment(t, ctx, s, "other-comment", 1, 3, 0)
 
-	err := s.DeleteByCommentID(ctx, 2, true)
+	// An ID of 0 deletes nothing, rather than the attachments of no comment.
+	err := s.DeleteByCommentID(ctx, 0, true)
+	require.NoError(t, err)
+	_, err = s.GetByUUID(ctx, issue.UUID)
+	require.NoError(t, err)
+	require.True(t, osx.IsFile(issue.LocalPath()), "file of issue attachment removed")
+
+	err = s.DeleteByCommentID(ctx, 2, true)
 	require.NoError(t, err)
 	for _, a := range []*Attachment{comment1, comment2} {
 		_, err = s.GetByUUID(ctx, a.UUID)
