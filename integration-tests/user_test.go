@@ -1,6 +1,7 @@
 package integrationtests
 
 import (
+	"encoding/json"
 	"net/http"
 	"testing"
 	"time"
@@ -11,10 +12,6 @@ import (
 
 	"gogs.io/gogs/internal/database"
 )
-
-// captchaSessionKey is where the captcha middleware keeps the text of the last
-// captcha image it served.
-const captchaSessionKey = "flamego::captcha::text"
 
 func TestSignUp(t *testing.T) {
 	t.Parallel()
@@ -28,25 +25,83 @@ func TestSignUp(t *testing.T) {
 			"captcha":  captcha,
 		})
 	}
-	newCaptcha := func() string {
-		status, _ := c.do(http.MethodGet, "/captcha/image.jpeg", nil)
-		require.Equal(t, http.StatusOK, status)
-		text, ok := c.sessionValue(captchaSessionKey).(string)
-		require.True(t, ok, "no captcha text in session")
-		return text
-	}
 
 	name := UniqueName("signup-")
-	status, body := signUp(name, newCaptcha()+"x")
+	status, body := signUp(name, c.captcha()+"x")
 	require.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
 	_, err := database.Handle.Users().GetByUsername(t.Context(), name)
 	require.True(t, database.IsErrUserNotExist(err), "user created with the wrong captcha: %v", err)
 
-	status, body = signUp(name, newCaptcha())
+	status, body = signUp(name, c.captcha())
 	require.Equal(t, http.StatusOK, status, "response: %s", body)
 	u, err := database.Handle.Users().GetByUsername(t.Context(), name)
 	require.NoError(t, err)
 	assert.True(t, u.IsActive)
+}
+
+func TestSignInWithCaptcha(t *testing.T) {
+	t.Parallel()
+
+	u := seedUser(t, CreateUserOptions{})
+	c := newClient(t)
+	c.baseURL = hardenedServerURL
+
+	captchaEnabled := func(c *client) bool {
+		var resp struct {
+			CaptchaEnabled bool `json:"captchaEnabled"`
+		}
+		c.doJSON(http.MethodGet, "/api/web/user/sign-in", nil, http.StatusOK, &resp)
+		return resp.CaptchaEnabled
+	}
+	assert.True(t, captchaEnabled(c))
+	assert.False(t, captchaEnabled(newClient(t)))
+
+	signIn := func(password string, captcha *string) map[string]*string {
+		req := map[string]any{"username": u.Name, "password": password}
+		if captcha != nil {
+			req["captcha"] = *captcha
+		}
+		status, body := c.do(http.MethodPost, "/api/web/user/sign-in", req)
+		if status == http.StatusOK {
+			return nil
+		}
+		require.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
+		var resp struct {
+			Fields map[string]*string `json:"fields"`
+		}
+		require.NoError(t, json.Unmarshal(body, &resp), "response: %s", body)
+		return resp.Fields
+	}
+	ptr := func(s string) *string { return &s }
+
+	fields := signIn(u.Password, nil)
+	assert.Contains(t, fields, "captcha", "signed in without a captcha")
+	assert.NotContains(t, fields, "password")
+	assert.Empty(t, c.username())
+
+	fields = signIn(u.Password, ptr(c.captcha()+"x"))
+	assert.Contains(t, fields, "captcha", "signed in with a wrong captcha")
+	assert.NotContains(t, fields, "password")
+	assert.Empty(t, c.username())
+
+	captcha := c.captcha()
+	fields = signIn("wrong-password", &captcha)
+	assert.Contains(t, fields, "password")
+	assert.NotContains(t, fields, "captcha")
+
+	// The failed attempt used up the captcha.
+	fields = signIn(u.Password, &captcha)
+	assert.Contains(t, fields, "captcha", "signed in with a used captcha")
+	assert.Empty(t, c.username())
+
+	require.Nil(t, signIn(u.Password, ptr(c.captcha())))
+	assert.Equal(t, u.Name, c.username())
+
+	// The API still accepts the password without a captcha.
+	api := apiV1BasicClient(t, u.Name, u.Password)
+	api.baseURL = hardenedServerURL
+	status, body := api.do(http.MethodGet, "/api/v1/users/"+u.Name+"/tokens", nil)
+	assert.Equal(t, http.StatusOK, status, "response: %s", body)
 }
 
 func TestSignInWithTwoFactor(t *testing.T) {

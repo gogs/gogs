@@ -20,7 +20,7 @@ func repoVisibilityForcePrivateClient(t *testing.T, u *User) *client {
 	t.Helper()
 
 	c := newClient(t)
-	c.baseURL = forcePrivateServerURL
+	c.baseURL = hardenedServerURL
 	c.signIn(u)
 	return c
 }
@@ -93,7 +93,7 @@ func TestRepoForcePrivate(t *testing.T) {
 	t.Run("API v1 creates private repositories", func(t *testing.T) {
 		create := map[string]any{"name": UniqueName("repo-"), "private": false}
 		forcePrivateClient := apiV1Client(t, owner)
-		forcePrivateClient.baseURL = forcePrivateServerURL
+		forcePrivateClient.baseURL = hardenedServerURL
 		var created apiV1Repo
 		forcePrivateClient.doJSON(http.MethodPost, "/api/v1/user/repos", create, http.StatusCreated, &created)
 		assert.True(t, created.Private)
