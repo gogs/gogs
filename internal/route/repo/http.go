@@ -37,6 +37,8 @@ type HTTPContext struct {
 
 // writeError writes the status and the text of an error response.
 func writeError(w http.ResponseWriter, status int, text string) {
+	// The text can quote the request, which must not be sniffed as HTML.
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(status)
 	if text != "" {
 		_, _ = w.Write([]byte(text))
