@@ -30,7 +30,7 @@ All notable changes to Gogs are documented in this file.
 - A command palette, opened with Ctrl K or ⌘K or the search button in the navbar, to jump to issues, pull requests, files, repositories, people and pages, search code, and run actions such as switching the theme or copying a clone URL. Type `>`, `#`, `@` or `/` to see only commands, issues, people or code. [#8551](https://github.com/gogs/gogs/pull/8551)
 - API endpoints to create branches and tags: `POST /repos/{owner}/{repo}/branches` and `POST /repos/{owner}/{repo}/tags`. [#8566](https://github.com/gogs/gogs/pull/8566)
 - API endpoint for an access token to delete itself: `DELETE /user/token`, e.g., for a tool to revoke its token when it is done. [#8574](https://github.com/gogs/gogs/pull/8574)
-- Commit pages link issue references and @mentions in commit messages, and commit lists also link @mentions. [#8628](https://github.com/gogs/gogs/pull/8628)
+- Commit pages link issue references and @mentions in commit messages, and commit lists and file lists also link @mentions. [#8628](https://github.com/gogs/gogs/pull/8628)
 
 ### Changed
 
