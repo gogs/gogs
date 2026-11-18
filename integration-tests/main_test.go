@@ -286,6 +286,10 @@ HOST = 127.0.0.1:1
 [auth]
 DISABLE_REGISTRATION = false
 ENABLE_REGISTRATION_CAPTCHA = true
+; Tests call from the loopback interface, which is a trusted proxy by default,
+; so only requests with the header are authenticated by it.
+ENABLE_REVERSE_PROXY_AUTHENTICATION = true
+ENABLE_REVERSE_PROXY_AUTO_REGISTRATION = true
 
 [log]
 MODE = console

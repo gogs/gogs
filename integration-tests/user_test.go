@@ -1,7 +1,11 @@
 package integrationtests
 
 import (
+	"context"
+	"net"
 	"net/http"
+	"net/textproto"
+	"strings"
 	"testing"
 	"time"
 
@@ -9,6 +13,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"gogs.io/gogs/internal/auth"
+	"gogs.io/gogs/internal/auth/smtp"
 	"gogs.io/gogs/internal/database"
 )
 
@@ -111,6 +117,117 @@ func TestSignInWithTwoFactor(t *testing.T) {
 		require.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
 		assert.Empty(t, other.username())
 	})
+}
+
+// 🚨 SECURITY: A username with a path separator maps onto the directory of
+// another user's repositories, e.g., "x/../victim", so an account that owns it
+// could delete them.
+func TestSignInWithReverseProxy(t *testing.T) {
+	t.Parallel()
+
+	victim := seedUser(t, CreateUserOptions{})
+	signIn := func(name string) *client {
+		c := newClient(t)
+		c.header.Set("X-WEBAUTH-USER", name)
+		return c
+	}
+
+	assert.Equal(t, victim.Name, signIn(victim.Name).username())
+
+	// Names from the proxy are not limited to the characters of the sign-up form.
+	name := UniqueName("proxy-") + "@corp.com"
+	assert.Equal(t, name, signIn(name).username())
+	_, err := database.Handle.Users().GetByUsername(t.Context(), name)
+	require.NoError(t, err)
+
+	for _, name := range []string{"x/../" + victim.Name, `x\..\` + victim.Name} {
+		assert.Empty(t, signIn(name).username(), "name %q", name)
+		_, err := database.Handle.Users().GetByUsername(t.Context(), name)
+		assert.True(t, database.IsErrUserNotExist(err), "user %q created: %v", name, err)
+	}
+}
+
+// 🚨 SECURITY: See TestSignInWithReverseProxy.
+func TestSignInWithLoginSource(t *testing.T) {
+	t.Parallel()
+
+	source, err := database.Handle.LoginSources().Create(t.Context(), database.CreateLoginSourceOptions{
+		Type:      auth.SMTP,
+		Name:      UniqueName("source-"),
+		Activated: true,
+		Config: &smtp.Config{
+			Auth: smtp.Plain,
+			Host: "127.0.0.1",
+			Port: startSMTPStub(t),
+		},
+	})
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = database.Handle.LoginSources().DeleteByID(context.Background(), source.ID) })
+
+	// The SMTP source names the new account after the part of the login before
+	// "@".
+	signIn := func(login string) (int, []byte) {
+		return newClient(t).do(http.MethodPost, "/api/web/user/sign-in", map[string]any{
+			"username":    login,
+			"password":    "password",
+			"loginSource": source.ID,
+		})
+	}
+
+	name := UniqueName("smtp-")
+	status, body := signIn(name + "@corp.com")
+	require.Equal(t, http.StatusOK, status, "response: %s", body)
+	u, err := database.Handle.Users().GetByUsername(t.Context(), name)
+	require.NoError(t, err)
+	assert.Equal(t, source.ID, u.LoginSource)
+
+	victim := seedUser(t, CreateUserOptions{})
+	name = "x/../" + victim.Name
+	status, body = signIn(name + "@corp.com")
+	assert.Equal(t, http.StatusUnprocessableEntity, status, "response: %s", body)
+	_, err = database.Handle.Users().GetByUsername(t.Context(), name)
+	assert.True(t, database.IsErrUserNotExist(err), "user %q created: %v", name, err)
+}
+
+// startSMTPStub starts an SMTP server that accepts every login with any
+// password, and returns its port.
+func startSMTPStub(t *testing.T) int {
+	t.Helper()
+
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = l.Close() })
+	go func() {
+		for {
+			conn, err := l.Accept()
+			if err != nil {
+				return
+			}
+			go func() {
+				c := textproto.NewConn(conn)
+				defer func() { _ = c.Close() }()
+				_ = c.PrintfLine("220 localhost")
+				for {
+					line, err := c.ReadLine()
+					if err != nil {
+						return
+					}
+					verb, _, _ := strings.Cut(line, " ")
+					switch strings.ToUpper(verb) {
+					case "EHLO":
+						_ = c.PrintfLine("250-localhost")
+						_ = c.PrintfLine("250 AUTH PLAIN")
+					case "AUTH":
+						_ = c.PrintfLine("235 Authentication successful")
+					default:
+						_ = c.PrintfLine("221 Bye")
+						return
+					}
+				}
+			}()
+		}
+	}()
+	return l.Addr().(*net.TCPAddr).Port
 }
 
 func TestActivateAccount(t *testing.T) {
