@@ -48,9 +48,6 @@ export function CommitAuthors({
                 collisionPadding={16}
                 className="flex max-h-[min(20rem,var(--radix-popover-content-available-height))] w-64 flex-col p-1 text-sm"
               >
-                <p className="px-2 py-1.5 text-xs text-(--color-muted-foreground)">
-                  {t("repo.authors_people", { count: people.length })}
-                </p>
                 <ScrollArea>
                   {people.map((person) => (
                     <span key={person.email} className="flex items-center gap-2 rounded-sm px-2 py-1.5">
