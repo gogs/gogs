@@ -595,6 +595,36 @@ func TestLFSSSHAuthenticate(t *testing.T) {
 		assert.Equal(t, content, body)
 	})
 
+	t.Run("deploy key of another repository", func(t *testing.T) {
+		public := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+		status, _, body := lfsClient(t, owner).doRaw(http.MethodPut, lfsBasePath(public)+"/basic/"+oid, "application/octet-stream", bytes.NewReader(content))
+		require.Equal(t, http.StatusOK, status, "response: %s", body)
+		stranger := seedUser(t, CreateUserOptions{})
+		key := sshDeployKey(t, seedRepository(t, stranger.ID, CreateRepositoryOptions{AutoInit: true}))
+
+		// Like Git, the key reads the public repository as anyone does, not as its
+		// owner.
+		out, stderr, err := lfsSSHAuthenticate(key, public, "download")
+		require.NoError(t, err, "git-lfs-authenticate: %s", stderr)
+		var creds lfsSSHCredentials
+		require.NoError(t, json.Unmarshal(out, &creds), "output: %s", out)
+		assert.Equal(t, serverURL+"/"+public.Owner+"/"+public.Name+".git/info/lfs", creds.Href)
+		c := lfsClient(t, nil)
+		for k, v := range creds.Header {
+			c.header.Set(k, v)
+		}
+		status, body = get(c, public)
+		require.Equal(t, http.StatusOK, status, "response: %s", body)
+
+		repoVisibilityPatch(t, authenticatedClient(t, owner), public, true, false)
+		status, body = get(c, public)
+		assert.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
+
+		_, stderr, err = lfsSSHAuthenticate(key, public, "download")
+		require.Error(t, err)
+		assert.Contains(t, stderr, "Key access denied")
+	})
+
 	t.Run("unknown operation", func(t *testing.T) {
 		_, stderr, err := lfsSSHAuthenticate(ownerKey, repo, "delete")
 		require.Error(t, err)
