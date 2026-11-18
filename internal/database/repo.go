@@ -573,11 +573,6 @@ func (r *Repository) GetWriters() (_ []*User, err error) {
 	return r.getUsersWithAccesMode(x, AccessModeWrite)
 }
 
-// GetMilestoneByID returns the milestone belongs to repository by given ID.
-func (r *Repository) GetMilestoneByID(milestoneID int64) (*Milestone, error) {
-	return GetMilestoneByRepoID(r.ID, milestoneID)
-}
-
 // IssueStats returns number of open and closed repository issues by given filter mode.
 func (r *Repository) IssueStats(userID int64, filterMode FilterMode, isPull bool) (int64, int64) {
 	return GetRepoIssueStats(r.ID, userID, filterMode, isPull)
@@ -1822,6 +1817,7 @@ func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 		"star",
 		"mirror",
 		"issue_user",
+		"label",
 		"milestone",
 		"release",
 		"collaboration",
@@ -1865,7 +1861,7 @@ func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 		for _, row := range rows {
 			attachmentPaths = append(attachmentPaths, AttachmentLocalPath(string(row["uuid"])))
 		}
-		if err = deleteByColumn(sess, "issue_id", issues[i].ID, "attachment"); err != nil {
+		if err = deleteByColumn(sess, "issue_id", issues[i].ID, "attachment", "issue_label"); err != nil {
 			return err
 		}
 	}
@@ -2363,13 +2359,6 @@ func CheckRepoStats(logger *logx.Logger) {
 	// ***** END: Repository.NumForks *****
 }
 
-//  __      __         __         .__
-// /  \    /  \_____ _/  |_  ____ |  |__
-// \   \/\/   /\__  \\   __\/ ___\|  |  \
-//  \        /  / __ \|  | \  \___|   Y  \
-//   \__/\  /  (____  /__|  \___  >___|  /
-//        \/        \/          \/     \/
-
 // Watch is connection request for receiving repository notification.
 type Watch struct {
 	ID     int64 `gorm:"primaryKey"`
@@ -2485,13 +2474,6 @@ func NotifyWatchers(act *Action) error {
 	return notifyWatchers(x, act)
 }
 
-//   _________ __
-//  /   _____//  |______ _______
-//  \_____  \\   __\__  \\_  __ \
-//  /        \|  |  / __ \|  | \/
-// /_______  /|__| (____  /__|
-//         \/           \/
-
 type Star struct {
 	ID     int64 `gorm:"primaryKey"`
 	UserID int64 `xorm:"uid UNIQUE(s)" gorm:"column:uid;uniqueIndex:star_user_repo_unique;not null"`
@@ -2545,13 +2527,6 @@ func (r *Repository) GetStargazers(page int) ([]*User, error) {
 	}
 	return users, sess.Find(&users)
 }
-
-// ___________           __
-// \_   _____/__________|  | __
-//  |    __)/  _ \_  __ \  |/ /
-//  |     \(  <_> )  | \/    <
-//  \___  / \____/|__|  |__|_ \
-//      \/                   \/
 
 // HasForkedRepo checks if given user has already forked a repository.
 // When user has already forked, it returns true along with the repository.

@@ -1,6 +1,7 @@
 package integrationtests
 
 import (
+	"context"
 	"net/http"
 	"slices"
 	"testing"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/database"
 )
@@ -16,10 +18,8 @@ import (
 func issueCreateLabel(t *testing.T, repo *Repository, name string) int64 {
 	t.Helper()
 
-	require.NoError(t, database.NewLabels(&database.Label{RepoID: repo.ID, Name: name, Color: "#123456"}))
-	// Inserting a list of labels does not set their IDs.
-	label := issueLabelsOf(t, repo)[name]
-	require.NotNil(t, label)
+	label := &database.Label{RepoID: repo.ID, Name: name, Color: "#123456"}
+	require.NoError(t, database.Handle.Labels().Create(t.Context(), label))
 	return label.ID
 }
 
@@ -29,14 +29,14 @@ func issueCreateMilestone(t *testing.T, repo *Repository, name string) int64 {
 	t.Helper()
 
 	m := &database.Milestone{RepoID: repo.ID, Name: name, Deadline: time.Date(9999, 12, 31, 0, 0, 0, 0, time.Local)}
-	require.NoError(t, database.NewMilestone(m))
+	require.NoError(t, database.Handle.Milestones().Create(t.Context(), m))
 	return m.ID
 }
 
 func issueLabelsOf(t *testing.T, repo *Repository) map[string]*database.Label {
 	t.Helper()
 
-	labels, err := database.GetLabelsByRepoID(repo.ID)
+	labels, err := database.Handle.Labels().ListByRepoID(t.Context(), repo.ID)
 	require.NoError(t, err)
 	byName := make(map[string]*database.Label, len(labels))
 	for _, l := range labels {
@@ -109,7 +109,7 @@ func TestIssueRepositoryLabels(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 		status, body = ownerClient.do(http.MethodPatch, path, map[string]any{"name": "defect", "color": "#00FF00"})
 		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-		label, err := database.GetLabelOfRepoByID(repo.ID, bug.ID)
+		label, err := database.Handle.Labels().GetByID(t.Context(), repo.ID, bug.ID)
 		require.NoError(t, err)
 		assert.Equal(t, "defect", label.Name)
 		assert.Equal(t, "#00FF00", label.Color)
@@ -127,7 +127,7 @@ func TestIssueRepositoryLabels(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 		status, body = ownerClient.do(http.MethodDelete, path, map[string]any{})
 		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-		_, err := database.GetLabelOfRepoByID(repo.ID, id)
+		_, err := database.Handle.Labels().GetByID(t.Context(), repo.ID, id)
 		assert.True(t, database.IsErrLabelNotExist(err), "label not deleted: %v", err)
 	})
 }
@@ -247,7 +247,7 @@ func TestIssueMilestones(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 		status, body = ownerClient.do(http.MethodPatch, path, map[string]any{"title": "v1.1", "description": "Renamed"})
 		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-		got, err := database.GetMilestoneByRepoID(repo.ID, m.ID)
+		got, err := database.Handle.Milestones().GetByID(t.Context(), repo.ID, m.ID)
 		require.NoError(t, err)
 		assert.Equal(t, "v1.1", got.Name)
 		assert.Equal(t, "Renamed", got.Content)
@@ -260,7 +260,7 @@ func TestIssueMilestones(t *testing.T) {
 
 		status, body = ownerClient.do(http.MethodPut, path+"/closed", map[string]any{})
 		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-		got, err := database.GetMilestoneByRepoID(repo.ID, m.ID)
+		got, err := database.Handle.Milestones().GetByID(t.Context(), repo.ID, m.ID)
 		require.NoError(t, err)
 		assert.True(t, got.IsClosed)
 		assert.Empty(t, list(ownerClient, "open").Items)
@@ -271,7 +271,7 @@ func TestIssueMilestones(t *testing.T) {
 
 		status, body = ownerClient.do(http.MethodDelete, path+"/closed", map[string]any{})
 		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-		got, err = database.GetMilestoneByRepoID(repo.ID, m.ID)
+		got, err = database.Handle.Milestones().GetByID(t.Context(), repo.ID, m.ID)
 		require.NoError(t, err)
 		assert.False(t, got.IsClosed)
 		assert.Len(t, list(ownerClient, "open").Items, 1)
@@ -287,7 +287,7 @@ func TestIssueMilestones(t *testing.T) {
 
 		status, body = ownerClient.do(http.MethodDelete, path, map[string]any{})
 		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-		_, err := database.GetMilestoneByRepoID(repo.ID, m.ID)
+		_, err := database.Handle.Milestones().GetByID(t.Context(), repo.ID, m.ID)
 		assert.True(t, database.IsErrMilestoneNotExist(err), "milestone not deleted: %v", err)
 		assert.Zero(t, issueFromDatabase(t, repo, index).MilestoneID, "the issue still has the deleted milestone")
 		names := []string{}
@@ -296,4 +296,65 @@ func TestIssueMilestones(t *testing.T) {
 		}
 		assert.False(t, slices.Contains(names, "v1.1"))
 	})
+}
+
+// The numbers of issues of labels and milestones keep the issues another
+// change counts while a request waits to count its own.
+func TestIssueCountsUnderConcurrentChanges(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{})
+	api := apiV1Client(t, owner)
+	labelID := issueCreateLabel(t, repo, "bug")
+	milestoneID := issueCreateMilestone(t, repo, "v1")
+	labeled := apiV1CreateIssue(t, api, repo, map[string]any{"title": "Labeled"})
+	inMilestone := apiV1CreateIssue(t, api, repo, map[string]any{"title": "In milestone"})
+
+	countsOf := func(table string, id int64) []int {
+		t.Helper()
+		var counts struct {
+			NumIssues       int
+			NumClosedIssues int
+			Completeness    int
+		}
+		columns := "num_issues, num_closed_issues"
+		if table == "milestone" {
+			columns += ", completeness"
+		}
+		require.NoError(t, gormDB.Raw("SELECT "+columns+" FROM "+table+" WHERE id = ?", id).Scan(&counts).Error)
+		if table == "milestone" {
+			return []int{counts.NumIssues, counts.NumClosedIssues, counts.Completeness}
+		}
+		return []int{counts.NumIssues, counts.NumClosedIssues}
+	}
+	// whileCounting sends the request while the row of the label or milestone
+	// is locked by a transaction that counts a closed issue of another change.
+	whileCounting := func(table string, id int64, method, path string, body any) {
+		t.Helper()
+		status, resp := api.whileLocked("SELECT id FROM "+table+" WHERE id = ? FOR UPDATE", id, method, apiV1RepoPath(repo, path), body,
+			func(tx *gorm.DB, _ context.CancelFunc) {
+				require.NoError(t, tx.Exec("UPDATE "+table+" SET num_issues = num_issues + 1, num_closed_issues = num_closed_issues + 1 WHERE id = ?", id).Error)
+			},
+		)
+		require.True(t, status >= 200 && status < 300, "status %d, response: %s", status, resp)
+	}
+
+	whileCounting("label", labelID, http.MethodPost, "/issues/"+apiV1Itoa(labeled)+"/labels", map[string]any{"labels": []int64{labelID}})
+	assert.Equal(t, []int{2, 1}, countsOf("label", labelID), "label added to an issue")
+	whileCounting("label", labelID, http.MethodPatch, "/issues/"+apiV1Itoa(labeled), map[string]any{"state": "closed"})
+	assert.Equal(t, []int{3, 3}, countsOf("label", labelID), "issue with the label closed")
+	whileCounting("label", labelID, http.MethodPatch, "/labels/"+apiV1Itoa(labelID), map[string]any{"name": "defect"})
+	assert.Equal(t, []int{4, 4}, countsOf("label", labelID), "label edited")
+	whileCounting("label", labelID, http.MethodDelete, "/issues/"+apiV1Itoa(labeled)+"/labels/"+apiV1Itoa(labelID), nil)
+	assert.Equal(t, []int{4, 4}, countsOf("label", labelID), "label removed from a closed issue")
+
+	whileCounting("milestone", milestoneID, http.MethodPatch, "/issues/"+apiV1Itoa(inMilestone), map[string]any{"milestone": milestoneID})
+	assert.Equal(t, []int{2, 1, 50}, countsOf("milestone", milestoneID), "issue added to the milestone")
+	whileCounting("milestone", milestoneID, http.MethodPatch, "/issues/"+apiV1Itoa(inMilestone), map[string]any{"state": "closed"})
+	assert.Equal(t, []int{3, 3, 100}, countsOf("milestone", milestoneID), "issue in the milestone closed")
+	whileCounting("milestone", milestoneID, http.MethodPatch, "/milestones/"+apiV1Itoa(milestoneID), map[string]any{"title": "v1.0", "state": "closed"})
+	assert.Equal(t, []int{4, 4, 100}, countsOf("milestone", milestoneID), "milestone edited and closed")
+	whileCounting("milestone", milestoneID, http.MethodPatch, "/issues/"+apiV1Itoa(inMilestone), map[string]any{"milestone": 0})
+	assert.Equal(t, []int{4, 4, 100}, countsOf("milestone", milestoneID), "closed issue removed from the milestone")
 }

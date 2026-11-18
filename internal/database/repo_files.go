@@ -353,14 +353,6 @@ func (r *Repository) UpdateRepoFile(ctx context.Context, logger *logx.Logger, do
 	})
 }
 
-// ________         .__          __           ___________.__.__
-// \______ \   ____ |  |   _____/  |_  ____   \_   _____/|__|  |   ____
-//  |    |  \_/ __ \|  | _/ __ \   __\/ __ \   |    __)  |  |  | _/ __ \
-//  |    `   \  ___/|  |_\  ___/|  | \  ___/   |     \   |  |  |_\  ___/
-// /_______  /\___  >____/\___  >__|  \___  >  \___  /   |__|____/\___  >
-//         \/     \/          \/          \/       \/                 \/
-//
-
 type DeleteRepoFileOptions struct {
 	LastCommitID string
 	OldBranch    string
@@ -383,14 +375,6 @@ func (r *Repository) DeleteRepoFile(ctx context.Context, logger *logx.Logger, do
 		return nil
 	})
 }
-
-//  ____ ___        .__                    .___ ___________.___.__
-// |    |   \______ |  |   _________     __| _/ \_   _____/|   |  |   ____   ______
-// |    |   /\____ \|  |  /  _ \__  \   / __ |   |    __)  |   |  | _/ __ \ /  ___/
-// |    |  / |  |_> >  |_(  <_> ) __ \_/ /_/ |   |     \   |   |  |_\  ___/ \___ \
-// |______/  |   __/|____/\____(____  /\____ |   \___  /   |___|____/\___  >____  >
-//           |__|                   \/      \/       \/                  \/     \/
-//
 
 type UploadRepoFileOptions struct {
 	LastCommitID string

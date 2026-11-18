@@ -213,8 +213,8 @@ type issueMetaOptions struct {
 	AssigneeOptions  []repoIssueAssignee        `json:"assigneeOptions,omitempty"`
 }
 
-func listIssueMetaOptions(repo *database.Repository) (opts issueMetaOptions, err error) {
-	labels, err := database.GetLabelsByRepoID(repo.ID)
+func listIssueMetaOptions(ctx context.Context, repo *database.Repository) (opts issueMetaOptions, err error) {
+	labels, err := database.Handle.Labels().ListByRepoID(ctx, repo.ID)
 	if err != nil {
 		return opts, errors.Wrap(err, "list labels")
 	}
@@ -223,7 +223,7 @@ func listIssueMetaOptions(repo *database.Repository) (opts issueMetaOptions, err
 		opts.LabelOptions = append(opts.LabelOptions, toIssueLabel(label))
 	}
 
-	milestones, err := database.GetMilestonesByRepoID(repo.ID)
+	milestones, err := database.Handle.Milestones().ListByRepoID(ctx, repo.ID)
 	if err != nil {
 		return opts, errors.Wrap(err, "list milestones")
 	}
@@ -401,7 +401,7 @@ func toRepoIssueView(ctx context.Context, logger *logx.Logger, viewer *database.
 	}
 
 	if resp.ViewerCanWrite {
-		if resp.issueMetaOptions, err = listIssueMetaOptions(repo); err != nil {
+		if resp.issueMetaOptions, err = listIssueMetaOptions(ctx, repo); err != nil {
 			return nil, errors.Wrap(err, "list what can be set on issues")
 		}
 	}
@@ -515,10 +515,11 @@ type repoIssueLabelsRequest struct {
 }
 
 // putRepoIssueLabels replaces the labels of the issue.
-func putRepoIssueLabels(logger *logx.Logger, viewer *database.User, repoCtx *repoContext, issue *database.Issue, req repoIssueLabelsRequest) (statusCode int, resp any, err error) {
+func putRepoIssueLabels(c flamego.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, issue *database.Issue, req repoIssueLabelsRequest) (statusCode int, resp any, err error) {
+	ctx := c.Request().Context()
 	labels := make([]*database.Label, 0, len(req.IDs))
 	for _, id := range req.IDs {
-		label, err := database.GetLabelOfRepoByID(repoCtx.Repo.ID, id)
+		label, err := database.Handle.Labels().GetByID(ctx, repoCtx.Repo.ID, id)
 		if err != nil {
 			if database.IsErrLabelNotExist(err) {
 				return http.StatusBadRequest, nil, errors.Newf("label %d does not exist", id)
@@ -539,7 +540,7 @@ func putRepoIssueLabels(logger *logx.Logger, viewer *database.User, repoCtx *rep
 		}
 	}
 	for _, label := range labels {
-		if issue.HasLabel(label.ID) {
+		if slices.ContainsFunc(issue.Labels, func(l *database.Label) bool { return l.ID == label.ID }) {
 			continue
 		}
 		if err = issue.AddLabel(logger, viewer, label); err != nil {
@@ -557,11 +558,11 @@ type repoIssueIDRequest struct {
 
 // checkIssueMilestone returns the status code and the error to answer with
 // when the milestone, unless 0, is not one of the repository.
-func checkIssueMilestone(repo *database.Repository, id int64) (statusCode int, err error) {
+func checkIssueMilestone(ctx context.Context, repo *database.Repository, id int64) (statusCode int, err error) {
 	if id == 0 {
 		return 0, nil
 	}
-	if _, err = database.GetMilestoneByRepoID(repo.ID, id); err != nil {
+	if _, err = database.Handle.Milestones().GetByID(ctx, repo.ID, id); err != nil {
 		if database.IsErrMilestoneNotExist(err) {
 			return http.StatusBadRequest, errors.New("milestone does not exist")
 		}
@@ -586,11 +587,12 @@ func checkIssueAssignee(repo *database.Repository, id int64) (statusCode int, er
 	return 0, nil
 }
 
-func putRepoIssueMilestone(logger *logx.Logger, viewer *database.User, repoCtx *repoContext, issue *database.Issue, req repoIssueIDRequest) (statusCode int, resp any, err error) {
+func putRepoIssueMilestone(c flamego.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, issue *database.Issue, req repoIssueIDRequest) (statusCode int, resp any, err error) {
+	ctx := c.Request().Context()
 	if req.ID == issue.MilestoneID {
 		return http.StatusNoContent, nil, nil
 	}
-	if statusCode, err = checkIssueMilestone(repoCtx.Repo, req.ID); err != nil {
+	if statusCode, err = checkIssueMilestone(ctx, repoCtx.Repo, req.ID); err != nil {
 		if statusCode == http.StatusInternalServerError {
 			logger.Error("Failed to check issue milestone", "error", err)
 		}
@@ -598,7 +600,7 @@ func putRepoIssueMilestone(logger *logx.Logger, viewer *database.User, repoCtx *
 	}
 	oldID := issue.MilestoneID
 	issue.MilestoneID = req.ID
-	if err = database.ChangeMilestoneAssign(logger, viewer, issue, oldID); err != nil {
+	if err = database.Handle.Milestones().AssignIssue(ctx, logger, viewer, issue, oldID); err != nil {
 		logger.Error("Failed to change issue milestone", "issueID", issue.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "change milestone")
 	}
@@ -973,8 +975,9 @@ func toIssueTemplate(repo *database.Repository, t *issuetemplate.Template) *issu
 }
 
 func getRepoNewIssue(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoNewIssueOptions, err error) {
+	ctx := c.Request().Context()
 	repo := repoCtx.Repo
-	ts, err := loadIssueTemplates(c.Request().Context(), repoCtx)
+	ts, err := loadIssueTemplates(ctx, repoCtx)
 	if err != nil {
 		logger.Error("Failed to load issue templates", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, err
@@ -997,7 +1000,7 @@ func getRepoNewIssue(c flamego.Context, logger *logx.Logger, repoCtx *repoContex
 		resp.Template = toIssueTemplate(repo, t)
 	}
 	if resp.ViewerCanWrite {
-		if resp.issueMetaOptions, err = listIssueMetaOptions(repo); err != nil {
+		if resp.issueMetaOptions, err = listIssueMetaOptions(ctx, repo); err != nil {
 			logger.Error("Failed to list issue metadata options", "repoID", repo.ID, "error", err)
 			return http.StatusInternalServerError, nil, err
 		}
@@ -1023,9 +1026,9 @@ type repoNewIssueRequest struct {
 
 // templateLabelsAndAssignee returns the labels and the assignee the template
 // sets that exist in the repository.
-func templateLabelsAndAssignee(repo *database.Repository, t *issuetemplate.Template) (labelIDs []int64, assigneeID int64, err error) {
+func templateLabelsAndAssignee(ctx context.Context, repo *database.Repository, t *issuetemplate.Template) (labelIDs []int64, assigneeID int64, err error) {
 	if len(t.Labels) > 0 {
-		labels, err := database.GetLabelsByRepoID(repo.ID)
+		labels, err := database.Handle.Labels().ListByRepoID(ctx, repo.ID)
 		if err != nil {
 			return nil, 0, errors.Wrap(err, "list labels")
 		}
@@ -1075,14 +1078,14 @@ func newIssueFromRequest(ctx context.Context, l i18n.Locale, viewer *database.Us
 	// What only writers can set is left out for others.
 	if repoCtx.Viewer.CanWrite() {
 		for _, id := range req.LabelIDs {
-			if _, err = database.GetLabelOfRepoByID(repo.ID, id); err != nil {
+			if _, err = database.Handle.Labels().GetByID(ctx, repo.ID, id); err != nil {
 				if database.IsErrLabelNotExist(err) {
 					return nil, nil, http.StatusBadRequest, nil, errors.Newf("label %d does not exist", id)
 				}
 				return nil, nil, http.StatusInternalServerError, nil, errors.Wrapf(err, "get label %d", id)
 			}
 		}
-		if statusCode, err = checkIssueMilestone(repo, req.MilestoneID); err == nil {
+		if statusCode, err = checkIssueMilestone(ctx, repo, req.MilestoneID); err == nil {
 			statusCode, err = checkIssueAssignee(repo, req.AssigneeID)
 		}
 		if err != nil {
@@ -1157,7 +1160,7 @@ func postRepoIssue(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer
 	if tmpl != nil && !repoCtx.Viewer.CanWrite() {
 		// Like on GitHub, the labels and assignees of the template apply to
 		// issues of anyone. Writers choose them on the form instead.
-		if labelIDs, issue.AssigneeID, err = templateLabelsAndAssignee(repo, tmpl); err != nil {
+		if labelIDs, issue.AssigneeID, err = templateLabelsAndAssignee(ctx, repo, tmpl); err != nil {
 			logger.Error("Failed to get template labels and assignee", "error", err)
 			return http.StatusInternalServerError, nil, err
 		}

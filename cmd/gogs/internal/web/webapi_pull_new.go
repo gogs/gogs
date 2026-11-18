@@ -277,7 +277,7 @@ func getRepoNewPull(c flamego.Context, logger *logx.Logger, viewer *database.Use
 	resp.State = "ready"
 	resp.Attachment = attachmentSettings(issueAttachmentLimits())
 	if resp.ViewerCanWrite {
-		if resp.issueMetaOptions, err = listIssueMetaOptions(repo); err != nil {
+		if resp.issueMetaOptions, err = listIssueMetaOptions(ctx, repo); err != nil {
 			logger.Error("Failed to list pull request metadata options", "repoID", repo.ID, "error", err)
 			return http.StatusInternalServerError, nil, err
 		}

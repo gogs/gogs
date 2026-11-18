@@ -407,13 +407,6 @@ func deletePublicKeys(tx *gorm.DB, keyIDs ...int64) error {
 	return tx.Where("id IN ?", keyIDs).Delete(new(PublicKey)).Error
 }
 
-// ________                .__                 ____  __.
-// \______ \   ____ ______ |  |   ____ ___.__.|    |/ _|____ ___.__.
-//  |    |  \_/ __ \\____ \|  |  /  _ <   |  ||      <_/ __ <   |  |
-//  |    `   \  ___/|  |_> >  |_(  <_> )___  ||    |  \  ___/\___  |
-// /_______  /\___  >   __/|____/\____// ____||____|__ \___  > ____|
-//         \/     \/|__|               \/             \/   \/\/
-
 // DeployKey represents deploy key information and its relation with repository.
 type DeployKey struct {
 	ID          int64

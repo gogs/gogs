@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
+	"gorm.io/gorm"
 	"unknwon.dev/x/logx"
 	"xorm.io/builder"
 	"xorm.io/xorm"
@@ -61,9 +62,11 @@ func (issue *Issue) BeforeInsert() {
 	issue.UpdatedUnix = issue.CreatedUnix
 }
 
-func (issue *Issue) BeforeUpdate() {
-	issue.UpdatedUnix = time.Now().Unix()
+// BeforeUpdate implements the GORM update hook.
+func (issue *Issue) BeforeUpdate(tx *gorm.DB) error {
+	issue.UpdatedUnix = tx.NowFunc().Unix()
 	issue.DeadlineUnix = issue.Deadline.Unix()
+	return nil
 }
 
 func (issue *Issue) AfterSet(colName string, _ xorm.Cell) {
@@ -98,16 +101,16 @@ func (issue *Issue) loadAttributes(e Engine) (err error) {
 	}
 
 	if issue.Labels == nil {
-		issue.Labels, err = getLabelsByIssueID(e, issue.ID)
+		issue.Labels, err = newLabelsStore(legacyTx(e)).ListByIssueID(context.TODO(), issue.ID)
 		if err != nil {
-			return errors.Newf("getLabelsByIssueID [%d]: %v", issue.ID, err)
+			return errors.Wrap(err, "list labels")
 		}
 	}
 
 	if issue.Milestone == nil && issue.MilestoneID > 0 {
-		issue.Milestone, err = getMilestoneByRepoID(e, issue.RepoID, issue.MilestoneID)
+		issue.Milestone, err = newMilestonesStore(legacyTx(e)).GetByID(context.TODO(), issue.RepoID, issue.MilestoneID)
 		if err != nil {
-			return errors.Newf("getMilestoneByRepoID [repo_id: %d, milestone_id: %d]: %v", issue.RepoID, issue.MilestoneID, err)
+			return errors.Wrapf(err, "get milestone %d", issue.MilestoneID)
 		}
 	}
 
@@ -216,15 +219,6 @@ func (issue *Issue) IsPoster(uid int64) bool {
 	return issue.PosterID == uid
 }
 
-func (issue *Issue) hasLabel(e Engine, labelID int64) bool {
-	return hasIssueLabel(e, issue.ID, labelID)
-}
-
-// HasLabel returns true if issue has been labeled by given ID.
-func (issue *Issue) HasLabel(labelID int64) bool {
-	return issue.hasLabel(x, labelID)
-}
-
 func (issue *Issue) sendLabelUpdatedWebhook(logger *logx.Logger, doer *User) {
 	var err error
 	if issue.IsPull {
@@ -254,27 +248,18 @@ func (issue *Issue) sendLabelUpdatedWebhook(logger *logx.Logger, doer *User) {
 	}
 }
 
-func (issue *Issue) addLabel(e *xorm.Session, label *Label) error {
-	return newIssueLabel(e, issue, label)
-}
-
-// AddLabel adds a new label to the issue.
+// AddLabel adds the label to the issue.
 func (issue *Issue) AddLabel(logger *logx.Logger, doer *User, label *Label) error {
-	if err := NewIssueLabel(issue, label); err != nil {
-		return err
-	}
-
-	issue.sendLabelUpdatedWebhook(logger, doer)
-	return nil
+	return issue.AddLabels(logger, doer, []*Label{label})
 }
 
 func (issue *Issue) addLabels(e *xorm.Session, labels []*Label) error {
-	return newIssueLabels(e, issue, labels)
+	return newLabelsStore(legacyTx(e)).addToIssue(context.TODO(), issue, labels...)
 }
 
 // AddLabels adds a list of new labels to the issue.
 func (issue *Issue) AddLabels(logger *logx.Logger, doer *User, labels []*Label) error {
-	if err := NewIssueLabels(issue, labels); err != nil {
+	if err := Handle.Labels().AddToIssue(context.TODO(), issue, labels...); err != nil {
 		return err
 	}
 
@@ -287,20 +272,16 @@ func (issue *Issue) getLabels(e Engine) (err error) {
 		return nil
 	}
 
-	issue.Labels, err = getLabelsByIssueID(e, issue.ID)
+	issue.Labels, err = newLabelsStore(legacyTx(e)).ListByIssueID(context.TODO(), issue.ID)
 	if err != nil {
-		return errors.Newf("getLabelsByIssueID: %v", err)
+		return errors.Wrap(err, "list labels")
 	}
 	return nil
 }
 
-func (issue *Issue) removeLabel(e *xorm.Session, label *Label) error {
-	return deleteIssueLabel(e, issue, label)
-}
-
 // RemoveLabel removes a label from issue by given ID.
 func (issue *Issue) RemoveLabel(logger *logx.Logger, doer *User, label *Label) error {
-	if err := DeleteIssueLabel(issue, label); err != nil {
+	if err := Handle.Labels().RemoveFromIssue(context.TODO(), issue, label); err != nil {
 		return err
 	}
 
@@ -313,12 +294,12 @@ func (issue *Issue) clearLabels(e *xorm.Session) (err error) {
 		return errors.Newf("getLabels: %v", err)
 	}
 
-	// NOTE: issue.removeLabel slices issue.Labels, so we need to create another slice to be unaffected.
+	// NOTE: Removing a label deletes it from issue.Labels in place, so iterate over a copy.
 	labels := make([]*Label, len(issue.Labels))
 	copy(labels, issue.Labels)
 	for i := range labels {
-		if err = issue.removeLabel(e, labels[i]); err != nil {
-			return errors.Newf("removeLabel: %v", err)
+		if err = newLabelsStore(legacyTx(e)).removeFromIssue(context.TODO(), issue, labels[i]); err != nil {
+			return errors.Wrapf(err, "remove label %d", labels[i].ID)
 		}
 	}
 
@@ -403,15 +384,14 @@ func (issue *Issue) ReadBy(uid int64) error {
 	return UpdateIssueUserByRead(uid, issue.ID)
 }
 
-func updateIssueCols(e Engine, issue *Issue, cols ...string) error {
+func updateIssueCols(tx *gorm.DB, issue *Issue, cols ...string) error {
 	cols = append(cols, "updated_unix")
-	_, err := e.ID(issue.ID).Cols(cols...).Update(issue)
-	return err
+	return tx.Model(issue).Where("id = ?", issue.ID).Select(cols).Updates(issue).Error
 }
 
 // UpdateIssueCols only updates values of specific columns for given issue.
 func UpdateIssueCols(issue *Issue, cols ...string) error {
-	return updateIssueCols(x, issue, cols...)
+	return updateIssueCols(Handle.db, issue, cols...)
 }
 
 func (issue *Issue) changeStatus(logger *logx.Logger, e *xorm.Session, doer *User, repo *Repository, isClosed bool) (err error) {
@@ -421,7 +401,7 @@ func (issue *Issue) changeStatus(logger *logx.Logger, e *xorm.Session, doer *Use
 	}
 	issue.IsClosed = isClosed
 
-	if err = updateIssueCols(e, issue, "is_closed"); err != nil {
+	if err = updateIssueCols(legacyTx(e), issue, "is_closed"); err != nil {
 		return err
 	} else if err = updateIssueUsersByStatus(e, issue.ID, isClosed); err != nil {
 		return err
@@ -431,19 +411,18 @@ func (issue *Issue) changeStatus(logger *logx.Logger, e *xorm.Session, doer *Use
 	if err = issue.getLabels(e); err != nil {
 		return err
 	}
-	for idx := range issue.Labels {
-		if issue.IsClosed {
-			issue.Labels[idx].NumClosedIssues++
-		} else {
-			issue.Labels[idx].NumClosedIssues--
-		}
-		if err = updateLabel(e, issue.Labels[idx]); err != nil {
+	closedIssues := -1
+	if issue.IsClosed {
+		closedIssues = 1
+	}
+	for _, label := range issue.Labels {
+		if err = newLabelsStore(legacyTx(e)).addToCounts(context.TODO(), label, 0, closedIssues); err != nil {
 			return err
 		}
 	}
 
 	// Update issue count of milestone.
-	if err = changeMilestoneIssueStats(e, issue); err != nil {
+	if err = newMilestonesStore(legacyTx(e)).updateIssueStats(context.TODO(), issue); err != nil {
 		return err
 	}
 
@@ -652,9 +631,10 @@ func newIssue(e *xorm.Session, opts NewIssueOptions) (err error) {
 	opts.Issue.Index = opts.Repo.NextIssueIndex()
 
 	if opts.Issue.MilestoneID > 0 {
-		milestone, err := getMilestoneByRepoID(e, opts.Issue.RepoID, opts.Issue.MilestoneID)
+		milestones := newMilestonesStore(legacyTx(e))
+		milestone, err := milestones.GetByID(context.TODO(), opts.Issue.RepoID, opts.Issue.MilestoneID)
 		if err != nil && !IsErrMilestoneNotExist(err) {
-			return errors.Newf("getMilestoneByID: %v", err)
+			return errors.Wrap(err, "get milestone")
 		}
 
 		// Assume milestone is invalid and drop silently.
@@ -662,7 +642,7 @@ func newIssue(e *xorm.Session, opts NewIssueOptions) (err error) {
 		if milestone != nil {
 			opts.Issue.MilestoneID = milestone.ID
 			opts.Issue.Milestone = milestone
-			if err = changeMilestoneAssign(e, opts.Issue, -1); err != nil {
+			if err = milestones.assignIssue(context.TODO(), opts.Issue, -1); err != nil {
 				return err
 			}
 		}
@@ -700,19 +680,16 @@ func newIssue(e *xorm.Session, opts NewIssueOptions) (err error) {
 	if len(opts.LableIDs) > 0 {
 		// During the session, SQLite3 driver cannot handle retrieving objects after updating something.
 		// So we have to get all needed labels first.
-		labels := make([]*Label, 0, len(opts.LableIDs))
-		if err = e.In("id", opts.LableIDs).Find(&labels); err != nil {
-			return errors.Newf("find all labels [label_ids: %v]: %v", opts.LableIDs, err)
+		labels := newLabelsStore(legacyTx(e))
+		// Labels of other repositories are silently dropped.
+		list, err := labels.ListByIDs(context.TODO(), opts.Repo.ID, opts.LableIDs)
+		if err != nil {
+			return errors.Wrapf(err, "list labels %v", opts.LableIDs)
 		}
 
-		for _, label := range labels {
-			// Silently drop invalid labels.
-			if label.RepoID != opts.Repo.ID {
-				continue
-			}
-
-			if err = opts.Issue.addLabel(e, label); err != nil {
-				return errors.Newf("addLabel [id: %d]: %v", label.ID, err)
+		for _, label := range list {
+			if err = labels.addToIssue(context.TODO(), opts.Issue, label); err != nil {
+				return errors.Wrapf(err, "add label %d", label.ID)
 			}
 		}
 	}
@@ -1113,13 +1090,6 @@ func GetParticipantsByIssueID(e Engine, issueID int64) ([]*User, error) {
 	return users, e.In("id", userIDs).Find(&users)
 }
 
-// .___                             ____ ___
-// |   | ______ ________ __   ____ |    |   \______ ___________
-// |   |/  ___//  ___/  |  \_/ __ \|    |   /  ___// __ \_  __ \
-// |   |\___ \ \___ \|  |  /\  ___/|    |  /\___ \\  ___/|  | \/
-// |___/____  >____  >____/  \___  >______//____  >\___  >__|
-//          \/     \/            \/             \/     \/
-
 // IssueUser represents an issue-user relation.
 type IssueUser struct {
 	ID          int64 `gorm:"primary_key"`
@@ -1470,14 +1440,15 @@ func GetRepoIssueStats(repoID, userID int64, filterMode FilterMode, isPull bool)
 	return openResult, closedResult
 }
 
-func updateIssue(e Engine, issue *Issue) error {
-	_, err := e.ID(issue.ID).AllCols().Update(issue)
-	return err
+func updateIssue(tx *gorm.DB, issue *Issue) error {
+	// NOTE: The explicit condition keeps updating an issue that is not yet
+	// inserted (i.e., ID is 0) a no-op instead of an error.
+	return tx.Model(issue).Where("id = ?", issue.ID).Select("*").Updates(issue).Error
 }
 
 // UpdateIssue updates all fields of given issue.
 func UpdateIssue(issue *Issue) error {
-	return updateIssue(x, issue)
+	return updateIssue(Handle.db, issue)
 }
 
 func updateIssueUsersByStatus(e Engine, issueID int64, isClosed bool) error {
@@ -1502,7 +1473,7 @@ func updateIssueUserByAssignee(e *xorm.Session, issue *Issue) (err error) {
 		}
 	}
 
-	return updateIssue(e, issue)
+	return updateIssue(legacyTx(e), issue)
 }
 
 // UpdateIssueUserByAssignee updates issue-user relation for assignee.

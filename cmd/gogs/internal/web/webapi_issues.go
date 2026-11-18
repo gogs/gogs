@@ -175,7 +175,7 @@ func listRepoIssues(c flamego.Context, logger *logx.Logger, viewer *database.Use
 		ClosedCount: stats.ClosedCount,
 	}
 
-	labelList, err := database.GetLabelsByRepoID(repo.ID)
+	labelList, err := database.Handle.Labels().ListByRepoID(c.Request().Context(), repo.ID)
 	if err != nil {
 		logger.Error("Failed to list labels", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list labels")
@@ -185,7 +185,7 @@ func listRepoIssues(c flamego.Context, logger *logx.Logger, viewer *database.Use
 		resp.Labels = append(resp.Labels, toIssueLabel(label))
 	}
 
-	milestones, err := database.GetMilestonesByRepoID(repo.ID)
+	milestones, err := database.Handle.Milestones().ListByRepoID(c.Request().Context(), repo.ID)
 	if err != nil {
 		logger.Error("Failed to list milestones", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list milestones")

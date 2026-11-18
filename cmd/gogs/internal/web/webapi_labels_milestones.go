@@ -72,8 +72,9 @@ type repoLabels struct {
 	ViewerCanWrite bool     `json:"viewerCanWrite"`
 }
 
-func getRepoLabels(logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp any, err error) {
-	labels, err := database.GetLabelsByRepoID(repoCtx.Repo.ID)
+func getRepoLabels(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp any, err error) {
+	ctx := c.Request().Context()
+	labels, err := database.Handle.Labels().ListByRepoID(ctx, repoCtx.Repo.ID)
 	if err != nil {
 		logger.Error("Failed to list labels", "repoID", repoCtx.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list labels")
@@ -108,12 +109,13 @@ func (req repoLabelRequest) validate(l i18n.Locale) *bindingErrorResponse {
 	return nil
 }
 
-func postRepoLabel(logger *logx.Logger, l i18n.Locale, repoCtx *repoContext, req repoLabelRequest) (statusCode int, resp any, err error) {
+func postRepoLabel(c flamego.Context, logger *logx.Logger, l i18n.Locale, repoCtx *repoContext, req repoLabelRequest) (statusCode int, resp any, err error) {
+	ctx := c.Request().Context()
 	if resp := req.validate(l); resp != nil {
 		return http.StatusBadRequest, resp, nil
 	}
 	label := &database.Label{RepoID: repoCtx.Repo.ID, Name: req.Name, Color: req.Color}
-	if err = database.NewLabels(label); err != nil {
+	if err = database.Handle.Labels().Create(ctx, label); err != nil {
 		logger.Error("Failed to create label", "repoID", repoCtx.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "create label")
 	}
@@ -122,8 +124,9 @@ func postRepoLabel(logger *logx.Logger, l i18n.Locale, repoCtx *repoContext, req
 
 // withRepoLabel injects the label of the repository named in the route.
 func withRepoLabel(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) {
+	ctx := c.Request().Context()
 	id := idParam(c)
-	label, err := database.GetLabelOfRepoByID(repoCtx.Repo.ID, id)
+	label, err := database.Handle.Labels().GetByID(ctx, repoCtx.Repo.ID, id)
 	if err != nil {
 		if database.IsErrLabelNotExist(err) {
 			writeErrorResponse(c.ResponseWriter(), http.StatusNotFound, errors.New("label does not exist"))
@@ -136,21 +139,23 @@ func withRepoLabel(c flamego.Context, logger *logx.Logger, repoCtx *repoContext)
 	c.Map(label)
 }
 
-func patchRepoLabel(logger *logx.Logger, l i18n.Locale, label *database.Label, req repoLabelRequest) (statusCode int, resp any, err error) {
+func patchRepoLabel(c flamego.Context, logger *logx.Logger, l i18n.Locale, label *database.Label, req repoLabelRequest) (statusCode int, resp any, err error) {
+	ctx := c.Request().Context()
 	if resp := req.validate(l); resp != nil {
 		return http.StatusBadRequest, resp, nil
 	}
 	label.Name = req.Name
 	label.Color = req.Color
-	if err = database.UpdateLabel(label); err != nil {
+	if err = database.Handle.Labels().Update(ctx, label); err != nil {
 		logger.Error("Failed to update label", "labelID", label.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update label")
 	}
 	return http.StatusNoContent, nil, nil
 }
 
-func deleteRepoLabel(logger *logx.Logger, repoCtx *repoContext, label *database.Label) (statusCode int, resp any, err error) {
-	if err = database.DeleteLabel(repoCtx.Repo.ID, label.ID); err != nil {
+func deleteRepoLabel(c flamego.Context, logger *logx.Logger, repoCtx *repoContext, label *database.Label) (statusCode int, resp any, err error) {
+	ctx := c.Request().Context()
+	if err = database.Handle.Labels().DeleteByID(ctx, repoCtx.Repo.ID, label.ID); err != nil {
 		logger.Error("Failed to delete label", "labelID", label.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete label")
 	}
@@ -162,7 +167,8 @@ type repoLabelsInitializeRequest struct {
 }
 
 // postRepoLabelsInitialize adds a predefined set of labels.
-func postRepoLabelsInitialize(logger *logx.Logger, l i18n.Locale, repoCtx *repoContext, req repoLabelsInitializeRequest) (statusCode int, resp any, err error) {
+func postRepoLabelsInitialize(c flamego.Context, logger *logx.Logger, l i18n.Locale, repoCtx *repoContext, req repoLabelsInitializeRequest) (statusCode int, resp any, err error) {
+	ctx := c.Request().Context()
 	if !slices.Contains(database.LabelTemplates, req.Template) {
 		msg := l.Tr("repo.issues.label_templates.helper")
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"template": &msg}}, nil
@@ -176,7 +182,7 @@ func postRepoLabelsInitialize(logger *logx.Logger, l i18n.Locale, repoCtx *repoC
 	for i := range list {
 		labels[i] = &database.Label{RepoID: repoCtx.Repo.ID, Name: list[i][0], Color: list[i][1]}
 	}
-	if err = database.NewLabels(labels...); err != nil {
+	if err = database.Handle.Labels().Create(ctx, labels...); err != nil {
 		logger.Error("Failed to create labels", "repoID", repoCtx.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "create labels")
 	}
@@ -210,15 +216,20 @@ type repoMilestones struct {
 // getRepoMilestones lists the open milestones of the repository, or the
 // closed ones with `state=closed`.
 func getRepoMilestones(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp any, err error) {
+	ctx := c.Request().Context()
 	repo := repoCtx.Repo
 	isClosed := c.Query("state") == "closed"
-	openCount, closedCount := database.MilestoneStats(repo.ID)
+	openCount, closedCount, err := database.Handle.Milestones().Count(ctx, repo.ID)
+	if err != nil {
+		logger.Error("Failed to count milestones", "repoID", repo.ID, "error", err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "count milestones")
+	}
 	total := openCount
 	if isClosed {
 		total = closedCount
 	}
 	page := pageParam(c)
-	miles, err := database.GetMilestones(repo.ID, page, isClosed)
+	miles, err := database.Handle.Milestones().List(ctx, repo.ID, isClosed, page)
 	if err != nil {
 		logger.Error("Failed to list milestones", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list milestones")
@@ -226,14 +237,24 @@ func getRepoMilestones(c flamego.Context, logger *logx.Logger, repoCtx *repoCont
 
 	items := make([]repoMilestone, 0, len(miles))
 	for _, m := range miles {
+		openIssues, err := database.Handle.Milestones().CountIssues(ctx, m.ID, false, false)
+		if err != nil {
+			logger.Error("Failed to count open issues", "milestoneID", m.ID, "error", err)
+			return http.StatusInternalServerError, nil, errors.Wrap(err, "count open issues")
+		}
+		closedIssues, err := database.Handle.Milestones().CountIssues(ctx, m.ID, true, false)
+		if err != nil {
+			logger.Error("Failed to count closed issues", "milestoneID", m.ID, "error", err)
+			return http.StatusInternalServerError, nil, errors.Wrap(err, "count closed issues")
+		}
 		item := repoMilestone{
 			ID:               m.ID,
 			Name:             m.Name,
 			Deadline:         m.DeadlineString,
 			IsOverdue:        m.IsOverDue,
 			IsClosed:         m.IsClosed,
-			OpenIssueCount:   int(m.CountIssues(false, false)),
-			ClosedIssueCount: int(m.CountIssues(true, false)),
+			OpenIssueCount:   int(openIssues),
+			ClosedIssueCount: int(closedIssues),
 		}
 		if all := item.OpenIssueCount + item.ClosedIssueCount; all > 0 {
 			item.Completeness = item.ClosedIssueCount * 100 / all
@@ -283,12 +304,13 @@ func (req repoMilestoneRequest) apply(l i18n.Locale, m *database.Milestone) *bin
 	return nil
 }
 
-func postRepoMilestone(logger *logx.Logger, l i18n.Locale, repoCtx *repoContext, req repoMilestoneRequest) (statusCode int, resp any, err error) {
+func postRepoMilestone(c flamego.Context, logger *logx.Logger, l i18n.Locale, repoCtx *repoContext, req repoMilestoneRequest) (statusCode int, resp any, err error) {
+	ctx := c.Request().Context()
 	m := &database.Milestone{RepoID: repoCtx.Repo.ID}
 	if resp := req.apply(l, m); resp != nil {
 		return http.StatusBadRequest, resp, nil
 	}
-	if err = database.NewMilestone(m); err != nil {
+	if err = database.Handle.Milestones().Create(ctx, m); err != nil {
 		logger.Error("Failed to create milestone", "repoID", repoCtx.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "create milestone")
 	}
@@ -298,13 +320,14 @@ func postRepoMilestone(logger *logx.Logger, l i18n.Locale, repoCtx *repoContext,
 // withRepoMilestone injects the milestone of the repository named in the
 // route.
 func withRepoMilestone(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) {
+	ctx := c.Request().Context()
 	id := idParam(c)
 	// An ID of 0 would match any milestone of the repository.
 	if id == 0 {
 		writeErrorResponse(c.ResponseWriter(), http.StatusNotFound, errors.New("milestone does not exist"))
 		return
 	}
-	m, err := database.GetMilestoneByRepoID(repoCtx.Repo.ID, id)
+	m, err := database.Handle.Milestones().GetByID(ctx, repoCtx.Repo.ID, id)
 	if err != nil {
 		if database.IsErrMilestoneNotExist(err) {
 			writeErrorResponse(c.ResponseWriter(), http.StatusNotFound, errors.New("milestone does not exist"))
@@ -321,11 +344,12 @@ func getRepoMilestone(m *database.Milestone) (statusCode int, resp any, err erro
 	return http.StatusOK, &repoMilestoneRequest{Title: m.Name, Description: m.Content, Deadline: m.DeadlineString}, nil
 }
 
-func patchRepoMilestone(logger *logx.Logger, l i18n.Locale, m *database.Milestone, req repoMilestoneRequest) (statusCode int, resp any, err error) {
+func patchRepoMilestone(c flamego.Context, logger *logx.Logger, l i18n.Locale, m *database.Milestone, req repoMilestoneRequest) (statusCode int, resp any, err error) {
+	ctx := c.Request().Context()
 	if resp := req.apply(l, m); resp != nil {
 		return http.StatusBadRequest, resp, nil
 	}
-	if err = database.UpdateMilestone(m); err != nil {
+	if err = database.Handle.Milestones().Update(ctx, m); err != nil {
 		logger.Error("Failed to update milestone", "milestoneID", m.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update milestone")
 	}
@@ -333,12 +357,12 @@ func patchRepoMilestone(logger *logx.Logger, l i18n.Locale, m *database.Mileston
 }
 
 // putRepoMilestoneClosed closes the milestone.
-func putRepoMilestoneClosed(logger *logx.Logger, m *database.Milestone) (statusCode int, resp any, err error) {
+func putRepoMilestoneClosed(c flamego.Context, logger *logx.Logger, m *database.Milestone) (statusCode int, resp any, err error) {
+	ctx := c.Request().Context()
 	if m.IsClosed {
 		return http.StatusNoContent, nil, nil
 	}
-	m.ClosedDate = time.Now()
-	if err = database.ChangeMilestoneStatus(m, true); err != nil {
+	if err = database.Handle.Milestones().ChangeStatus(ctx, m, true); err != nil {
 		logger.Error("Failed to close milestone", "milestoneID", m.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "close milestone")
 	}
@@ -346,19 +370,21 @@ func putRepoMilestoneClosed(logger *logx.Logger, m *database.Milestone) (statusC
 }
 
 // deleteRepoMilestoneClosed reopens the milestone.
-func deleteRepoMilestoneClosed(logger *logx.Logger, m *database.Milestone) (statusCode int, resp any, err error) {
+func deleteRepoMilestoneClosed(c flamego.Context, logger *logx.Logger, m *database.Milestone) (statusCode int, resp any, err error) {
+	ctx := c.Request().Context()
 	if !m.IsClosed {
 		return http.StatusNoContent, nil, nil
 	}
-	if err = database.ChangeMilestoneStatus(m, false); err != nil {
+	if err = database.Handle.Milestones().ChangeStatus(ctx, m, false); err != nil {
 		logger.Error("Failed to reopen milestone", "milestoneID", m.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "reopen milestone")
 	}
 	return http.StatusNoContent, nil, nil
 }
 
-func deleteRepoMilestone(logger *logx.Logger, repoCtx *repoContext, m *database.Milestone) (statusCode int, resp any, err error) {
-	if err = database.DeleteMilestoneOfRepoByID(repoCtx.Repo.ID, m.ID); err != nil {
+func deleteRepoMilestone(c flamego.Context, logger *logx.Logger, repoCtx *repoContext, m *database.Milestone) (statusCode int, resp any, err error) {
+	ctx := c.Request().Context()
+	if err = database.Handle.Milestones().DeleteByID(ctx, repoCtx.Repo.ID, m.ID); err != nil {
 		logger.Error("Failed to delete milestone", "milestoneID", m.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete milestone")
 	}

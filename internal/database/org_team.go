@@ -446,13 +446,6 @@ func DeleteTeam(t *Team) error {
 	return sess.Commit()
 }
 
-// ___________                    ____ ___
-// \__    ___/___ _____    _____ |    |   \______ ___________
-//   |    |_/ __ \\__  \  /     \|    |   /  ___// __ \_  __ \
-//   |    |\  ___/ / __ \|  Y Y  \    |  /\___ \\  ___/|  | \/
-//   |____| \___  >____  /__|_|  /______//____  >\___  >__|
-//              \/     \/      \/             \/     \/
-
 // TeamUser represents a team-user relation.
 type TeamUser struct {
 	ID     int64
@@ -649,13 +642,6 @@ func RemoveTeamMember(orgID, teamID, uid int64) error {
 	}
 	return sess.Commit()
 }
-
-// ___________                  __________
-// \__    ___/___ _____    _____\______   \ ____ ______   ____
-//   |    |_/ __ \\__  \  /     \|       _// __ \\____ \ /  _ \
-//   |    |\  ___/ / __ \|  Y Y  \    |   \  ___/|  |_> >  <_> )
-//   |____| \___  >____  /__|_|  /____|_  /\___  >   __/ \____/
-//              \/     \/      \/       \/     \/|__|
 
 // TeamRepo represents a team-repository relation.
 type TeamRepo struct {

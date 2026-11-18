@@ -1,0 +1,2 @@
+{"ID":1,"RepoID":1,"Name":"v1.0","Content":"The first milestone.","IsClosed":false,"NumIssues":4,"NumClosedIssues":1,"Completeness":25,"DeadlineUnix":1588568886,"ClosedDateUnix":0}
+{"ID":2,"RepoID":1,"Name":"v0.9","Content":"","IsClosed":true,"NumIssues":2,"NumClosedIssues":2,"Completeness":100,"DeadlineUnix":253402300799,"ClosedDateUnix":1588572486}
