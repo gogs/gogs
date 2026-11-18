@@ -88,6 +88,7 @@
               "api-reference/repositories/edit-issue-tracker-settings",
               "api-reference/repositories/mirror-sync",
               "api-reference/repositories/list-branches",
+              "api-reference/repositories/create-a-branch",
               "api-reference/repositories/get-a-branch",
               "api-reference/repositories/get-a-single-commit",
               "api-reference/repositories/download-raw-content",
@@ -96,6 +97,7 @@
               "api-reference/repositories/create-or-update-a-file",
               "api-reference/repositories/list-forks",
               "api-reference/repositories/list-tags",
+              "api-reference/repositories/create-a-tag",
               "api-reference/repositories/list-all-commits",
               "api-reference/repositories/edit-wiki-settings",
               "api-reference/repositories/get-editorconfig-definition"

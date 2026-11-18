@@ -191,6 +191,54 @@ func (r *Repository) commitToBranch(ctx context.Context, logger *logx.Logger, do
 	return nil
 }
 
+// CreateReference creates the reference, e.g., "refs/heads/feature", at the
+// commit by pushing it as the doer, which runs the hooks of the repository, and
+// records the push. It returns git.ErrReferenceConflict when the reference
+// exists or cannot be created next to another one.
+func (r *Repository) CreateReference(ctx context.Context, logger *logx.Logger, doer *User, ref, commitID string) error {
+	// Stopping midway, e.g., when the client disconnects, would skip the hooks or
+	// recording the push.
+	ctx = context.WithoutCancel(ctx)
+
+	format, err := git.RepoObjectFormat(ctx, r.RepoPath())
+	if err != nil {
+		return errors.Wrap(err, "get object format")
+	}
+	update := git.RefUpdate{OldID: format.EmptyID(), NewID: commitID, RefName: ref}
+
+	tmpRepo, cleanup, err := newTemporaryRepository(ctx, r.RepoPath())
+	if err != nil {
+		return errors.Wrap(err, "create temporary repository")
+	}
+	defer cleanup()
+
+	envs := ComposeHookEnvs(ComposeHookEnvsOptions{
+		AuthUser:  doer,
+		OwnerName: r.MustOwner().Name,
+		OwnerSalt: r.MustOwner().Salt,
+		RepoID:    r.ID,
+		RepoName:  r.Name,
+		RepoPath:  r.RepoPath(),
+	})
+	err = tmpRepo.Push(ctx, r.RepoPath(), commitID+":"+ref, git.PushOptions{Envs: envs, ExpectedOldID: update.OldID})
+	if errors.Is(err, git.ErrReferenceConflict) {
+		return err
+	} else if err != nil {
+		// Git before 2.51 rejects a conflict with the same reason as any other
+		// failure to update the reference.
+		if gitRepo, openErr := git.Open(r.RepoPath()); openErr == nil {
+			if taken, _ := gitRepo.IsReferenceTaken(ctx, ref); taken {
+				return git.ErrReferenceConflict
+			}
+		}
+		return errors.Wrapf(err, "push %s", ref)
+	}
+	PushUpdates(ctx, logger, doer, r.MustOwner().Name, r.Name, []git.RefUpdate{update}, func(branch string) {
+		TriggerPushTasks(logger, doer, r.ID, branch)
+	})
+	return nil
+}
+
 // treeEntry returns the entry at the path in the tree of the commit, or nil if
 // there is none. A nil commit stands for the empty tree of an empty repository.
 func treeEntry(ctx context.Context, commit *git.Commit, path string) (*git.TreeEntry, error) {

@@ -204,6 +204,16 @@ func TestRepository_IsValidBranchName(t *testing.T) {
 	}
 }
 
+func TestRepository_IsValidTagName(t *testing.T) {
+	ctx := context.Background()
+	for _, name := range []string{"v1.0", "release/v1", "@"} {
+		assert.True(t, testrepo.IsValidTagName(ctx, name), name)
+	}
+	for _, name := range []string{"HEAD", "-x", "a..b", "@{-1}", "x.lock", "v1/", "a b", ""} {
+		assert.False(t, testrepo.IsValidTagName(ctx, name), name)
+	}
+}
+
 func TestCleanupMessage(t *testing.T) {
 	tests := []struct {
 		message string
