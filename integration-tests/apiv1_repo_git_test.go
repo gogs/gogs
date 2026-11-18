@@ -2,8 +2,11 @@ package integrationtests
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"net/http"
+	"net/url"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -134,6 +137,9 @@ func TestAPIV1EmptyRepository(t *testing.T) {
 		}
 		api.doJSON(http.MethodGet, apiV1RepoPath(repo, "/branches"), nil, http.StatusOK, &branches)
 		assert.Empty(t, branches)
+		status, body := api.do(http.MethodGet, apiV1RepoPath(repo, "/commits"), nil)
+		require.Equal(t, http.StatusOK, status, "response: %s", body)
+		assert.JSONEq(t, `[]`, string(body))
 
 		firstSHA := apiV1PutFile(t, api, repo, "README.md", "First", "")
 		var first commit
@@ -405,6 +411,165 @@ func TestAPIV1BranchesAndCommits(t *testing.T) {
 			status, body := withAccept.do(http.MethodGet, apiV1RepoPath(repo, "/commits/refs/heads/missing"), nil)
 			assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 		})
+	})
+}
+
+func TestAPIV1CommitsPages(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	api := apiV1Client(t, owner)
+
+	// 55 commits on the default branch, more than [api] MAX_RESPONSE_ITEMS = 50.
+	repoPath := database.RepoPath(repo.Owner, repo.Name)
+	tree := repoSettingsGit(t, repoPath, "rev-parse", "main^{tree}")
+	head := repoSettingsGit(t, repoPath, "rev-parse", "main")
+	for i := range 54 {
+		head = repoSettingsGit(t, repoPath, "commit-tree", tree, "-p", head, "-m", "Commit "+strconv.Itoa(i))
+	}
+	repoSettingsGit(t, repoPath, "update-ref", "refs/heads/main", head)
+	all := strings.Fields(repoSettingsGit(t, repoPath, "rev-list", "main"))
+	require.Len(t, all, 55)
+	repoSettingsGit(t, repoPath, "branch", "old", all[50])
+	repoSettingsGit(t, repoPath, "tag", "-a", "annotated", "-m", "Annotated", all[52])
+
+	list := func(path string) (shas []string, links map[string]string) {
+		t.Helper()
+		status, header, body := api.doRaw(http.MethodGet, path, "", nil)
+		require.Equal(t, http.StatusOK, status, "%s, response: %s", path, body)
+		var commits []struct {
+			SHA string `json:"sha"`
+		}
+		require.NoError(t, json.Unmarshal(body, &commits), "%s, response: %s", path, body)
+		shas = []string{}
+		for _, c := range commits {
+			shas = append(shas, c.SHA)
+		}
+		return shas, apiV1Links(t, header)
+	}
+	commits := func(query string) string {
+		return apiV1RepoPath(repo, "/commits?"+query)
+	}
+
+	t.Run("default branch", func(t *testing.T) {
+		got, links := list(apiV1RepoPath(repo, "/commits"))
+		assert.Equal(t, all[:30], got, "default page size")
+		assert.Equal(t, map[string]string{"next": commits("page=2"), "last": commits("page=2")}, links)
+
+		got, _ = list(commits("page=2"))
+		assert.Equal(t, all[30:], got)
+
+		got, links = list(commits("pageSize=1000"))
+		assert.Equal(t, all[:50], got, "page size above MAX_RESPONSE_ITEMS")
+		assert.Equal(t, commits("page=2&pageSize=1000"), links["next"])
+	})
+
+	// Follows the "next" links like an API client. Starting from another branch
+	// with another page size, a link that drops either leads to other commits.
+	t.Run("next links", func(t *testing.T) {
+		got := []string{}
+		pages := 0
+		for next := commits("sha=old&pageSize=2"); next != ""; pages++ {
+			require.Less(t, pages, 3, "more pages than the commits fill")
+			shas, links := list(next)
+			got = append(got, shas...)
+			next = links["next"]
+		}
+		assert.Equal(t, 3, pages)
+		assert.Equal(t, all[50:], got)
+	})
+
+	t.Run("starting points", func(t *testing.T) {
+		for sha, want := range map[string][]string{
+			"old":       all[50:],
+			"annotated": all[52:],
+			all[53]:     all[53:],
+			"main~54":   all[54:],
+		} {
+			got, _ := list(commits("sha=" + sha))
+			assert.Equal(t, want, got, "sha %q", sha)
+		}
+
+		for _, sha := range []string{"missing", "--all", "main^{tree}", "old..main"} {
+			status, body := api.do(http.MethodGet, commits("sha="+url.QueryEscape(sha)), nil)
+			assert.Equal(t, http.StatusNotFound, status, "sha %q, response: %s", sha, body)
+		}
+	})
+
+	t.Run("past the last page", func(t *testing.T) {
+		// A page whose offset overflows an int is past the last page too.
+		for _, n := range []string{"10", "99999999999999999999"} {
+			got, links := list(commits("pageSize=20&page=" + n))
+			assert.Empty(t, got, "page %s", n)
+			assert.Equal(t, map[string]string{
+				"first": commits("page=1&pageSize=20"),
+				"prev":  commits("page=3&pageSize=20"),
+				"last":  commits("page=3&pageSize=20"),
+			}, links, "page %s", n)
+		}
+	})
+}
+
+func TestAPIV1BranchesPages(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	api := apiV1Client(t, owner)
+	repoPath := database.RepoPath(repo.Owner, repo.Name)
+	for i := range 5 {
+		repoSettingsGit(t, repoPath, "branch", "b"+strconv.Itoa(i), "main")
+	}
+
+	list := func(path string) (names []string, links map[string]string) {
+		t.Helper()
+		status, header, body := api.doRaw(http.MethodGet, path, "", nil)
+		require.Equal(t, http.StatusOK, status, "%s, response: %s", path, body)
+		var branches []struct {
+			Name string `json:"name"`
+		}
+		require.NoError(t, json.Unmarshal(body, &branches), "%s, response: %s", path, body)
+		names = []string{}
+		for _, b := range branches {
+			names = append(names, b.Name)
+		}
+		return names, apiV1Links(t, header)
+	}
+	branches := func(query string) string {
+		return apiV1RepoPath(repo, "/branches?"+query)
+	}
+
+	// Without "page" or "limit", all branches in one response, as before.
+	all, links := list(apiV1RepoPath(repo, "/branches"))
+	assert.ElementsMatch(t, []string{"main", "b0", "b1", "b2", "b3", "b4"}, all)
+	assert.Empty(t, links)
+
+	t.Run("next links", func(t *testing.T) {
+		got := []string{}
+		pages := 0
+		for next := branches("limit=4"); next != ""; pages++ {
+			require.Less(t, pages, 2, "more pages than the branches fill")
+			names, links := list(next)
+			require.LessOrEqual(t, len(names), 4)
+			got = append(got, names...)
+			next = links["next"]
+		}
+		assert.Equal(t, 2, pages)
+		assert.Equal(t, all, got)
+	})
+
+	t.Run("past the last page", func(t *testing.T) {
+		// A page whose offset overflows an int is past the last page too.
+		for _, n := range []string{"10", "99999999999999999999"} {
+			got, links := list(branches("limit=4&page=" + n))
+			assert.Empty(t, got, "page %s", n)
+			assert.Equal(t, map[string]string{
+				"first": branches("limit=4&page=1"),
+				"prev":  branches("limit=4&page=2"),
+				"last":  branches("limit=4&page=2"),
+			}, links, "page %s", n)
+		}
 	})
 }
 

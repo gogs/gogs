@@ -21,7 +21,7 @@ func getAllCommits(c *apiContext) {
 		pageSize = 30
 	}
 	pageSize = toAllowedPageSize(pageSize)
-	page := max(c.QueryInt("page"), 1)
+	page := c.queryPage(pageSize)
 
 	result := make([]*types.Commit, 0, pageSize)
 	sha := c.Query("sha")
@@ -48,13 +48,18 @@ func getAllCommits(c *apiContext) {
 		c.Error(err, "count commits")
 		return
 	}
-	commits, err := gitRepo.Log(c.Request().Context(), start.ID.String(), git.LogOptions{
-		MaxCount: pageSize,
-		Skip:     (page - 1) * pageSize,
-	})
-	if err != nil {
-		c.Error(err, "git log")
-		return
+	// A page past the last one is empty. Its offset may also be too large for
+	// git, which reads "--skip" as a 32-bit integer.
+	var commits []*git.Commit
+	if skip := (page - 1) * pageSize; skip < int(total) {
+		commits, err = gitRepo.Log(c.Request().Context(), start.ID.String(), git.LogOptions{
+			MaxCount: pageSize,
+			Skip:     skip,
+		})
+		if err != nil {
+			c.Error(err, "git log")
+			return
+		}
 	}
 
 	for _, commit := range commits {
