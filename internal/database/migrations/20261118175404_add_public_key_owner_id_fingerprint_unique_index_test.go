@@ -26,7 +26,7 @@ func TestAddPublicKeyOwnerIDFingerprintUniqueIndex(t *testing.T) {
 
 	db := dbtest.NewDB(t, "addPublicKeyOwnerIDFingerprintUniqueIndex")
 	require.NoError(t, Migrate(logx.NewNoopLogger(), db))
-	require.NoError(t, DropOwnerFingerprintIndex(db))
+	require.NoError(t, AllowDuplicatePublicKeys(db))
 
 	newKey := func() (string, string) {
 		pub, _, err := ed25519.GenerateKey(rand.Reader)

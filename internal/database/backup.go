@@ -148,9 +148,9 @@ func ImportDatabase(ctx context.Context, logger *logx.Logger, db *gorm.DB, dirPa
 	}
 	// Backups from before public keys were unique by their owners and
 	// fingerprints may have duplicates, which are merged after the import.
-	err = migrations.DropOwnerFingerprintIndex(db.WithContext(ctx))
+	err = migrations.AllowDuplicatePublicKeys(db.WithContext(ctx))
 	if err != nil {
-		return errors.Wrap(err, "drop unique index on owners and fingerprints of public keys")
+		return errors.Wrap(err, "allow duplicate public keys")
 	}
 
 	err = importLegacyTables(ctx, logger, dirPath, verbose)
@@ -190,9 +190,9 @@ func ImportDatabase(ctx context.Context, logger *logx.Logger, db *gorm.DB, dirPa
 		}
 	}
 
-	err = migrations.AddOwnerFingerprintIndex(db.WithContext(ctx))
+	err = migrations.MergeDuplicatePublicKeys(db.WithContext(ctx))
 	if err != nil {
-		return errors.Wrap(err, "add unique index on owners and fingerprints of public keys")
+		return errors.Wrap(err, "merge duplicate public keys")
 	}
 	return nil
 }

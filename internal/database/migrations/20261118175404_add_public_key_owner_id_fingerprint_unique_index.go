@@ -24,16 +24,17 @@ func addPublicKeyOwnerIDFingerprintUniqueIndex(db *gorm.DB) error {
 	if db.Migrator().HasIndex("public_key", ownerFingerprintIndex) {
 		return errMigrationSkipped
 	}
-	return AddOwnerFingerprintIndex(db)
+	return MergeDuplicatePublicKeys(db)
 }
 
-// AddOwnerFingerprintIndex merges the public keys that have the same owner and
+// MergeDuplicatePublicKeys merges the public keys that have the same owner and
 // fingerprint into the one added first, removes the others from the
 // authorized_keys file, and then adds the unique index on the owners and
 // fingerprints of public keys. Before the index, the same key with another
 // comment, or added twice at the same time, got a public key of its own. Public
 // keys of deploy keys have no owner, so they are unique by their fingerprints.
-func AddOwnerFingerprintIndex(db *gorm.DB) error {
+// Restoring a backup calls it after importing the public keys.
+func MergeDuplicatePublicKeys(db *gorm.DB) error {
 	err := db.Transaction(mergePublicKeys)
 	if err != nil {
 		return errors.Wrap(err, "merge public keys")
@@ -43,9 +44,10 @@ func AddOwnerFingerprintIndex(db *gorm.DB) error {
 	return errors.Wrap(err, "create index")
 }
 
-// DropOwnerFingerprintIndex drops the index that AddOwnerFingerprintIndex adds,
-// e.g., to restore a backup that may have duplicates.
-func DropOwnerFingerprintIndex(db *gorm.DB) error {
+// AllowDuplicatePublicKeys drops the index that MergeDuplicatePublicKeys adds,
+// so that restoring a backup from before the index can import its duplicates,
+// which MergeDuplicatePublicKeys then merges.
+func AllowDuplicatePublicKeys(db *gorm.DB) error {
 	if !db.Migrator().HasIndex("public_key", ownerFingerprintIndex) {
 		return nil
 	}
