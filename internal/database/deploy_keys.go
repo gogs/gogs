@@ -64,7 +64,7 @@ func (s *DeployKeysStore) Add(ctx context.Context, logger *logx.Logger, repoID i
 			}
 		}
 		if !has {
-			if err := addKey(logger, tx, pkey); err != nil {
+			if err := addKey(tx, pkey); err != nil {
 				return errors.Wrap(err, "add key")
 			}
 		}
@@ -75,6 +75,11 @@ func (s *DeployKeysStore) Add(ctx context.Context, logger *logx.Logger, repoID i
 	})
 	if err != nil {
 		return nil, err
+	}
+	if !has {
+		if err = appendAuthorizedKeysToFile(logger, pkey); err != nil {
+			return nil, errors.Wrap(err, "append to authorized_keys")
+		}
 	}
 	key.Content = content
 	return key, nil

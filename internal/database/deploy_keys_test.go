@@ -69,8 +69,11 @@ func deployKeysAdd(t *testing.T, ctx context.Context, s *DeployKeysStore) {
 
 	_, err = s.Add(ctx, logger, 1, "again", content)
 	assert.True(t, IsErrDeployKeyAlreadyExist(err), "got %v", err)
-	_, err = s.Add(ctx, logger, 1, "deploy", newTestSSHKey(t))
+	// A key rolled back leaves no line, whose key ID a later key may get.
+	rolledBack := newTestSSHKey(t)
+	_, err = s.Add(ctx, logger, 1, "deploy", rolledBack)
 	assert.True(t, IsErrDeployKeyNameAlreadyUsed(err), "got %v", err)
+	assert.NotContains(t, readAuthorizedKeys(t, authorizedKeys), rolledBack)
 
 	// Content of a user key cannot be a deploy key.
 	userContent := newTestSSHKey(t)

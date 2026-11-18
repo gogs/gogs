@@ -49,10 +49,13 @@ func (s *PublicKeysStore) Add(ctx context.Context, logger *logx.Logger, ownerID 
 		Type:    KeyTypeUser,
 	}
 	err = db.Transaction(func(tx *gorm.DB) error {
-		return addKey(logger, tx, key)
+		return addKey(tx, key)
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "add key")
+	}
+	if err = appendAuthorizedKeysToFile(logger, key); err != nil {
+		return nil, errors.Wrap(err, "append to authorized_keys")
 	}
 	return key, nil
 }

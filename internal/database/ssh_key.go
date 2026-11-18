@@ -324,6 +324,11 @@ func CheckPublicKeyString(logger *logx.Logger, content string) (_ string, err er
 
 // appendAuthorizedKeysToFile appends new SSH keys' content to authorized_keys file.
 func appendAuthorizedKeysToFile(logger *logx.Logger, keys ...*PublicKey) error {
+	// The builtin SSH server does not read the file.
+	if conf.SSH.StartBuiltinServer {
+		return nil
+	}
+
 	sshOpLocker.Lock()
 	defer sshOpLocker.Unlock()
 
@@ -371,7 +376,10 @@ func checkKeyContent(tx *gorm.DB, content string) error {
 	return nil
 }
 
-func addKey(logger *logx.Logger, tx *gorm.DB, key *PublicKey) (err error) {
+// addKey adds the key to the database. Callers add it to the authorized_keys
+// file with appendAuthorizedKeysToFile once the transaction commits, so that a
+// key rolled back leaves no line whose key ID a later key may get.
+func addKey(tx *gorm.DB, key *PublicKey) (err error) {
 	// Calculate fingerprint.
 	tmpPath := strings.ReplaceAll(path.Join(os.TempDir(), fmt.Sprintf("%d", time.Now().Nanosecond()), "id_rsa.pub"), "\\", "/")
 	_ = os.MkdirAll(path.Dir(tmpPath), os.ModePerm)
@@ -387,15 +395,7 @@ func addKey(logger *logx.Logger, tx *gorm.DB, key *PublicKey) (err error) {
 	}
 	key.Fingerprint = strings.Split(stdout, " ")[1]
 
-	if err = tx.Create(key).Error; err != nil {
-		return err
-	}
-
-	// Don't need to rewrite this file if builtin SSH server is enabled.
-	if conf.SSH.StartBuiltinServer {
-		return nil
-	}
-	return appendAuthorizedKeysToFile(logger, key)
+	return tx.Create(key).Error
 }
 
 // deletePublicKeys does the actual key deletion but does not update authorized_keys file.
