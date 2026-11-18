@@ -15,6 +15,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/lfsx"
 )
 
 func TestServeBatch(t *testing.T) {
@@ -25,6 +26,7 @@ func TestServeBatch(t *testing.T) {
 	tests := []struct {
 		name          string
 		body          string
+		bearer        string
 		mockStore     func() *MockStore
 		expStatusCode int
 		expBody       string
@@ -58,6 +60,31 @@ func TestServeBatch(t *testing.T) {
 				},
 				"verify": {
 					"href": "https://gogs.example.com/owner/repo.git/info/lfs/objects/basic/verify"
+				}
+			}
+		}
+	]
+}` + "\n",
+		},
+		{
+			name:          "upload: with a token",
+			body:          `{"operation": "upload", "objects": [{"oid": "ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f", "size": 123}]}`,
+			bearer:        "Bearer token",
+			expStatusCode: http.StatusOK,
+			expBody: `{
+	"transfer": "basic",
+	"objects": [
+		{
+			"oid": "ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f",
+			"size": 123,
+			"actions": {
+				"upload": {
+					"href": "https://gogs.example.com/owner/repo.git/info/lfs/objects/basic/ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f",
+					"header": {"Authorization": "Bearer token", "Content-Type": "application/octet-stream"}
+				},
+				"verify": {
+					"href": "https://gogs.example.com/owner/repo.git/info/lfs/objects/basic/verify",
+					"header": {"Authorization": "Bearer token"}
 				}
 			}
 		}
@@ -123,11 +150,17 @@ func TestServeBatch(t *testing.T) {
 			m.Use(func(c flamego.Context) {
 				c.Map(&database.User{Name: "owner"})
 				c.Map(&database.Repository{Name: "repo"})
+				if test.bearer != "" {
+					c.Map(&lfsx.Token{})
+				} else {
+					c.Map((*lfsx.Token)(nil))
+				}
 			})
 			m.Post("/", serveBatch(logx.NewNoopLogger(), mockStore))
 
 			r, err := http.NewRequest(http.MethodPost, "/", bytes.NewBufferString(test.body))
 			require.NoError(t, err)
+			r.Header.Set("Authorization", test.bearer)
 
 			rr := httptest.NewRecorder()
 			m.ServeHTTP(rr, r)
