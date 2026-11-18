@@ -27,7 +27,7 @@ func TestDumpAndImport(t *testing.T) {
 	}
 	t.Parallel()
 
-	const wantTables = 17
+	const wantTables = 19
 	if len(Tables) != wantTables {
 		t.Fatalf("New table has added (want %d got %d), please add new tests for the table and update this check", wantTables, len(Tables))
 	}
@@ -126,6 +126,24 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			RefName:      "main",
 			IsPrivate:    false,
 			CreatedUnix:  1588568886,
+		},
+
+		&Attachment{
+			ID:          1,
+			UUID:        "7d2b8c1e-0f3a-4b5c-9d6e-1a2b3c4d5e6f",
+			IssueID:     1,
+			CommentID:   2,
+			UploaderID:  1,
+			Name:        "screenshot.png",
+			CreatedUnix: 1588568886,
+		},
+		&Attachment{
+			ID:          2,
+			UUID:        "9e8d7c6b-5a4f-4e3d-8c2b-1a0f9e8d7c6b",
+			ReleaseID:   1,
+			UploaderID:  2,
+			Name:        "gogs.zip",
+			CreatedUnix: 1588572486,
 		},
 
 		&DeployKey{
@@ -266,6 +284,31 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			Mode:        AccessModeRead,
 			Type:        KeyTypeDeploy,
 			CreatedUnix: 1588568886,
+		},
+
+		&Release{
+			ID:           1,
+			RepoID:       1,
+			PublisherID:  1,
+			TagName:      "v1.0.0",
+			LowerTagName: "v1.0.0",
+			Target:       "main",
+			Title:        "First release",
+			Sha1:         "4b825dc642cb6eb9a060e54bf8d69288fbee4904",
+			NumCommits:   12,
+			Note:         "Notes of the first release.",
+			IsPrerelease: true,
+			CreatedUnix:  1588568886,
+		},
+		&Release{
+			ID:           2,
+			RepoID:       1,
+			PublisherID:  2,
+			TagName:      "V2.0.0",
+			LowerTagName: "v2.0.0",
+			Target:       "main",
+			IsDraft:      true,
+			CreatedUnix:  1588572486,
 		},
 
 		&TwoFactor{

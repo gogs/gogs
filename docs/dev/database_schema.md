@@ -55,6 +55,27 @@ Indexes:
 	"idx_action_user_id" (user_id)
 ```
 
+# Table "attachment"
+
+```
+    Field    |    Column    | PostgreSQL  |         MySQL         |        SQLite3        
+-------------+--------------+-------------+-----------------------+-----------------------
+ ID          | id           | BIGSERIAL   | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ UUID        | uuid         | VARCHAR(40) | VARCHAR(40)           | TEXT                  
+ IssueID     | issue_id     | BIGINT      | BIGINT                | INTEGER               
+ CommentID   | comment_id   | BIGINT      | BIGINT                | INTEGER               
+ ReleaseID   | release_id   | BIGINT      | BIGINT                | INTEGER               
+ UploaderID  | uploader_id  | BIGINT      | BIGINT                | INTEGER               
+ Name        | name         | TEXT        | LONGTEXT              | TEXT                  
+ CreatedUnix | created_unix | BIGINT      | BIGINT                | INTEGER               
+
+Primary keys: id
+Indexes: 
+	"IDX_attachment_issue_id" (issue_id)
+	"IDX_attachment_release_id" (release_id)
+	"UQE_attachment_uuid" UNIQUE (uuid)
+```
+
 # Table "deploy_key"
 
 ```
@@ -226,6 +247,28 @@ Indexes:
 Primary keys: id
 Indexes: 
 	"IDX_public_key_owner_id" (owner_id)
+```
+
+# Table "release"
+
+```
+    Field     |     Column     |           PostgreSQL           |             MySQL              |            SQLite3             
+--------------+----------------+--------------------------------+--------------------------------+--------------------------------
+ ID           | id             | BIGSERIAL                      | BIGINT AUTO_INCREMENT          | INTEGER AUTOINCREMENT          
+ RepoID       | repo_id        | BIGINT                         | BIGINT                         | INTEGER                        
+ PublisherID  | publisher_id   | BIGINT                         | BIGINT                         | INTEGER                        
+ TagName      | tag_name       | TEXT                           | LONGTEXT                       | TEXT                           
+ LowerTagName | lower_tag_name | TEXT                           | LONGTEXT                       | TEXT                           
+ Target       | target         | TEXT                           | LONGTEXT                       | TEXT                           
+ Title        | title          | TEXT                           | LONGTEXT                       | TEXT                           
+ Sha1         | sha1           | VARCHAR(64)                    | VARCHAR(64)                    | VARCHAR(64)                    
+ NumCommits   | num_commits    | BIGINT                         | BIGINT                         | INTEGER                        
+ Note         | note           | TEXT                           | TEXT                           | TEXT                           
+ IsDraft      | is_draft       | BOOLEAN NOT NULL DEFAULT FALSE | BOOLEAN NOT NULL DEFAULT FALSE | NUMERIC NOT NULL DEFAULT FALSE 
+ IsPrerelease | is_prerelease  | BOOLEAN                        | BOOLEAN                        | NUMERIC                        
+ CreatedUnix  | created_unix   | BIGINT                         | BIGINT                         | INTEGER                        
+
+Primary keys: id
 ```
 
 # Table "two_factor"

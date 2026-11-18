@@ -1825,15 +1825,14 @@ func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 			return err
 		}
 
-		attachments := make([]*Attachment, 0, 5)
-		if err = sess.Where("issue_id=?", issues[i].ID).Find(&attachments); err != nil {
-			return err
+		rows, err := sess.Query("SELECT uuid FROM attachment WHERE issue_id = ?", issues[i].ID)
+		if err != nil {
+			return errors.Newf("list attachments: %v", err)
 		}
-		for j := range attachments {
-			attachmentPaths = append(attachmentPaths, attachments[j].LocalPath())
+		for _, row := range rows {
+			attachmentPaths = append(attachmentPaths, AttachmentLocalPath(string(row["uuid"])))
 		}
-
-		if _, err = sess.Where("issue_id = ?", issues[i].ID).Delete(new(Attachment)); err != nil {
+		if err = deleteByColumn(sess, "issue_id", issues[i].ID, "attachment"); err != nil {
 			return err
 		}
 	}

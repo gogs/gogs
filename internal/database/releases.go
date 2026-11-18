@@ -20,24 +20,24 @@ import (
 type Release struct {
 	ID               int64
 	RepoID           int64
-	Repo             *Repository `xorm:"-" json:"-" gorm:"-"`
+	Repo             *Repository `json:"-" gorm:"-"`
 	PublisherID      int64
-	Publisher        *User `xorm:"-" json:"-" gorm:"-"`
+	Publisher        *User `json:"-" gorm:"-"`
 	TagName          string
 	LowerTagName     string
 	Target           string
 	Title            string
-	Sha1             string `xorm:"VARCHAR(64)"`
+	Sha1             string `gorm:"type:VARCHAR(64)"`
 	NumCommits       int64
-	NumCommitsBehind int64  `xorm:"-" json:"-" gorm:"-"`
-	Note             string `xorm:"TEXT"`
-	IsDraft          bool   `xorm:"NOT NULL DEFAULT false"`
+	NumCommitsBehind int64  `json:"-" gorm:"-"`
+	Note             string `gorm:"type:TEXT"`
+	IsDraft          bool   `gorm:"not null;default:FALSE"`
 	IsPrerelease     bool
 
-	Created     time.Time `xorm:"-" json:"-" gorm:"-"`
+	Created     time.Time `json:"-" gorm:"-"`
 	CreatedUnix int64
 
-	Attachments []*Attachment `xorm:"-" json:"-" gorm:"-"`
+	Attachments []*Attachment `json:"-" gorm:"-"`
 }
 
 // BeforeCreate implements the GORM create hook.
