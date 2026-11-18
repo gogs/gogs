@@ -39,7 +39,6 @@ var (
 	Security struct {
 		SecretKey               string
 		LoginRememberDays       int
-		CookieSecure            bool
 		EnableLoginStatusCookie bool
 		LoginStatusCookieName   string
 		LocalNetworkAllowlist   []string `delim:","`
@@ -105,14 +104,6 @@ var (
 			MaxSize      int64
 			MaxFiles     int
 		} `ini:"release.attachment"`
-	}
-
-	// Time settings
-	Time struct {
-		Format string
-
-		// Derived from other static values
-		FormatLayout string `ini:"-"` // Actual layout of the Format.
 	}
 
 	// Mirror settings
@@ -181,17 +172,10 @@ var (
 		// ⚠️ WARNING: Should only be set by "internal/database/repo.go".
 		Version string `ini:"-"`
 
-		DisableDiffHighlight bool
-		MaxDiffFiles         int      `ini:"MAX_GIT_DIFF_FILES"`
-		MaxDiffLines         int      `ini:"MAX_GIT_DIFF_LINES"`
-		MaxDiffLineChars     int      `ini:"MAX_GIT_DIFF_LINE_CHARACTERS"`
-		GCArgs               []string `ini:"GC_ARGS" delim:" "`
-		Timeout              struct {
+		GCArgs  []string `ini:"GC_ARGS" delim:" "`
+		Timeout struct {
 			Migrate int
 			Mirror  int
-			Clone   int
-			Pull    int
-			Diff    int
 			GC      int `ini:"GC"`
 		} `ini:"git.timeout"`
 	}
@@ -216,11 +200,6 @@ var (
 		MaxAge                   time.Duration
 		SlowThreshold            time.Duration
 		SamplesPerRoutePerMinute int
-	}
-
-	// Other settings
-	Other struct {
-		ShowFooterTemplateLoadTime bool
 	}
 
 	// Global setting
@@ -388,7 +367,6 @@ type UIOpts struct {
 	ExplorePagingNum   int
 	IssuePagingNum     int
 	FeedMaxCommitNum   int
-	ThemeColorMetaTag  string
 	MaxDisplayFileSize int64
 
 	Admin struct {
@@ -418,18 +396,8 @@ type PictureOpts struct {
 var Picture PictureOpts
 
 type i18nConf struct {
-	Langs     []string          `delim:","`
-	Names     []string          `delim:","`
-	dateLangs map[string]string `ini:"-"`
-}
-
-// DateLang transforms standard language locale name to corresponding value in datetime plugin.
-func (c *i18nConf) DateLang(lang string) string {
-	name, ok := c.dateLangs[lang]
-	if ok {
-		return name
-	}
-	return "en"
+	Langs []string `delim:","`
+	Names []string `delim:","`
 }
 
 // I18n settings

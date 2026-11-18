@@ -36,7 +36,6 @@ require (
 	github.com/pquerna/otp v1.5.0
 	github.com/pressly/goose/v3 v3.26.0
 	github.com/prometheus/client_golang v1.23.2
-	github.com/sergi/go-diff v1.4.0
 	github.com/sourcegraph/run v0.12.0
 	github.com/stretchr/testify v1.12.1
 	github.com/unknwon/cae v1.0.2

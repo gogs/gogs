@@ -45,7 +45,6 @@ import (
 	"gogs.io/gogs/internal/route/repo"
 	"gogs.io/gogs/internal/ssh"
 	"gogs.io/gogs/internal/telemetry"
-	"gogs.io/gogs/internal/template/highlight"
 	"gogs.io/gogs/internal/urlx"
 	"gogs.io/gogs/public"
 	"gogs.io/gogs/templates"
@@ -633,7 +632,6 @@ func initServices(logger *logx.Logger, customConf string) (*logx.Logger, error) 
 
 	email.NewContext(logger)
 
-	highlight.NewContext()
 	markup.NewSanitizer()
 	if err := database.NewEngine(logger); err != nil {
 		return logger, errors.Wrap(err, "initialize ORM engine")

@@ -8,6 +8,9 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
+	"gogs.io/gogs/internal/tool"
+	"golang.org/x/net/html/charset"
+	"golang.org/x/text/transform"
 	"unknwon.dev/x/logx"
 )
 
@@ -582,5 +585,37 @@ func streamParseDiff(logger *logx.Logger, r io.Reader, done chan<- streamParseDi
 	done <- streamParseDiffResult{
 		Diff: diff,
 		Err:  err,
+	}
+}
+
+// decodeCharsets converts the content of each file in the diff to UTF-8 when
+// the file is detected to be in another encoding.
+func decodeCharsets(logger *logx.Logger, diff *Diff) {
+	var buf bytes.Buffer
+	for _, file := range diff.Files {
+		buf.Reset()
+		for _, section := range file.Sections {
+			for _, line := range section.Lines {
+				buf.WriteString(line.Content)
+				buf.WriteString("\n")
+			}
+		}
+
+		charsetLabel, err := tool.DetectEncoding(logger, buf.Bytes())
+		if charsetLabel == "UTF-8" || err != nil {
+			continue
+		}
+		encoding, _ := charset.Lookup(charsetLabel)
+		if encoding == nil {
+			continue
+		}
+		d := encoding.NewDecoder()
+		for _, section := range file.Sections {
+			for _, line := range section.Lines {
+				if c, _, err := transform.String(d, line.Content); err == nil {
+					line.Content = c
+				}
+			}
+		}
 	}
 }

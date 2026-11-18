@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/cockroachdb/errors"
 	"github.com/gogs/go-libravatar"
@@ -272,35 +271,6 @@ func Init(logger *logx.Logger, customConf string) error {
 	}
 	Attachment.Path = ensureAbs(Attachment.Path)
 
-	// *************************
-	// ----- Time settings -----
-	// *************************
-
-	if err = File.Section("time").MapTo(&Time); err != nil {
-		return errors.Wrap(err, "mapping [time] section")
-	}
-
-	Time.FormatLayout = map[string]string{
-		"ANSIC":       time.ANSIC,
-		"UnixDate":    time.UnixDate,
-		"RubyDate":    time.RubyDate,
-		"RFC822":      time.RFC822,
-		"RFC822Z":     time.RFC822Z,
-		"RFC850":      time.RFC850,
-		"RFC1123":     time.RFC1123,
-		"RFC1123Z":    time.RFC1123Z,
-		"RFC3339":     time.RFC3339,
-		"RFC3339Nano": time.RFC3339Nano,
-		"Kitchen":     time.Kitchen,
-		"Stamp":       time.Stamp,
-		"StampMilli":  time.StampMilli,
-		"StampMicro":  time.StampMicro,
-		"StampNano":   time.StampNano,
-	}[Time.Format]
-	if Time.FormatLayout == "" {
-		Time.FormatLayout = time.RFC3339
-	}
-
 	// ****************************
 	// ----- Picture settings -----
 	// ****************************
@@ -361,7 +331,6 @@ func Init(logger *logx.Logger, customConf string) error {
 	if err = File.Section("i18n").MapTo(I18n); err != nil {
 		return errors.Wrap(err, "mapping [i18n] section")
 	}
-	I18n.dateLangs = File.Section("i18n.datelang").KeyValues()
 
 	// *************************
 	// ----- LFS settings -----
@@ -406,8 +375,6 @@ func Init(logger *logx.Logger, customConf string) error {
 		return errors.Wrap(err, "mapping [prometheus] section")
 	} else if err = File.Section("tracing").MapTo(&Tracing); err != nil {
 		return errors.Wrap(err, "mapping [tracing] section")
-	} else if err = File.Section("other").MapTo(&Other); err != nil {
-		return errors.Wrap(err, "mapping [other] section")
 	}
 
 	HasRobotsTxt = osx.IsFile(filepath.Join(CustomDir(), "robots.txt"))
