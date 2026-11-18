@@ -43,7 +43,9 @@ func ToUTF8WithErr(logger *logx.Logger, content []byte) (string, error) {
 // RenderCommitMessage renders commit message with special links.
 func RenderCommitMessage(full bool, msg, urlPrefix string, metas map[string]string) string {
 	cleanMsg := template.HTMLEscapeString(msg)
-	fullMessage := string(markup.RenderIssueIndexPattern([]byte(cleanMsg), urlPrefix, metas))
+	// Repository admins set the external issue tracker format the links are
+	// made of, which can be any URL, e.g., a "javascript:" URL.
+	fullMessage := markup.Sanitize(string(markup.RenderIssueIndexPattern([]byte(cleanMsg), urlPrefix, metas)))
 	msgLines := strings.Split(strings.TrimSpace(fullMessage), "\n")
 	numLines := len(msgLines)
 	if numLines == 0 {
