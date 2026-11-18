@@ -89,6 +89,9 @@ func runBackup(ctx context.Context, cmd *cli.Command) error {
 	archiveName := filepath.Join(cmd.String("target"), cmd.String("archive-name"))
 	logger.Info("Packing backup files", "archivePath", archiveName)
 
+	if err = os.MkdirAll(cmd.String("target"), os.ModePerm); err != nil {
+		logger.FatalContext(ctx, "Failed to create target directory", "targetDir", cmd.String("target"), "error", err)
+	}
 	f, err := os.Create(archiveName)
 	if err != nil {
 		logger.FatalContext(ctx, "Failed to create backup archive", "archivePath", archiveName, "error", err)
@@ -229,13 +232,16 @@ type archiveWriter struct {
 }
 
 // add adds the file or the directory tree at absPath to the archive under
-// name. A symbolic link at absPath itself is followed.
+// name. A link at absPath itself, including a Windows junction, is followed.
 func (z *archiveWriter) add(name, absPath string) error {
-	root, err := filepath.EvalSymlinks(absPath)
+	fi, err := os.Stat(absPath)
 	if err != nil {
-		return errors.Wrap(err, "resolve path")
+		return errors.Wrap(err, "get file info")
 	}
-	return filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+	if !fi.IsDir() {
+		return z.addEntry(name, absPath, fi)
+	}
+	return fs.WalkDir(os.DirFS(absPath), ".", func(rel string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -243,45 +249,46 @@ func (z *archiveWriter) add(name, absPath string) error {
 		if err != nil {
 			return errors.Wrap(err, "get file info")
 		}
-		rel, err := filepath.Rel(root, p)
-		if err != nil {
-			return errors.Wrap(err, "get relative path")
-		}
-
-		fh, err := zip.FileInfoHeader(fi)
-		if err != nil {
-			return errors.Wrap(err, "create header")
-		}
-		fh.Name = path.Join(name, filepath.ToSlash(rel))
-		if z.verbose {
-			z.logger.Debug("Adding to archive", "name", fh.Name)
-		}
-		if d.IsDir() {
-			fh.Name += "/"
-			_, err = z.CreateHeader(fh)
-			return err
-		}
-
-		fh.Method = zip.Deflate
-		w, err := z.CreateHeader(fh)
-		if err != nil {
-			return errors.Wrap(err, "create entry")
-		}
-		if fi.Mode()&fs.ModeSymlink != 0 {
-			target, err := os.Readlink(p)
-			if err != nil {
-				return errors.Wrap(err, "read link")
-			}
-			_, err = io.WriteString(w, target)
-			return err
-		}
-
-		src, err := os.Open(p)
-		if err != nil {
-			return errors.Wrap(err, "open")
-		}
-		defer func() { _ = src.Close() }()
-		_, err = io.Copy(w, src)
-		return err
+		return z.addEntry(path.Join(name, rel), filepath.Join(absPath, filepath.FromSlash(rel)), fi)
 	})
+}
+
+// addEntry adds the file, directory or link at p with its info to the archive
+// under name, without the entries of a directory.
+func (z *archiveWriter) addEntry(name, p string, fi fs.FileInfo) error {
+	fh, err := zip.FileInfoHeader(fi)
+	if err != nil {
+		return errors.Wrap(err, "create header")
+	}
+	fh.Name = name
+	if z.verbose {
+		z.logger.Debug("Adding to archive", "name", fh.Name)
+	}
+	if fi.IsDir() {
+		fh.Name += "/"
+		_, err = z.CreateHeader(fh)
+		return err
+	}
+
+	fh.Method = zip.Deflate
+	w, err := z.CreateHeader(fh)
+	if err != nil {
+		return errors.Wrap(err, "create entry")
+	}
+	if fi.Mode()&fs.ModeSymlink != 0 {
+		target, err := os.Readlink(p)
+		if err != nil {
+			return errors.Wrap(err, "read link")
+		}
+		_, err = io.WriteString(w, target)
+		return err
+	}
+
+	src, err := os.Open(p)
+	if err != nil {
+		return errors.Wrap(err, "open")
+	}
+	defer func() { _ = src.Close() }()
+	_, err = io.Copy(w, src)
+	return err
 }
