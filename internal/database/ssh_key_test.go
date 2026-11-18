@@ -45,6 +45,18 @@ func TestSSHParsePublicKey(t *testing.T) {
 			expType:   "ed25519",
 			expLength: 256,
 		},
+		{
+			name:      "ed25519-sk-256",
+			content:   "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIEeWTbZ8dSRinHt2mlR+f8pW2TjINxeV0pD9opoJYBN7AAAABHNzaDo= nocomment",
+			expType:   "ed25519-sk",
+			expLength: 256,
+		},
+		{
+			name:      "ecdsa-sk-256",
+			content:   "sk-ecdsa-sha2-nistp256@openssh.com AAAAInNrLWVjZHNhLXNoYTItbmlzdHAyNTZAb3BlbnNzaC5jb20AAAAIbmlzdHAyNTYAAABBBI5k3ow/Rtz4EHfDqwr260EUeSfwAiAPZzZohr7DM8MFB9kFDRR8WzmJhJoapwfwQIE01b7+nyT396EESW2yKMUAAAAEc3NoOg== nocomment",
+			expType:   "ecdsa-sk",
+			expLength: 256,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
