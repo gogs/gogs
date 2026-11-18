@@ -128,7 +128,8 @@ func (r *renderer) parseLeaf(n *node, stream bool) (inlineMark, bool) {
 }
 
 func (r *renderer) renderHTML(doc *node) {
-	r.out.Grow(len(r.p.src) + len(r.p.src)/4)
+	// Short documents have more markup per byte of source.
+	r.out.Grow(len(r.p.src) + len(r.p.src)/4 + min(len(r.p.src), 2048))
 	r.s = &r.html
 	r.renderDocument(doc)
 }
@@ -987,7 +988,11 @@ func (h *htmlSink) raw(b []byte) {
 // writeEscaped writes b with "&", "<", ">" and '"' escaped.
 func writeEscaped(out *bytes.Buffer, b []byte) {
 	start := 0
-	for i, c := range b {
+	for i := 0; i < len(b); i++ {
+		c := b[i]
+		if !needsEscape[c] {
+			continue
+		}
 		var esc string
 		switch c {
 		case '&':
@@ -1009,6 +1014,8 @@ func writeEscaped(out *bytes.Buffer, b []byte) {
 	}
 	out.Write(b[start:])
 }
+
+var needsEscape = withSpecial([256]bool{}, "&<>\"\x00")
 
 // appendEscapedText appends b to dst escaped as writeEscaped does.
 func appendEscapedText(dst, b []byte) []byte {
