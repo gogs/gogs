@@ -47,6 +47,10 @@ func TestIssues(t *testing.T) {
 				err := clearTables(t, s.db)
 				require.NoError(t, err)
 			})
+			// Issue webhook payloads and API formats build links from the
+			// server and SSH settings, which other suites mock.
+			conf.SetMockServer(t, conf.ServerOpts{})
+			conf.SetMockSSH(t, conf.SSHOpts{})
 			tc.test(t, ctx, s)
 		})
 		if t.Failed() {
@@ -248,9 +252,7 @@ func issuesGet(t *testing.T, ctx context.Context, s *IssuesStore) {
 }
 
 func issuesList(t *testing.T, ctx context.Context, s *IssuesStore) {
-	ui := conf.UI
-	ui.IssuePagingNum = 2
-	conf.SetMockUI(t, ui)
+	conf.SetMockUI(t, conf.UIOpts{IssuePagingNum: 2})
 
 	repo := newTestIssueRepo(t, ctx, s.db, "is-list")
 	other := newTestIssueRepo(t, ctx, s.db, "is-list-other")

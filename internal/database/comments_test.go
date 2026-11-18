@@ -9,6 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"unknwon.dev/x/logx"
+
+	"gogs.io/gogs/internal/conf"
 )
 
 func TestComments(t *testing.T) {
@@ -39,6 +41,10 @@ func TestComments(t *testing.T) {
 				err := clearTables(t, s.db)
 				require.NoError(t, err)
 			})
+			// Issue webhook payloads and API formats build links from the
+			// server and SSH settings, which other suites mock.
+			conf.SetMockServer(t, conf.ServerOpts{})
+			conf.SetMockSSH(t, conf.SSHOpts{})
 			tc.test(t, ctx, s)
 		})
 		if t.Failed() {
