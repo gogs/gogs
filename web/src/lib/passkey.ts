@@ -25,16 +25,12 @@ export interface RequestOptionsJSON {
   };
 }
 
-// externalPageURL returns the current page at the external URL, or null when
-// the site is open there. It compares origins, not hosts: at another port or
-// scheme the browser still saves a new passkey that the server then rejects.
 export function externalPageURL() {
   const { externalURL } = webContext;
   let origin;
   try {
     ({ origin } = new URL(externalURL));
   } catch {
-    // The server accepts an EXTERNAL_URL without a scheme.
     return null;
   }
   if (origin === window.location.origin) return null;
