@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/cockroachdb/errors"
@@ -219,20 +220,26 @@ func (c *apiContext) webNotFoundOrError(err error, msg string) {
 
 // SetLinkHeader sets pagination link header by given total number and page size.
 func (c *apiContext) SetLinkHeader(total, pageSize int) {
-	path := c.path[1:]
 	page := paginater.New(total, pageSize, c.QueryInt("page"), 0)
+	// Links keep the other query parameters, e.g., the search keyword and the
+	// page size, so that every page belongs to the same list.
+	query := c.Request().URL.Query()
+	link := func(n int, rel string) string {
+		query.Set("page", strconv.Itoa(n))
+		return fmt.Sprintf("<%s%s?%s>; rel=%q", conf.Server.ExternalURL, c.path[1:], query.Encode(), rel)
+	}
 	links := make([]string, 0, 4)
 	if page.HasNext() {
-		links = append(links, fmt.Sprintf("<%s%s?page=%d>; rel=\"next\"", conf.Server.ExternalURL, path, page.Next()))
+		links = append(links, link(page.Next(), "next"))
 	}
 	if !page.IsLast() {
-		links = append(links, fmt.Sprintf("<%s%s?page=%d>; rel=\"last\"", conf.Server.ExternalURL, path, page.TotalPages()))
+		links = append(links, link(page.TotalPages(), "last"))
 	}
 	if !page.IsFirst() {
-		links = append(links, fmt.Sprintf("<%s%s?page=1>; rel=\"first\"", conf.Server.ExternalURL, path))
+		links = append(links, link(1, "first"))
 	}
 	if page.HasPrevious() {
-		links = append(links, fmt.Sprintf("<%s%s?page=%d>; rel=\"prev\"", conf.Server.ExternalURL, path, page.Previous()))
+		links = append(links, link(page.Previous(), "prev"))
 	}
 
 	if len(links) > 0 {

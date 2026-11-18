@@ -2,7 +2,10 @@ package integrationtests
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
+	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -122,10 +125,62 @@ func TestAPIV1SearchRepositories(t *testing.T) {
 	}
 
 	anonymous := newClient(t)
+	ownerClient := apiV1Client(t, owner)
+	uid := "uid=" + apiV1Itoa(owner.ID)
 	assert.Equal(t, []string{public.Name}, search(anonymous, "q="+public.Name))
 	assert.Empty(t, search(anonymous, "q="+private.Name), "private repository found by anonymous viewer")
-	assert.Empty(t, search(anonymous, "q="+private.Name+"&uid="+apiV1Itoa(owner.ID)), "private repository found by anonymous viewer")
-	assert.Equal(t, []string{private.Name}, search(apiV1Client(t, owner), "q="+private.Name+"&uid="+apiV1Itoa(owner.ID)))
+	assert.Empty(t, search(anonymous, "q="+private.Name+"&"+uid), "private repository found by anonymous viewer")
+	assert.Equal(t, []string{private.Name}, search(ownerClient, "q="+private.Name+"&"+uid))
+
+	// Seeded repository names have no dot, which an empty query once required.
+	t.Run("empty query", func(t *testing.T) {
+		assert.Equal(t, []string{public.Name}, search(anonymous, uid))
+		assert.Equal(t, []string{public.Name}, search(anonymous, "q=&"+uid))
+		assert.ElementsMatch(t, []string{public.Name, private.Name}, search(ownerClient, uid))
+	})
+
+	t.Run("full name", func(t *testing.T) {
+		assert.Empty(t, search(anonymous, "q="+owner.Name+"/"+public.Name))
+	})
+}
+
+func TestAPIV1SearchRepositoriesPages(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	want := []string{}
+	for range 5 {
+		want = append(want, seedRepository(t, owner.ID, CreateRepositoryOptions{}).Name)
+	}
+
+	// Follows the "next" links of the Link header like an API client, so every
+	// page keeps the query of the first one.
+	anonymous := newClient(t)
+	got := []string{}
+	next := "/api/v1/repos/search?limit=2&uid=" + apiV1Itoa(owner.ID)
+	for pages := 0; next != ""; pages++ {
+		require.Less(t, pages, 3, "more pages than the repositories fill")
+
+		status, header, body := anonymous.doRaw(http.MethodGet, next, "", nil)
+		require.Equal(t, http.StatusOK, status, "response: %s", body)
+		var resp struct {
+			Data []apiV1Repo `json:"data"`
+		}
+		require.NoError(t, json.Unmarshal(body, &resp))
+		require.LessOrEqual(t, len(resp.Data), 2)
+		got = append(got, apiV1RepoNames(resp.Data)...)
+
+		next = ""
+		for _, link := range strings.Split(header.Get("Link"), ",") {
+			if target, ok := strings.CutSuffix(link, `>; rel="next"`); ok {
+				u, err := url.Parse(strings.TrimPrefix(target, "<"))
+				require.NoError(t, err)
+				next = u.RequestURI()
+			}
+		}
+	}
+	// Repositories are listed in the order they were created, each once.
+	assert.Equal(t, want, got, "pages of the search")
 }
 
 func TestAPIV1DeleteRepository(t *testing.T) {

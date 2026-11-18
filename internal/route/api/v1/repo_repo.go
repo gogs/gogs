@@ -17,6 +17,7 @@ func searchRepos(c *apiContext) {
 	opts := &database.SearchRepoOptions{
 		Keyword:  c.Query("q"),
 		OwnerID:  c.QueryInt64("uid"),
+		OrderBy:  "id ASC", // Unique, so walking the pages lists every repository once.
 		PageSize: toAllowedPageSize(c.QueryInt("limit")),
 		Page:     c.QueryInt("page"),
 	}
