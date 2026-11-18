@@ -132,8 +132,25 @@ func toIssueAttachments(attachments []*database.Attachment, content string) []is
 // updateLinkedAttachments attaches the new files to the issue or comment, and
 // deletes the attached files the content no longer links to. Files that were
 // never linked, e.g., attached before files were linked in place, are kept.
-func updateLinkedAttachments(ctx context.Context, issueID, commentID int64, attached []*database.Attachment, oldContent, newContent string, uuids []string) error {
-	if err := database.Handle.Attachments().Bind(ctx, issueID, commentID, uuids); err != nil {
+// The comment is the one with given commentID, or the issue itself when it is
+// 0.
+func updateLinkedAttachments(ctx context.Context, issueID, commentID int64, oldContent, newContent string, uuids []string) error {
+	// The content that links the files is already saved, so the files have to
+	// follow even when the client goes away.
+	ctx = context.WithoutCancel(ctx)
+
+	var attached []*database.Attachment
+	var err error
+	if commentID > 0 {
+		attached, err = database.Handle.Attachments().ListByCommentID(ctx, commentID)
+	} else {
+		attached, err = database.Handle.Attachments().ListByIssueID(ctx, issueID)
+	}
+	if err != nil {
+		return errors.Wrap(err, "list attached files")
+	}
+
+	if err = database.Handle.Attachments().Bind(ctx, issueID, commentID, uuids); err != nil {
 		return errors.Wrap(err, "attach files")
 	}
 	var unlinked []*database.Attachment
@@ -142,7 +159,7 @@ func updateLinkedAttachments(ctx context.Context, issueID, commentID int64, atta
 			unlinked = append(unlinked, a)
 		}
 	}
-	if err := database.Handle.Attachments().Delete(ctx, true, unlinked...); err != nil {
+	if err = database.Handle.Attachments().Delete(ctx, true, unlinked...); err != nil {
 		return errors.Wrap(err, "delete unlinked files")
 	}
 	return nil
@@ -447,11 +464,7 @@ func patchRepoIssue(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewe
 			logger.Error("Failed to change issue content", "issueID", issue.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "change content")
 		}
-		attached, err := database.Handle.Attachments().ListByIssueID(ctx, issue.ID)
-		if err == nil {
-			err = updateLinkedAttachments(ctx, issue.ID, 0, attached, oldContent, issue.Content, req.Attachments)
-		}
-		if err != nil {
+		if err = updateLinkedAttachments(ctx, issue.ID, 0, oldContent, issue.Content, req.Attachments); err != nil {
 			logger.Error("Failed to update issue attachments", "issueID", issue.ID, "error", err)
 			return http.StatusInternalServerError, nil, err
 		}
@@ -705,11 +718,7 @@ func patchRepoIssueComment(c flamego.Context, logger *logx.Logger, l i18n.Locale
 		logger.Error("Failed to update comment", "commentID", comment.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update comment")
 	}
-	attached, err := database.Handle.Attachments().ListByCommentID(ctx, comment.ID)
-	if err == nil {
-		err = updateLinkedAttachments(ctx, comment.IssueID, comment.ID, attached, oldContent, comment.Content, req.Attachments)
-	}
-	if err != nil {
+	if err = updateLinkedAttachments(ctx, comment.IssueID, comment.ID, oldContent, comment.Content, req.Attachments); err != nil {
 		logger.Error("Failed to update comment attachments", "commentID", comment.ID, "error", err)
 		return http.StatusInternalServerError, nil, err
 	}

@@ -438,7 +438,9 @@ func patchRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, vie
 		logger.Error("Failed to update release", "releaseID", rel.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update release")
 	}
-	if err = database.Handle.Attachments().Delete(c.Request().Context(), true, unlinked...); err != nil {
+	// The release is already saved without the files, so they have to go even
+	// when the client goes away.
+	if err = database.Handle.Attachments().Delete(context.WithoutCancel(c.Request().Context()), true, unlinked...); err != nil {
 		logger.Error("Failed to delete unlinked files", "releaseID", rel.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete unlinked files")
 	}
