@@ -83,6 +83,8 @@ type repoVisibilitySettings struct {
 }
 
 func TestRepoForcePrivate(t *testing.T) {
+	t.Parallel()
+
 	admin := seedUser(t, CreateUserOptions{Admin: true})
 	owner := seedUser(t, CreateUserOptions{})
 	ownerClient := repoVisibilityForcePrivateClient(t, owner)
@@ -203,10 +205,12 @@ func TestRepoForcePrivate(t *testing.T) {
 }
 
 func TestRepoForkVisibility(t *testing.T) {
+	t.Parallel()
+
 	owner := seedUser(t, CreateUserOptions{})
 	forker := seedUser(t, CreateUserOptions{})
-	ownerClient := repoSettingsSignedIn(t, owner)
-	forkerClient := repoSettingsSignedIn(t, forker)
+	ownerClient := authenticatedClient(t, owner)
+	forkerClient := authenticatedClient(t, forker)
 
 	t.Run("forks follow their base", func(t *testing.T) {
 		base := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
