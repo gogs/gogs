@@ -7,11 +7,13 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -488,6 +490,80 @@ func TestRepoCodeRawAndDiffs(t *testing.T) {
 		diff = repoCodeGet(t, anonymous, page+"/compare/"+second+"..."+third+".diff")
 		assert.NotContains(t, diff, "notes.txt")
 		assert.Contains(t, diff, "+ship it")
+	})
+
+	t.Run("root commit diff and patch", func(t *testing.T) {
+		var added strings.Builder
+		for line := range strings.Lines(repoCodeGit(t, repo, "show", first+":README.md") + "\n") {
+			added.WriteString("+" + line)
+		}
+
+		diff := repoCodeGet(t, anonymous, page+"/commit/"+first+".diff")
+		assert.True(t, strings.HasPrefix(diff, "commit "+first+"\n"), "diff: %s", diff)
+		assert.Contains(t, diff, "diff --git a/README.md b/README.md\nnew file mode 100644\n")
+		assert.Contains(t, diff, "--- /dev/null\n+++ b/README.md\n")
+		assert.Contains(t, diff, added.String())
+
+		patch := repoCodeGet(t, anonymous, page+"/commit/"+first+".patch")
+		assert.True(t, strings.HasPrefix(patch, "From "+first+" "), "patch: %s", patch)
+		assert.Contains(t, patch, "Subject: [PATCH] ")
+		assert.Contains(t, patch, "diff --git a/README.md b/README.md\nnew file mode 100644\n")
+		assert.Contains(t, patch, added.String())
+	})
+
+	t.Run("diff beyond the old parser limits", func(t *testing.T) {
+		// The commit is built with Git plumbing on its own branch, so main and
+		// the subtests above are unaffected.
+		gitInput := func(stdin string, args ...string) string {
+			t.Helper()
+			cmd := exec.Command("git", append([]string{"-C", database.RepoPath(repo.Owner, repo.Name), "-c", "user.name=Plumber", "-c", "user.email=plumber@example.com"}, args...)...)
+			cmd.Stdin = strings.NewReader(stdin)
+			out, err := cmd.Output()
+			require.NoError(t, err, "git %v", args)
+			return strings.TrimSuffix(string(out), "\n")
+		}
+
+		files := map[string]string{
+			"big.txt":  strings.Repeat("a line of a big file\n", 1500),
+			"long.txt": strings.Repeat("x", 3000) + "\n",
+		}
+		for i := range 120 {
+			files[fmt.Sprintf("file-%03d.txt", i)] = fmt.Sprintf("file %d\n", i)
+		}
+		dir := t.TempDir()
+		var paths, names []string
+		for name, content := range files {
+			path := filepath.Join(dir, name)
+			require.NoError(t, os.WriteFile(path, []byte(content), 0o644))
+			paths = append(paths, path)
+			names = append(names, name)
+		}
+		blobs := strings.Split(gitInput(strings.Join(paths, "\n")+"\n", "hash-object", "-w", "--stdin-paths"), "\n")
+		require.Len(t, blobs, len(names))
+
+		var entries strings.Builder
+		for entry := range strings.Lines(repoCodeGit(t, repo, "ls-tree", third) + "\n") {
+			if before, ok := strings.CutSuffix(entry, "\tnotes.txt\n"); ok {
+				entry = before + "\trenamed-notes.txt\n"
+			}
+			entries.WriteString(entry)
+		}
+		for i, name := range names {
+			entries.WriteString("100644 blob " + blobs[i] + "\t" + name + "\n")
+		}
+		tree := gitInput(entries.String(), "mktree")
+		large := gitInput("", "commit-tree", tree, "-p", third, "-m", "Exceed the old diff limits")
+		repoCodeGit(t, repo, "update-ref", "refs/heads/large", large)
+
+		want := repoCodeGit(t, repo, "diff", "--full-index", "-M", third, large) + "\n"
+		assert.Contains(t, want, "rename from notes.txt\nrename to renamed-notes.txt\n")
+		got := repoCodeGet(t, anonymous, page+"/commit/"+large+".diff")
+		assert.Equal(t, want, got)
+
+		want = repoCodeGit(t, repo, "diff", "--full-index", "-M", second, large) + "\n"
+		assert.Contains(t, want, "rename from notes.txt\nrename to renamed-notes.txt\n")
+		got = repoCodeGet(t, anonymous, page+"/compare/"+second+"..."+large+".diff")
+		assert.Equal(t, want, got)
 	})
 }
 
