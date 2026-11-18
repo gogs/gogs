@@ -57,10 +57,18 @@ func withRepoEditor(c flamego.Context, repoCtx *repoContext) {
 }
 
 // editableBranch reports whether files of the branch can be changed in the
-// browser: it exists and does not take changes only through pull requests.
+// browser: it exists and its protection lets the viewer push to it.
 func editableBranch(c flamego.Context, logger *logx.Logger, repoCtx *repoContext, gitRepo *git.Repository, branch string) bool {
 	ctx := c.Request().Context()
-	return branch != "" && gitRepo.HasBranch(ctx, branch) && !database.Handle.ProtectBranches().RequiresPullRequest(ctx, logger, repoCtx.Repo.ID, branch)
+	if branch == "" || !gitRepo.HasBranch(ctx, branch) {
+		return false
+	}
+	canPush, err := canPushTo(ctx, repoCtx, branch, false)
+	if err != nil {
+		logger.Error("Failed to check branch protection", "repoID", repoCtx.Repo.ID, "branch", branch, "error", err)
+		return false
+	}
+	return canPush
 }
 
 type repoEditorTarget struct {

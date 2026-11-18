@@ -202,7 +202,7 @@ func describePull(ctx context.Context, repoCtx *repoContext, issue *database.Iss
 	case pull.CanAutoMerge():
 		info.State = "mergeable"
 		if repoCtx.Viewer.CanWrite() {
-			info.ViewerCanMerge, err = canPushTo(ctx, repoCtx, pull.BaseBranch)
+			info.ViewerCanMerge, err = canPushTo(ctx, repoCtx, pull.BaseBranch, true)
 			if err != nil {
 				return nil, nil, nil, errors.Wrap(err, "check push allowlist")
 			}
@@ -301,22 +301,13 @@ type repoPullMergeRequest struct {
 	Body  string `json:"body"`
 }
 
-// canPushTo returns whether the push allowlist of the branch, when it is
-// protected and has one, lets in the viewer, who must already be a writer. A
-// merge pushes to its base branch, so it takes the same allowlist as the
-// pre-receive hook does for pushes.
-func canPushTo(ctx context.Context, repoCtx *repoContext, branch string) (bool, error) {
-	protectBranch, err := database.Handle.ProtectBranches().GetByName(ctx, repoCtx.Repo.ID, branch)
-	if err != nil {
-		if database.IsErrBranchNotExist(err) {
-			return true, nil
-		}
-		return false, errors.Wrap(err, "get protected branch")
-	}
-	if !protectBranch.Protected || !protectBranch.EnableAllowlist {
-		return true, nil
-	}
-	return database.Handle.ProtectBranches().IsUserInAllowlist(ctx, protectBranch, repoCtx.Viewer.ID())
+// canPushTo returns whether the protection of the branch lets the viewer, who
+// must already be a writer, update it, which a merge of a pull request does
+// when viaPullRequest is true. It takes the same rules as the pre-receive hook
+// does for pushes.
+func canPushTo(ctx context.Context, repoCtx *repoContext, branch string, viaPullRequest bool) (bool, error) {
+	denial, err := database.Handle.ProtectBranches().CheckPushByName(ctx, repoCtx.Repo.ID, branch, repoCtx.Viewer.ID(), viaPullRequest)
+	return denial == "", err
 }
 
 // postRepoPullMerge merges the pull request into its base branch.
@@ -325,7 +316,7 @@ func postRepoPullMerge(c flamego.Context, logger *logx.Logger, l i18n.Locale, vi
 	if issue.IsClosed || pull.HasMerged || !pull.CanAutoMerge() {
 		return http.StatusNotFound, nil, errors.New("pull request cannot be merged")
 	}
-	canPush, err := canPushTo(c.Request().Context(), repoCtx, pull.BaseBranch)
+	canPush, err := canPushTo(c.Request().Context(), repoCtx, pull.BaseBranch, true)
 	if err != nil {
 		logger.Error("Failed to check push allowlist", "pullID", pull.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "check push allowlist")

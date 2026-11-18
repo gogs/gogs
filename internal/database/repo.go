@@ -1514,6 +1514,12 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 		if err = repo.recalculateAccesses(sess); err != nil {
 			return errors.Newf("recalculateAccesses: %v", err)
 		}
+
+		// Repositories of users have no push allowlist to manage, and one left
+		// enabled would keep everyone from pushing to the branch.
+		if _, err = sess.Exec("UPDATE protect_branch SET enable_whitelist = ? WHERE repo_id = ?", false, repo.ID); err != nil {
+			return errors.Wrap(err, "disable push allowlists")
+		}
 	}
 
 	// Update repository count.

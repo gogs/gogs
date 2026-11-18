@@ -190,6 +190,20 @@ func putContents(c *apiContext, r putContentsRequest) {
 		oldBranch = r.Branch
 	}
 
+	denial, err := database.Handle.ProtectBranches().CheckPushByName(c.Request().Context(), c.Repo.Repository.ID, r.Branch, c.User.ID, false)
+	if err != nil {
+		c.Error(err, "check branch protection")
+		return
+	}
+	switch denial {
+	case database.PushDeniedNotInAllowlist:
+		c.ErrorStatus(http.StatusForbidden, errors.Newf("branch %q is protected and you are not in the push allowlist", r.Branch))
+		return
+	case database.PushDeniedRequiresPullRequest:
+		c.ErrorStatus(http.StatusForbidden, errors.Newf("branch %q is protected and commits must be merged through pull request", r.Branch))
+		return
+	}
+
 	// 🚨 SECURITY: Prevent path traversal.
 	treePath := pathx.Clean(c.Param("**"))
 

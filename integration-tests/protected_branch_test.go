@@ -180,3 +180,81 @@ func TestProtectedBranchAllowlist(t *testing.T) {
 		assert.Contains(t, out, "commits must be merged through pull request")
 	})
 }
+
+func TestProtectedBranchRules(t *testing.T) {
+	owner := seedUser(t, CreateUserOptions{})
+	listed := seedUser(t, CreateUserOptions{})
+	unlisted := seedUser(t, CreateUserOptions{})
+	org := orgSeed(t, owner.ID)
+	repo := seedRepository(t, org.ID, CreateRepositoryOptions{AutoInit: true})
+	protectedBranchTeam(t, org, repo, database.AccessModeWrite, listed.ID, unlisted.ID)
+
+	ownerClient := orgSignedIn(t, owner)
+	protect := func(t *testing.T, branch string, body map[string]any) {
+		t.Helper()
+		status, resp := ownerClient.do(http.MethodPut, issueAPIPath(repo, "settings", "branches", branch), body)
+		require.Equal(t, http.StatusNoContent, status, "response: %s", resp)
+	}
+	protect(t, "main", map[string]any{
+		"protected":          true,
+		"requirePullRequest": true,
+		"enableAllowlist":    true,
+		"allowlistUserIDs":   []int64{listed.ID},
+	})
+
+	t.Run("web editor and contents API follow the push rules", func(t *testing.T) {
+		editor := func(u *User) string {
+			var resp struct {
+				Editor string `json:"editor"`
+			}
+			orgSignedIn(t, u).doJSON(http.MethodGet, issueAPIPath(repo, "src", "main"), nil, http.StatusOK, &resp)
+			return resp.Editor
+		}
+		// People in the allowlist push past the pull request requirement, so
+		// they can also edit in the browser.
+		assert.Equal(t, "ok", editor(listed))
+		assert.Empty(t, editor(unlisted))
+
+		before := gitMainOnDisk(t, repo)
+		status, body := apiV1Client(t, unlisted).do(http.MethodPut, apiV1RepoPath(repo, "/contents/unlisted.txt"), map[string]any{
+			"message": "Add unlisted.txt",
+			"content": "dW5saXN0ZWQK",
+			"branch":  "main",
+		})
+		assert.Equal(t, http.StatusForbidden, status, "response: %s", body)
+		assert.Contains(t, string(body), "you are not in the push allowlist")
+		assert.Equal(t, before, gitMainOnDisk(t, repo))
+
+		apiV1PutFile(t, apiV1Client(t, listed), repo, "listed.txt", "listed\n", "main")
+	})
+
+	t.Run("tag with the name of a protected branch", func(t *testing.T) {
+		dir := gitClone(t, gitRemoteURL(t, repo, unlisted.Name, unlisted.Password))
+		gitRun(t, dir, "tag", "main")
+		out, err := gitCommand(dir, "push", "origin", "refs/tags/main").CombinedOutput()
+		require.NoError(t, err, "push tag: %s", out)
+
+		out, err = gitCommand(dir, "push", "origin", ":refs/tags/main").CombinedOutput()
+		require.NoError(t, err, "delete tag: %s", out)
+
+		// The branch stays protected.
+		pushOut, ok := protectedBranchPush(t, repo, unlisted)
+		assert.False(t, ok, "push succeeded: %s", pushOut)
+		assert.Contains(t, pushOut, "you are not in the push allowlist")
+	})
+
+	t.Run("branch created again under its protection", func(t *testing.T) {
+		dir := gitClone(t, gitRemoteURL(t, repo, listed.Name, listed.Password))
+		gitRun(t, dir, "push", "origin", "main:refs/heads/release")
+		protect(t, "release", map[string]any{"protected": true})
+		// Protection outlives a branch deleted outside of Gogs.
+		gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(repo.Owner, repo.Name), "branch", "-D", "release")
+
+		out, err := gitCommand(dir, "push", "origin", "main:refs/heads/release").CombinedOutput()
+		require.NoError(t, err, "push: %s", out)
+
+		out, err = gitCommand(dir, "push", "origin", ":refs/heads/release").CombinedOutput()
+		assert.Error(t, err, "delete succeeded: %s", out)
+		assert.Contains(t, string(out), "is protected from deletion")
+	})
+}

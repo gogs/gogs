@@ -163,7 +163,7 @@ type repoSrcResponse struct {
 	// Editor tells whether files can be changed in the browser: "ok", or why
 	// not: "not_branch" off a branch and "no_write" without write access. It
 	// is left out where the browser never changes files, e.g., in a mirror or
-	// a branch that only takes pull requests.
+	// a branch whose protection does not let the viewer push.
 	Editor        string                 `json:"editor,omitempty"`
 	CanUploadFile bool                   `json:"canUploadFile"`
 	PullRequest   *repoPullRequestTarget `json:"pullRequest,omitempty"`
