@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -597,6 +598,58 @@ func TestRepoCodeRawAndDiffs(t *testing.T) {
 		assert.NotContains(t, diff, "notes.txt")
 		assert.Contains(t, diff, "+ship it")
 	})
+}
+
+func TestRepoCodeRawEntryKinds(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	token, err := CreateAccessToken(t.Context(), owner.ID)
+	require.NoError(t, err)
+	dir := gitClone(t, gitRemoteURL(t, repo, token, ""))
+	require.NoError(t, os.Mkdir(filepath.Join(dir, "docs"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "docs", "a.txt"), []byte("hello\n"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "run.sh"), []byte("#!/bin/sh\necho run\n"), 0o755))
+	require.NoError(t, os.Symlink("docs/a.txt", filepath.Join(dir, "readme")))
+	require.NoError(t, os.Symlink("docs", filepath.Join(dir, "linked")))
+	gitRun(t, dir, "add", ".")
+	gitRun(t, dir, "update-index", "--add", "--cacheinfo", "160000,"+gitRun(t, dir, "rev-parse", "HEAD")+",sub")
+	gitRun(t, dir, "commit", "-m", "Add entries of every kind")
+	gitRun(t, dir, "push", "origin", "main")
+
+	anonymous := newClient(t)
+	api := apiV1Client(t, owner)
+	routes := map[string]func(path string) (int, http.Header, []byte){
+		"web": func(path string) (int, http.Header, []byte) {
+			return anonymous.doRaw(http.MethodGet, repoCodePage(repo)+"/raw/main/"+path, "", nil)
+		},
+		"API v1": func(path string) (int, http.Header, []byte) {
+			return api.doRaw(http.MethodGet, apiV1RepoPath(repo, "/raw/main/"+path), "", nil)
+		},
+	}
+	for name, get := range routes {
+		t.Run(name, func(t *testing.T) {
+			// The content of a symlink is its target path, which is served
+			// without following the link.
+			for path, want := range map[string]string{
+				"readme":     "docs/a.txt",
+				"linked":     "docs",
+				"docs/a.txt": "hello\n",
+				"run.sh":     "#!/bin/sh\necho run\n",
+			} {
+				status, header, body := get(path)
+				require.Equal(t, http.StatusOK, status, "path %q, response: %s", path, body)
+				assert.Equal(t, want, string(body), "path %q", path)
+				assert.Equal(t, "text/plain; charset=utf-8", header.Get("Content-Type"), "path %q", path)
+			}
+
+			for _, path := range []string{"docs", "sub", "nope", "linked/a.txt", "docs/a.txt/b", "sub/README.md"} {
+				status, _, body := get(path)
+				assert.Equal(t, http.StatusNotFound, status, "path %q, response: %s", path, body)
+			}
+		})
+	}
 }
 
 func TestRepoCodeEditor(t *testing.T) {
