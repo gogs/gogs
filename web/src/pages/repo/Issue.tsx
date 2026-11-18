@@ -547,7 +547,7 @@ export function ThreadReplies({
   const replies = includeRoot ? [root, ...(root.replies ?? [])] : (root.replies ?? []);
   if (!replies.length && !user && !actions) return null;
   return (
-    <div className={cn(!includeRoot && "border-t border-(--color-border)")}>
+    <div className={cn("rounded-b-[inherit]", !includeRoot && "border-t border-(--color-border)")}>
       {replies.map((reply) => (
         <ReplyItem
           key={reply.id}
@@ -560,7 +560,7 @@ export function ThreadReplies({
       {user || actions ? (
         <div
           className={cn(
-            "flex flex-wrap items-start gap-2 rounded-b-md bg-(--color-surface) px-3 py-2",
+            "flex flex-wrap items-start gap-2 rounded-b-[inherit] bg-(--color-surface) px-3 py-2",
             replies.length && "border-t border-(--color-border)",
           )}
         >

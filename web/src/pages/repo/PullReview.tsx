@@ -226,16 +226,18 @@ export function ReviewThread({
     <div
       id={anchor}
       className={cn(
-        "min-w-0 scroll-mt-4 rounded-md border border-(--color-border) bg-(--color-background)",
+        "glass min-w-0 scroll-mt-4 rounded-md border bg-(--color-background)",
         // The diff clips what is drawn outside the thread.
-        linked &&
-          (inDiff
-            ? "ring-2 ring-(--color-primary) ring-inset"
-            : "outline outline-(--color-primary) ring-2 ring-(--color-primary)/30"),
+        linked
+          ? cn(
+              "!border-(--color-primary)",
+              inDiff ? "ring-1 ring-(--color-primary) ring-inset" : "ring-2 ring-(--color-primary)/30",
+            )
+          : "border-(--color-border)",
       )}
     >
       {inDiff ? null : (
-        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 rounded-t-md border-b border-(--color-border) bg-(--color-surface) px-3 py-1.5 text-sm">
+        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 rounded-t-[inherit] border-b border-(--color-border) bg-(--color-surface) px-3 py-1.5 text-sm">
           <span className="min-w-0 font-mono text-xs wrap-anywhere">{thread.path}</span>
           <span className="flex items-center gap-2">
             {thread.outdated ? <Chip>{t("repo.pulls.review.outdated")}</Chip> : null}
@@ -280,7 +282,7 @@ export function ReviewThread({
       {open ? (
         <>
           {inDiff || !thread.diffHunk ? null : <DiffExcerpt thread={thread} />}
-          <div className={cn(thread.resolvedBy && "border-t border-(--color-border)")}>
+          <div className={cn("rounded-b-[inherit]", thread.resolvedBy && "border-t border-(--color-border)")}>
             <ThreadReplies
               issueRef={issueRef}
               root={root}
@@ -382,8 +384,8 @@ export function CodeCommentForm({
   const disabled = !content.trim() || uploads.uploading;
 
   return (
-    <form onSubmit={onSubmit} className="rounded-md border border-(--color-border) bg-(--color-background)">
-      <p className="rounded-t-md border-b border-(--color-border) bg-(--color-surface) px-3 py-1.5 text-sm text-(--color-muted-foreground)">
+    <form onSubmit={onSubmit} className="glass rounded-md border border-(--color-border) bg-(--color-background)">
+      <p className="rounded-t-[inherit] border-b border-(--color-border) bg-(--color-surface) px-3 py-1.5 text-sm text-(--color-muted-foreground)">
         {title}
       </p>
       <fieldset disabled={mutation.isPending} className="block p-3">
