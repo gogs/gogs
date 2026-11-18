@@ -9,10 +9,13 @@ import (
 	"net/http/cookiejar"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/dbx"
 )
 
 // client calls the server under test like a browser that keeps its cookies.
@@ -171,4 +174,84 @@ func seedRepository(t *testing.T, ownerID int64, opts CreateRepositoryOptions) *
 	repo, err := CreateRepository(t.Context(), logger, ownerID, opts)
 	require.NoError(t, err)
 	return repo
+}
+
+// goAwayWhileLocked sends a request with the body encoded as JSON, and goes
+// away while the request waits for the rows the lock query locks, e.g.,
+// "SELECT id FROM issue WHERE id = ? FOR UPDATE". It then releases the rows,
+// so that the server goes on with the request its client left.
+func (c *client) goAwayWhileLocked(lockQuery string, lockArg any, method, path string, body any) {
+	c.t.Helper()
+	c.whileLocked(lockQuery, lockArg, method, path, body, func(_ *gorm.DB, goAway context.CancelFunc) {
+		goAway()
+		// Leave the server time to notice that the client went away.
+		time.Sleep(500 * time.Millisecond)
+	})
+}
+
+// whileLocked sends a request with the body encoded as JSON while the rows the
+// lock query locks are locked. Once the request waits for them, it calls
+// whileWaiting with the locking transaction and the function that cancels the
+// request, then commits the transaction. It returns the response, or a zero
+// status when the request was cancelled.
+func (c *client) whileLocked(lockQuery string, lockArg any, method, path string, body any, whileWaiting func(tx *gorm.DB, cancel context.CancelFunc)) (int, []byte) {
+	c.t.Helper()
+
+	db, err := dbx.OpenDB(conf.Database, &gorm.Config{})
+	require.NoError(c.t, err)
+	sqlDB, err := db.DB()
+	require.NoError(c.t, err)
+	defer func() { _ = sqlDB.Close() }()
+
+	tx := db.Begin()
+	require.NoError(c.t, tx.Error)
+	defer tx.Rollback()
+	var lockerPID int64
+	require.NoError(c.t, tx.Raw("SELECT pg_backend_pid()").Scan(&lockerPID).Error)
+	var locked []int64
+	require.NoError(c.t, tx.Raw(lockQuery, lockArg).Scan(&locked).Error)
+	require.NotEmpty(c.t, locked, "nothing locked")
+
+	// Like the browser client, send no body rather than "null" for nil. The
+	// server notices that the client went away only after it reads the body
+	// to its end.
+	reqBody := io.Reader(http.NoBody)
+	if body != nil {
+		b, err := json.Marshal(body)
+		require.NoError(c.t, err)
+		reqBody = bytes.NewReader(b)
+	}
+	ctx, cancel := context.WithCancel(c.t.Context())
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, reqBody)
+	require.NoError(c.t, err)
+	req.Header.Set("Content-Type", "application/json")
+	for k, v := range c.header {
+		req.Header[k] = v
+	}
+	var status int
+	var respBody []byte
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		resp, err := c.http.Do(req)
+		if err != nil {
+			return
+		}
+		defer func() { _ = resp.Body.Close() }()
+		b, err := io.ReadAll(resp.Body)
+		if err == nil {
+			status, respBody = resp.StatusCode, b
+		}
+	}()
+
+	require.Eventually(c.t, func() bool {
+		var blocked int64
+		err := db.Raw("SELECT count(*) FROM pg_stat_activity WHERE ? = ANY(pg_blocking_pids(pid))", lockerPID).Scan(&blocked).Error
+		return err == nil && blocked > 0
+	}, 30*time.Second, 50*time.Millisecond, "request did not wait for the locked rows")
+	whileWaiting(tx, cancel)
+	require.NoError(c.t, tx.Commit().Error)
+	<-done
+	return status, respBody
 }
