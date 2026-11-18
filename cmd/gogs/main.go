@@ -48,6 +48,7 @@ func main() {
 			&importCommand,
 			&backupCommand,
 			&restoreCommand,
+			&healthcheckCommand,
 		},
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

@@ -31,78 +31,14 @@ var File *ini.File
 //
 // ⚠️ WARNING: Do not print anything in this function other than warnings.
 func Init(logger *logx.Logger, customConf string) error {
-	data, err := conf.Files.ReadFile("app.ini")
+	err := InitServer(customConf)
 	if err != nil {
-		return errors.Wrap(err, `read default "app.ini"`)
-	}
-
-	File, err = ini.Load(
-		data,
-		ini.IgnoreInlineComment(true),
-		ini.NameMapping(ini.SnakeCase),
-		ini.ValueMapping(os.ExpandEnv),
-	)
-	if err != nil {
-		return errors.Wrap(err, `parse "app.ini"`)
-	}
-
-	if customConf == "" {
-		customConf = filepath.Join(CustomDir(), "conf", "app.ini")
-	} else {
-		customConf, err = filepath.Abs(customConf)
-		if err != nil {
-			return errors.Wrap(err, "get absolute path")
-		}
-	}
-	CustomConf = customConf
-
-	if osx.IsFile(customConf) {
-		if err = File.Append(customConf); err != nil {
-			return errors.Wrapf(err, "append %q", customConf)
-		}
-	} else if !HookMode {
-		return errors.Newf("custom config %q not found: see https://gogs.io/getting-started/installation#configuration for first-time setup", customConf)
+		return err
 	}
 
 	if err = File.Section(ini.DefaultSection).MapTo(&App); err != nil {
 		return errors.Wrap(err, "mapping default section")
 	}
-
-	// ***************************
-	// ----- Server settings -----
-	// ***************************
-
-	if err = File.Section("server").MapTo(&Server); err != nil {
-		return errors.Wrap(err, "mapping [server] section")
-	}
-	Server.AppDataPath = ensureAbs(Server.AppDataPath)
-	if Server.CertFile != "" {
-		Server.CertFile = ensureAbs(Server.CertFile)
-	}
-	if Server.KeyFile != "" {
-		Server.KeyFile = ensureAbs(Server.KeyFile)
-	}
-
-	if !strings.HasSuffix(Server.ExternalURL, "/") {
-		Server.ExternalURL += "/"
-	}
-	Server.URL, err = url.Parse(Server.ExternalURL)
-	if err != nil {
-		return errors.Wrapf(err, "parse '[server] EXTERNAL_URL' %q", err)
-	}
-
-	// Subpath should start with '/' and end without '/', i.e., '/{subpath}'.
-	Server.Subpath = strings.TrimRight(Server.URL.Path, "/")
-	Server.SubpathDepth = strings.Count(Server.Subpath, "/")
-
-	unixSocketMode, err := strconv.ParseUint(Server.UnixSocketPermission, 8, 32)
-	if err != nil {
-		return errors.Wrapf(err, "parse '[server] UNIX_SOCKET_PERMISSION' %q", Server.UnixSocketPermission)
-	}
-	if unixSocketMode > 0o777 {
-		unixSocketMode = 0o666
-	}
-	Server.UnixSocketMode = os.FileMode(unixSocketMode)
 
 	// ************************
 	// ----- SSH settings -----
@@ -378,5 +314,80 @@ func Init(logger *logx.Logger, customConf string) error {
 	}
 
 	HasRobotsTxt = osx.IsFile(filepath.Join(CustomDir(), "robots.txt"))
+	return nil
+}
+
+// InitServer loads the configuration like Init but only initializes the
+// [server] settings, without checking the run user or creating directories.
+func InitServer(customConf string) error {
+	data, err := conf.Files.ReadFile("app.ini")
+	if err != nil {
+		return errors.Wrap(err, `read default "app.ini"`)
+	}
+
+	File, err = ini.Load(
+		data,
+		ini.IgnoreInlineComment(true),
+		ini.NameMapping(ini.SnakeCase),
+		ini.ValueMapping(os.ExpandEnv),
+	)
+	if err != nil {
+		return errors.Wrap(err, `parse "app.ini"`)
+	}
+
+	if customConf == "" {
+		customConf = filepath.Join(CustomDir(), "conf", "app.ini")
+	} else {
+		customConf, err = filepath.Abs(customConf)
+		if err != nil {
+			return errors.Wrap(err, "get absolute path")
+		}
+	}
+	CustomConf = customConf
+
+	if osx.IsFile(customConf) {
+		if err = File.Append(customConf); err != nil {
+			return errors.Wrapf(err, "append %q", customConf)
+		}
+	} else if !HookMode {
+		return errors.Newf("custom config %q not found: see https://gogs.io/getting-started/installation#configuration for first-time setup", customConf)
+	}
+
+	// ***************************
+	// ----- Server settings -----
+	// ***************************
+
+	if err = File.Section("server").MapTo(&Server); err != nil {
+		return errors.Wrap(err, "mapping [server] section")
+	}
+	Server.AppDataPath = ensureAbs(Server.AppDataPath)
+	if Server.CertFile != "" {
+		Server.CertFile = ensureAbs(Server.CertFile)
+	}
+	if Server.KeyFile != "" {
+		Server.KeyFile = ensureAbs(Server.KeyFile)
+	}
+
+	if !strings.HasSuffix(Server.ExternalURL, "/") {
+		Server.ExternalURL += "/"
+	}
+	Server.URL, err = url.Parse(Server.ExternalURL)
+	if err != nil {
+		return errors.Wrapf(err, "parse '[server] EXTERNAL_URL' %q", err)
+	}
+
+	// Subpath should start with '/' and end without '/', i.e., '/{subpath}'.
+	Server.Subpath = strings.TrimRight(Server.URL.Path, "/")
+	Server.SubpathDepth = strings.Count(Server.Subpath, "/")
+
+	unixSocketMode, err := strconv.ParseUint(Server.UnixSocketPermission, 8, 32)
+	if err != nil {
+		return errors.Wrapf(err, "parse '[server] UNIX_SOCKET_PERMISSION' %q", Server.UnixSocketPermission)
+	}
+	if unixSocketMode > 0o777 {
+		unixSocketMode = 0o666
+	}
+	Server.UnixSocketMode = os.FileMode(unixSocketMode)
+
 	return nil
 }
