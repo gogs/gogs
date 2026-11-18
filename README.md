@@ -21,13 +21,13 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 
 ## 📡 Overview
 
-- Please visit [our home page](https://gogs.io) for user documentation.
+- Please visit [our documentation site](https://gogs.io/docs) for user documentation.
 - Please refer to [CHANGELOG.md](CHANGELOG.md) for list of changes in each releases.
 - Want to try it before doing anything else? Do it [online](https://try.gogs.io/gogs/gogs)!
-- Having trouble? Help yourself with [troubleshooting](https://gogs.io/asking/troubleshooting) or ask questions in [Discussions](https://github.com/gogs/gogs/discussions).
-- Want to help with localization? Check out the [localization documentation](https://gogs.io/advancing/localization).
+- Having trouble? Help yourself with [troubleshooting](https://gogs.io/docs/asking/troubleshooting) or ask questions in [Discussions](https://github.com/gogs/gogs/discussions).
+- Want to help with localization? Check out the [localization documentation](https://gogs.io/docs/advancing/localization).
 - Ready to get hands dirty? Read our [contributing guide](.github/CONTRIBUTING.md).
-- Hmm... What about APIs? We have experimental support with [documentation](https://gogs.io/api-reference).
+- Hmm... What about APIs? We have experimental support with [documentation](https://gogs.io/docs/api-reference).
 
 ## 💌 Features
 
@@ -45,7 +45,7 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
   - Light and dark themes, a command palette\* and over [31 languages](https://crowdin.com/project/gogs).
 - Integrations
   - Webhooks for Slack, Discord, DingTalk and more, plus server-side Git hooks.
-  - A REST [API](https://gogs.io/api-reference), GitHub-compatible\*.
+  - A REST [API](https://gogs.io/docs/api-reference), GitHub-compatible\*.
 - Security
   - Sign in with LDAP, SMTP, PAM, reverse proxy, OAuth 2.0\*, OpenID Connect\* or SAML 2.0\*.
   - Two-factor authentication and passkeys\*.
@@ -71,7 +71,7 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 
 ## 📜 Installation
 
-Please follow [the guide in our documentation](https://gogs.io/getting-started/installation).
+Please follow [the guide in our documentation](https://gogs.io/docs/getting-started/installation).
 
 ## 🙇‍♂️ Acknowledgments
 

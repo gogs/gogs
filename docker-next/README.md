@@ -83,7 +83,7 @@ SECRET_KEY = ${GOGS_SECURITY_SECRET_KEY}
 > [!NOTE]
 > `${...}` references in any value expand from the container's environment at startup, which keeps secrets out of `app.ini` on disk. Pass them with `docker run -e GOGS_DATABASE_PASSWORD=… -e GOGS_SECURITY_SECRET_KEY=…` (or `--env-file secrets.env`). Plain literal values work too, e.g., `PASSWORD = hunter2`.
 
-See [configuration primer](https://gogs.io/fine-tuning/configuration-primer) to learn more about how the configuration system works.
+See [configuration primer](https://gogs.io/docs/fine-tuning/configuration-primer) to learn more about how the configuration system works.
 
 ### Git over SSH
 

@@ -61,7 +61,7 @@ export function Navbar() {
               <NavLink href="/explore/repos" spa>
                 {t("explore")}
               </NavLink>
-              <NavLink href="https://gogs.io" external>
+              <NavLink href="https://gogs.io/docs" external>
                 {t("help")}
               </NavLink>
             </>
@@ -166,7 +166,7 @@ export function Navbar() {
                       </MobileLink>
                     )}
                     <li className="my-1 h-px bg-(--color-border)" />
-                    <MobileLink href="https://gogs.io" external onClick={() => setOpen(false)}>
+                    <MobileLink href="https://gogs.io/docs" external onClick={() => setOpen(false)}>
                       {t("help")}
                     </MobileLink>
                     <li>
@@ -192,7 +192,7 @@ export function Navbar() {
                     <MobileLink href="/search" spa onClick={() => setOpen(false)}>
                       {t("repo.code_search")}
                     </MobileLink>
-                    <MobileLink href="https://gogs.io" external onClick={() => setOpen(false)}>
+                    <MobileLink href="https://gogs.io/docs" external onClick={() => setOpen(false)}>
                       {t("help")}
                     </MobileLink>
                     <li className="my-1 h-px bg-(--color-border)" />
@@ -282,7 +282,7 @@ function UserMenu({ user }: { user: UserInfo }) {
           {t("your_settings")}
         </MenuLink>
         <MenuLink
-          href="https://gogs.io"
+          href="https://gogs.io/docs"
           external
           icon={<HelpCircle className="size-4" aria-hidden />}
           onSelect={() => setOpen(false)}

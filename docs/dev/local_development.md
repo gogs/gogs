@@ -161,7 +161,7 @@ The following command builds the web frontend and a production binary with it em
 moon run gogs:build-prod
 ```
 
-Copy `.bin/gogs` to your server and follow the [installation guide](https://gogs.io/getting-started/installation#configuration) from there. Use `moon run gogs:prod` to run it locally.
+Copy `.bin/gogs` to your server and follow the [installation guide](https://gogs.io/docs/getting-started/installation#configuration) from there. Use `moon run gogs:prod` to run it locally.
 
 > [!NOTE]
 > A plain `go build` produces a development binary, which serves the web frontend from the Vite dev server that `moon run gogs:dev` starts, so it shows no pages on its own.

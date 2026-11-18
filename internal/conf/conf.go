@@ -62,7 +62,7 @@ func Init(logger *logx.Logger, customConf string) error {
 			return errors.Wrapf(err, "append %q", customConf)
 		}
 	} else if !HookMode {
-		return errors.Newf("custom config %q not found: see https://gogs.io/getting-started/installation#configuration for first-time setup", customConf)
+		return errors.Newf("custom config %q not found: see https://gogs.io/docs/getting-started/installation#configuration for first-time setup", customConf)
 	}
 
 	if err = File.Section(ini.DefaultSection).MapTo(&App); err != nil {

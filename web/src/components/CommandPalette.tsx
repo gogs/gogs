@@ -824,7 +824,7 @@ function PaletteBody({
         run: () => switchLanguage(lang.code),
       });
     }
-    out.push({ key: "g-help", label: t("help"), keywords: "docs", icon: HelpCircle, external: "https://gogs.io" });
+    out.push({ key: "g-help", label: t("help"), keywords: "docs", icon: HelpCircle, external: "https://gogs.io/docs" });
     if (user) {
       out.push({
         key: "g-sign-out",

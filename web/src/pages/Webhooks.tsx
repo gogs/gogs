@@ -42,7 +42,7 @@ const FIELD_ORDER = ["url", "channel"] as const;
 
 // WEBHOOK_TYPES are the kinds of webhooks, with their names and logos.
 const WEBHOOK_TYPES: Record<WebhookType, { name: string; logo: string; site: string }> = {
-  gogs: { name: "Gogs", logo: "/img/favicon.png", site: "https://gogs.io/advancing/webhooks" },
+  gogs: { name: "Gogs", logo: "/img/favicon.png", site: "https://gogs.io/docs/advancing/webhooks" },
   slack: { name: "Slack", logo: "/img/slack.png", site: "https://slack.com" },
   discord: { name: "Discord", logo: "/img/discord.png", site: "https://discordapp.com/" },
   dingtalk: { name: "Dingtalk", logo: "/img/dingtalk.png", site: "https://open-doc.dingtalk.com/" },

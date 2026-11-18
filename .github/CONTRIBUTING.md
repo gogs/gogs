@@ -29,7 +29,7 @@ In addition to the general guides with open source contributions, you would also
 
 ### Ask for help
 
-Before opening an issue, please make sure the problem you're encountering isn't already addressed on the [Troubleshooting](https://gogs.io/asking/troubleshooting) and [FAQs](https://gogs.io/asking/faq) pages.
+Before opening an issue, please make sure the problem you're encountering isn't already addressed on the [Troubleshooting](https://gogs.io/docs/asking/troubleshooting) and [FAQs](https://gogs.io/docs/asking/faq) pages.
 
 ### Create a new issue
 
@@ -65,7 +65,7 @@ Contributing to another codebase is not as simple as code changes, it is also ab
 
 ### Things we do not accept
 
-1. Updates to locale files (`conf/locale_xx-XX.ini`) other than the `conf/locale_en-US.ini`. Please read the [guide for localizing Gogs](https://gogs.io/advancing/localization).
+1. Updates to locale files (`conf/locale_xx-XX.ini`) other than the `conf/locale_en-US.ini`. Please read the [guide for localizing Gogs](https://gogs.io/docs/advancing/localization).
 1. Docker compose files.
 
 ### Coding guidelines
