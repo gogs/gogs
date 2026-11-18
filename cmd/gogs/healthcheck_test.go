@@ -34,10 +34,20 @@ func TestHealthcheckTarget(t *testing.T) {
 
 	plain := httptest.NewServer(handler)
 	t.Cleanup(plain.Close)
-	for _, addr := range []string{"", "0.0.0.0", "127.0.0.1", "localhost"} {
+	plainPort := strconv.Itoa(port(t, plain))
+	// Dialing a wildcard address reaches local listeners on Linux, so the URL is
+	// checked as well.
+	for addr, host := range map[string]string{
+		"":          "127.0.0.1",
+		"0.0.0.0":   "127.0.0.1",
+		"[::]":      "127.0.0.1",
+		"127.0.0.1": "127.0.0.1",
+		"localhost": "localhost",
+	} {
 		t.Run("http with address "+strconv.Quote(addr), func(t *testing.T) {
 			client, url, err := healthcheckTarget("http", addr, port(t, plain))
 			require.NoError(t, err)
+			assert.Equal(t, "http://"+host+":"+plainPort+"/healthcheck", url)
 			get(t, client, url)
 		})
 	}
@@ -52,11 +62,10 @@ func TestHealthcheckTarget(t *testing.T) {
 		s.Start()
 		t.Cleanup(s.Close)
 
-		for _, addr := range []string{"[::]", "[::1]"} {
-			client, url, err := healthcheckTarget("http", addr, port(t, s))
-			require.NoError(t, err)
-			get(t, client, url)
-		}
+		client, url, err := healthcheckTarget("http", "[::1]", port(t, s))
+		require.NoError(t, err)
+		assert.Equal(t, "http://[::1]:"+strconv.Itoa(port(t, s))+"/healthcheck", url)
+		get(t, client, url)
 	})
 
 	t.Run("https with a self-signed certificate", func(t *testing.T) {

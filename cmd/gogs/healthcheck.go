@@ -68,11 +68,10 @@ func healthcheckTarget(protocol, addr string, port int) (*http.Client, string, e
 		// The server listens at "HTTP_ADDR:HTTP_PORT", so an IPv6 address is
 		// set in brackets.
 		host := strings.TrimSuffix(strings.TrimPrefix(addr, "["), "]")
+		// A listener on the IPv6 wildcard address also accepts IPv4, and a
+		// container may have no IPv6 loopback address.
 		if ip := net.ParseIP(host); host == "" || (ip != nil && ip.IsUnspecified()) {
 			host = "127.0.0.1"
-			if ip != nil && ip.To4() == nil {
-				host = "::1"
-			}
 		}
 		if protocol == "https" {
 			// The certificate is issued for the external domain, not the listen address.

@@ -48,10 +48,12 @@ func TestHealthcheck(t *testing.T) {
 		assert.NoError(t, err, out)
 	})
 
-	t.Run("wildcard address reaches the server on loopback", func(t *testing.T) {
-		out, err := healthcheckRun(t, map[string]string{"HTTP_ADDR": "0.0.0.0"})
-		assert.NoError(t, err, out)
-	})
+	for _, addr := range []string{"0.0.0.0", "[::]"} {
+		t.Run("wildcard address "+addr+" reaches the server on IPv4 loopback", func(t *testing.T) {
+			out, err := healthcheckRun(t, map[string]string{"HTTP_ADDR": addr})
+			assert.NoError(t, err, out)
+		})
+	}
 
 	// The Docker image runs the health check as root while RUN_USER is "git".
 	t.Run("run user other than the current user", func(t *testing.T) {
