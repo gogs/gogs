@@ -386,3 +386,146 @@ func TestPullPrivateRepository(t *testing.T) {
 		}
 	}
 }
+
+// pullSetPulls turns the pull requests of the repository on or off as the
+// client.
+func pullSetPulls(t *testing.T, c *client, repo *Repository, enable bool) {
+	t.Helper()
+
+	status, body := c.do(http.MethodPut, repoSettingsAPIPath(repo, "/settings/advanced"), map[string]any{
+		"enableIssues":    true,
+		"enablePulls":     enable,
+		"pullsAllowMerge": true,
+	})
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+}
+
+// pullNewURL returns where the pull request list of the repository sends the
+// client to propose a pull request.
+func pullNewURL(t *testing.T, c *client, repo *Repository) string {
+	t.Helper()
+
+	var list struct {
+		NewPullRequestURL string `json:"newPullRequestURL"`
+	}
+	c.doJSON(http.MethodGet, issueAPIPath(repo, "pulls"), nil, http.StatusOK, &list)
+	return list.NewPullRequestURL
+}
+
+type pullCompareView struct {
+	State     string `json:"state"`
+	Head      string `json:"head"`
+	BaseRepos []struct {
+		Owner         string `json:"owner"`
+		Name          string `json:"name"`
+		DefaultBranch string `json:"defaultBranch"`
+	} `json:"baseRepos"`
+}
+
+// pullCompareFork compares the branches of the range in the repository as
+// the client, and returns the comparison with its base repositories written
+// as "<owner>/<name>@<default branch>".
+func pullCompareFork(t *testing.T, c *client, repo *Repository, rng string) (*pullCompareView, []string) {
+	t.Helper()
+
+	var v pullCompareView
+	c.doJSON(http.MethodGet, issueAPIPath(repo, "pulls", "new", rng), nil, http.StatusOK, &v)
+	bases := make([]string, 0, len(v.BaseRepos))
+	for _, b := range v.BaseRepos {
+		bases = append(bases, b.Owner+"/"+b.Name+"@"+b.DefaultBranch)
+	}
+	return &v, bases
+}
+
+func TestPullFork(t *testing.T) {
+	t.Parallel()
+
+	alice := seedUser(t, CreateUserOptions{})
+	bob := seedUser(t, CreateUserOptions{})
+	base := seedRepository(t, alice.ID, CreateRepositoryOptions{AutoInit: true})
+	aliceClient := authenticatedClient(t, alice)
+	bobClient := authenticatedClient(t, bob)
+
+	fork := repoVisibilityFork(t, bobClient, base, bob)
+	branch := UniqueName("feature-")
+	pullCommitToNewBranch(t, bobClient, fork, branch, "feature.txt", "Hello fork\n")
+	baseLink := "/" + base.Owner + "/" + base.Name
+	forkLink := "/" + fork.Owner + "/" + fork.Name
+	baseEntry := base.Owner + "/" + base.Name + "@main"
+	forkEntry := fork.Owner + "/" + fork.Name + "@main"
+
+	t.Run("fork without pull requests", func(t *testing.T) {
+		status, body := bobClient.do(http.MethodGet, issueAPIPath(fork, "pulls"), nil)
+		require.Equal(t, http.StatusNotFound, status, "forks start without pull requests, response: %s", body)
+
+		assert.Equal(t, baseLink+"/compare/main..."+bob.Name+":main", pullNewURL(t, bobClient, base))
+
+		v, bases := pullCompareFork(t, bobClient, base, "main..."+bob.Name+":"+branch)
+		assert.Equal(t, "ready", v.State)
+		assert.Equal(t, []string{baseEntry}, bases)
+	})
+
+	pullSetPulls(t, bobClient, fork, true)
+
+	t.Run("fork with pull requests", func(t *testing.T) {
+		assert.Equal(t, forkLink+"/compare/main...main", pullNewURL(t, bobClient, fork))
+		// Those who forked the base still propose from their fork.
+		assert.Equal(t, baseLink+"/compare/main..."+bob.Name+":main", pullNewURL(t, bobClient, base))
+		assert.Equal(t, baseLink+"/compare/main...main", pullNewURL(t, aliceClient, base))
+
+		// Both sides of the comparison offer the same repositories to merge
+		// into, the fork first.
+		v, bases := pullCompareFork(t, bobClient, fork, "main..."+branch)
+		assert.Equal(t, "ready", v.State)
+		assert.Equal(t, branch, v.Head)
+		assert.Equal(t, []string{forkEntry, baseEntry}, bases)
+		v, bases = pullCompareFork(t, bobClient, base, "main..."+bob.Name+":"+branch)
+		assert.Equal(t, "ready", v.State)
+		assert.Equal(t, bob.Name+":"+branch, v.Head)
+		assert.Equal(t, []string{forkEntry, baseEntry}, bases)
+
+		// A pull request within the fork does not count as one into the base
+		// from the same branch, and the other way around.
+		inFork := pullCreate(t, bobClient, fork, branch, "Within the fork")
+		v, _ = pullCompareFork(t, bobClient, base, "main..."+bob.Name+":"+branch)
+		assert.Equal(t, "ready", v.State)
+
+		var created struct {
+			Index int64 `json:"index"`
+		}
+		bobClient.doJSON(http.MethodPost, issueAPIPath(base, "pulls"), map[string]any{
+			"title": "Into the base",
+			"base":  "main",
+			"head":  bob.Name + ":" + branch,
+		}, http.StatusCreated, &created)
+		v, _ = pullCompareFork(t, bobClient, fork, "main..."+branch)
+		assert.Equal(t, "exists", v.State)
+
+		inForkPull, err := database.GetPullRequestByIssueID(issueFromDatabase(t, fork, inFork).ID)
+		require.NoError(t, err)
+		assert.Equal(t, fork.ID, inForkPull.HeadRepoID)
+		assert.Equal(t, fork.ID, inForkPull.BaseRepoID)
+		assert.Equal(t, pullMustGit(t, fork, "rev-parse", "refs/heads/"+branch), pullMustGit(t, fork, "rev-parse", "refs/pull/"+strconv.FormatInt(inFork, 10)+"/head"))
+		intoBasePull, err := database.GetPullRequestByIssueID(issueFromDatabase(t, base, created.Index).ID)
+		require.NoError(t, err)
+		assert.Equal(t, fork.ID, intoBasePull.HeadRepoID)
+		assert.Equal(t, base.ID, intoBasePull.BaseRepoID)
+		assert.Equal(t, bob.Name, intoBasePull.HeadUserName)
+	})
+
+	t.Run("base repository without pull requests is not offered", func(t *testing.T) {
+		pullSetPulls(t, aliceClient, base, false)
+		defer pullSetPulls(t, aliceClient, base, true)
+
+		_, bases := pullCompareFork(t, bobClient, fork, "main..."+branch)
+		assert.Equal(t, []string{forkEntry}, bases)
+	})
+
+	t.Run("base repository the viewer cannot read is not offered", func(t *testing.T) {
+		repoVisibilityPatch(t, aliceClient, base, true, false)
+		defer repoVisibilityPatch(t, aliceClient, base, false, false)
+
+		_, bases := pullCompareFork(t, bobClient, fork, "main..."+branch)
+		assert.Equal(t, []string{forkEntry}, bases)
+	})
+}
