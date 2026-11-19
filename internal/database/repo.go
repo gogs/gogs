@@ -1996,12 +1996,6 @@ func GetUserMirrorRepositories(userID int64) ([]*Repository, error) {
 	return repos, x.Where("owner_id = ?", userID).And("is_mirror = ?", true).Find(&repos)
 }
 
-// GetRecentUpdatedRepositories returns the list of repositories that are recently updated.
-func GetRecentUpdatedRepositories(page, pageSize int) (repos []*Repository, err error) {
-	return repos, x.Limit(pageSize, (page-1)*pageSize).
-		Where("is_private=?", false).Limit(pageSize).Desc("updated_unix").Find(&repos)
-}
-
 // GetUserAndCollaborativeRepositories returns list of repositories the user owns and collaborates.
 func GetUserAndCollaborativeRepositories(userID int64) ([]*Repository, error) {
 	repos := make([]*Repository, 0, 10)
