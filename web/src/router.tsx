@@ -1,6 +1,6 @@
 import { canUseWASM } from "@pierre/diffs";
 import { WorkerPoolContextProvider } from "@pierre/diffs/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   type AnyRoute,
   type ErrorComponentProps,
@@ -24,6 +24,7 @@ import { NoticeBanner } from "@/components/NoticeBanner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { webContext } from "@/lib/context";
 import { LoaderResponseError, authenticationRedirect } from "@/lib/loader-error";
+import { subUrl } from "@/lib/url";
 import { useUserInfo } from "@/lib/use-user-info";
 import type { UserInfo } from "@/lib/user-info";
 import { NotFound } from "@/pages/NotFound";
@@ -46,11 +47,11 @@ interface RouterContext {
 function RootLayout() {
   const user = useUserInfo();
   const inAdmin = useRouterState({ select: (state) => state.matches.some((match) => match.routeId === "/admin") });
-  // The admin console has its own navigation in place of the navbar and footer.
+  // The admin console has its own navigation in place of the navbar and
+  // footer, and shows the notice banner below its own bar.
   if (inAdmin && user?.isAdmin) {
     return (
       <div className="flex min-h-dvh flex-col">
-        <NoticeBanner />
         <Outlet />
       </div>
     );
@@ -174,7 +175,22 @@ declare module "@tanstack/react-router" {
   }
 }
 
-const queryClient = new QueryClient();
+// Cards of the admin console fetch outside the route loaders, so nothing
+// sends a viewer the web API turns away, e.g., after their session expired, to
+// where a loader would. Loading the page again asks the server who the viewer
+// is, and the admin route then has them sign in or shows that nothing is here.
+const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (err, query) => {
+      if (query.queryKey[0] !== "admin" || !(err instanceof LoaderResponseError)) return;
+      if (err.status === 403 && err.errorField === "account not activated") {
+        window.location.assign(subUrl("/user/activate"));
+      } else if (err.status === 401 || err.status === 403) {
+        window.location.reload();
+      }
+    },
+  }),
+});
 
 // Pierre's worker pool is a process-wide singleton (refcounted by mount). Hold
 // it at the app root so it stays warm across navigations: the diff renderer

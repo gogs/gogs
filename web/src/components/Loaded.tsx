@@ -1,6 +1,6 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import { CircleAlert, LoaderCircle, RefreshCw } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -24,11 +24,31 @@ export function Loaded<T>({
   children: (data: T) => ReactNode;
 }) {
   if (query.data !== undefined) return children(query.data);
-  if (query.isError) {
+  return <NotLoaded query={query} what={what} skeleton={skeleton} compact={compact} />;
+}
+
+// NotLoaded stands in for what a query has not answered yet: the skeleton, or
+// the error of a failed query with a way to try again.
+export function NotLoaded({
+  query,
+  what,
+  skeleton,
+  compact,
+}: {
+  query: UseQueryResult<unknown>;
+  what: string;
+  skeleton: ReactNode;
+  compact?: boolean;
+}) {
+  // A failed query drops its error while it is tried again. The last error
+  // stays up until then, so the Retry button keeps its place and the focus.
+  const [lastError, setLastError] = useState(query.error);
+  if (query.error && query.error !== lastError) setLastError(query.error);
+  if (lastError && query.errorUpdateCount > 0) {
     return (
       <LoadError
         what={what}
-        error={query.error}
+        error={lastError}
         retrying={query.isFetching}
         onRetry={() => void query.refetch()}
         compact={compact}
@@ -40,7 +60,7 @@ export function Loaded<T>({
 
 // LoadError tells that a part of the page failed to load, without taking the
 // rest of the page down. Without `compact`, it also shows the reason.
-export function LoadError({
+function LoadError({
   what,
   error,
   retrying,
@@ -63,7 +83,15 @@ export function LoadError({
           <p className="font-mono text-xs wrap-anywhere text-(--color-muted-foreground)">{error.message}</p>
         )}
       </div>
-      <Button type="button" variant="outline" size="sm" disabled={retrying} onClick={onRetry}>
+      {/* Not `disabled`, which takes the focus off the button. */}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        aria-disabled={retrying || undefined}
+        className={retrying ? "opacity-60" : undefined}
+        onClick={retrying ? undefined : onRetry}
+      >
         {retrying ? (
           <LoaderCircle className="size-3.5 animate-spin" aria-hidden />
         ) : (

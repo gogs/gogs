@@ -134,6 +134,18 @@ function AuthSourceForm({ source }: { source?: AdminAuthSourceDetail }) {
   const isLDAP = form.type === LDAP || form.type === DLDAP;
   const usesTLS = form.type === SMTP || (isLDAP && form.securityProtocol > 0);
 
+  // Another type starts its fields over, so that values of fields the form no
+  // longer shows are not saved with the source. The two kinds of LDAP differ
+  // only in how they bind.
+  const changeType = (type: number) => {
+    const { name, isActive, isDefault } = form;
+    setForm(
+      isLDAP && (type === LDAP || type === DLDAP)
+        ? { ...form, type, bindDN: "", bindPassword: "", userBase: "", userDN: "", attributesInBind: false }
+        : { ...NEW_SOURCE, type, name, isActive, isDefault },
+    );
+  };
+
   const textField = (key: TextKey, label: string, opts: { helper?: string; placeholder?: string } = {}) => (
     <FormField id={key} label={label} helper={opts.helper} error={fields[key]} invalid={key in fields}>
       <Input
@@ -175,7 +187,15 @@ function AuthSourceForm({ source }: { source?: AdminAuthSourceDetail }) {
       onSubmit={() => save.mutate()}
       actions={
         <>
-          <Button type="submit">{source ? t("admin.auths.update") : t("admin.auths.new")}</Button>
+          <Button type="submit">
+            {source
+              ? save.isPending
+                ? t("admin.auths.update_submitting")
+                : t("admin.auths.update")
+              : save.isPending
+                ? t("admin.auths.new_submitting")
+                : t("admin.auths.new")}
+          </Button>
           {source && !source.fromFile ? (
             <ConfirmButton
               label={t("admin.auths.delete")}
@@ -199,7 +219,7 @@ function AuthSourceForm({ source }: { source?: AdminAuthSourceDetail }) {
           </div>
         ) : (
           <FormField id="type" label={t("admin.auths.auth_type")} error={fields.type} invalid={"type" in fields}>
-            <Select value={String(form.type)} onValueChange={(v) => setForm({ ...form, type: Number(v) })}>
+            <Select value={String(form.type)} onValueChange={(v) => changeType(Number(v))}>
               <SelectTrigger id="type">
                 <SelectValue />
               </SelectTrigger>
@@ -225,7 +245,10 @@ function AuthSourceForm({ source }: { source?: AdminAuthSourceDetail }) {
             >
               <Select
                 value={String(form.securityProtocol)}
-                onValueChange={(v) => setForm({ ...form, securityProtocol: Number(v) })}
+                // An unencrypted connection has no certificate to skip the check of.
+                onValueChange={(v) =>
+                  setForm({ ...form, securityProtocol: Number(v), skipVerify: Number(v) > 0 && form.skipVerify })
+                }
               >
                 <SelectTrigger id="securityProtocol">
                   <SelectValue />

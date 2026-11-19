@@ -264,7 +264,8 @@ export function UserMenu({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
-        aria-label={t("user_profile_and_more")}
+        // The name starts with the text the button shows, for speech input.
+        aria-label={showName ? `${user.username}, ${t("user_profile_and_more")}` : t("user_profile_and_more")}
         className={cn(
           "inline-flex h-9 cursor-pointer items-center gap-1 rounded-md px-1 hover:bg-(--color-surface)",
           showName && "w-full gap-2 px-2",
