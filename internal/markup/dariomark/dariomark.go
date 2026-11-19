@@ -184,10 +184,18 @@ var parserPool = sync.Pool{New: func() any { return new(parser) }}
 // sanitized while rendering when Options.Sanitizer is set, and
 // Result.Sanitized is true. Other documents must be sanitized by the caller.
 func Render(src []byte, opts *Options) Result {
+	return render(nil, src, opts)
+}
+
+// render renders src as Render does, appending the HTML to dst.
+func render(dst, src []byte, opts *Options) Result {
 	if len(src) > maxSourceSize {
 		// The parser keeps offsets into the source as int32, so the source
 		// is shown as text, which needs no sanitizing.
-		out := appendEscapedText(append(make([]byte, 0, len(src)+len(src)/8+12), "<pre>"...), src)
+		if dst == nil {
+			dst = make([]byte, 0, len(src)+len(src)/8+12)
+		}
+		out := appendEscapedText(append(dst, "<pre>"...), src)
 		out = append(out, "</pre>\n"...)
 		return Result{HTML: out, Sanitized: opts.PostProcess && opts.Sanitizer != nil}
 	}
@@ -197,6 +205,7 @@ func Render(src []byte, opts *Options) Result {
 		parserPool.Put(p)
 	}()
 	p.opts = opts
+	p.dst = dst
 	if len(src) >= streamMinSize && !bytes.Contains(src, []byte("]:")) {
 		return p.renderStream(src)
 	}
@@ -263,12 +272,19 @@ func (p *parser) renderStream(src []byte) Result {
 
 // HTML renders the Markdown source to HTML without post-processing.
 func HTML(src []byte, opts *Options) []byte {
+	return AppendHTML(nil, src, opts)
+}
+
+// AppendHTML appends the HTML of the Markdown source to dst, as HTML renders
+// it, and returns the extended buffer. Callers that render many documents
+// can pass the buffer of the previous one, truncated, to reuse its memory.
+func AppendHTML(dst, src []byte, opts *Options) []byte {
 	if opts.PostProcess {
 		o := *opts
 		o.PostProcess = false
 		opts = &o
 	}
-	return Render(src, opts).HTML
+	return render(dst, src, opts).HTML
 }
 
 // AppendEscaped appends b to dst with "&", "<", ">" and '"' escaped.

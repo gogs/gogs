@@ -105,7 +105,7 @@ func (r *renderer) init(p *parser, opts *Options) {
 	r.p = p
 	r.opts = opts
 	// The output of the previous render belongs to its caller.
-	r.out = outBuf{}
+	r.out = outBuf{buf: p.dst}
 	r.html = htmlSink{out: &r.out, xhtml: opts.XHTML}
 	r.headings = r.headings[:0]
 	r.headingText = r.headingText[:0]

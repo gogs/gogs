@@ -16,6 +16,8 @@ type linkRef struct {
 type parser struct {
 	opts *Options
 	src  []byte
+	// dst is the buffer that the HTML is appended to, see AppendHTML.
+	dst  []byte
 	segs []seg
 	// buf holds bytes that are not slices of src, e.g., paragraph contents
 	// that span container prefixes.
@@ -99,7 +101,7 @@ func (p *parser) reset() {
 	if cap(p.buf) > maxPooledBytes {
 		p.buf = nil
 	}
-	p.src = nil
+	p.src, p.dst = nil, nil
 	p.crlf = p.crlf[:0]
 	if cap(p.crlf) > maxPooledBytes {
 		p.crlf = nil

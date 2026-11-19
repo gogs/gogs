@@ -308,6 +308,15 @@ func TestFootnoteRawHTMLBeforePlainParagraph(t *testing.T) {
 	assert.False(t, got.Sanitized)
 }
 
+func TestAppendHTML(t *testing.T) {
+	opts := &Options{Tables: true, TaskLists: true, Linkify: true, Footnotes: true}
+	buf := []byte("<!-- prefix -->")
+	for _, src := range []string{"# a\n\n- [x] b https://c.d\n\n| e |\n| - |\n| f |\n", "g[^1]\n\n[^1]: h\n", "`i` *j*"} {
+		buf = AppendHTML(buf[:15], []byte(src), opts)
+		assert.Equal(t, "<!-- prefix -->"+string(HTML([]byte(src), opts)), string(buf), src)
+	}
+}
+
 func TestTablePadding(t *testing.T) {
 	opts := &Options{Tables: true}
 	t.Run("short rows are filled", func(t *testing.T) {
