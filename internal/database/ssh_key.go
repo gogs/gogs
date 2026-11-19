@@ -293,7 +293,7 @@ func SSHNativeParsePublicKey(keyLine string) (string, int, error) {
 // It returns the actual public key line on success.
 func CheckPublicKeyString(logger *logx.Logger, content string) (_ string, err error) {
 	if conf.SSH.Disabled {
-		return "", errors.New("SSH is disabled")
+		return "", ErrSSHDisabled
 	}
 
 	content, err = parseKeyString(content)

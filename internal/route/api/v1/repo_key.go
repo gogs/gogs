@@ -50,6 +50,8 @@ func getDeployKey(c *apiContext) {
 
 func handleCheckKeyStringError(c *apiContext, err error) {
 	switch {
+	case errors.Is(err, database.ErrSSHDisabled):
+		c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("SSH is disabled on this site, so SSH keys cannot be added"))
 	case database.IsErrKeyCheckFailed(err):
 		c.Error(err, "check key content")
 	case database.IsErrKeyUnableVerify(err):

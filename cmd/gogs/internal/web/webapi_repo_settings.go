@@ -650,6 +650,9 @@ func postRepoDeployKey(c flamego.Context, logger *logx.Logger, l i18n.Locale, rc
 	if database.IsErrKeyCheckFailed(err) {
 		logger.Error("Failed to check deploy key", "repoID", rc.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "check deploy key")
+	} else if errors.Is(err, database.ErrSSHDisabled) {
+		msg := l.Tr("settings.ssh_disabled")
+		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
 	} else if err != nil {
 		msg := l.Tr("form.invalid_ssh_key", err.Error())
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil

@@ -31,6 +31,9 @@ func (err ErrKeyUnableVerify) Error() string {
 	return fmt.Sprintf("Unable to verify key content [result: %s]", err.Result)
 }
 
+// ErrSSHDisabled is returned when adding a public key while SSH is disabled.
+var ErrSSHDisabled = errors.New("SSH is disabled")
+
 // ErrKeyCheckFailed is returned when the server fails to check a public key,
 // e.g., because it cannot run ssh-keygen, rather than because the key is
 // invalid. Its details are for the server log, not for the user.
