@@ -37,16 +37,37 @@ var tokenizerInputs = []string{
 	"<p\tid=a\fclass=b\n>",
 }
 
+// prefixedTokenizerInputs are checked with every prefix, so that the input
+// ends in each state of the tokenizer, e.g., of script data.
+var prefixedTokenizerInputs = []string{
+	`<script>a<b<!c<!-d<!--e-f-<g--h--<i--->j<!--<k</l</scriptx<script>m-n-<o--p--<q---r--->s<t</u</script>v-->w</script >x`,
+	`<script><!--<SCRIPT/>-</script>a</script>b`,
+	`<script><!--<1-->a</script>b`,
+	`<textarea>a<b</c</textareax</TEXTAREA b>c`,
+	`<title>a</title/>b`,
+	`<!--a--!b--!>c<!--d-!>e-->f<!>g<!x>`,
+	`<a b = "c" d='e' f=g h=/ i/>`,
+	`a&#1;b&#x1;c&d;`,
+}
+
 // TestHTMLTokenizer checks that htmlTokenizer splits HTML into the tokens of
 // html.Tokenizer, and that appendDecoded decodes them the same.
 func TestHTMLTokenizer(t *testing.T) {
 	for _, s := range tokenizerInputs {
 		checkTokenizer(t, []byte(s))
 	}
+	for _, s := range prefixedTokenizerInputs {
+		for i := 0; i <= len(s); i++ {
+			checkTokenizer(t, []byte(s[:i]))
+		}
+	}
 }
 
 func FuzzHTMLTokenizer(f *testing.F) {
 	for _, s := range tokenizerInputs {
+		f.Add(s)
+	}
+	for _, s := range prefixedTokenizerInputs {
 		f.Add(s)
 	}
 	f.Fuzz(func(t *testing.T, s string) {
