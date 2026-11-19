@@ -247,6 +247,13 @@ func (r *renderer) plainLeaf(n *node) bool {
 	if opts.Linkify {
 		special = &plainSpecialLinkify
 	}
+	if opts.RelativeLinks || opts.TextAutoLinksInRawAnchors ||
+		opts.TaskLists && len(src) > 0 && src[0] == '[' && n.parent != nil && n.parent.kind == kindListItem {
+		// See parser.walkLinks and inlineParser.taskCheckbox.
+		if bytes.IndexByte(src, '[') >= 0 {
+			return false
+		}
+	}
 	r.p.footnoteDefsBefore(n)
 	out := &r.out
 	start := len(out.buf)
@@ -328,6 +335,25 @@ func (r *renderer) plainLeaf(n *node) bool {
 			out.WriteString("</code>")
 			i = closer + k
 			text = i
+		case '[':
+			// See inlineParser.closeBracket. Only inline links whose text
+			// is plain and whose destination needs no unescaping are handled.
+			n := plainLink(src, i, opts)
+			if n == 0 {
+				out.buf = out.buf[:start]
+				return false
+			}
+			close := i + 1 + bytes.IndexByte(src[i+1:], ']')
+			writeEscaped(out, src[text:i])
+			bufLen := len(r.p.buf)
+			out.WriteString(`<a href="`)
+			writeEscaped(out, r.urlEscape(src[close+2:i+n-1]))
+			out.WriteString(`">`)
+			r.p.buf = r.p.buf[:bufLen]
+			writeEscaped(out, src[i+1:close])
+			out.WriteString("</a>")
+			i += n
+			text = i
 		case '*':
 			// Pairs of runs of one or two asterisks, with nothing else
 			// between them that could be a delimiter, are emphasis and strong
@@ -376,6 +402,44 @@ func (r *renderer) plainLeaf(n *node) bool {
 	}
 	writeEscaped(out, src[text:])
 	return true
+}
+
+// plainLink returns the length of the inline link at src[i], which is "[",
+// if plainLeaf can render it, or 0. Its text must contain no character that
+// plainLeaf handles and no autolink, and its destination must not be empty
+// and must contain no whitespace, parentheses, "<", "\\" or "&", so that it
+// has no title and needs no unescaping.
+func plainLink(src []byte, i int, opts *Options) int {
+	if i > 0 && src[i-1] == '!' {
+		return 0
+	}
+	j := i + 1
+	for ; j < len(src) && src[j] != ']'; j++ {
+		if plainSpecial[src[j]] {
+			return 0
+		}
+	}
+	if j >= len(src) || j+1 >= len(src) || src[j+1] != '(' {
+		return 0
+	}
+	label := src[i+1 : j]
+	if len(label) > 0 && label[0] == '^' {
+		return 0
+	}
+	if opts.Linkify && (bytes.IndexByte(label, '@') >= 0 || bytes.Contains(label, []byte("www.")) || bytes.Contains(label, []byte("://"))) {
+		return 0
+	}
+	k := j + 2
+	for ; k < len(src) && src[k] != ')'; k++ {
+		switch c := src[k]; {
+		case c <= ' ', c == '(', c == '<', c == '\\', c == '&', c == 0x7f:
+			return 0
+		}
+	}
+	if k >= len(src) || k == j+2 {
+		return 0
+	}
+	return k + 1 - i
 }
 
 var emTags = [2]string{"em", "strong"}
