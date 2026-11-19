@@ -222,9 +222,15 @@ func SSHKeygenParsePublicKey(key, keyTestPath, keygenPath string) (string, int, 
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) && exitErr.ExitCode() > 0 && exitErr.ExitCode() != 126 && exitErr.ExitCode() != 127 {
 			// The message comes last, on stdout before OpenSSH 6.9, and starts with
-			// the path of the temporary file, which users must not see.
+			// the path of the temporary file, which users must not see. The path is
+			// cut at the file name, because ssh-keygen on Windows may spell the
+			// directories differently, e.g., in their short names.
 			lines := strings.Split(strings.TrimSpace(stdout+stderr), "\n")
-			return "", 0, ErrKeyUnableVerify{strings.TrimSpace(strings.ReplaceAll(lines[len(lines)-1], tmpName, "key"))}
+			msg := "key rejected by ssh-keygen"
+			if line, base := lines[len(lines)-1], filepath.Base(tmpName); strings.Contains(line, base) {
+				msg = "key" + line[strings.LastIndex(line, base)+len(base):]
+			}
+			return "", 0, ErrKeyUnableVerify{strings.TrimSpace(msg)}
 		}
 		return "", 0, ErrKeyCheckFailed{errors.Newf("fail to parse public key: %s - %s", err, stderr)}
 	}
