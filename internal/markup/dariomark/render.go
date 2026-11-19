@@ -244,7 +244,7 @@ func shiftSegs(n *node, k int32) {
 // parser and renderer write for the same contents.
 func (r *renderer) plainLeaf(n *node) bool {
 	opts := r.opts
-	if r.s.san != nil || n.parsed || opts.Typographer.Enabled {
+	if n.parsed || opts.Typographer.Enabled {
 		return false
 	}
 	src := n.text
@@ -411,7 +411,99 @@ func (r *renderer) plainLeaf(n *node) bool {
 		return false
 	}
 	out.Write(src[text:])
+	if san := r.s.san; san != nil {
+		// The HTML written above only showed that the contents are plain.
+		out.buf = out.buf[:start]
+		r.plainLeafSanitized(src, inCell, san)
+	}
 	return true
+}
+
+// plainLeafSanitized passes the contents src of a leaf, which plainLeaf
+// found plain, to the sanitizing sink s with the calls that the inline
+// renderer would make.
+func (r *renderer) plainLeafSanitized(src []byte, inCell bool, s *sanitizeSink) {
+	opts := r.opts
+	text := 0
+	var noCloser uint64
+	open := 0
+	for i := 0; i < len(src); {
+		switch src[i] {
+		case '\n':
+			end := i
+			if end > text && src[end-1] == '\r' {
+				end--
+			}
+			spaces := 0
+			for end-spaces > text && src[end-spaces-1] == ' ' {
+				spaces++
+			}
+			hard := spaces >= 2
+			for end-spaces > text && (src[end-spaces-1] == ' ' || src[end-spaces-1] == '\t') {
+				spaces++
+			}
+			s.text(src[text : end-spaces])
+			if hard || opts.HardWraps {
+				s.start("br")
+			}
+			s.text(newline)
+			i++
+			for i < len(src) && (src[i] == ' ' || src[i] == '\t') {
+				i++
+			}
+			text = i
+		case '`':
+			end := i + 1
+			for end < len(src) && src[end] == '`' {
+				end++
+			}
+			k := end - i
+			closer := -1
+			if noCloser&(1<<k) == 0 {
+				closer = scanBackticks(src, k, end)
+			}
+			if closer < 0 {
+				noCloser |= 1 << k
+				i = end
+				continue
+			}
+			s.text(src[text:i])
+			s.start("code")
+			s.text(r.codeContent(src[end:closer], inCell))
+			s.end("code")
+			i = closer + k
+			text = i
+		case '[':
+			n := plainLink(src, i, opts)
+			close := i + 1 + bytes.IndexByte(src[i+1:], ']')
+			s.text(src[text:i])
+			bufLen := len(r.p.buf)
+			s.start("a", attr{"href", r.urlEscape(src[close+2 : i+n-1]), false})
+			r.p.buf = r.p.buf[:bufLen]
+			s.text(src[i+1 : close])
+			s.end("a")
+			i += n
+			text = i
+		case '*':
+			end := i + 1
+			for end < len(src) && src[end] == '*' {
+				end++
+			}
+			s.text(src[text:i])
+			if open == 0 {
+				open = end - i
+				s.start(emTags[open-1])
+			} else {
+				s.end(emTags[open-1])
+				open = 0
+			}
+			i = end
+			text = i
+		default:
+			i++
+		}
+	}
+	s.text(src[text:])
 }
 
 // plainLink returns the length of the inline link at src[i], which is "[",
