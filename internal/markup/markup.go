@@ -251,11 +251,6 @@ func findCrossReferences(text []byte, skip []linkSpan) []linkSpan {
 	return mergeSpans(skip, spans)
 }
 
-// RenderCrossReferenceIssueIndexPattern renders issue indexes from other repositories to corresponding links.
-func RenderCrossReferenceIssueIndexPattern(rawBytes []byte, _ string, _ map[string]string) []byte {
-	return replaceSpans(rawBytes, findCrossReferences(rawBytes, nil))
-}
-
 // findSha1s returns the spans of skip merged with the commit IDs in text that
 // do not overlap them.
 func findSha1s(text []byte, metas map[string]string, skip []linkSpan) []linkSpan {
@@ -271,13 +266,6 @@ func findSha1s(text []byte, metas map[string]string, skip []linkSpan) []linkSpan
 		spans = append(spans, linkSpan{Start: loc[0], End: loc[1], Href: href, Text: m[:min(len(m), 10)], Code: true})
 	}
 	return mergeSpans(skip, spans)
-}
-
-// RenderSha1CurrentPattern renders commit IDs to corresponding links, assuming
-// they are in the same repository, i.e., metas["repoLink"]. Hex strings of 64 characters
-// are only rendered when metas["objectFormat"] is "sha256".
-func RenderSha1CurrentPattern(rawBytes []byte, metas map[string]string) []byte {
-	return replaceSpans(rawBytes, findSha1s(rawBytes, metas, nil))
 }
 
 // RenderSpecialLink renders mentions, indexes and commit IDs to corresponding links.

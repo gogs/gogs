@@ -23,14 +23,6 @@ import (
 	"gogs.io/gogs/internal/tool"
 )
 
-// DashboardURLPath returns the URL path to the user or organization dashboard.
-func DashboardURLPath(name string, isOrganization bool) string {
-	if isOrganization {
-		return conf.Server.Subpath + "/org/" + name + "/dashboard/"
-	}
-	return conf.Server.Subpath + "/"
-}
-
 // codePurpose is signed into every time-limited user code so that a code issued
 // for one purpose cannot be redeemed for another.
 type codePurpose string

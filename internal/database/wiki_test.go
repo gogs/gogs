@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"gogs.io/gogs/internal/conf"
 )
@@ -47,28 +46,6 @@ func TestRepoPathAndWikiPath(t *testing.T) {
 		t.Run(test.repoName, func(t *testing.T) {
 			assert.Equal(t, test.wantRepo, RepoPath("alice", test.repoName))
 			assert.Equal(t, test.wantWiki, WikiPath("alice", test.repoName))
-		})
-	}
-}
-
-func TestToWikiPageName(t *testing.T) {
-	tests := []struct {
-		input string
-		want  string
-	}{
-		{input: "Home", want: "Home"},
-		{input: "../../../../tmp/target_file", want: "tmp target_file"},
-		{input: "..\\..\\..\\..\\tmp\\target_file", want: "tmp target_file"},
-		{input: "A/B", want: "A B"},
-		{input: "../pwn", want: "pwn"},
-		{input: "Getting+started", want: "Getting started"},
-		{input: "C%2B%2B", want: "C++"},
-	}
-
-	for _, test := range tests {
-		t.Run(test.input, func(t *testing.T) {
-			got := ToWikiPageName(test.input)
-			require.Equal(t, test.want, got)
 		})
 	}
 }

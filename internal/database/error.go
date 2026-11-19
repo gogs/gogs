@@ -153,11 +153,6 @@ type ErrUpdateTaskNotExist struct {
 	UUID string
 }
 
-func IsErrUpdateTaskNotExist(err error) bool {
-	_, ok := err.(ErrUpdateTaskNotExist)
-	return ok
-}
-
 func (err ErrUpdateTaskNotExist) Error() string {
 	return fmt.Sprintf("update task does not exist [uuid: %s]", err.UUID)
 }

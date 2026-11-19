@@ -74,10 +74,6 @@ type ErrTwoFactorNotFound struct {
 	args errx.Args
 }
 
-func IsErrTwoFactorNotFound(err error) bool {
-	return errors.As(err, &ErrTwoFactorNotFound{})
-}
-
 func (err ErrTwoFactorNotFound) Error() string {
 	return fmt.Sprintf("2FA does not found: %v", err.args)
 }

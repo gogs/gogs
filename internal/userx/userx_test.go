@@ -14,20 +14,6 @@ import (
 	"gogs.io/gogs/public"
 )
 
-func TestDashboardURLPath(t *testing.T) {
-	t.Run("user", func(t *testing.T) {
-		got := DashboardURLPath("alice", false)
-		want := "/"
-		assert.Equal(t, want, got)
-	})
-
-	t.Run("organization", func(t *testing.T) {
-		got := DashboardURLPath("acme", true)
-		want := "/org/acme/dashboard/"
-		assert.Equal(t, want, got)
-	})
-}
-
 func TestTimeLimitedUserCode(t *testing.T) {
 	conf.SetMockAuth(t,
 		conf.AuthOpts{

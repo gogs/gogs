@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"net/url"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -25,17 +24,6 @@ func WikiBranch(ctx context.Context, repoPath string) string {
 		return "main"
 	}
 	return "master"
-}
-
-// ToWikiPageURL formats a string to corresponding wiki URL name.
-func ToWikiPageURL(name string) string {
-	return url.QueryEscape(name)
-}
-
-// ToWikiPageName formats a URL back to corresponding wiki page name.
-func ToWikiPageName(urlString string) string {
-	name, _ := url.QueryUnescape(urlString)
-	return CleanWikiPageName(name)
 }
 
 // CleanWikiPageName returns the name of the file of a wiki page without its
