@@ -132,8 +132,6 @@ func milestonesGetByID(t *testing.T, ctx context.Context, s *MilestonesStore) {
 }
 
 func milestonesList(t *testing.T, ctx context.Context, s *MilestonesStore) {
-	conf.SetMockUI(t, conf.UIOpts{IssuePagingNum: 2})
-
 	open1 := newTestMilestone(t, ctx, s, 1, "open1", false)
 	closed1 := newTestMilestone(t, ctx, s, 1, "closed1", true)
 	open2 := newTestMilestone(t, ctx, s, 1, "open2", false)

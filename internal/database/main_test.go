@@ -35,6 +35,15 @@ func TestMain(m *testing.M) {
 		conf.UseSQLite3 = true
 	}
 
+	// Tests run in parallel and code such as Markdown rendering reads conf.UI
+	// without holding the mock lock, so tests set it here instead of mocking it.
+	conf.UI = conf.UIOpts{
+		IssuePagingNum: 2,
+		User: conf.UIUserOpts{
+			NewsFeedPagingNum: 20,
+		},
+	}
+
 	os.Exit(m.Run())
 }
 

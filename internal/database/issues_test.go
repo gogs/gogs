@@ -252,8 +252,6 @@ func issuesGet(t *testing.T, ctx context.Context, s *IssuesStore) {
 }
 
 func issuesList(t *testing.T, ctx context.Context, s *IssuesStore) {
-	conf.SetMockUI(t, conf.UIOpts{IssuePagingNum: 2})
-
 	repo := newTestIssueRepo(t, ctx, s.db, "is-list")
 	other := newTestIssueRepo(t, ctx, s.db, "is-list-other")
 	bug := newTestLabel(t, ctx, newLabelsStore(s.db), repo.ID, "bug")

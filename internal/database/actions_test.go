@@ -149,11 +149,6 @@ func actionsCommitRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
 	// NOTE: We set a noop mock here to avoid data race with other tests that write
 	// to the mock repository because this function holds a lock.
 	conf.SetMockRepository(t, conf.RepositoryOpts{})
-	conf.SetMockUI(t, conf.UIOpts{
-		User: conf.UIUserOpts{
-			NewsFeedPagingNum: 20,
-		},
-	})
 
 	t.Run("new commit", func(t *testing.T) {
 		t.Cleanup(func() {
@@ -338,14 +333,6 @@ func actionsListByOrganization(t *testing.T, ctx context.Context, s *ActionsStor
 		return
 	}
 
-	conf.SetMockUI(t,
-		conf.UIOpts{
-			User: conf.UIUserOpts{
-				NewsFeedPagingNum: 20,
-			},
-		},
-	)
-
 	tests := []struct {
 		name    string
 		orgID   int64
@@ -383,14 +370,6 @@ func actionsListByUser(t *testing.T, ctx context.Context, s *ActionsStore) {
 		t.Skip("Skipping testing with not using PostgreSQL")
 		return
 	}
-
-	conf.SetMockUI(t,
-		conf.UIOpts{
-			User: conf.UIUserOpts{
-				NewsFeedPagingNum: 20,
-			},
-		},
-	)
 
 	tests := []struct {
 		name      string
@@ -444,12 +423,6 @@ func actionsListByUser(t *testing.T, ctx context.Context, s *ActionsStore) {
 }
 
 func actionsMergePullRequest(t *testing.T, ctx context.Context, s *ActionsStore) {
-	conf.SetMockUI(t, conf.UIOpts{
-		User: conf.UIUserOpts{
-			NewsFeedPagingNum: 20,
-		},
-	})
-
 	alice, err := newUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	repo, err := newReposStore(s.db).Create(ctx,
@@ -495,12 +468,6 @@ func actionsMergePullRequest(t *testing.T, ctx context.Context, s *ActionsStore)
 }
 
 func actionsMirrorSyncCreate(t *testing.T, ctx context.Context, s *ActionsStore) {
-	conf.SetMockUI(t, conf.UIOpts{
-		User: conf.UIUserOpts{
-			NewsFeedPagingNum: 20,
-		},
-	})
-
 	alice, err := newUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	repo, err := newReposStore(s.db).Create(ctx,
@@ -542,12 +509,6 @@ func actionsMirrorSyncCreate(t *testing.T, ctx context.Context, s *ActionsStore)
 }
 
 func actionsMirrorSyncDelete(t *testing.T, ctx context.Context, s *ActionsStore) {
-	conf.SetMockUI(t, conf.UIOpts{
-		User: conf.UIUserOpts{
-			NewsFeedPagingNum: 20,
-		},
-	})
-
 	alice, err := newUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	repo, err := newReposStore(s.db).Create(ctx,
@@ -596,11 +557,6 @@ func actionsMirrorSyncPush(t *testing.T, ctx context.Context, s *ActionsStore) {
 	// NOTE: We set a noop mock here to avoid data race with other tests that writes
 	// to the mock repository because this function holds a lock.
 	conf.SetMockRepository(t, conf.RepositoryOpts{})
-	conf.SetMockUI(t, conf.UIOpts{
-		User: conf.UIUserOpts{
-			NewsFeedPagingNum: 20,
-		},
-	})
 
 	alice, err := newUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
@@ -667,12 +623,6 @@ func actionsMirrorSyncPush(t *testing.T, ctx context.Context, s *ActionsStore) {
 }
 
 func actionsNewRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
-	conf.SetMockUI(t, conf.UIOpts{
-		User: conf.UIUserOpts{
-			NewsFeedPagingNum: 20,
-		},
-	})
-
 	alice, err := newUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	repo, err := newReposStore(s.db).Create(ctx,
@@ -752,11 +702,6 @@ func actionsPushTag(t *testing.T, ctx context.Context, s *ActionsStore) {
 	// to the mock server because this function holds a lock.
 	conf.SetMockServer(t, conf.ServerOpts{})
 	conf.SetMockSSH(t, conf.SSHOpts{})
-	conf.SetMockUI(t, conf.UIOpts{
-		User: conf.UIUserOpts{
-			NewsFeedPagingNum: 20,
-		},
-	})
 
 	alice, err := newUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
@@ -850,12 +795,6 @@ func actionsPushTag(t *testing.T, ctx context.Context, s *ActionsStore) {
 }
 
 func actionsRenameRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
-	conf.SetMockUI(t, conf.UIOpts{
-		User: conf.UIUserOpts{
-			NewsFeedPagingNum: 20,
-		},
-	})
-
 	alice, err := newUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	repo, err := newReposStore(s.db).Create(ctx,
@@ -893,12 +832,6 @@ func actionsRenameRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
 }
 
 func actionsTransferRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
-	conf.SetMockUI(t, conf.UIOpts{
-		User: conf.UIUserOpts{
-			NewsFeedPagingNum: 20,
-		},
-	})
-
 	alice, err := newUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	bob, err := newUsersStore(s.db).Create(ctx, "bob", "bob@example.com", CreateUserOptions{})
