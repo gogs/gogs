@@ -54,6 +54,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Fixed
 
+- Restoring a backup made by Gogs 0.12 to 0.14 no longer fails on access tokens, and keeps user passwords, the users of email addresses, stars and issue subscriptions, and the push allowlists of protected branches. Restored repositories allow merge commits, as repositories did before choosing merge methods. [#7687](https://github.com/gogs/gogs/issues/7687) [#7697](https://github.com/gogs/gogs/issues/7697) [#8682](https://github.com/gogs/gogs/pull/8682)
 - Listing the repositories of another user or an organization through the API no longer reports admin, push and pull permissions on every repository. [#8667](https://github.com/gogs/gogs/pull/8667)
 - Commenting on, closing, or reopening an issue, including with `fixes #N` in a pushed commit, no longer hangs the server when using SQLite with email notifications enabled. [#8395](https://github.com/gogs/gogs/pull/8395)
 - Markdown files starting with a byte order mark now render their first line correctly, e.g., a leading heading is no longer shown as plain text. [#8519](https://github.com/gogs/gogs/pull/8519)
