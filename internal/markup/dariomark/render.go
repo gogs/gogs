@@ -280,10 +280,11 @@ func (r *renderer) plainLeaf(n *node) bool {
 		// See inlineParser.taskCheckbox.
 		text, box = r.taskCheckbox(n, src)
 		from = text
-		if box == boxChecked {
+		switch box {
+		case boxChecked:
 			r.html.start("input", attr{"checked", nil, false}, attr{"disabled", nil, false}, attr{"type", checkboxValue, false})
 			out.writeByte(' ')
-		} else if box == boxUnchecked {
+		case boxUnchecked:
 			r.html.start("input", attr{"disabled", nil, false}, attr{"type", checkboxValue, false})
 			out.writeByte(' ')
 		}
