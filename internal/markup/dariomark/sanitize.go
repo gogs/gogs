@@ -507,6 +507,9 @@ var allowedRoles = map[string]bool{"doc-noteref": true, "doc-backlink": true, "d
 func appendHTMLEscaped[T string | []byte](dst []byte, b T) []byte {
 	start := 0
 	for i := 0; i < len(b); i++ {
+		if !needsHTMLEscape[b[i]] {
+			continue
+		}
 		var esc string
 		switch b[i] {
 		case '&':
@@ -530,6 +533,8 @@ func appendHTMLEscaped[T string | []byte](dst []byte, b T) []byte {
 	}
 	return append(dst, b[start:]...)
 }
+
+var needsHTMLEscape = withSpecial([256]bool{}, "&'<>\"\r")
 
 // convertNewlines replaces "\r\n" and "\r" with "\n", as the tokenizer does.
 func convertNewlines(s string) string {
