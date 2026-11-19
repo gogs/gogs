@@ -350,8 +350,9 @@ func patchAdminAuthSource(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 		return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fields}, nil
 	}
 
+	// Only a source that binds with a DN has a bind password to keep.
 	bindPassword := req.BindPassword
-	if bindPassword == "" && (source.IsLDAP() || source.IsDLDAP()) {
+	if bindPassword == "" && source.IsLDAP() {
 		bindPassword = source.LDAP().BindPassword
 	}
 	source.Name = req.AuthSourceName
