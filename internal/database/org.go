@@ -415,7 +415,7 @@ func RemoveOrgUser(orgID, userID int64) error {
 	}
 
 	if len(repoIDs) > 0 {
-		if _, err = sess.Where("user_id = ?", user.ID).In("repo_id", repoIDs).Delete(new(Access)); err != nil {
+		if err = legacyTx(sess).Where("user_id = ? AND repo_id IN ?", user.ID, repoIDs).Delete(new(Access)).Error; err != nil {
 			return err
 		}
 	}

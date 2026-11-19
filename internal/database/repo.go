@@ -1436,7 +1436,7 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 
 	for _, c := range collaborators {
 		if c.ID == newOwner.ID || newOwner.IsOrgMember(c.ID) {
-			if _, err = sess.Where("repo_id = ? AND user_id = ?", repo.ID, c.ID).Delete(new(Collaboration)); err != nil {
+			if err = legacyTx(sess).Where("repo_id = ? AND user_id = ?", repo.ID, c.ID).Delete(new(Collaboration)).Error; err != nil {
 				return errors.Newf("remove collaborator '%d': %v", c.ID, err)
 			}
 		}
@@ -2345,14 +2345,14 @@ func CheckRepoStats(logger *logx.Logger) {
 // Watch is connection request for receiving repository notification.
 type Watch struct {
 	ID     int64 `gorm:"primaryKey"`
-	UserID int64 `xorm:"UNIQUE(watch)" gorm:"uniqueIndex:watch_user_repo_unique;not null"`
-	RepoID int64 `xorm:"UNIQUE(watch)" gorm:"uniqueIndex:watch_user_repo_unique;not null"`
+	UserID int64 `gorm:"uniqueIndex:UQE_watch_watch"`
+	RepoID int64 `gorm:"uniqueIndex:UQE_watch_watch"`
 }
 
 type Star struct {
 	ID     int64 `gorm:"primaryKey"`
-	UserID int64 `xorm:"uid UNIQUE(s)" gorm:"column:uid;uniqueIndex:star_user_repo_unique;not null"`
-	RepoID int64 `xorm:"UNIQUE(s)" gorm:"uniqueIndex:star_user_repo_unique;not null"`
+	UserID int64 `gorm:"column:uid;uniqueIndex:UQE_star_s"`
+	RepoID int64 `gorm:"uniqueIndex:UQE_star_s"`
 }
 
 // HasForkedRepo checks if given user has already forked a repository.

@@ -76,6 +76,23 @@ Indexes:
 	"UQE_attachment_uuid" UNIQUE (uuid)
 ```
 
+# Table "collaboration"
+
+```
+ Field  | Column  |        PostgreSQL         |           MySQL           |          SQLite3           
+--------+---------+---------------------------+---------------------------+----------------------------
+ ID     | id      | BIGSERIAL                 | BIGINT AUTO_INCREMENT     | INTEGER AUTOINCREMENT      
+ UserID | user_id | BIGINT NOT NULL           | BIGINT NOT NULL           | INTEGER NOT NULL           
+ RepoID | repo_id | BIGINT NOT NULL           | BIGINT NOT NULL           | INTEGER NOT NULL           
+ Mode   | mode    | BIGINT NOT NULL DEFAULT 2 | BIGINT NOT NULL DEFAULT 2 | INTEGER NOT NULL DEFAULT 2 
+
+Primary keys: id
+Indexes: 
+	"IDX_collaboration_repo_id" (repo_id)
+	"IDX_collaboration_user_id" (user_id)
+	"UQE_collaboration_s" UNIQUE (user_id, repo_id)
+```
+
 # Table "comment"
 
 ```
@@ -420,6 +437,20 @@ Indexes:
 Primary keys: id
 ```
 
+# Table "star"
+
+```
+ Field  | Column  | PostgreSQL |         MySQL         |        SQLite3        
+--------+---------+------------+-----------------------+-----------------------
+ ID     | id      | BIGSERIAL  | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ UserID | uid     | BIGINT     | BIGINT                | INTEGER               
+ RepoID | repo_id | BIGINT     | BIGINT                | INTEGER               
+
+Primary keys: id
+Indexes: 
+	"UQE_star_s" UNIQUE (uid, repo_id)
+```
+
 # Table "two_factor"
 
 ```
@@ -460,6 +491,20 @@ Primary keys: id
 Primary keys: id
 Indexes: 
 	"UQE_upload_uuid" UNIQUE (uuid)
+```
+
+# Table "watch"
+
+```
+ Field  | Column  | PostgreSQL |         MySQL         |        SQLite3        
+--------+---------+------------+-----------------------+-----------------------
+ ID     | id      | BIGSERIAL  | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ UserID | user_id | BIGINT     | BIGINT                | INTEGER               
+ RepoID | repo_id | BIGINT     | BIGINT                | INTEGER               
+
+Primary keys: id
+Indexes: 
+	"UQE_watch_watch" UNIQUE (user_id, repo_id)
 ```
 
 # Table "webhook"
