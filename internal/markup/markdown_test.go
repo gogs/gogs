@@ -286,7 +286,7 @@ func TestMarkdown_Emoji(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			res := renderMarkdown([]byte(test.input), "/user/repo", nil, false, false)
+			res := renderMarkdown([]byte(test.input), "/user/repo", nil, nil, false, false)
 			require.True(t, res.Sanitized, "takes the fast path")
 			assert.Equal(t, test.want, string(MarkdownFile(test.input, "/user/repo", nil)))
 			// A raw HTML comment, which renders as a line ending, takes the
@@ -358,7 +358,7 @@ func TestMarkdown_FastPathXSS(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.input, func(t *testing.T) {
-			res := renderMarkdown([]byte(test.input), "/user/repo", trackerMetas(), true, false)
+			res := renderMarkdown([]byte(test.input), "/user/repo", trackerMetas(), nil, true, false)
 			assert.True(t, res.Sanitized, "takes the fast path")
 			assert.Equal(t, test.want, string(Markdown(test.input, "/user/repo", trackerMetas())))
 		})
@@ -482,7 +482,7 @@ details
 <li class="task-list-item" data-source-lines="7-7"><input checked="" disabled="" type="checkbox"> ship</li>
 </ol>
 `
-	res := renderMarkdown([]byte(input), "/user/repo", nil, true, false)
+	res := renderMarkdown([]byte(input), "/user/repo", nil, nil, true, false)
 	assert.True(t, res.Sanitized, "takes the fast path")
 	assert.Equal(t, want, string(Markdown(input, "/user/repo", nil)))
 	// Documents with raw HTML are sanitized by SanitizeBytes instead.
@@ -566,7 +566,7 @@ func FuzzMarkdown(f *testing.F) {
 		// Both line break modes, comments and files, chosen by the input.
 		hardWraps := len(s)%2 == 0
 		file := !hardWraps
-		res := renderMarkdown(body, urlPrefix, trackerMetas(), hardWraps, file)
+		res := renderMarkdown(body, urlPrefix, trackerMetas(), nil, hardWraps, file)
 		got := res.HTML
 		if !res.Sanitized {
 			SanitizeBytes(got)

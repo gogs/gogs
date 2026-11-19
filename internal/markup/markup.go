@@ -300,10 +300,9 @@ func resolveCommits(text []byte, metas map[string]string) map[string]string {
 // resolveLinkableCommits is resolveCommits for the text that render passes to
 // specialText, which must be the text where special links render. Hex strings
 // elsewhere, e.g., in code and link URLs, are never linked, so they do not run
-// Git. render only runs when src has commit ID candidates and a repository to
-// resolve them in.
-func resolveLinkableCommits(src []byte, metas map[string]string, render func(specialText func(text []byte))) map[string]string {
-	if metas["repoPath"] == "" || !Sha1CurrentPattern.Match(src) {
+// Git. render only runs when there is a repository to resolve them in.
+func resolveLinkableCommits(metas map[string]string, render func(specialText func(text []byte))) map[string]string {
+	if metas["repoPath"] == "" {
 		return nil
 	}
 	var text []byte
@@ -433,7 +432,10 @@ func wrapImgWithLink(urlPrefix string, buf *bytes.Buffer, token html.Token) {
 // postProcessHTML treats different types of HTML differently,
 // and only renders special links for plain text blocks.
 func postProcessHTML(rawHTML []byte, urlPrefix string, metas map[string]string) []byte {
-	commits := resolveLinkableCommits(rawHTML, metas, func(specialText func(text []byte)) {
+	commits := resolveLinkableCommits(metas, func(specialText func(text []byte)) {
+		if !Sha1CurrentPattern.Match(rawHTML) {
+			return
+		}
 		processHTMLText(rawHTML, urlPrefix, func(text []byte) []byte {
 			specialText(text)
 			return text
@@ -567,12 +569,13 @@ var utf8BOM = []byte("\ufeff")
 // A document larger than [ui] MAX_DISPLAY_FILE_SIZE is shown as escaped plain
 // text instead of being rendered.
 func Render(typ Type, input any, urlPrefix string, metas map[string]string) []byte {
-	return renderInput(typ, input, urlPrefix, metas, conf.Markdown.EnableHardLineBreak, true)
+	return renderInput(typ, input, urlPrefix, metas, nil, conf.Markdown.EnableHardLineBreak, true)
 }
 
-// renderInput is Render, with hardWraps rendering every line break of
-// Markdown as written, and file rendering front matter of Markdown files.
-func renderInput(typ Type, input any, urlPrefix string, metas map[string]string, hardWraps, file bool) []byte {
+// renderInput is Render, with commits resolved for Markdown, see
+// ResolveCommits, hardWraps rendering every line break of Markdown as written,
+// and file rendering front matter of Markdown files.
+func renderInput(typ Type, input any, urlPrefix string, metas, commits map[string]string, hardWraps, file bool) []byte {
 	var rawBytes []byte
 	switch v := input.(type) {
 	case []byte:
@@ -588,7 +591,7 @@ func renderInput(typ Type, input any, urlPrefix string, metas map[string]string,
 	}
 	rawBytes = bytes.TrimPrefix(rawBytes, utf8BOM)
 	return guardRender(rawBytes, func() []byte {
-		return render(typ, rawBytes, urlPrefix, metas, hardWraps, file)
+		return render(typ, rawBytes, urlPrefix, metas, commits, hardWraps, file)
 	})
 }
 
@@ -607,12 +610,12 @@ func guardRender(body []byte, render func() []byte) []byte {
 	return render()
 }
 
-func render(typ Type, rawBytes []byte, urlPrefix string, metas map[string]string, hardWraps, file bool) []byte {
+func render(typ Type, rawBytes []byte, urlPrefix string, metas, commits map[string]string, hardWraps, file bool) []byte {
 	urlPrefix = strings.TrimRight(strings.ReplaceAll(urlPrefix, " ", "%20"), "/")
 	var rawHTML []byte
 	switch typ {
 	case TypeMarkdown:
-		res := renderMarkdown(rawBytes, urlPrefix, metas, hardWraps, file)
+		res := renderMarkdown(rawBytes, urlPrefix, metas, commits, hardWraps, file)
 		if res.Sanitized {
 			return res.HTML
 		}

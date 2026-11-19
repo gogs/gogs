@@ -700,7 +700,16 @@ func TestIssueMarkdownCommitLinks(t *testing.T) {
 	content := "Fixed in " + commitID[:7] + ", not in 123e4567-e89b-12d3-a456-426614174000 or deadbeef. " +
 		"Branch " + hexBranch + ". Other " + otherCommitID + "."
 	index := issueCreate(t, ownerClient, repo, "Commit links", content)
-	got := issueGet(t, ownerClient, repo, index).ContentHTML
+	// Comments are rendered with the commits of the whole issue, which are
+	// resolved together.
+	var created struct {
+		ID int64 `json:"id"`
+	}
+	ownerClient.doJSON(http.MethodPost, issueAPIPath(repo, "issues", index, "comments"), map[string]any{"content": "Also " + commitID[:9] + ", not `" + commitID[:8] + "`."}, http.StatusCreated, &created)
+	v := issueGet(t, ownerClient, repo, index)
+	require.Len(t, v.Comments, 1)
+	assert.Contains(t, v.Comments[0].ContentHTML, "Also "+link(commitID, commitID[:9])+", not <code>"+commitID[:8]+"</code>.")
+	got := v.ContentHTML
 	assert.Contains(t, got, "Fixed in "+link(commitID, commitID[:7])+",", "a short hash links to the full commit ID")
 	assert.Contains(t, got, "not in 123e4567-e89b-12d3-a456-426614174000 or deadbeef.")
 	assert.Contains(t, got, "Branch "+hexBranch+".")

@@ -315,13 +315,20 @@ func getRepoIssue(c flamego.Context, logger *logx.Logger, viewer *database.User,
 func toRepoIssueView(ctx context.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, issue *database.Issue) (resp *repoIssueView, err error) {
 	repo := repoCtx.Repo
 	metas := repo.ComposeMetas()
+	docs := []string{issue.Content}
+	for _, comment := range issue.Comments {
+		if comment.Type == database.CommentTypeComment {
+			docs = append(docs, comment.Content)
+		}
+	}
+	commits := markup.ResolveCommits(metas, docs...)
 	resp = &repoIssueView{
 		Index:       issue.Index,
 		Title:       issue.Title,
 		IsClosed:    issue.IsClosed,
 		Poster:      toIssueUser(issue.Poster),
 		CreatedAt:   issue.Created.UTC(),
-		ContentHTML: string(markup.Markdown(issue.Content, repo.Link(), metas)),
+		ContentHTML: string(markup.MarkdownWithCommits(issue.Content, repo.Link(), metas, commits)),
 		Content:     issue.Content,
 		Attachments: toIssueAttachments(issue.Attachments, issue.Content),
 		Comments:    make([]issueComment, 0, len(issue.Comments)),
@@ -362,7 +369,7 @@ func toRepoIssueView(ctx context.Context, logger *logx.Logger, viewer *database.
 		case database.CommentTypeCommitRef:
 			item.ContentHTML = markup.Sanitize(comment.Content)
 		case database.CommentTypeComment:
-			item.ContentHTML = string(markup.Markdown(comment.Content, repo.Link(), metas))
+			item.ContentHTML = string(markup.MarkdownWithCommits(comment.Content, repo.Link(), metas, commits))
 			item.Attachments = toIssueAttachments(comment.Attachments, comment.Content)
 			// The poster and admins can change a comment.
 			if viewer != nil && (comment.PosterID == viewer.ID || repoCtx.Viewer.CanAdminister()) {

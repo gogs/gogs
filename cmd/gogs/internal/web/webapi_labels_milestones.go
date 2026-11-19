@@ -235,6 +235,12 @@ func getRepoMilestones(c flamego.Context, logger *logx.Logger, repoCtx *repoCont
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list milestones")
 	}
 
+	metas := repo.ComposeMetas()
+	descriptions := make([]string, 0, len(miles))
+	for _, m := range miles {
+		descriptions = append(descriptions, m.Content)
+	}
+	commits := markup.ResolveCommits(metas, descriptions...)
 	items := make([]repoMilestone, 0, len(miles))
 	for _, m := range miles {
 		openIssues, err := database.Handle.Milestones().CountIssues(ctx, m.ID, false, false)
@@ -260,7 +266,7 @@ func getRepoMilestones(c flamego.Context, logger *logx.Logger, repoCtx *repoCont
 			item.Completeness = item.ClosedIssueCount * 100 / all
 		}
 		if m.Content != "" {
-			item.DescriptionHTML = string(markup.Markdown(m.Content, repo.Link(), repo.ComposeMetas()))
+			item.DescriptionHTML = string(markup.MarkdownWithCommits(m.Content, repo.Link(), metas, commits))
 		}
 		if m.IsClosed {
 			item.ClosedAt = &m.ClosedDate

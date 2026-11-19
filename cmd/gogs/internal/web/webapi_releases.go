@@ -179,6 +179,12 @@ func getRepoReleases(c flamego.Context, logger *logx.Logger, repoCtx *repoContex
 		ViewerCanWrite: viewerCanWrite,
 		IsMirror:       repo.IsMirror,
 	}
+	metas := repo.ComposeMetas()
+	notes := make([]string, 0, len(releases))
+	for _, r := range releases {
+		notes = append(notes, r.Note)
+	}
+	commits := markup.ResolveCommits(metas, notes...)
 	for _, r := range releases {
 		item := repoRelease{TagName: r.TagName, Sha: r.Sha1}
 		if r.ID > 0 {
@@ -192,7 +198,7 @@ func getRepoReleases(c flamego.Context, logger *logx.Logger, repoCtx *repoContex
 			item.IsDraft = r.IsDraft
 			item.IsPrerelease = r.IsPrerelease
 			item.Publisher = &publisher
-			item.NoteHTML = string(markup.Markdown(r.Note, repo.Link(), repo.ComposeMetas()))
+			item.NoteHTML = string(markup.MarkdownWithCommits(r.Note, repo.Link(), metas, commits))
 			item.Attachments = toReleaseAttachments(r.Attachments, r.Note)
 			if r.CreatedUnix > 0 {
 				item.CreatedAt = &r.Created

@@ -438,14 +438,19 @@ func TestMarkdown_CommitLinks(t *testing.T) {
 	want := `<p>Fixed in <a href="/user/repo/commit/` + commitID + `" rel="nofollow"><code>` + commitID[:7] + `</code></a>, see <a href="/user/repo/commit/` + commitID + `" rel="nofollow"><code>` + commitID[:10] + "</code></a>. UUID 123e4567-e89b-12d3-a456-426614174000.</p>\n<p><code>" + commitID + "</code></p>\n"
 	assert.Equal(t, want, string(Markdown(input, "/user/repo", metas)))
 
-	// Hex strings that never render as links do not need Git to resolve them.
-	gitRuns := func(t *testing.T, input string) bool {
+	// gitRuns returns how many times render runs Git to resolve commits.
+	gitRuns := func(t *testing.T, render func()) int {
 		trace := filepath.Join(t.TempDir(), "trace")
 		t.Setenv("GIT_TRACE", trace)
-		Markdown(input, "/user/repo", metas)
-		_, err := os.Stat(trace)
-		return err == nil
+		render()
+		out, _ := os.ReadFile(trace)
+		return strings.Count(string(out), "cat-file")
 	}
+	markdownGitRuns := func(t *testing.T, input string) int {
+		return gitRuns(t, func() { Markdown(input, "/user/repo", metas) })
+	}
+
+	// Hex strings that never render as links do not need Git to resolve them.
 	for name, input := range map[string]string{
 		"code span":  "See `" + commitID + "`.",
 		"code block": "```\n" + commitID + "\n```",
@@ -454,8 +459,31 @@ func TestMarkdown_CommitLinks(t *testing.T) {
 		"link text":  "[" + commitID[:7] + "](https://example.com)",
 	} {
 		t.Run(name, func(t *testing.T) {
-			assert.False(t, gitRuns(t, input))
+			assert.Zero(t, markdownGitRuns(t, input))
 		})
 	}
-	assert.True(t, gitRuns(t, "See "+commitID[:7]+" and `"+commitID+"`."), "text with a commit ID runs Git")
+	assert.Equal(t, 1, markdownGitRuns(t, "See "+commitID[:7]+" and `"+commitID+"`."), "text with a commit ID runs Git")
+
+	t.Run("resolved for several documents", func(t *testing.T) {
+		docs := []string{"Fixed in " + commitID[:7] + ".", "No hex.", "Also " + commitID[:9] + ", not deadbeef."}
+		var commits map[string]string
+		assert.Equal(t, 1, gitRuns(t, func() { commits = ResolveCommits(metas, docs...) }), "one Git command for all documents")
+
+		var got []string
+		assert.Zero(t, gitRuns(t, func() {
+			for _, doc := range docs {
+				got = append(got, string(MarkdownWithCommits(doc, "/user/repo", metas, commits)))
+			}
+		}), "rendering the resolved documents runs no Git command")
+		link := func(text string) string {
+			return `<a href="/user/repo/commit/` + commitID + `" rel="nofollow"><code>` + text + "</code></a>"
+		}
+		assert.Equal(t, []string{
+			"<p>Fixed in " + link(commitID[:7]) + ".</p>\n",
+			"<p>No hex.</p>\n",
+			"<p>Also " + link(commitID[:9]) + ", not deadbeef.</p>\n",
+		}, got)
+
+		assert.Zero(t, gitRuns(t, func() { ResolveCommits(metas, "No hex.", "`"+commitID+"`") }), "documents without linkable hex strings run no Git command")
+	})
 }
