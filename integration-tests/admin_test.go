@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -96,9 +95,12 @@ func TestAdminDashboard(t *testing.T) {
 	adminAssertTurnedAway(t, nonAdmin, anonymous, http.MethodGet, "/api/web/admin/dashboard", nil)
 
 	var resp struct {
-		AppVersion   string             `json:"appVersion"`
-		GoVersion    string             `json:"goVersion"`
-		Statistics   string             `json:"statistics"`
+		AppVersion string `json:"appVersion"`
+		GoVersion  string `json:"goVersion"`
+		Statistics []struct {
+			Label string `json:"label"`
+			Count int64  `json:"count"`
+		} `json:"statistics"`
 		SystemStatus adminReportSection `json:"systemStatus"`
 	}
 	admin.doJSON(http.MethodGet, "/api/web/admin/dashboard", nil, http.StatusOK, &resp)
@@ -113,12 +115,14 @@ func TestAdminDashboard(t *testing.T) {
 
 	// Other tests add and delete data at the same time, so the counts are only
 	// checked to be there, with at least the users of this test.
-	counts := regexp.MustCompile(`<b>(\d+)</b> (users|organizations|repositories|login sources)`).FindAllStringSubmatch(resp.Statistics, -1)
-	require.Len(t, counts, 4, "statistics: %s", resp.Statistics)
-	assert.Equal(t, "users", counts[0][2])
-	users, err := strconv.Atoi(counts[0][1])
-	require.NoError(t, err)
-	assert.GreaterOrEqual(t, users, 2)
+	require.NotEmpty(t, resp.Statistics)
+	assert.Equal(t, "Users", resp.Statistics[0].Label)
+	assert.GreaterOrEqual(t, resp.Statistics[0].Count, int64(2))
+	labels := make([]string, 0, len(resp.Statistics))
+	for _, statistic := range resp.Statistics {
+		labels = append(labels, statistic.Label)
+	}
+	assert.Subset(t, labels, []string{"Organizations", "Repositories", "Login sources"})
 }
 
 // adminRunOperation runs the site-wide operation as the admin, after checking
