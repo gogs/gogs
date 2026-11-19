@@ -647,7 +647,10 @@ func getRepoDeployKeys(c flamego.Context, logger *logx.Logger, rc *repoAdminCont
 // postRepoDeployKey gives an SSH key read access to the repository.
 func postRepoDeployKey(c flamego.Context, logger *logx.Logger, l i18n.Locale, rc *repoAdminContext, req userSSHKeyRequest) (statusCode int, resp any, err error) {
 	content, err := database.CheckPublicKeyString(logger, req.Content)
-	if err != nil {
+	if database.IsErrKeyCheckFailed(err) {
+		logger.Error("Failed to check deploy key", "repoID", rc.Repo.ID, "error", err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "check deploy key")
+	} else if err != nil {
 		msg := l.Tr("form.invalid_ssh_key", err.Error())
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
 	}

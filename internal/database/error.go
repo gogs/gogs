@@ -31,6 +31,25 @@ func (err ErrKeyUnableVerify) Error() string {
 	return fmt.Sprintf("Unable to verify key content [result: %s]", err.Result)
 }
 
+// ErrKeyCheckFailed is returned when the server fails to check a public key,
+// e.g., because it cannot run ssh-keygen, rather than because the key is
+// invalid. Its details are for the server log, not for the user.
+type ErrKeyCheckFailed struct {
+	Err error
+}
+
+func IsErrKeyCheckFailed(err error) bool {
+	return errors.As(err, new(ErrKeyCheckFailed))
+}
+
+func (err ErrKeyCheckFailed) Error() string {
+	return err.Err.Error()
+}
+
+func (err ErrKeyCheckFailed) Unwrap() error {
+	return err.Err
+}
+
 type ErrKeyNotExist struct {
 	ID int64
 }

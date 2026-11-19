@@ -206,21 +206,24 @@ func sshKeygenFingerprint(keygenPath, path string) (stdout, stderr string, err e
 func SSHKeygenParsePublicKey(key, keyTestPath, keygenPath string) (string, int, error) {
 	tmpName, err := writeTmpKeyFile(key, keyTestPath)
 	if err != nil {
-		return "", 0, errors.Newf("writeTmpKeyFile: %v", err)
+		return "", 0, ErrKeyCheckFailed{errors.Wrap(err, "writeTmpKeyFile")}
 	}
 	defer os.Remove(tmpName)
 
 	stdout, stderr, err := sshKeygenFingerprint(keygenPath, tmpName)
 	if err != nil {
-		return "", 0, errors.Newf("fail to parse public key: %s - %s", err, stderr)
-	}
-	if strings.Contains(stdout, "is not a public key file") {
-		return "", 0, ErrKeyUnableVerify{stdout}
+		// OpenSSH before 6.9 prints the message to stdout.
+		if out := stdout + stderr; strings.Contains(out, "is not a public key file") {
+			// The message starts with the path of the temporary file, which users
+			// must not see.
+			return "", 0, ErrKeyUnableVerify{strings.TrimSpace(strings.ReplaceAll(out, tmpName, "key"))}
+		}
+		return "", 0, ErrKeyCheckFailed{errors.Newf("fail to parse public key: %s - %s", err, stderr)}
 	}
 
 	fields := strings.Split(stdout, " ")
 	if len(fields) < 4 {
-		return "", 0, errors.Newf("invalid public key line: %s", stdout)
+		return "", 0, ErrKeyCheckFailed{errors.Newf("invalid public key line: %s", stdout)}
 	}
 
 	keyType := strings.Trim(fields[len(fields)-1], "()\r\n")

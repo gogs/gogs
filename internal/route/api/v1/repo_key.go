@@ -49,9 +49,12 @@ func getDeployKey(c *apiContext) {
 }
 
 func handleCheckKeyStringError(c *apiContext, err error) {
-	if database.IsErrKeyUnableVerify(err) {
+	switch {
+	case database.IsErrKeyCheckFailed(err):
+		c.Error(err, "check key content")
+	case database.IsErrKeyUnableVerify(err):
 		c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("Unable to verify key content"))
-	} else {
+	default:
 		c.ErrorStatus(http.StatusUnprocessableEntity, errors.Wrap(err, "Invalid key content"))
 	}
 }
