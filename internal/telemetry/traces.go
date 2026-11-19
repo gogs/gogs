@@ -512,9 +512,13 @@ func (r *ring) push(t *storedTrace) {
 	r.size += t.size
 }
 
-func (r *ring) evict(cutoff time.Time, byID map[string]*storedTrace) {
+// evict drops the traces that ended before the cutoff, in Unix nanoseconds,
+// and the oldest ones while the ring is over its budget. Unix times tell how
+// old a trace is, since the monotonic clock that `Before` reads stops while
+// the machine is suspended.
+func (r *ring) evict(cutoff int64, byID map[string]*storedTrace) {
 	n := 0
-	for n < len(r.traces) && (r.size > r.budget || r.traces[n].end().Before(cutoff)) {
+	for n < len(r.traces) && (r.size > r.budget || r.traces[n].end().UnixNano() < cutoff) {
 		t := r.traces[n]
 		r.size -= t.size
 		// A later trace with the same ID may have replaced this one.
@@ -528,9 +532,7 @@ func (r *ring) evict(cutoff time.Time, byID map[string]*storedTrace) {
 }
 
 func (s *Store) evict() {
-	// Compare by the wall clock, since the monotonic clock stops while the
-	// machine is suspended, which would keep the traces from before it.
-	cutoff := s.now().Add(-s.opts.MaxAge).Round(0)
+	cutoff := s.now().Add(-s.opts.MaxAge).UnixNano()
 	s.kept.evict(cutoff, s.byID)
 	s.sampled.evict(cutoff, s.byID)
 }
