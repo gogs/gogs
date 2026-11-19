@@ -243,8 +243,9 @@ func (r *renderer) plainLeaf(n *node) bool {
 		return false
 	}
 	src := n.text
-	if opts.Linkify && (bytes.IndexByte(src, '@') >= 0 || bytes.Contains(src, []byte("www.")) || bytes.Contains(src, []byte("://"))) {
-		return false
+	special := &plainSpecial
+	if opts.Linkify {
+		special = &plainSpecialLinkify
 	}
 	r.p.footnoteDefsBefore(n)
 	out := &r.out
@@ -258,11 +259,24 @@ func (r *renderer) plainLeaf(n *node) bool {
 	open := 0
 	for i := 0; i < len(src); {
 		c := src[i]
-		if !plainSpecial[c] {
+		if !special[c] {
 			i++
 			continue
 		}
 		switch c {
+		case '.':
+			// Leaves possible extended autolinks to the inline parser.
+			if i >= 3 && string(src[i-3:i]) == "www" {
+				out.buf = out.buf[:start]
+				return false
+			}
+			i++
+		case ':':
+			if bytes.HasPrefix(src[i+1:], []byte("//")) {
+				out.buf = out.buf[:start]
+				return false
+			}
+			i++
 		case '\n':
 			// See inlineParser.lineEnding.
 			end := i
@@ -393,7 +407,12 @@ func flankClass(src []byte, i int) (int, bool) {
 
 // plainSpecial marks the characters that plainLeaf handles, or for which it
 // leaves the contents to the inline parser.
-var plainSpecial = withSpecial([256]bool{}, "\n\\`*_[]<&~")
+var (
+	plainSpecial = withSpecial([256]bool{}, "\n\\`*_[]<&~")
+	// plainSpecialLinkify adds the characters of autolinks: "@" of email
+	// addresses, "." after "www" and ":" before "//".
+	plainSpecialLinkify = withSpecial(plainSpecial, "@.:")
+)
 
 // scanBackticks returns the start of the first maximal run of n backticks in
 // src at or after pos, which does not start within a run, or -1.
