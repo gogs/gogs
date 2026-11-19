@@ -1195,8 +1195,8 @@ export interface RepoCommitAuthor {
 
 export interface RepoCommitListItem {
   sha: string;
-  // subjectHTML is the first line of the message, with links to the issues
-  // it mentions.
+  // subjectHTML is the first line of the message, with links to the users
+  // and issues it mentions.
   subjectHTML: string;
   isMerge: boolean;
   author: RepoCommitAuthor;

@@ -35,6 +35,9 @@ const (
 var (
 	// MentionPattern matches string that mentions someone, e.g., @Unknwon
 	MentionPattern = lazyregexp.New(`(\s|^|\W)@[0-9a-zA-Z-_\.]+`)
+	// urlPattern matches URLs in plain text, in which "@" does not start a
+	// mention, e.g., https://medium.com/@alice.
+	urlPattern = lazyregexp.New(`(?i)\b[a-z][a-z0-9+.-]*://\S+`)
 
 	// CommitPattern matches link to certain commit with or without trailing hash,
 	// e.g., https://try.gogs.io/gogs/gogs/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2
@@ -227,6 +230,21 @@ func replaceSpans(text []byte, spans []linkSpan) []byte {
 		return text
 	}
 	return dariomark.AppendSpecialLinks(make([]byte, 0, len(text)+len(spans)*48), text, spans)
+}
+
+// RenderCommitMessage escapes msg and links the mentions and issue references
+// in it.
+func RenderCommitMessage(msg, urlPrefix string, metas map[string]string) string {
+	text := []byte(html.EscapeString(msg))
+	// Unlike Markdown, plain text does not link URLs first, which would keep
+	// mentions out of them.
+	urls := urlPattern.FindAllIndex(text, -1)
+	mentions := slices.DeleteFunc(findMentions(text), func(m linkSpan) bool {
+		return slices.ContainsFunc(urls, func(u []int) bool { return u[0] <= m.Start && m.Start < u[1] })
+	})
+	// Repository admins set the external issue tracker format the links are
+	// made of, which can be any URL, e.g., a "javascript:" URL.
+	return string(SanitizeBytes(replaceSpans(text, findIssueIndexes(text, urlPrefix, metas, mentions))))
 }
 
 // RenderIssueIndexPattern renders issue indexes to corresponding links.

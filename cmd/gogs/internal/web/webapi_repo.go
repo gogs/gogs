@@ -5,6 +5,7 @@ import (
 	"context"
 	"net/http"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
@@ -121,11 +122,16 @@ type repoCommitSignature struct {
 }
 
 type repoCommit struct {
-	SHA     string              `json:"sha"`
-	Subject string              `json:"subject"`
-	Body    string              `json:"body"`
-	Author  repoCommitSignature `json:"author"`
-	Parents []string            `json:"parents"`
+	SHA string `json:"sha"`
+	// Subject is the first line of the message as plain text, for the page
+	// title.
+	Subject string `json:"subject"`
+	// SubjectHTML and BodyHTML are the first line and the rest of the message,
+	// with links to the users and issues they mention.
+	SubjectHTML string              `json:"subjectHTML"`
+	BodyHTML    string              `json:"bodyHTML"`
+	Author      repoCommitSignature `json:"author"`
+	Parents     []string            `json:"parents"`
 	// MarkdownExtensions are the extensions of files that show a rich diff.
 	MarkdownExtensions []string `json:"markdownExtensions"`
 }
@@ -178,10 +184,12 @@ func getRepoCommit(logger *logx.Logger, c flamego.Context, repoCtx *repoContext)
 		body = msg[len(subject):]
 	}
 
+	metas := repo.ComposeMetas()
 	return http.StatusOK, &repoCommit{
 		SHA:                commitID,
 		Subject:            subject,
-		Body:               body,
+		SubjectHTML:        markup.RenderCommitMessage(subject, repo.Link(), metas),
+		BodyHTML:           markup.RenderCommitMessage(strings.TrimSpace(body), repo.Link(), metas),
 		Author:             toSignature(commit.Author),
 		Parents:            parents,
 		MarkdownExtensions: conf.Markdown.FileExtensions,

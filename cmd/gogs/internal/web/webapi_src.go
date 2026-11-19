@@ -344,7 +344,7 @@ func getRepoSrc(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (s
 		if info.Commit != nil {
 			item.Commit = &repoEntryCommit{
 				SHA:         info.Commit.ID.String(),
-				SubjectHTML: template.RenderCommitMessage(false, info.Commit.Summary(), repo.Link(), metas),
+				SubjectHTML: markup.RenderCommitMessage(info.Commit.Summary(), repo.Link(), metas),
 				When:        info.Commit.Committer.When.UTC(),
 			}
 		}

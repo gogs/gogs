@@ -1376,3 +1376,128 @@ func TestRepoCodeGoGet(t *testing.T) {
 		userAssertPage(t, newClient(t), repoCodePage(repo), http.StatusOK)
 	})
 }
+
+// TestRepoCodeCommitMessageLinks checks that every page showing a commit
+// message escapes it and links the users and issues it mentions, with the
+// links the repository's issue tracker allows.
+func TestRepoCodeCommitMessageLinks(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	ownerClient := authenticatedClient(t, owner)
+	anonymous := newClient(t)
+	api := repoCodeAPI(repo)
+
+	status, body := ownerClient.do(http.MethodPost, api+"/editor/files", map[string]any{
+		"branch":  "main",
+		"path":    "notes.txt",
+		"content": "Notes.\n",
+		"summary": `Fix "quoted" <b> for @` + owner.Name + `, closes #1`,
+		"message": "Thanks @" + owner.Name + "\nSee #2 and <script>alert(1)</script>\n\nSigned-off-by: Alice <alice@example.com>",
+	})
+	require.Equal(t, http.StatusOK, status, "response: %s", body)
+	sha := repoCodeGit(t, repo, "rev-parse", "refs/heads/main")
+
+	mention := `<a href="/` + owner.Name + `" rel="nofollow">@` + owner.Name + `</a>`
+	issue := func(index string) string {
+		return `<a href="` + repoCodePage(repo) + `/issues/` + index + `" rel="nofollow">#` + index + `</a>`
+	}
+
+	type commitResponse struct {
+		Subject     string `json:"subject"`
+		SubjectHTML string `json:"subjectHTML"`
+		BodyHTML    string `json:"bodyHTML"`
+	}
+	getCommit := func(t *testing.T) commitResponse {
+		t.Helper()
+
+		var commit commitResponse
+		anonymous.doJSON(http.MethodGet, api+"/commit/"+sha, nil, http.StatusOK, &commit)
+		return commit
+	}
+	// subjects returns the subject of the commit as each page shows it: the
+	// commit page, the commit list and the file list.
+	subjects := func(t *testing.T) map[string]string {
+		t.Helper()
+
+		var commits struct {
+			Commits []repoCodeCommitItem `json:"commits"`
+		}
+		anonymous.doJSON(http.MethodGet, api+"/commits/main", nil, http.StatusOK, &commits)
+		require.NotEmpty(t, commits.Commits)
+		require.Equal(t, sha, commits.Commits[0].SHA)
+
+		var src struct {
+			Entries []struct {
+				Name   string             `json:"name"`
+				Commit repoCodeCommitItem `json:"commit"`
+			} `json:"entries"`
+		}
+		anonymous.doJSON(http.MethodGet, api+"/src", nil, http.StatusOK, &src)
+		var entry *repoCodeCommitItem
+		for i := range src.Entries {
+			if src.Entries[i].Name == "notes.txt" {
+				entry = &src.Entries[i].Commit
+			}
+		}
+		require.NotNil(t, entry)
+		require.Equal(t, sha, entry.SHA)
+
+		return map[string]string{
+			"commit page": getCommit(t).SubjectHTML,
+			"commit list": commits.Commits[0].SubjectHTML,
+			"file list":   entry.SubjectHTML,
+		}
+	}
+
+	t.Run("internal tracker", func(t *testing.T) {
+		commit := getCommit(t)
+		assert.Equal(t, `Fix "quoted" <b> for @`+owner.Name+`, closes #1`, commit.Subject)
+		assert.Equal(t,
+			"Thanks "+mention+"\nSee "+issue("2")+" and &lt;script&gt;alert(1)&lt;/script&gt;\n\nSigned-off-by: Alice &lt;alice@example.com&gt;",
+			commit.BodyHTML,
+		)
+		want := `Fix &#34;quoted&#34; &lt;b&gt; for ` + mention + `, closes ` + issue("1")
+		for page, got := range subjects(t) {
+			assert.Equal(t, want, got, page)
+		}
+	})
+
+	setTrackerFormat := func(t *testing.T, format string) {
+		t.Helper()
+
+		status, body := ownerClient.do(http.MethodPut, repoSettingsAPIPath(repo, "/settings/advanced"), map[string]any{
+			"enableWiki":            true,
+			"enableIssues":          true,
+			"enableExternalTracker": true,
+			"externalTrackerURL":    "https://tracker.example.com",
+			"externalTrackerFormat": format,
+			"externalTrackerStyle":  "numeric",
+			"enablePulls":           true,
+			"pullsAllowMerge":       true,
+		})
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	}
+
+	t.Run("external tracker", func(t *testing.T) {
+		setTrackerFormat(t, "https://tracker.example.com/{user}/{repo}/{index}")
+		want := `Fix &#34;quoted&#34; &lt;b&gt; for ` + mention + `, closes <a href="https://tracker.example.com/` + repo.Owner + `/` + repo.Name + `/1" rel="nofollow">#1</a>`
+		for page, got := range subjects(t) {
+			assert.Equal(t, want, got, page)
+		}
+	})
+
+	t.Run("unsafe external tracker", func(t *testing.T) {
+		// Repository admins can set any format, but links that run script are
+		// dropped and leave the reference as text.
+		setTrackerFormat(t, "javascript:alert(document.domain)//{index}")
+		want := `Fix &#34;quoted&#34; &lt;b&gt; for ` + mention + `, closes #1`
+		for page, got := range subjects(t) {
+			assert.Equal(t, want, got, page)
+		}
+		commit := getCommit(t)
+		assert.NotContains(t, strings.ToLower(commit.BodyHTML), "javascript")
+		assert.Contains(t, commit.BodyHTML, "\nSee #2 and ")
+	})
+}

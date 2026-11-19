@@ -230,3 +230,85 @@ func TestRenderIssueIndexPattern(t *testing.T) {
 		})
 	})
 }
+
+func TestRenderCommitMessage(t *testing.T) {
+	NewSanitizer()
+
+	tests := []struct {
+		name   string
+		input  string
+		format string
+		want   string
+	}{
+		{
+			name:  "mention and issue",
+			input: "Fix crash for @alice, closes #3",
+			want:  `Fix crash for <a href="/alice" rel="nofollow">@alice</a>, closes <a href="/user/repo/issues/3" rel="nofollow">#3</a>`,
+		},
+		{
+			name:  "escaped quotes are not issue references",
+			input: `Say "hi" (#34) &#34;`,
+			want:  `Say &#34;hi&#34; (<a href="/user/repo/issues/34" rel="nofollow">#34</a>) &amp;#34;`,
+		},
+		{
+			name:  "markup is escaped",
+			input: `<img src=x onerror=alert(1)> @bob`,
+			want:  `&lt;img src=x onerror=alert(1)&gt; <a href="/bob" rel="nofollow">@bob</a>`,
+		},
+		{
+			name:  "email addresses are not mentions",
+			input: "Signed-off-by: Alice <alice@example.com>",
+			want:  "Signed-off-by: Alice &lt;alice@example.com&gt;",
+		},
+		{
+			name:  "mentions in URLs are not links",
+			input: "See https://medium.com/@alice/post and HTTP://npmjs.com/package/@scope/pkg, thanks (@bob)",
+			want:  `See https://medium.com/@alice/post and HTTP://npmjs.com/package/@scope/pkg, thanks (<a href="/bob" rel="nofollow">@bob</a>)`,
+		},
+		{
+			name:  "line breaks are kept",
+			input: "Subject\n\nSee #1\n  indented & <tag>",
+			want:  "Subject\n\nSee <a href=\"/user/repo/issues/1\" rel=\"nofollow\">#1</a>\n  indented &amp; &lt;tag&gt;",
+		},
+		{
+			name:   "HTTP tracker format",
+			input:  "#1 fix <b> & more",
+			format: "https://tracker.example.com/{user}/{repo}/{index}",
+			want:   `<a href="https://tracker.example.com/user/repo/1" rel="nofollow">#1</a> fix &lt;b&gt; &amp; more`,
+		},
+		{
+			name:   "javascript tracker format",
+			input:  "#1 fix <b> & more",
+			format: "javascript:alert(1)//{index}",
+			want:   `#1 fix &lt;b&gt; &amp; more`,
+		},
+		{
+			name:   "mixed case javascript tracker format",
+			input:  "#1 fix <b> & more",
+			format: "JaVaScRiPt:alert(1)//{index}",
+			want:   `#1 fix &lt;b&gt; &amp; more`,
+		},
+		{
+			name:   "data tracker format",
+			input:  "#1 fix <b> & more",
+			format: "data:text/html,{index}",
+			want:   `#1 fix &lt;b&gt; &amp; more`,
+		},
+		{
+			name:   "vbscript tracker format",
+			input:  "#1 fix <b> & more",
+			format: "vbscript:{index}",
+			want:   `#1 fix &lt;b&gt; &amp; more`,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			metas := map[string]string{"user": "user", "repo": "repo"}
+			if test.format != "" {
+				metas["format"] = test.format
+				metas["style"] = IssueNameStyleNumeric
+			}
+			assert.Equal(t, test.want, RenderCommitMessage(test.input, "/user/repo", metas))
+		})
+	}
+}

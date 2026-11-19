@@ -16,6 +16,7 @@ import { usePageTitle } from "@/lib/page-title";
 import { type RepoCommitListItem, type RepoCommitsData, refPath, repoHeaderQuery } from "@/lib/queries/repo";
 import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
 import { routePath } from "@/lib/url";
+import { useAppLinkClick } from "@/lib/use-app-link-click";
 import { cn } from "@/lib/utils";
 
 const DAY_FMT = new Intl.DateTimeFormat(webContext.lang, { dateStyle: "long" });
@@ -234,6 +235,7 @@ function CommitRow({
   const [copied, setCopied] = useState(false);
   const [before, after = ""] = t("repo.commits.committed").split("%s");
   const { author } = commit;
+  const onLinkClick = useAppLinkClick();
   const copySHA = () => {
     navigator.clipboard.writeText(commit.sha).then(
       () => {
@@ -252,6 +254,7 @@ function CommitRow({
             "text-sm font-semibold wrap-anywhere [&_a]:text-(--color-primary) [&_a]:hover:underline",
             commit.isMerge && "font-normal text-(--color-muted-foreground)",
           )}
+          onClick={onLinkClick}
           dangerouslySetInnerHTML={{ __html: commit.subjectHTML }}
         />
         <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-(--color-muted-foreground)">
@@ -309,6 +312,7 @@ function CommitRow({
 function CompactCommitRow({ owner, name, commit }: { owner: string; name: string; commit: RepoCommitListItem }) {
   const { t } = useTranslation();
   const { author } = commit;
+  const onLinkClick = useAppLinkClick();
 
   return (
     <li className="flex items-center gap-3 px-4 py-2">
@@ -318,6 +322,7 @@ function CompactCommitRow({ owner, name, commit }: { owner: string; name: string
             "min-w-0 text-sm font-medium wrap-anywhere sm:truncate [&_a]:text-(--color-primary) [&_a]:hover:underline",
             commit.isMerge && "font-normal text-(--color-muted-foreground)",
           )}
+          onClick={onLinkClick}
           dangerouslySetInnerHTML={{ __html: commit.subjectHTML }}
         />
         <p className="flex shrink-0 items-center gap-x-1.5 text-xs text-(--color-muted-foreground)">

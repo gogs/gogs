@@ -12,6 +12,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { usePageTitle } from "@/lib/page-title";
 import { repoHeaderQuery } from "@/lib/queries/repo";
 import { routePath, subUrl } from "@/lib/url";
+import { useAppLinkClick } from "@/lib/use-app-link-click";
 
 import type { RepoCommitSearch } from "./Commit.search";
 
@@ -25,8 +26,12 @@ export interface RepoCommitSignature {
 
 export interface RepoCommitPage {
   sha: string;
+  // subject is the first line of the message as plain text, for the page title.
   subject: string;
-  body: string;
+  // The first line and the rest of the message, escaped, with links to the
+  // users and issues they mention.
+  subjectHTML: string;
+  bodyHTML: string;
   author: RepoCommitSignature;
   parents: string[];
   // markdownExtensions are the extensions of files that show a rich diff.
@@ -36,16 +41,24 @@ export interface RepoCommitPage {
 
 const BODY_CLAMP_LINES = 3;
 
-function CommitBody({ body }: { body: string }) {
+const messageLinkClass = "[&_a]:text-(--color-primary) [&_a]:hover:underline";
+
+function CommitBody({ html }: { html: string }) {
   const { t } = useTranslation();
-  const lines = body.split("\n");
+  // Links never span lines, so the HTML splits into whole lines.
+  const lines = html.split("\n");
   const needsClamp = lines.length > BODY_CLAMP_LINES;
   const [expanded, setExpanded] = useState(!needsClamp);
-  const visible = expanded ? body : lines.slice(0, BODY_CLAMP_LINES).join("\n");
+  const visible = expanded ? html : lines.slice(0, BODY_CLAMP_LINES).join("\n");
+  const onLinkClick = useAppLinkClick();
 
   return (
     <div className="mt-2 max-w-3xl">
-      <pre className="text-sm wrap-anywhere whitespace-pre-wrap text-(--color-muted-foreground)">{visible}</pre>
+      <pre
+        className={`text-sm wrap-anywhere whitespace-pre-wrap text-(--color-muted-foreground) ${messageLinkClass}`}
+        onClick={onLinkClick}
+        dangerouslySetInnerHTML={{ __html: visible }}
+      />
       {needsClamp ? (
         <button
           type="button"
@@ -61,12 +74,13 @@ function CommitBody({ body }: { body: string }) {
 
 export function RepoCommit() {
   const data = useLoaderData({ from: "/$owner/$repo/commit/$sha" });
-  const { sha, subject, body, author, parents, markdownExtensions, patch } = data;
+  const { sha, subject, subjectHTML, bodyHTML, author, parents, markdownExtensions, patch } = data;
   const { owner, repo } = useParams({ from: "/$owner/$repo/commit/$sha" });
   const search: RepoCommitSearch = useSearch({ from: "/$owner/$repo/commit/$sha" });
   const { data: repoHeader } = useSuspenseQuery(repoHeaderQuery(owner, repo));
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
+  const onLinkClick = useAppLinkClick();
   usePageTitle(`${subject} - ${owner}/${repo}@${sha.slice(0, 7)}`);
 
   const authorLabel = author.profileURL ? (
@@ -102,7 +116,11 @@ export function RepoCommit() {
 
       <section className="mx-auto w-full max-w-7xl px-4 pt-6 pb-4 sm:px-6">
         <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-          <h2 className="min-w-0 flex-1 text-xl font-semibold break-words text-(--color-foreground)">{subject}</h2>
+          <h2
+            className={`min-w-0 flex-1 text-xl font-semibold break-words text-(--color-foreground) ${messageLinkClass}`}
+            onClick={onLinkClick}
+            dangerouslySetInnerHTML={{ __html: subjectHTML }}
+          />
           <div className="basis-full sm:basis-auto">
             <Link
               activeOptions={{ exact: true }}
@@ -114,7 +132,7 @@ export function RepoCommit() {
             </Link>
           </div>
         </div>
-        {(body ?? "").trim() ? <CommitBody key={sha} body={(body ?? "").trim()} /> : null}
+        {bodyHTML ? <CommitBody key={sha} html={bodyHTML} /> : null}
 
         <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-(--color-muted-foreground)">
           <span className="inline-flex items-center gap-1.5">
