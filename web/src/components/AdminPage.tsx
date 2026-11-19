@@ -57,7 +57,7 @@ export function Segmented({ label, className, children }: { label: string; class
     <nav
       aria-label={label}
       className={cn(
-        "glass-control glass-tabs inline-flex max-w-full flex-wrap items-center gap-0.5 rounded-lg bg-(--color-surface) p-0.5",
+        "glass-control glass-tabs inline-flex max-w-full flex-wrap items-center gap-0.5 rounded-lg bg-(--color-surface) p-0.5 glass-ui:overflow-x-auto",
         className,
       )}
     >

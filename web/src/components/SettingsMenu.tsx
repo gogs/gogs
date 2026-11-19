@@ -25,8 +25,10 @@ function toggleI18nDebug() {
 }
 
 // The themes share one row, and a longer label, e.g., in another language,
-// takes more of it than a shorter one.
-const THEME_ITEM = "flex-auto gap-1.5";
+// takes more of it than a shorter one. Labels that do not fit the row together
+// wrap onto a second one. The theme in use is bold, so it does not rely on its
+// fill alone.
+const THEME_ITEM = "min-w-0 flex-auto gap-1.5 data-[state=on]:font-semibold";
 
 export function SettingsMenu() {
   const { t } = useTranslation();
@@ -73,19 +75,21 @@ export function SettingsMenu() {
             value={theme}
             onValueChange={(v) => v && setTheme(v as Theme)}
             size="sm"
-            className="glass-control glass-tabs flex-wrap glass-ui:!w-full"
+            // With glass the themes are the segments of one control, which cannot wrap, so a label
+            // that is too long for its share of the row is cut short, and the others keep their room.
+            className="glass-control glass-tabs flex-wrap glass-ui:grid glass-ui:!w-full glass-ui:grid-cols-[repeat(3,minmax(0,auto))] glass-ui:justify-stretch"
           >
             <ToggleGroupItem value="light" aria-label={t("theme_light")} className={THEME_ITEM}>
               <Sun className="size-4 shrink-0" aria-hidden />
-              {t("theme_light")}
+              <span className="truncate">{t("theme_light")}</span>
             </ToggleGroupItem>
             <ToggleGroupItem value="dark" aria-label={t("theme_dark")} className={THEME_ITEM}>
               <Moon className="size-4 shrink-0" aria-hidden />
-              {t("theme_dark")}
+              <span className="truncate">{t("theme_dark")}</span>
             </ToggleGroupItem>
             <ToggleGroupItem value="system" aria-label={t("theme_system")} className={THEME_ITEM}>
               <Monitor className="size-4 shrink-0" aria-hidden />
-              {t("theme_system")}
+              <span className="truncate">{t("theme_system")}</span>
             </ToggleGroupItem>
           </ToggleGroup>
         </div>
