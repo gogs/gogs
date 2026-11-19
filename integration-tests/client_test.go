@@ -218,6 +218,11 @@ func (c *client) doBothWhileLocked(lockQuery string, lockArg any, first, second 
 		var lockerPID int64
 		require.NoError(c.t, tx.Raw("SELECT pg_backend_pid()").Scan(&lockerPID).Error)
 		require.Eventually(c.t, func() bool {
+			// PostgreSQL keeps what pg_stat_activity shows until the transaction
+			// ends, which would miss connections that the server opens later.
+			if err := tx.Exec("SELECT pg_stat_clear_snapshot()").Error; err != nil {
+				return false
+			}
 			var blocked int64
 			err := tx.Raw(`SELECT count(*) FROM pg_stat_activity a WHERE @pid = ANY(pg_blocking_pids(a.pid)) OR EXISTS (
 	SELECT 1 FROM pg_stat_activity b WHERE @pid = ANY(pg_blocking_pids(b.pid)) AND b.pid = ANY(pg_blocking_pids(a.pid))

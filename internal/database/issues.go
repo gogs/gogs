@@ -456,20 +456,22 @@ func (s *IssuesStore) createIssueUsers(ctx context.Context, repo *Repository, is
 	for _, assignee := range assignees {
 		isPoster := assignee.ID == issue.PosterID
 		issueUsers = append(issueUsers, &IssueUser{
-			IssueID:    issue.ID,
-			RepoID:     repo.ID,
-			UserID:     assignee.ID,
-			IsPoster:   isPoster,
-			IsAssigned: assignee.ID == issue.AssigneeID,
+			IssueID:     issue.ID,
+			RepoID:      repo.ID,
+			UserID:      assignee.ID,
+			MilestoneID: issue.MilestoneID,
+			IsPoster:    isPoster,
+			IsAssigned:  assignee.ID == issue.AssigneeID,
 		})
 		isPosterAssignee = isPosterAssignee || isPoster
 	}
 	if !isPosterAssignee {
 		issueUsers = append(issueUsers, &IssueUser{
-			IssueID:  issue.ID,
-			RepoID:   repo.ID,
-			UserID:   issue.PosterID,
-			IsPoster: true,
+			IssueID:     issue.ID,
+			RepoID:      repo.ID,
+			UserID:      issue.PosterID,
+			MilestoneID: issue.MilestoneID,
+			IsPoster:    true,
 		})
 	}
 	return s.db.WithContext(ctx).Create(issueUsers).Error
@@ -887,24 +889,31 @@ func (s *IssuesStore) MarkRead(ctx context.Context, userID, issueID int64) error
 	return s.db.WithContext(ctx).Exec("UPDATE issue_user SET is_read = ? WHERE uid = ? AND issue_id = ?", true, userID, issueID).Error
 }
 
-// Update saves all fields of the issue.
+// Update saves the title and the content of the issue. Saving no other fields
+// keeps the changes that others made since the issue was read, e.g., closing
+// it.
 func (s *IssuesStore) Update(ctx context.Context, issue *Issue) error {
-	// NOTE: The explicit condition keeps updating an issue that is not yet
-	// inserted (i.e., ID is 0) a no-op instead of an error.
-	return s.db.WithContext(ctx).Model(issue).Where("id = ?", issue.ID).Select("*").Updates(issue).Error
+	return s.updateCols(ctx, issue, "name", "content")
 }
 
-// updateCols saves given columns and the updated time of the issue.
+// updateCols saves given columns and the updated time of the issue. Updating
+// an issue that is not yet inserted (i.e., ID is 0) is a no-op.
 func (s *IssuesStore) updateCols(ctx context.Context, issue *Issue, cols ...string) error {
 	cols = append(cols, "updated_unix")
 	return s.db.WithContext(ctx).Model(issue).Where("id = ?", issue.ID).Select(cols).Updates(issue).Error
 }
 
-// UpdateAssignee saves all fields of the issue, and marks its assignee, if
-// any, as the only user assigned to it.
+// UpdateAssignee saves the assignee of the issue, and marks it, if any, as the
+// only user assigned to the issue.
 func (s *IssuesStore) UpdateAssignee(ctx context.Context, issue *Issue) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		err := tx.Exec("UPDATE issue_user SET is_assigned = ? WHERE issue_id = ?", false, issue.ID).Error
+		// Closing the issue locks it before its users, and so does this.
+		err := newIssuesStore(tx).updateCols(ctx, issue, "assignee_id")
+		if err != nil {
+			return errors.Wrap(err, "update issue")
+		}
+
+		err = tx.Exec("UPDATE issue_user SET is_assigned = ? WHERE issue_id = ?", false, issue.ID).Error
 		if err != nil {
 			return errors.Wrap(err, "unassign users")
 		}
@@ -914,7 +923,7 @@ func (s *IssuesStore) UpdateAssignee(ctx context.Context, issue *Issue) error {
 				return errors.Wrap(err, "assign user")
 			}
 		}
-		return newIssuesStore(tx).Update(ctx, issue)
+		return nil
 	})
 }
 
@@ -982,23 +991,46 @@ func (s *IssuesStore) ChangeStatus(ctx context.Context, logger *logx.Logger, doe
 var errIssueStatusUnchanged = errors.New("issue already has the status")
 
 // changeStatus is ChangeStatus without a transaction of its own and webhooks.
-func (s *IssuesStore) changeStatus(ctx context.Context, logger *logx.Logger, doer *User, repo *Repository, issue *Issue, isClosed bool) (err error) {
+func (s *IssuesStore) changeStatus(ctx context.Context, logger *logx.Logger, doer *User, repo *Repository, issue *Issue, isClosed bool) error {
 	if issue.IsClosed == isClosed {
 		return nil
 	}
-	issue.IsClosed = isClosed
+	if err := s.setStatus(ctx, issue, isClosed); err != nil {
+		return err
+	}
+	return s.recordStatus(ctx, logger, doer, repo, issue)
+}
 
+// setStatus closes or reopens the issue, and nothing else. It returns
+// errIssueStatusUnchanged when the issue already has the status.
+func (s *IssuesStore) setStatus(ctx context.Context, issue *Issue, isClosed bool) error {
 	// Update only if the status still differs. This locks the row, so a
 	// concurrent change, e.g., closing a pull request while it is merged, waits
 	// here and then updates nothing.
-	issue.UpdatedUnix = time.Now().Unix()
+	updatedUnix := time.Now().Unix()
 	result := s.db.WithContext(ctx).Model(&Issue{}).
 		Where("id = ? AND is_closed = ?", issue.ID, !isClosed).
-		UpdateColumns(map[string]any{"is_closed": isClosed, "updated_unix": issue.UpdatedUnix})
+		UpdateColumns(map[string]any{"is_closed": isClosed, "updated_unix": updatedUnix})
 	if result.Error != nil {
 		return errors.Wrap(result.Error, "update issue")
 	} else if result.RowsAffected == 0 {
 		return errIssueStatusUnchanged
+	}
+	issue.IsClosed = isClosed
+	issue.UpdatedUnix = updatedUnix
+	return nil
+}
+
+// recordStatus updates the numbers of closed issues of the labels and the
+// milestone of the issue, comments on it, and updates its users, after
+// setStatus changed its status.
+func (s *IssuesStore) recordStatus(ctx context.Context, logger *logx.Logger, doer *User, repo *Repository, issue *Issue) (err error) {
+	isClosed := issue.IsClosed
+	// The issue is locked now, so its milestone is the one that a concurrent
+	// move committed, if any.
+	err = s.db.WithContext(ctx).Raw("SELECT milestone_id FROM issue WHERE id = ?", issue.ID).Scan(&issue.MilestoneID).Error
+	if err != nil {
+		return errors.Wrap(err, "get milestone")
 	}
 
 	labels := newLabelsStore(s.db)

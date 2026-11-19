@@ -188,6 +188,9 @@ func issuesCreate(t *testing.T, ctx context.Context, s *IssuesStore) {
 	var relations []relation
 	for _, iu := range ius {
 		assert.Equal(t, issue.ID, iu.IssueID)
+		if iu.UserID != mentioned.ID {
+			assert.Equal(t, milestone.ID, iu.MilestoneID, "user %d", iu.UserID)
+		}
 		relations = append(relations, relation{iu.UserID, iu.IsPoster, iu.IsAssigned, iu.IsMentioned})
 	}
 	assert.Equal(t, []relation{
@@ -510,7 +513,8 @@ func issuesUpdateAssignee(t *testing.T, ctx context.Context, s *IssuesStore) {
 	got, err := s.getRaw(ctx, nil, "id = ?", issue.ID)
 	require.NoError(t, err)
 	assert.Equal(t, int64(11), got.AssigneeID)
-	assert.Equal(t, "New", got.Title)
+	// Other fields may have been changed by others since the issue was read.
+	assert.Equal(t, "Old", got.Title)
 
 	issue.AssigneeID = 0
 	err = s.UpdateAssignee(ctx, issue)

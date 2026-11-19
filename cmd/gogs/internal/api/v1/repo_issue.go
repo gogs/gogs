@@ -175,9 +175,8 @@ func editIssue(c *apiContext, form editIssueRequest) {
 	}
 	if c.Repo.IsWriter() && form.Milestone != nil &&
 		issue.MilestoneID != *form.Milestone {
-		oldMilestoneID := issue.MilestoneID
 		issue.MilestoneID = *form.Milestone
-		if err = database.Handle.Milestones().AssignIssue(ctx, c.Logger, c.User, issue, oldMilestoneID); err != nil {
+		if err = database.Handle.Milestones().AssignIssue(ctx, c.Logger, c.User, issue); err != nil {
 			c.Error(err, "change milestone assign")
 			return
 		}
