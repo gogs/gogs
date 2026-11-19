@@ -217,7 +217,7 @@ type SearchIssuesOptions struct {
 type IssueUser struct {
 	ID          int64 `gorm:"primaryKey"`
 	UserID      int64 `gorm:"column:uid;index:IDX_issue_user_uid"`
-	IssueID     int64
+	IssueID     int64 `gorm:"index:IDX_issue_user_issue_id"`
 	RepoID      int64 `gorm:"index:IDX_issue_user_repo_id"`
 	MilestoneID int64
 	IsRead      bool
@@ -1059,9 +1059,8 @@ func (s *IssuesStore) recordStatus(ctx context.Context, logger *logx.Logger, doe
 		return errors.Wrap(err, "create comment")
 	}
 
-	// Update issue_user last: it has no index on issue_id, so MySQL locks the
-	// whole table, which would deadlock with an issue creation holding the
-	// labels.
+	// Update issue_user last, the order that everything changing issues uses,
+	// so they cannot deadlock.
 	err = s.db.WithContext(ctx).Exec("UPDATE issue_user SET is_closed = ? WHERE issue_id = ?", isClosed, issue.ID).Error
 	if err != nil {
 		return errors.Wrap(err, "update issue users")
