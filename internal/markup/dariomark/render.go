@@ -1610,6 +1610,28 @@ func (h *htmlSink) raw(b []byte) {
 func writeEscaped(out *outBuf, b []byte) {
 	start := 0
 	for i := 0; i < len(b); i++ {
+		for i+4 <= len(b) {
+			w := b[i : i+4 : i+4]
+			if needsEscape[w[0]] {
+				break
+			}
+			if needsEscape[w[1]] {
+				i++
+				break
+			}
+			if needsEscape[w[2]] {
+				i += 2
+				break
+			}
+			if needsEscape[w[3]] {
+				i += 3
+				break
+			}
+			i += 4
+		}
+		if i >= len(b) {
+			break
+		}
 		c := b[i]
 		if !needsEscape[c] {
 			continue
