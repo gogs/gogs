@@ -1,124 +1,60 @@
 package markup
 
 import (
-	"net/url"
+	"bytes"
 	"strings"
 	"sync"
 	"sync/atomic"
 
-	"github.com/microcosm-cc/bluemonday"
-
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/lazyregexp"
+	"gogs.io/gogs/internal/markup/dariomark"
 )
 
-// Sanitizer is a protection wrapper of *bluemonday.Policy which does not allow
-// any modification to the underlying policies once it's been created.
+// Sanitizer sanitizes HTML with an allowlist policy for user content. Its
+// policy cannot be modified once it's been created.
 type Sanitizer struct {
-	policy *bluemonday.Policy
 	init   sync.Once
 	ready  atomic.Bool
-	// schemes holds the URL schemes the policy allows without checks.
-	schemes map[string]bool
+	policy atomic.Pointer[dariomark.Policy]
+	// markdown is the policy as Dariomark uses it while rendering, set
+	// before ready.
+	markdown *dariomark.Sanitizer
 }
 
-var sanitizer = &Sanitizer{
-	policy: bluemonday.UGCPolicy(),
-}
+var sanitizer = func() *Sanitizer {
+	s := &Sanitizer{}
+	s.policy.Store(dariomark.NewPolicy(false, nil))
+	return s
+}()
 
-// codeClassPattern matches the allowed classes of code elements.
-var codeClassPattern = lazyregexp.New(`^language-[\w.+#-]+$`)
-
-// urlSchemePolicies are the URL schemes that are allowed only for the URLs
-// that pass their checks.
-var urlSchemePolicies = map[string]func(*url.URL) bool{
-	// Only allow data URIs with safe image MIME types to prevent XSS via
-	// "data:text/html" payloads.
-	"data": IsSafeDataURI,
-}
-
-// NewSanitizer initializes sanitizer with allowed attributes based on settings.
-// Multiple calls to this function will only create one instance of Sanitizer during
-// entire application lifecycle.
-//
-// Dariomark sanitizes documents without raw HTML itself, with a copy of this
-// policy for the HTML it produces (see dariomark.Sanitizer). When changing the
-// elements, classes or attributes allowed here for that HTML, update sanitizedElements,
-// allowedClasses, allowedRoles and the attribute checks in
-// internal/markup/dariomark/sanitize.go to match, and markdownSanitizer in
-// markdown.go. URL schemes are not copied: Dariomark asks allowURLScheme.
+// NewSanitizer extends the policy of the sanitizer with the rules for rendered
+// Markdown and the custom URL schemes of the settings. Multiple calls to this
+// function will only extend it once during entire application lifecycle.
 func NewSanitizer() {
 	sanitizer.init.Do(func() {
-		// Only allow highlight.js language classes for code blocks.
-		sanitizer.policy.AllowAttrs("class").Matching(codeClassPattern.Regexp()).OnElements("code")
-
-		// Checkboxes
-		sanitizer.policy.AllowAttrs("type").Matching(lazyregexp.New(`^checkbox$`).Regexp()).OnElements("input")
-		sanitizer.policy.AllowAttrs("checked", "disabled").OnElements("input")
-
-		// Alerts
-		sanitizer.policy.AllowAttrs("class").Matching(lazyregexp.New(`^markdown-alert markdown-alert-(note|tip|important|warning|caution)$`).Regexp()).OnElements("div")
-		sanitizer.policy.AllowAttrs("class").Matching(lazyregexp.New(`^markdown-alert-title$`).Regexp()).OnElements("p")
-
-		// Alignment of blocks in READMEs, e.g., <div align="center">, as on GitHub
-		sanitizer.policy.AllowAttrs("align").Matching(lazyregexp.New(`(?i)^(left|center|right|justify)$`).Regexp()).OnElements("div", "p", "h1", "h2", "h3", "h4", "h5", "h6")
-
-		// Image sizes in pixels, e.g., width="201px", which browsers read as
-		// width="201". The UGC policy only allows numbers and percentages.
-		sanitizer.policy.AllowAttrs("width", "height").Matching(lazyregexp.New(`(?i)^[0-9]+px$`).Regexp()).OnElements("img")
-
-		// Keyboard keys, e.g., <kbd>Ctrl</kbd>
-		sanitizer.policy.AllowElements("kbd")
-
-		// Start numbers of ordered lists
-		sanitizer.policy.AllowAttrs("start").Matching(lazyregexp.New(`^[0-9]+$`).Regexp()).OnElements("ol")
-
-		// Task lists
-		sanitizer.policy.AllowAttrs("class").Matching(lazyregexp.New(`^contains-task-list$`).Regexp()).OnElements("ul", "ol")
-		sanitizer.policy.AllowAttrs("class").Matching(lazyregexp.New(`^task-list-item$`).Regexp()).OnElements("li")
-		sanitizer.policy.AllowAttrs("data-source-lines").Matching(lazyregexp.New(`^[0-9]+-[0-9]+$`).Regexp()).OnElements("li")
-
-		// Footnotes
-		sanitizer.policy.AllowAttrs("class").Matching(lazyregexp.New(`^footnotes$`).Regexp()).OnElements("div")
-		sanitizer.policy.AllowAttrs("class").Matching(lazyregexp.New(`^footnote-(ref|backref)$`).Regexp()).OnElements("a")
-		sanitizer.policy.AllowAttrs("role").Matching(lazyregexp.New(`^doc-(endnotes|noteref|backlink)$`).Regexp()).OnElements("div", "a")
-
-		for scheme, allow := range urlSchemePolicies {
-			sanitizer.policy.AllowURLSchemeWithCustomPolicy(scheme, allow)
-		}
-
-		// Custom URL schemes
-		sanitizer.policy.AllowURLSchemes(conf.Markdown.CustomURLSchemes...)
-
-		// The schemes that bluemonday.UGCPolicy allows, plus the custom ones.
-		// Keep in sync with UGCPolicy when upgrading bluemonday.
-		sanitizer.schemes = map[string]bool{"mailto": true, "http": true, "https": true}
-		for _, scheme := range conf.Markdown.CustomURLSchemes {
-			sanitizer.schemes[strings.ToLower(scheme)] = true
-		}
+		p := dariomark.NewPolicy(true, conf.Markdown.CustomURLSchemes)
+		sanitizer.policy.Store(p)
+		sanitizer.markdown = p.Sanitizer()
 		sanitizer.ready.Store(true)
 	})
 }
 
-// IsSafeDataURI returns whether the given data URI uses a safe image MIME type.
-func IsSafeDataURI(u *url.URL) bool {
-	// The opaque data of a data URI has the form "mediatype;base64,data" or
-	// "mediatype,data". We only allow common image MIME types.
-	mediatype, _, _ := strings.Cut(u.Opaque, ";")
-	mediatype, _, _ = strings.Cut(mediatype, ",")
-	switch strings.TrimSpace(strings.ToLower(mediatype)) {
-	case "image/png", "image/jpeg", "image/gif", "image/webp", "image/x-icon":
-		return true
-	}
-	return false
-}
-
 // Sanitize takes a string that contains an HTML fragment or document and applies policy allowlist.
 func Sanitize(s string) string {
-	return sanitizer.policy.Sanitize(s)
+	if strings.TrimSpace(s) == "" {
+		return s
+	}
+	return string(sanitizer.policy.Load().AppendSanitized(make([]byte, 0, len(s)), []byte(s)))
 }
 
 // SanitizeBytes takes a []byte slice that contains an HTML fragment or document and applies policy allowlist.
 func SanitizeBytes(b []byte) []byte {
-	return sanitizer.policy.SanitizeBytes(b)
+	if len(bytes.TrimSpace(b)) == 0 {
+		return b
+	}
+	out := sanitizer.policy.Load().AppendSanitized(make([]byte, 0, len(b)), b)
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }

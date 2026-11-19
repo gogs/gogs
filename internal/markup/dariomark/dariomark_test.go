@@ -75,7 +75,7 @@ func TestGFMSpec(t *testing.T) {
 	for _, ex := range examples {
 		t.Run(strconv.Itoa(ex.Example), func(t *testing.T) {
 			if ex.Extension == "tagfilter" {
-				t.Skip("HTML is sanitized with bluemonday instead of filtering tags")
+				t.Skip("HTML is sanitized by Policy instead of filtering tags")
 			}
 			got := string(HTML([]byte(ex.Markdown), opts))
 			got = taskAttrs.ReplaceAllString(got, "")
@@ -296,6 +296,25 @@ func TestFootnoteTableAfterRawHTML(t *testing.T) {
 	assert.False(t, got.Sanitized)
 	assert.Equal(t, 2, strings.Count(string(got.HTML), "<th>"), string(got.HTML))
 	assert.Equal(t, 2, strings.Count(string(got.HTML), "<td>"), string(got.HTML))
+}
+
+func TestFootnoteRawHTMLBeforePlainParagraph(t *testing.T) {
+	// The definition is parsed before the paragraph after it, and its raw
+	// HTML makes the sanitizing render start over without sanitizing. The
+	// typographer is off, so that the paragraph needs no inline nodes.
+	opts := postProcessTestOptions()
+	opts.Typographer = Typographer{}
+	got := Render([]byte("a\n\n[^1]: <b>x</b>\n\nplain text\n"), opts)
+	assert.False(t, got.Sanitized)
+}
+
+func TestAppendHTML(t *testing.T) {
+	opts := &Options{Tables: true, TaskLists: true, Linkify: true, Footnotes: true}
+	buf := []byte("<!-- prefix -->")
+	for _, src := range []string{"# a\n\n- [x] b https://c.d\n\n| e |\n| - |\n| f |\n", "g[^1]\n\n[^1]: h\n", "`i` *j*"} {
+		buf = AppendHTML(buf[:15], []byte(src), opts)
+		assert.Equal(t, "<!-- prefix -->"+string(HTML([]byte(src), opts)), string(buf), src)
+	}
 }
 
 func TestTablePadding(t *testing.T) {

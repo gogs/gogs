@@ -117,6 +117,11 @@ func (ip *inlineParser) linkifyURL(b []byte) int {
 	if f := ip.p.opts.LinkifyURL; f != nil {
 		return f(b)
 	}
+	return linkifyURL(b)
+}
+
+// linkifyURL returns the length of the URL at the start of b, by default.
+func linkifyURL(b []byte) int {
 	n := bytes.Index(b[:min(len(b), 8)], []byte("://")) + 3
 	// Like GitHub, the domain of a URL needs no period, e.g., "http://localhost".
 	d := scanDomain(b[n:], false)

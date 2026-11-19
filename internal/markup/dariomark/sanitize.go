@@ -7,15 +7,14 @@ import (
 	"strings"
 
 	"golang.org/x/net/html"
-
-	"gogs.io/gogs/internal/lazyregexp"
 )
 
 // Sanitizer describes the parts of the sanitizer policy that depend on the
-// rendered content. Render emulates the rest of the policy, which is the
-// bluemonday UGC policy with classes for code languages, alerts, footnotes and
-// task lists, and attributes for task list items and checkboxes, footnote
-// roles and ordered list start numbers.
+// rendered content, see Policy.Sanitizer. Render emulates the rest of the
+// policy, which is the Policy of NewPolicy for Markdown: the allowlist for
+// user content with classes for code languages, alerts, footnotes and task lists, and
+// attributes for task list items and checkboxes, footnote roles and ordered
+// list start numbers.
 type Sanitizer struct {
 	// AllowURLScheme reports whether the policy allows the URL, which has a
 	// scheme.
@@ -32,7 +31,7 @@ type Sanitizer struct {
 // setting failed, on HTML that it does not handle.
 type sanitizeSink struct {
 	r   *renderer
-	out *bytes.Buffer
+	out *outBuf
 	san *Sanitizer
 	// run is the text since the last tag, unescaped.
 	run []byte
@@ -44,11 +43,13 @@ type sanitizeSink struct {
 	code  int
 	emoji emojiText
 	// dropped are the names of the dropped start tags whose end tags the
-	// sanitizer skips, see bluemonday's closingTagToSkipStack.
+	// sanitizer skips, see sanitizeState.stack.
 	dropped []string
 	failed  bool
 	attrs   []html.Attribute
-	buf     []byte
+	// clean is a buffer for the attributes that emitStart keeps.
+	clean []html.Attribute
+	buf   []byte
 	// escaped is the escaped run, see flush.
 	escaped []byte
 }
@@ -57,9 +58,14 @@ func (r *renderer) renderSanitized(render func()) ([]byte, bool) {
 	if r.opts.Sanitizer == nil {
 		return nil, false
 	}
-	r.out.Grow(len(r.p.src) + len(r.p.src)/4)
-	s := &sanitizeSink{r: r, out: &r.out, san: r.opts.Sanitizer, emoji: emojiText{names: r.opts.Emoji}}
-	r.s = s
+	r.out.Grow(len(r.p.src) + len(r.p.src)/4 + min(len(r.p.src), 2048) + 32)
+	// The sink keeps its buffers from the previous render.
+	s := &r.san
+	*s = sanitizeSink{
+		r: r, out: &r.out, san: r.opts.Sanitizer, emoji: emojiText{names: r.opts.Emoji},
+		run: s.run[:0], dropped: s.dropped[:0], attrs: s.attrs[:0], clean: s.clean[:0], buf: s.buf[:0], escaped: s.escaped[:0],
+	}
+	r.s = sink{san: s}
 	r.sanitizing = true
 	render()
 	s.flush()
@@ -151,7 +157,7 @@ func (s *sanitizeSink) endTag(name string) {
 
 func (s *sanitizeSink) wrapImage(attrs []html.Attribute) {
 	t := html.Token{Type: html.StartTagToken, Data: "img", Attr: attrs}
-	var b bytes.Buffer
+	var b outBuf
 	if !s.r.imageLink(&b, t) {
 		s.emitStart("img", attrs)
 		return
@@ -166,7 +172,9 @@ func (s *sanitizeSink) flush() {
 	if len(s.run) == 0 {
 		return
 	}
-	s.run = []byte(convertNewlines(string(s.run)))
+	if bytes.IndexByte(s.run, '\r') >= 0 {
+		s.run = []byte(convertNewlines(string(s.run)))
+	}
 	s.escaped = appendHTMLEscaped(s.escaped[:0], s.run)
 	s.run = s.run[:0]
 	s.emoji.startNode()
@@ -285,19 +293,19 @@ func (s *sanitizeSink) tokens(b []byte, f func(t *html.Token)) {
 }
 
 // emitStart writes a start tag as the sanitizer does. Its attribute checks
-// must be kept in sync with NewSanitizer in internal/markup/sanitizer.go.
+// must be kept in sync with NewPolicy.
 func (s *sanitizeSink) emitStart(name string, attrs []html.Attribute) {
-	if !sanitizedElements[name] {
+	if !sanitizedElement(name) {
 		s.failed = true
 		return
 	}
-	clean := attrs[:0:0]
+	clean := s.clean[:0]
 	href := false
 	for _, a := range attrs {
 		ok := false
 		switch a.Key {
 		case "id":
-			ok = idPattern.MatchString(a.Val)
+			ok = hasID([]byte(a.Val))
 		case "title":
 			ok = s.san.Text.MatchString(a.Val)
 		case "href":
@@ -337,15 +345,15 @@ func (s *sanitizeSink) emitStart(name string, attrs []html.Attribute) {
 				return
 			}
 		case "align":
-			ok = (name == "td" || name == "th") && cellAlignPattern.MatchString(a.Val)
+			ok = (name == "td" || name == "th") && isCellAlign([]byte(a.Val))
 		case "start":
-			ok = name == "ol" && listStartPattern.MatchString(a.Val)
+			ok = name == "ol" && isDigits([]byte(a.Val))
 		case "type":
 			ok = name == "input" && a.Val == "checkbox"
 		case "checked", "disabled":
 			ok = name == "input"
 		case "data-source-lines":
-			ok = name == "li" && sourceLinesPattern.MatchString(a.Val)
+			ok = name == "li" && isSourceLines([]byte(a.Val))
 		default:
 			s.failed = true
 			return
@@ -357,22 +365,23 @@ func (s *sanitizeSink) emitStart(name string, attrs []html.Attribute) {
 	if href {
 		clean = append(clean, html.Attribute{Key: "rel", Val: "nofollow"})
 	}
+	s.clean = clean[:0]
 	if len(clean) == 0 && (name == "a" || name == "img" || name == "input") {
 		s.dropped = append(s.dropped, name)
 		return
 	}
 	out := s.out
-	out.WriteByte('<')
+	out.writeByte('<')
 	out.WriteString(name)
 	for _, a := range clean {
-		out.WriteByte(' ')
+		out.writeByte(' ')
 		out.WriteString(a.Key)
 		out.WriteString(`="`)
-		s.buf = appendHTMLEscaped(s.buf[:0], []byte(a.Val))
+		s.buf = appendHTMLEscaped(s.buf[:0], a.Val)
 		out.Write(s.buf)
-		out.WriteByte('"')
+		out.writeByte('"')
 	}
-	out.WriteByte('>')
+	out.writeByte('>')
 }
 
 // emitEnd writes an end tag as the sanitizer does.
@@ -381,13 +390,13 @@ func (s *sanitizeSink) emitEnd(name string) {
 		s.dropped = s.dropped[:n-1]
 		return
 	}
-	if !sanitizedElements[name] {
+	if !sanitizedElement(name) {
 		s.failed = true
 		return
 	}
 	s.out.WriteString("</")
 	s.out.WriteString(name)
-	s.out.WriteByte('>')
+	s.out.writeByte('>')
 }
 
 // validURL validates and normalizes a URL as the sanitizer does.
@@ -412,26 +421,21 @@ func (s *sanitizeSink) validURL(raw string) (string, bool) {
 	return v, v != ""
 }
 
-// The patterns and tables below, with the attribute checks in emitStart, copy
-// the sanitizer policy for the HTML that Render produces. They must be
-// kept in sync with NewSanitizer in internal/markup/sanitizer.go, and with the
-// bluemonday UGC policy when upgrading bluemonday, which supplies id, align,
-// title, alt and data URIs.
-var (
-	dataURIBase64Prefix = lazyregexp.New(`^data:[^,]*;base64,`)
-	idPattern           = lazyregexp.New(`[a-zA-Z0-9\:\-_\.]+`)
-	cellAlignPattern    = lazyregexp.New(`(?i)^(center|justify|left|right|char)$`)
-	sourceLinesPattern  = lazyregexp.New(`^[0-9]+-[0-9]+$`)
-	listStartPattern    = lazyregexp.New(`^[0-9]+$`)
-)
+// The tables below, with the attribute checks in emitStart, copy the
+// sanitizer policy for the HTML that Render produces. They must be kept in
+// sync with NewPolicy, whose checks emitStart shares.
 
-// sanitizedElements are the elements that Render produces and the sanitizer
-// allows.
-var sanitizedElements = map[string]bool{
-	"a": true, "blockquote": true, "br": true, "code": true, "del": true, "div": true, "em": true,
-	"h1": true, "h2": true, "h3": true, "h4": true, "h5": true, "h6": true, "hr": true, "img": true,
-	"input": true, "li": true, "ol": true, "p": true, "pre": true, "strong": true, "sub": true, "sup": true,
-	"table": true, "tbody": true, "td": true, "th": true, "thead": true, "tr": true, "ul": true,
+// sanitizedElement reports whether name is an element that Render produces
+// and the sanitizer allows.
+func sanitizedElement(name string) bool {
+	switch name {
+	case "a", "blockquote", "br", "code", "del", "div", "em",
+		"h1", "h2", "h3", "h4", "h5", "h6", "hr", "img",
+		"input", "li", "ol", "p", "pre", "strong", "sub", "sup",
+		"table", "tbody", "td", "th", "thead", "tr", "ul":
+		return true
+	}
+	return false
 }
 
 // allowedClasses are the classes that Render produces, by element.
@@ -456,6 +460,9 @@ var allowedRoles = map[string]bool{"doc-noteref": true, "doc-backlink": true, "d
 func appendHTMLEscaped[T string | []byte](dst []byte, b T) []byte {
 	start := 0
 	for i := 0; i < len(b); i++ {
+		if !needsHTMLEscape[b[i]] {
+			continue
+		}
 		var esc string
 		switch b[i] {
 		case '&':
@@ -479,6 +486,8 @@ func appendHTMLEscaped[T string | []byte](dst []byte, b T) []byte {
 	}
 	return append(dst, b[start:]...)
 }
+
+var needsHTMLEscape = withSpecial([256]bool{}, "&'<>\"\r")
 
 // convertNewlines replaces "\r\n" and "\r" with "\n", as the tokenizer does.
 func convertNewlines(s string) string {

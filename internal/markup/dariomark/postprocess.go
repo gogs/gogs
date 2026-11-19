@@ -20,7 +20,7 @@ import (
 // element. If the tokenizer fails other than at the end of the input, the
 // input is returned unchanged.
 func (r *renderer) postProcess(b []byte) []byte {
-	var out bytes.Buffer
+	var out outBuf
 	out.Grow(len(b) + len(b)/8)
 	// Front matter is text, which is not linked.
 	out.Write(b[:r.frontMatterSize])
@@ -33,22 +33,29 @@ func (r *renderer) postProcess(b []byte) []byte {
 	// the text around them is one text node.
 	inText := false
 	z := html.NewTokenizer(bytes.NewReader(b))
-	for z.Next() != html.ErrorToken {
-		t := z.Token()
+	for {
+		tt := z.Next()
+		if tt == html.ErrorToken {
+			break
+		}
+		var t html.Token
+		if tt != html.TextToken {
+			t = z.Token()
+		}
 		inRawText := rawText
 		rawText = false
 		continuesText := inText
 		inText = false
-		switch t.Type {
+		switch tt {
 		case html.TextToken:
 			if inRawText {
-				out.WriteString(t.String())
+				out.Write(r.tokenText(z))
 				break
 			}
 			if !continuesText {
 				emoji.startNode()
 			}
-			r.specialLinks(&out, []byte(t.String()), &emoji)
+			r.specialLinks(&out, r.tokenText(z), &emoji)
 			inText = true
 		case html.StartTagToken, html.SelfClosingTagToken:
 			// The tokenizer reads the content after "<textarea/>" as raw
@@ -73,13 +80,22 @@ func (r *renderer) postProcess(b []byte) []byte {
 				if t.Data != "a" {
 					code = 1
 				}
-				for z.Next() != html.ErrorToken {
-					inner := z.Token()
-					if inner.Type == html.TextToken && code == 0 {
-						emoji.startNode()
-						emoji.write(&out, []byte(inner.String()))
+				for {
+					it := z.Next()
+					if it == html.ErrorToken {
+						break
+					}
+					if it == html.TextToken {
+						text := r.tokenText(z)
+						if code == 0 {
+							emoji.startNode()
+							emoji.write(&out, text)
+						} else {
+							out.Write(text)
+						}
 						continue
 					}
+					inner := z.Token()
 					if (inner.Type == html.StartTagToken || inner.Type == html.SelfClosingTagToken) && inner.Data == "img" && code == 0 {
 						inner.Attr = r.linkedImageAttrs(inner.Attr)
 					}
@@ -113,7 +129,7 @@ func (r *renderer) postProcess(b []byte) []byte {
 			}
 			out.WriteString("</")
 			out.WriteString(startTags[len(startTags)-1])
-			out.WriteByte('>')
+			out.writeByte('>')
 			startTags = startTags[:len(startTags)-1]
 		default:
 			out.WriteString(t.String())
@@ -123,6 +139,20 @@ func (r *renderer) postProcess(b []byte) []byte {
 		return b
 	}
 	return out.Bytes()
+}
+
+// tokenText returns the current text token of z as Token.String writes it,
+// which is valid until the next call. Text without "&", "\r" or NUL is the
+// same after the tokenizer unescapes it, so it is escaped without building a
+// token.
+func (r *renderer) tokenText(z *html.Tokenizer) []byte {
+	raw := z.Raw()
+	if bytes.IndexByte(raw, '&') < 0 && bytes.IndexByte(raw, '\r') < 0 && bytes.IndexByte(raw, 0) < 0 {
+		r.tokText = appendHTMLEscaped(r.tokText[:0], raw)
+		return r.tokText
+	}
+	r.tokText = append(r.tokText[:0], z.Token().String()...)
+	return r.tokText
 }
 
 // isNoEndTag reports whether postProcess treats name as an element without
@@ -149,7 +179,7 @@ func isRawTextElement(name string) bool {
 // specialLinks writes text, the escaped text of a text node, to out with
 // special references rendered as links, and emoji shortcodes replaced by e.
 // The links split the text into text nodes.
-func (r *renderer) specialLinks(out *bytes.Buffer, text []byte, e *emojiText) {
+func (r *renderer) specialLinks(out *outBuf, text []byte, e *emojiText) {
 	f := r.opts.SpecialLinks
 	if f == nil {
 		e.write(out, text)
@@ -188,7 +218,7 @@ func (r *renderer) rawImagePrefix(src string) (string, bool) {
 // whether it did. Relative sources are resolved against the raw file URL of
 // Options.LinkBase. Images without a source or with a data URI are not
 // wrapped.
-func (r *renderer) imageLink(out *bytes.Buffer, t html.Token) bool {
+func (r *renderer) imageLink(out *outBuf, t html.Token) bool {
 	var src string
 	for _, a := range t.Attr {
 		if a.Key == "src" {

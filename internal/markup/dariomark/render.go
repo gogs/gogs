@@ -14,29 +14,71 @@ type attr struct {
 	escaped bool
 }
 
-// sink receives the rendered document as HTML tokens.
-type sink interface {
-	// text writes text, which is not escaped yet.
-	text(b []byte)
-	// entity writes a character reference, given in its HTML form and as
-	// text.
-	entity(html, text string)
-	// start writes a start tag with attributes whose values are not escaped
-	// yet.
-	start(name string, attrs ...attr)
-	end(name string)
-	// raw writes raw HTML.
-	raw(b []byte)
+// sink receives the rendered document as HTML tokens, which go to the
+// sanitizing sink when it is set, else to the HTML sink. It is a struct
+// rather than an interface so that the common HTML path makes direct calls.
+type sink struct {
+	html *htmlSink
+	san  *sanitizeSink
+}
+
+// text writes text, which is not escaped yet.
+func (s sink) text(b []byte) {
+	if s.san != nil {
+		s.san.text(b)
+		return
+	}
+	s.html.text(b)
+}
+
+// entity writes a character reference, given in its HTML form and as text.
+func (s sink) entity(html, text string) {
+	if s.san != nil {
+		s.san.entity(html, text)
+		return
+	}
+	s.html.entity(html, text)
+}
+
+// start writes a start tag with attributes whose values are not escaped yet.
+func (s sink) start(name string, attrs ...attr) {
+	if s.san != nil {
+		s.san.start(name, attrs...)
+		return
+	}
+	s.html.start(name, attrs...)
+}
+
+func (s sink) end(name string) {
+	if s.san != nil {
+		s.san.end(name)
+		return
+	}
+	s.html.end(name)
+}
+
+// raw writes raw HTML.
+func (s sink) raw(b []byte) {
+	if s.san != nil {
+		s.san.raw(b)
+		return
+	}
+	s.html.raw(b)
 }
 
 type renderer struct {
 	p    *parser
 	opts *Options
-	out  bytes.Buffer
+	out  outBuf
 	s    sink
 	html htmlSink
+	san  sanitizeSink
 
-	plain     []byte
+	plain []byte
+	// tokText is a buffer for text tokens, see tokenText.
+	tokText []byte
+	// code is a buffer for the content of code spans, see codeContent.
+	code      []byte
 	numBuf    [24]byte
 	listAttrs [2]attr
 
@@ -63,7 +105,7 @@ func (r *renderer) init(p *parser, opts *Options) {
 	r.p = p
 	r.opts = opts
 	// The output of the previous render belongs to its caller.
-	r.out = bytes.Buffer{}
+	r.out = outBuf{buf: p.dst}
 	r.html = htmlSink{out: &r.out, xhtml: opts.XHTML}
 	r.headings = r.headings[:0]
 	r.headingText = r.headingText[:0]
@@ -78,11 +120,21 @@ func (r *renderer) init(p *parser, opts *Options) {
 // release drops the references of r to the last render, and its buffers
 // above the sizes that pooled parsers keep.
 func (r *renderer) release() {
-	r.p, r.opts, r.s = nil, nil, nil
-	r.out = bytes.Buffer{}
+	r.p, r.opts, r.s = nil, nil, sink{}
+	r.out = outBuf{}
 	r.html = htmlSink{}
+	r.san = sanitizeSink{run: r.san.run[:0], dropped: r.san.dropped[:0], attrs: r.san.attrs[:0], clean: r.san.clean[:0], buf: r.san.buf[:0], escaped: r.san.escaped[:0]}
+	if cap(r.san.run) > maxPooledBytes || cap(r.san.escaped) > maxPooledBytes || cap(r.san.buf) > maxPooledBytes {
+		r.san = sanitizeSink{}
+	}
 	if cap(r.plain) > maxPooledBytes {
 		r.plain = nil
+	}
+	if cap(r.code) > maxPooledBytes {
+		r.code = nil
+	}
+	if cap(r.tokText) > maxPooledBytes {
+		r.tokText = nil
 	}
 	if cap(r.headings) > maxPooledSegs {
 		r.headings = nil
@@ -128,8 +180,9 @@ func (r *renderer) parseLeaf(n *node, stream bool) (inlineMark, bool) {
 }
 
 func (r *renderer) renderHTML(doc *node) {
-	r.out.Grow(len(r.p.src) + len(r.p.src)/4)
-	r.s = &r.html
+	// Short documents have more markup per byte of source.
+	r.out.Grow(len(r.p.src) + len(r.p.src)/4 + min(len(r.p.src), 2048) + 32)
+	r.s = sink{html: &r.html}
 	r.renderDocument(doc)
 }
 
@@ -189,6 +242,558 @@ func shiftSegs(n *node, k int32) {
 	}
 }
 
+// plainLeaf renders the inline contents of the paragraph, heading or table
+// cell n without parsing them into nodes, and reports whether it did. It does
+// so when they are only text, line breaks, code spans and simple emphasis, as
+// is common in comments and documents written by AI agents. The output is what the inline
+// parser and renderer write for the same contents.
+func (r *renderer) plainLeaf(n *node) bool {
+	opts := r.opts
+	if n.parsed || opts.Typographer.Enabled {
+		return false
+	}
+	src := n.text
+	if n.kind == kindHeading && !n.setext && n.segEnd > n.segStart {
+		s := r.p.segs[n.segStart]
+		src = r.p.src[s.start:s.end]
+	}
+	special := &plainSpecial
+	if opts.Linkify {
+		special = &plainSpecialLinkify
+	}
+	if (opts.RelativeLinks || opts.TextAutoLinksInRawAnchors) && bytes.IndexByte(src, '[') >= 0 {
+		// See parser.walkLinks.
+		return false
+	}
+	r.p.footnoteDefsBefore(n)
+	if r.sanitizing && r.p.hasRawHTML {
+		// A footnote definition has raw HTML, which stops the sanitizing
+		// render, see renderer.parseLeaf.
+		return false
+	}
+	out := &r.out
+	start := len(out.buf)
+	inCell := n.kind == kindTableCell
+	// text is the start of the text not written yet.
+	text, from, box := 0, 0, boxNone
+	if opts.TaskLists && len(src) > 0 && src[0] == '[' {
+		// See inlineParser.taskCheckbox.
+		text, box = r.taskCheckbox(n, src)
+		from = text
+		switch box {
+		case boxChecked:
+			r.html.start("input", attr{"checked", nil, false}, attr{"disabled", nil, false}, attr{"type", checkboxValue, false})
+			out.writeByte(' ')
+		case boxUnchecked:
+			r.html.start("input", attr{"disabled", nil, false}, attr{"type", checkboxValue, false})
+			out.writeByte(' ')
+		}
+	}
+	// noCloser has a bit for each length of backtick run that has no closing
+	// run left.
+	var noCloser uint64
+	// open is the length of the run of asterisks that opened emphasis, or 0.
+	open := 0
+	for i := from; i < len(src); {
+		for i+4 <= len(src) {
+			b := src[i : i+4 : i+4]
+			if special[b[0]] {
+				break
+			}
+			if special[b[1]] {
+				i++
+				break
+			}
+			if special[b[2]] {
+				i += 2
+				break
+			}
+			if special[b[3]] {
+				i += 3
+				break
+			}
+			i += 4
+		}
+		if i >= len(src) {
+			break
+		}
+		c := src[i]
+		if !special[c] {
+			i++
+			continue
+		}
+		switch c {
+		case '>', '"', 0:
+			out.Write(src[text:i])
+			out.WriteString(escapes[c])
+			i++
+			text = i
+		case '.', ':':
+			// See inlineParser.tryLinkify.
+			at, n, ok := plainAutoLink(src, i, text, opts)
+			if !ok {
+				out.buf = out.buf[:start]
+				return false
+			}
+			if n == 0 {
+				i++
+				continue
+			}
+			out.Write(src[text:at])
+			bufLen := len(r.p.buf)
+			out.WriteString(`<a href="`)
+			writeEscaped(out, r.autoLinkDest(src[at:at+n], c == '.'))
+			out.WriteString(`">`)
+			r.p.buf = r.p.buf[:bufLen]
+			writeEscaped(out, src[at:at+n])
+			out.WriteString("</a>")
+			i = at + n
+			text = i
+		case '\n':
+			// See inlineParser.lineEnding.
+			end := i
+			if end > text && src[end-1] == '\r' {
+				end--
+			}
+			spaces := 0
+			for end-spaces > text && src[end-spaces-1] == ' ' {
+				spaces++
+			}
+			hard := spaces >= 2
+			for end-spaces > text && (src[end-spaces-1] == ' ' || src[end-spaces-1] == '\t') {
+				spaces++
+			}
+			out.Write(src[text : end-spaces])
+			if hard || opts.HardWraps {
+				r.html.start("br")
+			}
+			out.writeByte('\n')
+			i++
+			for i < len(src) && (src[i] == ' ' || src[i] == '\t') {
+				i++
+			}
+			text = i
+		case '`':
+			// See inlineParser.codeSpan.
+			end := i + 1
+			for end < len(src) && src[end] == '`' {
+				end++
+			}
+			k := end - i
+			if k >= 64 {
+				out.buf = out.buf[:start]
+				return false
+			}
+			closer := -1
+			if noCloser&(1<<k) == 0 {
+				closer = scanBackticks(src, k, end)
+			}
+			if closer < 0 {
+				// The run is literal text, and so are later runs of its length.
+				noCloser |= 1 << k
+				i = end
+				continue
+			}
+			out.Write(src[text:i])
+			out.WriteString("<code>")
+			writeEscaped(out, r.codeContent(src[end:closer], inCell))
+			out.WriteString("</code>")
+			i = closer + k
+			text = i
+		case '[':
+			// See inlineParser.closeBracket. Only inline links whose text
+			// is plain and whose destination needs no unescaping are handled.
+			n := plainLink(src, i, opts)
+			if n == 0 {
+				out.buf = out.buf[:start]
+				return false
+			}
+			close := i + 1 + bytes.IndexByte(src[i+1:], ']')
+			out.Write(src[text:i])
+			bufLen := len(r.p.buf)
+			out.WriteString(`<a href="`)
+			writeEscaped(out, r.urlEscape(src[close+2:i+n-1]))
+			out.WriteString(`">`)
+			r.p.buf = r.p.buf[:bufLen]
+			writeEscaped(out, src[i+1:close])
+			out.WriteString("</a>")
+			i += n
+			text = i
+		case '*':
+			// Pairs of runs of one or two asterisks, with nothing else
+			// between them that could be a delimiter, are emphasis and strong
+			// emphasis. The delimiter algorithm matches them as written.
+			end := i + 1
+			for end < len(src) && src[end] == '*' {
+				end++
+			}
+			k := end - i
+			before, okBefore := flankClass(src, i-1)
+			after, okAfter := flankClass(src, end)
+			if k > 2 || !okBefore || !okAfter {
+				out.buf = out.buf[:start]
+				return false
+			}
+			left := after != flankSpace && (after != flankPunct || before != flankOther)
+			right := before != flankSpace && (before != flankPunct || after != flankOther)
+			tag := emTags[k-1]
+			switch {
+			case open == 0 && left:
+				out.Write(src[text:i])
+				out.writeByte('<')
+				out.WriteString(tag)
+				out.writeByte('>')
+				open = k
+			case open == k && right:
+				out.Write(src[text:i])
+				out.WriteString("</")
+				out.WriteString(tag)
+				out.writeByte('>')
+				open = 0
+			default:
+				out.buf = out.buf[:start]
+				return false
+			}
+			i = end
+			text = i
+		default:
+			out.buf = out.buf[:start]
+			return false
+		}
+	}
+	if open != 0 {
+		out.buf = out.buf[:start]
+		return false
+	}
+	out.Write(src[text:])
+	if san := r.s.san; san != nil {
+		// The HTML written above only showed that the contents are plain.
+		out.buf = out.buf[:start]
+		r.plainLeafSanitized(src, inCell, from, box, san)
+	}
+	return true
+}
+
+const (
+	boxNone = iota
+	boxUnchecked
+	boxChecked
+)
+
+// taskCheckbox returns where the text of the leaf n, whose contents src
+// start with "[", starts after a task list item marker, and the checkbox the
+// marker renders, see inlineParser.taskCheckbox.
+func (r *renderer) taskCheckbox(n *node, src []byte) (int, int) {
+	item := n.parent
+	if n.kind != kindParagraph || item == nil || item.kind != kindListItem || item.first != n {
+		return 0, boxNone
+	}
+	task, checked := r.p.taskItem(item)
+	if !task {
+		return 0, boxNone
+	}
+	next := 3
+	for next < len(src) && (src[next] == ' ' || src[next] == '\t' || src[next] == '\n' || src[next] == '\r') {
+		next++
+	}
+	if checked {
+		return next, boxChecked
+	}
+	return next, boxUnchecked
+}
+
+// plainLeafSanitized passes the contents src of a leaf, which plainLeaf
+// found plain, to the sanitizing sink s with the calls that the inline
+// renderer would make.
+func (r *renderer) plainLeafSanitized(src []byte, inCell bool, text, box int, s *sanitizeSink) {
+	opts := r.opts
+	switch box {
+	case boxChecked:
+		s.start("input", attr{"checked", nil, false}, attr{"disabled", nil, false}, attr{"type", checkboxValue, false})
+		s.text(spaces[:1])
+	case boxUnchecked:
+		s.start("input", attr{"disabled", nil, false}, attr{"type", checkboxValue, false})
+		s.text(spaces[:1])
+	}
+	var noCloser uint64
+	open := 0
+	for i := text; i < len(src); {
+		switch src[i] {
+		case '\n':
+			end := i
+			if end > text && src[end-1] == '\r' {
+				end--
+			}
+			spaces := 0
+			for end-spaces > text && src[end-spaces-1] == ' ' {
+				spaces++
+			}
+			hard := spaces >= 2
+			for end-spaces > text && (src[end-spaces-1] == ' ' || src[end-spaces-1] == '\t') {
+				spaces++
+			}
+			s.text(src[text : end-spaces])
+			if hard || opts.HardWraps {
+				s.start("br")
+			}
+			s.text(newline)
+			i++
+			for i < len(src) && (src[i] == ' ' || src[i] == '\t') {
+				i++
+			}
+			text = i
+		case '`':
+			end := i + 1
+			for end < len(src) && src[end] == '`' {
+				end++
+			}
+			k := end - i
+			closer := -1
+			if noCloser&(1<<k) == 0 {
+				closer = scanBackticks(src, k, end)
+			}
+			if closer < 0 {
+				noCloser |= 1 << k
+				i = end
+				continue
+			}
+			s.text(src[text:i])
+			s.start("code")
+			s.text(r.codeContent(src[end:closer], inCell))
+			s.end("code")
+			i = closer + k
+			text = i
+		case '.', ':':
+			if !opts.Linkify {
+				i++
+				continue
+			}
+			at, n, _ := plainAutoLink(src, i, text, opts)
+			if n == 0 {
+				i++
+				continue
+			}
+			s.text(src[text:at])
+			bufLen := len(r.p.buf)
+			s.start("a", attr{"href", r.autoLinkDest(src[at:at+n], src[i] == '.'), false})
+			r.p.buf = r.p.buf[:bufLen]
+			s.text(src[at : at+n])
+			s.end("a")
+			i = at + n
+			text = i
+		case '[':
+			n := plainLink(src, i, opts)
+			close := i + 1 + bytes.IndexByte(src[i+1:], ']')
+			s.text(src[text:i])
+			bufLen := len(r.p.buf)
+			s.start("a", attr{"href", r.urlEscape(src[close+2 : i+n-1]), false})
+			r.p.buf = r.p.buf[:bufLen]
+			s.text(src[i+1 : close])
+			s.end("a")
+			i += n
+			text = i
+		case '*':
+			end := i + 1
+			for end < len(src) && src[end] == '*' {
+				end++
+			}
+			s.text(src[text:i])
+			if open == 0 {
+				open = end - i
+				s.start(emTags[open-1])
+			} else {
+				s.end(emTags[open-1])
+				open = 0
+			}
+			i = end
+			text = i
+		default:
+			i++
+		}
+	}
+	s.text(src[text:])
+}
+
+// plainAutoLink returns the start and length of the extended autolink that
+// the inline parser finds for the "." or ":" at src[i], with nothing written
+// from text on, or a length of 0 if there is none. It reports false when
+// plainLeaf must leave the contents to the inline parser.
+func plainAutoLink(src []byte, i, text int, opts *Options) (at, n int, ok bool) {
+	var scheme bool
+	switch {
+	case src[i] == '.' && i >= 3 && string(src[i-3:i]) == "www":
+		at = i - 3
+	case src[i] == ':' && bytes.HasPrefix(src[i+1:], []byte("//")):
+		scheme = true
+		switch {
+		case i >= 5 && string(src[i-5:i]) == "https":
+			at = i - 5
+		case i >= 4 && string(src[i-4:i]) == "http":
+			at = i - 4
+		case i >= 3 && string(src[i-3:i]) == "ftp":
+			at = i - 3
+		default:
+			return 0, 0, !opts.LinkifyAfterPunct
+		}
+	default:
+		return 0, 0, true
+	}
+	if opts.LinkifyAfterPunct || opts.LinkifyURL != nil || opts.ShortenAutoLink != nil || at < text {
+		return 0, 0, false
+	}
+	if at > 0 {
+		switch src[at-1] {
+		case ' ', '\t', '\n', '*', '_', '~', '(':
+		default:
+			return 0, 0, true
+		}
+	}
+	if !scheme {
+		return at, scanWWW(src[at:]), true
+	}
+	if m := linkifyURL(src[at:]); m > 0 {
+		return at, trimLinkTail(src[at : at+m]), true
+	}
+	return 0, 0, true
+}
+
+// autoLinkDest returns the escaped destination of the extended autolink
+// link, which starts with "www." if www is true, see renderer.autoLink.
+func (r *renderer) autoLinkDest(link []byte, www bool) []byte {
+	if !www {
+		return r.urlEscape(link)
+	}
+	r.plain = append(append(r.plain[:0], "http://"...), link...)
+	return r.urlEscape(r.plain)
+}
+
+// plainLink returns the length of the inline link at src[i], which is "[",
+// if plainLeaf can render it, or 0. Its text must contain no character that
+// plainLeaf handles and no autolink, and its destination must not be empty
+// and must contain no whitespace, parentheses, "<", "\\" or "&", so that it
+// has no title and needs no unescaping.
+func plainLink(src []byte, i int, opts *Options) int {
+	if i > 0 && src[i-1] == '!' {
+		return 0
+	}
+	j := i + 1
+	for ; j < len(src) && src[j] != ']'; j++ {
+		if c := src[j]; plainSpecial[c] && c != '>' && c != '"' && c != 0 {
+			return 0
+		}
+	}
+	if j >= len(src) || j+1 >= len(src) || src[j+1] != '(' {
+		return 0
+	}
+	label := src[i+1 : j]
+	if len(label) > 0 && label[0] == '^' {
+		return 0
+	}
+	if opts.Linkify && (bytes.IndexByte(label, '@') >= 0 || bytes.Contains(label, []byte("www.")) || bytes.Contains(label, []byte("://"))) {
+		return 0
+	}
+	k := j + 2
+	for ; k < len(src) && src[k] != ')'; k++ {
+		switch c := src[k]; {
+		case c <= ' ', c == '(', c == '<', c == '\\', c == '&', c == 0x7f:
+			return 0
+		}
+	}
+	if k >= len(src) || k == j+2 {
+		return 0
+	}
+	return k + 1 - i
+}
+
+// escapes are the escapes of the characters that writeEscaped escapes and
+// plainLeaf does not leave to the inline parser.
+var escapes = [256]string{'>': "&gt;", '"': "&quot;", 0: "\uFFFD"}
+
+var emTags = [2]string{"em", "strong"}
+
+const (
+	flankSpace = iota
+	flankPunct
+	flankOther
+)
+
+// flankClass returns the class of src[i] for deciding whether a delimiter
+// run is left or right flanking (CommonMark 0.31.2, section 6.2): Unicode
+// whitespace, which the ends of src count as, punctuation or other. It only
+// classifies ASCII, and reports false for other characters.
+func flankClass(src []byte, i int) (int, bool) {
+	if i < 0 || i >= len(src) {
+		return flankSpace, true
+	}
+	switch c := src[i]; {
+	case c >= utf8.RuneSelf:
+		return 0, false
+	case c == ' ' || c == '\t' || c == '\n' || c == '\f' || c == '\r':
+		return flankSpace, true
+	case isASCIIPunct(c):
+		return flankPunct, true
+	}
+	return flankOther, true
+}
+
+// plainSpecial marks the characters that plainLeaf handles, or for which it
+// leaves the contents to the inline parser.
+var (
+	plainSpecial = withSpecial([256]bool{}, "\n\\`*_[]<&~>\"\x00")
+	// plainSpecialLinkify adds the characters of autolinks: "@" of email
+	// addresses, "." after "www" and ":" before "//".
+	plainSpecialLinkify = withSpecial(plainSpecial, "@.:")
+)
+
+// scanBackticks returns the start of the first maximal run of n backticks in
+// src at or after pos, which does not start within a run, or -1.
+func scanBackticks(src []byte, n, pos int) int {
+	for pos < len(src) {
+		i := bytes.IndexByte(src[pos:], '`')
+		if i < 0 {
+			return -1
+		}
+		start := pos + i
+		end := start + 1
+		for end < len(src) && src[end] == '`' {
+			end++
+		}
+		if end-start == n {
+			return start
+		}
+		pos = end
+	}
+	return -1
+}
+
+// codeContent returns the content of a code span, as
+// inlineParser.codeContent does.
+func (r *renderer) codeContent(b []byte, inCell bool) []byte {
+	if bytes.IndexByte(b, '\n') >= 0 || inCell && bytes.Contains(b, []byte(`\|`)) {
+		out := r.code[:0]
+		for i := 0; i < len(b); i++ {
+			c := b[i]
+			if inCell && c == '\\' && i+1 < len(b) && b[i+1] == '|' {
+				continue
+			}
+			if c == '\n' {
+				c = ' '
+			}
+			out = append(out, c)
+		}
+		r.code = out
+		b = out
+	}
+	if len(b) >= 2 && b[0] == ' ' && b[len(b)-1] == ' ' {
+		for _, c := range b {
+			if c != ' ' {
+				return b[1 : len(b)-1]
+			}
+		}
+	}
+	return b
+}
+
 func (r *renderer) nl() {
 	r.s.text(newline)
 }
@@ -209,32 +814,49 @@ func (r *renderer) block(n *node) {
 		if !tight {
 			s.start("p")
 		}
-		m, ok := r.parseLeaf(n, true)
-		if !ok {
-			return
+		plain := r.plainLeaf(n)
+		var m inlineMark
+		if !plain {
+			var ok bool
+			if m, ok = r.parseLeaf(n, true); !ok {
+				return
+			}
+			r.inlines(n)
 		}
 		if tight {
-			r.inlines(n)
 			if n.next != nil {
 				r.nl()
 			}
-			r.p.releaseLeaf(n, m)
+			if !plain {
+				r.p.releaseLeaf(n, m)
+			}
 			return
 		}
-		r.inlines(n)
 		if n.parent.kind == kindFootnoteDef && n.next == nil {
 			r.backlinks(n.parent)
 		}
 		s.end("p")
 		r.nl()
-		r.p.releaseLeaf(n, m)
+		if !plain {
+			r.p.releaseLeaf(n, m)
+		}
 	case kindHeading:
+		tag := headingTags[n.level]
+		if !r.opts.HeadingIDs {
+			s.start(tag)
+			if r.plainLeaf(n) {
+				s.end(tag)
+				r.nl()
+				return
+			}
+		}
 		m, ok := r.parseLeaf(n, false)
 		if !ok {
 			return
 		}
-		tag := headingTags[n.level]
-		r.headingStart(n, tag)
+		if r.opts.HeadingIDs {
+			r.headingStart(n, tag)
+		}
 		r.inlines(n)
 		s.end(tag)
 		r.nl()
@@ -330,7 +952,7 @@ func (p *parser) taskItem(item *node) (task, checked bool) {
 	}
 	s := p.segs[b.segStart]
 	line := p.src[s.start:s.end]
-	line = bytes.TrimRight(line, " \t\r\n")
+	line = trimRightSpace(line, true)
 	if len(line) < 3 || line[0] != '[' || line[2] != ']' || len(line) > 3 && line[3] != ' ' && line[3] != '\t' {
 		return false, false
 	}
@@ -597,12 +1219,14 @@ func (r *renderer) tableCell(tag string, c *node) bool {
 	default:
 		s.start(tag)
 	}
-	m, ok := r.parseLeaf(c, true)
-	if !ok {
-		return false
+	if !r.plainLeaf(c) {
+		m, ok := r.parseLeaf(c, true)
+		if !ok {
+			return false
+		}
+		r.inlines(c)
+		r.p.releaseLeaf(c, m)
 	}
-	r.inlines(c)
-	r.p.releaseLeaf(c, m)
 	s.end(tag)
 	r.nl()
 	return true
@@ -932,7 +1556,7 @@ func (r *renderer) renderFootnotes() {
 
 // htmlSink serializes tokens to HTML.
 type htmlSink struct {
-	out   *bytes.Buffer
+	out   *outBuf
 	xhtml bool
 }
 
@@ -946,10 +1570,10 @@ func (h *htmlSink) entity(html, _ string) {
 
 func (h *htmlSink) start(name string, attrs ...attr) {
 	out := h.out
-	out.WriteByte('<')
+	out.writeByte('<')
 	out.WriteString(name)
 	for _, a := range attrs {
-		out.WriteByte(' ')
+		out.writeByte(' ')
 		out.WriteString(a.key)
 		out.WriteString(`="`)
 		if a.escaped {
@@ -957,12 +1581,12 @@ func (h *htmlSink) start(name string, attrs ...attr) {
 		} else {
 			writeEscaped(out, a.val)
 		}
-		out.WriteByte('"')
+		out.writeByte('"')
 	}
 	if h.xhtml && isVoid(name) {
 		out.WriteString(" />")
 	} else {
-		out.WriteByte('>')
+		out.writeByte('>')
 	}
 }
 
@@ -977,7 +1601,7 @@ func isVoid(name string) bool {
 func (h *htmlSink) end(name string) {
 	h.out.WriteString("</")
 	h.out.WriteString(name)
-	h.out.WriteByte('>')
+	h.out.writeByte('>')
 }
 
 func (h *htmlSink) raw(b []byte) {
@@ -985,9 +1609,35 @@ func (h *htmlSink) raw(b []byte) {
 }
 
 // writeEscaped writes b with "&", "<", ">" and '"' escaped.
-func writeEscaped(out *bytes.Buffer, b []byte) {
+func writeEscaped(out *outBuf, b []byte) {
 	start := 0
-	for i, c := range b {
+	for i := 0; i < len(b); i++ {
+		for i+4 <= len(b) {
+			w := b[i : i+4 : i+4]
+			if needsEscape[w[0]] {
+				break
+			}
+			if needsEscape[w[1]] {
+				i++
+				break
+			}
+			if needsEscape[w[2]] {
+				i += 2
+				break
+			}
+			if needsEscape[w[3]] {
+				i += 3
+				break
+			}
+			i += 4
+		}
+		if i >= len(b) {
+			break
+		}
+		c := b[i]
+		if !needsEscape[c] {
+			continue
+		}
 		var esc string
 		switch c {
 		case '&':
@@ -1009,6 +1659,8 @@ func writeEscaped(out *bytes.Buffer, b []byte) {
 	}
 	out.Write(b[start:])
 }
+
+var needsEscape = withSpecial([256]bool{}, "&<>\"\x00")
 
 // appendEscapedText appends b to dst escaped as writeEscaped does.
 func appendEscapedText(dst, b []byte) []byte {
@@ -1037,4 +1689,24 @@ func (r *renderer) replaceNUL(b []byte) []byte {
 		return b
 	}
 	return bytes.ReplaceAll(b, []byte{0}, []byte("\uFFFD"))
+}
+
+// outBuf is an append-only output buffer. Its methods are small enough to be
+// inlined, which matters for the many short writes of rendering.
+type outBuf struct {
+	buf []byte
+}
+
+func (o *outBuf) Write(b []byte)          { o.buf = append(o.buf, b...) }
+func (o *outBuf) WriteString(s string)    { o.buf = append(o.buf, s...) }
+func (o *outBuf) writeByte(c byte)        { o.buf = append(o.buf, c) }
+func (o *outBuf) Len() int                { return len(o.buf) }
+func (o *outBuf) Bytes() []byte           { return o.buf }
+func (o *outBuf) AvailableBuffer() []byte { return o.buf[len(o.buf):] }
+
+// Grow makes room for n more bytes.
+func (o *outBuf) Grow(n int) {
+	if cap(o.buf)-len(o.buf) < n {
+		o.buf = append(o.buf[:len(o.buf):len(o.buf)], make([]byte, n)...)[:len(o.buf)]
+	}
 }

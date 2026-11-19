@@ -38,10 +38,15 @@ type bracketText struct {
 
 type backtickRuns struct {
 	built bool
-	// positions of maximal backtick runs by length, and the next unused index.
-	byLen map[int][]int
-	next  map[int]int
+	// positions of maximal backtick runs by length, and the next unused index:
+	// in short for runs shorter than maxShortBackticks, else in byLen.
+	short     [maxShortBackticks][]int
+	shortNext [maxShortBackticks]int
+	byLen     map[int][]int
+	next      map[int]int
 }
+
+const maxShortBackticks = 16
 
 type inlineParser struct {
 	p      *parser
@@ -135,9 +140,7 @@ type inlineMark struct {
 // not nil, it may receive finished parts of the contents before the end, see
 // inlineParser.streamFlush.
 func (p *parser) parseLeaf(n *node, stream func(chunk *node)) inlineMark {
-	if p.opts.Footnotes && !p.footnotes.inlined && len(p.footnotes.defs) > 0 && int(n.startLine) > p.footnotes.firstLine {
-		p.parseFootnoteDefs()
-	}
+	p.footnoteDefsBefore(n)
 	m := inlineMark{arena: p.arena.mark(), buf: len(p.buf)}
 	if n.parsed {
 		return m
@@ -163,6 +166,14 @@ func (p *parser) parseLeaf(n *node, stream func(chunk *node)) inlineMark {
 		p.walkLinks(n, &p.rawAnchor)
 	}
 	return m
+}
+
+// footnoteDefsBefore parses the footnote definitions, see parseFootnoteDefs,
+// when the leaf block n is the first leaf after the first definition.
+func (p *parser) footnoteDefsBefore(n *node) {
+	if p.opts.Footnotes && !p.footnotes.inlined && len(p.footnotes.defs) > 0 && int(n.startLine) > p.footnotes.firstLine {
+		p.parseFootnoteDefs()
+	}
 }
 
 // releaseLeaf drops the inline contents of the leaf block n, which were
@@ -247,19 +258,37 @@ func (ip *inlineParser) parse() {
 	src := ip.src
 	opts := ip.p.opts
 	special := ip.special
+	streaming := ip.stream != nil
+	// Spaces, tabs and "(" are special only as linkify boundaries, which is
+	// handled here unless the typographer may also replace them.
+	fastBoundary := ip.linkify && !opts.Typographer.Enabled
 	for ip.pos < len(src) {
-		if ip.stream != nil && ip.p.arena.allocs-ip.streamAllocs >= streamNodes {
+		if streaming && ip.p.arena.allocs-ip.streamAllocs >= streamNodes {
 			ip.streamFlush()
 		}
-		c := src[ip.pos]
-		if ip.pos == ip.boundary && ip.linkify && isASCIIAlnum(c) && ip.tryLinkify() {
+		pos := ip.pos
+		c := src[pos]
+		if pos == ip.boundary && ip.linkify && (c == 'w' || c == 'h' || c == 'f') && ip.tryLinkify() {
 			continue
 		}
-		if !special[c] {
-			ip.pos++
+		for !special[c] {
+			pos++
+			if pos == len(src) {
+				break
+			}
+			c = src[pos]
+		}
+		if pos == len(src) {
+			ip.pos = pos
+			break
+		}
+		if fastBoundary && (c == ' ' || c == '\t' || c == '(') {
+			pos++
+			ip.pos, ip.boundary = pos, pos
 			continue
 		}
-		start := ip.pos
+		ip.pos = pos
+		start := pos
 		handled := false
 		switch c {
 		case '\n':
@@ -417,10 +446,10 @@ func (ip *inlineParser) backslash() bool {
 func (ip *inlineParser) buildBackticks() {
 	b := &ip.backticks
 	b.built = true
-	if b.byLen == nil {
-		b.byLen = make(map[int][]int)
-		b.next = make(map[int]int)
+	for k := range b.short {
+		b.short[k] = b.short[k][:0]
 	}
+	b.shortNext = [maxShortBackticks]int{}
 	for k, v := range b.byLen {
 		b.byLen[k] = v[:0]
 	}
@@ -439,7 +468,15 @@ func (ip *inlineParser) buildBackticks() {
 		for j < len(src) && src[j] == '`' {
 			j++
 		}
-		b.byLen[j-i] = append(b.byLen[j-i], i)
+		if n := j - i; n < maxShortBackticks {
+			b.short[n] = append(b.short[n], i)
+		} else {
+			if b.byLen == nil {
+				b.byLen = make(map[int][]int)
+				b.next = make(map[int]int)
+			}
+			b.byLen[n] = append(b.byLen[n], i)
+		}
 		i = j
 	}
 }
@@ -451,12 +488,21 @@ func (ip *inlineParser) findBackticks(n, pos int) int {
 	if !b.built {
 		ip.buildBackticks()
 	}
-	list := b.byLen[n]
-	k := b.next[n]
+	var list []int
+	var k int
+	if n < maxShortBackticks {
+		list, k = b.short[n], b.shortNext[n]
+	} else {
+		list, k = b.byLen[n], b.next[n]
+	}
 	for k < len(list) && list[k] < pos {
 		k++
 	}
-	b.next[n] = k
+	if n < maxShortBackticks {
+		b.shortNext[n] = k
+	} else if b.next != nil {
+		b.next[n] = k
+	}
 	if k < len(list) {
 		return list[k]
 	}
@@ -699,6 +745,13 @@ func decodeEntityOctal(b []byte, octal bool) ([]byte, int) {
 		return []byte(s), i + 1
 	}
 	return nil, 0
+}
+
+// entity returns the replacement text of the HTML named character reference
+// with the name, which has neither the leading "&" nor the trailing ";".
+func entity(name []byte) (string, bool) {
+	s, ok := entities[string(name)]
+	return s, ok
 }
 
 // unescapeDest resolves backslash escapes and then entities in a link

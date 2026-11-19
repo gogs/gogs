@@ -16,6 +16,8 @@ type linkRef struct {
 type parser struct {
 	opts *Options
 	src  []byte
+	// dst is the buffer that the HTML is appended to, see AppendHTML.
+	dst  []byte
 	segs []seg
 	// buf holds bytes that are not slices of src, e.g., paragraph contents
 	// that span container prefixes.
@@ -99,7 +101,7 @@ func (p *parser) reset() {
 	if cap(p.buf) > maxPooledBytes {
 		p.buf = nil
 	}
-	p.src = nil
+	p.src, p.dst = nil, nil
 	p.crlf = p.crlf[:0]
 	if cap(p.crlf) > maxPooledBytes {
 		p.crlf = nil
@@ -202,6 +204,9 @@ func (p *parser) parse(src []byte, flush func() bool) *node {
 		p.lineNumber++
 		p.incorporateLine()
 		pos = eol
+		if t := p.tip; t.kind == kindCodeBlock && t.fenced && t.parent == p.doc && t.fenceOffset == 0 && t.startLine == int32(p.lineNumber) {
+			pos = p.fencedCodeBody(t, pos)
+		}
 		if flush != nil && p.doc.first != nil && !p.doc.first.open && !flush() {
 			return p.doc
 		}
@@ -216,6 +221,59 @@ func (p *parser) parse(src []byte, flush func() bool) *node {
 		p.detachFootnoteDefs()
 	}
 	return p.doc
+}
+
+// fencedCodeBody adds the lines of the top-level fenced code block b, which
+// is not indented and starts at the line before pos, up to its closing fence
+// as one line, and returns the start of the closing fence. Its lines are
+// rendered as they are, so they need not be split.
+func (p *parser) fencedCodeBody(b *node, pos int) int {
+	src := p.src
+	end := len(src)
+	for i := pos; i < len(src); {
+		k := bytes.IndexByte(src[i:], b.fenceChar)
+		if k < 0 {
+			break
+		}
+		i += k
+		start := i
+		for start > pos && start > i-3 && src[start-1] == ' ' {
+			start--
+		}
+		run := i
+		for run < len(src) && src[run] == b.fenceChar {
+			run++
+		}
+		if start == pos || src[start-1] == '\n' {
+			if run-i >= int(b.fenceLen) {
+				lineEnd := len(src)
+				if e := bytes.IndexByte(src[run:], '\n'); e >= 0 {
+					lineEnd = run + e
+				}
+				if isBlankBytes(src[run:lineEnd]) {
+					end = start
+					break
+				}
+			}
+		}
+		i = run
+	}
+	if end == pos {
+		return pos
+	}
+	lines := bytes.Count(src[pos:end], []byte("\n"))
+	contentEnd := end
+	if src[end-1] == '\n' {
+		contentEnd--
+	} else {
+		lines++
+	}
+	p.segs = append(p.segs, seg{start: int32(pos), end: int32(contentEnd), eol: int32(end)})
+	b.segEnd = int32(len(p.segs))
+	p.lineNumber += lines
+	p.touch(b)
+	p.curBlankIn = nil
+	return end
 }
 
 // tabWidth returns the number of columns of a tab at column col. Tab stops
@@ -278,6 +336,22 @@ func (p *parser) advanceOffset(count int, columns bool) {
 			count--
 		}
 	}
+}
+
+// advanceToEnd advances to the end of the line, as advanceOffset does for
+// the rest of the line.
+func (p *parser) advanceToEnd() {
+	rest := p.line[min(p.offset, len(p.line)):]
+	if len(rest) == 0 {
+		return
+	}
+	if bytes.IndexByte(rest, '\t') >= 0 {
+		p.advanceOffset(len(rest), false)
+		return
+	}
+	p.partiallyConsumedTab = false
+	p.offset += len(rest)
+	p.column += len(rest)
 }
 
 func (p *parser) peek(i int) byte {
@@ -444,6 +518,19 @@ func (p *parser) incorporateLine() {
 	p.prevBlankIn, p.curBlankIn = p.curBlankIn, nil
 	p.emptiedParagraph = false
 	p.oldtip = p.tip
+	if tip := p.tip; tip.kind == kindParagraph && tip.parent == p.doc && !tip.tableRows {
+		// A line that continues a top-level paragraph and cannot start a
+		// block, or be a table delimiter row, skips the general block rules.
+		p.findNextNonspace()
+		if !p.blank && p.indent < 4 && !maybeSpecial(p.line[p.nextNonspace]) {
+			p.allClosed = true
+			p.lastMatchedContainer = tip
+			p.advanceNextNonspace()
+			p.addLine()
+			p.touch(tip)
+			return
+		}
+	}
 	var marked *node
 
 	container := p.doc
@@ -639,7 +726,7 @@ func (p *parser) tryBlockStarts(container *node) int {
 			if isThematicBreak(p.line[p.nextNonspace:]) {
 				p.closeUnmatchedBlocks()
 				p.addChild(kindThematicBreak)
-				p.advanceOffset(len(p.line)-p.offset, false)
+				p.advanceToEnd()
 				return startLeaf
 			}
 		}
@@ -675,7 +762,7 @@ func (p *parser) tryATXHeading() int {
 	h.level = int32(level)
 	content := p.line[p.offset:]
 	start := p.lineStart + p.offset
-	content = bytes.TrimRight(content, " \t")
+	content = trimRightSpace(content, false)
 	end := len(content)
 	j := end
 	for j > 0 && content[j-1] == '#' {
@@ -684,11 +771,11 @@ func (p *parser) tryATXHeading() int {
 	if j < end && (j == 0 || content[j-1] == ' ' || content[j-1] == '\t') {
 		end = j
 	}
-	content = bytes.TrimRight(content[:end], " \t")
-	lead := len(content) - len(bytes.TrimLeft(content, " \t"))
+	content = trimRightSpace(content[:end], false)
+	lead := len(content) - len(trimSpace(content))
 	p.segs = append(p.segs, seg{start: int32(start + lead), end: int32(start + len(content)), eol: int32(p.lineEOL)})
 	h.segEnd = int32(len(p.segs))
-	p.advanceOffset(len(p.line)-p.offset, false)
+	p.advanceToEnd()
 	return startLeaf
 }
 
@@ -712,9 +799,9 @@ func (p *parser) tryFencedCode() int {
 	b.fenceChar = c
 	b.fenceLen = int32(n)
 	b.fenceOffset = int32(p.indent)
-	b.text = bytes.Trim(info, " \t")
+	b.text = trimSpace(info)
 	p.advanceNextNonspace()
-	p.advanceOffset(len(p.line)-p.offset, false)
+	p.advanceToEnd()
 	return startLeaf
 }
 
@@ -888,4 +975,30 @@ func (p *parser) blankBetweenChildren(b *node) bool {
 		prev, prevLast = c, int(c.lastLine)
 	}
 	return false
+}
+
+// trimRightSpace returns b without trailing spaces and tabs, and also line
+// endings if eol is true. Unlike bytes.TrimRight, it builds no character set.
+func trimRightSpace(b []byte, eol bool) []byte {
+	for len(b) > 0 {
+		switch b[len(b)-1] {
+		case ' ', '\t':
+		case '\r', '\n':
+			if !eol {
+				return b
+			}
+		default:
+			return b
+		}
+		b = b[:len(b)-1]
+	}
+	return b
+}
+
+// trimSpace returns b without leading and trailing spaces and tabs.
+func trimSpace(b []byte) []byte {
+	for len(b) > 0 && (b[0] == ' ' || b[0] == '\t') {
+		b = b[1:]
+	}
+	return trimRightSpace(b, false)
 }
