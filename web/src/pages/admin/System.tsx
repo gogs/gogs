@@ -260,7 +260,7 @@ export function AdminConfig({ config }: { config: AdminConfigData }) {
         <div className="grid items-start gap-4 lg:grid-cols-[13rem_minmax(0,1fr)]">
           <nav
             aria-label={t("admin.config.sections")}
-            className="sticky top-16 hidden max-h-[calc(100dvh-5rem)] overflow-y-auto lg:block"
+            className="glass sticky top-16 hidden max-h-[calc(100dvh-5rem)] overflow-y-auto lg:block glass-ui:border glass-ui:p-2"
           >
             <ul className="flex flex-col gap-0.5">
               {sections.map((section) => (

@@ -308,7 +308,7 @@ function EditorTabs<K extends string>({
   onChange: (key: K) => void;
 }) {
   return (
-    <div role="tablist" aria-label={label} className="mb-3 flex gap-1 overflow-x-auto">
+    <div role="tablist" aria-label={label} className="glass-control glass-tabs mb-3 flex gap-1 overflow-x-auto">
       {tabs.map((tab) => (
         <button
           key={tab.key}

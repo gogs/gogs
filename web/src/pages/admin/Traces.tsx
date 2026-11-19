@@ -406,7 +406,7 @@ export function AdminTraceSearch({ result, search }: { result: AdminTraceSearchD
           <Select value={search.route ?? ALL} onValueChange={(v) => refine({ route: v === ALL ? undefined : v })}>
             <SelectTrigger
               aria-label={t("admin.traces.route")}
-              className="h-9 w-full min-w-0 sm:w-auto sm:max-w-sm sm:min-w-48"
+              className="glass-control h-9 w-full min-w-0 sm:w-auto sm:max-w-sm sm:min-w-48"
             >
               <SelectValue />
             </SelectTrigger>
@@ -423,7 +423,7 @@ export function AdminTraceSearch({ result, search }: { result: AdminTraceSearchD
             value={search.minMs ? String(search.minMs) : ALL}
             onValueChange={(v) => refine({ minMs: v === ALL ? undefined : Number(v) })}
           >
-            <SelectTrigger aria-label={t("admin.traces.duration")} className="h-9 w-auto gap-2">
+            <SelectTrigger aria-label={t("admin.traces.duration")} className="glass-control h-9 w-auto gap-2">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -439,7 +439,7 @@ export function AdminTraceSearch({ result, search }: { result: AdminTraceSearchD
             </SelectContent>
           </Select>
           {search.from || search.to ? (
-            <span className="inline-flex min-h-9 max-w-full items-center gap-1 rounded-md border border-(--color-ring) bg-(--color-surface) py-1 pr-1 pl-3 text-sm">
+            <span className="glass-control inline-flex min-h-9 max-w-full items-center gap-1 rounded-md border !border-(--color-ring) bg-(--color-surface) py-1 pr-1 pl-3 text-sm">
               {t("admin.traces.window", {
                 from: search.from ? formatAbsoluteTime(search.from) : "",
                 to: search.to ? formatAbsoluteTime(search.to) : "",
@@ -448,7 +448,7 @@ export function AdminTraceSearch({ result, search }: { result: AdminTraceSearchD
                 to="/admin/traces"
                 search={{ ...search, from: undefined, to: undefined }}
                 aria-label={t("admin.traces.clear_window")}
-                className="flex size-6 shrink-0 items-center justify-center rounded text-(--color-muted-foreground) hover:bg-(--color-background) hover:text-(--color-foreground)"
+                className="flex size-6 shrink-0 items-center justify-center rounded text-(--color-muted-foreground) hover:bg-(--color-background) hover:text-(--color-foreground) glass-ui:hover:bg-(--color-surface)"
               >
                 <X className="size-4" aria-hidden />
               </Link>
@@ -468,7 +468,7 @@ export function AdminTraceSearch({ result, search }: { result: AdminTraceSearchD
             value={search.sort ?? "recent"}
             onValueChange={(v) => refine({ sort: v === "slowest" ? "slowest" : undefined })}
           >
-            <SelectTrigger aria-label={t("admin.traces.sort")} className="h-9 w-auto gap-2">
+            <SelectTrigger aria-label={t("admin.traces.sort")} className="glass-control h-9 w-auto gap-2">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
