@@ -52,7 +52,7 @@ func handleCheckKeyStringError(c *apiContext, err error) {
 	if database.IsErrKeyUnableVerify(err) {
 		c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("Unable to verify key content"))
 	} else {
-		c.ErrorStatus(http.StatusUnprocessableEntity, errors.Wrap(err, "Invalid key content: %v"))
+		c.ErrorStatus(http.StatusUnprocessableEntity, errors.Wrap(err, "Invalid key content"))
 	}
 }
 
