@@ -265,6 +265,11 @@ func (r *renderer) plainLeaf(n *node) bool {
 		}
 	}
 	r.p.footnoteDefsBefore(n)
+	if r.sanitizing && r.p.hasRawHTML {
+		// A footnote definition has raw HTML, which stops the sanitizing
+		// render, see renderer.parseLeaf.
+		return false
+	}
 	out := &r.out
 	start := len(out.buf)
 	inCell := n.kind == kindTableCell

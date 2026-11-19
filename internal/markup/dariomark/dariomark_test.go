@@ -298,6 +298,16 @@ func TestFootnoteTableAfterRawHTML(t *testing.T) {
 	assert.Equal(t, 2, strings.Count(string(got.HTML), "<td>"), string(got.HTML))
 }
 
+func TestFootnoteRawHTMLBeforePlainParagraph(t *testing.T) {
+	// The definition is parsed before the paragraph after it, and its raw
+	// HTML makes the sanitizing render start over without sanitizing. The
+	// typographer is off, so that the paragraph needs no inline nodes.
+	opts := postProcessTestOptions()
+	opts.Typographer = Typographer{}
+	got := Render([]byte("a\n\n[^1]: <b>x</b>\n\nplain text\n"), opts)
+	assert.False(t, got.Sanitized)
+}
+
 func TestTablePadding(t *testing.T) {
 	opts := &Options{Tables: true}
 	t.Run("short rows are filled", func(t *testing.T) {
