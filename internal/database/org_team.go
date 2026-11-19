@@ -430,6 +430,10 @@ func DeleteTeam(t *Team) error {
 		return err
 	}
 
+	if _, err = sess.Where("team_id=?", t.ID).Delete(new(TeamRepo)); err != nil {
+		return err
+	}
+
 	if _, err = sess.ID(t.ID).Delete(new(Team)); err != nil {
 		return err
 	}
