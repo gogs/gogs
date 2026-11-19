@@ -101,7 +101,7 @@ func TestNewDSN(t *testing.T) {
 				Type: "sqlite3",
 				Path: "/tmp/gogs.db",
 			},
-			wantDSN: "file:/tmp/gogs.db?cache=shared&mode=rwc",
+			wantDSN: "file:/tmp/gogs.db?mode=rwc&_pragma=busy_timeout(30000)&_pragma=journal_mode(WAL)&_txlock=immediate",
 		},
 	}
 	for _, test := range tests {

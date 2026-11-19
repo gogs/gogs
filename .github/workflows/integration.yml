@@ -39,12 +39,18 @@ jobs:
           fi
 
   test:
-    name: Test
+    name: Test (${{ matrix.database }})
     needs: changes
     # Runs unless the pull request is known to have nothing for this job, which
     # includes pushes and failed detection. A skipped job satisfies a required check.
     if: ${{ !cancelled() && needs.changes.outputs.skip != 'true' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        database: [ sqlite3, postgres ]
     runs-on: ubuntu-latest
+    # The service starts for every database, because a service cannot depend on
+    # the matrix. Only the tests against Postgres connect to it.
     services:
       postgres:
         image: postgres:12
@@ -68,6 +74,7 @@ jobs:
         run: go test -count=1 -shuffle=on -v ./integration-tests/...
         env:
           GOGS_INTEGRATION_TEST: 1
+          GOGS_DATABASE_TYPE: ${{ matrix.database }}
           PGHOST: localhost
           PGPORT: 5432
           PGUSER: postgres

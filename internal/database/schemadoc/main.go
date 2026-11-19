@@ -9,7 +9,6 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/cockroachdb/errors"
-	"github.com/glebarez/sqlite"
 	"github.com/olekukonko/tablewriter"
 	"github.com/olekukonko/tablewriter/renderer"
 	"github.com/olekukonko/tablewriter/tw"
@@ -20,6 +19,7 @@ import (
 	"gorm.io/gorm/schema"
 
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/sqlite"
 )
 
 //go:generate go run main.go ../../../docs/dev/database_schema.md

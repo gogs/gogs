@@ -89,16 +89,16 @@ func run(m *testing.M, dir string) (int, error) {
 	if err != nil {
 		return 0, errors.Wrap(err, "find free SSH port")
 	}
-	dbName, dropDatabase, err := createPostgresDatabase()
+	dbName, dbConfig, dropDatabase, err := createDatabase(dir)
 	if err != nil {
-		return 0, errors.Wrap(err, "create Postgres database")
+		return 0, errors.Wrap(err, "create database")
 	}
 	// Servers that share the database must share the key that encrypts what they
 	// store.
 	secretKey := make([]byte, 16)
 	_, _ = rand.Read(secretKey)
 	configPath := filepath.Join(dir, "app.ini")
-	if err = writeConfig(dir, configPath, port, sshPort, dbName, hex.EncodeToString(secretKey), false); err != nil {
+	if err = writeConfig(dir, configPath, port, sshPort, dbConfig, hex.EncodeToString(secretKey), false); err != nil {
 		return 0, errors.Wrap(err, "write configuration")
 	}
 
@@ -144,7 +144,7 @@ func run(m *testing.M, dir string) (int, error) {
 		return 0, errors.Wrap(err, "find free SSH port")
 	}
 	forcePrivateConfigPath := filepath.Join(dir, "app-force-private.ini")
-	if err = writeConfig(dir, forcePrivateConfigPath, forcePrivatePort, forcePrivateSSHPort, dbName, hex.EncodeToString(secretKey), true); err != nil {
+	if err = writeConfig(dir, forcePrivateConfigPath, forcePrivatePort, forcePrivateSSHPort, dbConfig, hex.EncodeToString(secretKey), true); err != nil {
 		return 0, errors.Wrap(err, "write configuration")
 	}
 	forcePrivateServerURL = fmt.Sprintf("http://localhost:%d", forcePrivatePort)
@@ -228,20 +228,12 @@ func freePort() (int, error) {
 }
 
 // writeConfig writes the configuration of a server under test, which uses the
-// Postgres database of the name on the server the PG* environment variables
-// point to.
-func writeConfig(dir, path string, port, sshPort int, dbName, secretKey string, forcePrivate bool) error {
+// database of the given [database] section.
+func writeConfig(dir, path string, port, sshPort int, database, secretKey string, forcePrivate bool) error {
 	u, err := user.Current()
 	if err != nil {
 		return errors.Wrap(err, "get current user")
 	}
-
-	database := fmt.Sprintf(`TYPE = postgres
-HOST = %s:%s
-NAME = %s
-USER = %s
-PASSWORD = %s
-SSL_MODE = %s`, os.Getenv("PGHOST"), os.Getenv("PGPORT"), dbName, os.Getenv("PGUSER"), os.Getenv("PGPASSWORD"), os.Getenv("PGSSLMODE"))
 
 	config := fmt.Sprintf(`RUN_USER = %s
 RUN_MODE = dev
@@ -296,6 +288,33 @@ MODE = console
 LEVEL = Info
 `, u.Username, port, filepath.Join(dir, "repositories"), database, secretKey, filepath.Join(dir, "ssh"), sshPort, forcePrivate)
 	return os.WriteFile(path, []byte(config), 0o600)
+}
+
+// createDatabase creates the database of the type the GOGS_DATABASE_TYPE
+// environment variable names, SQLite by default. It returns the name of the
+// database, the [database] section of the configuration that uses it, and a
+// function that drops it.
+func createDatabase(dir string) (name, config string, drop func() error, _ error) {
+	switch dbType := os.Getenv("GOGS_DATABASE_TYPE"); dbType {
+	case "", "sqlite3":
+		// The file is removed with the work directory.
+		name = filepath.Join(dir, "gogs.db")
+		return name, "TYPE = sqlite3\nPATH = " + name, func() error { return nil }, nil
+	case "postgres":
+		name, drop, err := createPostgresDatabase()
+		if err != nil {
+			return "", "", nil, errors.Wrap(err, "create Postgres database")
+		}
+		config = fmt.Sprintf(`TYPE = postgres
+HOST = %s:%s
+NAME = %s
+USER = %s
+PASSWORD = %s
+SSL_MODE = %s`, os.Getenv("PGHOST"), os.Getenv("PGPORT"), name, os.Getenv("PGUSER"), os.Getenv("PGPASSWORD"), os.Getenv("PGSSLMODE"))
+		return name, config, drop, nil
+	default:
+		return "", "", nil, errors.Newf("unsupported database type %q", dbType)
+	}
 }
 
 // createPostgresDatabase creates a database with a unique name on the server

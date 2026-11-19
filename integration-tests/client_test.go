@@ -196,6 +196,11 @@ func (c *client) goAwayWhileLocked(lockQuery string, lockArg any, method, path s
 // status when the request was cancelled.
 func (c *client) whileLocked(lockQuery string, lockArg any, method, path string, body any, whileWaiting func(tx *gorm.DB, cancel context.CancelFunc)) (int, []byte) {
 	c.t.Helper()
+	if conf.UseSQLite3 {
+		// A transaction in SQLite locks the whole database rather than rows, which
+		// would stall the writes of every other test running at the same time.
+		c.t.Skip("SQLite has no row locks")
+	}
 
 	db, err := dbx.OpenDB(conf.Database, &gorm.Config{})
 	require.NoError(c.t, err)
