@@ -440,16 +440,35 @@ diffs-container {
     border-radius: 0.25rem;
     padding: 0.25rem;
     color: var(--color-muted-foreground);
-    opacity: 0;
+    /* Keeps the focus ring inside the link, which may fill a margin up to
+       the edge of the window, e.g., beside a wiki page. */
+    outline-offset: -2px;
   }
-  .markdown :where(h1, h2, h3, h4, h5, h6):hover .heading-anchor,
-  .markdown .heading-anchor:focus-visible {
-    opacity: 1;
-  }
-  /* Touch screens cannot hover, so the links stay visible there. */
-  @media (hover: none) {
-    .markdown .heading-anchor {
+  /* Touch screens cannot hover, so they keep the link visible. */
+  @media (hover: hover) {
+    .markdown :where(.heading-anchor) {
+      opacity: 0;
+    }
+    .markdown :where(h1, h2, h3, h4, h5, h6):hover .heading-anchor,
+    .markdown .heading-anchor:focus-visible {
       opacity: 1;
+    }
+  }
+  /* With a mouse, the link of a top-level heading sits in the margin left of
+     it, so the heading text stays in place. Elsewhere it stays after the text:
+     margins of narrow screens are narrower than the link (24px from the sm
+     breakpoint up), and it would cover the border of a blockquote or the
+     marker of a list item. */
+  @media (hover: hover) and (width >= 40rem) {
+    .markdown > div > :where(h1, h2, h3, h4, h5, h6):has(> .heading-anchor) {
+      position: relative;
+    }
+    .markdown > div > :where(h1, h2, h3, h4, h5, h6) > :where(.heading-anchor) {
+      position: absolute;
+      /* Centers the link on the first line of a heading that wraps. */
+      top: calc(0.625em - 8px - 0.25rem);
+      right: 100%;
+      margin-left: 0;
     }
   }
   .markdown :where(ul) {
