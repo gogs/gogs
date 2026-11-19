@@ -26,11 +26,11 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: R
         week: cn("mt-1 flex w-full", defaults.week),
         day: cn("size-9 p-0 text-center text-sm", defaults.day),
         day_button: cn(
-          "size-9 cursor-pointer rounded-md outline-none hover:bg-(--color-surface) focus-visible:ring-2 focus-visible:ring-(--color-ring)",
+          "size-9 cursor-pointer rounded-md outline-none hover:bg-(--color-surface) focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-(--color-ring)",
           defaults.day_button,
         ),
         selected: cn(
-          "[&>button]:bg-(--color-primary) [&>button]:font-semibold [&>button]:text-(--color-primary-foreground) [&>button]:focus-visible:ring-offset-2 [&>button]:focus-visible:ring-offset-(--color-popover) [&>button]:hover:bg-(--color-primary)",
+          "[&>button]:bg-(--color-primary) [&>button]:font-semibold [&>button]:text-(--color-primary-foreground) [&>button]:focus-visible:outline-offset-2 [&>button]:hover:bg-(--color-primary)",
           defaults.selected,
         ),
         today: cn("[&>button]:ring-1 [&>button]:ring-(--color-border)", defaults.today),
