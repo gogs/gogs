@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { AdminPageHeader } from "@/components/AdminPage";
+import { AdminFormCard, AdminPageHeader, CHECKBOX_GROUP, FieldGrid } from "@/components/AdminPage";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { CheckboxField, FormField } from "@/components/FormField";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,6 @@ import {
 } from "@/lib/queries/admin";
 import { FormError, formErrors } from "@/lib/queries/request";
 import { cn } from "@/lib/utils";
-import { AdminFormCard, CHECKBOX_GROUP, FieldGrid } from "@/pages/admin/Users";
 
 const LDAP = 2;
 const SMTP = 3;

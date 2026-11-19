@@ -36,6 +36,22 @@ function useChart() {
   return context;
 }
 
+// Chromium lets Tab stop on the SVG groups that Recharts renders its layers
+// into, since React listens for focus events on them as portal targets
+// (recharts/recharts#5988). Taking the groups out of the tab order leaves the
+// chart as a single stop.
+function keepLayersOutOfTabOrder(container: HTMLDivElement) {
+  const fix = () => {
+    for (const layer of container.querySelectorAll('g[class^="recharts-zIndex-layer"]:not([tabindex])')) {
+      layer.setAttribute("tabindex", "-1");
+    }
+  };
+  fix();
+  const observer = new MutationObserver(fix);
+  observer.observe(container, { childList: true, subtree: true });
+  return () => observer.disconnect();
+}
+
 function ChartContainer({
   id,
   className,
@@ -59,8 +75,9 @@ function ChartContainer({
       <div
         data-slot="chart"
         data-chart={chartId}
+        ref={keepLayersOutOfTabOrder}
         className={cn(
-          "flex aspect-video justify-center text-xs [&_.recharts-cartesian-axis-tick_text]:fill-(--color-muted-foreground) [&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-(--color-border) [&_.recharts-curve.recharts-tooltip-cursor]:stroke-(--color-border) [&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-layer]:outline-hidden [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-(--color-border) [&_.recharts-radial-bar-background-sector]:fill-(--color-surface) [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-(--color-surface) [&_.recharts-reference-line_[stroke='#ccc']]:stroke-(--color-border) [&_.recharts-sector]:outline-hidden [&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-surface]:outline-hidden",
+          "flex aspect-video justify-center text-xs [&_.recharts-cartesian-axis-tick-value]:fill-(--color-muted-foreground) [&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-(--color-border) [&_.recharts-curve.recharts-tooltip-cursor]:stroke-(--color-border) [&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-layer]:outline-hidden [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-(--color-border) [&_.recharts-radial-bar-background-sector]:fill-(--color-surface) [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-(--color-surface) [&_.recharts-reference-line_[stroke='#ccc']]:stroke-(--color-border) [&_.recharts-sector]:outline-hidden [&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-surface]:outline-hidden [&_.recharts-surface:focus-visible]:[outline:2px_solid_var(--color-ring)] [&_.recharts-surface_g]:outline-hidden",
           className,
         )}
         {...props}

@@ -1,5 +1,4 @@
 import { Link } from "@tanstack/react-router";
-import { TrendingUp } from "lucide-react";
 import { type KeyboardEvent, memo, useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -14,8 +13,7 @@ import {
   YAxis,
 } from "recharts";
 
-import { AdminPageHeader, STAT_VALUE, SegmentedLinks } from "@/components/AdminPage";
-import { Card } from "@/components/ui/card";
+import { AdminPageHeader, STAT_VALUE, SegmentedLinks, StatCard, TrendChip } from "@/components/AdminPage";
 import { type ChartConfig, ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import { METRICS, SECTIONS, flag, flagText, formatCount } from "@/lib/admin-health";
 import type { AdminHealth, AdminHealthRange, AdminHealthSeries } from "@/lib/queries/admin";
@@ -135,7 +133,6 @@ const MetricChart = memo(function MetricChart({
           ticks={[start, (start + end) / 2, end]}
           interval="preserveStartEnd"
           tickFormatter={formatClockTime}
-          tick={{ fill: "var(--color-muted-foreground)" }}
           tickLine={false}
           axisLine={false}
           tickMargin={8}
@@ -296,16 +293,12 @@ export function AdminServerHealth({ health, range }: { health: AdminHealth; rang
                 const flagged = flagText(t, row.flag, formatClockTime);
                 const label = t(row.metric.label);
                 return (
-                  <Card key={row.metric.key} className="flex min-w-0 flex-col gap-2 p-5">
-                    <div className="flex min-h-6 flex-wrap items-center justify-between gap-x-2 gap-y-1">
-                      <h3 className="text-sm text-(--color-muted-foreground)">{label}</h3>
-                      {flagged ? (
-                        <span className="inline-flex max-w-full items-center gap-1 rounded-full border border-(--color-border) px-2 text-xs/5">
-                          <TrendingUp className="size-3 shrink-0" aria-hidden />
-                          <span className="truncate">{flagged}</span>
-                        </span>
-                      ) : null}
-                    </div>
+                  <StatCard
+                    key={row.metric.key}
+                    as="h3"
+                    label={label}
+                    chip={flagged ? <TrendChip>{flagged}</TrendChip> : null}
+                  >
                     <p className={cn(STAT_VALUE, shown === undefined && "text-(--color-muted-foreground)")}>
                       {format(row, shown)}
                     </p>
@@ -333,7 +326,7 @@ export function AdminServerHealth({ health, range }: { health: AdminHealth; rang
                         onPin={setPinned}
                       />
                     </div>
-                  </Card>
+                  </StatCard>
                 );
               })}
             </div>

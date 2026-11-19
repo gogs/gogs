@@ -1,9 +1,10 @@
 import { Link, type LinkProps } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, TrendingUp } from "lucide-react";
 import { type ReactNode, use } from "react";
 import { createPortal } from "react-dom";
 
-import { Card } from "@/components/ui/card";
+import { FormAlert } from "@/components/FormField";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { AdminCrumbSlot } from "@/lib/admin-crumb-context";
 import { cn } from "@/lib/utils";
 
@@ -31,7 +32,7 @@ export function AdminPageHeader({
       {back ? (
         <Link
           to={back.to}
-          className="inline-flex items-center gap-1.5 justify-self-start text-sm text-(--color-primary) hover:underline"
+          className="inline-flex min-h-6 items-center gap-1.5 justify-self-start text-sm text-(--color-primary) hover:underline"
         >
           <ArrowLeft className="size-4 shrink-0" aria-hidden />
           {back.label}
@@ -71,7 +72,10 @@ export const SEGMENTED_ITEM =
   "inline-flex h-8 items-center rounded-md border border-transparent px-3 text-sm font-medium whitespace-nowrap text-(--color-muted-foreground) outline-none hover:text-(--color-foreground) focus-visible:ring-1 focus-visible:ring-(--color-ring) aria-[current=page]:border-(--color-border) aria-[current=page]:bg-(--color-background) aria-[current=page]:text-(--color-foreground) aria-[current=page]:shadow-xs";
 
 // SegmentedLinks switches a page between views through its search params, so
-// that the loader fetches the view, e.g., the last hour or the last day.
+// that the loader fetches the view, e.g., the last hour or the last day. The
+// router marks a link as the current page when its search params are among
+// those of the URL, which the params of the first view always are, so each
+// link only counts as current on exactly its own params.
 export function SegmentedLinks<V extends string>({
   label,
   active,
@@ -92,6 +96,7 @@ export function SegmentedLinks<V extends string>({
           key={option.value}
           to={to}
           search={option.search}
+          activeOptions={{ exact: true }}
           aria-current={option.value === active ? "page" : undefined}
           className={SEGMENTED_ITEM}
         >
@@ -104,15 +109,17 @@ export function SegmentedLinks<V extends string>({
 
 // StatCard heads a number with what it measures. The chip says what stands
 // out about it, and the footer holds, e.g., the link to the page that tells
-// more.
+// more. Cards below a section heading take `as="h3"`.
 export function StatCard({
   label,
+  as: Heading = "h2",
   chip,
   footer,
   className,
   children,
 }: {
   label: string;
+  as?: "h2" | "h3";
   chip?: ReactNode;
   footer?: ReactNode;
   className?: string;
@@ -121,12 +128,23 @@ export function StatCard({
   return (
     <Card className={cn("flex min-w-0 flex-col gap-2 p-5", className)}>
       <div className="flex min-h-6 flex-wrap items-center justify-between gap-x-2 gap-y-1">
-        <h2 className="text-sm text-(--color-muted-foreground)">{label}</h2>
+        <Heading className="text-sm text-(--color-muted-foreground)">{label}</Heading>
         {chip}
       </div>
       {children}
       {footer ? <div className="mt-auto pt-1">{footer}</div> : null}
     </Card>
+  );
+}
+
+// TrendChip says what stands out about a measurement, e.g., "Spike from
+// 14:32". The icon and the text carry it, not a color.
+export function TrendChip({ children }: { children: ReactNode }) {
+  return (
+    <span className="inline-flex max-w-full items-center gap-1 rounded-full border border-(--color-border) px-2 text-xs/5">
+      <TrendingUp className="size-3 shrink-0" aria-hidden />
+      <span className="truncate">{children}</span>
+    </span>
   );
 }
 
@@ -146,3 +164,51 @@ export function Row({ label, children }: { label: ReactNode; children: ReactNode
     </div>
   );
 }
+
+// AdminFormCard lays a form of the admin console out in a card, with its
+// actions in a bar at the foot of the card. Everything in it is disabled
+// while a submit is `pending`.
+export function AdminFormCard({
+  pending,
+  error,
+  actions,
+  onSubmit,
+  children,
+}: {
+  pending: boolean;
+  error: string | null;
+  actions: ReactNode;
+  onSubmit: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <form
+      noValidate
+      className="min-w-0"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit();
+      }}
+    >
+      <fieldset disabled={pending} className="contents">
+        <Card className="@container max-w-5xl">
+          <CardContent>
+            <FormAlert message={error} />
+            <div className="flex flex-col gap-5">{children}</div>
+          </CardContent>
+          <CardFooter className="flex-wrap gap-2 border-t border-(--color-border) py-4 sm:py-4">{actions}</CardFooter>
+        </Card>
+      </fieldset>
+    </form>
+  );
+}
+
+// FieldGrid puts the fields of a form in two columns once its card is wide
+// enough for both.
+export function FieldGrid({ className, children }: { className?: string; children: ReactNode }) {
+  return <div className={cn("grid grid-cols-1 gap-5 @2xl:grid-cols-2", className)}>{children}</div>;
+}
+
+// Each label of a checkbox in the group is 24px tall, the least a touch
+// target may be.
+export const CHECKBOX_GROUP = "flex flex-col gap-2 [&>label]:min-h-6";

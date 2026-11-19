@@ -1,14 +1,13 @@
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
-import { type ReactNode, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { AdminPageHeader } from "@/components/AdminPage";
+import { AdminFormCard, AdminPageHeader, CHECKBOX_GROUP, FieldGrid } from "@/components/AdminPage";
 import { ConfirmButton } from "@/components/ConfirmButton";
-import { CheckboxField, FormAlert, FormField } from "@/components/FormField";
+import { CheckboxField, FormField } from "@/components/FormField";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -63,54 +62,6 @@ function LoginSourceSelect({
     </FormField>
   );
 }
-
-// AdminFormCard lays a form of the admin console out in a card, with its
-// actions in a bar at the foot of the card. Everything in it is disabled
-// while a submit is `pending`.
-export function AdminFormCard({
-  pending,
-  error,
-  actions,
-  onSubmit,
-  children,
-}: {
-  pending: boolean;
-  error: string | null;
-  actions: ReactNode;
-  onSubmit: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <form
-      noValidate
-      className="min-w-0"
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSubmit();
-      }}
-    >
-      <fieldset disabled={pending} className="contents">
-        <Card className="@container max-w-5xl">
-          <CardContent>
-            <FormAlert message={error} />
-            <div className="flex flex-col gap-5">{children}</div>
-          </CardContent>
-          <CardFooter className="flex-wrap gap-2 border-t border-(--color-border) py-4 sm:py-4">{actions}</CardFooter>
-        </Card>
-      </fieldset>
-    </form>
-  );
-}
-
-// FieldGrid puts the fields of a form in two columns once its card is wide
-// enough for both.
-export function FieldGrid({ className, children }: { className?: string; children: ReactNode }) {
-  return <div className={cn("grid grid-cols-1 gap-5 @2xl:grid-cols-2", className)}>{children}</div>;
-}
-
-// Each label of a checkbox in the group is 24px tall, the least a touch
-// target may be.
-export const CHECKBOX_GROUP = "flex flex-col gap-2 [&>label]:min-h-6";
 
 const CREATE_FIELDS = ["loginSource", "loginName", "name", "email", "password"] as const;
 
