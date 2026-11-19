@@ -1104,20 +1104,18 @@ func (s *UsersStore) ListEmails(ctx context.Context, userID int64) ([]*EmailAddr
 	return emails, nil
 }
 
-// MarkEmailActivated marks the email address of the given user as activated,
-// and new rands are generated for the user.
+// MarkEmailActivated marks the email address of the given user as activated.
+// The rands of the user are kept, so that confirmation links of their other
+// email addresses keep working.
 func (s *UsersStore) MarkEmailActivated(ctx context.Context, userID int64, email string) error {
-	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		err := tx.Model(&EmailAddress{}).
-			Where("uid = ? AND email = ?", userID, email).
-			Update("is_activated", true).
-			Error
-		if err != nil {
-			return errors.Wrap(err, "mark email activated")
-		}
-
-		return newUsersStore(tx).Update(ctx, userID, UpdateUserOptions{GenerateNewRands: true})
-	})
+	err := s.db.WithContext(ctx).Model(&EmailAddress{}).
+		Where("uid = ? AND email = ?", userID, email).
+		Update("is_activated", true).
+		Error
+	if err != nil {
+		return errors.Wrap(err, "mark email activated")
+	}
+	return nil
 }
 
 type ErrEmailNotVerified struct {
@@ -1554,7 +1552,28 @@ func isNameAllowed(names map[string]struct{}, patterns []string, name string) er
 // isUsernameAllowed returns ErrNameNotAllowed if the given name or pattern of
 // the name is not allowed as a username.
 func isUsernameAllowed(name string) error {
-	return isNameAllowed(reservedUsernames, reservedUsernamePatterns, name)
+	err := isNameAllowed(reservedUsernames, reservedUsernamePatterns, name)
+	if err != nil {
+		return err
+	}
+
+	// 🚨 SECURITY: The username names the directory of the user's repositories,
+	// and a path separator would map it onto another user's directory (e.g.,
+	// "x/../victim"). Only path separators and control characters are rejected
+	// because names from reverse proxy and external authentication sources
+	// (e.g., "jane@corp.com") are not limited to the characters of the sign-up
+	// form.
+	if strings.ContainsFunc(name, func(r rune) bool {
+		return r == '/' || r == '\\' || r < 0x20 || r == 0x7f
+	}) {
+		return ErrNameNotAllowed{
+			args: errx.Args{
+				"reason": "contains path separator or control character",
+				"name":   name,
+			},
+		}
+	}
+	return nil
 }
 
 // EmailAddress is an email address of a user.

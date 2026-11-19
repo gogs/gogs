@@ -135,20 +135,6 @@ func getEngine() (*xorm.Engine, error) {
 	return xorm.NewEngine(driver, connStr)
 }
 
-func NewTestEngine() error {
-	x, err := getEngine()
-	if err != nil {
-		return errors.Newf("connect to database: %v", err)
-	}
-
-	if conf.UsePostgreSQL {
-		x.SetSchema(conf.Database.Schema)
-	}
-
-	x.SetMapper(core.GonicMapper{})
-	return x.StoreEngine("InnoDB").Sync2(legacyTables...)
-}
-
 // SetEngine connects to the database. When logQueries is true, every query is
 // logged at the debug level. Otherwise only failed and slow queries are, which
 // suits commands whose console output is read by people, such as backups.

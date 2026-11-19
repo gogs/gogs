@@ -18,6 +18,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/net/html"
 	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/database"
@@ -158,6 +159,10 @@ func TestRepoCodeBrowse(t *testing.T) {
 			CommitCount int64 `json:"commitCount"`
 		} `json:"summary"`
 		Branches []string `json:"branches"`
+		Overview []struct {
+			Kind string `json:"kind"`
+			HTML string `json:"html"`
+		} `json:"overview"`
 	}
 
 	t.Run("src", func(t *testing.T) {
@@ -177,6 +182,11 @@ func TestRepoCodeBrowse(t *testing.T) {
 		assert.Equal(t, repoCodeGit(t, repo, "rev-list", "--count", "main"), "2")
 		assert.EqualValues(t, 2, root.Summary.CommitCount)
 		assert.Equal(t, []string{"main"}, root.Branches)
+		// The page links headings to themselves by these ids. The text of the
+		// heading may vary, e.g., the hex of the name can link to a commit.
+		require.Len(t, root.Overview, 1)
+		assert.Equal(t, "readme", root.Overview[0].Kind)
+		assert.Contains(t, root.Overview[0].HTML, `<h1 id="user-content-`+repo.Name+`">`)
 
 		var dir srcResponse
 		anonymous.doJSON(http.MethodGet, api+"/src/main/docs", nil, http.StatusOK, &dir)
@@ -194,6 +204,7 @@ func TestRepoCodeBrowse(t *testing.T) {
 		assert.Equal(t, "markup", file.File.Kind)
 		require.NotNil(t, file.File.Content)
 		assert.Equal(t, "# Guide\n\nRead **this** first.\n", *file.File.Content)
+		assert.Contains(t, file.File.HTML, `<h1 id="user-content-guide">Guide</h1>`)
 		assert.Contains(t, file.File.HTML, "<strong>this</strong>")
 
 		// The first commit has no guide yet.
@@ -426,6 +437,103 @@ func TestRepoCodeNotebookAndPDF(t *testing.T) {
 		assert.Nil(t, resp.File.Content)
 		raw := repoCodeGet(t, anonymous, repoCodePage(repo)+"/raw/main/docs/manual.pdf")
 		assert.True(t, strings.HasPrefix(raw, "%PDF-1.4"), raw)
+	})
+}
+
+// TestRepoCodeLinkedImages checks that images inside links, e.g., README
+// badges, load from the repository and keep the author's link, both in
+// Markdown without raw HTML and in Markdown with it, which render differently.
+func TestRepoCodeLinkedImages(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	ownerClient := authenticatedClient(t, owner)
+	anonymous := newClient(t)
+	api := repoCodeAPI(repo)
+	page := repoCodePage(repo)
+
+	const badge = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><rect width="20" height="20" fill="red"/></svg>` + "\n"
+	repoCodeNewFile(t, ownerClient, repo, "img/badge.svg", badge, "Add badge")
+	repoCodeNewFile(t, ownerClient, repo, "badges.md", `Raw HTML badges:
+
+<a href="https://ci.example.com/raw"><img src="img/badge.svg" alt="raw"></a>
+<a href="https://ci.example.com/self-closing"><img src="img/badge.svg" alt="self-closing" /></a>
+[![markdown](img/badge.svg)](https://ci.example.com/markdown)
+`, "Add badges")
+	status, body := ownerClient.do(http.MethodPost, api+"/editor/files", map[string]any{
+		"branch":     "main",
+		"oldPath":    "README.md",
+		"path":       "README.md",
+		"content":    "[![relative](img/badge.svg)](https://ci.example.com/relative) [![root](/img/badge.svg)](https://ci.example.com/root) [![absolute](https://img.example.com/badge.svg)](https://ci.example.com/absolute)\n",
+		"lastCommit": repoCodeGit(t, repo, "rev-parse", "refs/heads/main"),
+		"summary":    "Add badges to README",
+	})
+	require.Equal(t, http.StatusOK, status, "response: %s", body)
+
+	type linkedImage struct {
+		href, src string
+	}
+	// linkedImages returns the images in rendered HTML by their alternative
+	// text, with the link around each.
+	linkedImages := func(t *testing.T, rendered string) map[string]linkedImage {
+		t.Helper()
+
+		images := map[string]linkedImage{}
+		var href string
+		z := html.NewTokenizer(strings.NewReader(rendered))
+		for z.Next() != html.ErrorToken {
+			tok := z.Token()
+			attrs := map[string]string{}
+			for _, a := range tok.Attr {
+				attrs[a.Key] = a.Val
+			}
+			switch {
+			case tok.Type == html.StartTagToken && tok.Data == "a":
+				href = attrs["href"]
+			case tok.Type == html.EndTagToken && tok.Data == "a":
+				href = ""
+			case (tok.Type == html.StartTagToken || tok.Type == html.SelfClosingTagToken) && tok.Data == "img":
+				images[attrs["alt"]] = linkedImage{href: href, src: attrs["src"]}
+			}
+		}
+		return images
+	}
+	resolved := page + "/raw/main/img/badge.svg"
+
+	t.Run("README without raw HTML", func(t *testing.T) {
+		var root struct {
+			Overview []struct {
+				Kind string `json:"kind"`
+				HTML string `json:"html"`
+			} `json:"overview"`
+		}
+		anonymous.doJSON(http.MethodGet, api+"/src", nil, http.StatusOK, &root)
+		require.Len(t, root.Overview, 1)
+		require.Equal(t, "readme", root.Overview[0].Kind)
+		assert.Equal(t, map[string]linkedImage{
+			"relative": {href: "https://ci.example.com/relative", src: resolved},
+			"root":     {href: "https://ci.example.com/root", src: resolved},
+			"absolute": {href: "https://ci.example.com/absolute", src: "https://img.example.com/badge.svg"},
+		}, linkedImages(t, root.Overview[0].HTML))
+	})
+
+	t.Run("file with raw HTML", func(t *testing.T) {
+		var file struct {
+			File struct {
+				HTML string `json:"html"`
+			} `json:"file"`
+		}
+		anonymous.doJSON(http.MethodGet, api+"/src/main/badges.md", nil, http.StatusOK, &file)
+		assert.Equal(t, map[string]linkedImage{
+			"raw":          {href: "https://ci.example.com/raw", src: resolved},
+			"self-closing": {href: "https://ci.example.com/self-closing", src: resolved},
+			"markdown":     {href: "https://ci.example.com/markdown", src: resolved},
+		}, linkedImages(t, file.File.HTML))
+	})
+
+	t.Run("resolved source loads", func(t *testing.T) {
+		assert.Equal(t, badge, repoCodeGet(t, anonymous, resolved))
 	})
 }
 
@@ -1056,7 +1164,7 @@ func TestRepoCodeWiki(t *testing.T) {
 	assert.Equal(t, "Home", created.Name)
 	ownerClient.doJSON(http.MethodPost, api+"/wiki", map[string]any{
 		"title":   "Getting started",
-		"content": "Install it.",
+		"content": "## Install it\n\nRun the binary.",
 	}, http.StatusCreated, &created)
 	assert.Equal(t, "Getting started", created.Name)
 
@@ -1086,6 +1194,8 @@ func TestRepoCodeWiki(t *testing.T) {
 	// Links written like GitHub's reach the page with spaces.
 	anonymous.doJSON(http.MethodGet, api+"/wiki?page=Getting-started", nil, http.StatusOK, &wiki)
 	assert.Equal(t, "Getting started", wiki.Page.Name)
+	// The page links headings to themselves by these ids.
+	assert.Contains(t, wiki.Page.HTML, `<h2 id="user-content-install-it">Install it</h2>`)
 	status, body = anonymous.do(http.MethodGet, api+"/wiki?page=Missing", nil)
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 

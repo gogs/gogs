@@ -27,7 +27,6 @@ import {
   deleteAdminRepo,
   deleteAllAdminNotices,
 } from "@/lib/queries/admin";
-import { subUrl } from "@/lib/url";
 import { cn } from "@/lib/utils";
 
 const DATE_FMT = new Intl.DateTimeFormat(webContext.lang, { year: "numeric", month: "short", day: "2-digit" });
@@ -437,9 +436,9 @@ export function AdminRepos({ list, search }: { list: AdminList<AdminRepo>; searc
           <TableRow key={repo.id}>
             <TableCell>
               <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <a href={subUrl(`/${repo.owner}/${repo.name}`)} className={NAME_LINK}>
+                <Link activeOptions={{ exact: true }} to={`/${repo.owner}/${repo.name}`} className={NAME_LINK}>
                   {repo.owner}/{repo.name}
-                </a>
+                </Link>
                 {repo.isPrivate ? <span className={BADGE_CLASS}>{t("admin.repos.private")}</span> : null}
               </p>
               <Facts until="4xl">

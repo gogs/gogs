@@ -36,7 +36,7 @@ import { ResizableSidebar } from "@/components/ResizableSidebar";
 import { RichDiff } from "@/components/RichDiff";
 import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { repoMarkdownFileQuery } from "@/lib/queries/repo";
+import { refPath, repoMarkdownFileQuery } from "@/lib/queries/repo";
 import { resolveTheme, useTheme } from "@/lib/theme-context";
 import { TREE_THEME_STYLE } from "@/lib/tree-theme";
 import { subUrl } from "@/lib/url";
@@ -481,8 +481,6 @@ export function DiffWorkspace({
     };
   }, [nameToItemIds]);
 
-  const repoLink = subUrl(`/${owner}/${repo}`);
-
   // Lock the page first so Pierre's sticky header offset math has a stable
   // viewport.
   const scrollPageToLock = useCallback(() => {
@@ -750,10 +748,10 @@ export function DiffWorkspace({
       if (item.type !== "diff") return null;
       const path = item.fileDiff.name;
       const prev = item.fileDiff.prevName;
-      const viewFileHref = `${repoLink}/src/${newRef}/${path}`;
-      const rawFileHref = `${repoLink}/raw/${newRef}/${path}`;
+      const viewFileHref = `/${owner}/${repo}/src/${refPath(`${newRef}/${path}`)}`;
+      const rawFileHref = subUrl(`/${owner}/${repo}/raw/${newRef}/${path}`);
       // File history is `/commits/{ref}/{path}`. A commit SHA is a valid ref.
-      const historyHref = `${repoLink}/commits/${newRef}/${path}`;
+      const historyHref = `/${owner}/${repo}/commits/${refPath(`${newRef}/${path}`)}`;
       // The menu leaves out Edit/Delete, which need a branch ref. A commit SHA
       // 404s in the editor.
       const counts = richById[item.id] ? lineCounts.get(item.id) : undefined;
@@ -779,7 +777,7 @@ export function DiffWorkspace({
         </span>
       );
     },
-    [repoLink, newRef, richById, lineCounts],
+    [owner, repo, newRef, richById, lineCounts],
   );
 
   // A file-level annotation holds either the rich diff of an item that shows

@@ -23,20 +23,13 @@ import (
 	"gogs.io/gogs/internal/tool"
 )
 
-// DashboardURLPath returns the URL path to the user or organization dashboard.
-func DashboardURLPath(name string, isOrganization bool) string {
-	if isOrganization {
-		return conf.Server.Subpath + "/org/" + name + "/dashboard/"
-	}
-	return conf.Server.Subpath + "/"
-}
-
 // codePurpose is signed into every time-limited user code so that a code issued
 // for one purpose cannot be redeemed for another.
 type codePurpose string
 
 const (
 	codePurposeActivate      codePurpose = "activate"
+	codePurposeConfirmEmail  codePurpose = "confirm_email"
 	codePurposeResetPassword codePurpose = "reset_password"
 )
 
@@ -50,6 +43,18 @@ func GenerateActivateCode(userID int64, email, name, password, rands string) str
 // the given user information and email.
 func VerifyActivateCode(code string, userID int64, email, name, password, rands string) bool {
 	return verifyTimeLimitedUserCode(codePurposeActivate, code, userID, email, name, password, rands, conf.Auth.ActivateCodeLives)
+}
+
+// GenerateConfirmEmailCode generates a code that confirms the given email
+// address of the user, which cannot be redeemed to activate the account.
+func GenerateConfirmEmailCode(userID int64, email, name, password, rands string) string {
+	return generateTimeLimitedUserCode(codePurposeConfirmEmail, userID, email, name, password, rands, conf.Auth.ActivateCodeLives)
+}
+
+// VerifyConfirmEmailCode returns true if the code is an unexpired code that
+// confirms the given email address of the user.
+func VerifyConfirmEmailCode(code string, userID int64, email, name, password, rands string) bool {
+	return verifyTimeLimitedUserCode(codePurposeConfirmEmail, code, userID, email, name, password, rands, conf.Auth.ActivateCodeLives)
 }
 
 // GenerateResetPasswordCode generates a password-reset code based on user

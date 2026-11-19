@@ -33,6 +33,7 @@ import {
   type RepoReleasesData,
   createRepoRelease,
   deleteRepoRelease,
+  refPath,
   repoHeaderQuery,
   updateRepoRelease,
 } from "@/lib/queries/repo";
@@ -160,24 +161,26 @@ function ReleaseRow({
   const repoLink = `/${owner}/${name}`;
   const archive = (ext: string) => subUrl(`${repoLink}/archive/${encodeURIComponent(release.tagName)}${ext}`);
   const tagLink = (
-    <a
-      href={subUrl(`${repoLink}/src/${release.tagName}`)}
+    <Link
+      activeOptions={{ exact: true }}
+      to={`/${owner}/${name}/src/${refPath(release.tagName)}`}
       rel="nofollow"
       className={`${LINK_CLASS} inline-flex items-center gap-1.5 break-all`}
     >
       <Tag className="size-4 shrink-0" aria-hidden />
       {release.tagName}
-    </a>
+    </Link>
   );
   const commitLink = (
-    <a
-      href={subUrl(`${repoLink}/src/${release.sha}`)}
+    <Link
+      activeOptions={{ exact: true }}
+      to={`/${owner}/${name}/src/${release.sha}`}
       rel="nofollow"
       className="inline-flex items-center gap-1.5 font-mono text-(--color-muted-foreground) hover:text-(--color-primary) hover:underline"
     >
       <GitCommitHorizontal className="size-4 shrink-0" aria-hidden />
       {release.sha.slice(0, 10)}
-    </a>
+    </Link>
   );
 
   // A tag that has no release only offers its source code.
@@ -218,9 +221,13 @@ function ReleaseRow({
       <div className="min-w-0">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <h2 className="min-w-0 text-xl font-semibold break-words">
-            <a href={subUrl(`${repoLink}/src/${release.tagName}`)} className={LINK_CLASS}>
+            <Link
+              activeOptions={{ exact: true }}
+              to={`/${owner}/${name}/src/${refPath(release.tagName)}`}
+              className={LINK_CLASS}
+            >
               {release.title}
-            </a>
+            </Link>
           </h2>
           {canWrite ? (
             <Button asChild variant="outline" size="sm">

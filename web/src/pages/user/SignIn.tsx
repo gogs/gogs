@@ -1,4 +1,4 @@
-import { getRouteApi, useNavigate } from "@tanstack/react-router";
+import { Link, getRouteApi, useNavigate } from "@tanstack/react-router";
 import { Eye, EyeOff, Fingerprint, KeyRound, LoaderCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
@@ -283,8 +283,9 @@ export function SignIn() {
                   <div className="flex items-center justify-between gap-3">
                     <Label htmlFor="password">{t("password")}</Label>
                     <Button variant="link" size="inline" asChild>
-                      <a
-                        href={subUrl("/user/reset-password")}
+                      <Link
+                        activeOptions={{ exact: true }}
+                        to="/user/reset-password"
                         tabIndex={submitting ? -1 : 7}
                         aria-disabled={submitting || undefined}
                         className={submitting ? "pointer-events-none opacity-50" : undefined}
@@ -293,7 +294,7 @@ export function SignIn() {
                         }}
                       >
                         {t("auth.forget_password")}
-                      </a>
+                      </Link>
                     </Button>
                   </div>
                   <div className="relative">
@@ -392,8 +393,9 @@ export function SignIn() {
                     </Button>
                   ) : null}
                   <Button variant="link" size="inline" asChild className="self-center">
-                    <a
-                      href={subUrl("/user/sign-up")}
+                    <Link
+                      activeOptions={{ exact: true }}
+                      to="/user/sign-up"
                       tabIndex={submitting ? -1 : 8}
                       aria-disabled={submitting || undefined}
                       className={submitting ? "pointer-events-none opacity-50" : undefined}
@@ -402,7 +404,7 @@ export function SignIn() {
                       }}
                     >
                       {t("auth.sign_up_now")}
-                    </a>
+                    </Link>
                   </Button>
                 </div>
               </div>
@@ -485,7 +487,9 @@ function PasskeySignIn({
           </Button>
         )}
         <Button variant="link" size="inline" asChild className="self-center">
-          <a href={subUrl("/user/sign-up")}>{t("auth.sign_up_now")}</a>
+          <Link activeOptions={{ exact: true }} to="/user/sign-up">
+            {t("auth.sign_up_now")}
+          </Link>
         </Button>
       </div>
     </div>

@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { Binary, FileCode2, History, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { type ButtonHTMLAttributes, type Ref, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -45,10 +46,14 @@ export function FileHeaderMenu({
       <PopoverContent align="end" sideOffset={4} className="w-48 p-1 text-sm">
         <ul className="flex flex-col">
           <li>
-            <a href={viewFileHref} className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-(--color-surface)">
+            <Link
+              activeOptions={{ exact: true }}
+              to={viewFileHref}
+              className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-(--color-surface)"
+            >
               <FileCode2 className="size-3.5 shrink-0" aria-hidden />
               <span>{t("repo.view_file")}</span>
-            </a>
+            </Link>
           </li>
           <li>
             <a href={rawFileHref} className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-(--color-surface)">
@@ -57,10 +62,14 @@ export function FileHeaderMenu({
             </a>
           </li>
           <li>
-            <a href={historyHref} className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-(--color-surface)">
+            <Link
+              activeOptions={{ exact: true }}
+              to={historyHref}
+              className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-(--color-surface)"
+            >
               <History className="size-3.5 shrink-0" aria-hidden />
               <span>{t("repo.view_history")}</span>
-            </a>
+            </Link>
           </li>
           {editFileHref || deleteFileHref ? (
             <li role="presentation">
@@ -69,21 +78,26 @@ export function FileHeaderMenu({
           ) : null}
           {editFileHref ? (
             <li>
-              <a href={editFileHref} className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-(--color-surface)">
+              <Link
+                activeOptions={{ exact: true }}
+                to={editFileHref}
+                className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-(--color-surface)"
+              >
                 <Pencil className="size-3.5 shrink-0" aria-hidden />
                 <span>{t("repo.editor.edit_file")}</span>
-              </a>
+              </Link>
             </li>
           ) : null}
           {deleteFileHref ? (
             <li>
-              <a
-                href={deleteFileHref}
+              <Link
+                activeOptions={{ exact: true }}
+                to={deleteFileHref}
                 className="flex items-center gap-2 rounded px-2 py-1.5 text-(--color-destructive) hover:bg-(--color-surface)"
               >
                 <Trash2 className="size-3.5 shrink-0" aria-hidden />
                 <span>{t("repo.editor.delete_this_file")}</span>
-              </a>
+              </Link>
             </li>
           ) : null}
           {prevFilePath ? (

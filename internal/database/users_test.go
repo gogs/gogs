@@ -283,6 +283,31 @@ func usersAuthenticate(t *testing.T, ctx context.Context, s *UsersStore) {
 		require.NoError(t, err)
 		assert.Equal(t, "cindy@example.com", user.Email)
 	})
+
+	t.Run("new user via login source with a name that changes the repository path", func(t *testing.T) {
+		loginSourcesStore := newLoginSourcesStore(s.db, NewMockLoginSourceFilesStore())
+		loginSource, err := loginSourcesStore.Create(
+			ctx,
+			CreateLoginSourceOptions{
+				Type:      auth.Mock,
+				Name:      "mock-3",
+				Activated: true,
+				Config: mockProviderConfig{
+					ExternalAccount: &auth.ExternalAccount{
+						Name:  "x/../cindy",
+						Email: "x-cindy@example.com",
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = s.Authenticate(ctx, logx.NewNoopLogger(), "x/../cindy", password, loginSource.ID)
+		assert.True(t, IsErrNameNotAllowed(err))
+
+		_, err = s.GetByUsername(ctx, "x/../cindy")
+		assert.True(t, IsErrUserNotExist(err))
+	})
 }
 
 func usersChangeUsername(t *testing.T, ctx context.Context, s *UsersStore) {
@@ -430,6 +455,28 @@ func usersCreate(t *testing.T, ctx context.Context, s *UsersStore) {
 			},
 		}
 		assert.Equal(t, wantErr, err)
+	})
+
+	t.Run("name changes the repository path", func(t *testing.T) {
+		_, err := s.Create(ctx, "x/../alice", "", CreateUserOptions{})
+		wantErr := ErrNameNotAllowed{
+			args: errx.Args{
+				"reason": "contains path separator or control character",
+				"name":   "x/../alice",
+			},
+		}
+		assert.Equal(t, wantErr, err)
+
+		_, err = s.GetByUsername(ctx, "x/../alice")
+		assert.True(t, IsErrUserNotExist(err))
+	})
+
+	t.Run("name with characters outside of the sign-up form", func(t *testing.T) {
+		for i, name := range []string{"jane@corp.com", "Jane Smith", "jürgen"} {
+			user, err := s.Create(ctx, name, fmt.Sprintf("user%d@example.com", i), CreateUserOptions{})
+			require.NoError(t, err)
+			assert.Equal(t, name, user.Name)
+		}
 	})
 
 	t.Run("name already exists", func(t *testing.T) {
@@ -1208,6 +1255,20 @@ func TestIsUsernameAllowed(t *testing.T) {
 			assert.True(t, IsErrNameNotAllowed(isUsernameAllowed(username)))
 		})
 	}
+
+	for _, name := range []string{"x/../victim", "a/b", `a\b`, `..\victim`, "a\x00b", "a\nb", "a\x7fb"} {
+		t.Run(name, func(t *testing.T) {
+			assert.True(t, IsErrNameNotAllowed(isUsernameAllowed(name)))
+		})
+	}
+
+	// Names from reverse proxy and external authentication sources are not
+	// limited to the characters of the sign-up form.
+	for _, name := range []string{"alice", "jane@corp.com", "Jane Smith", "jürgen", "a.b-c_d", "alice."} {
+		t.Run(name, func(t *testing.T) {
+			assert.NoError(t, isUsernameAllowed(name))
+		})
+	}
 }
 
 func usersAddEmail(t *testing.T, ctx context.Context, s *UsersStore) {
@@ -1308,9 +1369,10 @@ func usersMarkEmailActivated(t *testing.T, ctx context.Context, s *UsersStore) {
 	require.NoError(t, err)
 	assert.True(t, gotEmail.IsActivated)
 
+	// Confirmation links of other email addresses are signed with the rands.
 	gotAlice, err := s.GetByID(ctx, alice.ID)
 	require.NoError(t, err)
-	assert.NotEqual(t, alice.Rands, gotAlice.Rands)
+	assert.Equal(t, alice.Rands, gotAlice.Rands)
 }
 
 func usersMarkEmailPrimary(t *testing.T, ctx context.Context, s *UsersStore) {

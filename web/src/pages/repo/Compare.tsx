@@ -35,14 +35,18 @@ export function RepoCompare({
   const { before, after, base, baseIsEmptyTree, commits, totalCommits, markdownExtensions, patch } = data;
   const [showAll, setShowAll] = useState(false);
   const hiddenCommits = showAll ? 0 : Math.max(commits.length - collapsedCommits, 0);
-  const repoLink = subUrl(`/${owner}/${name}`);
+  const repoLink = `/${owner}/${name}`;
   usePageTitle(`${base.slice(0, 7)}...${after.slice(0, 7)} - ${owner}/${name}`);
 
   const shaClass = "rounded bg-(--color-surface) px-1.5 py-0.5 font-mono text-sm text-(--color-foreground)";
   const shaLink = (sha: string) => (
-    <a href={`${repoLink}/commit/${sha}`} className={`${shaClass} hover:underline`}>
+    <Link
+      activeOptions={{ exact: true }}
+      to={`/${owner}/${name}/commit/${sha}`}
+      className={`${shaClass} hover:underline`}
+    >
       {sha.slice(0, 7)}
-    </a>
+    </Link>
   );
 
   return (
@@ -65,7 +69,7 @@ export function RepoCompare({
             </span>
           </h2>
           <a
-            href={`${repoLink}/compare/${before}...${after}.diff`}
+            href={subUrl(`${repoLink}/compare/${before}...${after}.diff`)}
             className="glass-control inline-flex h-7 shrink-0 items-center rounded-md border border-(--color-border) px-2 font-mono text-xs hover:bg-(--color-surface)"
           >
             {t("repo.diff_label")}

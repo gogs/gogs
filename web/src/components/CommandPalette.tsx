@@ -809,7 +809,9 @@ function PaletteBody({
     const glass = readGlass();
     out.push({
       key: "g-glass",
-      label: glass ? t("command_palette.glass_off") : t("command_palette.glass_on"),
+      label: t("command_palette.experimental", {
+        action: glass ? t("command_palette.glass_off") : t("command_palette.glass_on"),
+      }),
       keywords: "glass mode toggle blur appearance",
       icon: Blend,
       run: () => setGlass(!glass),

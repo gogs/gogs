@@ -33,7 +33,6 @@ import {
 } from "@/lib/queries/repo";
 import { formErrors } from "@/lib/queries/request";
 import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
-import { subUrl } from "@/lib/url";
 import { linkedUploads, useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { useUserInfo } from "@/lib/use-user-info";
 import { cn } from "@/lib/utils";
@@ -667,18 +666,21 @@ function NewComment({
   const { fields, formError } = formErrors(mutation.error);
 
   if (!user) {
-    const signIn = subUrl(
-      `/user/sign-in?redirect_to=${encodeURIComponent(window.location.pathname + window.location.search)}`,
-    );
+    const signIn = `/user/sign-in?redirect_to=${encodeURIComponent(window.location.pathname + window.location.search)}`;
     return (
       <p className="mt-2 border-t border-(--color-border) pt-4 text-center text-sm text-(--color-muted-foreground)">
         {t("repo.issues.sign_in_require_desc")
           .split(/(<a\b[^>]*>.*?<\/a>)/)
           .map((part, i) =>
             part.startsWith("<a") ? (
-              <a key={i} href={signIn} className="text-(--color-primary) underline underline-offset-2">
+              <Link
+                activeOptions={{ exact: true }}
+                key={i}
+                to={signIn}
+                className="text-(--color-primary) underline underline-offset-2"
+              >
                 {part.replace(/^<[^>]+>|<\/a>$/g, "")}
-              </a>
+              </Link>
             ) : (
               part
             ),

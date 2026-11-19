@@ -263,7 +263,7 @@ func activateEmail(c flamego.Context, logger *logx.Logger) {
 // when the code is not valid for it.
 func verifyActivateEmailCode(ctx stdctx.Context, logger *logx.Logger, code, email string) *database.EmailAddress {
 	user := parseUserFromCode(ctx, logger, code)
-	if user == nil || !userx.VerifyActivateCode(code, user.ID, email, user.LowerName, user.Password, user.Rands) {
+	if user == nil || !userx.VerifyConfirmEmailCode(code, user.ID, email, user.LowerName, user.Password, user.Rands) {
 		return nil
 	}
 	emailAddress, err := database.Handle.Users().GetEmail(ctx, user.ID, email, false)

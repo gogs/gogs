@@ -6,7 +6,6 @@ import { useTranslation } from "react-i18next";
 import { RelativeTime } from "@/components/RelativeTime";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { DashboardIssue } from "@/lib/queries/user";
-import { subUrl } from "@/lib/url";
 import { cn } from "@/lib/utils";
 
 // IssueListItem is one row of a list of issues or pull requests.
@@ -49,12 +48,13 @@ export function IssueListItem({
       <div className="min-w-0 flex-1">
         <p className="text-sm break-words">
           {showRepo ? (
-            <a
-              href={subUrl(`/${issue.repo}`)}
+            <Link
+              activeOptions={{ exact: true }}
+              to={`/${issue.repo}`}
               className="mr-1 text-(--color-muted-foreground) hover:text-(--color-primary) hover:underline"
             >
               {issue.repo}
-            </a>
+            </Link>
           ) : null}
           {unread ? (
             <Tooltip>
@@ -77,9 +77,9 @@ export function IssueListItem({
               {issue.title}
             </Link>
           ) : (
-            <a href={subUrl(`/${issue.repo}/pulls/${issue.index}`)} className={titleClass}>
+            <Link activeOptions={{ exact: true }} to={`/${issue.repo}/pulls/${issue.index}`} className={titleClass}>
               {issue.title}
-            </a>
+            </Link>
           )}
           {issue.labels.map((label) => {
             const chip = (

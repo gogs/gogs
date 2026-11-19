@@ -1151,21 +1151,6 @@ func newIssueUsers(e *xorm.Session, repo *Repository, issue *Issue) error {
 	return nil
 }
 
-// NewIssueUsers adds new issue-user relations for new issue of repository.
-func NewIssueUsers(repo *Repository, issue *Issue) (err error) {
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	if err = newIssueUsers(sess, repo, issue); err != nil {
-		return err
-	}
-
-	return sess.Commit()
-}
-
 // PairsContains returns the index of the pair of given issue and user in the
 // pairs list, or -1 when the list does not contain it.
 func PairsContains(ius []*IssueUser, issueID, uid int64) int {
@@ -1182,38 +1167,6 @@ func PairsContains(ius []*IssueUser, issueID, uid int64) int {
 func GetIssueUsers(rid, uid int64, isClosed bool) ([]*IssueUser, error) {
 	ius := make([]*IssueUser, 0, 10)
 	err := x.Where("is_closed=?", isClosed).Find(&ius, &IssueUser{RepoID: rid, UserID: uid})
-	return ius, err
-}
-
-// GetIssueUserPairsByRepoIds returns issue-user pairs by given repository IDs.
-func GetIssueUserPairsByRepoIds(rids []int64, isClosed bool, page int) ([]*IssueUser, error) {
-	if len(rids) == 0 {
-		return []*IssueUser{}, nil
-	}
-
-	ius := make([]*IssueUser, 0, 10)
-	sess := x.Limit(20, (page-1)*20).Where("is_closed=?", isClosed).In("repo_id", rids)
-	err := sess.Find(&ius)
-	return ius, err
-}
-
-// GetIssueUserPairsByMode returns issue-user pairs by given repository and user.
-func GetIssueUserPairsByMode(userID, repoID int64, filterMode FilterMode, isClosed bool, page int) ([]*IssueUser, error) {
-	ius := make([]*IssueUser, 0, 10)
-	sess := x.Limit(20, (page-1)*20).Where("uid=?", userID).And("is_closed=?", isClosed)
-	if repoID > 0 {
-		sess.And("repo_id=?", repoID)
-	}
-
-	switch filterMode {
-	case FilterModeAssign:
-		sess.And("is_assigned=?", true)
-	case FilterModeCreate:
-		sess.And("is_poster=?", true)
-	default:
-		return ius, nil
-	}
-	err := sess.Find(&ius)
 	return ius, err
 }
 
@@ -1461,11 +1414,6 @@ func UpdateIssue(issue *Issue) error {
 func updateIssueUsersByStatus(e Engine, issueID int64, isClosed bool) error {
 	_, err := e.Exec("UPDATE `issue_user` SET is_closed=? WHERE issue_id=?", isClosed, issueID)
 	return err
-}
-
-// UpdateIssueUsersByStatus updates issue-user relations by issue status.
-func UpdateIssueUsersByStatus(issueID int64, isClosed bool) error {
-	return updateIssueUsersByStatus(x, issueID, isClosed)
 }
 
 func updateIssueUserByAssignee(e *xorm.Session, issue *Issue) (err error) {

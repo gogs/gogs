@@ -170,21 +170,22 @@ function Sidebar({ rail }: { rail: boolean }) {
         {rail ? (
           <Tooltip>
             <TooltipTrigger asChild>
-              <a
-                href={subUrl("/")}
+              <Link
+                activeOptions={{ exact: true }}
+                to="/"
                 aria-label={t("admin.back_to_site")}
                 className={cn(NAV_LINK, "justify-center px-0")}
               >
                 <ArrowLeft className="size-4 shrink-0" aria-hidden />
-              </a>
+              </Link>
             </TooltipTrigger>
             <TooltipContent side="right">{t("admin.back_to_site")}</TooltipContent>
           </Tooltip>
         ) : (
-          <a href={subUrl("/")} className={NAV_LINK}>
+          <Link activeOptions={{ exact: true }} to="/" className={NAV_LINK}>
             <ArrowLeft className="size-4 shrink-0" aria-hidden />
             {t("admin.back_to_site")}
-          </a>
+          </Link>
         )}
         {user ? (
           <UserMenu

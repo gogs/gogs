@@ -18,7 +18,6 @@ import {
   removeOrgTeamRepo,
 } from "@/lib/queries/org";
 import { userProfileQuery } from "@/lib/queries/user";
-import { subUrl } from "@/lib/url";
 import { useOrgChange } from "@/lib/use-org-change";
 import { TeamCounts, TeamMembershipButton } from "@/pages/org/Teams";
 import { RepoIcon } from "@/pages/user/Dashboard";
@@ -174,12 +173,13 @@ function TeamRepos({
         {repos.map((repo) => (
           <li key={repo.name} className="flex items-center gap-3 border-b border-(--color-border) py-3">
             <RepoIcon repo={repo} />
-            <a
-              href={subUrl(`/${org}/${repo.name}`)}
+            <Link
+              activeOptions={{ exact: true }}
+              to={`/${org}/${repo.name}`}
               className="min-w-0 flex-1 font-semibold wrap-anywhere text-(--color-primary) hover:underline"
             >
               {org}/{repo.name}
-            </a>
+            </Link>
             {canChange ? (
               <RemoveButton
                 org={org}

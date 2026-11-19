@@ -279,6 +279,10 @@ func postUserSignIn(logger *logx.Logger, r *http.Request, w http.ResponseWriter,
 			}, nil
 		case database.IsErrLoginSourceMismatch(err):
 			return http.StatusUnprocessableEntity, nil, errors.New(l.Tr("form.auth_source_mismatch"))
+		case database.IsErrNameNotAllowed(err):
+			// The authentication source gave a name that cannot be used for the new
+			// account.
+			return http.StatusUnprocessableEntity, nil, errors.New(l.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()))
 		default:
 			logger.Error("Failed to authenticate user", "username", req.Username, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "authenticate user")
