@@ -68,6 +68,14 @@ const ABSOLUTE_TIME_FMT = new Intl.DateTimeFormat(webContext.lang, {
   timeZoneName: "short",
 });
 
+const CLOCK_TIME_FMT = new Intl.DateTimeFormat(webContext.lang, { hour: "2-digit", minute: "2-digit", hour12: false });
+
+// formatClockTime formats an ISO time or Unix milliseconds as the time of day,
+// e.g., "14:35", for the ticks of a chart that covers hours.
+export function formatClockTime(time: string | number): string {
+  return CLOCK_TIME_FMT.format(new Date(time));
+}
+
 // formatAbsoluteTime formats an ISO time or Unix milliseconds.
 export function formatAbsoluteTime(time: string | number): string {
   const d = new Date(typeof time === "number" ? time : Date.parse(time));

@@ -1,19 +1,16 @@
 import { useMutation } from "@tanstack/react-query";
-import { Check, ExternalLink, LoaderCircle, Minus, Play } from "lucide-react";
+import { Check, LoaderCircle, Minus, Play } from "lucide-react";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { AdminLayout } from "@/components/AdminLayout";
 import { FormAlert, FormField } from "@/components/FormField";
 import { InlineCode } from "@/components/InlineCode";
-import { RichText } from "@/components/RichText";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   ADMIN_OPERATIONS,
   type AdminConfig as AdminConfigData,
-  type AdminDashboard as AdminDashboardData,
   type AdminMonitor as AdminMonitorData,
   type AdminOperation,
   type AdminReportRow,
@@ -54,7 +51,7 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function ReportValue({ row }: { row: AdminReportRow }) {
+export function ReportValue({ row }: { row: AdminReportRow }) {
   switch (row.kind) {
     case "code":
       return row.value ? (
@@ -122,54 +119,6 @@ const OPERATION_LABELS: Record<AdminOperation, string> = {
   "reinit-missing-repos": "admin.dashboard.reinit_missing_repos",
 };
 
-// AdminDashboard is the overview of the site: how it was built, what its
-// database holds and what the server uses right now.
-export function AdminDashboard({ dashboard }: { dashboard: AdminDashboardData }) {
-  const { t } = useTranslation();
-  return (
-    <AdminLayout active="dashboard">
-      <h1 className="mb-4 text-xl font-semibold">{t("admin.overview")}</h1>
-      <Section id="build-info" title={t("admin.dashboard.build_info")}>
-        <Facts>
-          <Fact label={t("admin.dashboard.app_ver")}>
-            <InlineCode>{dashboard.appVersion}</InlineCode>
-          </Fact>
-          <Fact label={t("admin.dashboard.git_version")}>
-            <InlineCode>{dashboard.gitVersion}</InlineCode>
-          </Fact>
-          <Fact label={t("admin.dashboard.go_version")}>
-            <InlineCode>{dashboard.goVersion}</InlineCode>
-          </Fact>
-          <Fact label={t("admin.dashboard.build_time")}>
-            <InlineCode>{dashboard.buildTime || "N/A"}</InlineCode>
-          </Fact>
-          <Fact label={t("admin.dashboard.build_commit")}>
-            {dashboard.buildCommit ? (
-              <a
-                href={`https://github.com/gogs/gogs/commit/${dashboard.buildCommit}`}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 text-(--color-primary) hover:underline"
-              >
-                <InlineCode>{dashboard.buildCommit}</InlineCode>
-                <ExternalLink className="size-3.5 shrink-0" aria-hidden />
-              </a>
-            ) : (
-              <InlineCode>N/A</InlineCode>
-            )}
-          </Fact>
-        </Facts>
-      </Section>
-      <Section id="statistics" title={t("admin.dashboard.statistic")}>
-        <p className="text-sm leading-6">
-          <RichText text={dashboard.statistics} />
-        </p>
-      </Section>
-      <Report section={dashboard.systemStatus} />
-    </AdminLayout>
-  );
-}
-
 // TestMailForm sends a test email, to check the email settings work.
 function TestMailForm() {
   const { t } = useTranslation();
@@ -229,7 +178,7 @@ export function AdminOperations() {
     onError: (err) => toast.error(err.message),
   });
   return (
-    <AdminLayout active="operations">
+    <>
       <h1 className="mb-4 text-xl font-semibold">{t("admin.dashboard.operations")}</h1>
       <ul className="glass-list border-t border-(--color-border)">
         {ADMIN_OPERATIONS.map((op) => {
@@ -258,7 +207,7 @@ export function AdminOperations() {
           );
         })}
       </ul>
-    </AdminLayout>
+    </>
   );
 }
 
@@ -266,14 +215,14 @@ export function AdminOperations() {
 export function AdminConfig({ config }: { config: AdminConfigData }) {
   const { t } = useTranslation();
   return (
-    <AdminLayout active="config">
+    <>
       <h1 className="mb-4 text-xl font-semibold">{t("admin.config")}</h1>
       {config.sections.map((section) => (
         <Report key={section.id} section={section}>
           {section.id === "email" && config.emailEnabled ? <TestMailForm /> : null}
         </Report>
       ))}
-    </AdminLayout>
+    </>
   );
 }
 
@@ -310,7 +259,7 @@ function Empty() {
 export function AdminJobs({ monitor }: { monitor: AdminMonitorData }) {
   const { t } = useTranslation();
   return (
-    <AdminLayout active="jobs">
+    <>
       <h1 className="mb-4 text-xl font-semibold">{t("admin.monitor.cron")}</h1>
       {monitor.cronTasks.length > 0 ? (
         <ul className="glass-list border-t border-(--color-border)">
@@ -337,6 +286,6 @@ export function AdminJobs({ monitor }: { monitor: AdminMonitorData }) {
       ) : (
         <Empty />
       )}
-    </AdminLayout>
+    </>
   );
 }

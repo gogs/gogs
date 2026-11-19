@@ -1,100 +1,308 @@
-import { Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import {
   Activity,
+  ArrowLeft,
   Bell,
   BookMarked,
   Building2,
+  ChevronRight,
   Clock,
   HeartPulse,
   LayoutDashboard,
   type LucideIcon,
+  PanelLeft,
   Play,
   Settings,
   ShieldCheck,
   User,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { type MouseEvent, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { SettingsLayout, SettingsNavGroup, SettingsNavItem } from "@/components/SettingsLayout";
+import { PaletteButton, UserMenu } from "@/components/Navbar";
+import { SettingsMenu } from "@/components/SettingsMenu";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { formatNumber } from "@/lib/format";
 import { usePageTitle } from "@/lib/page-title";
+import { adminNoticesQuery } from "@/lib/queries/admin";
+import { subUrl } from "@/lib/url";
+import { useUserInfo } from "@/lib/use-user-info";
+import { cn } from "@/lib/utils";
 
-export type AdminPage =
-  | "dashboard"
-  | "operations"
-  | "users"
-  | "orgs"
-  | "repos"
-  | "auths"
-  | "config"
-  | "notices"
-  | "jobs"
-  | "health"
-  | "traces";
+type NavItem = { path: string; label: string; icon: LucideIcon };
 
-type NavItem = { page: AdminPage; path: string; label: string; icon: LucideIcon };
-
-// NAV lists the pages of the admin panel in groups. The first group has no
-// heading.
+// NAV lists the pages of the admin console in groups. The first group has no
+// heading. Pages below the path of an item, e.g., a user below the users,
+// belong to the item.
 const NAV: { title?: string; items: NavItem[] }[] = [
   {
     items: [
-      { page: "dashboard", path: "", label: "admin.overview", icon: LayoutDashboard },
-      { page: "users", path: "/users", label: "admin.users", icon: User },
-      { page: "orgs", path: "/orgs", label: "admin.organizations", icon: Building2 },
-      { page: "repos", path: "/repos", label: "admin.repositories", icon: BookMarked },
+      { path: "", label: "admin.overview", icon: LayoutDashboard },
+      { path: "/users", label: "admin.users", icon: User },
+      { path: "/orgs", label: "admin.organizations", icon: Building2 },
+      { path: "/repos", label: "admin.repositories", icon: BookMarked },
     ],
   },
   {
     title: "admin.group_settings",
     items: [
-      { page: "auths", path: "/auths", label: "admin.authentication", icon: ShieldCheck },
-      { page: "config", path: "/config", label: "admin.config", icon: Settings },
+      { path: "/auths", label: "admin.authentication", icon: ShieldCheck },
+      { path: "/config", label: "admin.config", icon: Settings },
     ],
   },
   {
     title: "admin.group_monitoring",
     items: [
-      { page: "health", path: "/health", label: "admin.health", icon: HeartPulse },
-      { page: "traces", path: "/traces", label: "admin.traces", icon: Activity },
-      { page: "notices", path: "/notices", label: "admin.notices", icon: Bell },
+      { path: "/health", label: "admin.health", icon: HeartPulse },
+      { path: "/traces", label: "admin.traces", icon: Activity },
+      { path: "/notices", label: "admin.notices", icon: Bell },
     ],
   },
   {
     title: "admin.group_maintenance",
     items: [
-      { page: "operations", path: "/operations", label: "admin.dashboard.operations", icon: Play },
-      { page: "jobs", path: "/jobs", label: "admin.monitor.cron", icon: Clock },
+      { path: "/operations", label: "admin.dashboard.operations", icon: Play },
+      { path: "/jobs", label: "admin.monitor.cron", icon: Clock },
     ],
   },
 ];
 
-// AdminLayout heads the pages of the admin panel, with links between them.
-export function AdminLayout({ active, children }: { active: AdminPage; children: ReactNode }) {
+const COLLAPSED_KEY = "gogs-admin-sidebar-collapsed";
+
+// Without a stored choice, the sidebar starts as a rail of icons on screens
+// where it would leave the page narrow.
+function readCollapsed() {
+  try {
+    const stored = window.localStorage.getItem(COLLAPSED_KEY);
+    if (stored !== null) return stored === "true";
+  } catch {
+    // Storage may be unavailable, e.g., in a private window.
+  }
+  return window.matchMedia("(max-width: 1023px)").matches;
+}
+
+const ICON_BUTTON =
+  "size-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-(--color-muted-foreground) outline-none hover:bg-(--color-surface) hover:text-(--color-foreground) focus-visible:ring-1 focus-visible:ring-(--color-ring)";
+
+// The current page gets a bar in the primary color beside its fill, so it does
+// not rely on the subtle fill alone.
+const NAV_LINK =
+  "relative flex h-8 items-center gap-2 rounded-md px-2 text-sm text-(--color-muted-foreground) outline-none hover:bg-(--color-foreground)/5 hover:text-(--color-foreground) focus-visible:ring-1 focus-visible:ring-(--color-ring) aria-[current=page]:bg-(--color-foreground)/10 aria-[current=page]:font-semibold aria-[current=page]:text-(--color-foreground) aria-[current=page]:before:absolute aria-[current=page]:before:inset-y-1.5 aria-[current=page]:before:-left-2 aria-[current=page]:before:w-1 aria-[current=page]:before:rounded-full aria-[current=page]:before:bg-(--color-primary)";
+
+// Sidebar holds the navigation of the admin console. As a rail it shows only
+// icons, each named by a tooltip.
+function Sidebar({ rail }: { rail: boolean }) {
   const { t } = useTranslation();
-  const label = NAV.flatMap((group) => group.items).find((item) => item.page === active)?.label;
-  const current = t(label ?? "admin_panel");
-  usePageTitle(current);
-  return (
-    <main className="flex-1">
-      <SettingsLayout
-        label={t("admin_panel")}
-        current={current}
-        nav={NAV.map((group, i) => (
-          <SettingsNavGroup key={i} title={group.title ? t(group.title) : undefined}>
-            {group.items.map((item) => (
-              <SettingsNavItem key={item.page} active={item.page === active} icon={item.icon}>
-                <Link to={`/admin${item.path}`} activeOptions={{ exact: true }}>
-                  {t(item.label)}
-                </Link>
-              </SettingsNavItem>
-            ))}
-          </SettingsNavGroup>
-        ))}
+  const user = useUserInfo();
+  const notices = useQuery(adminNoticesQuery({}));
+  const unread = notices.data?.total ?? 0;
+
+  const link = (item: NavItem) => {
+    const label = t(item.label);
+    const count = item.path === "/notices" && unread > 0 ? formatNumber(unread) : null;
+    const node = (
+      <Link
+        key={item.path}
+        to={`/admin${item.path}`}
+        activeOptions={{ exact: item.path === "", includeSearch: false }}
+        aria-label={rail ? (count ? `${label} (${count})` : label) : undefined}
+        className={cn(NAV_LINK, rail && "justify-center px-0")}
       >
-        {children}
-      </SettingsLayout>
-    </main>
+        <item.icon className="size-4 shrink-0" aria-hidden />
+        {rail ? null : <span className="min-w-0 flex-1 truncate">{label}</span>}
+        {count ? (
+          rail ? (
+            <span aria-hidden className="absolute top-1 right-1.5 size-2 rounded-full bg-(--color-primary)" />
+          ) : (
+            <span className="rounded-full bg-(--color-foreground)/10 px-2 text-xs/5 font-medium text-(--color-foreground) tabular-nums">
+              {count}
+            </span>
+          )
+        ) : null}
+      </Link>
+    );
+    return rail ? (
+      <Tooltip key={item.path}>
+        <TooltipTrigger asChild>{node}</TooltipTrigger>
+        <TooltipContent side="right">{label}</TooltipContent>
+      </Tooltip>
+    ) : (
+      node
+    );
+  };
+
+  return (
+    <>
+      <div className={cn("flex h-10 shrink-0 items-center gap-2", rail ? "justify-center" : "px-2")}>
+        <img src={subUrl("/img/favicon.png")} alt="" width="28" height="28" className="size-7" />
+        {rail ? null : (
+          <div className="min-w-0 leading-tight">
+            <div className="truncate text-sm font-semibold">Gogs</div>
+            <div className="truncate text-xs text-(--color-muted-foreground)">{t("admin_panel")}</div>
+          </div>
+        )}
+      </div>
+      <nav aria-label={t("admin_panel")} className="mt-2 flex min-h-0 flex-1 flex-col overflow-y-auto px-2 pb-2">
+        {NAV.map((group, i) => (
+          <div
+            key={i}
+            role="group"
+            aria-label={group.title ? t(group.title) : undefined}
+            className="flex flex-col gap-0.5"
+          >
+            {group.title ? (
+              rail ? (
+                <hr className="my-2 border-(--color-border)" />
+              ) : (
+                <div className="mt-4 mb-1 px-2 text-xs font-medium text-(--color-muted-foreground)">
+                  {t(group.title)}
+                </div>
+              )
+            ) : null}
+            {group.items.map(link)}
+          </div>
+        ))}
+      </nav>
+      <div className="flex shrink-0 flex-col gap-0.5 px-2">
+        {rail ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <a
+                href={subUrl("/")}
+                aria-label={t("admin.back_to_site")}
+                className={cn(NAV_LINK, "justify-center px-0")}
+              >
+                <ArrowLeft className="size-4 shrink-0" aria-hidden />
+              </a>
+            </TooltipTrigger>
+            <TooltipContent side="right">{t("admin.back_to_site")}</TooltipContent>
+          </Tooltip>
+        ) : (
+          <a href={subUrl("/")} className={NAV_LINK}>
+            <ArrowLeft className="size-4 shrink-0" aria-hidden />
+            {t("admin.back_to_site")}
+          </a>
+        )}
+        {user ? (
+          <UserMenu
+            user={user}
+            showName={!rail}
+            side="top"
+            align="start"
+            className={cn("hover:bg-(--color-foreground)/5", rail && "justify-center px-0")}
+          />
+        ) : null}
+      </div>
+    </>
+  );
+}
+
+// AdminLayout is the console that every page of the admin panel renders in:
+// a sidebar with the links between the pages, which collapses to a rail of
+// icons and moves into a sheet on narrow screens, and a bar that names the
+// current page above it. The pages use the whole window width.
+export function AdminLayout() {
+  const { t } = useTranslation();
+  const [collapsed, setCollapsed] = useState(readCollapsed);
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  // The deepest route tells the page, e.g., "/admin/users/$id".
+  const routePath = useRouterState({ select: (state) => state.matches.at(-1)?.fullPath ?? "" });
+  const group = NAV.find((g) => g.items.some((item) => item.path && `${routePath}/`.startsWith(`/admin${item.path}/`)));
+  const item = group?.items.find((i) => i.path && `${routePath}/`.startsWith(`/admin${i.path}/`)) ?? NAV[0].items[0];
+  const current = t(item.label);
+  usePageTitle(current);
+
+  const toggleCollapsed = () => {
+    const next = !collapsed;
+    setCollapsed(next);
+    try {
+      window.localStorage.setItem(COLLAPSED_KEY, next ? "true" : "false");
+    } catch {
+      // The choice lasts until the page reloads.
+    }
+  };
+  // The sheet closes after a click on a link, which stays in the app.
+  const closeOnLink = (e: MouseEvent) => {
+    if ((e.target as Element).closest("a")) setSheetOpen(false);
+  };
+
+  return (
+    <div className="flex flex-1 bg-(--color-surface)">
+      <aside
+        id="admin-sidebar"
+        className={cn("sticky top-0 hidden h-dvh shrink-0 flex-col py-2 md:flex", collapsed ? "w-14" : "w-60")}
+      >
+        <Sidebar rail={collapsed} />
+      </aside>
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <SheetContent
+          side="left"
+          aria-describedby={undefined}
+          className="flex w-64 flex-col bg-(--color-surface) py-2"
+          onClick={closeOnLink}
+        >
+          <SheetTitle className="sr-only">{t("admin_panel")}</SheetTitle>
+          <Sidebar rail={false} />
+        </SheetContent>
+      </Sheet>
+      <div className="flex min-w-0 flex-1 flex-col md:py-2 md:pr-2">
+        <div className="flex min-w-0 flex-1 flex-col bg-(--color-background) md:rounded-xl md:border md:border-(--color-border)">
+          <header className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b border-(--color-border) bg-(--color-background) px-2 sm:px-3 md:rounded-t-xl">
+            <button
+              type="button"
+              aria-label={t("admin.toggle_sidebar")}
+              onClick={() => setSheetOpen(true)}
+              className={cn(ICON_BUTTON, "inline-flex md:hidden")}
+            >
+              <PanelLeft className="size-4" aria-hidden />
+            </button>
+            <button
+              type="button"
+              aria-label={t("admin.toggle_sidebar")}
+              aria-expanded={!collapsed}
+              aria-controls="admin-sidebar"
+              onClick={toggleCollapsed}
+              className={cn(ICON_BUTTON, "hidden md:inline-flex")}
+            >
+              <PanelLeft className="size-4" aria-hidden />
+            </button>
+            <span aria-hidden className="h-4 w-px shrink-0 bg-(--color-border)" />
+            <nav aria-label={t("admin.breadcrumb")} className="min-w-0">
+              <ol className="flex min-w-0 items-center gap-1.5 text-sm">
+                <Crumb className="hidden sm:flex">
+                  <Link to="/admin" className="hover:text-(--color-foreground)">
+                    {t("admin_panel")}
+                  </Link>
+                </Crumb>
+                {group?.title ? <Crumb className="hidden lg:flex">{t(group.title)}</Crumb> : null}
+                <li aria-current="page" className="truncate font-medium">
+                  {current}
+                </li>
+              </ol>
+            </nav>
+            <div className="ml-auto flex shrink-0 items-center gap-1">
+              <PaletteButton />
+              <SettingsMenu />
+            </div>
+          </header>
+          <main className="min-w-0 flex-1 px-4 py-6 sm:px-6">
+            <Outlet />
+          </main>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Crumb({ className, children }: { className?: string; children: ReactNode }) {
+  return (
+    <li className={cn("shrink-0 items-center gap-1.5 text-(--color-muted-foreground)", className)}>
+      {children}
+      <ChevronRight className="size-3.5" aria-hidden />
+    </li>
   );
 }
 

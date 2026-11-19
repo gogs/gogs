@@ -1,11 +1,11 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { Pencil, Plus } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { AdminLayout, AdminListHeading } from "@/components/AdminLayout";
+import { AdminListHeading } from "@/components/AdminLayout";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { Pagination } from "@/components/Pagination";
 import { SearchForm } from "@/components/SearchForm";
@@ -82,7 +82,10 @@ function ListBody<T>({ list, children }: { list: AdminList<T>; children: (item: 
 function useReloadList(current: number) {
   const router = useRouter();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   return async (page: number) => {
+    // The sidebar of the console counts the system notices.
+    void queryClient.invalidateQueries({ queryKey: ["admin", "notices"] });
     if (page >= current) {
       await router.invalidate();
       return;
@@ -99,7 +102,7 @@ export function AdminUsers({ list, search }: { list: AdminList<AdminUser>; searc
   const { t } = useTranslation();
 
   return (
-    <AdminLayout active="users">
+    <>
       <AdminListHeading
         title={t("admin.users")}
         total={list.total}
@@ -156,7 +159,7 @@ export function AdminUsers({ list, search }: { list: AdminList<AdminUser>; searc
           </li>
         )}
       </ListBody>
-    </AdminLayout>
+    </>
   );
 }
 
@@ -165,7 +168,7 @@ export function AdminUsers({ list, search }: { list: AdminList<AdminUser>; searc
 export function AdminAuthSources({ sources }: { sources: AdminAuthSource[] }) {
   const { t } = useTranslation();
   return (
-    <AdminLayout active="auths">
+    <>
       <AdminListHeading
         title={t("admin.auths.auth_sources")}
         total={sources.length}
@@ -221,7 +224,7 @@ export function AdminAuthSources({ sources }: { sources: AdminAuthSource[] }) {
           </li>
         )}
       </ListBody>
-    </AdminLayout>
+    </>
   );
 }
 
@@ -229,7 +232,7 @@ export function AdminAuthSources({ sources }: { sources: AdminAuthSource[] }) {
 export function AdminOrgs({ list, search }: { list: AdminList<AdminOrg>; search: ListSearch }) {
   const { t } = useTranslation();
   return (
-    <AdminLayout active="orgs">
+    <>
       <AdminListHeading title={t("admin.organizations")} total={list.total} />
       <SearchForm q={search.q} />
       <ListBody list={list}>
@@ -276,7 +279,7 @@ export function AdminOrgs({ list, search }: { list: AdminList<AdminOrg>; search:
           </li>
         )}
       </ListBody>
-    </AdminLayout>
+    </>
   );
 }
 
@@ -287,7 +290,7 @@ export function AdminRepos({ list, search }: { list: AdminList<AdminRepo>; searc
   const reload = useReloadList(list.page);
   const description = `${t("repo.settings.delete_desc")} ${t("repo.settings.delete_notices_2").replace(/^-\s*/, "")}`;
   return (
-    <AdminLayout active="repos">
+    <>
       <AdminListHeading title={t("admin.repositories")} total={list.total} />
       <SearchForm q={search.q} />
       <ListBody list={list}>
@@ -337,7 +340,7 @@ export function AdminRepos({ list, search }: { list: AdminList<AdminRepo>; searc
           </li>
         )}
       </ListBody>
-    </AdminLayout>
+    </>
   );
 }
 
@@ -396,7 +399,7 @@ export function AdminNotices({ list }: { list: AdminList<AdminNotice> }) {
   };
 
   return (
-    <AdminLayout active="notices">
+    <>
       <AdminListHeading
         title={t("admin.notices")}
         total={list.total}
@@ -458,6 +461,6 @@ export function AdminNotices({ list }: { list: AdminList<AdminNotice> }) {
           </li>
         )}
       </ListBody>
-    </AdminLayout>
+    </>
   );
 }

@@ -4,7 +4,6 @@ import { type FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { AdminLayout } from "@/components/AdminLayout";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { CheckboxField, FormAlert, FormField } from "@/components/FormField";
 import { Button } from "@/components/ui/button";
@@ -350,10 +349,10 @@ function AuthSourceForm({ source }: { source?: AdminAuthSourceDetail }) {
 export function AdminAuthSourceNew() {
   const { t } = useTranslation();
   return (
-    <AdminLayout active="auths">
+    <>
       <h1 className="mb-4 text-xl font-semibold">{t("admin.auths.new")}</h1>
       <AuthSourceForm />
-    </AdminLayout>
+    </>
   );
 }
 
@@ -361,9 +360,9 @@ export function AdminAuthSourceNew() {
 export function AdminAuthSourceEdit({ source }: { source: AdminAuthSourceDetail }) {
   const { t } = useTranslation();
   return (
-    <AdminLayout active="auths">
+    <>
       <h1 className="mb-4 text-xl font-semibold">{t("admin.auths.edit")}</h1>
       <AuthSourceForm source={source} />
-    </AdminLayout>
+    </>
   );
 }

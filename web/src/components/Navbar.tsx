@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import {
   Building2,
   ChevronDown,
+  ChevronsUpDown,
   HelpCircle,
   Import,
   LayoutDashboard,
@@ -23,11 +24,11 @@ import { signOut } from "@/lib/sign-out";
 import { subUrl } from "@/lib/url";
 import { useUserInfo } from "@/lib/use-user-info";
 import type { UserInfo } from "@/lib/user-info";
+import { cn } from "@/lib/utils";
 
 export function Navbar() {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  const [paletteOpen, setPaletteOpen] = useState(false);
   const user = useUserInfo();
 
   return (
@@ -68,28 +69,7 @@ export function Navbar() {
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={() => setPaletteOpen(true)}
-          aria-keyshortcuts={paletteShortcut.aria}
-          className="hidden h-8 w-48 shrink cursor-pointer items-center gap-2 rounded-md border border-(--color-input) bg-(--color-background) pr-1.5 pl-2.5 text-(--color-muted-foreground) hover:border-(--color-ring) md:flex lg:w-64"
-        >
-          <Search className="size-4 shrink-0" aria-hidden />
-          <span className="min-w-0 flex-1 truncate text-left">{t("command_palette.placeholder")}</span>
-          <kbd className="shrink-0 rounded border border-(--color-border) px-1.5 font-sans text-[11px] leading-5">
-            {paletteShortcut.label}
-          </kbd>
-        </button>
-        <button
-          type="button"
-          onClick={() => setPaletteOpen(true)}
-          aria-label={t("command_palette.title")}
-          aria-keyshortcuts={paletteShortcut.aria}
-          className="ml-auto inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md text-(--color-foreground) hover:bg-(--color-surface) sm:ml-0 md:hidden"
-        >
-          <Search className="size-[18px]" aria-hidden />
-        </button>
-        <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+        <PaletteButton />
 
         <div className="hidden shrink-0 items-center gap-1 sm:flex">
           <SettingsMenu />
@@ -213,6 +193,39 @@ export function Navbar() {
   );
 }
 
+// PaletteButton opens the command palette: a search field from the `md`
+// breakpoint up, and an icon button below it.
+export function PaletteButton() {
+  const { t } = useTranslation();
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setPaletteOpen(true)}
+        aria-keyshortcuts={paletteShortcut.aria}
+        className="hidden h-8 w-48 shrink cursor-pointer items-center gap-2 rounded-md border border-(--color-input) bg-(--color-background) pr-1.5 pl-2.5 text-(--color-muted-foreground) hover:border-(--color-ring) md:flex lg:w-64"
+      >
+        <Search className="size-4 shrink-0" aria-hidden />
+        <span className="min-w-0 flex-1 truncate text-left">{t("command_palette.placeholder")}</span>
+        <kbd className="shrink-0 rounded border border-(--color-border) px-1.5 font-sans text-[11px] leading-5">
+          {paletteShortcut.label}
+        </kbd>
+      </button>
+      <button
+        type="button"
+        onClick={() => setPaletteOpen(true)}
+        aria-label={t("command_palette.title")}
+        aria-keyshortcuts={paletteShortcut.aria}
+        className="ml-auto inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md text-(--color-foreground) hover:bg-(--color-surface) sm:ml-0 md:hidden"
+      >
+        <Search className="size-[18px]" aria-hidden />
+      </button>
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+    </>
+  );
+}
+
 function CreateMenu({ canCreateOrganization }: { canCreateOrganization: boolean }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -246,23 +259,49 @@ function CreateMenu({ canCreateOrganization }: { canCreateOrganization: boolean 
   );
 }
 
-function UserMenu({ user }: { user: UserInfo }) {
+// UserMenu opens the links of the viewer's account from their avatar. With
+// `showName`, their username follows the avatar and the trigger fills its row,
+// e.g., at the end of the sidebar of the admin console.
+export function UserMenu({
+  user,
+  showName = false,
+  side,
+  align = "end",
+  className,
+}: {
+  user: UserInfo;
+  showName?: boolean;
+  side?: "top" | "bottom";
+  align?: "start" | "end";
+  className?: string;
+}) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         aria-label={t("user_profile_and_more")}
-        className="inline-flex h-9 cursor-pointer items-center gap-1 rounded-md px-1 hover:bg-(--color-surface)"
+        className={cn(
+          "inline-flex h-9 cursor-pointer items-center gap-1 rounded-md px-1 hover:bg-(--color-surface)",
+          showName && "w-full gap-2 px-2",
+          className,
+        )}
       >
         {user.avatarURL ? (
-          <img src={user.avatarURL} alt="" width="24" height="24" className="size-6 rounded-full" />
+          <img src={user.avatarURL} alt="" width="24" height="24" className="size-6 shrink-0 rounded-full" />
         ) : (
-          <UserIcon className="size-5" aria-hidden />
+          <UserIcon className="size-5 shrink-0" aria-hidden />
         )}
-        <ChevronDown className="size-3 text-(--color-muted-foreground)" aria-hidden />
+        {showName ? (
+          <>
+            <span className="min-w-0 flex-1 truncate text-left text-sm">{user.username}</span>
+            <ChevronsUpDown className="size-3.5 shrink-0 text-(--color-muted-foreground)" aria-hidden />
+          </>
+        ) : (
+          <ChevronDown className="size-3 text-(--color-muted-foreground)" aria-hidden />
+        )}
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-60 p-1" onOpenAutoFocus={(e) => e.preventDefault()}>
+      <PopoverContent side={side} align={align} className="w-60 p-1" onOpenAutoFocus={(e) => e.preventDefault()}>
         <div className="px-2 pt-2 pb-1 text-xs text-(--color-muted-foreground)">
           {t("signed_in_as")} <strong className="text-(--color-foreground)">{user.username}</strong>
         </div>

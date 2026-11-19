@@ -1,7 +1,8 @@
-import { type AnyRoute, createRoute, redirect } from "@tanstack/react-router";
+import { type AnyRoute, createRoute, notFound, redirect } from "@tanstack/react-router";
 import type { JSX } from "react";
 
-import { LoaderResponseError, loadAuthenticatedPage } from "@/lib/loader-error";
+import { AdminLayout } from "@/components/AdminLayout";
+import { LoaderResponseError, authenticationRedirect, loadAuthenticatedPage } from "@/lib/loader-error";
 import {
   type HealthSearch,
   type ListSearch,
@@ -16,7 +17,6 @@ import {
   fetchAdminAuthSource,
   fetchAdminAuthSources,
   fetchAdminConfig,
-  fetchAdminDashboard,
   fetchAdminHealth,
   fetchAdminMonitor,
   fetchAdminNotices,
@@ -29,32 +29,46 @@ import {
   fetchAdminUserOptions,
   fetchAdminUsers,
 } from "@/lib/queries/admin";
+import type { UserInfo } from "@/lib/user-info";
 import { AdminAuthSourceEdit, AdminAuthSourceNew } from "@/pages/admin/Auths";
 import { AdminServerHealth } from "@/pages/admin/Health";
 import { AdminAuthSources, AdminNotices, AdminOrgs, AdminRepos, AdminUsers } from "@/pages/admin/Lists";
-import { AdminConfig, AdminDashboard, AdminJobs, AdminOperations } from "@/pages/admin/System";
+import { AdminOverview } from "@/pages/admin/Overview";
+import { AdminConfig, AdminJobs, AdminOperations } from "@/pages/admin/System";
 import { AdminTraceOverview, AdminTraceSearch, AdminTraceView } from "@/pages/admin/Traces";
 import { AdminUserEdit, AdminUserNew } from "@/pages/admin/Users";
 
 export function createAdminRoutes(rootRoute: AnyRoute) {
-  const dashboardRoute = createRoute({
+  // The pages share the console shell, which stays in place while one of them
+  // loads. Only site admins get to see it.
+  const adminRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/admin",
-    loader: () => loadAuthenticatedPage(fetchAdminDashboard),
-    component: function Dashboard() {
-      return <AdminDashboard dashboard={dashboardRoute.useLoaderData()} />;
+    beforeLoad: ({ context, location }) => {
+      const { user } = context as { user: UserInfo | null };
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
+      if (!user) throw authenticationRedirect(location.href);
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+      if (!user.isAdmin) throw notFound();
     },
+    component: AdminLayout,
+  });
+
+  const dashboardRoute = createRoute({
+    getParentRoute: () => adminRoute,
+    path: "/",
+    component: AdminOverview,
   });
 
   const operationsRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/admin/operations",
+    getParentRoute: () => adminRoute,
+    path: "operations",
     component: AdminOperations,
   });
 
   const configRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/admin/config",
+    getParentRoute: () => adminRoute,
+    path: "config",
     loader: () => loadAuthenticatedPage(fetchAdminConfig),
     component: function Config() {
       return <AdminConfig config={configRoute.useLoaderData()} />;
@@ -62,8 +76,8 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
   });
 
   const jobsRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/admin/jobs",
+    getParentRoute: () => adminRoute,
+    path: "jobs",
     loader: () => loadAuthenticatedPage(fetchAdminMonitor),
     component: function Jobs() {
       return <AdminJobs monitor={jobsRoute.useLoaderData()} />;
@@ -71,8 +85,8 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
   });
 
   const healthRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/admin/health",
+    getParentRoute: () => adminRoute,
+    path: "health",
     validateSearch: validateHealthSearch,
     loaderDeps: ({ search }: { search: HealthSearch }) => ({ health: search.health ?? ("1h" as const) }),
     loader: ({ deps }) => loadAuthenticatedPage(() => fetchAdminHealth(deps.health)),
@@ -84,8 +98,8 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
   });
 
   const tracesRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/admin/traces",
+    getParentRoute: () => adminRoute,
+    path: "traces",
     validateSearch: validateTraceSearch,
     loaderDeps: ({ search }: { search: TraceSearch }) => search,
     loader: async ({ deps }) => {
@@ -118,8 +132,8 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
   });
 
   const traceRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/admin/traces/$id",
+    getParentRoute: () => adminRoute,
+    path: "traces/$id",
     loader: ({ params }) =>
       loadAuthenticatedPage(async () => {
         try {
@@ -141,8 +155,8 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
   });
 
   const usersRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/admin/users",
+    getParentRoute: () => adminRoute,
+    path: "users",
     validateSearch: validateListSearch,
     loaderDeps: ({ search }: { search: ListSearch }) => ({ q: search.q, page: search.page }),
     loader: ({ deps }) => loadAuthenticatedPage(() => fetchAdminUsers(deps)),
@@ -153,8 +167,8 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
   });
 
   const userNewRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/admin/users/new",
+    getParentRoute: () => adminRoute,
+    path: "users/new",
     loader: () => loadAuthenticatedPage(fetchAdminUserOptions),
     component: function UserNew() {
       return <AdminUserNew options={userNewRoute.useLoaderData()} />;
@@ -162,8 +176,8 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
   });
 
   const userEditRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/admin/users/$id",
+    getParentRoute: () => adminRoute,
+    path: "users/$id",
     loader: ({ params }) =>
       loadAuthenticatedPage(() => Promise.all([fetchAdminUser(Number(params.id)), fetchAdminUserOptions()])),
     component: function UserEdit() {
@@ -174,8 +188,8 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
   });
 
   const orgsRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/admin/orgs",
+    getParentRoute: () => adminRoute,
+    path: "orgs",
     validateSearch: validateListSearch,
     loaderDeps: ({ search }: { search: ListSearch }) => ({ q: search.q, page: search.page }),
     loader: ({ deps }) => loadAuthenticatedPage(() => fetchAdminOrgs(deps)),
@@ -186,8 +200,8 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
   });
 
   const reposRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/admin/repos",
+    getParentRoute: () => adminRoute,
+    path: "repos",
     validateSearch: validateListSearch,
     loaderDeps: ({ search }: { search: ListSearch }) => ({ q: search.q, page: search.page }),
     loader: ({ deps }) => loadAuthenticatedPage(() => fetchAdminRepos(deps)),
@@ -198,8 +212,8 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
   });
 
   const authsRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/admin/auths",
+    getParentRoute: () => adminRoute,
+    path: "auths",
     loader: () => loadAuthenticatedPage(fetchAdminAuthSources),
     component: function Auths() {
       return <AdminAuthSources sources={authsRoute.useLoaderData()} />;
@@ -207,14 +221,14 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
   });
 
   const authNewRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/admin/auths/new",
+    getParentRoute: () => adminRoute,
+    path: "auths/new",
     component: AdminAuthSourceNew,
   });
 
   const authEditRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/admin/auths/$id",
+    getParentRoute: () => adminRoute,
+    path: "auths/$id",
     loader: ({ params }) => loadAuthenticatedPage(() => fetchAdminAuthSource(Number(params.id))),
     component: function AuthEdit() {
       const source = authEditRoute.useLoaderData();
@@ -224,8 +238,8 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
   });
 
   const noticesRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/admin/notices",
+    getParentRoute: () => adminRoute,
+    path: "notices",
     validateSearch: validatePageSearch,
     loaderDeps: ({ search }: { search: PageSearch }) => ({ page: search.page }),
     loader: ({ deps }) => loadAuthenticatedPage(() => fetchAdminNotices(deps)),
@@ -235,21 +249,23 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
   });
 
   return [
-    dashboardRoute,
-    operationsRoute,
-    configRoute,
-    jobsRoute,
-    healthRoute,
-    tracesRoute,
-    traceRoute,
-    usersRoute,
-    userNewRoute,
-    userEditRoute,
-    orgsRoute,
-    reposRoute,
-    authsRoute,
-    authNewRoute,
-    authEditRoute,
-    noticesRoute,
+    adminRoute.addChildren([
+      dashboardRoute,
+      operationsRoute,
+      configRoute,
+      jobsRoute,
+      healthRoute,
+      tracesRoute,
+      traceRoute,
+      usersRoute,
+      userNewRoute,
+      userEditRoute,
+      orgsRoute,
+      reposRoute,
+      authsRoute,
+      authNewRoute,
+      authEditRoute,
+      noticesRoute,
+    ]),
   ];
 }
