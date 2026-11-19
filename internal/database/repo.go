@@ -1762,6 +1762,14 @@ func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 		return errors.Newf("list releases: %v", err)
 	}
 
+	// Delete labels and milestones before the repository, the order issue
+	// creation locks them in, and watches and stars too, the order unwatching
+	// and unstarring lock them in, so that none of them can deadlock with this.
+	// Removing the repository from teams locks the repository.
+	if err = deleteByColumn(sess, "repo_id", repoID, "label", "milestone", "watch", "star"); err != nil {
+		return err
+	}
+
 	if org.IsOrganization() {
 		for _, t := range org.Teams {
 			if !t.hasRepository(legacyTx(sess), repoID) {
@@ -1770,12 +1778,6 @@ func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 				return err
 			}
 		}
-	}
-
-	// Delete labels and milestones before the repository, the order issue
-	// creation locks them in, so the two cannot deadlock.
-	if err = deleteByColumn(sess, "repo_id", repoID, "label", "milestone"); err != nil {
-		return err
 	}
 	if _, err = sess.Where("id = ?", repoID).Delete(new(Repository)); err != nil {
 		return errors.Newf("delete repository: %v", err)
@@ -1786,8 +1788,6 @@ func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 	if err = deleteByColumn(sess, "repo_id", repoID,
 		"access",
 		"action",
-		"watch",
-		"star",
 		"mirror",
 		"issue_user",
 		"release",

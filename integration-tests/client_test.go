@@ -201,13 +201,20 @@ type lockedRequest struct {
 // both status codes.
 func (c *client) doBothWhileLocked(lockQuery string, lockArg any, first, second lockedRequest) []int {
 	c.t.Helper()
+	return c.doBothWhileLockedWith(lockQuery, lockArg, first, c, second)
+}
+
+// doBothWhileLockedWith is doBothWhileLocked with the second request sent by
+// the other client.
+func (c *client) doBothWhileLockedWith(lockQuery string, lockArg any, first lockedRequest, other *client, second lockedRequest) []int {
+	c.t.Helper()
 
 	var secondStatus int
 	done := make(chan struct{})
 	firstStatus, _ := c.whileLocked(lockQuery, lockArg, first.method, first.path, first.body, func(tx *gorm.DB, _ context.CancelFunc) {
 		go func() {
 			defer close(done)
-			secondStatus, _ = c.do(second.method, second.path, second.body)
+			secondStatus, _ = other.do(second.method, second.path, second.body)
 		}()
 		// The second request may fail the test, so it must finish before the
 		// test does.

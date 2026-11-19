@@ -11,6 +11,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/auth"
@@ -401,6 +402,21 @@ func (s *UsersStore) DeleteByID(ctx context.Context, userID int64, skipRewriteAu
 
 	needsRewriteAuthorizedKeys := false
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Lock the watches and stars of the user before any repository, the order
+		// unwatching and unstarring use, so they cannot deadlock. SQLite has no
+		// row locks.
+		if !conf.UseSQLite3 {
+			var ids []int64
+			err := tx.Model(new(Watch)).Clauses(clause.Locking{Strength: "UPDATE"}).Where("user_id = ?", userID).Pluck("id", &ids).Error
+			if err != nil {
+				return errors.Wrap(err, "lock watches")
+			}
+			err = tx.Model(new(Star)).Clauses(clause.Locking{Strength: "UPDATE"}).Where("uid = ?", userID).Pluck("id", &ids).Error
+			if err != nil {
+				return errors.Wrap(err, "lock stars")
+			}
+		}
+
 		/*
 			Equivalent SQL for PostgreSQL:
 

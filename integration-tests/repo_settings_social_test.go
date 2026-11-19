@@ -2,6 +2,7 @@ package integrationtests
 
 import (
 	"net/http"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -107,6 +108,31 @@ func TestRepoSettingsStar(t *testing.T) {
 	status, body = c.do(http.MethodGet, repoSettingsAPIPath(private, "/stargazers"), nil)
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 	assert.False(t, database.Handle.Repositories().IsStarring(t.Context(), viewer.ID, private.ID))
+}
+
+func TestRepoSettingsUnstarWhileUserIsDeleted(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	viewer := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	admin := authenticatedClient(t, seedUser(t, CreateUserOptions{Admin: true}))
+	c := authenticatedClient(t, viewer)
+	before := repoSettingsGetRepo(t, repo.ID)
+	for _, p := range []string{"/watch", "/star"} {
+		status, body := c.do(http.MethodPost, repoSettingsAPIPath(repo, p), repoSettingsNoBody)
+		require.Equal(t, http.StatusOK, status, "response: %s", body)
+	}
+
+	// Deleting the user updates the repository for the watch before it gets to
+	// the star, which unstarring locks before the repository.
+	statuses := admin.doBothWhileLockedWith("SELECT id FROM repository WHERE id = ? FOR UPDATE", repo.ID,
+		lockedRequest{http.MethodDelete, "/api/web/admin/users/" + strconv.FormatInt(viewer.ID, 10), adminNoBody},
+		c, lockedRequest{http.MethodDelete, repoSettingsAPIPath(repo, "/star"), repoSettingsNoBody})
+	assert.Equal(t, []int{http.StatusNoContent, http.StatusOK}, statuses)
+	after := repoSettingsGetRepo(t, repo.ID)
+	assert.Equal(t, before.NumWatches, after.NumWatches)
+	assert.Equal(t, before.NumStars, after.NumStars)
 }
 
 func TestRepoSettingsRemoveWatcher(t *testing.T) {
