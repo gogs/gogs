@@ -371,15 +371,17 @@ func importLegacyTables(ctx context.Context, logger *logx.Logger, dirPath string
 			var meta struct {
 				ID          int64
 				CreatedUnix int64
+				UpdatedUnix int64
 			}
 			if err = json.Unmarshal(scanner.Bytes(), &meta); err != nil {
 				logger.Error("Failed to unmarshal to map", "error", err)
 			}
 
-			// Reset created_unix back to the date saved in archive because Insert method updates its value.
+			// The insert hooks set both timestamps to the current time, so reset them to
+			// the ones in the archive.
 			if isInsertProcessor {
-				if _, err = x.Exec("UPDATE `"+rawTableName+"` SET created_unix=? WHERE id=?", meta.CreatedUnix, meta.ID); err != nil {
-					logger.Error("Failed to reset 'created_unix'", "tableName", rawTableName, "error", err)
+				if _, err = x.Exec("UPDATE `"+rawTableName+"` SET created_unix=?, updated_unix=? WHERE id=?", meta.CreatedUnix, meta.UpdatedUnix, meta.ID); err != nil {
+					logger.Error("Failed to reset timestamps", "tableName", rawTableName, "error", err)
 				}
 			}
 		}
