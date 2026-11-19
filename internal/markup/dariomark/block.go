@@ -280,6 +280,22 @@ func (p *parser) advanceOffset(count int, columns bool) {
 	}
 }
 
+// advanceToEnd advances to the end of the line, as advanceOffset does for
+// the rest of the line.
+func (p *parser) advanceToEnd() {
+	rest := p.line[min(p.offset, len(p.line)):]
+	if len(rest) == 0 {
+		return
+	}
+	if bytes.IndexByte(rest, '\t') >= 0 {
+		p.advanceOffset(len(rest), false)
+		return
+	}
+	p.partiallyConsumedTab = false
+	p.offset += len(rest)
+	p.column += len(rest)
+}
+
 func (p *parser) peek(i int) byte {
 	if i < len(p.line) {
 		return p.line[i]
@@ -652,7 +668,7 @@ func (p *parser) tryBlockStarts(container *node) int {
 			if isThematicBreak(p.line[p.nextNonspace:]) {
 				p.closeUnmatchedBlocks()
 				p.addChild(kindThematicBreak)
-				p.advanceOffset(len(p.line)-p.offset, false)
+				p.advanceToEnd()
 				return startLeaf
 			}
 		}
@@ -698,10 +714,10 @@ func (p *parser) tryATXHeading() int {
 		end = j
 	}
 	content = trimRightSpace(content[:end], false)
-	lead := len(content) - len(bytes.TrimLeft(content, " \t"))
+	lead := len(content) - len(trimSpace(content))
 	p.segs = append(p.segs, seg{start: int32(start + lead), end: int32(start + len(content)), eol: int32(p.lineEOL)})
 	h.segEnd = int32(len(p.segs))
-	p.advanceOffset(len(p.line)-p.offset, false)
+	p.advanceToEnd()
 	return startLeaf
 }
 
@@ -727,7 +743,7 @@ func (p *parser) tryFencedCode() int {
 	b.fenceOffset = int32(p.indent)
 	b.text = trimSpace(info)
 	p.advanceNextNonspace()
-	p.advanceOffset(len(p.line)-p.offset, false)
+	p.advanceToEnd()
 	return startLeaf
 }
 

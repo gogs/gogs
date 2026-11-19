@@ -141,7 +141,7 @@ func (p *parser) trySetextHeading(container *node) int {
 	h.segStart, h.segEnd = int32(first), int32(first+len(segs))
 	p.tip = h.parent
 	p.touch(h)
-	p.advanceOffset(len(p.line)-p.offset, false)
+	p.advanceToEnd()
 	return startLeaf
 }
 
