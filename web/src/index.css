@@ -795,9 +795,10 @@ diffs-container {
 }
 
 /* The row shrinks to its tabs and draws the edge, and the tabs divide by a
-   line instead of a gap. The tab shown keeps the fill and weight it has
-   without glass. */
+   line instead of a gap, so they stay on one row. The tab shown keeps the fill
+   and weight it has without glass. */
 :root.glass-ui .glass-tabs {
+  flex-wrap: nowrap;
   gap: 0;
   width: fit-content;
   max-width: 100%;

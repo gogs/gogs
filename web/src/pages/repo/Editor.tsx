@@ -292,7 +292,7 @@ function CommitForm({
   );
 }
 
-const TAB_CLASS = "cursor-pointer rounded-md px-3 py-1.5 text-sm whitespace-nowrap";
+const TAB_CLASS = "cursor-pointer rounded-md px-3 py-1.5 text-sm whitespace-nowrap glass-ui:px-2.5";
 
 function EditorTabs<K extends string>({
   id,
