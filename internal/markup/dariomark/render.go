@@ -304,19 +304,27 @@ func (r *renderer) plainLeaf(n *node) bool {
 			out.WriteString(escapes[c])
 			i++
 			text = i
-		case '.':
-			// Leaves possible extended autolinks to the inline parser.
-			if i >= 3 && string(src[i-3:i]) == "www" {
+		case '.', ':':
+			// See inlineParser.tryLinkify.
+			at, n, ok := plainAutoLink(src, i, text, opts)
+			if !ok {
 				out.buf = out.buf[:start]
 				return false
 			}
-			i++
-		case ':':
-			if bytes.HasPrefix(src[i+1:], []byte("//")) {
-				out.buf = out.buf[:start]
-				return false
+			if n == 0 {
+				i++
+				continue
 			}
-			i++
+			out.Write(src[text:at])
+			bufLen := len(r.p.buf)
+			out.WriteString(`<a href="`)
+			writeEscaped(out, r.autoLinkDest(src[at:at+n], c == '.'))
+			out.WriteString(`">`)
+			r.p.buf = r.p.buf[:bufLen]
+			writeEscaped(out, src[at:at+n])
+			out.WriteString("</a>")
+			i = at + n
+			text = i
 		case '\n':
 			// See inlineParser.lineEnding.
 			end := i
@@ -406,13 +414,13 @@ func (r *renderer) plainLeaf(n *node) bool {
 			right := before != flankSpace && (before != flankPunct || after != flankOther)
 			tag := emTags[k-1]
 			switch {
-			case open == 0 && left && !right:
+			case open == 0 && left:
 				out.Write(src[text:i])
 				out.writeByte('<')
 				out.WriteString(tag)
 				out.writeByte('>')
 				open = k
-			case open == k && right && !left:
+			case open == k && right:
 				out.Write(src[text:i])
 				out.WriteString("</")
 				out.WriteString(tag)
@@ -531,6 +539,24 @@ func (r *renderer) plainLeafSanitized(src []byte, inCell bool, text, box int, s 
 			s.end("code")
 			i = closer + k
 			text = i
+		case '.', ':':
+			if !opts.Linkify {
+				i++
+				continue
+			}
+			at, n, _ := plainAutoLink(src, i, text, opts)
+			if n == 0 {
+				i++
+				continue
+			}
+			s.text(src[text:at])
+			bufLen := len(r.p.buf)
+			s.start("a", attr{"href", r.autoLinkDest(src[at:at+n], src[i] == '.'), false})
+			r.p.buf = r.p.buf[:bufLen]
+			s.text(src[at : at+n])
+			s.end("a")
+			i = at + n
+			text = i
 		case '[':
 			n := plainLink(src, i, opts)
 			close := i + 1 + bytes.IndexByte(src[i+1:], ']')
@@ -562,6 +588,59 @@ func (r *renderer) plainLeafSanitized(src []byte, inCell bool, text, box int, s 
 		}
 	}
 	s.text(src[text:])
+}
+
+// plainAutoLink returns the start and length of the extended autolink that
+// the inline parser finds for the "." or ":" at src[i], with nothing written
+// from text on, or a length of 0 if there is none. It reports false when
+// plainLeaf must leave the contents to the inline parser.
+func plainAutoLink(src []byte, i, text int, opts *Options) (at, n int, ok bool) {
+	var scheme bool
+	switch {
+	case src[i] == '.' && i >= 3 && string(src[i-3:i]) == "www":
+		at = i - 3
+	case src[i] == ':' && bytes.HasPrefix(src[i+1:], []byte("//")):
+		scheme = true
+		switch {
+		case i >= 5 && string(src[i-5:i]) == "https":
+			at = i - 5
+		case i >= 4 && string(src[i-4:i]) == "http":
+			at = i - 4
+		case i >= 3 && string(src[i-3:i]) == "ftp":
+			at = i - 3
+		default:
+			return 0, 0, !opts.LinkifyAfterPunct
+		}
+	default:
+		return 0, 0, true
+	}
+	if opts.LinkifyAfterPunct || opts.LinkifyURL != nil || opts.ShortenAutoLink != nil || at < text {
+		return 0, 0, false
+	}
+	if at > 0 {
+		switch src[at-1] {
+		case ' ', '\t', '\n', '*', '_', '~', '(':
+		default:
+			return 0, 0, true
+		}
+	}
+	if !scheme {
+		return at, scanWWW(src[at:]), true
+	}
+	if m := linkifyURL(src[at:]); m > 0 {
+		return at, trimLinkTail(src[at : at+m]), true
+	}
+	return 0, 0, true
+}
+
+// autoLinkDest returns the escaped destination of the extended autolink
+// link, which starts with "www." if www is true, see renderer.autoLink.
+func (r *renderer) autoLinkDest(link []byte, www bool) []byte {
+	if !www {
+		return r.urlEscape(link)
+	}
+	r.plain = append(append(r.plain[:0], "http://"...), link...)
+	return r.urlEscape(r.plain)
 }
 
 // plainLink returns the length of the inline link at src[i], which is "[",
