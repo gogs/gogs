@@ -202,6 +202,9 @@ func (p *parser) parse(src []byte, flush func() bool) *node {
 		p.lineNumber++
 		p.incorporateLine()
 		pos = eol
+		if t := p.tip; t.kind == kindCodeBlock && t.fenced && t.parent == p.doc && t.fenceOffset == 0 && t.startLine == int32(p.lineNumber) {
+			pos = p.fencedCodeBody(t, pos)
+		}
 		if flush != nil && p.doc.first != nil && !p.doc.first.open && !flush() {
 			return p.doc
 		}
@@ -216,6 +219,59 @@ func (p *parser) parse(src []byte, flush func() bool) *node {
 		p.detachFootnoteDefs()
 	}
 	return p.doc
+}
+
+// fencedCodeBody adds the lines of the top-level fenced code block b, which
+// is not indented and starts at the line before pos, up to its closing fence
+// as one line, and returns the start of the closing fence. Its lines are
+// rendered as they are, so they need not be split.
+func (p *parser) fencedCodeBody(b *node, pos int) int {
+	src := p.src
+	end := len(src)
+	for i := pos; i < len(src); {
+		k := bytes.IndexByte(src[i:], b.fenceChar)
+		if k < 0 {
+			break
+		}
+		i += k
+		start := i
+		for start > pos && start > i-3 && src[start-1] == ' ' {
+			start--
+		}
+		run := i
+		for run < len(src) && src[run] == b.fenceChar {
+			run++
+		}
+		if start == pos || src[start-1] == '\n' {
+			if run-i >= int(b.fenceLen) {
+				lineEnd := len(src)
+				if e := bytes.IndexByte(src[run:], '\n'); e >= 0 {
+					lineEnd = run + e
+				}
+				if isBlankBytes(src[run:lineEnd]) {
+					end = start
+					break
+				}
+			}
+		}
+		i = run
+	}
+	if end == pos {
+		return pos
+	}
+	lines := bytes.Count(src[pos:end], []byte("\n"))
+	contentEnd := end
+	if src[end-1] == '\n' {
+		contentEnd--
+	} else {
+		lines++
+	}
+	p.segs = append(p.segs, seg{start: int32(pos), end: int32(contentEnd), eol: int32(end)})
+	b.segEnd = int32(len(p.segs))
+	p.lineNumber += lines
+	p.touch(b)
+	p.curBlankIn = nil
+	return end
 }
 
 // tabWidth returns the number of columns of a tab at column col. Tab stops
