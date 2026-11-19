@@ -84,8 +84,15 @@ function formatBytes(v: number) {
 }
 
 function median(values: number[]) {
-  return [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)];
+  return [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)] ?? 0;
 }
+
+// RECENT_POINTS is how many of the last points tell the recent level: 4
+// minutes of the last hour, and 30 minutes of the last 24 hours.
+const RECENT_POINTS: Record<AdminHealthRange, number> = { "1h": 16, "24h": 6 };
+
+// A level is not read off fewer samples than this.
+const LEVEL_SAMPLES = 3;
 
 // flag tells when a metric left its usual range, which is the first half of
 // the range: its recent level stands out, or it spiked. Both levels are
@@ -101,18 +108,26 @@ export function flag(
   }: Pick<Metric, "followsTraffic" | "floor" | "spikeFloor" | "idleAtZero">,
   range: AdminHealthRange,
 ): { up: number } | { spikeAt: number } | null {
-  const measured = idleAtZero ? points.filter(([, v]) => v > 0) : points;
-  if (measured.length < 20) return null;
-  const values = measured.map(([, v]) => v);
-  const first = values.slice(0, Math.floor(values.length / 2));
-  const base = median(first);
-  const spread = Math.max(median(first.map((v) => Math.abs(v - base))), 0.5);
-  const recent = median(values.slice(-Math.max(4, Math.round(values.length / 15))));
+  if (points.length < 20) return null;
+  // Both levels are read off a span of time, so that idle samples leave it
+  // with fewer samples and not with older ones. A span with too few samples
+  // has no level, and a metric without a usual level only flags spikes.
+  const half = Math.floor(points.length / 2);
+  const levelOf = (span: [number, number][]) => {
+    const values = span.filter(([, v]) => !idleAtZero || v > 0).map(([, v]) => v);
+    return values.length < LEVEL_SAMPLES ? [] : values;
+  };
+  const usual = levelOf(points.slice(0, half));
+  const base = median(usual);
+  const spread = Math.max(median(usual.map((v) => Math.abs(v - base))), 0.5);
+  const recent = median(levelOf(points.slice(-Math.min(RECENT_POINTS[range], points.length - half))));
   if (!followsTraffic && base > 0 && recent >= floor && recent / base >= 1.5) return { up: recent / base };
   // A point of the last hour is one sample, which on a quiet server can be a
   // single request, so there a spike counts as far as a neighbor reaches it
   // too. A point of the last 24 hours is the peak or the mean rate of 5
   // minutes, which is worth a flag on its own.
+  const measured = idleAtZero ? points.filter(([, v]) => v > 0) : points;
+  const values = measured.map(([, v]) => v);
   const held =
     range === "1h" ? values.map((v, i) => Math.min(v, Math.max(values[i - 1] ?? 0, values[i + 1] ?? 0))) : values;
   const peak = Math.max(...held);
