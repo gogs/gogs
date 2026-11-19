@@ -263,9 +263,12 @@ func (p *parser) renderStream(src []byte) Result {
 
 // HTML renders the Markdown source to HTML without post-processing.
 func HTML(src []byte, opts *Options) []byte {
-	o := *opts
-	o.PostProcess = false
-	return Render(src, &o).HTML
+	if opts.PostProcess {
+		o := *opts
+		o.PostProcess = false
+		opts = &o
+	}
+	return Render(src, opts).HTML
 }
 
 // AppendEscaped appends b to dst with "&", "<", ">" and '"' escaped.

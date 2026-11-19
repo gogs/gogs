@@ -181,7 +181,7 @@ func (r *renderer) parseLeaf(n *node, stream bool) (inlineMark, bool) {
 
 func (r *renderer) renderHTML(doc *node) {
 	// Short documents have more markup per byte of source.
-	r.out.Grow(len(r.p.src) + len(r.p.src)/4 + min(len(r.p.src), 2048))
+	r.out.Grow(len(r.p.src) + len(r.p.src)/4 + min(len(r.p.src), 2048) + 32)
 	r.s = sink{html: &r.html}
 	r.renderDocument(doc)
 }

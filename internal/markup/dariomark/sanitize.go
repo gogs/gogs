@@ -59,7 +59,7 @@ func (r *renderer) renderSanitized(render func()) ([]byte, bool) {
 	if r.opts.Sanitizer == nil {
 		return nil, false
 	}
-	r.out.Grow(len(r.p.src) + len(r.p.src)/4 + min(len(r.p.src), 2048))
+	r.out.Grow(len(r.p.src) + len(r.p.src)/4 + min(len(r.p.src), 2048) + 32)
 	// The sink keeps its buffers from the previous render.
 	s := &r.san
 	*s = sanitizeSink{
