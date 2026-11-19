@@ -30,7 +30,7 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: R
           defaults.day_button,
         ),
         selected: cn(
-          "[&>button]:bg-(--color-primary) [&>button]:font-semibold [&>button]:text-(--color-primary-foreground) [&>button]:hover:bg-(--color-primary)",
+          "[&>button]:bg-(--color-primary) [&>button]:font-semibold [&>button]:text-(--color-primary-foreground) [&>button]:focus-visible:ring-offset-2 [&>button]:focus-visible:ring-offset-(--color-popover) [&>button]:hover:bg-(--color-primary)",
           defaults.selected,
         ),
         today: cn("[&>button]:ring-1 [&>button]:ring-(--color-border)", defaults.today),

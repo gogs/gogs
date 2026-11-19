@@ -93,7 +93,9 @@
   --color-diff-removed: #dc2626;
   --color-border: #d4d4d4;
   --color-input: #8f8f8f;
-  --color-ring: #009fff;
+  /* The primary color. The blue of the dark theme falls short of 3:1 against
+     light surfaces. */
+  --color-ring: #0b6bcb;
 
   /* Token colors of CodeEditor, Pierre Light hues darkened where needed to
      reach 4.5:1 against the background. */
