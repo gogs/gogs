@@ -199,6 +199,10 @@ func sshKeygenFingerprint(keygenPath, path string) (stdout, stderr string, err e
 	cmd.Stdout = &outBuf
 	cmd.Stderr = &errBuf
 	err = cmd.Run()
+	if ctx.Err() != nil {
+		// On Windows, the killed process exits with 1 as if it rejected the key.
+		err = errors.Wrapf(ctx.Err(), "run ssh-keygen: %v", err)
+	}
 	return outBuf.String(), errBuf.String(), err
 }
 
@@ -212,11 +216,15 @@ func SSHKeygenParsePublicKey(key, keyTestPath, keygenPath string) (string, int, 
 
 	stdout, stderr, err := sshKeygenFingerprint(keygenPath, tmpName)
 	if err != nil {
-		// OpenSSH before 6.9 prints the message to stdout.
-		if out := stdout + stderr; strings.Contains(out, "is not a public key file") {
-			// The message starts with the path of the temporary file, which users
-			// must not see.
-			return "", 0, ErrKeyUnableVerify{strings.TrimSpace(strings.ReplaceAll(out, tmpName, "key"))}
+		// ssh-keygen that ran to its end rejected the key, e.g., "is not a public
+		// key file", while one that did not start or was killed failed the check.
+		// Exit codes 126 and 127 are of a shell that could not run the command.
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) && exitErr.ExitCode() > 0 && exitErr.ExitCode() != 126 && exitErr.ExitCode() != 127 {
+			// The message comes last, on stdout before OpenSSH 6.9, and starts with
+			// the path of the temporary file, which users must not see.
+			lines := strings.Split(strings.TrimSpace(stdout+stderr), "\n")
+			return "", 0, ErrKeyUnableVerify{strings.TrimSpace(strings.ReplaceAll(lines[len(lines)-1], tmpName, "key"))}
 		}
 		return "", 0, ErrKeyCheckFailed{errors.Newf("fail to parse public key: %s - %s", err, stderr)}
 	}

@@ -90,10 +90,16 @@ func TestCheckPublicKeyStringWithSSHKeygen(t *testing.T) {
 	truncated := "ssh-ed25519 " + base64.StdEncoding.EncodeToString(ssh.Marshal(struct{ Name string }{"ssh-ed25519"}))
 
 	t.Run("key ssh-keygen rejects", func(t *testing.T) {
-		_, err := CheckPublicKeyString(logx.NewNoopLogger(), truncated)
-		require.Error(t, err)
-		assert.True(t, IsErrKeyUnableVerify(err), "error: %v", err)
-		assert.NotContains(t, err.Error(), keyTestPath)
+		for _, content := range []string{
+			truncated,
+			// ssh-keygen reads it as a private key and answers "is not a key file".
+			truncated + " PRIVATE KEY",
+		} {
+			_, err := CheckPublicKeyString(logx.NewNoopLogger(), content)
+			require.Error(t, err)
+			assert.True(t, IsErrKeyUnableVerify(err), "error: %v", err)
+			assert.Regexp(t, `\[result: key is not a (public )?key file\.\]$`, err.Error())
+		}
 	})
 
 	t.Run("server fails to check", func(t *testing.T) {
