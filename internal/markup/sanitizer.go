@@ -43,7 +43,7 @@ var urlSchemePolicies = map[string]func(*url.URL) bool{
 //
 // Dariomark sanitizes documents without raw HTML itself, with a copy of this
 // policy for the HTML it produces (see dariomark.Sanitizer). When changing the
-// elements, classes or attributes allowed here for that HTML, update sanitizedElements,
+// elements, classes or attributes allowed here for that HTML, update sanitizedElement,
 // allowedClasses, allowedRoles and the attribute checks in
 // internal/markup/dariomark/sanitize.go to match, and markdownSanitizer in
 // markdown.go. URL schemes are not copied: Dariomark asks allowURLScheme.

@@ -296,7 +296,7 @@ func (s *sanitizeSink) tokens(b []byte, f func(t *html.Token)) {
 // emitStart writes a start tag as the sanitizer does. Its attribute checks
 // must be kept in sync with NewSanitizer in internal/markup/sanitizer.go.
 func (s *sanitizeSink) emitStart(name string, attrs []html.Attribute) {
-	if !sanitizedElements[name] {
+	if !sanitizedElement(name) {
 		s.failed = true
 		return
 	}
@@ -306,7 +306,7 @@ func (s *sanitizeSink) emitStart(name string, attrs []html.Attribute) {
 		ok := false
 		switch a.Key {
 		case "id":
-			ok = idPattern.MatchString(a.Val)
+			ok = hasIDChar(a.Val)
 		case "title":
 			ok = s.san.Text.MatchString(a.Val)
 		case "href":
@@ -346,15 +346,15 @@ func (s *sanitizeSink) emitStart(name string, attrs []html.Attribute) {
 				return
 			}
 		case "align":
-			ok = (name == "td" || name == "th") && cellAlignPattern.MatchString(a.Val)
+			ok = (name == "td" || name == "th") && isCellAlign(a.Val)
 		case "start":
-			ok = name == "ol" && listStartPattern.MatchString(a.Val)
+			ok = name == "ol" && isDigits(a.Val)
 		case "type":
 			ok = name == "input" && a.Val == "checkbox"
 		case "checked", "disabled":
 			ok = name == "input"
 		case "data-source-lines":
-			ok = name == "li" && sourceLinesPattern.MatchString(a.Val)
+			ok = name == "li" && isSourceLines(a.Val)
 		default:
 			s.failed = true
 			return
@@ -391,7 +391,7 @@ func (s *sanitizeSink) emitEnd(name string) {
 		s.dropped = s.dropped[:n-1]
 		return
 	}
-	if !sanitizedElements[name] {
+	if !sanitizedElement(name) {
 		s.failed = true
 		return
 	}
@@ -429,19 +429,60 @@ func (s *sanitizeSink) validURL(raw string) (string, bool) {
 // title, alt and data URIs.
 var (
 	dataURIBase64Prefix = lazyregexp.New(`^data:[^,]*;base64,`)
-	idPattern           = lazyregexp.New(`[a-zA-Z0-9\:\-_\.]+`)
-	cellAlignPattern    = lazyregexp.New(`(?i)^(center|justify|left|right|char)$`)
-	sourceLinesPattern  = lazyregexp.New(`^[0-9]+-[0-9]+$`)
-	listStartPattern    = lazyregexp.New(`^[0-9]+$`)
 )
 
-// sanitizedElements are the elements that Render produces and the sanitizer
-// allows.
-var sanitizedElements = map[string]bool{
-	"a": true, "blockquote": true, "br": true, "code": true, "del": true, "div": true, "em": true,
-	"h1": true, "h2": true, "h3": true, "h4": true, "h5": true, "h6": true, "hr": true, "img": true,
-	"input": true, "li": true, "ol": true, "p": true, "pre": true, "strong": true, "sub": true, "sup": true,
-	"table": true, "tbody": true, "td": true, "th": true, "thead": true, "tr": true, "ul": true,
+// sanitizedElement reports whether name is an element that Render produces
+// and the sanitizer allows.
+func sanitizedElement(name string) bool {
+	switch name {
+	case "a", "blockquote", "br", "code", "del", "div", "em",
+		"h1", "h2", "h3", "h4", "h5", "h6", "hr", "img",
+		"input", "li", "ol", "p", "pre", "strong", "sub", "sup",
+		"table", "tbody", "td", "th", "thead", "tr", "ul":
+		return true
+	}
+	return false
+}
+
+// hasIDChar reports whether the sanitizer's id pattern, the unanchored
+// [a-zA-Z0-9\:\-_\.]+, matches v.
+func hasIDChar(v string) bool {
+	for i := 0; i < len(v); i++ {
+		if c := v[i]; isASCIIAlnum(c) || c == ':' || c == '-' || c == '_' || c == '.' {
+			return true
+		}
+	}
+	return false
+}
+
+// isCellAlign reports whether the sanitizer's align pattern,
+// (?i)^(center|justify|left|right|char)$, matches v.
+func isCellAlign(v string) bool {
+	for _, a := range [...]string{"center", "justify", "left", "right", "char"} {
+		if strings.EqualFold(v, a) {
+			return true
+		}
+	}
+	return false
+}
+
+// isDigits reports whether ^[0-9]+$ matches v.
+func isDigits(v string) bool {
+	if v == "" {
+		return false
+	}
+	for i := 0; i < len(v); i++ {
+		if !isASCIIDigit(v[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+// isSourceLines reports whether ^[0-9]+-[0-9]+$ matches v.
+func isSourceLines(v string) bool {
+	i := strings.IndexByte(v, '-')
+	return i > 0 && isDigits(v[:i]) && isDigits(v[i+1:])
 }
 
 // allowedClasses are the classes that Render produces, by element.
