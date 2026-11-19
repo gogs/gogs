@@ -153,7 +153,7 @@ func TestMigrateScenarios(t *testing.T) {
 		},
 		{
 			// Gogs 0.12 created only missing tables, so databases that started on 0.11
-			// keep the tables as XORM created them.
+			// keep the index on "access_token.uid" as XORM named it.
 			name:   "Gogs 0.12, started on 0.11",
 			legacy: 19,
 			seed: func(t *testing.T, db *gorm.DB) {
