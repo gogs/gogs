@@ -1,10 +1,8 @@
-package markup
+package dariomark
 
 import (
 	"bytes"
 	"unicode/utf8"
-
-	"gogs.io/gogs/internal/markup/dariomark"
 )
 
 // appendDecoded appends the text b of a token to dst as html.Tokenizer
@@ -118,13 +116,13 @@ func appendEntity(dst, s []byte, attr bool) ([]byte, int) {
 	switch {
 	case len(name) == 0:
 	case name[len(name)-1] == ';':
-		if v, ok := dariomark.Entity(name[:len(name)-1]); ok {
+		if v, ok := entity(name[:len(name)-1]); ok {
 			return append(dst, v...), i
 		}
 	case attr && i < len(s) && s[i] == '=':
 		return append(dst, '&'), 1
 	case legacyEntities[string(name)]:
-		v, _ := dariomark.Entity(name)
+		v, _ := entity(name)
 		return append(dst, v...), i
 	}
 	if !attr {
@@ -132,7 +130,7 @@ func appendEntity(dst, s []byte, attr bool) ([]byte, int) {
 		// starts the name is decoded, e.g., "&notit;" is "¬it;".
 		for j := min(len(name)-1, longestLegacyEntity); j > 1; j-- {
 			if legacyEntities[string(name[:j])] {
-				v, _ := dariomark.Entity(name[:j])
+				v, _ := entity(name[:j])
 				return append(dst, v...), j + 1
 			}
 		}

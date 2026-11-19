@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"hash/fnv"
-	"net/url"
 	"path/filepath"
 	"strings"
 
@@ -246,7 +245,7 @@ func renderMarkdown(body []byte, urlPrefix string, metas map[string]string, hard
 		opts.FrontMatter = true
 	}
 	if sanitizer.ready.Load() {
-		opts.Sanitizer = markdownSanitizer
+		opts.Sanitizer = sanitizer.markdown
 	}
 	return dariomark.Render(body, opts)
 }
@@ -338,24 +337,4 @@ func Markdown(input any, urlPrefix string, metas map[string]string) []byte {
 // is set, and renders YAML front matter as a table above the document.
 func MarkdownFile(input any, urlPrefix string, metas map[string]string) []byte {
 	return Render(TypeMarkdown, input, urlPrefix, metas)
-}
-
-// markdownSanitizer describes the sanitizer policy to Dariomark. Its patterns
-// must be the ones that newPolicy uses for the same attributes.
-var markdownSanitizer = &dariomark.Sanitizer{
-	AllowURLScheme: allowURLScheme,
-	Text:           paragraphPattern.Regexp(),
-	CodeClass:      codeClassPattern.Regexp(),
-}
-
-// allowURLScheme reports whether the sanitizer policy allows u, which has a
-// scheme. Data URIs are checked by validating u, the others by looking their
-// schemes up, so that unknown schemes are never stored.
-func allowURLScheme(u *url.URL) bool {
-	p := sanitizer.policy.Load()
-	if u.Scheme == "data" {
-		_, ok := p.validURL(u.String())
-		return ok
-	}
-	return p.schemes[u.Scheme]
 }

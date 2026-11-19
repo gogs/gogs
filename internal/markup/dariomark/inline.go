@@ -747,9 +747,9 @@ func decodeEntityOctal(b []byte, octal bool) ([]byte, int) {
 	return nil, 0
 }
 
-// Entity returns the replacement text of the HTML named character reference
+// entity returns the replacement text of the HTML named character reference
 // with the name, which has neither the leading "&" nor the trailing ";".
-func Entity(name []byte) (string, bool) {
+func entity(name []byte) (string, bool) {
 	s, ok := entities[string(name)]
 	return s, ok
 }

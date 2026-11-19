@@ -7,13 +7,11 @@ import (
 	"strings"
 
 	"golang.org/x/net/html"
-
-	"gogs.io/gogs/internal/lazyregexp"
 )
 
 // Sanitizer describes the parts of the sanitizer policy that depend on the
-// rendered content. Render emulates the rest of the policy, which is the policy
-// of internal/markup/sanitizer.go: the UGC policy with classes for code
+// rendered content, see Policy.Sanitizer. Render emulates the rest of the
+// policy, which is the Policy of NewPolicy for Markdown: the UGC policy with classes for code
 // languages, alerts, footnotes and task lists, and attributes for task list
 // items and checkboxes, footnote roles and ordered list start numbers.
 type Sanitizer struct {
@@ -44,8 +42,7 @@ type sanitizeSink struct {
 	code  int
 	emoji emojiText
 	// dropped are the names of the dropped start tags whose end tags the
-	// sanitizer skips, see sanitizeState.stack in
-	// internal/markup/sanitizer.go.
+	// sanitizer skips, see sanitizeState.stack.
 	dropped []string
 	failed  bool
 	attrs   []html.Attribute
@@ -295,7 +292,7 @@ func (s *sanitizeSink) tokens(b []byte, f func(t *html.Token)) {
 }
 
 // emitStart writes a start tag as the sanitizer does. Its attribute checks
-// must be kept in sync with newPolicy in internal/markup/sanitizer.go.
+// must be kept in sync with NewPolicy.
 func (s *sanitizeSink) emitStart(name string, attrs []html.Attribute) {
 	if !sanitizedElement(name) {
 		s.failed = true
@@ -347,15 +344,15 @@ func (s *sanitizeSink) emitStart(name string, attrs []html.Attribute) {
 				return
 			}
 		case "align":
-			ok = (name == "td" || name == "th") && isCellAlign(a.Val)
+			ok = (name == "td" || name == "th") && isCellAlign([]byte(a.Val))
 		case "start":
-			ok = name == "ol" && isDigits(a.Val)
+			ok = name == "ol" && isDigits([]byte(a.Val))
 		case "type":
 			ok = name == "input" && a.Val == "checkbox"
 		case "checked", "disabled":
 			ok = name == "input"
 		case "data-source-lines":
-			ok = name == "li" && isSourceLines(a.Val)
+			ok = name == "li" && isSourceLines([]byte(a.Val))
 		default:
 			s.failed = true
 			return
@@ -425,12 +422,8 @@ func (s *sanitizeSink) validURL(raw string) (string, bool) {
 
 // The patterns and tables below, with the attribute checks in emitStart, copy
 // the sanitizer policy for the HTML that Render produces. They must be
-// kept in sync with newPolicy in internal/markup/sanitizer.go, which also
-// supplies the rules for id, align, title, alt and data URIs.
-var (
-	dataURIBase64Prefix = lazyregexp.New(`^data:[^,]*;base64,`)
-)
-
+// kept in sync with NewPolicy, which also supplies the rules for id, align,
+// title, alt and data URIs.
 // sanitizedElement reports whether name is an element that Render produces
 // and the sanitizer allows.
 func sanitizedElement(name string) bool {
@@ -453,36 +446,6 @@ func hasIDChar(v string) bool {
 		}
 	}
 	return false
-}
-
-// isCellAlign reports whether the sanitizer's align pattern,
-// (?i)^(center|justify|left|right|char)$, matches v.
-func isCellAlign(v string) bool {
-	for _, a := range [...]string{"center", "justify", "left", "right", "char"} {
-		if strings.EqualFold(v, a) {
-			return true
-		}
-	}
-	return false
-}
-
-// isDigits reports whether ^[0-9]+$ matches v.
-func isDigits(v string) bool {
-	if v == "" {
-		return false
-	}
-	for i := 0; i < len(v); i++ {
-		if !isASCIIDigit(v[i]) {
-			return false
-		}
-	}
-	return true
-}
-
-// isSourceLines reports whether ^[0-9]+-[0-9]+$ matches v.
-func isSourceLines(v string) bool {
-	i := strings.IndexByte(v, '-')
-	return i > 0 && isDigits(v[:i]) && isDigits(v[i+1:])
 }
 
 // allowedClasses are the classes that Render produces, by element.
