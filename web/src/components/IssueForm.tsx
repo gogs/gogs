@@ -106,7 +106,7 @@ export function MarkdownEditor({
 
   return (
     <div>
-      <div role="tablist" aria-label={label} className="mb-2 flex gap-1">
+      <div role="tablist" aria-label={label} className="glass-control glass-tabs mb-2 flex gap-1">
         {tabs.map((item) => (
           <button
             key={item.key}

@@ -90,7 +90,7 @@ const ICON_BUTTON =
 // The current page gets a bar in the primary color beside its fill, so it does
 // not rely on the subtle fill alone.
 const NAV_LINK =
-  "relative flex h-8 items-center gap-2 rounded-md px-2 text-sm text-(--color-muted-foreground) outline-none hover:bg-(--color-foreground)/5 hover:text-(--color-foreground) focus-visible:ring-1 focus-visible:ring-(--color-ring) aria-[current=page]:bg-(--color-foreground)/10 aria-[current=page]:font-semibold aria-[current=page]:text-(--color-foreground) aria-[current=page]:before:absolute aria-[current=page]:before:inset-y-1.5 aria-[current=page]:before:-left-2 aria-[current=page]:before:w-1 aria-[current=page]:before:rounded-full aria-[current=page]:before:bg-(--color-primary)";
+  "relative flex h-8 items-center gap-2 rounded-md px-2 text-sm text-(--color-muted-foreground) outline-none hover:bg-(--color-foreground)/5 hover:text-(--color-foreground) focus-visible:ring-1 focus-visible:ring-(--color-ring) aria-[current=page]:bg-(--color-foreground)/10 glass-ui:aria-[current=page]:bg-(--color-surface) aria-[current=page]:font-semibold aria-[current=page]:text-(--color-foreground) aria-[current=page]:before:absolute aria-[current=page]:before:inset-y-1.5 aria-[current=page]:before:-left-2 aria-[current=page]:before:w-1 aria-[current=page]:before:rounded-full aria-[current=page]:before:bg-(--color-primary)";
 
 // Sidebar holds the navigation of the admin console. As a rail it shows only
 // icons, each named by a tooltip.
@@ -234,10 +234,13 @@ export function AdminLayout() {
   };
 
   return (
-    <div className="flex flex-1 bg-(--color-surface)">
+    <div className="flex flex-1 bg-(--color-surface) glass-ui:bg-transparent">
       <aside
         id="admin-sidebar"
-        className={cn("sticky top-0 hidden h-dvh shrink-0 flex-col py-2 md:flex", collapsed ? "w-14" : "w-60")}
+        className={cn(
+          "glass-bar sticky top-0 hidden h-dvh shrink-0 flex-col py-2 md:flex glass-ui:border-r glass-ui:border-(--color-border)",
+          collapsed ? "w-14" : "w-60",
+        )}
       >
         <Sidebar rail={collapsed} />
       </aside>
@@ -252,9 +255,9 @@ export function AdminLayout() {
           <Sidebar rail={false} />
         </SheetContent>
       </Sheet>
-      <div className="flex min-w-0 flex-1 flex-col md:py-2 md:pr-2">
-        <div className="flex min-w-0 flex-1 flex-col bg-(--color-background) md:rounded-xl md:border md:border-(--color-border)">
-          <header className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b border-(--color-border) bg-(--color-background) px-2 sm:px-3 md:rounded-t-xl">
+      <div className="flex min-w-0 flex-1 flex-col md:py-2 md:pr-2 glass-ui:md:py-0 glass-ui:md:pr-0">
+        <div className="flex min-w-0 flex-1 flex-col bg-(--color-background) md:rounded-xl md:border md:border-(--color-border) glass-ui:bg-transparent glass-ui:md:rounded-none glass-ui:md:border-0">
+          <header className="glass-bar sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b border-(--color-border) bg-(--color-background) px-2 sm:px-3 md:rounded-t-xl glass-ui:md:rounded-none">
             <button
               type="button"
               aria-label={t("admin.toggle_sidebar")}

@@ -82,30 +82,32 @@ export function RefPicker({
           />
         </div>
         {tags ? (
-          <div
-            role="tablist"
-            aria-label={t("repo.filter_branch_and_tag")}
-            className="flex gap-1 border-b border-(--color-border) px-2 py-1.5"
-          >
-            {tabs.map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                role="tab"
-                id={`${id}-${item.key}-tab`}
-                aria-selected={tab === item.key}
-                aria-controls={`${id}-list`}
-                onClick={() => setTab(item.key)}
-                className={cn(
-                  "cursor-pointer rounded-md px-3 py-1 text-sm",
-                  tab === item.key
-                    ? "bg-(--color-surface) font-semibold text-(--color-foreground)"
-                    : "text-(--color-muted-foreground) hover:text-(--color-foreground)",
-                )}
-              >
-                {item.label}
-              </button>
-            ))}
+          <div className="border-b border-(--color-border) px-2 py-1.5">
+            <div
+              role="tablist"
+              aria-label={t("repo.filter_branch_and_tag")}
+              className="glass-control glass-tabs flex gap-1"
+            >
+              {tabs.map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  role="tab"
+                  id={`${id}-${item.key}-tab`}
+                  aria-selected={tab === item.key}
+                  aria-controls={`${id}-list`}
+                  onClick={() => setTab(item.key)}
+                  className={cn(
+                    "cursor-pointer rounded-md px-3 py-1 text-sm",
+                    tab === item.key
+                      ? "bg-(--color-surface) font-semibold text-(--color-foreground)"
+                      : "text-(--color-muted-foreground) hover:text-(--color-foreground)",
+                  )}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
           </div>
         ) : null}
         <ScrollArea

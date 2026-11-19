@@ -50,7 +50,7 @@ export function CloneBox({
   return (
     <div className="flex flex-col gap-2">
       {protocols.length > 1 ? (
-        <div role="group" aria-label={label} className="flex gap-1">
+        <div role="group" aria-label={label} className="glass-control glass-tabs flex gap-1">
           {protocols.map((p) => (
             <button
               key={p.key}

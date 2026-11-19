@@ -57,7 +57,7 @@ export function Segmented({ label, className, children }: { label: string; class
     <nav
       aria-label={label}
       className={cn(
-        "inline-flex max-w-full flex-wrap items-center gap-0.5 rounded-lg bg-(--color-surface) p-0.5",
+        "glass-control glass-tabs inline-flex max-w-full flex-wrap items-center gap-0.5 rounded-lg bg-(--color-surface) p-0.5",
         className,
       )}
     >
@@ -67,9 +67,11 @@ export function Segmented({ label, className, children }: { label: string; class
 }
 
 // The view shown is a raised pill with a border, so it does not rely on its
-// color alone.
+// color alone. With glass on, `glass-tabs` makes the links the segments of one
+// glass control, as in the view switchers of the site, and the view shown is
+// the filled one in bold.
 export const SEGMENTED_ITEM =
-  "inline-flex h-8 items-center rounded-md border border-transparent px-3 text-sm font-medium whitespace-nowrap text-(--color-muted-foreground) outline-none hover:text-(--color-foreground) focus-visible:ring-1 focus-visible:ring-(--color-ring) aria-[current=page]:border-(--color-border) aria-[current=page]:bg-(--color-background) aria-[current=page]:text-(--color-foreground) aria-[current=page]:shadow-xs";
+  "inline-flex h-8 items-center rounded-md border border-transparent px-3 text-sm font-medium whitespace-nowrap text-(--color-muted-foreground) outline-none hover:text-(--color-foreground) focus-visible:ring-1 focus-visible:ring-(--color-ring) aria-[current=page]:border-(--color-border) aria-[current=page]:bg-(--color-background) aria-[current=page]:text-(--color-foreground) aria-[current=page]:shadow-xs glass-ui:h-8.5 glass-ui:focus-visible:ring-inset glass-ui:aria-[current=page]:bg-(--color-surface) glass-ui:aria-[current=page]:font-semibold glass-ui:aria-[current=page]:shadow-none";
 
 // SegmentedLinks switches a page between views through its search params, so
 // that the loader fetches the view, e.g., the last hour or the last day. The
