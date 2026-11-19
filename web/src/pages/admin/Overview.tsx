@@ -83,7 +83,7 @@ function HealthStat({ metric, health }: { metric: (typeof METRICS)[number]; heal
   const points = health.data?.series.find((series) => series.key === metric.key)?.points ?? [];
   const now = points.at(-1)?.[1];
   const value = now === undefined ? "N/A" : metric.format(now);
-  const flagged = flagText(t, flag(points, metric), formatClockTime);
+  const flagged = flagText(t, flag(points, metric, "1h"), formatClockTime);
   return (
     <StatCard
       label={label}
@@ -222,7 +222,7 @@ function AttentionCard({
   const flagged = (data: AdminHealth) =>
     METRICS.flatMap((metric) => {
       const points = data.series.find((series) => series.key === metric.key)?.points ?? [];
-      const text = flagText(t, flag(points, metric), formatClockTime);
+      const text = flagText(t, flag(points, metric, "1h"), formatClockTime);
       return text ? [{ key: metric.key, text: `${t(metric.label)}: ${text}` }] : [];
     });
   const clear =

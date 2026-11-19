@@ -22,8 +22,9 @@ import {
   runAdminOperation,
   sendAdminTestMail,
 } from "@/lib/queries/admin";
-import { FormError, formErrors } from "@/lib/queries/request";
+import { formErrors } from "@/lib/queries/request";
 import { formatAbsoluteTime } from "@/lib/relative-time";
+import { useFocusFirstError } from "@/lib/use-focus-error";
 
 export function ReportValue({ row }: { row: AdminReportRow }) {
   switch (row.kind) {
@@ -72,6 +73,10 @@ const OPERATION_LABELS: Record<AdminOperation, string> = {
   "reinit-missing-repos": "admin.dashboard.reinit_missing_repos",
 };
 
+// The form keys the server reports errors by are the IDs of the fields
+// elsewhere. Here the field has an ID of its own, so the error names it.
+const TEST_MAIL_FIELDS = ["email"] as const;
+
 // TestMailForm sends a test email, to check the email settings work.
 function TestMailForm() {
   const { t } = useTranslation();
@@ -79,11 +84,8 @@ function TestMailForm() {
   const send = useMutation({
     mutationFn: () => sendAdminTestMail(email),
     onSuccess: (message) => toast.success(message),
-    onError: (err) => {
-      if (!(err instanceof FormError) || !("email" in err.fields)) return;
-      requestAnimationFrame(() => document.getElementById("testMailEmail")?.focus());
-    },
   });
+  useFocusFirstError(send.error, TEST_MAIL_FIELDS);
   const { fields, formError } = formErrors(send.error);
 
   const onSubmit = (e: FormEvent) => {

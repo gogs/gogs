@@ -17,7 +17,7 @@ import {
   ShieldCheck,
   User,
 } from "lucide-react";
-import { type MouseEvent, type ReactNode, useState } from "react";
+import { type MouseEvent, type ReactNode, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { PaletteButton, UserMenu } from "@/components/Navbar";
@@ -209,6 +209,7 @@ export function AdminLayout() {
   const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const sheetToggle = useRef<HTMLButtonElement>(null);
   const [crumbSlot, setCrumbSlot] = useState<HTMLElement | null>(null);
 
   // The deepest route tells the page, e.g., "/admin/users/$id".
@@ -255,6 +256,18 @@ export function AdminLayout() {
           aria-describedby={undefined}
           className="flex w-64 flex-col bg-(--color-surface) py-2"
           onClick={closeOnLink}
+          // Radix passes over links when it picks what to focus, which would
+          // be the user menu at the foot of the sheet.
+          onOpenAutoFocus={(e) => {
+            e.preventDefault();
+            const sheet = e.currentTarget as HTMLElement;
+            (sheet.querySelector<HTMLElement>("nav a[aria-current=page]") ?? sheet.querySelector("a"))?.focus();
+          }}
+          // The sheet has no trigger of its own to give the focus back to.
+          onCloseAutoFocus={(e) => {
+            e.preventDefault();
+            sheetToggle.current?.focus();
+          }}
         >
           <SheetTitle className="sr-only">{t("admin_panel")}</SheetTitle>
           <Sidebar rail={false} />
@@ -264,6 +277,7 @@ export function AdminLayout() {
         <div className="flex min-w-0 flex-1 flex-col bg-(--color-background) md:rounded-xl md:border md:border-(--color-border) glass-ui:bg-transparent glass-ui:md:rounded-none glass-ui:md:border-0">
           <header className="glass-bar sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b border-(--color-border) bg-(--color-background) px-2 sm:px-3 md:rounded-t-xl glass-ui:md:rounded-none">
             <button
+              ref={sheetToggle}
               type="button"
               aria-label={t("admin.toggle_sidebar")}
               onClick={() => setSheetOpen(true)}

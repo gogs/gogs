@@ -1,7 +1,7 @@
 import type { TFunction } from "i18next";
 
 import { formatMs, formatNumber } from "@/lib/format";
-import type { AdminHealthKey } from "@/lib/queries/admin";
+import type { AdminHealthKey, AdminHealthRange } from "@/lib/queries/admin";
 import { formatAbsoluteTime } from "@/lib/relative-time";
 
 type HealthSection = "traffic" | "runtime" | "resources";
@@ -15,6 +15,9 @@ interface Metric {
   // the server is quiet, however far the value is from its usual range, e.g.,
   // the first request after an idle hour.
   floor: number;
+  // The least a spike reaches to be worth flagging, when that is more than
+  // the floor.
+  spikeFloor?: number;
   format: (v: number) => string;
 }
 
@@ -30,7 +33,8 @@ export const METRICS: Metric[] = [
     floor: 5,
     format: (v) => `${v.toFixed(1)} /s`,
   },
-  { key: "p95", section: "traffic", label: "admin.health.p95", floor: 250, format: formatMs },
+  // A single slow request sets the p95 latency of a quiet moment.
+  { key: "p95", section: "traffic", label: "admin.health.p95", floor: 50, spikeFloor: 250, format: formatMs },
   { key: "heap", section: "runtime", label: "admin.health.heap", floor: 64 * (1 << 20), format: formatBytes },
   { key: "goroutines", section: "runtime", label: "admin.health.goroutines", floor: 100, format: formatCount },
   { key: "gcPause", section: "runtime", label: "admin.health.gc_pause", floor: 1, format: formatMs },
@@ -73,13 +77,12 @@ function median(values: number[]) {
 }
 
 // flag tells when a metric left its usual range, which is the first half of
-// the range: its recent level stands out, or it spiked. A spike lasts at least
-// two samples, since one sample of a quiet server can be a single slow
-// request, and is reported at its start. Values below the floor of the metric
-// are never flagged.
+// the range: its recent level stands out, or it spiked. A spike is reported
+// at its start. Values below the floor of the metric are never flagged.
 export function flag(
   points: [number, number][],
-  { followsTraffic, floor }: Pick<Metric, "followsTraffic" | "floor">,
+  { followsTraffic, floor, spikeFloor = floor }: Pick<Metric, "followsTraffic" | "floor" | "spikeFloor">,
+  range: AdminHealthRange,
 ): { up: number } | { spikeAt: number } | null {
   if (points.length < 20) return null;
   const values = points.map(([, v]) => v);
@@ -88,11 +91,13 @@ export function flag(
   const spread = Math.max(median(first.map((v) => Math.abs(v - base))), 0.5);
   const tail = values.slice(-Math.max(4, Math.round(values.length / 15)));
   const tailMean = tail.reduce((a, b) => a + b, 0) / tail.length;
-  // The level each sample holds together with the next one.
-  const held = values.map((v, i) => Math.min(v, values[i + 1] ?? 0));
+  // A point of the last hour is one sample, which on a quiet server can be a
+  // single request, so a spike there holds for two samples. A point of the
+  // last 24 hours sums up 5 minutes already.
+  const held = range === "1h" ? values.map((v, i) => Math.min(v, values[i + 1] ?? 0)) : values;
   const peak = Math.max(...held);
   if (!followsTraffic && base > 0 && tailMean >= floor && tailMean / base >= 1.5) return { up: tailMean / base };
-  if (peak >= floor && peak > base + 6 * spread && peak >= 3 * base) {
+  if (peak >= spikeFloor && peak > base + 6 * spread && peak >= 3 * base) {
     const start = held.findIndex((v) => v > base + (peak - base) / 2);
     return { spikeAt: points[start][0] };
   }

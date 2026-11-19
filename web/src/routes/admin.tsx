@@ -3,6 +3,8 @@ import { type AnyRoute, createRoute, notFound, redirect } from "@tanstack/react-
 import type { JSX } from "react";
 
 import { AdminLayout } from "@/components/AdminLayout";
+import { leaveAdmin } from "@/lib/admin-exit";
+import { webContext } from "@/lib/context";
 import { LoaderResponseError, authenticationRedirect, loadAuthenticatedPage } from "@/lib/loader-error";
 import {
   type HealthSearch,
@@ -45,6 +47,18 @@ import { AdminUserEdit, AdminUserNew } from "@/pages/admin/Users";
 // the page, so the navigation of the console stays.
 const PAGE = { notFoundComponent: AdminNotFound, errorComponent: AdminError };
 
+// loadAdminPage loads what a page of the console shows. When the admin API
+// turns the viewer away, the page they are on stays until the one that takes
+// them out of the console loads.
+async function loadAdminPage<T>(location: { href: string }, load: () => Promise<T>): Promise<T> {
+  try {
+    return await loadAuthenticatedPage(load);
+  } catch (err) {
+    if (leaveAdmin(err, webContext.subURL + location.href)) await new Promise<never>(() => undefined);
+    throw err;
+  }
+}
+
 export function createAdminRoutes(rootRoute: AnyRoute) {
   // The pages share the console shell, which stays in place while one of them
   // loads. Only site admins get to see it.
@@ -79,7 +93,7 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
     getParentRoute: () => adminRoute,
     ...PAGE,
     path: "config",
-    loader: () => loadAuthenticatedPage(fetchAdminConfig),
+    loader: ({ location }) => loadAdminPage(location, fetchAdminConfig),
     component: function Config() {
       return <AdminConfig config={configRoute.useLoaderData()} />;
     },
@@ -89,7 +103,7 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
     getParentRoute: () => adminRoute,
     ...PAGE,
     path: "jobs",
-    loader: () => loadAuthenticatedPage(fetchAdminMonitor),
+    loader: ({ location }) => loadAdminPage(location, fetchAdminMonitor),
     component: function Jobs() {
       return <AdminJobs monitor={jobsRoute.useLoaderData()} />;
     },
@@ -101,7 +115,7 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
     path: "health",
     validateSearch: validateHealthSearch,
     loaderDeps: ({ search }: { search: HealthSearch }) => ({ health: search.health ?? ("1h" as const) }),
-    loader: ({ deps }) => loadAuthenticatedPage(() => fetchAdminHealth(deps.health)),
+    loader: ({ deps, location }) => loadAdminPage(location, () => fetchAdminHealth(deps.health)),
     component: function Health() {
       const health = healthRoute.useLoaderData();
       // Remount on a range switch, so that a pinned moment does not outlive its range.
@@ -115,14 +129,14 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
     path: "traces",
     validateSearch: validateTraceSearch,
     loaderDeps: ({ search }: { search: TraceSearch }) => search,
-    loader: async ({ deps }) => {
+    loader: async ({ deps, location }) => {
       if (deps.view !== "search") {
         return {
           view: "overview" as const,
-          overview: await loadAuthenticatedPage(() => fetchAdminTraceOverview(deps.range ?? "1h")),
+          overview: await loadAdminPage(location, () => fetchAdminTraceOverview(deps.range ?? "1h")),
         };
       }
-      const result = await loadAuthenticatedPage(() => fetchAdminTraceSearch(deps));
+      const result = await loadAdminPage(location, () => fetchAdminTraceSearch(deps));
       // A trace ID, or a prefix of one that only one trace has, opens the trace.
       if (deps.q && result.total === 1) {
         // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
@@ -148,8 +162,8 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
     getParentRoute: () => adminRoute,
     ...PAGE,
     path: "traces/$id",
-    loader: ({ params }) =>
-      loadAuthenticatedPage(async () => {
+    loader: ({ params, location }) =>
+      loadAdminPage(location, async () => {
         try {
           return await fetchAdminTrace(params.id);
         } catch (err) {
@@ -174,7 +188,7 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
     path: "users",
     validateSearch: validateListSearch,
     loaderDeps: ({ search }: { search: ListSearch }) => ({ q: search.q, page: search.page }),
-    loader: ({ deps }) => loadAuthenticatedPage(() => fetchAdminUsers(deps)),
+    loader: ({ deps, location }) => loadAdminPage(location, () => fetchAdminUsers(deps)),
     component: function Users() {
       const search: ListSearch = usersRoute.useSearch();
       return <AdminUsers list={usersRoute.useLoaderData()} search={search} />;
@@ -185,7 +199,7 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
     getParentRoute: () => adminRoute,
     ...PAGE,
     path: "users/new",
-    loader: () => loadAuthenticatedPage(fetchAdminUserOptions),
+    loader: ({ location }) => loadAdminPage(location, fetchAdminUserOptions),
     component: function UserNew() {
       return <AdminUserNew options={userNewRoute.useLoaderData()} />;
     },
@@ -195,8 +209,8 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
     getParentRoute: () => adminRoute,
     ...PAGE,
     path: "users/$id",
-    loader: ({ params }) =>
-      loadAuthenticatedPage(() => Promise.all([fetchAdminUser(Number(params.id)), fetchAdminUserOptions()])),
+    loader: ({ params, location }) =>
+      loadAdminPage(location, () => Promise.all([fetchAdminUser(Number(params.id)), fetchAdminUserOptions()])),
     component: function UserEdit() {
       const [user, options] = userEditRoute.useLoaderData();
       // Remount for another user so the form starts from their values.
@@ -210,7 +224,7 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
     path: "orgs",
     validateSearch: validateListSearch,
     loaderDeps: ({ search }: { search: ListSearch }) => ({ q: search.q, page: search.page }),
-    loader: ({ deps }) => loadAuthenticatedPage(() => fetchAdminOrgs(deps)),
+    loader: ({ deps, location }) => loadAdminPage(location, () => fetchAdminOrgs(deps)),
     component: function Orgs() {
       const search: ListSearch = orgsRoute.useSearch();
       return <AdminOrgs list={orgsRoute.useLoaderData()} search={search} />;
@@ -223,7 +237,7 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
     path: "repos",
     validateSearch: validateListSearch,
     loaderDeps: ({ search }: { search: ListSearch }) => ({ q: search.q, page: search.page }),
-    loader: ({ deps }) => loadAuthenticatedPage(() => fetchAdminRepos(deps)),
+    loader: ({ deps, location }) => loadAdminPage(location, () => fetchAdminRepos(deps)),
     component: function Repos() {
       const search: ListSearch = reposRoute.useSearch();
       return <AdminRepos list={reposRoute.useLoaderData()} search={search} />;
@@ -234,7 +248,7 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
     getParentRoute: () => adminRoute,
     ...PAGE,
     path: "auths",
-    loader: () => loadAuthenticatedPage(fetchAdminAuthSources),
+    loader: ({ location }) => loadAdminPage(location, fetchAdminAuthSources),
     component: function Auths() {
       return <AdminAuthSources sources={authsRoute.useLoaderData()} />;
     },
@@ -251,7 +265,7 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
     getParentRoute: () => adminRoute,
     ...PAGE,
     path: "auths/$id",
-    loader: ({ params }) => loadAuthenticatedPage(() => fetchAdminAuthSource(Number(params.id))),
+    loader: ({ params, location }) => loadAdminPage(location, () => fetchAdminAuthSource(Number(params.id))),
     component: function AuthEdit() {
       const source = authEditRoute.useLoaderData();
       // Remount for another source so the form starts from its values.
@@ -265,8 +279,8 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
     path: "notices",
     validateSearch: validatePageSearch,
     loaderDeps: ({ search }: { search: PageSearch }) => ({ page: search.page }),
-    loader: async ({ deps, context }) => {
-      const list = await loadAuthenticatedPage(() => fetchAdminNotices(deps));
+    loader: async ({ deps, context, location }) => {
+      const list = await loadAdminPage(location, () => fetchAdminNotices(deps));
       // The sidebar of the console counts the system notices from their first page.
       const { queryClient } = context as { queryClient: QueryClient };
       const firstPage = adminNoticesQuery({}).queryKey;

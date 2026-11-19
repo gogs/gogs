@@ -21,7 +21,7 @@ import type {
 import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
 import { cn } from "@/lib/utils";
 import { TraceScatterChart, TraceTrafficChart } from "@/pages/admin/TraceCharts";
-import { KIND_FILLS, formatClockSeconds, formatShare } from "@/pages/admin/TraceFormat";
+import { KIND_FILLS, formatShare, formatTraceStart } from "@/pages/admin/TraceFormat";
 import { KeptLabel, KindChip, RouteName } from "@/pages/admin/TraceParts";
 
 const CARD_TITLE = "text-base";
@@ -438,10 +438,14 @@ export function AdminTraceSearch({ result, search }: { result: AdminTraceSearchD
           </Select>
           {search.from || search.to ? (
             <span className="glass-control inline-flex min-h-9 max-w-full items-center gap-1 rounded-md border !border-(--color-ring) bg-(--color-surface) py-1 pr-1 pl-3 text-sm">
-              {t("admin.traces.window", {
-                from: search.from ? formatAbsoluteTime(search.from) : "",
-                to: search.to ? formatAbsoluteTime(search.to) : "",
-              })}
+              {search.from && search.to
+                ? t("admin.traces.window", {
+                    from: formatAbsoluteTime(search.from),
+                    to: formatAbsoluteTime(search.to),
+                  })
+                : search.from
+                  ? t("admin.traces.window_from", { from: formatAbsoluteTime(search.from) })
+                  : t("admin.traces.window_until", { to: formatAbsoluteTime(search.to ?? 0) })}
               <Link
                 to="/admin/traces"
                 search={{ ...search, from: undefined, to: undefined }}
@@ -550,7 +554,7 @@ export function AdminTraceSearch({ result, search }: { result: AdminTraceSearchD
                       {trace.status > 0 ? trace.status : t("admin.traces.background")}
                     </TableCell>
                     <TableCell className="hidden w-px whitespace-nowrap tabular-nums @3xl:table-cell">
-                      {formatClockSeconds(trace.start)}
+                      {formatTraceStart(result.maxAgeMinutes)(trace.start)}
                       <span className={cn("ml-2 hidden text-xs @5xl:inline", MUTED)}>{started}</span>
                     </TableCell>
                     <TableCell className={cn(NUMBER_CELL, "hidden @3xl:table-cell")}>

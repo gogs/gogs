@@ -22,9 +22,9 @@ import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { NoticeBanner } from "@/components/NoticeBanner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { leaveAdmin } from "@/lib/admin-exit";
 import { webContext } from "@/lib/context";
 import { LoaderResponseError, authenticationRedirect } from "@/lib/loader-error";
-import { subUrl } from "@/lib/url";
 import { useUserInfo } from "@/lib/use-user-info";
 import type { UserInfo } from "@/lib/user-info";
 import { NotFound } from "@/pages/NotFound";
@@ -156,12 +156,6 @@ function makeRouter(context: RouterContext) {
         // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
         throw redirect({ to: "/user/activate", replace: true });
       }
-      // A viewer who stopped being a site admin, or may no longer sign in,
-      // while in the admin console leaves it.
-      if (err.status === 403 && String(route.id).startsWith("/admin")) {
-        const exit = adminExit(err, webContext.subURL + router.latestLocation.href);
-        if (exit) loadPage(exit);
-      }
       // Pages the viewer may not see, e.g., the admin panel for other users,
       // are not found.
       if (err.status === 403 && err.errorField !== "login prohibited") {
@@ -181,35 +175,13 @@ declare module "@tanstack/react-router" {
   }
 }
 
-// adminExit returns the URL a viewer the admin API turned away belongs at, or
-// null for any other error, e.g., a 403 of a proxy, which loading a page again
-// does not change. The console only asks who the viewer is when the page
-// loads, so the viewer leaves it with a full page load of that URL. `href` is
-// the page they are on or asked for.
-function adminExit(err: unknown, href: string): string | null {
-  if (!(err instanceof LoaderResponseError)) return null;
-  // The admin route has them sign in, or shows that nothing is here.
-  if (err.status === 401 || (err.status === 403 && err.errorField === "admin required")) return href;
-  if (err.status === 403 && err.errorField === "account not activated") return subUrl("/user/activate");
-  // The pages of the site tell them that they may not sign in.
-  if (err.status === 403 && err.errorField === "login prohibited") return subUrl("/");
-  return null;
-}
-
-function loadPage(url: string) {
-  // Assigning the URL of the current page does not load it again when it has a hash.
-  if (url === window.location.href) window.location.reload();
-  else window.location.assign(url);
-}
-
 // Cards of the admin console fetch outside the route loaders, so nothing sends
 // a viewer the web API turns away, e.g., after their session expired, to where
 // a loader would.
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
     onError: (err, query) => {
-      const exit = query.queryKey[0] === "admin" ? adminExit(err, window.location.href) : null;
-      if (exit) loadPage(exit);
+      if (query.queryKey[0] === "admin") leaveAdmin(err, window.location.href);
     },
   }),
 });

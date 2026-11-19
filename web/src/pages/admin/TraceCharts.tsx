@@ -30,7 +30,7 @@ import type { TraceSearch } from "@/lib/page-search";
 import type { AdminTraceOverview, AdminTraceSearch } from "@/lib/queries/admin";
 import { formatClockTime } from "@/lib/relative-time";
 import { cn } from "@/lib/utils";
-import { formatClockSeconds, formatDay, formatDayTime } from "@/pages/admin/TraceFormat";
+import { formatClockSeconds, formatDay, formatDayTime, formatTraceStart } from "@/pages/admin/TraceFormat";
 
 const COMPACT_FMT = new Intl.NumberFormat(webContext.lang, { notation: "compact", maximumFractionDigits: 2 });
 
@@ -39,11 +39,12 @@ const BUCKET_MS = 5 * 60_000;
 // formatMsTick writes a round duration without its trailing zeros, e.g.,
 // "1 s" rather than "1.00 s", for the ticks of an axis.
 function formatMsTick(ms: number) {
-  return ms === 0
-    ? "0"
-    : formatMs(ms)
-        .replace(/(\.\d*?)0+ /, "$1 ")
-        .replace(". ", " ");
+  if (ms === 0) return "0";
+  // formatMs would round a tick below a second further, e.g., 2.55 ms to "2.5 ms".
+  if (ms < 999.5) return `${Number(ms.toFixed(2))} ms`;
+  return formatMs(ms)
+    .replace(/(\.\d*?)0+ /, "$1 ")
+    .replace(". ", " ");
 }
 
 // TraceTrafficChart draws the requests of each 5 minutes as bars and their p95
@@ -218,10 +219,17 @@ function timeTicks(start: number, end: number) {
   const fewHours = Math.ceil((end - start) / (6 * 3_600_000));
   const hours = fewHours < 24 ? fewHours : Math.ceil(fewHours / 24) * 24;
   const step = (TICK_STEPS.find((s) => (end - start) / (s * 1000) <= 6) ?? hours * 3600) * 1000;
-  const ticks: number[] = [];
-  for (let tick = Math.ceil(start / step) * step; tick <= end; tick += step) ticks.push(tick);
-  // The time of day tells the ticks of a day apart, and not those of a longer window.
   const day = 24 * 3_600_000;
+  const ticks: number[] = [];
+  if (step < day) {
+    for (let tick = Math.ceil(start / step) * step; tick <= end; tick += step) ticks.push(tick);
+  } else {
+    // Days start at midnight where the viewer is.
+    const tick = new Date(start);
+    tick.setHours(24, 0, 0, 0);
+    for (; tick.getTime() <= end; tick.setDate(tick.getDate() + step / day)) ticks.push(tick.getTime());
+  }
+  // The time of day tells the ticks of a day apart, and not those of a longer window.
   const format =
     step < 60_000 ? formatClockSeconds : end - start <= day ? formatClockTime : step < day ? formatDayTime : formatDay;
   return { ticks, format };
@@ -280,7 +288,7 @@ export function TraceScatterChart({ result, search }: { result: AdminTraceSearch
       icon: SlowIcon,
     },
     error: { label: t("admin.traces.error_5xx"), color: "var(--color-destructive)", icon: ErrorIcon },
-    time: { label: t("admin.traces.start"), format: formatClockSeconds },
+    time: { label: t("admin.traces.start"), format: formatTraceStart(result.maxAgeMinutes) },
     ms: { label: t("admin.traces.duration"), format: formatMs },
     status: {
       label: t("admin.traces.status"),

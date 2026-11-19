@@ -19,16 +19,9 @@ import {
   deleteAdminUser,
   updateAdminUser,
 } from "@/lib/queries/admin";
-import { FormError, formErrors } from "@/lib/queries/request";
+import { formErrors } from "@/lib/queries/request";
+import { useFocusFirstError } from "@/lib/use-focus-error";
 import { cn } from "@/lib/utils";
-
-// focusFirstError focuses the first field, in display order, that the server
-// rejected.
-function focusFirstError(err: Error, order: readonly string[]) {
-  const fields = err instanceof FormError ? err.fields : {};
-  const first = order.find((f) => f in fields);
-  if (first) requestAnimationFrame(() => document.getElementById(first)?.focus());
-}
 
 // LoginSourceSelect picks how a user signs in: with a local password or
 // through an authentication source.
@@ -85,8 +78,8 @@ export function AdminUserNew({ options }: { options: AdminUserOptions }) {
       toast.success(t("admin.users.new_success", { name: user.name }));
       await navigate({ to: "/admin/users/$id", params: { id: String(user.id) } });
     },
-    onError: (err) => focusFirstError(err, CREATE_FIELDS),
   });
+  useFocusFirstError(create.error, CREATE_FIELDS);
   const { fields, formError } = formErrors(create.error);
   const isLocal = form.loginSource === 0;
 
@@ -210,8 +203,8 @@ export function AdminUserEdit({ user, options }: { user: AdminUserDetail; option
       setMaxRepos(String(maxRepoCreation));
       await router.invalidate();
     },
-    onError: (err) => focusFirstError(err, EDIT_FIELDS),
   });
+  useFocusFirstError(save.error, EDIT_FIELDS);
   const { fields, formError } = formErrors(save.error);
   const isLocal = form.loginSource === 0;
 
@@ -224,6 +217,7 @@ export function AdminUserEdit({ user, options }: { user: AdminUserDetail; option
       input.focus();
       return;
     }
+    setMaxReposError(null);
     save.mutate();
   };
 
@@ -342,6 +336,7 @@ export function AdminUserEdit({ user, options }: { user: AdminUserDetail; option
               name="maxRepoCreation"
               type="number"
               min={-1}
+              max={2147483647}
               className="max-w-40"
               value={maxRepos}
               onChange={(e) => {

@@ -195,7 +195,7 @@ export function AdminServerHealth({ health, range }: { health: AdminHealth; rang
 
   const rows = METRICS.flatMap((metric) => {
     const series = health.series.find((s) => s.key === metric.key);
-    return series ? [{ metric, series, flag: flag(series.points, metric) }] : [];
+    return series ? [{ metric, series, flag: flag(series.points, metric, health.range) }] : [];
   });
   const empty = rows.every((row) => row.series.points.length === 0);
 
