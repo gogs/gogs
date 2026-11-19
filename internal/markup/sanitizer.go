@@ -86,7 +86,8 @@ func SanitizeBytes(b []byte) []byte {
 //
 // It reproduces, byte for byte, the output of the UGC policy of bluemonday
 // v1.0.27, which Gogs used before, so that stored and cached HTML does not
-// change.
+// change. The only exception is data URIs, which are always checked, even
+// when [markdown] CUSTOM_URL_SCHEMES lists "data".
 type policy struct {
 	elements map[string]*elementPolicy
 	// schemes are the URL schemes allowed without checks. Data URIs are

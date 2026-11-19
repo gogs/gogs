@@ -242,10 +242,10 @@ func shiftSegs(n *node, k int32) {
 	}
 }
 
-// plainLeaf renders the inline contents of the paragraph or table cell n
-// without parsing them into nodes, and reports whether it did. It does so
-// when they are only text, line breaks, code spans and simple emphasis, as is common in
-// comments and documents written by AI agents. The output is what the inline
+// plainLeaf renders the inline contents of the paragraph, heading or table
+// cell n without parsing them into nodes, and reports whether it did. It does
+// so when they are only text, line breaks, code spans and simple emphasis, as
+// is common in comments and documents written by AI agents. The output is what the inline
 // parser and renderer write for the same contents.
 func (r *renderer) plainLeaf(n *node) bool {
 	opts := r.opts
@@ -274,8 +274,7 @@ func (r *renderer) plainLeaf(n *node) bool {
 	out := &r.out
 	start := len(out.buf)
 	inCell := n.kind == kindTableCell
-	// text is the start of the text not written yet, and noCloser has a bit
-	// for each length of backtick run that has no closing run left.
+	// text is the start of the text not written yet.
 	text, from, box := 0, 0, boxNone
 	if opts.TaskLists && len(src) > 0 && src[0] == '[' {
 		// See inlineParser.taskCheckbox.
@@ -289,6 +288,8 @@ func (r *renderer) plainLeaf(n *node) bool {
 			out.writeByte(' ')
 		}
 	}
+	// noCloser has a bit for each length of backtick run that has no closing
+	// run left.
 	var noCloser uint64
 	// open is the length of the run of asterisks that opened emphasis, or 0.
 	open := 0
