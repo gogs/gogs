@@ -3,7 +3,7 @@ import { AlertCircle, ChevronDown, ChevronRight, Search as SearchIcon, X } from 
 import { type FormEvent, type ReactNode, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 
-import { AdminPageHeader, SEGMENTED_ITEM, STAT_VALUE, Segmented, StatCard } from "@/components/AdminPage";
+import { AdminPageHeader, STAT_VALUE, SegmentedLinks, StatCard } from "@/components/AdminPage";
 import { InlineCode } from "@/components/InlineCode";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,37 +41,6 @@ const LAST_SHOWN = "pr-5";
 // of a row, until the card is wide enough for the columns.
 function Facts({ className, children }: { className: string; children: ReactNode }) {
   return <span className={cn("mt-1 flex flex-wrap gap-x-3 text-xs tabular-nums", MUTED, className)}>{children}</span>;
-}
-
-// ViewLinks switches the page between views through its search params. The
-// router marks a link as the current page when its search params are among
-// those of the URL, which the params of the first view always are, so each
-// link only counts as current on exactly its own params.
-function ViewLinks<V extends string>({
-  label,
-  active,
-  options,
-}: {
-  label: string;
-  active: V;
-  options: { value: V; label: string; search: TraceSearch }[];
-}) {
-  return (
-    <Segmented label={label}>
-      {options.map((option) => (
-        <Link
-          key={option.value}
-          to="/admin/traces"
-          search={option.search}
-          activeOptions={{ exact: true }}
-          aria-current={option.value === active ? "page" : undefined}
-          className={SEGMENTED_ITEM}
-        >
-          {option.label}
-        </Link>
-      ))}
-    </Segmented>
-  );
 }
 
 // TraceIDForm finds a trace by its ID, or the first 8 or more characters of
@@ -135,7 +104,8 @@ function TracesLayout({
         <TraceIDForm q={q} />
       </AdminPageHeader>
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-        <ViewLinks
+        <SegmentedLinks
+          to="/admin/traces"
           label={t("admin.traces")}
           active={view}
           options={[
@@ -233,7 +203,8 @@ export function AdminTraceOverview({ overview }: { overview: AdminTraceOverviewD
       view="overview"
       maxAgeMinutes={overview.maxAgeMinutes}
       toolbar={
-        <ViewLinks
+        <SegmentedLinks
+          to="/admin/traces"
           label={t("admin.traces.range")}
           active={overview.range}
           options={[
@@ -483,7 +454,8 @@ export function AdminTraceSearch({ result, search }: { result: AdminTraceSearchD
               </Link>
             </span>
           ) : null}
-          <ViewLinks
+          <SegmentedLinks
+            to="/admin/traces"
             label={t("admin.traces.status")}
             active={search.status ?? "all"}
             options={[

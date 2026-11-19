@@ -1,26 +1,19 @@
 import { type UseQueryResult, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Bell, CircleAlert, CircleCheck, ExternalLink, type LucideIcon, TrendingUp, TriangleAlert } from "lucide-react";
+import { Bell, CircleAlert, CircleCheck, ExternalLink, type LucideIcon, TriangleAlert } from "lucide-react";
 import { type ReactNode, useId } from "react";
 import { useTranslation } from "react-i18next";
-import { Area, AreaChart, Bar, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, XAxis, YAxis } from "recharts";
 
-import { Row, Rows, STAT_VALUE, StatCard } from "@/components/AdminPage";
+import { Row, Rows, STAT_VALUE, StatCard, TrendChip } from "@/components/AdminPage";
 import { InlineCode } from "@/components/InlineCode";
 import { LoadError, Loaded } from "@/components/Loaded";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  type ChartConfig,
-  ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
+import { type ChartConfig, ChartContainer } from "@/components/ui/chart";
 import { Skeleton } from "@/components/ui/skeleton";
 import { METRICS, flag, flagText } from "@/lib/admin-health";
 import { webContext } from "@/lib/context";
-import { formatMs, formatNumber } from "@/lib/format";
+import { formatNumber } from "@/lib/format";
 import {
   type AdminDashboard,
   type AdminHealth,
@@ -35,16 +28,14 @@ import {
 import { formatClockTime } from "@/lib/relative-time";
 import { cn } from "@/lib/utils";
 import { ReportValue } from "@/pages/admin/System";
+import { TraceTrafficChart } from "@/pages/admin/TraceCharts";
 import { TracingDisabledNote } from "@/pages/admin/Traces";
 
 const LINK = "text-sm text-(--color-primary) hover:underline";
 
 const HEADLINE_METRICS = METRICS.filter((metric) => ["requests", "p95", "heap"].includes(metric.key));
 
-const COMPACT_FMT = new Intl.NumberFormat(webContext.lang, { notation: "compact" });
 const PERCENT_FMT = new Intl.NumberFormat(webContext.lang, { style: "percent", maximumFractionDigits: 2 });
-
-const BUCKET_MS = 5 * 60_000;
 
 // Sparkline draws the shape of a measurement over time, without axes. Flagged
 // ones take the primary color, next to the text that tells why.
@@ -98,14 +89,7 @@ function HealthStat({ metric, health }: { metric: (typeof METRICS)[number]; heal
   return (
     <StatCard
       label={label}
-      chip={
-        flagged ? (
-          <span className="inline-flex max-w-full items-center gap-1 rounded-full border border-(--color-border) px-2 text-xs/5">
-            <TrendingUp className="size-3 shrink-0" aria-hidden />
-            <span className="truncate">{flagged}</span>
-          </span>
-        ) : null
-      }
+      chip={flagged ? <TrendChip>{flagged}</TrendChip> : null}
       footer={
         <Link to="/admin/health" className={LINK}>
           {t("admin.health")}
@@ -168,89 +152,6 @@ function ErrorsStat({ traces }: { traces: UseQueryResult<AdminTraceOverview> }) 
         }
       </Loaded>
     </StatCard>
-  );
-}
-
-function TrafficChart({ overview }: { overview: AdminTraceOverview }) {
-  const { t } = useTranslation();
-  const config = {
-    requests: { label: t("admin.traces.requests_per_5m"), color: "var(--color-input)", format: formatNumber },
-    p95Ms: { label: t("admin.traces.p95_latency"), color: "var(--color-primary)", format: formatMs },
-  } satisfies ChartConfig;
-  // A bucket without requests has no latency, so the line skips it.
-  const data = overview.buckets.map((bucket) => ({ ...bucket, p95Ms: bucket.requests > 0 ? bucket.p95Ms : null }));
-  const first = overview.buckets[0]?.start;
-  const last = overview.buckets.at(-1)?.start;
-  return (
-    <ChartContainer config={config} className="aspect-auto h-64 w-full">
-      <ComposedChart
-        data={data}
-        margin={{ top: 8, right: 0, bottom: 0, left: 0 }}
-        title={
-          first && last
-            ? t("admin.traces.chart_overview", { from: formatClockTime(first), to: formatClockTime(last) })
-            : undefined
-        }
-      >
-        <CartesianGrid vertical={false} strokeDasharray="3 3" />
-        <XAxis
-          dataKey="start"
-          tickFormatter={formatClockTime}
-          tickLine={false}
-          axisLine={false}
-          tickMargin={8}
-          minTickGap={24}
-        />
-        <YAxis
-          yAxisId="requests"
-          width="auto"
-          tickLine={false}
-          axisLine={false}
-          allowDecimals={false}
-          tickFormatter={(value: number) => COMPACT_FMT.format(value)}
-        />
-        <YAxis
-          yAxisId="p95"
-          orientation="right"
-          width="auto"
-          tickLine={false}
-          axisLine={false}
-          tickFormatter={(value: number) => (value === 0 ? "0" : formatMs(value))}
-        />
-        <ChartTooltip
-          content={
-            <ChartTooltipContent
-              labelFormatter={(start) => {
-                if (typeof start !== "string") return start;
-                const from = Date.parse(start);
-                return t("admin.traces.window", {
-                  from: formatClockTime(from),
-                  to: formatClockTime(from + BUCKET_MS),
-                });
-              }}
-            />
-          }
-        />
-        <ChartLegend content={<ChartLegendContent />} itemSorter={null} />
-        <Bar
-          yAxisId="requests"
-          dataKey="requests"
-          fill="var(--color-requests)"
-          radius={[3, 3, 0, 0]}
-          isAnimationActive={false}
-        />
-        <Line
-          yAxisId="p95"
-          dataKey="p95Ms"
-          type="monotone"
-          stroke="var(--color-p95Ms)"
-          strokeWidth={2}
-          dot={{ r: 3, fill: "var(--color-p95Ms)" }}
-          connectNulls
-          isAnimationActive={false}
-        />
-      </ComposedChart>
-    </ChartContainer>
   );
 }
 
@@ -473,7 +374,7 @@ export function AdminOverview() {
             <Loaded query={traces} what={t("admin.traces")} skeleton={<Skeleton className="h-64 w-full" />}>
               {(overview) =>
                 overview.enabled && overview.requests > 0 ? (
-                  <TrafficChart overview={overview} />
+                  <TraceTrafficChart overview={overview} />
                 ) : (
                   <div className="flex min-h-64 items-center justify-center">
                     <p className="max-w-prose text-center text-sm text-(--color-muted-foreground)">

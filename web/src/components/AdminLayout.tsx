@@ -277,7 +277,7 @@ export function AdminLayout() {
             <nav aria-label={t("admin.breadcrumb")} className="min-w-0">
               <ol className="flex min-w-0 items-center gap-1.5 text-sm">
                 <Crumb className="hidden sm:flex">
-                  <Link to="/admin" className="hover:text-(--color-foreground)">
+                  <Link to="/admin" className="inline-flex min-h-6 items-center hover:text-(--color-foreground)">
                     {t("admin_panel")}
                   </Link>
                 </Crumb>
@@ -285,7 +285,10 @@ export function AdminLayout() {
                 {below ? (
                   <>
                     <Crumb className="hidden sm:flex">
-                      <Link to={`/admin${item.path}`} className="hover:text-(--color-foreground)">
+                      <Link
+                        to={`/admin${item.path}`}
+                        className="inline-flex min-h-6 items-center hover:text-(--color-foreground)"
+                      >
                         {current}
                       </Link>
                     </Crumb>
@@ -320,20 +323,5 @@ function Crumb({ className, children }: { className?: string; children: ReactNod
       {children}
       <ChevronRight className="size-3.5" aria-hidden />
     </li>
-  );
-}
-
-// AdminListHeading names a list of the admin panel with the number of all its
-// items, and holds an action for the list, e.g., creating an item.
-export function AdminListHeading({ title, total, action }: { title: string; total: number; action?: ReactNode }) {
-  const { t } = useTranslation();
-  return (
-    <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <h1 className="text-xl font-semibold">{title}</h1>
-        <p className="mt-1 text-sm text-(--color-muted-foreground)">{t("admin.total", { count: total })}</p>
-      </div>
-      {action}
-    </div>
   );
 }

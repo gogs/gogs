@@ -588,9 +588,9 @@ export function AdminNotices({ list }: { list: AdminList<AdminNotice> }) {
               />
             </label>
           </TableHead>
-          <TableHead>{t("admin.monitor.desc")}</TableHead>
+          <TableHead>{t("admin.notices.desc")}</TableHead>
           <TableHead className={cn(SHOWN_FROM.xl, "text-right")}>ID</TableHead>
-          <TableHead className={SHOWN_FROM.xl}>{t("admin.config.db.type")}</TableHead>
+          <TableHead className={SHOWN_FROM.xl}>{t("admin.notices.type")}</TableHead>
           <TableHead className={SHOWN_FROM.xl}>{t("admin.users.created")}</TableHead>
         </>
       }
