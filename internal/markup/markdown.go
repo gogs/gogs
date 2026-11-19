@@ -237,16 +237,23 @@ func renderMarkdown(body []byte, urlPrefix string, metas map[string]string, hard
 	opts := markdownOptions(urlPrefix, hardWraps)
 	opts.FootnoteIDPrefix = footnoteIDPrefix(body)
 	opts.PostProcess = true
-	commits := resolveCommits(body, metas)
-	opts.SpecialLinks = func(text []byte) []dariomark.SpecialLink {
-		return findSpecialLinks(text, urlPrefix, metas, commits)
-	}
 	opts.Emoji = emoji
 	if file {
 		opts.FrontMatter = true
 	}
 	if sanitizer.ready.Load() {
 		opts.Sanitizer = sanitizer.markdown
+	}
+	commits := resolveLinkableCommits(body, metas, func(specialText func(text []byte)) {
+		collect := *opts
+		collect.SpecialLinks = func(text []byte) []dariomark.SpecialLink {
+			specialText(text)
+			return nil
+		}
+		dariomark.Render(body, &collect)
+	})
+	opts.SpecialLinks = func(text []byte) []dariomark.SpecialLink {
+		return findSpecialLinks(text, urlPrefix, metas, commits)
 	}
 	return dariomark.Render(body, opts)
 }

@@ -3,6 +3,7 @@ package markup_test
 import (
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -436,4 +437,25 @@ func TestMarkdown_CommitLinks(t *testing.T) {
 	input := "Fixed in " + commitID[:7] + ", see " + commitID + ". UUID 123e4567-e89b-12d3-a456-426614174000.\n\n`" + commitID + "`"
 	want := `<p>Fixed in <a href="/user/repo/commit/` + commitID + `" rel="nofollow"><code>` + commitID[:7] + `</code></a>, see <a href="/user/repo/commit/` + commitID + `" rel="nofollow"><code>` + commitID[:10] + "</code></a>. UUID 123e4567-e89b-12d3-a456-426614174000.</p>\n<p><code>" + commitID + "</code></p>\n"
 	assert.Equal(t, want, string(Markdown(input, "/user/repo", metas)))
+
+	// Hex strings that never render as links do not need Git to resolve them.
+	gitRuns := func(t *testing.T, input string) bool {
+		trace := filepath.Join(t.TempDir(), "trace")
+		t.Setenv("GIT_TRACE", trace)
+		Markdown(input, "/user/repo", metas)
+		_, err := os.Stat(trace)
+		return err == nil
+	}
+	for name, input := range map[string]string{
+		"code span":  "See `" + commitID + "`.",
+		"code block": "```\n" + commitID + "\n```",
+		"link URL":   "[the fix](https://example.com/" + commitID + ")",
+		"attachment": "![screenshot](/attachments/123e4567-e89b-12d3-a456-426614174000)",
+		"link text":  "[" + commitID[:7] + "](https://example.com)",
+	} {
+		t.Run(name, func(t *testing.T) {
+			assert.False(t, gitRuns(t, input))
+		})
+	}
+	assert.True(t, gitRuns(t, "See "+commitID[:7]+" and `"+commitID+"`."), "text with a commit ID runs Git")
 }

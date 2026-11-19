@@ -297,6 +297,24 @@ func resolveCommits(text []byte, metas map[string]string) map[string]string {
 	return commits
 }
 
+// resolveLinkableCommits is resolveCommits for the text that render passes to
+// specialText, which must be the text where special links render. Hex strings
+// elsewhere, e.g., in code and link URLs, are never linked, so they do not run
+// Git. render only runs when src has commit ID candidates and a repository to
+// resolve them in.
+func resolveLinkableCommits(src []byte, metas map[string]string, render func(specialText func(text []byte))) map[string]string {
+	if metas["repoPath"] == "" || !Sha1CurrentPattern.Match(src) {
+		return nil
+	}
+	var text []byte
+	render(func(t []byte) {
+		// The space keeps the candidates of adjacent text nodes apart, as
+		// rendering does.
+		text = append(append(text, t...), ' ')
+	})
+	return resolveCommits(text, metas)
+}
+
 // findSha1s returns the spans of skip merged with the commit IDs in text that
 // name a commit in commits, see resolveCommits, and do not overlap them.
 func findSha1s(text []byte, metas, commits map[string]string, skip []linkSpan) []linkSpan {
@@ -415,18 +433,30 @@ func wrapImgWithLink(urlPrefix string, buf *bytes.Buffer, token html.Token) {
 // postProcessHTML treats different types of HTML differently,
 // and only renders special links for plain text blocks.
 func postProcessHTML(rawHTML []byte, urlPrefix string, metas map[string]string) []byte {
+	commits := resolveLinkableCommits(rawHTML, metas, func(specialText func(text []byte)) {
+		processHTMLText(rawHTML, urlPrefix, func(text []byte) []byte {
+			specialText(text)
+			return text
+		})
+	})
+	return processHTMLText(rawHTML, urlPrefix, func(text []byte) []byte {
+		return replaceSpans(text, findSpecialLinks(text, urlPrefix, metas, commits))
+	})
+}
+
+// processHTMLText is postProcessHTML, with renderText rendering the text
+// where special links render.
+func processHTMLText(rawHTML []byte, urlPrefix string, renderText func(text []byte) []byte) []byte {
 	startTags := make([]string, 0, 5)
 	buf := bytes.NewBuffer(nil)
 	tokenizer := html.NewTokenizer(bytes.NewReader(rawHTML))
-	commits := resolveCommits(rawHTML, metas)
 
 outerLoop:
 	for html.ErrorToken != tokenizer.Next() {
 		token := tokenizer.Token()
 		switch token.Type {
 		case html.TextToken:
-			text := []byte(token.String())
-			buf.Write(replaceSpans(text, findSpecialLinks(text, urlPrefix, metas, commits)))
+			buf.Write(renderText([]byte(token.String())))
 
 		case html.StartTagToken:
 			tagName := token.Data
