@@ -72,6 +72,7 @@ type renderer struct {
 	out  outBuf
 	s    sink
 	html htmlSink
+	san  sanitizeSink
 
 	plain []byte
 	// code is a buffer for the content of code spans, see codeContent.
@@ -120,6 +121,10 @@ func (r *renderer) release() {
 	r.p, r.opts, r.s = nil, nil, sink{}
 	r.out = outBuf{}
 	r.html = htmlSink{}
+	r.san = sanitizeSink{run: r.san.run[:0], dropped: r.san.dropped[:0], attrs: r.san.attrs[:0], clean: r.san.clean[:0], buf: r.san.buf[:0], escaped: r.san.escaped[:0]}
+	if cap(r.san.run) > maxPooledBytes || cap(r.san.escaped) > maxPooledBytes || cap(r.san.buf) > maxPooledBytes {
+		r.san = sanitizeSink{}
+	}
 	if cap(r.plain) > maxPooledBytes {
 		r.plain = nil
 	}

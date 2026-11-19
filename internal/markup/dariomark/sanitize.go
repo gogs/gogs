@@ -48,7 +48,9 @@ type sanitizeSink struct {
 	dropped []string
 	failed  bool
 	attrs   []html.Attribute
-	buf     []byte
+	// clean is a buffer for the attributes that emitStart keeps.
+	clean []html.Attribute
+	buf   []byte
 	// escaped is the escaped run, see flush.
 	escaped []byte
 }
@@ -57,8 +59,13 @@ func (r *renderer) renderSanitized(render func()) ([]byte, bool) {
 	if r.opts.Sanitizer == nil {
 		return nil, false
 	}
-	r.out.Grow(len(r.p.src) + len(r.p.src)/4)
-	s := &sanitizeSink{r: r, out: &r.out, san: r.opts.Sanitizer, emoji: emojiText{names: r.opts.Emoji}}
+	r.out.Grow(len(r.p.src) + len(r.p.src)/4 + min(len(r.p.src), 2048))
+	// The sink keeps its buffers from the previous render.
+	s := &r.san
+	*s = sanitizeSink{
+		r: r, out: &r.out, san: r.opts.Sanitizer, emoji: emojiText{names: r.opts.Emoji},
+		run: s.run[:0], dropped: s.dropped[:0], attrs: s.attrs[:0], clean: s.clean[:0], buf: s.buf[:0], escaped: s.escaped[:0],
+	}
 	r.s = sink{san: s}
 	r.sanitizing = true
 	render()
@@ -166,7 +173,9 @@ func (s *sanitizeSink) flush() {
 	if len(s.run) == 0 {
 		return
 	}
-	s.run = []byte(convertNewlines(string(s.run)))
+	if bytes.IndexByte(s.run, '\r') >= 0 {
+		s.run = []byte(convertNewlines(string(s.run)))
+	}
 	s.escaped = appendHTMLEscaped(s.escaped[:0], s.run)
 	s.run = s.run[:0]
 	s.emoji.startNode()
@@ -291,7 +300,7 @@ func (s *sanitizeSink) emitStart(name string, attrs []html.Attribute) {
 		s.failed = true
 		return
 	}
-	clean := attrs[:0:0]
+	clean := s.clean[:0]
 	href := false
 	for _, a := range attrs {
 		ok := false
@@ -357,6 +366,7 @@ func (s *sanitizeSink) emitStart(name string, attrs []html.Attribute) {
 	if href {
 		clean = append(clean, html.Attribute{Key: "rel", Val: "nofollow"})
 	}
+	s.clean = clean[:0]
 	if len(clean) == 0 && (name == "a" || name == "img" || name == "input") {
 		s.dropped = append(s.dropped, name)
 		return
@@ -368,7 +378,7 @@ func (s *sanitizeSink) emitStart(name string, attrs []html.Attribute) {
 		out.writeByte(' ')
 		out.WriteString(a.Key)
 		out.WriteString(`="`)
-		s.buf = appendHTMLEscaped(s.buf[:0], []byte(a.Val))
+		s.buf = appendHTMLEscaped(s.buf[:0], a.Val)
 		out.Write(s.buf)
 		out.writeByte('"')
 	}
