@@ -40,7 +40,7 @@ Use these tokens. Don't introduce raw hex values in components.
 - `--color-success`: affirmative state for signature verification badges and copy-confirm checkmarks. Lighter in dark mode (`#4ade80`) than light (`#15803d`) so it reads on both backgrounds. Always pair with a label or icon, never color alone.
 - `--color-merged`: merged pull requests, for the Merged pill and the merge box icon. Purple like other forges, darker in light mode (`#6f42c1`) than dark (`#b392f0`) so it keeps 4.5:1 on its own 15% tint. Always pair with a label or icon.
 - `--color-diff-added` / `--color-diff-removed`: diff change markers (the +/- dots in the diff toolbar stats row, and any future per-line tints). Separate from `--color-success`/`--color-destructive` so the diff palette can drift toward the universal git green/red without dragging the success/error semantics along.
-- `--color-ring`: keyboard focus ring color, at least 3:1 against the surfaces of its theme. Don't override per-component. If a default ring looks wrong, fix it at the token level. A filled control, e.g., a primary button or a checked checkbox, keeps the ring a gap away with `focus-visible:ring-offset-2` and a `ring-offset-(--color-...)` in the color of the surface under it, since a ring that touches the fill merges with it.
+- `--color-ring`: keyboard focus ring color, at least 3:1 against the surfaces of its theme. Don't override per-component. If a default ring looks wrong, fix it at the token level. A control filled with a color, e.g., a primary button, a checked checkbox or a pressed toggle, shows its focus with `FILLED_FOCUS` from `@/lib/utils` in place of the ring: an outline in the same color a gap away, since a ring that touches the fill merges with it.
 
 **Structure**
 

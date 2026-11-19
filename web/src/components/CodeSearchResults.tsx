@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { RepoSearchFile, RepoSearchLine } from "@/lib/queries/repo";
 import { resolveTheme, useTheme } from "@/lib/theme-context";
-import { cn } from "@/lib/utils";
+import { FILLED_FOCUS, cn } from "@/lib/utils";
 
 const THEMES = { light: "pierre-light", dark: "pierre-dark" } as const;
 
@@ -282,10 +282,10 @@ export function CodeSearchForm({
                   onToggle(((form ? new FormData(form).get("q") : null) as string | null)?.trim() ?? "");
                 }}
                 className={cn(
-                  "grid size-6 cursor-pointer place-items-center rounded border outline-none focus-visible:ring-1 focus-visible:ring-(--color-ring)",
+                  "grid size-6 cursor-pointer place-items-center rounded border outline-none",
                   pressed
-                    ? "border-(--color-primary) bg-(--color-primary)/15 text-(--color-primary)"
-                    : "border-transparent text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)",
+                    ? `border-(--color-primary) bg-(--color-primary)/15 text-(--color-primary) ${FILLED_FOCUS}`
+                    : "border-transparent text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground) focus-visible:ring-1 focus-visible:ring-(--color-ring)",
                 )}
               >
                 <Icon className="size-4" aria-hidden />
