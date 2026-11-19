@@ -28,7 +28,7 @@ function toggleI18nDebug() {
 // takes more of it than a shorter one. Labels that do not fit the row together
 // wrap onto a second one. The theme in use is bold, so it does not rely on its
 // fill alone.
-const THEME_ITEM = "min-w-0 flex-auto gap-1.5 data-[state=on]:font-semibold";
+const THEME_ITEM = "min-w-0 flex-auto gap-1.5 data-[state=on]:font-semibold glass-ui:gap-1 glass-ui:px-1.5";
 
 export function SettingsMenu() {
   const { t } = useTranslation();
@@ -79,15 +79,25 @@ export function SettingsMenu() {
             // that is too long for its share of the row is cut short, and the others keep their room.
             className="glass-control glass-tabs flex-wrap glass-ui:grid glass-ui:!w-full glass-ui:grid-cols-[repeat(3,minmax(0,auto))] glass-ui:justify-stretch"
           >
-            <ToggleGroupItem value="light" aria-label={t("theme_light")} className={THEME_ITEM}>
+            <ToggleGroupItem
+              value="light"
+              aria-label={t("theme_light")}
+              title={t("theme_light")}
+              className={THEME_ITEM}
+            >
               <Sun className="size-4 shrink-0" aria-hidden />
               <span className="truncate">{t("theme_light")}</span>
             </ToggleGroupItem>
-            <ToggleGroupItem value="dark" aria-label={t("theme_dark")} className={THEME_ITEM}>
+            <ToggleGroupItem value="dark" aria-label={t("theme_dark")} title={t("theme_dark")} className={THEME_ITEM}>
               <Moon className="size-4 shrink-0" aria-hidden />
               <span className="truncate">{t("theme_dark")}</span>
             </ToggleGroupItem>
-            <ToggleGroupItem value="system" aria-label={t("theme_system")} className={THEME_ITEM}>
+            <ToggleGroupItem
+              value="system"
+              aria-label={t("theme_system")}
+              title={t("theme_system")}
+              className={THEME_ITEM}
+            >
               <Monitor className="size-4 shrink-0" aria-hidden />
               <span className="truncate">{t("theme_system")}</span>
             </ToggleGroupItem>

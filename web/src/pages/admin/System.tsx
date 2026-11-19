@@ -22,7 +22,7 @@ import {
   runAdminOperation,
   sendAdminTestMail,
 } from "@/lib/queries/admin";
-import { formErrors } from "@/lib/queries/request";
+import { FormError, formErrors } from "@/lib/queries/request";
 import { formatAbsoluteTime } from "@/lib/relative-time";
 
 export function ReportValue({ row }: { row: AdminReportRow }) {
@@ -79,6 +79,10 @@ function TestMailForm() {
   const send = useMutation({
     mutationFn: () => sendAdminTestMail(email),
     onSuccess: (message) => toast.success(message),
+    onError: (err) => {
+      if (!(err instanceof FormError) || !("email" in err.fields)) return;
+      requestAnimationFrame(() => document.getElementById("testMailEmail")?.focus());
+    },
   });
   const { fields, formError } = formErrors(send.error);
 
@@ -112,7 +116,9 @@ function TestMailForm() {
           </div>
           {/* Lines the button up with the input below the label. */}
           <Button type="submit" className="sm:mt-[1.625rem]">
-            {t("admin.config.email.send_test_mail")}
+            {send.isPending
+              ? t("admin.config.email.send_test_mail_submitting")
+              : t("admin.config.email.send_test_mail")}
           </Button>
         </div>
       </fieldset>

@@ -39,7 +39,7 @@ export function ServerErrorTerminal({ error, version }: { error: unknown; versio
   return (
     <div className="w-full max-w-2xl">
       <div className="glass rounded-lg border border-(--color-foreground)/80 bg-(--color-surface)/40 font-mono shadow-xs dark:border-(--color-border)">
-        <div className="flex items-center gap-1.5 border-b border-(--color-foreground)/80 px-3 py-2 sm:px-4 sm:py-2.5 dark:border-(--color-border)">
+        <div className="flex items-center gap-1.5 border-b border-(--color-foreground)/80 px-3 py-2 sm:px-4 sm:py-2.5 dark:border-(--color-border) glass-ui:border-(--color-border)">
           <span className="size-2.5 rounded-full bg-(--color-destructive)/70" />
           <span className="size-2.5 rounded-full bg-[oklch(0.795_0.184_86.047)]/70" />
           <span className="size-2.5 rounded-full bg-(--color-foreground)/20" />

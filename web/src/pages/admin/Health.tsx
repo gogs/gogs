@@ -180,13 +180,16 @@ export function AdminServerHealth({ health, range }: { health: AdminHealth; rang
   const [pinned, setPinned] = useState<number | null>(null);
   const cursor = pinned ?? hover;
   const end = Date.parse(health.end);
-  const times = health.series.flatMap((s) => [...s.points.slice(0, 1), ...s.points.slice(-1)].map(([time]) => time));
+  // The moments that were measured, oldest first.
+  const times = useMemo(
+    () => [...new Set(health.series.flatMap((s) => s.points.map(([time]) => time)))].sort((a, b) => a - b),
+    [health],
+  );
   // Start at the first measurement, so that a server that started recently
   // spreads its measurements over the charts.
-  const start = Math.max(Date.parse(health.start), Math.min(end, ...times, end - 5 * 60_000));
-  // The cursor moves between the measurements, which are a step apart.
-  const first = times.length > 0 ? Math.min(...times) : start;
-  const last = times.length > 0 ? Math.max(...times) : end;
+  const start = Math.max(Date.parse(health.start), Math.min(times[0] ?? end, end - 5 * 60_000));
+  const first = times[0] ?? start;
+  const last = times.at(-1) ?? end;
   const stepMs = health.stepSeconds * 1000;
   const rangeLabel = t(range === "1h" ? "admin.traces.last_hour" : "admin.health.last_24h");
 
@@ -206,9 +209,15 @@ export function AdminServerHealth({ health, range }: { health: AdminHealth; rang
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     const at = cursor ?? last;
-    const step = e.shiftKey ? stepMs * 10 : stepMs;
-    if (e.key === "ArrowLeft") setPinned(Math.max(first, at - step));
-    else if (e.key === "ArrowRight") setPinned(Math.min(last, at + step));
+    // The cursor steps between the measurements, so it never rests on a moment
+    // without one, e.g., while the server was paused.
+    const move = (by: number) => {
+      const nearest = times.reduce((best, time, i) => (Math.abs(time - at) < Math.abs(times[best] - at) ? i : best), 0);
+      setPinned(times[Math.min(Math.max(0, nearest + by), times.length - 1)] ?? at);
+    };
+    const by = e.shiftKey ? 10 : 1;
+    if (e.key === "ArrowLeft") move(-by);
+    else if (e.key === "ArrowRight") move(by);
     else if (e.key === "Home") setPinned(first);
     else if (e.key === "End") setPinned(last);
     else if (e.key === "Escape") setPinned(null);

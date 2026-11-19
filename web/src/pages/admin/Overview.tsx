@@ -12,7 +12,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { type ChartConfig, ChartContainer } from "@/components/ui/chart";
 import { Skeleton } from "@/components/ui/skeleton";
 import { METRICS, flag, flagText } from "@/lib/admin-health";
-import { webContext } from "@/lib/context";
 import { formatNumber } from "@/lib/format";
 import {
   type AdminDashboard,
@@ -29,13 +28,12 @@ import { formatClockTime } from "@/lib/relative-time";
 import { cn } from "@/lib/utils";
 import { ReportValue } from "@/pages/admin/System";
 import { TraceTrafficChart } from "@/pages/admin/TraceCharts";
+import { formatShare } from "@/pages/admin/TraceFormat";
 import { TracingDisabledNote } from "@/pages/admin/Traces";
 
 const LINK = "text-sm text-(--color-primary) hover:underline";
 
 const HEADLINE_METRICS = METRICS.filter((metric) => ["requests", "p95", "heap"].includes(metric.key));
-
-const PERCENT_FMT = new Intl.NumberFormat(webContext.lang, { style: "percent", maximumFractionDigits: 2 });
 
 // Sparkline draws the shape of a measurement over time, without axes. Flagged
 // ones take the primary color, next to the text that tells why.
@@ -135,7 +133,7 @@ function ErrorsStat({ traces }: { traces: UseQueryResult<AdminTraceOverview> }) 
           overview.enabled ? (
             <>
               <p className={cn(STAT_VALUE, overview.errors > 0 && "text-(--color-destructive)")}>
-                {PERCENT_FMT.format(overview.requests > 0 ? overview.errors / overview.requests : 0)}
+                {formatShare(overview.requests > 0 ? overview.errors / overview.requests : 0)}
               </p>
               <p className="min-h-12 text-sm text-(--color-muted-foreground)">
                 {t("admin.overview.failed_requests", {

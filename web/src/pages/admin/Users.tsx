@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -194,6 +194,8 @@ export function AdminUserEdit({ user, options }: { user: AdminUserDetail; option
   // not a number yet. Left empty, it is the global default.
   const [maxRepos, setMaxRepos] = useState(String(user.maxRepoCreation));
   const maxRepoCreation = maxRepos.trim() === "" ? -1 : Number(maxRepos);
+  const maxReposInput = useRef<HTMLInputElement>(null);
+  const [maxReposError, setMaxReposError] = useState<string | null>(null);
   const save = useMutation({
     // Only local accounts sign in with a password.
     mutationFn: () =>
@@ -212,6 +214,18 @@ export function AdminUserEdit({ user, options }: { user: AdminUserDetail; option
   });
   const { fields, formError } = formErrors(save.error);
   const isLocal = form.loginSource === 0;
+
+  const submit = () => {
+    // The input reports text that is not a number, e.g., "5e", as empty, so
+    // only its validity tells that from a field left empty.
+    const input = maxReposInput.current;
+    if (input && !input.validity.valid) {
+      setMaxReposError(t("admin.users.max_repo_creation_invalid"));
+      input.focus();
+      return;
+    }
+    save.mutate();
+  };
 
   const field = (key: "loginName" | "fullName" | "email" | "password" | "website" | "location") => ({
     id: key,
@@ -246,7 +260,7 @@ export function AdminUserEdit({ user, options }: { user: AdminUserDetail; option
       <AdminFormCard
         pending={save.isPending}
         error={formError}
-        onSubmit={() => save.mutate()}
+        onSubmit={submit}
         actions={
           <>
             <Button type="submit">
@@ -319,17 +333,21 @@ export function AdminUserEdit({ user, options }: { user: AdminUserDetail; option
             id="maxRepoCreation"
             label={t("admin.users.max_repo_creation")}
             helper={t("admin.users.max_repo_creation_desc")}
-            error={fields.maxRepoCreation}
-            invalid={"maxRepoCreation" in fields}
+            error={maxReposError ?? fields.maxRepoCreation}
+            invalid={maxReposError !== null || "maxRepoCreation" in fields}
           >
             <Input
+              ref={maxReposInput}
               id="maxRepoCreation"
               name="maxRepoCreation"
               type="number"
               min={-1}
               className="max-w-40"
               value={maxRepos}
-              onChange={(e) => setMaxRepos(e.target.value)}
+              onChange={(e) => {
+                setMaxRepos(e.target.value);
+                setMaxReposError(null);
+              }}
             />
           </FormField>
         </FieldGrid>

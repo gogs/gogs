@@ -21,7 +21,7 @@ import type {
 import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
 import { cn } from "@/lib/utils";
 import { TraceScatterChart, TraceTrafficChart } from "@/pages/admin/TraceCharts";
-import { KIND_FILLS, formatClockSeconds } from "@/pages/admin/TraceFormat";
+import { KIND_FILLS, formatClockSeconds, formatShare } from "@/pages/admin/TraceFormat";
 import { KeptLabel, KindChip, RouteName } from "@/pages/admin/TraceParts";
 
 const CARD_TITLE = "text-base";
@@ -188,11 +188,9 @@ export function AdminTraceOverview({ overview }: { overview: AdminTraceOverviewD
     return <Disabled />;
   }
   const errorRate = overview.requests > 0 ? overview.errors / overview.requests : 0;
-  const percent = (share: number) =>
-    share > 0 && share < 0.001 ? "<0.1%" : `${(share * 100).toFixed(share > 0 && share < 0.1 ? 1 : 0)}%`;
   const stats: { label: string; value: string; alert?: boolean }[] = [
     { label: t("admin.traces.requests"), value: formatNumber(overview.requests) },
-    { label: t("admin.traces.errors"), value: percent(errorRate), alert: overview.errors > 0 },
+    { label: t("admin.traces.errors"), value: formatShare(errorRate), alert: overview.errors > 0 },
     { label: "p50", value: formatMs(overview.p50Ms) },
     { label: "p95", value: formatMs(overview.p95Ms) },
     { label: "p99", value: formatMs(overview.p99Ms) },
@@ -254,7 +252,7 @@ export function AdminTraceOverview({ overview }: { overview: AdminTraceOverviewD
                 </TableHeader>
                 <TableBody>
                   {overview.routes.slice(0, allRoutes ? undefined : COLLAPSED_ROWS).map((route) => {
-                    const errors = route.errors > 0 ? percent(route.errors / route.requests) : "0";
+                    const errors = route.errors > 0 ? formatShare(route.errors / route.requests) : "0";
                     return (
                       <TableRow key={route.name}>
                         <TableCell>
@@ -338,7 +336,7 @@ export function AdminTraceOverview({ overview }: { overview: AdminTraceOverviewD
                         </TableCell>
                         <TableCell className={cn(NUMBER_CELL, "hidden @lg:table-cell")}>{formatMs(op.p95Ms)}</TableCell>
                         <TableCell className={cn(NUMBER_CELL, "min-w-16")}>
-                          {percent(share)}
+                          {formatShare(share)}
                           <ShareBar share={share} className={KIND_FILLS[op.kind]} />
                         </TableCell>
                       </TableRow>

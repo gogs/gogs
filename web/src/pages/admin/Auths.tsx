@@ -90,6 +90,47 @@ const NEW_SOURCE: AdminAuthSourceForm = {
   skipVerify: false,
 };
 
+const LDAP_FIELDS = [
+  "securityProtocol",
+  "host",
+  "port",
+  "filter",
+  "adminFilter",
+  "attributeUsername",
+  "attributeName",
+  "attributeSurname",
+  "attributeMail",
+  "groupEnabled",
+  "groupDN",
+  "groupFilter",
+  "groupMemberUID",
+  "userUID",
+] as const;
+
+// TYPE_FIELDS lists the fields of each type of source, besides those every
+// type has.
+const TYPE_FIELDS: Partial<Record<number, readonly (keyof AdminAuthSourceForm)[]>> = {
+  [LDAP]: [...LDAP_FIELDS, "bindDN", "bindPassword", "userBase", "attributesInBind"],
+  [DLDAP]: [...LDAP_FIELDS, "userDN"],
+  [SMTP]: ["smtpAuth", "smtpHost", "smtpPort", "allowedDomains", "tls"],
+  [PAM]: ["pamServiceName"],
+};
+
+function usesTLS(form: AdminAuthSourceForm) {
+  const isLDAP = form.type === LDAP || form.type === DLDAP;
+  return form.type === SMTP || (isLDAP && form.securityProtocol > 0);
+}
+
+// fieldsOfType resets the fields that the form does not show for the type of
+// the source, so that values typed for another type are not saved with it.
+// The form keeps them, in case the type is switched back.
+function fieldsOfType(form: AdminAuthSourceForm): AdminAuthSourceForm {
+  const { type, name, isActive, isDefault } = form;
+  const ofType = Object.fromEntries((TYPE_FIELDS[type] ?? []).map((key) => [key, form[key]]));
+  const skipVerify = usesTLS(form) && form.skipVerify;
+  return { ...NEW_SOURCE, ...(ofType as Partial<AdminAuthSourceForm>), type, name, isActive, isDefault, skipVerify };
+}
+
 type TextKey = {
   [K in keyof AdminAuthSourceForm]: AdminAuthSourceForm[K] extends string ? K : never;
 }[keyof AdminAuthSourceForm];
@@ -109,8 +150,8 @@ function AuthSourceForm({ source }: { source?: AdminAuthSourceDetail }) {
   });
   const save = useMutation({
     mutationFn: async () => {
-      if (!source) return createAdminAuthSource(form);
-      await updateAdminAuthSource(source.id, form);
+      if (!source) return createAdminAuthSource(fieldsOfType(form));
+      await updateAdminAuthSource(source.id, fieldsOfType(form));
       return undefined;
     },
     onSuccess: async (created) => {
@@ -132,19 +173,6 @@ function AuthSourceForm({ source }: { source?: AdminAuthSourceDetail }) {
   const { fields, formError } = formErrors(save.error);
 
   const isLDAP = form.type === LDAP || form.type === DLDAP;
-  const usesTLS = form.type === SMTP || (isLDAP && form.securityProtocol > 0);
-
-  // Another type starts its fields over, so that values of fields the form no
-  // longer shows are not saved with the source. The two kinds of LDAP differ
-  // only in how they bind.
-  const changeType = (type: number) => {
-    const { name, isActive, isDefault } = form;
-    setForm(
-      isLDAP && (type === LDAP || type === DLDAP)
-        ? { ...form, type, bindDN: "", bindPassword: "", userBase: "", userDN: "", attributesInBind: false }
-        : { ...NEW_SOURCE, type, name, isActive, isDefault },
-    );
-  };
 
   const textField = (key: TextKey, label: string, opts: { helper?: string; placeholder?: string } = {}) => (
     <FormField id={key} label={label} helper={opts.helper} error={fields[key]} invalid={key in fields}>
@@ -219,7 +247,7 @@ function AuthSourceForm({ source }: { source?: AdminAuthSourceDetail }) {
           </div>
         ) : (
           <FormField id="type" label={t("admin.auths.auth_type")} error={fields.type} invalid={"type" in fields}>
-            <Select value={String(form.type)} onValueChange={(v) => changeType(Number(v))}>
+            <Select value={String(form.type)} onValueChange={(v) => setForm({ ...form, type: Number(v) })}>
               <SelectTrigger id="type">
                 <SelectValue />
               </SelectTrigger>
@@ -245,10 +273,7 @@ function AuthSourceForm({ source }: { source?: AdminAuthSourceDetail }) {
             >
               <Select
                 value={String(form.securityProtocol)}
-                // An unencrypted connection has no certificate to skip the check of.
-                onValueChange={(v) =>
-                  setForm({ ...form, securityProtocol: Number(v), skipVerify: Number(v) > 0 && form.skipVerify })
-                }
+                onValueChange={(v) => setForm({ ...form, securityProtocol: Number(v) })}
               >
                 <SelectTrigger id="securityProtocol">
                   <SelectValue />
@@ -360,7 +385,7 @@ function AuthSourceForm({ source }: { source?: AdminAuthSourceDetail }) {
           <CheckboxField label={t("admin.auths.attributes_in_bind")} {...flag("attributesInBind")} />
         ) : null}
         {form.type === SMTP ? <CheckboxField label={t("admin.auths.enable_tls")} {...flag("tls")} /> : null}
-        {usesTLS ? <CheckboxField label={t("admin.auths.skip_tls_verify")} {...flag("skipVerify")} /> : null}
+        {usesTLS(form) ? <CheckboxField label={t("admin.auths.skip_tls_verify")} {...flag("skipVerify")} /> : null}
         <CheckboxField label={t("admin.auths.activated")} {...flag("isActive")} />
         <CheckboxField label={t("admin.auths.default_auth")} {...flag("isDefault")} />
       </div>

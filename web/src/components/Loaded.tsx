@@ -89,7 +89,7 @@ function LoadError({
         variant="outline"
         size="sm"
         aria-disabled={retrying || undefined}
-        className={retrying ? "opacity-60" : undefined}
+        className={retrying ? "pointer-events-none opacity-60" : undefined}
         onClick={retrying ? undefined : onRetry}
       >
         {retrying ? (

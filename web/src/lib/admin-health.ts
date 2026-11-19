@@ -30,7 +30,7 @@ export const METRICS: Metric[] = [
     floor: 5,
     format: (v) => `${v.toFixed(1)} /s`,
   },
-  { key: "p95", section: "traffic", label: "admin.health.p95", floor: 50, format: formatMs },
+  { key: "p95", section: "traffic", label: "admin.health.p95", floor: 250, format: formatMs },
   { key: "heap", section: "runtime", label: "admin.health.heap", floor: 64 * (1 << 20), format: formatBytes },
   { key: "goroutines", section: "runtime", label: "admin.health.goroutines", floor: 100, format: formatCount },
   { key: "gcPause", section: "runtime", label: "admin.health.gc_pause", floor: 1, format: formatMs },
@@ -73,8 +73,10 @@ function median(values: number[]) {
 }
 
 // flag tells when a metric left its usual range, which is the first half of
-// the range: its recent level stands out, or it spiked. A spike is reported at
-// its start. Values below the floor of the metric are never flagged.
+// the range: its recent level stands out, or it spiked. A spike lasts at least
+// two samples, since one sample of a quiet server can be a single slow
+// request, and is reported at its start. Values below the floor of the metric
+// are never flagged.
 export function flag(
   points: [number, number][],
   { followsTraffic, floor }: Pick<Metric, "followsTraffic" | "floor">,
@@ -86,10 +88,12 @@ export function flag(
   const spread = Math.max(median(first.map((v) => Math.abs(v - base))), 0.5);
   const tail = values.slice(-Math.max(4, Math.round(values.length / 15)));
   const tailMean = tail.reduce((a, b) => a + b, 0) / tail.length;
-  const peak = Math.max(...values);
+  // The level each sample holds together with the next one.
+  const held = values.map((v, i) => Math.min(v, values[i + 1] ?? 0));
+  const peak = Math.max(...held);
   if (!followsTraffic && base > 0 && tailMean >= floor && tailMean / base >= 1.5) return { up: tailMean / base };
   if (peak >= floor && peak > base + 6 * spread && peak >= 3 * base) {
-    const start = values.findIndex((v) => v > base + (peak - base) / 2);
+    const start = held.findIndex((v) => v > base + (peak - base) / 2);
     return { spikeAt: points[start][0] };
   }
   return null;
