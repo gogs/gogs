@@ -75,7 +75,7 @@ func TestGFMSpec(t *testing.T) {
 	for _, ex := range examples {
 		t.Run(strconv.Itoa(ex.Example), func(t *testing.T) {
 			if ex.Extension == "tagfilter" {
-				t.Skip("HTML is sanitized with bluemonday instead of filtering tags")
+				t.Skip("HTML is sanitized by Gogs's sanitizer instead of filtering tags")
 			}
 			got := string(HTML([]byte(ex.Markdown), opts))
 			got = taskAttrs.ReplaceAllString(got, "")

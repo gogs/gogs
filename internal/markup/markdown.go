@@ -4,12 +4,9 @@ import (
 	"bytes"
 	"fmt"
 	"hash/fnv"
-	"html"
 	"net/url"
 	"path/filepath"
 	"strings"
-
-	"github.com/microcosm-cc/bluemonday"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/lazyregexp"
@@ -344,24 +341,21 @@ func MarkdownFile(input any, urlPrefix string, metas map[string]string) []byte {
 }
 
 // markdownSanitizer describes the sanitizer policy to Dariomark. Its patterns
-// must be the ones that NewSanitizer and bluemonday.UGCPolicy use for the same
-// attributes.
+// must be the ones that newPolicy uses for the same attributes.
 var markdownSanitizer = &dariomark.Sanitizer{
 	AllowURLScheme: allowURLScheme,
-	Text:           bluemonday.Paragraph,
+	Text:           paragraphPattern.Regexp(),
 	CodeClass:      codeClassPattern.Regexp(),
 }
 
 // allowURLScheme reports whether the sanitizer policy allows u, which has a
-// scheme. Schemes with their own policy are checked by sanitizing a link to u,
-// the others by looking them up, so that unknown schemes are never stored.
+// scheme. Data URIs are checked by validating u, the others by looking their
+// schemes up, so that unknown schemes are never stored.
 func allowURLScheme(u *url.URL) bool {
-	if _, ok := urlSchemePolicies[u.Scheme]; ok {
-		return policyAllowsHref(u.String())
+	p := sanitizer.policy.Load()
+	if u.Scheme == "data" {
+		_, ok := p.validURL(u.String())
+		return ok
 	}
-	return sanitizer.schemes[u.Scheme]
-}
-
-func policyAllowsHref(href string) bool {
-	return strings.Contains(sanitizer.policy.Sanitize(`<a href="`+html.EscapeString(href)+`">`), "href=")
+	return p.schemes[u.Scheme]
 }

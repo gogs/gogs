@@ -12,10 +12,10 @@ import (
 )
 
 // Sanitizer describes the parts of the sanitizer policy that depend on the
-// rendered content. Render emulates the rest of the policy, which is the
-// bluemonday UGC policy with classes for code languages, alerts, footnotes and
-// task lists, and attributes for task list items and checkboxes, footnote
-// roles and ordered list start numbers.
+// rendered content. Render emulates the rest of the policy, which is the policy
+// of internal/markup/sanitizer.go: the UGC policy with classes for code
+// languages, alerts, footnotes and task lists, and attributes for task list
+// items and checkboxes, footnote roles and ordered list start numbers.
 type Sanitizer struct {
 	// AllowURLScheme reports whether the policy allows the URL, which has a
 	// scheme.
@@ -44,7 +44,8 @@ type sanitizeSink struct {
 	code  int
 	emoji emojiText
 	// dropped are the names of the dropped start tags whose end tags the
-	// sanitizer skips, see bluemonday's closingTagToSkipStack.
+	// sanitizer skips, see sanitizeState.stack in
+	// internal/markup/sanitizer.go.
 	dropped []string
 	failed  bool
 	attrs   []html.Attribute
@@ -294,7 +295,7 @@ func (s *sanitizeSink) tokens(b []byte, f func(t *html.Token)) {
 }
 
 // emitStart writes a start tag as the sanitizer does. Its attribute checks
-// must be kept in sync with NewSanitizer in internal/markup/sanitizer.go.
+// must be kept in sync with newPolicy in internal/markup/sanitizer.go.
 func (s *sanitizeSink) emitStart(name string, attrs []html.Attribute) {
 	if !sanitizedElement(name) {
 		s.failed = true
@@ -424,9 +425,8 @@ func (s *sanitizeSink) validURL(raw string) (string, bool) {
 
 // The patterns and tables below, with the attribute checks in emitStart, copy
 // the sanitizer policy for the HTML that Render produces. They must be
-// kept in sync with NewSanitizer in internal/markup/sanitizer.go, and with the
-// bluemonday UGC policy when upgrading bluemonday, which supplies id, align,
-// title, alt and data URIs.
+// kept in sync with newPolicy in internal/markup/sanitizer.go, which also
+// supplies the rules for id, align, title, alt and data URIs.
 var (
 	dataURIBase64Prefix = lazyregexp.New(`^data:[^,]*;base64,`)
 )

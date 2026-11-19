@@ -440,7 +440,7 @@ func TestMarkdown_Fractions(t *testing.T) {
 	t.Run("any fraction with FRACTIONS", func(t *testing.T) {
 		conf.Smartypants.Fractions = true
 		assert.Equal(t, "<p><sup>2</sup>⁄<sub>3</sub>, <sup>12</sup>⁄<sub>345</sub>, 1/4th, 1/2/2020, 01/2</p>\n", string(Markdown("2/3, 12/345, 1/4th, 1/2/2020, 01/2", "/user/repo", nil)))
-		// Documents with raw HTML are sanitized by bluemonday instead.
+		// Documents with raw HTML are sanitized by SanitizeBytes instead.
 		assert.Equal(t, "<p><b>x</b> <sup>2</sup>⁄<sub>3</sub></p>\n", string(Markdown("<b>x</b> 2/3", "/user/repo", nil)))
 	})
 }
@@ -456,7 +456,7 @@ func TestMarkdown_HeadingIDs(t *testing.T) {
 <h2>!!!</h2>
 `
 	assert.Equal(t, want, string(Markdown(input, "/user/repo", nil)))
-	// Documents with raw HTML are sanitized by bluemonday instead.
+	// Documents with raw HTML are sanitized by SanitizeBytes instead.
 	assert.Equal(t, want+"<p><b>x</b></p>\n", string(Markdown(input+"\n<b>x</b>\n", "/user/repo", nil)))
 
 	got := dariomark.Render([]byte(input), markdownOptions("", true)).Headings
@@ -490,7 +490,7 @@ details
 	res := renderMarkdown([]byte(input), "/user/repo", nil, true, false)
 	assert.True(t, res.Sanitized, "takes the fast path")
 	assert.Equal(t, want, string(Markdown(input, "/user/repo", nil)))
-	// Documents with raw HTML are sanitized by bluemonday instead.
+	// Documents with raw HTML are sanitized by SanitizeBytes instead.
 	assert.Equal(t, want+"<p><b>x</b></p>\n", string(Markdown(input+"\n<b>x</b>\n", "/user/repo", nil)))
 }
 
@@ -547,8 +547,8 @@ func TestMarkdown_CodeInListItems(t *testing.T) {
 }
 
 // FuzzMarkdown checks that documents sanitized while rendering come out as
-// rendering them without sanitizing and then sanitizing them with bluemonday
-// would, and that bluemonday leaves them unchanged.
+// rendering them without sanitizing and then sanitizing them with
+// SanitizeBytes would, and that SanitizeBytes leaves them unchanged.
 func FuzzMarkdown(f *testing.F) {
 	conf.Server.ExternalURL = "http://localhost:3000/"
 	NewSanitizer()
@@ -590,10 +590,10 @@ func FuzzMarkdown(f *testing.F) {
 		}
 		want := SanitizeBytes(dariomark.Render(body, opts).HTML)
 		if string(got) != string(want) {
-			t.Fatalf("sanitizing while rendering differs from bluemonday for %q\ngot  %q\nwant %q", s, got, want)
+			t.Fatalf("sanitizing while rendering differs from SanitizeBytes for %q\ngot  %q\nwant %q", s, got, want)
 		}
 		if again := SanitizeBytes(got); string(again) != string(got) {
-			t.Fatalf("bluemonday changes the output for %q\ngot   %q\nagain %q", s, got, again)
+			t.Fatalf("SanitizeBytes changes the output for %q\ngot   %q\nagain %q", s, got, again)
 		}
 	})
 }
