@@ -17,6 +17,33 @@ const CLOCK_SECONDS_FMT = new Intl.DateTimeFormat(webContext.lang, {
   hour12: false,
 });
 
+const DAY_TIME_FMT = new Intl.DateTimeFormat(webContext.lang, {
+  month: "short",
+  day: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
+const DAY_FMT = new Intl.DateTimeFormat(webContext.lang, { dateStyle: "medium" });
+
+// formatDayTime formats Unix milliseconds as the day and the time of day, e.g.,
+// "Nov 18, 14:35", which tells the hours of several days apart.
+export function formatDayTime(time: number) {
+  return DAY_TIME_FMT.format(new Date(time));
+}
+
+// formatDay formats Unix milliseconds as the day, e.g., "Nov 18, 2026".
+export function formatDay(time: number) {
+  return DAY_FMT.format(new Date(time));
+}
+
+// formatShare writes a share of a whole as a percentage, e.g., "4.2%", and
+// tells a share too small to show apart from none.
+export function formatShare(share: number) {
+  return share > 0 && share < 0.001 ? "<0.1%" : `${(share * 100).toFixed(share > 0 && share < 0.1 ? 1 : 0)}%`;
+}
+
 // formatClockSeconds formats an ISO time or Unix milliseconds as the time of
 // day to the second, e.g., "14:35:07", which tells traces of one minute apart.
 export function formatClockSeconds(time: string | number) {

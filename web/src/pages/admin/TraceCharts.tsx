@@ -30,9 +30,9 @@ import type { TraceSearch } from "@/lib/page-search";
 import type { AdminTraceOverview, AdminTraceSearch } from "@/lib/queries/admin";
 import { formatClockTime } from "@/lib/relative-time";
 import { cn } from "@/lib/utils";
-import { formatClockSeconds } from "@/pages/admin/TraceFormat";
+import { formatClockSeconds, formatDay, formatDayTime } from "@/pages/admin/TraceFormat";
 
-const COMPACT_FMT = new Intl.NumberFormat(webContext.lang, { notation: "compact", maximumFractionDigits: 1 });
+const COMPACT_FMT = new Intl.NumberFormat(webContext.lang, { notation: "compact", maximumFractionDigits: 2 });
 
 const BUCKET_MS = 5 * 60_000;
 
@@ -213,12 +213,18 @@ const TICK_STEPS = [10, 15, 30, 60, 120, 300, 600, 900, 1800];
 
 function timeTicks(start: number, end: number) {
   // A window longer than the steps cover, e.g., from a link with an old start,
-  // steps by as many whole hours as keep the ticks few.
-  const hours = Math.ceil((end - start) / (6 * 3_600_000));
+  // steps by as many whole hours as keep the ticks few, and by whole days once
+  // that is a day or more, so that every tick is another day.
+  const fewHours = Math.ceil((end - start) / (6 * 3_600_000));
+  const hours = fewHours < 24 ? fewHours : Math.ceil(fewHours / 24) * 24;
   const step = (TICK_STEPS.find((s) => (end - start) / (s * 1000) <= 6) ?? hours * 3600) * 1000;
   const ticks: number[] = [];
   for (let tick = Math.ceil(start / step) * step; tick <= end; tick += step) ticks.push(tick);
-  return { ticks, format: step < 60_000 ? formatClockSeconds : formatClockTime };
+  // The time of day tells the ticks of a day apart, and not those of a longer window.
+  const day = 24 * 3_600_000;
+  const format =
+    step < 60_000 ? formatClockSeconds : end - start <= day ? formatClockTime : step < day ? formatDayTime : formatDay;
+  return { ticks, format };
 }
 
 // ActiveTrace reports the trace under the tooltip, which the arrow keys move
@@ -237,9 +243,11 @@ export function TraceScatterChart({ result, search }: { result: AdminTraceSearch
   const active = useRef<string | null>(null);
   const now = Date.parse(result.now);
   // Start at the oldest kept trace, so that a server that started recently
-  // spreads its traces over the plot, or at the window of the search.
+  // spreads its traces over the plot, or at the window of the search. A long
+  // request is kept from its end, so it may have started before the time
+  // traces are kept for.
   const oldest = result.oldest ? Date.parse(result.oldest) : now;
-  const start = search.from ?? Math.max(now - result.maxAgeMinutes * 60_000, Math.min(oldest, now - 5 * 60_000));
+  const start = search.from ?? Math.min(oldest, now - 5 * 60_000);
   const end = Math.max(Math.min(search.to ?? now, now), start + 60_000);
   const slow = result.slowThresholdMs;
 

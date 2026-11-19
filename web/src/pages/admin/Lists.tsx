@@ -470,7 +470,7 @@ export function AdminRepos({ list, search }: { list: AdminList<AdminRepo>; searc
               <ConfirmButton
                 label={t("admin.repos.delete")}
                 ariaLabel={`${t("admin.repos.delete")} ${repo.owner}/${repo.name}`}
-                title={t("repo.settings.delete")}
+                title={t("admin.repos.delete_title", { repo: `${repo.owner}/${repo.name}` })}
                 description={description}
                 size="sm"
                 action={() => deleteAdminRepo(repo.id)}
@@ -533,7 +533,9 @@ export function AdminNotices({ list }: { list: AdminList<AdminNotice> }) {
   };
   const deleteSelected = useMutation({
     mutationFn: () => deleteAdminNotices([...selected]),
-    onSuccess: () => onDeleted(selected.size === list.items.length ? list.page - 1 : list.page),
+    // The notices after an emptied page move up into it, unless it was the last one.
+    onSuccess: () =>
+      onDeleted(selected.size === list.items.length && list.page >= list.totalPages ? list.page - 1 : list.page),
     onError: (err) => toast.error(err.message),
   });
 

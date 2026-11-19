@@ -286,7 +286,7 @@ export function AdminLayout() {
             <nav aria-label={t("admin.breadcrumb")} className="min-w-0">
               <ol className="flex min-w-0 items-center gap-1.5 text-sm">
                 <Crumb className="hidden xl:flex">
-                  <Link to="/admin" className={CRUMB_LINK}>
+                  <Link to="/admin" activeOptions={{ exact: true }} className={CRUMB_LINK}>
                     {t("admin_panel")}
                   </Link>
                 </Crumb>
@@ -297,19 +297,20 @@ export function AdminLayout() {
                 ) : null}
                 {below || (problem !== null && item.path !== "") ? (
                   <Crumb className="hidden sm:flex">
-                    <Link to={`/admin${item.path}`} className={CRUMB_LINK}>
+                    <Link to={`/admin${item.path}`} activeOptions={{ exact: true }} className={CRUMB_LINK}>
                       {current}
                     </Link>
                   </Crumb>
                 ) : null}
+                {/* The keys keep React from reusing the element a page wrote its name into. */}
                 {problem !== null ? (
-                  <li aria-current="page" className="truncate font-medium">
+                  <li key="problem" aria-current="page" className="truncate font-medium">
                     {problem}
                   </li>
                 ) : below ? (
-                  <li ref={setCrumbSlot} aria-current="page" className="truncate font-medium" />
+                  <li key="slot" ref={setCrumbSlot} aria-current="page" className="truncate font-medium" />
                 ) : (
-                  <li aria-current="page" className="truncate font-medium">
+                  <li key="current" aria-current="page" className="truncate font-medium">
                     {current}
                   </li>
                 )}
@@ -336,10 +337,11 @@ export function AdminLayout() {
 const CRUMB_LINK = "min-w-0 truncate leading-6 hover:text-(--color-foreground)";
 
 // Crumb is a page above the current one. Where the bar is narrow it gives up
-// its room before the current page does, which the large shrink factor says.
+// its room before the current page does, which the large shrink factor says,
+// down to a width that leaves its link 24px wide.
 function Crumb({ className, children }: { className?: string; children: ReactNode }) {
   return (
-    <li className={cn("min-w-8 shrink-10000 items-center gap-1.5 text-(--color-muted-foreground)", className)}>
+    <li className={cn("min-w-11 shrink-10000 items-center gap-1.5 text-(--color-muted-foreground)", className)}>
       {children}
       <ChevronRight className="size-3.5 shrink-0" aria-hidden />
     </li>
