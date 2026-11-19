@@ -3,6 +3,7 @@ import { AlertCircle, ArrowLeft, ChevronDown, ChevronRight, Search as SearchIcon
 import { type FormEvent, type ReactNode, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 
+import { SegmentedLinks } from "@/components/AdminPage";
 import { InlineCode } from "@/components/InlineCode";
 import { PageTabs } from "@/components/PageTabs";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,6 @@ import type {
 } from "@/lib/queries/admin";
 import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
 import { cn } from "@/lib/utils";
-import { RangeLinks } from "@/pages/admin/Health";
 
 const KIND_CHIPS: Record<AdminSpanKind, string> = { request: "http", git: "git", db: "db", other: "go" };
 
@@ -351,7 +351,7 @@ export function AdminTraceOverview({ overview }: { overview: AdminTraceOverviewD
 
   return (
     <TracesLayout view="overview" maxAgeMinutes={overview.maxAgeMinutes}>
-      <RangeLinks
+      <SegmentedLinks
         label={t("admin.traces.range")}
         active={overview.range}
         to="/admin/traces"
@@ -702,7 +702,7 @@ export function AdminTraceSearch({ result, search }: { result: AdminTraceSearchD
               </Link>
             </span>
           ) : null}
-          <RangeLinks
+          <SegmentedLinks
             label={t("admin.traces.status")}
             active={search.status ?? "all"}
             to="/admin/traces"

@@ -70,6 +70,38 @@ export function Segmented({ label, className, children }: { label: string; class
 export const SEGMENTED_ITEM =
   "inline-flex h-8 items-center rounded-md border border-transparent px-3 text-sm font-medium whitespace-nowrap text-(--color-muted-foreground) outline-none hover:text-(--color-foreground) focus-visible:ring-1 focus-visible:ring-(--color-ring) aria-[current=page]:border-(--color-border) aria-[current=page]:bg-(--color-background) aria-[current=page]:text-(--color-foreground) aria-[current=page]:shadow-xs";
 
+// SegmentedLinks switches a page between views through its search params, so
+// that the loader fetches the view, e.g., the last hour or the last day.
+export function SegmentedLinks<V extends string>({
+  label,
+  active,
+  options,
+  to,
+  className,
+}: {
+  label: string;
+  active: V;
+  options: { value: V; label: string; search: Record<string, unknown> }[];
+  to: string;
+  className?: string;
+}) {
+  return (
+    <Segmented label={label} className={className}>
+      {options.map((option) => (
+        <Link
+          key={option.value}
+          to={to}
+          search={option.search}
+          aria-current={option.value === active ? "page" : undefined}
+          className={SEGMENTED_ITEM}
+        >
+          {option.label}
+        </Link>
+      ))}
+    </Segmented>
+  );
+}
+
 // StatCard heads a number with what it measures. The chip says what stands
 // out about it, and the footer holds, e.g., the link to the page that tells
 // more.
