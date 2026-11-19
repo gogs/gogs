@@ -32,7 +32,7 @@ import { formatClockTime } from "@/lib/relative-time";
 import { cn } from "@/lib/utils";
 import { formatClockSeconds } from "@/pages/admin/TraceFormat";
 
-const COMPACT_FMT = new Intl.NumberFormat(webContext.lang, { notation: "compact" });
+const COMPACT_FMT = new Intl.NumberFormat(webContext.lang, { notation: "compact", maximumFractionDigits: 1 });
 
 const BUCKET_MS = 5 * 60_000;
 
@@ -212,7 +212,10 @@ function ErrorIcon() {
 const TICK_STEPS = [10, 15, 30, 60, 120, 300, 600, 900, 1800];
 
 function timeTicks(start: number, end: number) {
-  const step = (TICK_STEPS.find((s) => (end - start) / (s * 1000) <= 6) ?? 3600) * 1000;
+  // A window longer than the steps cover, e.g., from a link with an old start,
+  // steps by as many whole hours as keep the ticks few.
+  const hours = Math.ceil((end - start) / (6 * 3_600_000));
+  const step = (TICK_STEPS.find((s) => (end - start) / (s * 1000) <= 6) ?? hours * 3600) * 1000;
   const ticks: number[] = [];
   for (let tick = Math.ceil(start / step) * step; tick <= end; tick += step) ticks.push(tick);
   return { ticks, format: step < 60_000 ? formatClockSeconds : formatClockTime };

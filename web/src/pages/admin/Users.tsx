@@ -108,7 +108,11 @@ export function AdminUserNew({ options }: { options: AdminUserOptions }) {
         pending={create.isPending}
         error={formError}
         onSubmit={() => create.mutate()}
-        actions={<Button type="submit">{t("admin.users.new_account")}</Button>}
+        actions={
+          <Button type="submit">
+            {create.isPending ? t("admin.users.new_account_submitting") : t("admin.users.new_account")}
+          </Button>
+        }
       >
         <FieldGrid>
           <LoginSourceSelect
@@ -186,12 +190,22 @@ export function AdminUserEdit({ user, options }: { user: AdminUserDetail; option
     allowImportLocal: user.allowImportLocal,
     prohibitLogin: user.prohibitLogin,
   });
+  // The limit is kept as typed, since a number in the making, e.g., "-", is
+  // not a number yet. Left empty, it is the global default.
+  const [maxRepos, setMaxRepos] = useState(String(user.maxRepoCreation));
+  const maxRepoCreation = maxRepos.trim() === "" ? -1 : Number(maxRepos);
   const save = useMutation({
     // Only local accounts sign in with a password.
-    mutationFn: () => updateAdminUser(user.id, form.loginSource === 0 ? form : { ...form, password: "" }),
+    mutationFn: () =>
+      updateAdminUser(user.id, {
+        ...form,
+        maxRepoCreation,
+        password: form.loginSource === 0 ? form.password : "",
+      }),
     onSuccess: async () => {
       toast.success(t("admin.users.update_profile_success"));
       setForm({ ...form, password: "" });
+      setMaxRepos(String(maxRepoCreation));
       await router.invalidate();
     },
     onError: (err) => focusFirstError(err, EDIT_FIELDS),
@@ -235,7 +249,9 @@ export function AdminUserEdit({ user, options }: { user: AdminUserDetail; option
         onSubmit={() => save.mutate()}
         actions={
           <>
-            <Button type="submit">{t("admin.users.update_profile")}</Button>
+            <Button type="submit">
+              {save.isPending ? t("admin.users.update_profile_submitting") : t("admin.users.update_profile")}
+            </Button>
             <ConfirmButton
               label={t("admin.users.delete_account")}
               title={t("settings.delete_account_title")}
@@ -312,8 +328,8 @@ export function AdminUserEdit({ user, options }: { user: AdminUserDetail; option
               type="number"
               min={-1}
               className="max-w-40"
-              value={form.maxRepoCreation}
-              onChange={(e) => setForm({ ...form, maxRepoCreation: Number(e.target.value) })}
+              value={maxRepos}
+              onChange={(e) => setMaxRepos(e.target.value)}
             />
           </FormField>
         </FieldGrid>

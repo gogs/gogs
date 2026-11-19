@@ -1,3 +1,4 @@
+import type { QueryClient } from "@tanstack/react-query";
 import { type AnyRoute, createRoute, notFound, redirect } from "@tanstack/react-router";
 import type { JSX } from "react";
 
@@ -14,6 +15,7 @@ import {
   validateTraceSearch,
 } from "@/lib/page-search";
 import {
+  adminNoticesQuery,
   fetchAdminAuthSource,
   fetchAdminAuthSources,
   fetchAdminConfig,
@@ -34,9 +36,14 @@ import { AdminAuthSourceEdit, AdminAuthSourceNew } from "@/pages/admin/Auths";
 import { AdminServerHealth } from "@/pages/admin/Health";
 import { AdminAuthSources, AdminNotices, AdminOrgs, AdminRepos, AdminUsers } from "@/pages/admin/Lists";
 import { AdminOverview } from "@/pages/admin/Overview";
+import { AdminError, AdminNotFound } from "@/pages/admin/Problem";
 import { AdminConfig, AdminJobs, AdminOperations } from "@/pages/admin/System";
 import { AdminTraceOverview, AdminTraceSearch, AdminTraceView } from "@/pages/admin/Traces";
 import { AdminUserEdit, AdminUserNew } from "@/pages/admin/Users";
+
+// A page of the console that is not found or fails to load says so in place of
+// the page, so the navigation of the console stays.
+const PAGE = { notFoundComponent: AdminNotFound, errorComponent: AdminError };
 
 export function createAdminRoutes(rootRoute: AnyRoute) {
   // The pages share the console shell, which stays in place while one of them
@@ -56,18 +63,21 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
 
   const dashboardRoute = createRoute({
     getParentRoute: () => adminRoute,
+    ...PAGE,
     path: "/",
     component: AdminOverview,
   });
 
   const operationsRoute = createRoute({
     getParentRoute: () => adminRoute,
+    ...PAGE,
     path: "operations",
     component: AdminOperations,
   });
 
   const configRoute = createRoute({
     getParentRoute: () => adminRoute,
+    ...PAGE,
     path: "config",
     loader: () => loadAuthenticatedPage(fetchAdminConfig),
     component: function Config() {
@@ -77,6 +87,7 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
 
   const jobsRoute = createRoute({
     getParentRoute: () => adminRoute,
+    ...PAGE,
     path: "jobs",
     loader: () => loadAuthenticatedPage(fetchAdminMonitor),
     component: function Jobs() {
@@ -86,6 +97,7 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
 
   const healthRoute = createRoute({
     getParentRoute: () => adminRoute,
+    ...PAGE,
     path: "health",
     validateSearch: validateHealthSearch,
     loaderDeps: ({ search }: { search: HealthSearch }) => ({ health: search.health ?? ("1h" as const) }),
@@ -99,6 +111,7 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
 
   const tracesRoute = createRoute({
     getParentRoute: () => adminRoute,
+    ...PAGE,
     path: "traces",
     validateSearch: validateTraceSearch,
     loaderDeps: ({ search }: { search: TraceSearch }) => search,
@@ -133,6 +146,7 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
 
   const traceRoute = createRoute({
     getParentRoute: () => adminRoute,
+    ...PAGE,
     path: "traces/$id",
     loader: ({ params }) =>
       loadAuthenticatedPage(async () => {
@@ -156,6 +170,7 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
 
   const usersRoute = createRoute({
     getParentRoute: () => adminRoute,
+    ...PAGE,
     path: "users",
     validateSearch: validateListSearch,
     loaderDeps: ({ search }: { search: ListSearch }) => ({ q: search.q, page: search.page }),
@@ -168,6 +183,7 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
 
   const userNewRoute = createRoute({
     getParentRoute: () => adminRoute,
+    ...PAGE,
     path: "users/new",
     loader: () => loadAuthenticatedPage(fetchAdminUserOptions),
     component: function UserNew() {
@@ -177,6 +193,7 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
 
   const userEditRoute = createRoute({
     getParentRoute: () => adminRoute,
+    ...PAGE,
     path: "users/$id",
     loader: ({ params }) =>
       loadAuthenticatedPage(() => Promise.all([fetchAdminUser(Number(params.id)), fetchAdminUserOptions()])),
@@ -189,6 +206,7 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
 
   const orgsRoute = createRoute({
     getParentRoute: () => adminRoute,
+    ...PAGE,
     path: "orgs",
     validateSearch: validateListSearch,
     loaderDeps: ({ search }: { search: ListSearch }) => ({ q: search.q, page: search.page }),
@@ -201,6 +219,7 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
 
   const reposRoute = createRoute({
     getParentRoute: () => adminRoute,
+    ...PAGE,
     path: "repos",
     validateSearch: validateListSearch,
     loaderDeps: ({ search }: { search: ListSearch }) => ({ q: search.q, page: search.page }),
@@ -213,6 +232,7 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
 
   const authsRoute = createRoute({
     getParentRoute: () => adminRoute,
+    ...PAGE,
     path: "auths",
     loader: () => loadAuthenticatedPage(fetchAdminAuthSources),
     component: function Auths() {
@@ -222,12 +242,14 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
 
   const authNewRoute = createRoute({
     getParentRoute: () => adminRoute,
+    ...PAGE,
     path: "auths/new",
     component: AdminAuthSourceNew,
   });
 
   const authEditRoute = createRoute({
     getParentRoute: () => adminRoute,
+    ...PAGE,
     path: "auths/$id",
     loader: ({ params }) => loadAuthenticatedPage(() => fetchAdminAuthSource(Number(params.id))),
     component: function AuthEdit() {
@@ -239,12 +261,34 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
 
   const noticesRoute = createRoute({
     getParentRoute: () => adminRoute,
+    ...PAGE,
     path: "notices",
     validateSearch: validatePageSearch,
     loaderDeps: ({ search }: { search: PageSearch }) => ({ page: search.page }),
-    loader: ({ deps }) => loadAuthenticatedPage(() => fetchAdminNotices(deps)),
+    loader: async ({ deps, context }) => {
+      const list = await loadAuthenticatedPage(() => fetchAdminNotices(deps));
+      // The sidebar of the console counts the system notices from their first page.
+      const { queryClient } = context as { queryClient: QueryClient };
+      const firstPage = adminNoticesQuery({}).queryKey;
+      if (list.page === 1) queryClient.setQueryData(firstPage, list);
+      else void queryClient.invalidateQueries({ queryKey: firstPage });
+      return list;
+    },
     component: function Notices() {
-      return <AdminNotices list={noticesRoute.useLoaderData()} />;
+      const list = noticesRoute.useLoaderData();
+      // Remount for another page, so that a selection does not come back with its page.
+      return <AdminNotices key={list.page} list={list} />;
+    },
+  });
+
+  // Paths without a page are not found inside the console too.
+  const missingRoute = createRoute({
+    getParentRoute: () => adminRoute,
+    ...PAGE,
+    path: "$",
+    loader: () => {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+      throw notFound();
     },
   });
 
@@ -266,6 +310,7 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
       authNewRoute,
       authEditRoute,
       noticesRoute,
+      missingRoute,
     ]),
   ];
 }

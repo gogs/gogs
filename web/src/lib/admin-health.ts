@@ -6,37 +6,51 @@ import { formatAbsoluteTime } from "@/lib/relative-time";
 
 type HealthSection = "traffic" | "runtime" | "resources";
 
-// METRICS lists the measurements in the order they are shown. Metrics that
-// follow traffic, e.g., requests, rise and fall every day, so only their spikes
-// are flagged, not their level.
-export const METRICS: {
+interface Metric {
   key: AdminHealthKey;
   section: HealthSection;
   label: string;
   followsTraffic?: true;
+  // The least value worth flagging, in the unit of the measurement. Below it
+  // the server is quiet, however far the value is from its usual range, e.g.,
+  // the first request after an idle hour.
+  floor: number;
   format: (v: number) => string;
-}[] = [
+}
+
+// METRICS lists the measurements in the order they are shown. Metrics that
+// follow traffic, e.g., requests, rise and fall every day, so only their spikes
+// are flagged, not their level.
+export const METRICS: Metric[] = [
   {
     key: "requests",
     section: "traffic",
     label: "admin.health.requests",
     followsTraffic: true,
+    floor: 5,
     format: (v) => `${v.toFixed(1)} /s`,
   },
-  { key: "p95", section: "traffic", label: "admin.health.p95", format: formatMs },
-  { key: "heap", section: "runtime", label: "admin.health.heap", format: formatBytes },
-  { key: "goroutines", section: "runtime", label: "admin.health.goroutines", format: formatCount },
-  { key: "gcPause", section: "runtime", label: "admin.health.gc_pause", format: formatMs },
-  { key: "dbConnections", section: "resources", label: "admin.health.db_connections", format: formatCount },
+  { key: "p95", section: "traffic", label: "admin.health.p95", floor: 50, format: formatMs },
+  { key: "heap", section: "runtime", label: "admin.health.heap", floor: 64 * (1 << 20), format: formatBytes },
+  { key: "goroutines", section: "runtime", label: "admin.health.goroutines", floor: 100, format: formatCount },
+  { key: "gcPause", section: "runtime", label: "admin.health.gc_pause", floor: 1, format: formatMs },
+  {
+    key: "dbConnections",
+    section: "resources",
+    label: "admin.health.db_connections",
+    floor: 5,
+    format: formatCount,
+  },
   {
     key: "gitProcesses",
     section: "resources",
     label: "admin.health.git_processes",
     followsTraffic: true,
+    floor: 5,
     format: formatCount,
   },
-  { key: "openFiles", section: "resources", label: "admin.health.open_files", format: formatCount },
-  { key: "mirrorQueue", section: "resources", label: "admin.health.mirror_queue", format: formatCount },
+  { key: "openFiles", section: "resources", label: "admin.health.open_files", floor: 100, format: formatCount },
+  { key: "mirrorQueue", section: "resources", label: "admin.health.mirror_queue", floor: 10, format: formatCount },
 ];
 
 export const SECTIONS: Record<HealthSection, string> = {
@@ -60,8 +74,11 @@ function median(values: number[]) {
 
 // flag tells when a metric left its usual range, which is the first half of
 // the range: its recent level stands out, or it spiked. A spike is reported at
-// its start.
-export function flag(points: [number, number][], followsTraffic: boolean): { up: number } | { spikeAt: number } | null {
+// its start. Values below the floor of the metric are never flagged.
+export function flag(
+  points: [number, number][],
+  { followsTraffic, floor }: Pick<Metric, "followsTraffic" | "floor">,
+): { up: number } | { spikeAt: number } | null {
   if (points.length < 20) return null;
   const values = points.map(([, v]) => v);
   const first = values.slice(0, Math.floor(values.length / 2));
@@ -70,8 +87,8 @@ export function flag(points: [number, number][], followsTraffic: boolean): { up:
   const tail = values.slice(-Math.max(4, Math.round(values.length / 15)));
   const tailMean = tail.reduce((a, b) => a + b, 0) / tail.length;
   const peak = Math.max(...values);
-  if (!followsTraffic && base > 0 && tailMean / base >= 1.5) return { up: tailMean / base };
-  if (peak > base + 6 * spread && peak >= 3 * base) {
+  if (!followsTraffic && base > 0 && tailMean >= floor && tailMean / base >= 1.5) return { up: tailMean / base };
+  if (peak >= floor && peak > base + 6 * spread && peak >= 3 * base) {
     const start = values.findIndex((v) => v > base + (peak - base) / 2);
     return { spikeAt: points[start][0] };
   }

@@ -167,7 +167,9 @@ export function AdminOperations() {
 }
 
 function matches(row: AdminReportRow, needle: string) {
-  return [row.label, row.value, row.unit, row.hint].some((text) => text?.toLowerCase().includes(needle));
+  // A value reads with its unit, e.g., "600 seconds".
+  const value = [row.value, row.unit].filter(Boolean).join(" ");
+  return [row.label, value, row.hint].some((text) => text?.toLowerCase().includes(needle));
 }
 
 // filterSection keeps the settings of a section that match the filter, or all

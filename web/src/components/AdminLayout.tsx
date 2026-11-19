@@ -21,6 +21,7 @@ import { type MouseEvent, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { PaletteButton, UserMenu } from "@/components/Navbar";
+import { NoticeBanner } from "@/components/NoticeBanner";
 import { SettingsMenu } from "@/components/SettingsMenu";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -215,7 +216,11 @@ export function AdminLayout() {
   const group = NAV.find((g) => g.items.some((item) => item.path && `${routePath}/`.startsWith(`/admin${item.path}/`)));
   const item = group?.items.find((i) => i.path && `${routePath}/`.startsWith(`/admin${i.path}/`)) ?? NAV[0].items[0];
   const current = t(item.label);
-  usePageTitle(current);
+  // A page that is not found or failed to load says so in place of its name.
+  const status = useRouterState({ select: (state) => state.matches.at(-1)?.status });
+  const problem =
+    status === "notFound" ? t("status.page_not_found") : status === "error" ? t("status.internal_server_error") : null;
+  usePageTitle(problem ?? current);
   // A page below the page of the item names itself in the breadcrumb.
   const below = item.path !== "" && routePath.replace(/\/$/, "") !== `/admin${item.path}`;
 
@@ -279,24 +284,29 @@ export function AdminLayout() {
             <span aria-hidden className="h-4 w-px shrink-0 bg-(--color-border)" />
             <nav aria-label={t("admin.breadcrumb")} className="min-w-0">
               <ol className="flex min-w-0 items-center gap-1.5 text-sm">
-                <Crumb className="hidden sm:flex">
-                  <Link to="/admin" className="inline-flex min-h-6 items-center hover:text-(--color-foreground)">
+                <Crumb className="hidden xl:flex">
+                  <Link to="/admin" className={CRUMB_LINK}>
                     {t("admin_panel")}
                   </Link>
                 </Crumb>
-                {group?.title ? <Crumb className="hidden lg:flex">{t(group.title)}</Crumb> : null}
-                {below ? (
-                  <>
-                    <Crumb className="hidden sm:flex">
-                      <Link
-                        to={`/admin${item.path}`}
-                        className="inline-flex min-h-6 items-center hover:text-(--color-foreground)"
-                      >
-                        {current}
-                      </Link>
-                    </Crumb>
-                    <li ref={setCrumbSlot} aria-current="page" className="truncate font-medium" />
-                  </>
+                {group?.title ? (
+                  <Crumb className="hidden lg:flex">
+                    <span className="min-w-0 truncate">{t(group.title)}</span>
+                  </Crumb>
+                ) : null}
+                {below || (problem !== null && item.path !== "") ? (
+                  <Crumb className="hidden sm:flex">
+                    <Link to={`/admin${item.path}`} className={CRUMB_LINK}>
+                      {current}
+                    </Link>
+                  </Crumb>
+                ) : null}
+                {problem !== null ? (
+                  <li aria-current="page" className="truncate font-medium">
+                    {problem}
+                  </li>
+                ) : below ? (
+                  <li ref={setCrumbSlot} aria-current="page" className="truncate font-medium" />
                 ) : (
                   <li aria-current="page" className="truncate font-medium">
                     {current}
@@ -309,6 +319,7 @@ export function AdminLayout() {
               <SettingsMenu />
             </div>
           </header>
+          <NoticeBanner fullWidth />
           <main className="min-w-0 flex-1 px-4 py-6 sm:px-6">
             <AdminCrumbSlot value={crumbSlot}>
               <Outlet />
@@ -320,11 +331,16 @@ export function AdminLayout() {
   );
 }
 
+// The line height makes the link 24px tall, the least a touch target may be.
+const CRUMB_LINK = "min-w-0 truncate leading-6 hover:text-(--color-foreground)";
+
+// Crumb is a page above the current one. Where the bar is narrow it gives up
+// its room before the current page does, which the large shrink factor says.
 function Crumb({ className, children }: { className?: string; children: ReactNode }) {
   return (
-    <li className={cn("shrink-0 items-center gap-1.5 text-(--color-muted-foreground)", className)}>
+    <li className={cn("min-w-8 shrink-10000 items-center gap-1.5 text-(--color-muted-foreground)", className)}>
       {children}
-      <ChevronRight className="size-3.5" aria-hidden />
+      <ChevronRight className="size-3.5 shrink-0" aria-hidden />
     </li>
   );
 }

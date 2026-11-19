@@ -1,18 +1,20 @@
 import { TriangleAlert } from "lucide-react";
 
 import { webContext } from "@/lib/context";
+import { cn } from "@/lib/utils";
 
 // NoticeBanner shows the notice that site admins put in
 // "custom/notice/banner.md", e.g., a maintenance window, below the navbar of
-// every page. The server renders and sanitizes its Markdown.
-export function NoticeBanner() {
+// every page. The server renders and sanitizes its Markdown. Pages that use
+// the whole window width pass `fullWidth`.
+export function NoticeBanner({ fullWidth = false }: { fullWidth?: boolean }) {
   if (!webContext.notice) return null;
   return (
     // The tint is on an inner layer because glass-bar sets the bar's own
     // background color.
     <div role="note" className="glass-bar border-b border-(--color-warning)/40">
       <div className="bg-(--color-warning)/10">
-        <div className="mx-auto flex max-w-6xl items-start gap-2 px-4 py-2.5 sm:px-6">
+        <div className={cn("flex items-start gap-2 px-4 py-2.5 sm:px-6", !fullWidth && "mx-auto max-w-6xl")}>
           <TriangleAlert className="mt-0.5 size-4 shrink-0 text-(--color-warning)" aria-hidden />
           <div
             className="markdown min-w-0 flex-1 [&_a]:text-(--color-foreground)"

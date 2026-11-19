@@ -7,7 +7,7 @@ import { Area, AreaChart, XAxis, YAxis } from "recharts";
 
 import { Row, Rows, STAT_VALUE, StatCard, TrendChip } from "@/components/AdminPage";
 import { InlineCode } from "@/components/InlineCode";
-import { LoadError, Loaded } from "@/components/Loaded";
+import { Loaded, NotLoaded } from "@/components/Loaded";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { type ChartConfig, ChartContainer } from "@/components/ui/chart";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -85,7 +85,7 @@ function HealthStat({ metric, health }: { metric: (typeof METRICS)[number]; heal
   const points = health.data?.series.find((series) => series.key === metric.key)?.points ?? [];
   const now = points.at(-1)?.[1];
   const value = now === undefined ? "N/A" : metric.format(now);
-  const flagged = flagText(t, flag(points, metric.followsTraffic ?? false), formatClockTime);
+  const flagged = flagText(t, flag(points, metric), formatClockTime);
   return (
     <StatCard
       label={label}
@@ -182,6 +182,16 @@ function AttentionRow({
 
 // AttentionSource lists what one request found. While it loads, or after it
 // failed, a row stands in for it, so the other sources still show.
+const ATTENTION_SKELETON = (
+  <div className="flex gap-3">
+    <Skeleton className="size-4 rounded-full" />
+    <div className="flex flex-1 flex-col gap-2">
+      <Skeleton className="h-4 w-3/4" />
+      <Skeleton className="h-4 w-1/3" />
+    </div>
+  </div>
+);
+
 function AttentionSource<T>({
   query,
   what,
@@ -194,23 +204,7 @@ function AttentionSource<T>({
   if (query.data !== undefined) return children(query.data);
   return (
     <li className="py-3 first:pt-0 last:pb-0">
-      {query.isError ? (
-        <LoadError
-          what={what}
-          error={query.error}
-          retrying={query.isFetching}
-          onRetry={() => void query.refetch()}
-          compact
-        />
-      ) : (
-        <div aria-busy="true" className="flex gap-3">
-          <Skeleton className="size-4 rounded-full" />
-          <div className="flex flex-1 flex-col gap-2">
-            <Skeleton className="h-4 w-3/4" />
-            <Skeleton className="h-4 w-1/3" />
-          </div>
-        </div>
-      )}
+      <NotLoaded query={query} what={what} skeleton={ATTENTION_SKELETON} compact />
     </li>
   );
 }
@@ -230,7 +224,7 @@ function AttentionCard({
   const flagged = (data: AdminHealth) =>
     METRICS.flatMap((metric) => {
       const points = data.series.find((series) => series.key === metric.key)?.points ?? [];
-      const text = flagText(t, flag(points, metric.followsTraffic ?? false), formatClockTime);
+      const text = flagText(t, flag(points, metric), formatClockTime);
       return text ? [{ key: metric.key, text: `${t(metric.label)}: ${text}` }] : [];
     });
   const clear =
