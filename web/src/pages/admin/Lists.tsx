@@ -5,13 +5,16 @@ import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { AdminListHeading } from "@/components/AdminLayout";
+import { AdminPageHeader } from "@/components/AdminPage";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { Pagination } from "@/components/Pagination";
 import { SearchForm } from "@/components/SearchForm";
 import { Button } from "@/components/ui/button";
+import { Card, CardFooter } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { webContext } from "@/lib/context";
+import { fill, formatNumber } from "@/lib/format";
 import type { ListSearch } from "@/lib/page-search";
 import {
   type AdminAuthSource,
@@ -29,17 +32,55 @@ import { cn } from "@/lib/utils";
 
 const DATE_FMT = new Intl.DateTimeFormat(webContext.lang, { year: "numeric", month: "short", day: "2-digit" });
 
-const ROW_CLASS = "flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-(--color-border) py-3";
 const BADGE_CLASS =
-  "rounded-full border border-(--color-border) px-2 py-0.5 text-xs whitespace-nowrap text-(--color-muted-foreground)";
+  "rounded-full border border-(--color-border) px-2 py-0.5 text-xs font-normal whitespace-nowrap text-(--color-muted-foreground)";
 
-// Meta lists facts about an item of a list, e.g., when it was created.
-function Meta({ children }: { children: ReactNode }) {
+// The link is at least 24px in both directions, however short the name is.
+const NAME_LINK =
+  "inline-flex min-h-6 min-w-6 items-center font-medium wrap-anywhere text-(--color-primary) hover:underline";
+
+const MUTED_CELL = "text-(--color-muted-foreground)";
+const NUMBER_CELL = "w-px text-right whitespace-nowrap tabular-nums";
+// A cell that is only as wide as what it holds, so the name gets the rest.
+const FIT_CELL = "w-px whitespace-nowrap";
+const ACTION_CELL = "w-px text-right";
+
+// A table hides a column until its card is wide enough for it, which depends
+// on the sidebar of the console as well as on the window. Until then the name
+// of the row tells what the column would, in a `Fact` of the same width.
+type CardWidth = "xl" | "2xl" | "3xl" | "4xl";
+
+const SHOWN_FROM: Record<CardWidth, string> = {
+  xl: "hidden @xl:table-cell",
+  "2xl": "hidden @2xl:table-cell",
+  "3xl": "hidden @3xl:table-cell",
+  "4xl": "hidden @4xl:table-cell",
+};
+
+const HIDDEN_FROM: Record<CardWidth, string> = {
+  xl: "@xl:hidden",
+  "2xl": "@2xl:hidden",
+  "3xl": "@3xl:hidden",
+  "4xl": "@4xl:hidden",
+};
+
+// Facts holds the facts below the name of a row. Give it the width from which
+// every column shows.
+function Facts({ until, children }: { until: CardWidth; children: ReactNode }) {
   return (
-    <p className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-(--color-muted-foreground) tabular-nums">
+    <p
+      className={cn(
+        "mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-(--color-muted-foreground) tabular-nums",
+        HIDDEN_FROM[until],
+      )}
+    >
       {children}
     </p>
   );
+}
+
+function Fact({ until, children }: { until: CardWidth; children: ReactNode }) {
+  return <span className={HIDDEN_FROM[until]}>{children}</span>;
 }
 
 function Avatar({ src, square = false }: { src: string; square?: boolean }) {
@@ -48,32 +89,63 @@ function Avatar({ src, square = false }: { src: string; square?: boolean }) {
       src={src}
       alt=""
       className={cn(
-        "size-10 shrink-0 border border-(--color-border) object-cover",
+        "size-8 shrink-0 border border-(--color-border) object-cover",
         square ? "rounded-md" : "rounded-full",
       )}
     />
   );
 }
 
-// ListBody shows the items of a page of a list, or that there are none, and
-// links to the other pages.
-function ListBody<T>({ list, children }: { list: AdminList<T>; children: (item: T) => ReactNode }) {
+// ListPage heads a list with its title, the number of all its items and its
+// actions, and shows one page of it as a table in a card, or that there are
+// no items, with the links to the other pages in the footer of the card.
+function ListPage<T>({
+  title,
+  list,
+  actions,
+  search,
+  head,
+  children,
+}: {
+  title: string;
+  list: AdminList<T>;
+  actions?: ReactNode;
+  // Given for a list that can be searched by keyword.
+  search?: ListSearch;
+  head: ReactNode;
+  children: (item: T) => ReactNode;
+}) {
   const { t } = useTranslation();
   return (
-    <>
-      {list.items.length > 0 ? (
-        <ul className="glass-list mt-4 border-t border-(--color-border)">{list.items.map(children)}</ul>
-      ) : (
-        <p className="mt-4 border-t border-(--color-border) py-6 text-sm text-(--color-muted-foreground)">
-          {t("repo.pulls.no_results")}
-        </p>
-      )}
-      {list.totalPages > 1 ? (
-        <div className="mt-4">
-          <Pagination page={list.page} totalPages={list.totalPages} />
+    <div className="grid gap-4">
+      <AdminPageHeader title={title} description={fill(t("admin.total"), formatNumber(list.total))}>
+        {actions}
+      </AdminPageHeader>
+      {search ? (
+        <div className="sm:max-w-md">
+          <SearchForm q={search.q} />
         </div>
       ) : null}
-    </>
+      <Card className="@container min-w-0 overflow-hidden">
+        {list.items.length > 0 ? (
+          <Table>
+            <TableHeader className="bg-(--color-surface)">
+              <TableRow className="hover:bg-transparent">{head}</TableRow>
+            </TableHeader>
+            <TableBody>{list.items.map(children)}</TableBody>
+          </Table>
+        ) : (
+          <p className="px-5 py-10 text-center text-sm text-(--color-muted-foreground) sm:px-6">
+            {t("repo.pulls.no_results")}
+          </p>
+        )}
+        {list.totalPages > 1 ? (
+          <CardFooter className="justify-center border-t border-(--color-border) py-3 sm:py-3">
+            <Pagination page={list.page} totalPages={list.totalPages} />
+          </CardFooter>
+        ) : null}
+      </Card>
+    </div>
   );
 }
 
@@ -102,64 +174,79 @@ export function AdminUsers({ list, search }: { list: AdminList<AdminUser>; searc
   const { t } = useTranslation();
 
   return (
-    <>
-      <AdminListHeading
-        title={t("admin.users")}
-        total={list.total}
-        action={
-          <Button asChild variant="outline" size="sm">
-            <Link to="/admin/users/new">
-              <Plus className="size-4" aria-hidden />
-              {t("admin.users.new_account")}
-            </Link>
-          </Button>
-        }
-      />
-      <SearchForm q={search.q} />
-      <ListBody list={list}>
-        {(user) => (
-          <li key={user.id} className={ROW_CLASS}>
-            <div className="flex min-w-0 flex-1 basis-56 items-center gap-3">
-              <Avatar src={user.avatarURL} />
-              <div className="min-w-0">
-                <p className="flex flex-wrap items-center gap-2">
-                  <Link
-                    to="/$username"
-                    params={{ username: user.name }}
-                    search={{}}
-                    className="font-semibold wrap-anywhere text-(--color-primary) hover:underline"
-                  >
-                    {user.name}
-                  </Link>
-                  {user.isAdmin ? <span className={BADGE_CLASS}>{t("admin.users.admin")}</span> : null}
-                  {user.isActive ? null : <span className={BADGE_CLASS}>{t("admin.users.not_activated")}</span>}
-                </p>
-                <p className="text-sm wrap-anywhere text-(--color-muted-foreground)">{user.email}</p>
-                <Meta>
-                  <span>ID {user.id}</span>
-                  <span>
-                    {t("admin.users.repos")} {user.repoCount}
-                  </span>
-                  <span>
-                    {t("admin.users.created")} {DATE_FMT.format(new Date(user.createdAt))}
-                  </span>
-                </Meta>
+    <ListPage
+      title={t("admin.users")}
+      list={list}
+      search={search}
+      actions={
+        <Button asChild variant="outline" size="sm">
+          <Link to="/admin/users/new">
+            <Plus className="size-4" aria-hidden />
+            {t("admin.users.new_account")}
+          </Link>
+        </Button>
+      }
+      head={
+        <>
+          <TableHead>{t("username")}</TableHead>
+          <TableHead className={SHOWN_FROM.xl}>{t("email")}</TableHead>
+          <TableHead className={cn(SHOWN_FROM["3xl"], "text-right")}>ID</TableHead>
+          <TableHead className={cn(SHOWN_FROM["3xl"], "text-right")}>{t("admin.users.repos")}</TableHead>
+          <TableHead className={SHOWN_FROM["3xl"]}>{t("admin.users.created")}</TableHead>
+          <TableHead>
+            <span className="sr-only">{t("admin.users.edit")}</span>
+          </TableHead>
+        </>
+      }
+    >
+      {(user) => {
+        const created = DATE_FMT.format(new Date(user.createdAt));
+        return (
+          <TableRow key={user.id}>
+            <TableCell>
+              <div className="flex min-w-0 items-center gap-3">
+                <Avatar src={user.avatarURL} />
+                <div className="min-w-0">
+                  <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <Link to="/$username" params={{ username: user.name }} search={{}} className={NAME_LINK}>
+                      {user.name}
+                    </Link>
+                    {user.isAdmin ? <span className={BADGE_CLASS}>{t("admin.users.admin")}</span> : null}
+                    {user.isActive ? null : <span className={BADGE_CLASS}>{t("admin.users.not_activated")}</span>}
+                  </p>
+                  <p className={cn("wrap-anywhere text-(--color-muted-foreground)", HIDDEN_FROM.xl)}>{user.email}</p>
+                  <Facts until="3xl">
+                    <Fact until="3xl">ID {user.id}</Fact>
+                    <Fact until="3xl">
+                      {t("admin.users.repos")} {user.repoCount}
+                    </Fact>
+                    <Fact until="3xl">
+                      {t("admin.users.created")} {created}
+                    </Fact>
+                  </Facts>
+                </div>
               </div>
-            </div>
-            <Button asChild variant="outline" size="sm" className="shrink-0">
-              <Link
-                to="/admin/users/$id"
-                params={{ id: String(user.id) }}
-                aria-label={`${t("admin.users.edit")} ${user.name}`}
-              >
-                <Pencil className="size-3.5" aria-hidden />
-                {t("admin.users.edit")}
-              </Link>
-            </Button>
-          </li>
-        )}
-      </ListBody>
-    </>
+            </TableCell>
+            <TableCell className={cn(SHOWN_FROM.xl, MUTED_CELL, "wrap-anywhere")}>{user.email}</TableCell>
+            <TableCell className={cn(SHOWN_FROM["3xl"], NUMBER_CELL, MUTED_CELL)}>{user.id}</TableCell>
+            <TableCell className={cn(SHOWN_FROM["3xl"], NUMBER_CELL)}>{user.repoCount}</TableCell>
+            <TableCell className={cn(SHOWN_FROM["3xl"], FIT_CELL)}>{created}</TableCell>
+            <TableCell className={ACTION_CELL}>
+              <Button asChild variant="outline" size="sm" className="shrink-0">
+                <Link
+                  to="/admin/users/$id"
+                  params={{ id: String(user.id) }}
+                  aria-label={`${t("admin.users.edit")} ${user.name}`}
+                >
+                  <Pencil className="size-3.5" aria-hidden />
+                  {t("admin.users.edit")}
+                </Link>
+              </Button>
+            </TableCell>
+          </TableRow>
+        );
+      }}
+    </ListPage>
   );
 }
 
@@ -168,63 +255,78 @@ export function AdminUsers({ list, search }: { list: AdminList<AdminUser>; searc
 export function AdminAuthSources({ sources }: { sources: AdminAuthSource[] }) {
   const { t } = useTranslation();
   return (
-    <>
-      <AdminListHeading
-        title={t("admin.auths.auth_sources")}
-        total={sources.length}
-        action={
-          <Button asChild variant="outline" size="sm">
-            <Link to="/admin/auths/new">
-              <Plus className="size-4" aria-hidden />
-              {t("admin.auths.new")}
-            </Link>
-          </Button>
-        }
-      />
-      <ListBody list={{ items: sources, page: 1, totalPages: 1, total: sources.length }}>
-        {(source) => (
-          <li key={source.id} className={ROW_CLASS}>
-            <div className="min-w-0 flex-1 basis-56">
-              <p className="flex flex-wrap items-center gap-2">
-                <Link
-                  to="/admin/auths/$id"
-                  params={{ id: String(source.id) }}
-                  className="font-semibold wrap-anywhere text-(--color-primary) hover:underline"
-                >
+    <ListPage
+      title={t("admin.auths.auth_sources")}
+      list={{ items: sources, page: 1, totalPages: 1, total: sources.length }}
+      actions={
+        <Button asChild variant="outline" size="sm">
+          <Link to="/admin/auths/new">
+            <Plus className="size-4" aria-hidden />
+            {t("admin.auths.new")}
+          </Link>
+        </Button>
+      }
+      head={
+        <>
+          <TableHead>{t("admin.auths.auth_name")}</TableHead>
+          <TableHead className={cn(SHOWN_FROM["3xl"], "text-right")}>ID</TableHead>
+          <TableHead className={SHOWN_FROM.xl}>{t("admin.auths.auth_type")}</TableHead>
+          <TableHead className={SHOWN_FROM["3xl"]}>{t("admin.auths.updated")}</TableHead>
+          <TableHead className={SHOWN_FROM["3xl"]}>{t("admin.users.created")}</TableHead>
+          <TableHead>
+            <span className="sr-only">{t("admin.users.edit")}</span>
+          </TableHead>
+        </>
+      }
+    >
+      {(source) => {
+        const updated = source.updatedAt ? DATE_FMT.format(new Date(source.updatedAt)) : null;
+        const created = source.createdAt ? DATE_FMT.format(new Date(source.createdAt)) : null;
+        return (
+          <TableRow key={source.id}>
+            <TableCell>
+              <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <Link to="/admin/auths/$id" params={{ id: String(source.id) }} className={NAME_LINK}>
                   {source.name}
                 </Link>
                 {source.isDefault ? <span className={BADGE_CLASS}>{t("admin.auths.default")}</span> : null}
                 {source.isActive ? null : <span className={BADGE_CLASS}>{t("admin.users.not_activated")}</span>}
               </p>
-              <Meta>
-                <span>ID {source.id}</span>
-                <span>{source.typeName}</span>
-                {source.updatedAt ? (
-                  <span>
-                    {t("admin.auths.updated")} {DATE_FMT.format(new Date(source.updatedAt))}
-                  </span>
+              <Facts until="3xl">
+                <Fact until="3xl">ID {source.id}</Fact>
+                <Fact until="xl">{source.typeName}</Fact>
+                {updated ? (
+                  <Fact until="3xl">
+                    {t("admin.auths.updated")} {updated}
+                  </Fact>
                 ) : null}
-                {source.createdAt ? (
-                  <span>
-                    {t("admin.users.created")} {DATE_FMT.format(new Date(source.createdAt))}
-                  </span>
+                {created ? (
+                  <Fact until="3xl">
+                    {t("admin.users.created")} {created}
+                  </Fact>
                 ) : null}
-              </Meta>
-            </div>
-            <Button asChild variant="outline" size="sm" className="shrink-0">
-              <Link
-                to="/admin/auths/$id"
-                params={{ id: String(source.id) }}
-                aria-label={`${t("admin.users.edit")} ${source.name}`}
-              >
-                <Pencil className="size-3.5" aria-hidden />
-                {t("admin.users.edit")}
-              </Link>
-            </Button>
-          </li>
-        )}
-      </ListBody>
-    </>
+              </Facts>
+            </TableCell>
+            <TableCell className={cn(SHOWN_FROM["3xl"], NUMBER_CELL, MUTED_CELL)}>{source.id}</TableCell>
+            <TableCell className={SHOWN_FROM.xl}>{source.typeName}</TableCell>
+            <TableCell className={cn(SHOWN_FROM["3xl"], FIT_CELL)}>{updated}</TableCell>
+            <TableCell className={cn(SHOWN_FROM["3xl"], FIT_CELL)}>{created}</TableCell>
+            <TableCell className={ACTION_CELL}>
+              <Button asChild variant="outline" size="sm" className="shrink-0">
+                <Link
+                  to="/admin/auths/$id"
+                  params={{ id: String(source.id) }}
+                  aria-label={`${t("admin.users.edit")} ${source.name}`}
+                >
+                  <Pencil className="size-3.5" aria-hidden />
+                  {t("admin.users.edit")}
+                </Link>
+              </Button>
+            </TableCell>
+          </TableRow>
+        );
+      }}
+    </ListPage>
   );
 }
 
@@ -232,54 +334,74 @@ export function AdminAuthSources({ sources }: { sources: AdminAuthSource[] }) {
 export function AdminOrgs({ list, search }: { list: AdminList<AdminOrg>; search: ListSearch }) {
   const { t } = useTranslation();
   return (
-    <>
-      <AdminListHeading title={t("admin.organizations")} total={list.total} />
-      <SearchForm q={search.q} />
-      <ListBody list={list}>
-        {(org) => (
-          <li key={org.id} className={ROW_CLASS}>
-            <div className="flex min-w-0 flex-1 basis-56 items-center gap-3">
-              <Avatar src={org.avatarURL} square />
-              <div className="min-w-0">
-                <Link
-                  to="/$username"
-                  params={{ username: org.name }}
-                  search={{}}
-                  className="font-semibold wrap-anywhere text-(--color-primary) hover:underline"
-                >
-                  {org.name}
-                </Link>
-                <Meta>
-                  <span>ID {org.id}</span>
-                  <span>
-                    {t("admin.orgs.teams")} {org.teamCount}
-                  </span>
-                  <span>
-                    {t("admin.orgs.members")} {org.memberCount}
-                  </span>
-                  <span>
-                    {t("admin.users.repos")} {org.repoCount}
-                  </span>
-                  <span>
-                    {t("admin.users.created")} {DATE_FMT.format(new Date(org.createdAt))}
-                  </span>
-                </Meta>
+    <ListPage
+      title={t("admin.organizations")}
+      list={list}
+      search={search}
+      head={
+        <>
+          <TableHead>{t("organization")}</TableHead>
+          <TableHead className={cn(SHOWN_FROM["3xl"], "text-right")}>ID</TableHead>
+          <TableHead className={cn(SHOWN_FROM.xl, "text-right")}>{t("admin.orgs.teams")}</TableHead>
+          <TableHead className={cn(SHOWN_FROM.xl, "text-right")}>{t("admin.orgs.members")}</TableHead>
+          <TableHead className={cn(SHOWN_FROM.xl, "text-right")}>{t("admin.users.repos")}</TableHead>
+          <TableHead className={SHOWN_FROM["3xl"]}>{t("admin.users.created")}</TableHead>
+          <TableHead>
+            <span className="sr-only">{t("admin.users.edit")}</span>
+          </TableHead>
+        </>
+      }
+    >
+      {(org) => {
+        const created = DATE_FMT.format(new Date(org.createdAt));
+        return (
+          <TableRow key={org.id}>
+            <TableCell>
+              <div className="flex min-w-0 items-center gap-3">
+                <Avatar src={org.avatarURL} square />
+                <div className="min-w-0">
+                  <Link to="/$username" params={{ username: org.name }} search={{}} className={NAME_LINK}>
+                    {org.name}
+                  </Link>
+                  <Facts until="3xl">
+                    <Fact until="3xl">ID {org.id}</Fact>
+                    <Fact until="xl">
+                      {t("admin.orgs.teams")} {org.teamCount}
+                    </Fact>
+                    <Fact until="xl">
+                      {t("admin.orgs.members")} {org.memberCount}
+                    </Fact>
+                    <Fact until="xl">
+                      {t("admin.users.repos")} {org.repoCount}
+                    </Fact>
+                    <Fact until="3xl">
+                      {t("admin.users.created")} {created}
+                    </Fact>
+                  </Facts>
+                </div>
               </div>
-            </div>
-            <Button asChild variant="outline" size="sm" className="shrink-0">
-              <Link
-                to="/org/$org/settings"
-                params={{ org: org.name }}
-                aria-label={`${t("admin.users.edit")} ${org.name}`}
-              >
-                <Pencil className="size-3.5" aria-hidden />
-                {t("admin.users.edit")}
-              </Link>
-            </Button>
-          </li>
-        )}
-      </ListBody>
-    </>
+            </TableCell>
+            <TableCell className={cn(SHOWN_FROM["3xl"], NUMBER_CELL, MUTED_CELL)}>{org.id}</TableCell>
+            <TableCell className={cn(SHOWN_FROM.xl, NUMBER_CELL)}>{org.teamCount}</TableCell>
+            <TableCell className={cn(SHOWN_FROM.xl, NUMBER_CELL)}>{org.memberCount}</TableCell>
+            <TableCell className={cn(SHOWN_FROM.xl, NUMBER_CELL)}>{org.repoCount}</TableCell>
+            <TableCell className={cn(SHOWN_FROM["3xl"], FIT_CELL)}>{created}</TableCell>
+            <TableCell className={ACTION_CELL}>
+              <Button asChild variant="outline" size="sm" className="shrink-0">
+                <Link
+                  to="/org/$org/settings"
+                  params={{ org: org.name }}
+                  aria-label={`${t("admin.users.edit")} ${org.name}`}
+                >
+                  <Pencil className="size-3.5" aria-hidden />
+                  {t("admin.users.edit")}
+                </Link>
+              </Button>
+            </TableCell>
+          </TableRow>
+        );
+      }}
+    </ListPage>
   );
 }
 
@@ -290,57 +412,79 @@ export function AdminRepos({ list, search }: { list: AdminList<AdminRepo>; searc
   const reload = useReloadList(list.page);
   const description = `${t("repo.settings.delete_desc")} ${t("repo.settings.delete_notices_2").replace(/^-\s*/, "")}`;
   return (
-    <>
-      <AdminListHeading title={t("admin.repositories")} total={list.total} />
-      <SearchForm q={search.q} />
-      <ListBody list={list}>
-        {(repo) => (
-          <li key={repo.id} className={ROW_CLASS}>
-            <div className="min-w-0 flex-1 basis-56">
-              <p className="flex flex-wrap items-center gap-2">
-                <a
-                  href={subUrl(`/${repo.owner}/${repo.name}`)}
-                  className="font-semibold wrap-anywhere text-(--color-primary) hover:underline"
-                >
+    <ListPage
+      title={t("admin.repositories")}
+      list={list}
+      search={search}
+      head={
+        <>
+          <TableHead>{t("repository")}</TableHead>
+          <TableHead className={cn(SHOWN_FROM["4xl"], "text-right")}>ID</TableHead>
+          <TableHead className={cn(SHOWN_FROM["2xl"], "text-right")}>{t("admin.repos.watches")}</TableHead>
+          <TableHead className={cn(SHOWN_FROM["2xl"], "text-right")}>{t("admin.repos.stars")}</TableHead>
+          <TableHead className={cn(SHOWN_FROM["2xl"], "text-right")}>{t("admin.repos.issues")}</TableHead>
+          <TableHead className={cn(SHOWN_FROM["2xl"], "text-right")}>{t("admin.repos.size")}</TableHead>
+          <TableHead className={SHOWN_FROM["4xl"]}>{t("admin.users.created")}</TableHead>
+          <TableHead>
+            <span className="sr-only">{t("admin.repos.delete")}</span>
+          </TableHead>
+        </>
+      }
+    >
+      {(repo) => {
+        const created = DATE_FMT.format(new Date(repo.createdAt));
+        return (
+          <TableRow key={repo.id}>
+            <TableCell>
+              <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <a href={subUrl(`/${repo.owner}/${repo.name}`)} className={NAME_LINK}>
                   {repo.owner}/{repo.name}
                 </a>
                 {repo.isPrivate ? <span className={BADGE_CLASS}>{t("admin.repos.private")}</span> : null}
               </p>
-              <Meta>
-                <span>ID {repo.id}</span>
-                <span>
+              <Facts until="4xl">
+                <Fact until="4xl">ID {repo.id}</Fact>
+                <Fact until="2xl">
                   {t("admin.repos.watches")} {repo.watchCount}
-                </span>
-                <span>
+                </Fact>
+                <Fact until="2xl">
                   {t("admin.repos.stars")} {repo.starCount}
-                </span>
-                <span>
+                </Fact>
+                <Fact until="2xl">
                   {t("admin.repos.issues")} {repo.issueCount}
-                </span>
-                <span>
+                </Fact>
+                <Fact until="2xl">
                   {t("admin.repos.size")} {repo.size}
-                </span>
-                <span>
-                  {t("admin.users.created")} {DATE_FMT.format(new Date(repo.createdAt))}
-                </span>
-              </Meta>
-            </div>
-            <ConfirmButton
-              label={t("admin.repos.delete")}
-              ariaLabel={`${t("admin.repos.delete")} ${repo.owner}/${repo.name}`}
-              title={t("repo.settings.delete")}
-              description={description}
-              size="sm"
-              action={() => deleteAdminRepo(repo.id)}
-              onDone={async () => {
-                toast.success(t("repo.settings.deletion_success"));
-                await reload(list.items.length === 1 ? list.page - 1 : list.page);
-              }}
-            />
-          </li>
-        )}
-      </ListBody>
-    </>
+                </Fact>
+                <Fact until="4xl">
+                  {t("admin.users.created")} {created}
+                </Fact>
+              </Facts>
+            </TableCell>
+            <TableCell className={cn(SHOWN_FROM["4xl"], NUMBER_CELL, MUTED_CELL)}>{repo.id}</TableCell>
+            <TableCell className={cn(SHOWN_FROM["2xl"], NUMBER_CELL)}>{repo.watchCount}</TableCell>
+            <TableCell className={cn(SHOWN_FROM["2xl"], NUMBER_CELL)}>{repo.starCount}</TableCell>
+            <TableCell className={cn(SHOWN_FROM["2xl"], NUMBER_CELL)}>{repo.issueCount}</TableCell>
+            <TableCell className={cn(SHOWN_FROM["2xl"], NUMBER_CELL)}>{repo.size}</TableCell>
+            <TableCell className={cn(SHOWN_FROM["4xl"], FIT_CELL)}>{created}</TableCell>
+            <TableCell className={ACTION_CELL}>
+              <ConfirmButton
+                label={t("admin.repos.delete")}
+                ariaLabel={`${t("admin.repos.delete")} ${repo.owner}/${repo.name}`}
+                title={t("repo.settings.delete")}
+                description={description}
+                size="sm"
+                action={() => deleteAdminRepo(repo.id)}
+                onDone={async () => {
+                  toast.success(t("repo.settings.deletion_success"));
+                  await reload(list.items.length === 1 ? list.page - 1 : list.page);
+                }}
+              />
+            </TableCell>
+          </TableRow>
+        );
+      }}
+    </ListPage>
   );
 }
 
@@ -360,7 +504,7 @@ function NoticeDescription({ text }: { text: string }) {
         <button
           type="button"
           aria-expanded={expanded}
-          className="mt-1 cursor-pointer text-xs text-(--color-primary) hover:underline"
+          className="mt-0.5 inline-flex min-h-6 cursor-pointer items-center rounded-sm text-xs text-(--color-primary) outline-none hover:underline focus-visible:ring-1 focus-visible:ring-(--color-ring)"
           onClick={() => setExpanded(!expanded)}
         >
           {expanded ? t("show_less") : t("show_more")}
@@ -369,6 +513,10 @@ function NoticeDescription({ text }: { text: string }) {
     </>
   );
 }
+
+// The label widens the target of a checkbox to 32px, and its margin keeps
+// the box itself in line with the edge of the card.
+const CHECKBOX_TARGET = "-my-1 -ml-2 flex size-8 cursor-pointer items-center justify-center";
 
 // AdminNotices lists the system notices, such as failures of background
 // tasks, and deletes the selected ones or all of them.
@@ -399,12 +547,24 @@ export function AdminNotices({ list }: { list: AdminList<AdminNotice> }) {
   };
 
   return (
-    <>
-      <AdminListHeading
-        title={t("admin.notices")}
-        total={list.total}
-        action={
-          list.total > 0 ? (
+    <ListPage
+      title={t("admin.notices")}
+      list={list}
+      actions={
+        list.total > 0 ? (
+          <>
+            {list.items.length > 0 ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-(--color-destructive)"
+                disabled={selected.size === 0 || deleteSelected.isPending}
+                onClick={() => deleteSelected.mutate()}
+              >
+                {t("admin.notices.delete_selected")}
+                {selected.size > 0 ? ` (${selected.size})` : null}
+              </Button>
+            ) : null}
             <ConfirmButton
               label={t("admin.notices.delete_all")}
               title={t("admin.notices.delete_all")}
@@ -413,54 +573,56 @@ export function AdminNotices({ list }: { list: AdminList<AdminNotice> }) {
               action={deleteAllAdminNotices}
               onDone={() => onDeleted(1)}
             />
-          ) : null
-        }
-      />
-      {list.items.length > 0 ? (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <label className="flex min-h-8 cursor-pointer items-center gap-2 text-sm">
-            <Checkbox
-              checked={allSelected ? true : selected.size > 0 ? "indeterminate" : false}
-              onCheckedChange={(checked) =>
-                setPicked(checked === true ? new Set(list.items.map((n) => n.id)) : new Set())
-              }
-            />
-            {t("admin.notices.select_all")}
-          </label>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-(--color-destructive)"
-            disabled={selected.size === 0 || deleteSelected.isPending}
-            onClick={() => deleteSelected.mutate()}
-          >
-            {t("admin.notices.delete_selected")}
-            {selected.size > 0 ? ` (${selected.size})` : null}
-          </Button>
-        </div>
-      ) : null}
-      <ListBody list={list}>
-        {(notice) => (
-          <li key={notice.id} className="flex gap-1 border-b border-(--color-border) py-3">
-            {/* The label widens the target of the checkbox to 32px. */}
-            <label className="-my-1.5 -ml-2 flex size-8 shrink-0 cursor-pointer items-center justify-center">
+          </>
+        ) : null
+      }
+      head={
+        <>
+          <TableHead className="w-px">
+            <label className={CHECKBOX_TARGET}>
               <Checkbox
-                checked={selected.has(notice.id)}
-                onCheckedChange={(checked) => toggle(notice.id, checked === true)}
-                aria-label={`${t("admin.notices.select")} ${notice.id}`}
+                checked={allSelected ? true : selected.size > 0 ? "indeterminate" : false}
+                onCheckedChange={(checked) =>
+                  setPicked(checked === true ? new Set(list.items.map((n) => n.id)) : new Set())
+                }
+                aria-label={t("admin.notices.select_all")}
               />
             </label>
-            <div className="min-w-0 flex-1">
+          </TableHead>
+          <TableHead>{t("admin.monitor.desc")}</TableHead>
+          <TableHead className={cn(SHOWN_FROM.xl, "text-right")}>ID</TableHead>
+          <TableHead className={SHOWN_FROM.xl}>{t("admin.config.db.type")}</TableHead>
+          <TableHead className={SHOWN_FROM.xl}>{t("admin.users.created")}</TableHead>
+        </>
+      }
+    >
+      {(notice) => {
+        const created = DATE_FMT.format(new Date(notice.createdAt));
+        return (
+          <TableRow key={notice.id} data-state={selected.has(notice.id) ? "selected" : undefined}>
+            <TableCell className="w-px align-top">
+              <label className={CHECKBOX_TARGET}>
+                <Checkbox
+                  checked={selected.has(notice.id)}
+                  onCheckedChange={(checked) => toggle(notice.id, checked === true)}
+                  aria-label={`${t("admin.notices.select")} ${notice.id}`}
+                />
+              </label>
+            </TableCell>
+            <TableCell className="align-top">
               <NoticeDescription text={notice.description} />
-              <Meta>
-                <span>ID {notice.id}</span>
-                <span>{notice.type}</span>
-                <span>{DATE_FMT.format(new Date(notice.createdAt))}</span>
-              </Meta>
-            </div>
-          </li>
-        )}
-      </ListBody>
-    </>
+              <Facts until="xl">
+                <Fact until="xl">ID {notice.id}</Fact>
+                <Fact until="xl">{notice.type}</Fact>
+                <Fact until="xl">{created}</Fact>
+              </Facts>
+            </TableCell>
+            <TableCell className={cn(SHOWN_FROM.xl, NUMBER_CELL, MUTED_CELL, "align-top")}>{notice.id}</TableCell>
+            <TableCell className={cn(SHOWN_FROM.xl, FIT_CELL, "align-top")}>{notice.type}</TableCell>
+            <TableCell className={cn(SHOWN_FROM.xl, FIT_CELL, "align-top")}>{created}</TableCell>
+          </TableRow>
+        );
+      }}
+    </ListPage>
   );
 }
