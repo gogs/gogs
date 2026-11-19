@@ -1,12 +1,14 @@
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
-import { type FormEvent, type ReactNode, useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { AdminPageHeader } from "@/components/AdminPage";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { CheckboxField, FormAlert, FormField } from "@/components/FormField";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -19,6 +21,7 @@ import {
   updateAdminUser,
 } from "@/lib/queries/admin";
 import { FormError, formErrors } from "@/lib/queries/request";
+import { cn } from "@/lib/utils";
 
 // focusFirstError focuses the first field, in display order, that the server
 // rejected.
@@ -61,9 +64,53 @@ function LoginSourceSelect({
   );
 }
 
-function FormActions({ children }: { children: ReactNode }) {
-  return <div className="flex flex-wrap items-center gap-2 border-t border-(--color-border) pt-5">{children}</div>;
+// AdminFormCard lays a form of the admin console out in a card, with its
+// actions in a bar at the foot of the card. Everything in it is disabled
+// while a submit is `pending`.
+export function AdminFormCard({
+  pending,
+  error,
+  actions,
+  onSubmit,
+  children,
+}: {
+  pending: boolean;
+  error: string | null;
+  actions: ReactNode;
+  onSubmit: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <form
+      noValidate
+      className="min-w-0"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit();
+      }}
+    >
+      <fieldset disabled={pending} className="contents">
+        <Card className="@container max-w-5xl">
+          <CardContent>
+            <FormAlert message={error} />
+            <div className="flex flex-col gap-5">{children}</div>
+          </CardContent>
+          <CardFooter className="flex-wrap gap-2 border-t border-(--color-border) py-4 sm:py-4">{actions}</CardFooter>
+        </Card>
+      </fieldset>
+    </form>
+  );
 }
+
+// FieldGrid puts the fields of a form in two columns once its card is wide
+// enough for both.
+export function FieldGrid({ className, children }: { className?: string; children: ReactNode }) {
+  return <div className={cn("grid grid-cols-1 gap-5 @2xl:grid-cols-2", className)}>{children}</div>;
+}
+
+// Each label of a checkbox in the group is 24px tall, the least a touch
+// target may be.
+export const CHECKBOX_GROUP = "flex flex-col gap-2 [&>label]:min-h-6";
 
 const CREATE_FIELDS = ["loginSource", "loginName", "name", "email", "password"] as const;
 
@@ -92,10 +139,6 @@ export function AdminUserNew({ options }: { options: AdminUserOptions }) {
   const { fields, formError } = formErrors(create.error);
   const isLocal = form.loginSource === 0;
 
-  const onSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    create.mutate();
-  };
   const field = (key: "loginName" | "name" | "email" | "password") => ({
     id: key,
     name: key,
@@ -104,54 +147,59 @@ export function AdminUserNew({ options }: { options: AdminUserOptions }) {
   });
 
   return (
-    <>
-      <h1 className="mb-4 text-xl font-semibold">{t("admin.users.new_account")}</h1>
-      <form onSubmit={onSubmit} noValidate>
-        <fieldset disabled={create.isPending} className="contents">
-          <FormAlert message={formError} />
-          <div className="flex flex-col gap-5">
-            <LoginSourceSelect
-              options={options}
-              value={form.loginSource}
-              error={fields.loginSource}
-              onChange={(loginSource) => setForm({ ...form, loginSource })}
+    <div className="grid gap-4">
+      <AdminPageHeader
+        title={t("admin.users.new_account")}
+        back={{ to: "/admin/users", label: t("admin.users") }}
+        crumb={t("admin.users.new_account")}
+      />
+      <AdminFormCard
+        pending={create.isPending}
+        error={formError}
+        onSubmit={() => create.mutate()}
+        actions={<Button type="submit">{t("admin.users.new_account")}</Button>}
+      >
+        <FieldGrid>
+          <LoginSourceSelect
+            options={options}
+            value={form.loginSource}
+            error={fields.loginSource}
+            onChange={(loginSource) => setForm({ ...form, loginSource })}
+          />
+          {isLocal ? null : (
+            <FormField
+              id="loginName"
+              label={t("admin.users.auth_login_name")}
+              error={fields.loginName}
+              invalid={"loginName" in fields}
+            >
+              <Input autoComplete="off" required {...field("loginName")} />
+            </FormField>
+          )}
+          <FormField id="name" label={t("username")} error={fields.name} invalid={"name" in fields}>
+            <Input autoComplete="off" required autoFocus {...field("name")} />
+          </FormField>
+          <FormField id="email" label={t("email")} error={fields.email} invalid={"email" in fields}>
+            <Input type="email" autoComplete="off" required {...field("email")} />
+          </FormField>
+          {isLocal ? (
+            <FormField id="password" label={t("password")} error={fields.password} invalid={"password" in fields}>
+              <Input type="password" autoComplete="new-password" required {...field("password")} />
+            </FormField>
+          ) : null}
+        </FieldGrid>
+        {options.canSendEmail ? (
+          <div className={CHECKBOX_GROUP}>
+            <CheckboxField
+              id="sendNotify"
+              label={t("admin.users.send_register_notify")}
+              checked={form.sendNotify}
+              onChange={(sendNotify) => setForm({ ...form, sendNotify })}
             />
-            {isLocal ? null : (
-              <FormField
-                id="loginName"
-                label={t("admin.users.auth_login_name")}
-                error={fields.loginName}
-                invalid={"loginName" in fields}
-              >
-                <Input autoComplete="off" required {...field("loginName")} />
-              </FormField>
-            )}
-            <FormField id="name" label={t("username")} error={fields.name} invalid={"name" in fields}>
-              <Input autoComplete="off" required autoFocus {...field("name")} />
-            </FormField>
-            <FormField id="email" label={t("email")} error={fields.email} invalid={"email" in fields}>
-              <Input type="email" autoComplete="off" required {...field("email")} />
-            </FormField>
-            {isLocal ? (
-              <FormField id="password" label={t("password")} error={fields.password} invalid={"password" in fields}>
-                <Input type="password" autoComplete="new-password" required {...field("password")} />
-              </FormField>
-            ) : null}
-            {options.canSendEmail ? (
-              <CheckboxField
-                id="sendNotify"
-                label={t("admin.users.send_register_notify")}
-                checked={form.sendNotify}
-                onChange={(sendNotify) => setForm({ ...form, sendNotify })}
-              />
-            ) : null}
-            <FormActions>
-              <Button type="submit">{t("admin.users.new_account")}</Button>
-            </FormActions>
           </div>
-        </fieldset>
-      </form>
-    </>
+        ) : null}
+      </AdminFormCard>
+    </div>
   );
 }
 
@@ -200,10 +248,6 @@ export function AdminUserEdit({ user, options }: { user: AdminUserDetail; option
   const { fields, formError } = formErrors(save.error);
   const isLocal = form.loginSource === 0;
 
-  const onSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    save.mutate();
-  };
   const field = (key: "loginName" | "fullName" | "email" | "password" | "website" | "location") => ({
     id: key,
     name: key,
@@ -217,9 +261,13 @@ export function AdminUserEdit({ user, options }: { user: AdminUserDetail; option
   });
 
   return (
-    <>
-      <h1 className="mb-4 text-xl font-semibold">{t("admin.users.edit_account")}</h1>
-      <div className="mb-5 flex min-w-0 items-center gap-3">
+    <div className="grid gap-4">
+      <AdminPageHeader
+        title={t("admin.users.edit_account")}
+        back={{ to: "/admin/users", label: t("admin.users") }}
+        crumb={user.name}
+      />
+      <div className="flex min-w-0 items-center gap-3">
         <img
           src={user.avatarURL}
           alt=""
@@ -230,101 +278,104 @@ export function AdminUserEdit({ user, options }: { user: AdminUserDetail; option
           <p className="text-xs text-(--color-muted-foreground) tabular-nums">ID {user.id}</p>
         </div>
       </div>
-      <form onSubmit={onSubmit} noValidate>
-        <fieldset disabled={save.isPending} className="contents">
-          <FormAlert message={formError} />
-          <div className="flex flex-col gap-5">
-            <LoginSourceSelect
-              options={options}
-              value={form.loginSource}
-              error={fields.loginSource}
-              onChange={(loginSource) => setForm({ ...form, loginSource })}
+      <AdminFormCard
+        pending={save.isPending}
+        error={formError}
+        onSubmit={() => save.mutate()}
+        actions={
+          <>
+            <Button type="submit">{t("admin.users.update_profile")}</Button>
+            <ConfirmButton
+              label={t("admin.users.delete_account")}
+              title={t("settings.delete_account_title")}
+              description={t("settings.delete_account_desc")}
+              action={() => deleteAdminUser(user.id)}
+              onDone={async () => {
+                toast.success(t("admin.users.deletion_success"));
+                await navigate({ to: "/admin/users" });
+              }}
             />
-            {isLocal ? null : (
-              <FormField
-                id="loginName"
-                label={t("admin.users.auth_login_name")}
-                error={fields.loginName}
-                invalid={"loginName" in fields}
-              >
-                <Input autoComplete="off" required {...field("loginName")} />
-              </FormField>
-            )}
+          </>
+        }
+      >
+        <FieldGrid>
+          <LoginSourceSelect
+            options={options}
+            value={form.loginSource}
+            error={fields.loginSource}
+            onChange={(loginSource) => setForm({ ...form, loginSource })}
+          />
+          {isLocal ? null : (
             <FormField
-              id="fullName"
-              label={t("settings.full_name")}
-              error={fields.fullName}
-              invalid={"fullName" in fields}
+              id="loginName"
+              label={t("admin.users.auth_login_name")}
+              error={fields.loginName}
+              invalid={"loginName" in fields}
             >
-              <Input autoComplete="off" {...field("fullName")} />
+              <Input autoComplete="off" required {...field("loginName")} />
             </FormField>
-            <FormField id="email" label={t("email")} error={fields.email} invalid={"email" in fields}>
-              <Input type="email" autoComplete="off" required {...field("email")} />
-            </FormField>
-            {isLocal ? (
-              <FormField
-                id="password"
-                label={t("password")}
-                helper={t("admin.users.password_helper")}
-                error={fields.password}
-                invalid={"password" in fields}
-              >
-                <Input type="password" autoComplete="new-password" {...field("password")} />
-              </FormField>
-            ) : null}
-            <FormField id="website" label={t("settings.website")} error={fields.website} invalid={"website" in fields}>
-              <Input type="url" autoComplete="off" {...field("website")} />
-            </FormField>
+          )}
+          <FormField
+            id="fullName"
+            label={t("settings.full_name")}
+            error={fields.fullName}
+            invalid={"fullName" in fields}
+          >
+            <Input autoComplete="off" {...field("fullName")} />
+          </FormField>
+          <FormField id="email" label={t("email")} error={fields.email} invalid={"email" in fields}>
+            <Input type="email" autoComplete="off" required {...field("email")} />
+          </FormField>
+          {isLocal ? (
             <FormField
-              id="location"
-              label={t("settings.location")}
-              error={fields.location}
-              invalid={"location" in fields}
+              id="password"
+              label={t("password")}
+              helper={t("admin.users.password_helper")}
+              error={fields.password}
+              invalid={"password" in fields}
             >
-              <Input autoComplete="off" {...field("location")} />
+              <Input type="password" autoComplete="new-password" {...field("password")} />
             </FormField>
-            <FormField
+          ) : null}
+          <FormField id="website" label={t("settings.website")} error={fields.website} invalid={"website" in fields}>
+            <Input type="url" autoComplete="off" {...field("website")} />
+          </FormField>
+          <FormField
+            id="location"
+            label={t("settings.location")}
+            error={fields.location}
+            invalid={"location" in fields}
+          >
+            <Input autoComplete="off" {...field("location")} />
+          </FormField>
+          <FormField
+            id="maxRepoCreation"
+            label={t("admin.users.max_repo_creation")}
+            helper={t("admin.users.max_repo_creation_desc")}
+            error={fields.maxRepoCreation}
+            invalid={"maxRepoCreation" in fields}
+          >
+            <Input
               id="maxRepoCreation"
-              label={t("admin.users.max_repo_creation")}
-              helper={t("admin.users.max_repo_creation_desc")}
-              error={fields.maxRepoCreation}
-              invalid={"maxRepoCreation" in fields}
-            >
-              <Input
-                id="maxRepoCreation"
-                name="maxRepoCreation"
-                type="number"
-                min={-1}
-                className="max-w-40"
-                value={form.maxRepoCreation}
-                onChange={(e) => setForm({ ...form, maxRepoCreation: Number(e.target.value) })}
-              />
-            </FormField>
-            <div className="flex flex-col gap-3 border-t border-(--color-border) pt-5">
-              <CheckboxField label={t("admin.users.is_activated")} {...flag("isActive")} />
-              <CheckboxField label={t("admin.users.prohibit_login")} {...flag("prohibitLogin")} />
-              <CheckboxField label={t("admin.users.is_admin")} {...flag("isAdmin")} />
-              <CheckboxField label={t("admin.users.allow_git_hook")} {...flag("allowGitHook")} />
-              {options.localPathMigrationEnabled ? (
-                <CheckboxField label={t("admin.users.allow_import_local")} {...flag("allowImportLocal")} />
-              ) : null}
-            </div>
-            <FormActions>
-              <Button type="submit">{t("admin.users.update_profile")}</Button>
-              <ConfirmButton
-                label={t("admin.users.delete_account")}
-                title={t("settings.delete_account_title")}
-                description={t("settings.delete_account_desc")}
-                action={() => deleteAdminUser(user.id)}
-                onDone={async () => {
-                  toast.success(t("admin.users.deletion_success"));
-                  await navigate({ to: "/admin/users" });
-                }}
-              />
-            </FormActions>
-          </div>
-        </fieldset>
-      </form>
-    </>
+              name="maxRepoCreation"
+              type="number"
+              min={-1}
+              className="max-w-40"
+              value={form.maxRepoCreation}
+              onChange={(e) => setForm({ ...form, maxRepoCreation: Number(e.target.value) })}
+            />
+          </FormField>
+        </FieldGrid>
+        <div className={cn(CHECKBOX_GROUP, "border-t border-(--color-border) pt-5")}>
+          <CheckboxField label={t("admin.users.is_activated")} {...flag("isActive")} />
+          <CheckboxField label={t("admin.users.prohibit_login")} {...flag("prohibitLogin")} />
+          <CheckboxField label={t("admin.users.is_admin")} {...flag("isAdmin")} />
+          <CheckboxField label={t("admin.users.allow_git_hook")} {...flag("allowGitHook")} />
+          {options.localPathMigrationEnabled ? (
+            <CheckboxField label={t("admin.users.allow_import_local")} {...flag("allowImportLocal")} />
+          ) : null}
+        </div>
+      </AdminFormCard>
+    </div>
   );
 }
