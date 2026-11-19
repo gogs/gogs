@@ -244,7 +244,13 @@ function AuthSourceForm({ source }: { source?: AdminAuthSourceDetail }) {
           </div>
         ) : (
           <FormField id="type" label={t("admin.auths.auth_type")} error={fields.type} invalid={"type" in fields}>
-            <Select value={String(form.type)} onValueChange={(v) => setForm({ ...form, type: Number(v) })}>
+            {/* Skipping the verification of a certificate is chosen for one
+                type of source, so it does not follow to another, unlike the
+                other fields that types share. */}
+            <Select
+              value={String(form.type)}
+              onValueChange={(v) => setForm({ ...form, type: Number(v), skipVerify: false })}
+            >
               <SelectTrigger id="type">
                 <SelectValue />
               </SelectTrigger>
