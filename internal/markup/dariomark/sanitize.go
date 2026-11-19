@@ -11,9 +11,10 @@ import (
 
 // Sanitizer describes the parts of the sanitizer policy that depend on the
 // rendered content, see Policy.Sanitizer. Render emulates the rest of the
-// policy, which is the Policy of NewPolicy for Markdown: the UGC policy with classes for code
-// languages, alerts, footnotes and task lists, and attributes for task list
-// items and checkboxes, footnote roles and ordered list start numbers.
+// policy, which is the Policy of NewPolicy for Markdown: the UGC policy with
+// classes for code languages, alerts, footnotes and task lists, and
+// attributes for task list items and checkboxes, footnote roles and ordered
+// list start numbers.
 type Sanitizer struct {
 	// AllowURLScheme reports whether the policy allows the URL, which has a
 	// scheme.
@@ -304,7 +305,7 @@ func (s *sanitizeSink) emitStart(name string, attrs []html.Attribute) {
 		ok := false
 		switch a.Key {
 		case "id":
-			ok = hasIDChar(a.Val)
+			ok = hasID([]byte(a.Val))
 		case "title":
 			ok = s.san.Text.MatchString(a.Val)
 		case "href":
@@ -420,10 +421,10 @@ func (s *sanitizeSink) validURL(raw string) (string, bool) {
 	return v, v != ""
 }
 
-// The patterns and tables below, with the attribute checks in emitStart, copy
-// the sanitizer policy for the HTML that Render produces. They must be
-// kept in sync with NewPolicy, which also supplies the rules for id, align,
-// title, alt and data URIs.
+// The tables below, with the attribute checks in emitStart, copy the
+// sanitizer policy for the HTML that Render produces. They must be kept in
+// sync with NewPolicy, whose checks emitStart shares.
+
 // sanitizedElement reports whether name is an element that Render produces
 // and the sanitizer allows.
 func sanitizedElement(name string) bool {
@@ -433,17 +434,6 @@ func sanitizedElement(name string) bool {
 		"input", "li", "ol", "p", "pre", "strong", "sub", "sup",
 		"table", "tbody", "td", "th", "thead", "tr", "ul":
 		return true
-	}
-	return false
-}
-
-// hasIDChar reports whether the sanitizer's id pattern, the unanchored
-// [a-zA-Z0-9\:\-_\.]+, matches v.
-func hasIDChar(v string) bool {
-	for i := 0; i < len(v); i++ {
-		if c := v[i]; isASCIIAlnum(c) || c == ':' || c == '-' || c == '_' || c == '.' {
-			return true
-		}
 	}
 	return false
 }
