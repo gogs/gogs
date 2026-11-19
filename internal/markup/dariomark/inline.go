@@ -747,6 +747,13 @@ func decodeEntityOctal(b []byte, octal bool) ([]byte, int) {
 	return nil, 0
 }
 
+// Entity returns the replacement text of the HTML named character reference
+// with the name, which has neither the leading "&" nor the trailing ";".
+func Entity(name []byte) (string, bool) {
+	s, ok := entities[string(name)]
+	return s, ok
+}
+
 // unescapeDest resolves backslash escapes and then entities in a link
 // destination, see decodeEntityOctal.
 func (p *parser) unescapeDest(b []byte) []byte {
