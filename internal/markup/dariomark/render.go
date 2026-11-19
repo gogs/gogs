@@ -75,6 +75,8 @@ type renderer struct {
 	san  sanitizeSink
 
 	plain []byte
+	// tokText is a buffer for text tokens, see tokenText.
+	tokText []byte
 	// code is a buffer for the content of code spans, see codeContent.
 	code      []byte
 	numBuf    [24]byte
@@ -130,6 +132,9 @@ func (r *renderer) release() {
 	}
 	if cap(r.code) > maxPooledBytes {
 		r.code = nil
+	}
+	if cap(r.tokText) > maxPooledBytes {
+		r.tokText = nil
 	}
 	if cap(r.headings) > maxPooledSegs {
 		r.headings = nil
