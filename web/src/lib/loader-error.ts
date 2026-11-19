@@ -38,9 +38,20 @@ export async function loaderResponseError(res: Response): Promise<LoaderResponse
 }
 
 // authenticationRedirect sends the viewer to sign in, and back to the page at href,
-// which is relative to the subpath, afterwards.
-export function authenticationRedirect(href: string) {
-  return redirect({ to: "/user/sign-in", search: { redirect_to: webContext.subURL + href }, replace: true });
+// which is relative to the subpath, afterwards. The app only asks who the
+// viewer is when a page loads, so it takes a viewer whose session ended since
+// then, i.e., `sessionEnded`, there with a full page load. Without one, the
+// sign-in page still counts them as authenticated and sends them home.
+export function authenticationRedirect(href: string, sessionEnded = false) {
+  const search = { redirect_to: webContext.subURL + href };
+  if (sessionEnded) {
+    return redirect({
+      href: `${webContext.subURL}/user/sign-in?${new URLSearchParams(search).toString()}`,
+      replace: true,
+      reloadDocument: true,
+    });
+  }
+  return redirect({ to: "/user/sign-in", search, replace: true });
 }
 
 // loadAuthenticatedPage maps the errors of loading a page that needs an
