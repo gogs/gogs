@@ -81,8 +81,7 @@ func init() {
 
 	legacyTables = append(legacyTables,
 		new(User),
-		new(Repository), new(Collaboration),
-		new(Watch), new(Star),
+		new(Repository),
 		new(ProtectBranch),
 		new(Team), new(OrgUser), new(TeamUser), new(TeamRepo),
 	)
