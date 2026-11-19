@@ -103,11 +103,11 @@ func (r adminReport) section(id, titleKey string, groups ...[]adminReportRow) ad
 func rows(rs ...adminReportRow) []adminReportRow { return rs }
 
 type adminDashboard struct {
-	AppVersion  string `json:"appVersion"`
-	GitVersion  string `json:"gitVersion"`
-	GoVersion   string `json:"goVersion"`
-	BuildTime   string `json:"buildTime"`
-	BuildCommit string `json:"buildCommit"`
+	AppVersion   string             `json:"appVersion"`
+	GitVersion   string             `json:"gitVersion"`
+	GoVersion    string             `json:"goVersion"`
+	BuildTime    string             `json:"buildTime"`
+	BuildCommit  string             `json:"buildCommit"`
 	Statistics   []adminStatistic   `json:"statistics"`
 	SystemStatus adminReportSection `json:"systemStatus"`
 }
