@@ -442,11 +442,6 @@ func getCommentsByIssueID(e Engine, issueID int64) ([]*Comment, error) {
 	return getCommentsByIssueIDSince(e, issueID, -1)
 }
 
-// GetCommentsByIssueID returns all comments of an issue.
-func GetCommentsByIssueID(issueID int64) ([]*Comment, error) {
-	return getCommentsByIssueID(x, issueID)
-}
-
 // GetCommentsByIssueIDSince returns a list of comments of an issue since a given time point.
 func GetCommentsByIssueIDSince(issueID, since int64) ([]*Comment, error) {
 	return getCommentsByIssueIDSince(x, issueID, since)

@@ -292,12 +292,6 @@ func getOwnedOrgsByUserID(sess *xorm.Session, userID int64) ([]*User, error) {
 		Join("INNER", "`org_user`", "`org_user`.org_id=`user`.id").Find(&orgs)
 }
 
-// GetOwnedOrgsByUserID returns a list of organizations that are owned by given user ID.
-func GetOwnedOrgsByUserID(userID int64) ([]*User, error) {
-	sess := x.NewSession()
-	return getOwnedOrgsByUserID(sess, userID)
-}
-
 // GetOwnedOrgsByUserIDDesc returns a list of organizations that are owned by
 // given user ID, ordered descending by the given condition.
 func GetOwnedOrgsByUserIDDesc(userID int64, desc string) ([]*User, error) {

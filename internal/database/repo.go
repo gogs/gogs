@@ -51,12 +51,6 @@ type InvalidRepoReference struct {
 	Ref string
 }
 
-// IsInvalidRepoReference returns true if the error is InvalidRepoReference.
-func IsInvalidRepoReference(err error) bool {
-	_, ok := err.(InvalidRepoReference)
-	return ok
-}
-
 func (err InvalidRepoReference) Error() string {
 	return fmt.Sprintf("invalid repository reference [ref: %s]", err.Ref)
 }
@@ -1378,23 +1372,6 @@ func Repositories(page, pageSize int) (_ []*Repository, err error) {
 	return repos, x.Limit(pageSize, (page-1)*pageSize).Asc("id").Find(&repos)
 }
 
-// RepositoriesWithUsers returns repositories in given page with their owners
-// loaded.
-func RepositoriesWithUsers(page, pageSize int) (_ []*Repository, err error) {
-	repos, err := Repositories(page, pageSize)
-	if err != nil {
-		return nil, errors.Newf("Repositories: %v", err)
-	}
-
-	for i := range repos {
-		if err = repos[i].GetOwner(); err != nil {
-			return nil, err
-		}
-	}
-
-	return repos, nil
-}
-
 // FilterRepositoryWithIssues selects repositories that are using internal issue tracker
 // and have disabled external tracker from given set.
 // It returns nil if result set is empty.
@@ -1613,11 +1590,6 @@ func ChangeRepositoryName(u *User, oldRepoName, newRepoName string) (err error) 
 func getRepositoriesByForkID(e Engine, forkID int64) ([]*Repository, error) {
 	repos := make([]*Repository, 0, 10)
 	return repos, e.Where("fork_id=?", forkID).Find(&repos)
-}
-
-// GetRepositoriesByForkID returns all repositories with given fork ID.
-func GetRepositoriesByForkID(forkID int64) ([]*Repository, error) {
-	return getRepositoriesByForkID(x, forkID)
 }
 
 func getNonMirrorRepositories(e Engine) ([]*Repository, error) {

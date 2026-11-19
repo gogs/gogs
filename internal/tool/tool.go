@@ -256,15 +256,6 @@ func Int64sToStrings(ints []int64) []string {
 	return strs
 }
 
-// Int64sToMap converts a slice of int64 to an int64 map.
-func Int64sToMap(ints []int64) map[int64]bool {
-	m := make(map[int64]bool)
-	for _, i := range ints {
-		m[i] = true
-	}
-	return m
-}
-
 // IsLetter reports whether the rune is a letter (category L).
 // https://github.com/golang/go/blob/master/src/go/scanner/scanner.go#L257
 func IsLetter(ch rune) bool {

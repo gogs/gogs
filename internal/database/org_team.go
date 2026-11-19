@@ -356,11 +356,6 @@ func getTeamsByOrgID(e Engine, orgID int64) ([]*Team, error) {
 	return teams, e.Where("org_id = ?", orgID).Find(&teams)
 }
 
-// GetTeamsByOrgID returns all teams that belong to given organization.
-func GetTeamsByOrgID(orgID int64) ([]*Team, error) {
-	return getTeamsByOrgID(x, orgID)
-}
-
 // UpdateTeam updates information of team.
 func UpdateTeam(t *Team, authChanged bool) (err error) {
 	if t.Name == "" {
@@ -479,11 +474,6 @@ func getTeamMembers(e Engine, teamID int64) (_ []*User, err error) {
 		members = append(members, member)
 	}
 	return members, nil
-}
-
-// GetTeamMembers returns all members in given team of organization.
-func GetTeamMembers(teamID int64) ([]*User, error) {
-	return getTeamMembers(x, teamID)
 }
 
 func getUserTeams(e Engine, orgID, userID int64) ([]*Team, error) {
@@ -656,11 +646,6 @@ func hasTeamRepo(e Engine, orgID, teamID, repoID int64) bool {
 	return has
 }
 
-// HasTeamRepo returns true if given team has access to the repository of the organization.
-func HasTeamRepo(orgID, teamID, repoID int64) bool {
-	return hasTeamRepo(x, orgID, teamID, repoID)
-}
-
 func addTeamRepo(e Engine, orgID, teamID, repoID int64) error {
 	_, err := e.InsertOne(&TeamRepo{
 		OrgID:  orgID,
@@ -670,22 +655,12 @@ func addTeamRepo(e Engine, orgID, teamID, repoID int64) error {
 	return err
 }
 
-// AddTeamRepo adds new repository relation to team.
-func AddTeamRepo(orgID, teamID, repoID int64) error {
-	return addTeamRepo(x, orgID, teamID, repoID)
-}
-
 func removeTeamRepo(e Engine, teamID, repoID int64) error {
 	_, err := e.Delete(&TeamRepo{
 		TeamID: teamID,
 		RepoID: repoID,
 	})
 	return err
-}
-
-// RemoveTeamRepo deletes repository relation to team.
-func RemoveTeamRepo(teamID, repoID int64) error {
-	return removeTeamRepo(x, teamID, repoID)
 }
 
 // GetTeamsHaveAccessToRepo returns all teams in an organization that have given access level to the repository.
