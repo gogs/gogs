@@ -1,13 +1,17 @@
 import { useMutation } from "@tanstack/react-query";
-import { Check, LoaderCircle, Minus, Play } from "lucide-react";
-import { type FormEvent, type ReactNode, useState } from "react";
+import { Check, LoaderCircle, Minus, Play, Search } from "lucide-react";
+import { type FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { AdminPageHeader } from "@/components/AdminPage";
 import { FormAlert, FormField } from "@/components/FormField";
 import { InlineCode } from "@/components/InlineCode";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { formatNumber } from "@/lib/format";
 import {
   ADMIN_OPERATIONS,
   type AdminConfig as AdminConfigData,
@@ -20,36 +24,6 @@ import {
 } from "@/lib/queries/admin";
 import { formErrors } from "@/lib/queries/request";
 import { formatAbsoluteTime } from "@/lib/relative-time";
-import { cn } from "@/lib/utils";
-
-const ROW_CLASS = "border-b border-(--color-border) py-3";
-
-// Section heads a part of an admin page.
-function Section({ id, title, children }: { id?: string; title: string; children: ReactNode }) {
-  return (
-    <section aria-labelledby={id ? `${id}-title` : undefined} className="mb-8">
-      <h2 id={id ? `${id}-title` : undefined} className="mb-2 text-lg font-semibold">
-        {title}
-      </h2>
-      {children}
-    </section>
-  );
-}
-
-// Facts lists labeled values, with the label beside the value on wide screens
-// and above it on narrow ones.
-function Facts({ ruled = true, children }: { ruled?: boolean; children: ReactNode }) {
-  return <dl className={cn("text-sm", ruled && "border-t border-(--color-border)")}>{children}</dl>;
-}
-
-function Fact({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="grid gap-x-4 gap-y-0.5 border-b border-(--color-border) py-2 sm:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]">
-      <dt className="font-medium">{label}</dt>
-      <dd className="min-w-0 wrap-anywhere text-(--color-muted-foreground)">{children}</dd>
-    </div>
-  );
-}
 
 export function ReportValue({ row }: { row: AdminReportRow }) {
   switch (row.kind) {
@@ -86,27 +60,6 @@ export function ReportValue({ row }: { row: AdminReportRow }) {
     default:
       return row.value;
   }
-}
-
-// Report shows a section of settings or measurements the server labeled.
-function Report({ section, children }: { section: AdminReportSection; children?: ReactNode }) {
-  return (
-    <Section id={section.id} title={section.title}>
-      {section.groups.map((group, i) => (
-        <div key={i} className={i > 0 ? "mt-6" : undefined}>
-          <Facts ruled={i === 0}>
-            {group.map((row) => (
-              <Fact key={row.label} label={row.label}>
-                <ReportValue row={row} />
-                {row.hint && <span className="ms-2 text-xs">{row.hint}</span>}
-              </Fact>
-            ))}
-          </Facts>
-        </div>
-      ))}
-      {children}
-    </Section>
-  );
 }
 
 const OPERATION_LABELS: Record<AdminOperation, string> = {
@@ -178,66 +131,163 @@ export function AdminOperations() {
     onError: (err) => toast.error(err.message),
   });
   return (
-    <>
-      <h1 className="mb-4 text-xl font-semibold">{t("admin.dashboard.operations")}</h1>
-      <ul className="glass-list border-t border-(--color-border)">
-        {ADMIN_OPERATIONS.map((op) => {
-          const label = t(OPERATION_LABELS[op]);
-          const running = run.isPending && run.variables === op;
-          return (
-            <li key={op} className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-(--color-border) py-3">
-              <span className="min-w-0 flex-1 basis-56 text-sm wrap-anywhere">{label}</span>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="shrink-0"
-                aria-label={`${t("admin.dashboard.operation_run")} ${label}`}
-                disabled={run.isPending}
-                onClick={() => run.mutate(op)}
-              >
-                {running ? (
-                  <LoaderCircle className="size-3.5 animate-spin" aria-hidden />
-                ) : (
-                  <Play className="size-3.5" aria-hidden />
-                )}
-                {t("admin.dashboard.operation_run")}
-              </Button>
-            </li>
-          );
-        })}
-      </ul>
-    </>
+    <div className="grid max-w-4xl gap-4">
+      <AdminPageHeader title={t("admin.dashboard.operations")} description={t("admin.operations_desc")} />
+      <Card>
+        <ul className="divide-y divide-(--color-border)">
+          {ADMIN_OPERATIONS.map((op) => {
+            const label = t(OPERATION_LABELS[op]);
+            const running = run.isPending && run.variables === op;
+            return (
+              <li key={op} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3 sm:px-6">
+                <span className="min-w-0 flex-1 basis-56 text-sm wrap-anywhere">{label}</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0"
+                  aria-label={`${t("admin.dashboard.operation_run")} ${label}`}
+                  disabled={run.isPending}
+                  onClick={() => run.mutate(op)}
+                >
+                  {running ? (
+                    <LoaderCircle className="size-3.5 animate-spin" aria-hidden />
+                  ) : (
+                    <Play className="size-3.5" aria-hidden />
+                  )}
+                  {t("admin.dashboard.operation_run")}
+                </Button>
+              </li>
+            );
+          })}
+        </ul>
+      </Card>
+    </div>
   );
 }
 
-// AdminConfig shows the settings the site runs with.
+function matches(row: AdminReportRow, needle: string) {
+  return [row.label, row.value, row.unit, row.hint].some((text) => text?.toLowerCase().includes(needle));
+}
+
+// filterSection keeps the settings of a section that match the filter, or all
+// of them when the title of the section matches.
+function filterSection(section: AdminReportSection, needle: string): AdminReportSection {
+  if (section.title.toLowerCase().includes(needle)) return section;
+  const groups = section.groups.map((group) => group.filter((row) => matches(row, needle)));
+  return { ...section, groups: groups.filter((group) => group.length > 0) };
+}
+
+function countRows(sections: AdminReportSection[]) {
+  return sections.reduce((n, section) => n + section.groups.reduce((m, group) => m + group.length, 0), 0);
+}
+
+// ConfigSection shows the settings of one section of the configuration, with
+// the label beside the value where the card is wide enough for both.
+function ConfigSection({ section, emailEnabled }: { section: AdminReportSection; emailEnabled: boolean }) {
+  return (
+    <section id={section.id} aria-labelledby={`${section.id}-title`} className="mb-4 scroll-mt-16 break-inside-avoid">
+      <Card className="@container">
+        <CardHeader>
+          <CardTitle id={`${section.id}-title`} className="text-base">
+            {section.title}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-5 pt-4 sm:pt-4">
+          {section.groups.map((group, i) => (
+            <dl key={i} className="divide-y divide-(--color-border) text-sm">
+              {group.map((row) => (
+                <div
+                  key={row.label}
+                  className="grid gap-x-4 gap-y-0.5 py-2 first:pt-0 last:pb-0 @md:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]"
+                >
+                  <dt className="font-medium">{row.label}</dt>
+                  <dd className="min-w-0 wrap-anywhere text-(--color-muted-foreground)">
+                    <ReportValue row={row} />
+                    {row.hint && <span className="ms-2 text-xs">{row.hint}</span>}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          ))}
+          {section.id === "email" && emailEnabled ? <TestMailForm /> : null}
+        </CardContent>
+      </Card>
+    </section>
+  );
+}
+
+// AdminConfig shows the settings the site runs with, a card per section. The
+// filter narrows them down by label, value or section, and the list of
+// sections jumps to one of them.
 export function AdminConfig({ config }: { config: AdminConfigData }) {
   const { t } = useTranslation();
+  const [query, setQuery] = useState("");
+  const needle = query.trim().toLowerCase();
+  const sections =
+    needle === ""
+      ? config.sections
+      : config.sections.map((section) => filterSection(section, needle)).filter((section) => section.groups.length > 0);
+  const total = countRows(config.sections);
   return (
-    <>
-      <h1 className="mb-4 text-xl font-semibold">{t("admin.config")}</h1>
-      {config.sections.map((section) => (
-        <Report key={section.id} section={section}>
-          {section.id === "email" && config.emailEnabled ? <TestMailForm /> : null}
-        </Report>
-      ))}
-    </>
-  );
-}
-
-// Details lays out the facts of a monitor row. Each is a line of a label and
-// its value on narrow screens, and a column with the label above its value
-// from the sm breakpoint.
-function Details({ children }: { children: ReactNode }) {
-  return <dl className="mt-2 grid gap-x-6 gap-y-1 text-sm tabular-nums sm:grid-cols-3 sm:gap-y-2">{children}</dl>;
-}
-
-function Detail({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="flex min-w-0 items-baseline justify-between gap-3 sm:block">
-      <dt className="shrink-0 text-xs text-(--color-muted-foreground)">{label}</dt>
-      <dd className="min-w-0 text-right wrap-anywhere sm:text-left">{children}</dd>
+    <div className="grid gap-4">
+      <AdminPageHeader
+        title={t("admin.config")}
+        description={
+          <span aria-live="polite">
+            {needle === ""
+              ? t("admin.config.summary", { count: formatNumber(total), sections: config.sections.length })
+              : t("admin.config.filtered", { shown: formatNumber(countRows(sections)), count: formatNumber(total) })}
+          </span>
+        }
+      >
+        <div className="relative w-full sm:w-64">
+          <Search
+            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-(--color-muted-foreground)"
+            aria-hidden
+          />
+          <Input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t("admin.config.filter")}
+            aria-label={t("admin.config.filter")}
+            className="pl-9"
+          />
+        </div>
+      </AdminPageHeader>
+      {sections.length > 0 ? (
+        <div className="grid items-start gap-4 lg:grid-cols-[13rem_minmax(0,1fr)]">
+          <nav
+            aria-label={t("admin.config.sections")}
+            className="sticky top-16 hidden max-h-[calc(100dvh-5rem)] overflow-y-auto lg:block"
+          >
+            <ul className="flex flex-col gap-0.5">
+              {sections.map((section) => (
+                <li key={section.id}>
+                  <a
+                    href={`#${section.id}`}
+                    className="block rounded-md px-2 py-1.5 text-sm text-(--color-muted-foreground) outline-none hover:bg-(--color-surface) hover:text-(--color-foreground) focus-visible:ring-1 focus-visible:ring-(--color-ring)"
+                  >
+                    {section.title}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          <div className="-mb-4 gap-4 2xl:columns-2">
+            {sections.map((section) => (
+              <ConfigSection key={section.id} section={section} emailEnabled={config.emailEnabled} />
+            ))}
+          </div>
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="text-sm text-(--color-muted-foreground)">
+            {t("admin.config.no_match", { query: query.trim() })}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
@@ -246,46 +296,62 @@ function NotAvailable() {
   return <span className="text-(--color-muted-foreground)">N/A</span>;
 }
 
-function Empty() {
-  const { t } = useTranslation();
-  return (
-    <p className="border-t border-(--color-border) py-6 text-sm text-(--color-muted-foreground)">
-      {t("repo.pulls.no_results")}
-    </p>
-  );
-}
-
-// AdminJobs lists the background jobs of the server and their schedules.
+// AdminJobs lists the background jobs of the server and their schedules. On
+// narrow screens the schedule and the times of a job move below its name.
 export function AdminJobs({ monitor }: { monitor: AdminMonitorData }) {
   const { t } = useTranslation();
   return (
-    <>
-      <h1 className="mb-4 text-xl font-semibold">{t("admin.monitor.cron")}</h1>
-      {monitor.cronTasks.length > 0 ? (
-        <ul className="glass-list border-t border-(--color-border)">
-          {monitor.cronTasks.map((task) => (
-            <li key={task.description} className={ROW_CLASS}>
-              <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <span className="font-semibold wrap-anywhere">{task.description}</span>
-                <code className="rounded border border-(--color-border) bg-(--color-surface) px-1.5 font-mono text-xs">
-                  {task.schedule}
-                </code>
-              </p>
-              <Details>
-                <Detail label={t("admin.monitor.next")}>
-                  {task.next ? formatAbsoluteTime(task.next) : <NotAvailable />}
-                </Detail>
-                <Detail label={t("admin.monitor.previous")}>
-                  {task.prev ? formatAbsoluteTime(task.prev) : <NotAvailable />}
-                </Detail>
-                <Detail label={t("admin.monitor.execute_times")}>{task.execTimes}</Detail>
-              </Details>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <Empty />
-      )}
-    </>
+    <div className="grid gap-4">
+      <AdminPageHeader title={t("admin.monitor.cron")} />
+      <Card className="overflow-hidden">
+        {monitor.cronTasks.length > 0 ? (
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead>{t("admin.monitor.name")}</TableHead>
+                <TableHead className="hidden sm:table-cell">{t("admin.monitor.schedule")}</TableHead>
+                <TableHead className="hidden lg:table-cell">{t("admin.monitor.next")}</TableHead>
+                <TableHead className="hidden lg:table-cell">{t("admin.monitor.previous")}</TableHead>
+                <TableHead className="text-right">{t("admin.monitor.execute_times")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {monitor.cronTasks.map((task) => {
+                const next = task.next ? formatAbsoluteTime(task.next) : <NotAvailable />;
+                const previous = task.prev ? formatAbsoluteTime(task.prev) : <NotAvailable />;
+                const schedule = <InlineCode>{task.schedule}</InlineCode>;
+                return (
+                  <TableRow key={task.description}>
+                    <TableCell>
+                      <span className="font-medium wrap-anywhere">{task.description}</span>
+                      <dl className="mt-1 grid gap-0.5 text-xs text-(--color-muted-foreground) lg:hidden">
+                        <div className="flex flex-wrap gap-x-1.5 sm:hidden">
+                          <dt>{t("admin.monitor.schedule")}</dt>
+                          <dd>{schedule}</dd>
+                        </div>
+                        <div className="flex flex-wrap gap-x-1.5">
+                          <dt>{t("admin.monitor.next")}</dt>
+                          <dd className="text-(--color-foreground)">{next}</dd>
+                        </div>
+                        <div className="flex flex-wrap gap-x-1.5">
+                          <dt>{t("admin.monitor.previous")}</dt>
+                          <dd className="text-(--color-foreground)">{previous}</dd>
+                        </div>
+                      </dl>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell">{schedule}</TableCell>
+                    <TableCell className="hidden tabular-nums lg:table-cell">{next}</TableCell>
+                    <TableCell className="hidden tabular-nums lg:table-cell">{previous}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatNumber(task.execTimes)}</TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        ) : (
+          <CardContent className="text-sm text-(--color-muted-foreground)">{t("repo.pulls.no_results")}</CardContent>
+        )}
+      </Card>
+    </div>
   );
 }

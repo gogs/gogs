@@ -108,9 +108,15 @@ type adminDashboard struct {
 	GoVersion   string `json:"goVersion"`
 	BuildTime   string `json:"buildTime"`
 	BuildCommit string `json:"buildCommit"`
-	// Statistics is a translated sentence that marks each count with <b>.
-	Statistics   string             `json:"statistics"`
+	Statistics   []adminStatistic   `json:"statistics"`
 	SystemStatus adminReportSection `json:"systemStatus"`
+}
+
+// adminStatistic is the number of records of one kind in the database, with
+// its label already translated.
+type adminStatistic struct {
+	Label string `json:"label"`
+	Count int64  `json:"count"`
 }
 
 func getAdminDashboard(logger *logx.Logger, c flamego.Context, l i18n.Locale) (statusCode int, resp *adminDashboard, err error) {
@@ -173,10 +179,30 @@ func getAdminDashboard(logger *logx.Logger, c flamego.Context, l i18n.Locale) (s
 		GoVersion:   runtime.Version(),
 		BuildTime:   conf.BuildTime,
 		BuildCommit: conf.BuildCommit,
-		Statistics: l.Tr("admin.dashboard.statistic_info",
-			s.User, s.Org, s.PublicKey, s.Repo, s.Watch, s.Star, s.Action, s.Access, s.Issue, s.Comment, s.Oauth,
-			s.Follow, s.Mirror, s.Release, s.LoginSource, s.Webhook, s.Milestone, s.Label, s.HookTask, s.Team,
-			s.UpdateTask, s.Attachment),
+		Statistics: []adminStatistic{
+			{l.Tr("admin.dashboard.statistic_users"), s.User},
+			{l.Tr("admin.dashboard.statistic_organizations"), s.Org},
+			{l.Tr("admin.dashboard.statistic_public_keys"), s.PublicKey},
+			{l.Tr("admin.dashboard.statistic_repositories"), s.Repo},
+			{l.Tr("admin.dashboard.statistic_watches"), s.Watch},
+			{l.Tr("admin.dashboard.statistic_stars"), s.Star},
+			{l.Tr("admin.dashboard.statistic_actions"), s.Action},
+			{l.Tr("admin.dashboard.statistic_accesses"), s.Access},
+			{l.Tr("admin.dashboard.statistic_issues"), s.Issue},
+			{l.Tr("admin.dashboard.statistic_comments"), s.Comment},
+			{l.Tr("admin.dashboard.statistic_social_accounts"), s.Oauth},
+			{l.Tr("admin.dashboard.statistic_follows"), s.Follow},
+			{l.Tr("admin.dashboard.statistic_mirrors"), s.Mirror},
+			{l.Tr("admin.dashboard.statistic_releases"), s.Release},
+			{l.Tr("admin.dashboard.statistic_login_sources"), s.LoginSource},
+			{l.Tr("admin.dashboard.statistic_webhooks"), s.Webhook},
+			{l.Tr("admin.dashboard.statistic_milestones"), s.Milestone},
+			{l.Tr("admin.dashboard.statistic_labels"), s.Label},
+			{l.Tr("admin.dashboard.statistic_hook_tasks"), s.HookTask},
+			{l.Tr("admin.dashboard.statistic_teams"), s.Team},
+			{l.Tr("admin.dashboard.statistic_update_tasks"), s.UpdateTask},
+			{l.Tr("admin.dashboard.statistic_attachments"), s.Attachment},
+		},
 		SystemStatus: status,
 	}, nil
 }
