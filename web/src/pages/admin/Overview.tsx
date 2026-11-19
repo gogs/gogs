@@ -5,6 +5,7 @@ import { type ReactNode, useId } from "react";
 import { useTranslation } from "react-i18next";
 import { Area, AreaChart, Bar, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from "recharts";
 
+import { Row, Rows, STAT_VALUE, StatCard } from "@/components/AdminPage";
 import { InlineCode } from "@/components/InlineCode";
 import { LoadError, Loaded } from "@/components/Loaded";
 import { RichText } from "@/components/RichText";
@@ -81,39 +82,12 @@ function Sparkline({ points, flagged, label }: { points: [number, number][]; fla
   );
 }
 
-// StatCard heads a number of the overview with what it measures, and ends
-// with the link to the page that tells more.
-function StatCard({
-  label,
-  chip,
-  link,
-  children,
-}: {
-  label: string;
-  chip?: ReactNode;
-  link: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <Card className="flex min-w-0 flex-col gap-2 p-5">
-      <div className="flex min-h-6 flex-wrap items-center justify-between gap-x-2 gap-y-1">
-        <h2 className="text-sm text-(--color-muted-foreground)">{label}</h2>
-        {chip}
-      </div>
-      {children}
-      <div className="mt-auto pt-1">{link}</div>
-    </Card>
-  );
-}
-
 const STAT_SKELETON = (
   <div className="flex flex-col gap-2">
     <Skeleton className="h-8 w-24" />
     <Skeleton className="h-12 w-full" />
   </div>
 );
-
-const STAT_VALUE = "text-2xl/8 font-semibold tabular-nums";
 
 function HealthStat({ metric, health }: { metric: (typeof METRICS)[number]; health: UseQueryResult<AdminHealth> }) {
   const { t } = useTranslation();
@@ -133,7 +107,7 @@ function HealthStat({ metric, health }: { metric: (typeof METRICS)[number]; heal
           </span>
         ) : null
       }
-      link={
+      footer={
         <Link to="/admin/health" className={LINK}>
           {t("admin.health")}
         </Link>
@@ -167,7 +141,7 @@ function ErrorsStat({ traces }: { traces: UseQueryResult<AdminTraceOverview> }) 
   return (
     <StatCard
       label={t("admin.overview.errors")}
-      link={
+      footer={
         <Link to="/admin/traces" search={{ view: "search", status: "5xx" }} className={LINK}>
           {t("admin.traces")}
         </Link>
@@ -432,21 +406,6 @@ function ReportSkeleton({ rows }: { rows: number }) {
       {Array.from({ length: rows }, (_, i) => (
         <Skeleton key={i} className="h-5 w-full" />
       ))}
-    </div>
-  );
-}
-
-// Rows lists labeled values in a card, with each value at the end of the line
-// of its label, or below it when they do not fit one line.
-function Rows({ children }: { children: ReactNode }) {
-  return <dl className="divide-y divide-(--color-border) text-sm">{children}</dl>;
-}
-
-function Row({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 py-2 first:pt-0 last:pb-0">
-      <dt className="font-medium">{label}</dt>
-      <dd className="min-w-0 wrap-anywhere text-(--color-muted-foreground)">{children}</dd>
     </div>
   );
 }

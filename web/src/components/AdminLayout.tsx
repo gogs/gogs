@@ -24,6 +24,7 @@ import { PaletteButton, UserMenu } from "@/components/Navbar";
 import { SettingsMenu } from "@/components/SettingsMenu";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { AdminCrumbSlot } from "@/lib/admin-crumb-context";
 import { formatNumber } from "@/lib/format";
 import { usePageTitle } from "@/lib/page-title";
 import { adminNoticesQuery } from "@/lib/queries/admin";
@@ -207,6 +208,7 @@ export function AdminLayout() {
   const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [crumbSlot, setCrumbSlot] = useState<HTMLElement | null>(null);
 
   // The deepest route tells the page, e.g., "/admin/users/$id".
   const routePath = useRouterState({ select: (state) => state.matches.at(-1)?.fullPath ?? "" });
@@ -214,6 +216,8 @@ export function AdminLayout() {
   const item = group?.items.find((i) => i.path && `${routePath}/`.startsWith(`/admin${i.path}/`)) ?? NAV[0].items[0];
   const current = t(item.label);
   usePageTitle(current);
+  // A page below the page of the item names itself in the breadcrumb.
+  const below = item.path !== "" && routePath.replace(/\/$/, "") !== `/admin${item.path}`;
 
   const toggleCollapsed = () => {
     const next = !collapsed;
@@ -278,9 +282,20 @@ export function AdminLayout() {
                   </Link>
                 </Crumb>
                 {group?.title ? <Crumb className="hidden lg:flex">{t(group.title)}</Crumb> : null}
-                <li aria-current="page" className="truncate font-medium">
-                  {current}
-                </li>
+                {below ? (
+                  <>
+                    <Crumb className="hidden sm:flex">
+                      <Link to={`/admin${item.path}`} className="hover:text-(--color-foreground)">
+                        {current}
+                      </Link>
+                    </Crumb>
+                    <li ref={setCrumbSlot} aria-current="page" className="truncate font-medium" />
+                  </>
+                ) : (
+                  <li aria-current="page" className="truncate font-medium">
+                    {current}
+                  </li>
+                )}
               </ol>
             </nav>
             <div className="ml-auto flex shrink-0 items-center gap-1">
@@ -289,7 +304,9 @@ export function AdminLayout() {
             </div>
           </header>
           <main className="min-w-0 flex-1 px-4 py-6 sm:px-6">
-            <Outlet />
+            <AdminCrumbSlot value={crumbSlot}>
+              <Outlet />
+            </AdminCrumbSlot>
           </main>
         </div>
       </div>
