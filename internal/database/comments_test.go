@@ -45,6 +45,9 @@ func TestComments(t *testing.T) {
 			// server and SSH settings, which other suites mock.
 			conf.SetMockServer(t, conf.ServerOpts{})
 			conf.SetMockSSH(t, conf.SSHOpts{})
+			// Finding mentions in issues and comments reads the UI settings,
+			// which other suites mock.
+			conf.SetMockUI(t, conf.UIOpts{})
 			tc.test(t, ctx, s)
 		})
 		if t.Failed() {

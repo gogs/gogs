@@ -51,6 +51,9 @@ func TestIssues(t *testing.T) {
 			// server and SSH settings, which other suites mock.
 			conf.SetMockServer(t, conf.ServerOpts{})
 			conf.SetMockSSH(t, conf.SSHOpts{})
+			// Finding mentions in issues reads the UI settings, which other suites
+			// mock. List pages by IssuePagingNum.
+			conf.SetMockUI(t, conf.UIOpts{IssuePagingNum: 2})
 			tc.test(t, ctx, s)
 		})
 		if t.Failed() {
@@ -252,8 +255,6 @@ func issuesGet(t *testing.T, ctx context.Context, s *IssuesStore) {
 }
 
 func issuesList(t *testing.T, ctx context.Context, s *IssuesStore) {
-	conf.SetMockUI(t, conf.UIOpts{IssuePagingNum: 2})
-
 	repo := newTestIssueRepo(t, ctx, s.db, "is-list")
 	other := newTestIssueRepo(t, ctx, s.db, "is-list-other")
 	bug := newTestLabel(t, ctx, newLabelsStore(s.db), repo.ID, "bug")
