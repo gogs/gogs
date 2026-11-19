@@ -13,10 +13,18 @@ import {
   YAxis,
 } from "recharts";
 
-import { AdminPageHeader, STAT_VALUE, SegmentedLinks, StatCard, TrendChip } from "@/components/AdminPage";
+import {
+  AdminPageHeader,
+  RefreshControl,
+  STAT_VALUE,
+  SegmentedLinks,
+  StatCard,
+  TrendChip,
+} from "@/components/AdminPage";
 import { type ChartConfig, ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import { METRICS, SECTIONS, flag, flagText, formatCount } from "@/lib/admin-health";
-import type { AdminHealth, AdminHealthRange, AdminHealthSeries } from "@/lib/queries/admin";
+import { useRefreshed } from "@/lib/admin-refresh";
+import { type AdminHealth, type AdminHealthRange, type AdminHealthSeries, adminHealthQuery } from "@/lib/queries/admin";
 import { formatAbsoluteTime, formatClockTime } from "@/lib/relative-time";
 import { cn } from "@/lib/utils";
 
@@ -174,8 +182,10 @@ const MetricChart = memo(function MetricChart({
 // AdminServerHealth shows how the server did over the last hour or day, one
 // card per measurement. Moving over a chart, or along it with the arrow keys,
 // reads every measurement at that moment, and links to the traces from then.
-export function AdminServerHealth({ health, range }: { health: AdminHealth; range: AdminHealthRange }) {
+// The page refreshes itself while its tab is in view.
+export function AdminServerHealth({ health: loaded, range }: { health: AdminHealth; range: AdminHealthRange }) {
   const { t } = useTranslation();
+  const { data: health, refresh } = useRefreshed(adminHealthQuery(range), loaded);
   const [hover, setHover] = useState<number | null>(null);
   const [pinned, setPinned] = useState<number | null>(null);
   const cursor = pinned ?? hover;
@@ -190,6 +200,8 @@ export function AdminServerHealth({ health, range }: { health: AdminHealth; rang
   const start = Math.max(Date.parse(health.start), Math.min(times[0] ?? end, end - 5 * 60_000));
   const first = times[0] ?? start;
   const last = times.at(-1) ?? end;
+  // The range moves on with each refresh, until it leaves a pinned moment behind.
+  if (pinned !== null && pinned < first) setPinned(null);
   const stepMs = health.stepSeconds * 1000;
   const rangeLabel = t(range === "1h" ? "admin.traces.last_hour" : "admin.health.last_24h");
 
@@ -241,6 +253,7 @@ export function AdminServerHealth({ health, range }: { health: AdminHealth; rang
           ]}
           to="/admin/health"
         />
+        <RefreshControl {...refresh} />
       </AdminPageHeader>
       {/* The help stays in the layout while a moment shows, so the charts do not jump under the pointer. */}
       <div aria-live="polite" className="grid text-sm/6 text-(--color-muted-foreground)">
