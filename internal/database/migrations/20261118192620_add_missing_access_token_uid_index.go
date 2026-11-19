@@ -1,8 +1,6 @@
 package migrations
 
 import (
-	"slices"
-
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
 )
@@ -18,18 +16,16 @@ func addMissingAccessTokenUIDIndex(db *gorm.DB) error {
 	if db.Migrator().HasIndex("access_token", name) {
 		return errMigrationSkipped
 	}
-	indexes, err := db.Migrator().GetIndexes("access_token")
-	if err != nil {
-		return errors.Wrap(err, "get indexes")
-	}
 	return db.Transaction(func(tx *gorm.DB) error {
-		for _, index := range indexes {
-			if !slices.Equal(index.Columns(), []string{"uid"}) {
+		// MySQL matches index names case-insensitively, so it finds the first name
+		// under either spelling and the second no longer exists after dropping it.
+		for _, legacyName := range []string{"idx_access_token_uid", "IDX_access_token_uid"} {
+			if !tx.Migrator().HasIndex("access_token", legacyName) {
 				continue
 			}
-			err := tx.Migrator().DropIndex("access_token", index.Name())
+			err := tx.Migrator().DropIndex("access_token", legacyName)
 			if err != nil {
-				return errors.Wrapf(err, "drop index %q", index.Name())
+				return errors.Wrapf(err, "drop index %q", legacyName)
 			}
 		}
 		return tx.Exec("CREATE INDEX " + quote(tx, name) + " ON " + quote(tx, "access_token") + " (" + quote(tx, "uid") + ")").Error
