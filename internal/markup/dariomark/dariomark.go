@@ -177,9 +177,10 @@ var parserPool = sync.Pool{New: func() any { return new(parser) }}
 //
 // With Options.PostProcess, the output is post-processed: special references
 // in text become links, standalone images are wrapped in links to themselves,
-// and links, code and preformatted text are left alone. With Options.Emoji,
-// emoji shortcodes become emoji as on GitHub, in text and links but not in
-// code or preformatted text, see emojiText. Documents without raw HTML are
+// and links, code and preformatted text are left alone, except that images in
+// links get relative sources resolved like standalone images. With
+// Options.Emoji, emoji shortcodes become emoji as on GitHub, in text and links
+// but not in code or preformatted text, see emojiText. Documents without raw HTML are
 // sanitized while rendering when Options.Sanitizer is set, and
 // Result.Sanitized is true. Other documents must be sanitized by the caller.
 func Render(src []byte, opts *Options) Result {
