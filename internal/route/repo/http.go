@@ -333,6 +333,8 @@ func serviceRPC(logger *logx.Logger, h serviceHandler, service string) {
 			database.PushUpdates(ctx, logger, h.authUser, h.ownerName, h.repoName, updates, func(branch string) {
 				database.TriggerPushTasks(logger, h.authUser, h.repoID, branch)
 			})
+		} else if err := database.UpdateWikiHEAD(ctx, h.dir); err != nil {
+			logger.Error("Failed to update wiki HEAD", "repoID", h.repoID, "error", err)
 		}
 	} else {
 		err = git.RunService(ctx, git.Service(service), h.dir, opts)

@@ -517,11 +517,11 @@ func TestGitPushWiki(t *testing.T) {
 	wikiPath := func(repo *Repository) string {
 		return database.WikiPath(repo.Owner, repo.Name)
 	}
-	// newWikiCheckout returns a new checkout with a commit of the home page,
-	// whose remote "origin" is the URL.
+	// newWikiCheckout returns a new checkout with a commit of the home page on
+	// the branch "main", whose remote "origin" is the URL.
 	newWikiCheckout := func(t *testing.T, remoteURL string) (dir, commit string) {
 		dir = t.TempDir()
-		gitRun(t, dir, "init", "--initial-branch=master")
+		gitRun(t, dir, "init", "--initial-branch=main")
 		gitRun(t, dir, "remote", "add", "origin", remoteURL)
 		return dir, gitCommitFile(t, dir, "Home.md")
 	}
@@ -542,10 +542,12 @@ func TestGitPushWiki(t *testing.T) {
 			require.False(t, hasWiki)
 
 			dir, want := newWikiCheckout(t, remote.url)
-			out, err := remote.git(dir, "push", "origin", "master")
+			// Git names "master" in HEAD of a new wiki by default, and clones
+			// still check out the pushed branch.
+			out, err := remote.git(dir, "push", "origin", "main")
 			require.NoError(t, err, "push: %s", out)
 
-			assert.Equal(t, want, gitRun(t, t.TempDir(), "--git-dir", wikiPath(repo), "rev-parse", "refs/heads/master"))
+			assert.Equal(t, want, gitRun(t, t.TempDir(), "--git-dir", wikiPath(repo), "rev-parse", "refs/heads/main"))
 			hasWiki, pages := getWiki(t, repo)
 			assert.True(t, hasWiki)
 			assert.Equal(t, []string{"Home"}, pages)
@@ -579,7 +581,7 @@ func TestGitPushWiki(t *testing.T) {
 		for name, remote := range gitTransports(t, test.pusher, wikiOf(test.repo)) {
 			t.Run(test.name+" over "+name, func(t *testing.T) {
 				dir, _ := newWikiCheckout(t, remote.url)
-				out, err := remote.git(dir, "push", "origin", "master")
+				out, err := remote.git(dir, "push", "origin", "main")
 				require.Error(t, err, "push succeeded: %s", out)
 				assert.NoDirExists(t, wikiPath(test.repo))
 			})
@@ -601,7 +603,7 @@ func TestGitPushWiki(t *testing.T) {
 		repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 		remote := gitTransports(t, owner, wikiOf(repo))["http"]
 		dir, _ := newWikiCheckout(t, remote.url)
-		out, err := remote.git(dir, "push", "--dry-run", "origin", "master")
+		out, err := remote.git(dir, "push", "--dry-run", "origin", "main")
 		require.NoError(t, err, "push: %s", out)
 		require.DirExists(t, wikiPath(repo))
 

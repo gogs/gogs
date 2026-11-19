@@ -89,6 +89,14 @@ func (r *Repository) InitWikiForPush(ctx context.Context) error {
 	return r.InitWiki(ctx)
 }
 
+// UpdateWikiHEAD points HEAD of the wiki in the path to the branch of its pages
+// when the branch HEAD names does not exist, e.g., after the first push to the
+// wiki used another branch name, so that clones check out the pages.
+func UpdateWikiHEAD(ctx context.Context, wikiPath string) error {
+	_, err := resolveMissingDefaultBranch(ctx, wikiPath, "", WikiBranch(ctx, wikiPath))
+	return err
+}
+
 // wikiParent returns the branch that wiki pages are committed to and its
 // latest commit, which is nil when the wiki has no pages yet.
 func (r *Repository) wikiParent(ctx context.Context) (string, *git.Commit, error) {
