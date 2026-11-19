@@ -502,11 +502,6 @@ func getUserTeams(e Engine, orgID, userID int64) ([]*Team, error) {
 	return teams, e.Where("org_id = ?", orgID).In("id", teamIDs).Find(&teams)
 }
 
-// GetUserTeams returns all teams that user belongs to in given organization.
-func GetUserTeams(orgID, userID int64) ([]*Team, error) {
-	return getUserTeams(x, orgID, userID)
-}
-
 // AddTeamMember adds new membership of given team to given organization,
 // the user will have membership to given organization automatically when needed.
 func AddTeamMember(orgID, teamID, userID int64) error {

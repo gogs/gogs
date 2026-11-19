@@ -34,6 +34,10 @@ func (s *CollaborationsStore) IsCollaborator(ctx context.Context, logger *logx.L
 // collaborator that the repository has is a no-op.
 func (s *CollaborationsStore) Add(ctx context.Context, repo *Repository, userID int64) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := newPermissionsStore(tx).lockRepository(ctx, repo.ID); err != nil {
+			return err
+		}
+
 		c := &Collaboration{RepoID: repo.ID, UserID: userID}
 		result := tx.Where("repo_id = ? AND user_id = ?", repo.ID, userID).Attrs(Collaboration{Mode: AccessModeWrite}).FirstOrCreate(c)
 		if result.Error != nil {
@@ -74,52 +78,28 @@ func (s *CollaborationsStore) List(ctx context.Context, repoID int64) ([]*Collab
 }
 
 // ChangeMode sets the collaborator's access mode to the repository, capped at
-// admin and at the actor's own mode. It is a no-op for a user who is not a
-// collaborator. In a repository of an organization, the collaborator gets the
-// higher of this mode and their teams' modes.
+// admin and at the actor's own mode, and recalculates the accesses of the
+// repository. It is a no-op for a user who is not a collaborator. In a
+// repository of an organization, the collaborator gets the higher of this mode
+// and the modes of their teams that have the repository.
 func (s *CollaborationsStore) ChangeMode(ctx context.Context, repo *Repository, actorMode AccessMode, userID int64, mode AccessMode) error {
 	if mode <= AccessModeNone || mode > AccessModeAdmin || mode > actorMode {
 		return nil
 	}
 
-	db := s.db.WithContext(ctx)
-	collaboration := new(Collaboration)
-	err := db.Where("repo_id = ? AND user_id = ?", repo.ID, userID).First(collaboration).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		perms := newPermissionsStore(tx)
+		if err := perms.lockRepository(ctx, repo.ID); err != nil {
+			return err
+		}
+
+		result := tx.Model(new(Collaboration)).Where("repo_id = ? AND user_id = ?", repo.ID, userID).Update("mode", mode)
+		if result.Error != nil {
+			return errors.Wrap(result.Error, "update collaboration")
+		} else if result.RowsAffected <= 0 {
 			return nil
 		}
-		return errors.Wrap(err, "get collaboration")
-	} else if collaboration.Mode == mode {
-		return nil
-	}
-	collaboration.Mode = mode
-
-	if err = repo.getOwner(db); err != nil {
-		return errors.Wrap(err, "get owner")
-	}
-	if repo.Owner.IsOrganization() {
-		teams, err := GetUserTeams(repo.OwnerID, userID)
-		if err != nil {
-			return errors.Wrapf(err, "list teams of user %d in organization %d", userID, repo.OwnerID)
-		}
-		for _, t := range teams {
-			mode = max(mode, t.Authorize)
-		}
-	}
-
-	return db.Transaction(func(tx *gorm.DB) error {
-		err := tx.Model(collaboration).Update("mode", collaboration.Mode).Error
-		if err != nil {
-			return errors.Wrap(err, "update collaboration")
-		}
-
-		access := &Access{UserID: userID, RepoID: repo.ID}
-		err = tx.Where("user_id = ? AND repo_id = ?", userID, repo.ID).Assign(Access{Mode: mode}).FirstOrCreate(access).Error
-		if err != nil {
-			return errors.Wrap(err, "upsert access")
-		}
-		return nil
+		return perms.recalculateAccesses(ctx, repo)
 	})
 }
 
@@ -128,6 +108,10 @@ func (s *CollaborationsStore) ChangeMode(ctx context.Context, repo *Repository, 
 // who is not a collaborator is a no-op.
 func (s *CollaborationsStore) Delete(ctx context.Context, repo *Repository, userID int64) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := newPermissionsStore(tx).lockRepository(ctx, repo.ID); err != nil {
+			return err
+		}
+
 		result := tx.Where("repo_id = ? AND user_id = ?", repo.ID, userID).Delete(new(Collaboration))
 		if result.Error != nil {
 			return errors.Wrap(result.Error, "delete")

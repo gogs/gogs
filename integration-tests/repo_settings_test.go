@@ -575,6 +575,51 @@ func TestRepoSettingsCollaborators(t *testing.T) {
 	assert.Empty(t, got)
 }
 
+func TestRepoSettingsCollaboratorsConcurrently(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
+	c := authenticatedClient(t, owner)
+	path := repoSettingsAPIPath(repo, "/settings/collaborators")
+	add := func(u *User) {
+		t.Helper()
+		status, body := c.do(http.MethodPost, path, map[string]any{"username": u.Name})
+		require.Equal(t, http.StatusCreated, status, "response: %s", body)
+	}
+	accessMode := func(u *User) database.AccessMode {
+		return database.Handle.Permissions().AccessMode(t.Context(), logger, u.ID, repo.ID, database.AccessModeOptions{OwnerID: owner.ID, Private: true})
+	}
+	existing := seedUser(t, CreateUserOptions{})
+	add(existing)
+
+	t.Run("adding two at the same time", func(t *testing.T) {
+		alice := seedUser(t, CreateUserOptions{})
+		bob := seedUser(t, CreateUserOptions{})
+
+		// Both recalculate the accesses, which replaces the access of the
+		// existing collaborator.
+		statuses := c.doBothWhileLocked("SELECT id FROM access WHERE user_id = ? FOR UPDATE", existing.ID,
+			lockedRequest{http.MethodPost, path, map[string]any{"username": alice.Name}},
+			lockedRequest{http.MethodPost, path, map[string]any{"username": bob.Name}})
+		assert.Equal(t, []int{http.StatusCreated, http.StatusCreated}, statuses)
+		for _, u := range []*User{existing, alice, bob} {
+			assert.Equal(t, database.AccessModeWrite, accessMode(u), "user %s", u.Name)
+		}
+	})
+
+	t.Run("changing the mode while removing", func(t *testing.T) {
+		carol := seedUser(t, CreateUserOptions{})
+		add(carol)
+
+		statuses := c.doBothWhileLocked("SELECT id FROM collaboration WHERE user_id = ? FOR UPDATE", carol.ID,
+			lockedRequest{http.MethodDelete, path + "/" + carol.Name, repoSettingsNoBody},
+			lockedRequest{http.MethodPatch, path + "/" + carol.Name, map[string]any{"mode": "admin"}})
+		assert.Equal(t, []int{http.StatusNoContent, http.StatusNoContent}, statuses)
+		assert.Equal(t, database.AccessModeNone, accessMode(carol))
+	})
+}
+
 // repoSettingsPublicKey returns a new SSH public key in the format of
 // authorized_keys.
 func repoSettingsPublicKey(t *testing.T) string {

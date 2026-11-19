@@ -165,14 +165,29 @@ func (s *PermissionsStore) SetRepoPerms(ctx context.Context, repoID int64, acces
 			return nil
 		}
 
-		return tx.Create(&records).Error
+		// In batches, because a statement can bind only so many parameters.
+		return tx.CreateInBatches(&records, 1000).Error
 	})
+}
+
+// lockRepository locks the row of the repository with given ID until the
+// transaction ends, so that changes to its accesses happen one at a time. A
+// change locks it before it reads anything. On MySQL, the first plain read
+// fixes the snapshot of the transaction, which would hide the collaborators
+// that a change committed meanwhile. SQLite then also writes first, rather
+// than failing to upgrade a read lock that another change holds too.
+func (s *PermissionsStore) lockRepository(ctx context.Context, repoID int64) error {
+	err := s.db.WithContext(ctx).Exec("UPDATE repository SET id = id WHERE id = ?", repoID).Error
+	return errors.Wrap(err, "lock repository")
 }
 
 // recalculateAccesses sets the access modes of the repository from its
 // collaborators and, when an organization owns it, from the teams of the
 // organization.
 func (s *PermissionsStore) recalculateAccesses(ctx context.Context, repo *Repository) error {
+	if err := s.lockRepository(ctx, repo.ID); err != nil {
+		return err
+	}
 	if err := repo.getOwner(s.db.WithContext(ctx)); err != nil {
 		return errors.Wrap(err, "get owner")
 	}
@@ -207,6 +222,9 @@ func (s *PermissionsStore) collaboratorAccesses(ctx context.Context, repoID int6
 // given ID. The owner team always gets owner access, and a member of several
 // teams gets their highest mode.
 func (s *PermissionsStore) recalculateTeamAccesses(ctx context.Context, repo *Repository, ignoredTeamID int64) error {
+	if err := s.lockRepository(ctx, repo.ID); err != nil {
+		return err
+	}
 	db := s.db.WithContext(ctx)
 	if err := repo.getOwner(db); err != nil {
 		return errors.Wrap(err, "get owner")

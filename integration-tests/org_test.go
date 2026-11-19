@@ -532,6 +532,40 @@ func TestOrgMemberRemovedLosesAccess(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 }
 
+// Changing the mode of a collaborator of an organization's repository counts
+// only the teams that have the repository.
+func TestOrgCollaboratorModeIgnoresOtherTeams(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	member := seedUser(t, CreateUserOptions{})
+	org := orgSeed(t, owner.ID)
+	repo := seedRepository(t, org.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
+	other := seedRepository(t, org.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
+	ownerClient := authenticatedClient(t, owner)
+	orgPath := "/api/web/orgs/" + org.Name
+
+	orgAddMember(t, org, member.ID)
+	var team struct {
+		LowerName string `json:"lowerName"`
+	}
+	ownerClient.doJSON(http.MethodPost, orgPath+"/teams", map[string]any{"teamName": UniqueName("Team-"), "permission": "admin"}, http.StatusCreated, &team)
+	teamPath := orgPath + "/teams/" + team.LowerName
+	status, body := ownerClient.do(http.MethodPut, teamPath+"/members/"+member.Name, orgNoBody)
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	status, body = ownerClient.do(http.MethodPut, teamPath+"/repos/"+other.Name, orgNoBody)
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+
+	collaboratorsPath := repoSettingsAPIPath(repo, "/settings/collaborators")
+	status, body = ownerClient.do(http.MethodPost, collaboratorsPath, map[string]any{"username": member.Name})
+	require.Equal(t, http.StatusCreated, status, "response: %s", body)
+	status, body = ownerClient.do(http.MethodPatch, collaboratorsPath+"/"+member.Name, map[string]any{"mode": "read"})
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+
+	accessMode := database.Handle.Permissions().AccessMode(t.Context(), logger, member.ID, repo.ID, database.AccessModeOptions{OwnerID: org.ID, Private: true})
+	assert.Equal(t, database.AccessModeRead, accessMode)
+}
+
 func TestOrgTeams(t *testing.T) {
 	t.Parallel()
 
