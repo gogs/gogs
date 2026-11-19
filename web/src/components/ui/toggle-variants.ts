@@ -12,7 +12,6 @@ export const toggleVariants = cva(
       size: {
         default: "h-10 px-3",
         sm: "h-8 px-2",
-        tile: "h-auto flex-col px-2 py-2 text-xs",
       },
     },
     defaultVariants: {

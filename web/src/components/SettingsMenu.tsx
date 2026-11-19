@@ -24,6 +24,10 @@ function toggleI18nDebug() {
   reloadWithParams(params);
 }
 
+// The themes share one row, and a longer label, e.g., in another language,
+// takes more of it than a shorter one.
+const THEME_ITEM = "flex-auto gap-1.5";
+
 export function SettingsMenu() {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -68,19 +72,19 @@ export function SettingsMenu() {
             type="single"
             value={theme}
             onValueChange={(v) => v && setTheme(v as Theme)}
-            size="tile"
-            className="grid grid-cols-3 gap-1"
+            size="sm"
+            className="glass-control glass-tabs flex-wrap glass-ui:!w-full"
           >
-            <ToggleGroupItem value="light" aria-label={t("theme_light")}>
-              <Sun className="size-4" aria-hidden />
+            <ToggleGroupItem value="light" aria-label={t("theme_light")} className={THEME_ITEM}>
+              <Sun className="size-4 shrink-0" aria-hidden />
               {t("theme_light")}
             </ToggleGroupItem>
-            <ToggleGroupItem value="dark" aria-label={t("theme_dark")}>
-              <Moon className="size-4" aria-hidden />
+            <ToggleGroupItem value="dark" aria-label={t("theme_dark")} className={THEME_ITEM}>
+              <Moon className="size-4 shrink-0" aria-hidden />
               {t("theme_dark")}
             </ToggleGroupItem>
-            <ToggleGroupItem value="system" aria-label={t("theme_system")}>
-              <Monitor className="size-4" aria-hidden />
+            <ToggleGroupItem value="system" aria-label={t("theme_system")} className={THEME_ITEM}>
+              <Monitor className="size-4 shrink-0" aria-hidden />
               {t("theme_system")}
             </ToggleGroupItem>
           </ToggleGroup>
