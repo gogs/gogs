@@ -293,6 +293,28 @@ func (r *renderer) plainLeaf(n *node) bool {
 	// open is the length of the run of asterisks that opened emphasis, or 0.
 	open := 0
 	for i := from; i < len(src); {
+		for i+4 <= len(src) {
+			b := src[i : i+4 : i+4]
+			if special[b[0]] {
+				break
+			}
+			if special[b[1]] {
+				i++
+				break
+			}
+			if special[b[2]] {
+				i += 2
+				break
+			}
+			if special[b[3]] {
+				i += 3
+				break
+			}
+			i += 4
+		}
+		if i >= len(src) {
+			break
+		}
 		c := src[i]
 		if !special[c] {
 			i++
