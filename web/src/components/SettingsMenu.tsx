@@ -34,7 +34,14 @@ export function SettingsMenu() {
   const otherLanguages = LANGUAGES.filter((l) => l.code !== currentLang);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        // The command palette can toggle glass while this menu is closed.
+        if (next) setGlassState(readGlass());
+        setOpen(next);
+      }}
+    >
       <PopoverTrigger
         aria-label={t("settings")}
         className="inline-flex size-9 cursor-pointer items-center justify-center rounded-md text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
