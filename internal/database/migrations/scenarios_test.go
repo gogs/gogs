@@ -310,10 +310,13 @@ func createLegacyDatabase(t *testing.T, db *gorm.DB, version int64) {
 		// SQLite cannot drop a column with a UNIQUE constraint.
 		require.NoError(t, db.Migrator().DropTable("access_token"))
 		require.NoError(t, db.Exec("CREATE TABLE `access_token` (`id` integer PRIMARY KEY AUTOINCREMENT, `uid` integer, `name` text, `sha1` VARCHAR(40), `created_unix` integer, `updated_unix` integer, CONSTRAINT `uni_access_token_sha1` UNIQUE (`sha1`))").Error)
-		require.NoError(t, db.Exec("CREATE INDEX `idx_access_token_user_id` ON `access_token`(`uid`)").Error)
 	} else {
 		require.NoError(t, db.Exec("ALTER TABLE access_token DROP COLUMN sha256").Error)
+		require.NoError(t, db.Migrator().DropIndex("access_token", "idx_access_token_user_id"))
 	}
+	// Gogs 0.12 created the table with GORM v1, which named the index after the
+	// column.
+	require.NoError(t, db.Exec("CREATE INDEX "+quote(db, "idx_access_token_uid")+" ON "+quote(db, "access_token")+" ("+quote(db, "uid")+")").Error)
 	require.NoError(t, db.Migrator().DropIndex("action", "idx_action_user_id"))
 	if db.Name() != "sqlite" {
 		require.NoError(t, db.Migrator().AlterColumn(new(pullRequestPreV23), "MergeBase"))
