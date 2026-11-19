@@ -234,7 +234,7 @@ func shiftSegs(n *node, k int32) {
 
 // plainLeaf renders the inline contents of the paragraph or table cell n
 // without parsing them into nodes, and reports whether it did. It does so
-// when they are only text, line breaks and code spans, as is common in
+// when they are only text, line breaks, code spans and simple emphasis, as is common in
 // comments and documents written by AI agents. The output is what the inline
 // parser and renderer write for the same contents.
 func (r *renderer) plainLeaf(n *node) bool {
@@ -254,6 +254,8 @@ func (r *renderer) plainLeaf(n *node) bool {
 	// for each length of backtick run that has no closing run left.
 	text := 0
 	var noCloser uint64
+	// open is the length of the run of asterisks that opened emphasis, or 0.
+	open := 0
 	for i := 0; i < len(src); {
 		c := src[i]
 		if !plainSpecial[c] {
@@ -312,13 +314,81 @@ func (r *renderer) plainLeaf(n *node) bool {
 			out.WriteString("</code>")
 			i = closer + k
 			text = i
+		case '*':
+			// Pairs of runs of one or two asterisks, with nothing else
+			// between them that could be a delimiter, are emphasis and strong
+			// emphasis. The delimiter algorithm matches them as written.
+			end := i + 1
+			for end < len(src) && src[end] == '*' {
+				end++
+			}
+			k := end - i
+			before, okBefore := flankClass(src, i-1)
+			after, okAfter := flankClass(src, end)
+			if k > 2 || !okBefore || !okAfter {
+				out.buf = out.buf[:start]
+				return false
+			}
+			left := after != flankSpace && (after != flankPunct || before != flankOther)
+			right := before != flankSpace && (before != flankPunct || after != flankOther)
+			tag := emTags[k-1]
+			switch {
+			case open == 0 && left && !right:
+				writeEscaped(out, src[text:i])
+				out.writeByte('<')
+				out.WriteString(tag)
+				out.writeByte('>')
+				open = k
+			case open == k && right && !left:
+				writeEscaped(out, src[text:i])
+				out.WriteString("</")
+				out.WriteString(tag)
+				out.writeByte('>')
+				open = 0
+			default:
+				out.buf = out.buf[:start]
+				return false
+			}
+			i = end
+			text = i
 		default:
 			out.buf = out.buf[:start]
 			return false
 		}
 	}
+	if open != 0 {
+		out.buf = out.buf[:start]
+		return false
+	}
 	writeEscaped(out, src[text:])
 	return true
+}
+
+var emTags = [2]string{"em", "strong"}
+
+const (
+	flankSpace = iota
+	flankPunct
+	flankOther
+)
+
+// flankClass returns the class of src[i] for deciding whether a delimiter
+// run is left or right flanking (CommonMark 0.31.2, section 6.2): Unicode
+// whitespace, which the ends of src count as, punctuation or other. It only
+// classifies ASCII, and reports false for other characters.
+func flankClass(src []byte, i int) (int, bool) {
+	if i < 0 || i >= len(src) {
+		return flankSpace, true
+	}
+	switch c := src[i]; {
+	case c >= utf8.RuneSelf:
+		return 0, false
+	case c == ' ' || c == '\t' || c == '\n' || c == '\f' || c == '\r':
+		return flankSpace, true
+	case isASCIIPunct(c):
+		return flankPunct, true
+	}
+	return flankOther, true
 }
 
 // plainSpecial marks the characters that plainLeaf handles, or for which it
