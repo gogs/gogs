@@ -309,7 +309,7 @@ func CheckPublicKeyString(logger *logx.Logger, content string) (_ string, err er
 		keyType, length, err = SSHKeygenParsePublicKey(content, conf.SSH.KeyTestPath, conf.SSH.KeygenPath)
 	}
 	if err != nil {
-		return "", errors.Newf("%s: %v", fnName, err)
+		return "", errors.Wrap(err, fnName)
 	}
 	logger.Debug("Parsed public key", "builtinServer", conf.SSH.StartBuiltinServer, "keyType", keyType, "length", length)
 

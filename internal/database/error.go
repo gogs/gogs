@@ -2,6 +2,8 @@ package database
 
 import (
 	"fmt"
+
+	"github.com/cockroachdb/errors"
 )
 
 type ErrWikiAlreadyExist struct {
@@ -22,8 +24,7 @@ type ErrKeyUnableVerify struct {
 }
 
 func IsErrKeyUnableVerify(err error) bool {
-	_, ok := err.(ErrKeyUnableVerify)
-	return ok
+	return errors.As(err, new(ErrKeyUnableVerify))
 }
 
 func (err ErrKeyUnableVerify) Error() string {

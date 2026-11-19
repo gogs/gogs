@@ -1,10 +1,15 @@
 package database
 
 import (
+	"encoding/base64"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/ssh"
+	"unknwon.dev/x/logx"
+
+	"gogs.io/gogs/internal/conf"
 )
 
 func TestSSHParsePublicKey(t *testing.T) {
@@ -59,4 +64,16 @@ func TestSSHParsePublicKey(t *testing.T) {
 			assert.Equal(t, test.expLength, length)
 		})
 	}
+}
+
+func TestCheckPublicKeyStringUnknownAlgorithm(t *testing.T) {
+	conf.SetMockSSH(t, conf.SSHOpts{
+		StartBuiltinServer:  true,
+		MinimumKeySizeCheck: true,
+	})
+
+	// A well-formed key line whose algorithm the SSH library does not know.
+	key := base64.StdEncoding.EncodeToString(ssh.Marshal(struct{ Name string }{"ssh-unknown"}))
+	_, err := CheckPublicKeyString(logx.NewNoopLogger(), "ssh-unknown "+key)
+	assert.True(t, IsErrKeyUnableVerify(err), "error: %v", err)
 }
