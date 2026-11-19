@@ -23,7 +23,8 @@ const minDBVersion = 19
 // database. Add new migrations to the bottom of the list, with the UTC time of
 // writing them as the version in the form of YYYYMMDDHHMMSS, in a file named
 // "<version>_<description>.go". Timestamps keep migrations written in parallel
-// from taking the same version.
+// from taking the same version. Cover the states of existing installations that
+// a migration may fail on with scenarios in TestMigrateScenarios.
 //
 // Versions 19 to 23 continue the numbering of the legacy "version" table, which
 // the migrations used before they were tracked by goose in "goose_db_version".
@@ -49,8 +50,9 @@ func newMigrations(logger *logx.Logger, db *gorm.DB) []*goose.Migration {
 		newMigration(logger, db, 20261116224500, "add attachment.uploader_id", addAttachmentUploaderID),
 		newMigration(logger, db, 20261116225300, "add repository pull request merge settings", addRepositoryPullsMergeSettings),
 		newMigration(logger, db, 20261117073704, "drop protect_branch_whitelist table", dropProtectBranchWhitelistTable),
-		newMigration(logger, db, 20261118160000, "disable push allowlists of protected branches of user repositories", disableProtectBranchAllowlistOfUserRepositories),
+		newMigration(logger, db, 20261118160000, "disable push allowlists of protected branches of user repositories", DisableProtectBranchAllowlistOfUserRepositories),
 		newMigration(logger, db, 20261118175404, "add unique index on public_key.owner_id and public_key.fingerprint", addPublicKeyOwnerIDFingerprintUniqueIndex),
+		newMigration(logger, db, 20261118192620, "add missing index on access_token.uid", addMissingAccessTokenUIDIndex),
 	}
 }
 
@@ -77,6 +79,11 @@ func newMigration(logger *logx.Logger, db *gorm.DB, version int64, description s
 
 // Migrate migrates the database schema and/or data to the current version.
 func Migrate(logger *logx.Logger, db *gorm.DB) error {
+	return migrateTo(logger, db, goose.MaxVersion)
+}
+
+// migrateTo runs the migrations up to and including the given version.
+func migrateTo(logger *logx.Logger, db *gorm.DB, version int64) error {
 	sqlDB, err := db.DB()
 	if err != nil {
 		return errors.Wrap(err, "get underlying *sql.DB")
@@ -109,7 +116,7 @@ func Migrate(logger *logx.Logger, db *gorm.DB) error {
 		return errors.Wrap(err, "new goose provider")
 	}
 
-	_, err = provider.Up(db.Statement.Context)
+	_, err = provider.UpTo(db.Statement.Context, version)
 	if err != nil {
 		return errors.Wrap(err, "run migrations")
 	}
