@@ -18,6 +18,9 @@ interface Metric {
   // The least a spike reaches to be worth flagging, when that is more than
   // the floor.
   spikeFloor?: number;
+  // A value of 0 tells that nothing was measured, e.g., no request arrived, so
+  // the sample says nothing about the level.
+  idleAtZero?: true;
   format: (v: number) => string;
 }
 
@@ -34,7 +37,15 @@ export const METRICS: Metric[] = [
     format: (v) => `${v.toFixed(1)} /s`,
   },
   // A single slow request sets the p95 latency of a quiet moment.
-  { key: "p95", section: "traffic", label: "admin.health.p95", floor: 50, spikeFloor: 250, format: formatMs },
+  {
+    key: "p95",
+    section: "traffic",
+    label: "admin.health.p95",
+    floor: 50,
+    spikeFloor: 250,
+    idleAtZero: true,
+    format: formatMs,
+  },
   { key: "heap", section: "runtime", label: "admin.health.heap", floor: 64 * (1 << 20), format: formatBytes },
   { key: "goroutines", section: "runtime", label: "admin.health.goroutines", floor: 100, format: formatCount },
   { key: "gcPause", section: "runtime", label: "admin.health.gc_pause", floor: 1, format: formatMs },
@@ -77,31 +88,37 @@ function median(values: number[]) {
 }
 
 // flag tells when a metric left its usual range, which is the first half of
-// the range: its recent level stands out, or it spiked. A spike is reported
-// at its start. Values below the floor of the metric are never flagged.
+// the range: its recent level stands out, or it spiked. Both levels are
+// medians, which a few odd samples do not move. A spike is reported at its
+// start. Values below the floor of the metric are never flagged.
 export function flag(
   points: [number, number][],
-  { followsTraffic, floor, spikeFloor = floor }: Pick<Metric, "followsTraffic" | "floor" | "spikeFloor">,
+  {
+    followsTraffic,
+    floor,
+    spikeFloor = floor,
+    idleAtZero,
+  }: Pick<Metric, "followsTraffic" | "floor" | "spikeFloor" | "idleAtZero">,
   range: AdminHealthRange,
 ): { up: number } | { spikeAt: number } | null {
-  if (points.length < 20) return null;
-  const values = points.map(([, v]) => v);
+  const measured = idleAtZero ? points.filter(([, v]) => v > 0) : points;
+  if (measured.length < 20) return null;
+  const values = measured.map(([, v]) => v);
   const first = values.slice(0, Math.floor(values.length / 2));
   const base = median(first);
   const spread = Math.max(median(first.map((v) => Math.abs(v - base))), 0.5);
+  const recent = median(values.slice(-Math.max(4, Math.round(values.length / 15))));
+  if (!followsTraffic && base > 0 && recent >= floor && recent / base >= 1.5) return { up: recent / base };
   // A point of the last hour is one sample, which on a quiet server can be a
-  // single request, so there a value counts as far as a neighbor reaches it
+  // single request, so there a spike counts as far as a neighbor reaches it
   // too. A point of the last 24 hours is the peak or the mean rate of 5
   // minutes, which is worth a flag on its own.
   const held =
     range === "1h" ? values.map((v, i) => Math.min(v, Math.max(values[i - 1] ?? 0, values[i + 1] ?? 0))) : values;
-  const tail = held.slice(-Math.max(4, Math.round(held.length / 15)));
-  const tailMean = tail.reduce((a, b) => a + b, 0) / tail.length;
   const peak = Math.max(...held);
-  if (!followsTraffic && base > 0 && tailMean >= floor && tailMean / base >= 1.5) return { up: tailMean / base };
   if (peak >= spikeFloor && peak > base + 6 * spread && peak >= 3 * base) {
     const start = held.findIndex((v) => v > base + (peak - base) / 2);
-    return { spikeAt: points[start][0] };
+    return { spikeAt: measured[start][0] };
   }
   return null;
 }

@@ -89,9 +89,10 @@ const ICON_BUTTON =
   "size-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-(--color-muted-foreground) outline-none hover:bg-(--color-surface) hover:text-(--color-foreground) focus-visible:ring-1 focus-visible:ring-(--color-ring)";
 
 // The current page gets a bar in the primary color beside its fill, so it does
-// not rely on the subtle fill alone.
+// not rely on the subtle fill alone. The focus ring is drawn inside the link,
+// where the edge of the scrolling list cannot cut it.
 const NAV_LINK =
-  "relative flex h-8 items-center gap-2 rounded-md px-2 text-sm text-(--color-muted-foreground) outline-none hover:bg-(--color-foreground)/5 hover:text-(--color-foreground) focus-visible:ring-1 focus-visible:ring-(--color-ring) aria-[current=page]:bg-(--color-foreground)/10 glass-ui:aria-[current=page]:bg-(--color-surface) aria-[current=page]:font-semibold aria-[current=page]:text-(--color-foreground) aria-[current=page]:before:absolute aria-[current=page]:before:inset-y-1.5 aria-[current=page]:before:-left-2 aria-[current=page]:before:w-1 aria-[current=page]:before:rounded-full aria-[current=page]:before:bg-(--color-primary)";
+  "relative flex h-8 items-center gap-2 rounded-md px-2 text-sm text-(--color-muted-foreground) outline-none hover:bg-(--color-foreground)/5 hover:text-(--color-foreground) focus-visible:ring-1 focus-visible:ring-(--color-ring) focus-visible:ring-inset aria-[current=page]:bg-(--color-foreground)/10 glass-ui:aria-[current=page]:bg-(--color-surface) aria-[current=page]:font-semibold aria-[current=page]:text-(--color-foreground) aria-[current=page]:before:absolute aria-[current=page]:before:inset-y-1.5 aria-[current=page]:before:-left-2 aria-[current=page]:before:w-1 aria-[current=page]:before:rounded-full aria-[current=page]:before:bg-(--color-primary)";
 
 // Sidebar holds the navigation of the admin console. As a rail it shows only
 // icons, each named by a tooltip.
@@ -146,10 +147,7 @@ function Sidebar({ rail }: { rail: boolean }) {
           </div>
         )}
       </div>
-      <nav
-        aria-label={t("admin_panel")}
-        className="mt-1.5 flex min-h-0 flex-1 flex-col overflow-y-auto px-2 pt-0.5 pb-2"
-      >
+      <nav aria-label={t("admin_panel")} className="mt-2 flex min-h-0 flex-1 flex-col overflow-y-auto px-2 pb-2">
         {NAV.map((group, i) => (
           <div
             key={i}
