@@ -1,11 +1,16 @@
 import { Link, type LinkProps } from "@tanstack/react-router";
-import { ArrowLeft, TrendingUp } from "lucide-react";
+import { ArrowLeft, RefreshCw, TrendingUp } from "lucide-react";
 import { type ReactNode, use } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 
 import { FormAlert } from "@/components/FormField";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AdminCrumbSlot } from "@/lib/admin-crumb-context";
+import { REFRESH_SECONDS } from "@/lib/admin-refresh";
+import { formatInterval } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 // AdminPageHeader heads a page of the admin console with its title and what
@@ -46,6 +51,46 @@ export function AdminPageHeader({
         {children ? <div className="flex min-w-0 flex-wrap items-center gap-2">{children}</div> : null}
       </div>
     </div>
+  );
+}
+
+// RefreshControl refreshes what a page shows: right away with its button, and
+// by itself at the interval picked beside it.
+export function RefreshControl({
+  seconds,
+  onSecondsChange,
+  refreshing,
+  onRefresh,
+}: {
+  seconds: number;
+  onSecondsChange: (seconds: number) => void;
+  refreshing: boolean;
+  onRefresh: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <>
+      <Button type="button" variant="outline" className="h-9 px-3" onClick={onRefresh}>
+        <RefreshCw className={cn("size-4", refreshing && "animate-spin")} aria-hidden />
+        {t("admin.refresh")}
+      </Button>
+      <Select value={String(seconds)} onValueChange={(value) => onSecondsChange(Number(value))}>
+        <SelectTrigger aria-label={t("admin.refresh.auto")} className="glass-control h-9 w-auto gap-2">
+          <SelectValue>
+            {seconds === 0
+              ? t("admin.refresh.auto_off")
+              : t("admin.refresh.every", { interval: formatInterval(seconds) })}
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent align="end">
+          {REFRESH_SECONDS.map((option) => (
+            <SelectItem key={option} value={String(option)}>
+              {option === 0 ? t("admin.refresh.off") : formatInterval(option)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </>
   );
 }
 
