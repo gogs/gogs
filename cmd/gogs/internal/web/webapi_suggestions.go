@@ -58,7 +58,7 @@ func getRepoIssueSuggestions(c flamego.Context, logger *logx.Logger, repoCtx *re
 		return http.StatusNotFound, nil, errors.New("repository does not exist")
 	}
 
-	issues, err := database.SuggestIssues(database.SuggestIssuesOptions{
+	issues, err := database.Handle.Issues().Suggest(c.Request().Context(), database.SuggestIssuesOptions{
 		RepoID:        repo.ID,
 		Keyword:       c.Query("q"),
 		IncludeIssues: includeIssues,

@@ -62,7 +62,7 @@ func issueGet(t *testing.T, c *client, repo *Repository, index int64) *issueView
 func issueFromDatabase(t *testing.T, repo *Repository, index int64) *database.Issue {
 	t.Helper()
 
-	issue, err := database.GetIssueByIndex(repo.ID, index)
+	issue, err := database.Handle.Issues().GetByIndex(t.Context(), repo.ID, index)
 	require.NoError(t, err)
 	return issue
 }
@@ -263,7 +263,7 @@ func TestIssueComments(t *testing.T) {
 		ID int64 `json:"id"`
 	}
 	commenterClient.doJSON(http.MethodPost, path, map[string]any{"content": "I **agree**."}, http.StatusCreated, &created)
-	comment, err := database.GetCommentByID(created.ID)
+	comment, err := database.Handle.Comments().GetByID(t.Context(), created.ID)
 	require.NoError(t, err)
 	assert.Equal(t, "I **agree**.", comment.Content)
 	assert.Equal(t, commenter.ID, comment.PosterID)
@@ -290,13 +290,13 @@ func TestIssueComments(t *testing.T) {
 
 	status, body = commenterClient.do(http.MethodPatch, commentPath, map[string]any{"content": "I disagree."})
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-	comment, err = database.GetCommentByID(created.ID)
+	comment, err = database.Handle.Comments().GetByID(t.Context(), created.ID)
 	require.NoError(t, err)
 	assert.Equal(t, "I disagree.", comment.Content)
 
 	status, body = ownerClient.do(http.MethodDelete, commentPath, map[string]any{})
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-	_, err = database.GetCommentByID(created.ID)
+	_, err = database.Handle.Comments().GetByID(t.Context(), created.ID)
 	assert.True(t, database.IsErrCommentNotExist(err), "comment not deleted: %v", err)
 	assert.Empty(t, issueGet(t, ownerClient, repo, index).Comments)
 }
@@ -394,6 +394,50 @@ func TestIssueLabelsMilestoneAndAssignee(t *testing.T) {
 	})
 }
 
+func TestIssueCreateConcurrently(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	c := authenticatedClient(t, owner)
+
+	create := lockedRequest{http.MethodPost, issueAPIPath(repo, "issues"), map[string]any{"title": "Same time"}}
+	statuses := c.doBothWhileLocked("SELECT id FROM repository WHERE id = ? FOR UPDATE", repo.ID, create, create)
+	assert.Equal(t, []int{http.StatusCreated, http.StatusCreated}, statuses)
+	assert.Equal(t, "Same time", issueFromDatabase(t, repo, 1).Title)
+	assert.Equal(t, "Same time", issueFromDatabase(t, repo, 2).Title)
+	assert.Equal(t, int64(3), issueCreate(t, c, repo, "Next", ""))
+
+	t.Run("while closing another issue", func(t *testing.T) {
+		// Closing an issue locks its labels by name (not by ID, as here), then
+		// its milestone, then the repository. Creating an issue must lock them
+		// in the same order.
+		zeta := issueCreateLabel(t, repo, "zeta")
+		alpha := issueCreateLabel(t, repo, "alpha")
+		milestoneID := issueCreateMilestone(t, repo, "v1")
+		labeled := map[string]any{"title": "Labeled", "labelIDs": []int64{zeta, alpha}, "milestoneID": milestoneID}
+		for _, locked := range []struct {
+			table string
+			id    int64
+		}{{"label", alpha}, {"milestone", milestoneID}} {
+			var created struct {
+				Index int64 `json:"index"`
+			}
+			c.doJSON(http.MethodPost, issueAPIPath(repo, "issues"), labeled, http.StatusCreated, &created)
+			// On PostgreSQL, updating a row moves it to the end of the table,
+			// so the row order differs from the name order too.
+			label, err := database.Handle.Labels().GetByID(t.Context(), repo.ID, alpha)
+			require.NoError(t, err)
+			require.NoError(t, database.Handle.Labels().Update(t.Context(), label))
+
+			statuses := c.doBothWhileLocked("SELECT id FROM "+locked.table+" WHERE id = ? FOR UPDATE", locked.id,
+				lockedRequest{http.MethodPut, issueAPIPath(repo, "issues", created.Index, "closed"), map[string]any{}},
+				lockedRequest{http.MethodPost, issueAPIPath(repo, "issues"), labeled})
+			assert.Equal(t, []int{http.StatusNoContent, http.StatusCreated}, statuses, "while %s is locked", locked.table)
+		}
+	})
+}
+
 // An edit whose client goes away after the content is saved still updates the
 // files the content links.
 func TestIssueEditAttachmentsClientGone(t *testing.T) {
@@ -452,6 +496,13 @@ func TestIssueEditAttachmentsClientGone(t *testing.T) {
 	require.Eventually(t, func() bool {
 		return gone(oldUUID) && attachedTo(newUUID, issue.ID, comment.ID)
 	}, 10*time.Second, 100*time.Millisecond, "files of the comment not updated")
+
+	c.goAwayWhileLocked("SELECT id FROM attachment WHERE uuid = ? FOR UPDATE", newUUID,
+		http.MethodDelete, issueAPIPath(repo, "issues", created.Index, "comments", comment.ID), nil)
+	require.Eventually(t, func() bool {
+		_, err := database.Handle.Comments().GetByID(t.Context(), comment.ID)
+		return database.IsErrCommentNotExist(err) && gone(newUUID)
+	}, 10*time.Second, 100*time.Millisecond, "comment or its files not deleted")
 }
 
 func TestIssueAttachments(t *testing.T) {

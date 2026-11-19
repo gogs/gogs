@@ -451,7 +451,7 @@ func getIssueSearch(c flamego.Context, logger *logx.Logger, viewer *database.Use
 			repos[repo.ID] = repo
 		}
 	}
-	issues, err := database.SearchIssues(opts)
+	issues, err := database.Handle.Issues().Search(ctx, opts)
 	if err != nil {
 		logger.Error("Failed to search issues", "keyword", keyword, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "search issues")

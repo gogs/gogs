@@ -96,7 +96,7 @@ func listRepoIssues(c flamego.Context, logger *logx.Logger, viewer *database.Use
 	isClosed := c.Query("state") == "closed"
 	page := pageParam(c)
 
-	stats := database.GetIssueStats(&database.IssueStatsOptions{
+	stats, err := database.Handle.Issues().Stats(c.Request().Context(), &database.IssueStatsOptions{
 		RepoID:      repo.ID,
 		UserID:      viewerID,
 		Labels:      labels,
@@ -105,6 +105,10 @@ func listRepoIssues(c flamego.Context, logger *logx.Logger, viewer *database.Use
 		FilterMode:  filterMode,
 		IsPull:      isPull,
 	})
+	if err != nil {
+		logger.Error("Failed to count issues", "repoID", repo.ID, "error", err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "count issues")
+	}
 	total := stats.OpenCount
 	if isClosed {
 		total = stats.ClosedCount
@@ -113,7 +117,7 @@ func listRepoIssues(c flamego.Context, logger *logx.Logger, viewer *database.Use
 	pageSize := int64(max(conf.UI.IssuePagingNum, 1))
 	page = min(page, max(int((total+pageSize-1)/pageSize), 1))
 
-	issues, err := database.Issues(&database.IssuesOptions{
+	issues, err := database.Handle.Issues().List(c.Request().Context(), &database.IssuesOptions{
 		UserID:      viewerID,
 		AssigneeID:  assigneeID,
 		RepoID:      repo.ID,
@@ -133,7 +137,7 @@ func listRepoIssues(c flamego.Context, logger *logx.Logger, viewer *database.Use
 
 	var reads []*database.IssueUser
 	if viewer != nil {
-		reads, err = database.GetIssueUsers(repo.ID, viewer.ID, isClosed)
+		reads, err = database.Handle.Issues().ListIssueUsers(c.Request().Context(), repo.ID, viewer.ID, isClosed)
 		if err != nil {
 			logger.Error("Failed to get issue read states", "repoID", repo.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "get read states")

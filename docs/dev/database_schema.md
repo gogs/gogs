@@ -76,6 +76,27 @@ Indexes:
 	"UQE_attachment_uuid" UNIQUE (uuid)
 ```
 
+# Table "comment"
+
+```
+    Field    |    Column    | PostgreSQL  |         MySQL         |        SQLite3        
+-------------+--------------+-------------+-----------------------+-----------------------
+ ID          | id           | BIGSERIAL   | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ Type        | type         | BIGINT      | BIGINT                | INTEGER               
+ PosterID    | poster_id    | BIGINT      | BIGINT                | INTEGER               
+ IssueID     | issue_id     | BIGINT      | BIGINT                | INTEGER               
+ CommitID    | commit_id    | BIGINT      | BIGINT                | INTEGER               
+ Line        | line         | BIGINT      | BIGINT                | INTEGER               
+ Content     | content      | TEXT        | TEXT                  | TEXT                  
+ CreatedUnix | created_unix | BIGINT      | BIGINT                | INTEGER               
+ UpdatedUnix | updated_unix | BIGINT      | BIGINT                | INTEGER               
+ CommitSHA   | commit_sha   | VARCHAR(64) | VARCHAR(64)           | VARCHAR(64)           
+
+Primary keys: id
+Indexes: 
+	"IDX_comment_issue_id" (issue_id)
+```
+
 # Table "deploy_key"
 
 ```
@@ -153,6 +174,33 @@ Indexes:
 	"IDX_hook_task_repo_id" (repo_id)
 ```
 
+# Table "issue"
+
+```
+    Field     |    Column     | PostgreSQL |         MySQL         |        SQLite3        
+--------------+---------------+------------+-----------------------+-----------------------
+ ID           | id            | BIGSERIAL  | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ RepoID       | repo_id       | BIGINT     | BIGINT                | INTEGER               
+ Index        | index         | BIGINT     | BIGINT                | INTEGER               
+ PosterID     | poster_id     | BIGINT     | BIGINT                | INTEGER               
+ Title        | name          | TEXT       | LONGTEXT              | TEXT                  
+ Content      | content       | TEXT       | TEXT                  | TEXT                  
+ MilestoneID  | milestone_id  | BIGINT     | BIGINT                | INTEGER               
+ Priority     | priority      | BIGINT     | BIGINT                | INTEGER               
+ AssigneeID   | assignee_id   | BIGINT     | BIGINT                | INTEGER               
+ IsClosed     | is_closed     | BOOLEAN    | BOOLEAN               | NUMERIC               
+ IsPull       | is_pull       | BOOLEAN    | BOOLEAN               | NUMERIC               
+ NumComments  | num_comments  | BIGINT     | BIGINT                | INTEGER               
+ DeadlineUnix | deadline_unix | BIGINT     | BIGINT                | INTEGER               
+ CreatedUnix  | created_unix  | BIGINT     | BIGINT                | INTEGER               
+ UpdatedUnix  | updated_unix  | BIGINT     | BIGINT                | INTEGER               
+
+Primary keys: id
+Indexes: 
+	"IDX_issue_repo_id" (repo_id)
+	"UQE_issue_repo_index" UNIQUE (repo_id, index)
+```
+
 # Table "issue_label"
 
 ```
@@ -165,6 +213,28 @@ Indexes:
 Primary keys: id
 Indexes: 
 	"UQE_issue_label_s" UNIQUE (issue_id, label_id)
+```
+
+# Table "issue_user"
+
+```
+    Field    |    Column    | PostgreSQL |         MySQL         |        SQLite3        
+-------------+--------------+------------+-----------------------+-----------------------
+ ID          | id           | BIGSERIAL  | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ UserID      | uid          | BIGINT     | BIGINT                | INTEGER               
+ IssueID     | issue_id     | BIGINT     | BIGINT                | INTEGER               
+ RepoID      | repo_id      | BIGINT     | BIGINT                | INTEGER               
+ MilestoneID | milestone_id | BIGINT     | BIGINT                | INTEGER               
+ IsRead      | is_read      | BOOLEAN    | BOOLEAN               | NUMERIC               
+ IsAssigned  | is_assigned  | BOOLEAN    | BOOLEAN               | NUMERIC               
+ IsMentioned | is_mentioned | BOOLEAN    | BOOLEAN               | NUMERIC               
+ IsPoster    | is_poster    | BOOLEAN    | BOOLEAN               | NUMERIC               
+ IsClosed    | is_closed    | BOOLEAN    | BOOLEAN               | NUMERIC               
+
+Primary keys: id
+Indexes: 
+	"IDX_issue_user_repo_id" (repo_id)
+	"IDX_issue_user_uid" (uid)
 ```
 
 # Table "label"
@@ -300,6 +370,32 @@ Primary keys: id
 Indexes: 
 	"IDX_public_key_owner_id" (owner_id)
 	"UQE_public_key_owner_id_fingerprint" UNIQUE (owner_id, fingerprint)
+```
+
+# Table "pull_request"
+
+```
+     Field      |      Column      | PostgreSQL  |         MySQL         |        SQLite3        
+----------------+------------------+-------------+-----------------------+-----------------------
+ ID             | id               | BIGSERIAL   | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ Type           | type             | BIGINT      | BIGINT                | INTEGER               
+ Status         | status           | BIGINT      | BIGINT                | INTEGER               
+ IssueID        | issue_id         | BIGINT      | BIGINT                | INTEGER               
+ Index          | index            | BIGINT      | BIGINT                | INTEGER               
+ HeadRepoID     | head_repo_id     | BIGINT      | BIGINT                | INTEGER               
+ BaseRepoID     | base_repo_id     | BIGINT      | BIGINT                | INTEGER               
+ HeadUserName   | head_user_name   | TEXT        | LONGTEXT              | TEXT                  
+ HeadBranch     | head_branch      | TEXT        | LONGTEXT              | TEXT                  
+ BaseBranch     | base_branch      | TEXT        | LONGTEXT              | TEXT                  
+ MergeBase      | merge_base       | VARCHAR(64) | VARCHAR(64)           | VARCHAR(64)           
+ HasMerged      | has_merged       | BOOLEAN     | BOOLEAN               | NUMERIC               
+ MergedCommitID | merged_commit_id | VARCHAR(64) | VARCHAR(64)           | VARCHAR(64)           
+ MergerID       | merger_id        | BIGINT      | BIGINT                | INTEGER               
+ MergedUnix     | merged_unix      | BIGINT      | BIGINT                | INTEGER               
+
+Primary keys: id
+Indexes: 
+	"IDX_pull_request_issue_id" (issue_id)
 ```
 
 # Table "release"

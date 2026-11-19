@@ -5,11 +5,11 @@ import (
 	"fmt"
 
 	"github.com/cockroachdb/errors"
+	"gorm.io/gorm"
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/email"
-	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/strx"
 	"gogs.io/gogs/internal/userx"
 )
@@ -115,7 +115,7 @@ func NewMailerIssue(issue *Issue) email.Issue {
 // This function sends two lists of emails:
 // 1. Repository watchers, users who participated in comments and the assignee.
 // 2. Users who are not in 1. but get mentioned in current issue/comment.
-func mailIssueCommentToParticipants(logger *logx.Logger, e Engine, issue *Issue, doer *User, mentions []string) error {
+func mailIssueCommentToParticipants(logger *logx.Logger, tx *gorm.DB, issue *Issue, doer *User, mentions []string) error {
 	ctx := context.TODO()
 
 	if !conf.User.EnableEmailNotification {
@@ -126,9 +126,9 @@ func mailIssueCommentToParticipants(logger *logx.Logger, e Engine, issue *Issue,
 	if err != nil {
 		return errors.Newf("GetWatchers [repo_id: %d]: %v", issue.RepoID, err)
 	}
-	participants, err := GetParticipantsByIssueID(e, issue.ID)
+	participants, err := newIssuesStore(tx).listParticipants(ctx, issue.ID)
 	if err != nil {
-		return errors.Newf("GetParticipantsByIssueID [issue_id: %d]: %v", issue.ID, err)
+		return errors.Wrap(err, "list participants")
 	}
 
 	// Add the issue poster in case they are not watching the repository.
@@ -193,20 +193,5 @@ func mailIssueCommentToParticipants(logger *logx.Logger, e Engine, issue *Issue,
 	if err = email.SendIssueMentionMail(logger, NewMailerIssue(issue), NewMailerRepo(issue.Repo), NewMailerUser(doer), tos); err != nil {
 		return errors.Wrap(err, "send issue mention mail")
 	}
-	return nil
-}
-
-// MailParticipants sends new issue thread created emails to repository watchers
-// and mentioned people.
-func (issue *Issue) MailParticipants(logger *logx.Logger) (err error) {
-	mentions := markup.FindAllMentions(issue.Content)
-	if err = updateIssueMentions(x, issue.ID, mentions); err != nil {
-		return errors.Newf("UpdateIssueMentions [%d]: %v", issue.ID, err)
-	}
-
-	if err = mailIssueCommentToParticipants(logger, x, issue, issue.Poster, mentions); err != nil {
-		logger.Error("Failed to mail participants", "error", err)
-	}
-
 	return nil
 }

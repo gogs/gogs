@@ -189,6 +189,46 @@ func (c *client) goAwayWhileLocked(lockQuery string, lockArg any, method, path s
 	})
 }
 
+// lockedRequest is a request for doBothWhileLocked. Its body is sent as JSON.
+type lockedRequest struct {
+	method string
+	path   string
+	body   any
+}
+
+// doBothWhileLocked sends both requests while the lock query holds its rows,
+// and releases them once both requests are blocked, so the two race. It returns
+// both status codes.
+func (c *client) doBothWhileLocked(lockQuery string, lockArg any, first, second lockedRequest) []int {
+	c.t.Helper()
+
+	var secondStatus int
+	done := make(chan struct{})
+	firstStatus, _ := c.whileLocked(lockQuery, lockArg, first.method, first.path, first.body, func(tx *gorm.DB, _ context.CancelFunc) {
+		go func() {
+			defer close(done)
+			secondStatus, _ = c.do(second.method, second.path, second.body)
+		}()
+		// The second request may fail the test, so it must finish before the
+		// test does.
+		c.t.Cleanup(func() { <-done })
+
+		// The second request may be blocked by the first one instead of by the
+		// lock.
+		var lockerPID int64
+		require.NoError(c.t, tx.Raw("SELECT pg_backend_pid()").Scan(&lockerPID).Error)
+		require.Eventually(c.t, func() bool {
+			var blocked int64
+			err := tx.Raw(`SELECT count(*) FROM pg_stat_activity a WHERE @pid = ANY(pg_blocking_pids(a.pid)) OR EXISTS (
+	SELECT 1 FROM pg_stat_activity b WHERE @pid = ANY(pg_blocking_pids(b.pid)) AND b.pid = ANY(pg_blocking_pids(a.pid))
+)`, map[string]any{"pid": lockerPID}).Scan(&blocked).Error
+			return err == nil && blocked >= 2
+		}, 30*time.Second, 50*time.Millisecond, "requests did not both wait")
+	})
+	<-done
+	return []int{firstStatus, secondStatus}
+}
+
 // whileLocked sends a request with the body encoded as JSON while the rows the
 // lock query locks are locked. Once the request waits for them, it calls
 // whileWaiting with the locking transaction and the function that cancels the

@@ -1,0 +1,1 @@
+{"ID":1,"Type":0,"Status":2,"IssueID":2,"Index":2,"HeadRepoID":2,"BaseRepoID":1,"HeadUserName":"bob","HeadBranch":"fix","BaseBranch":"main","MergeBase":"e180bd23085f8023cbe3625b21c3c387534c3b0d","HasMerged":true,"MergedCommitID":"a4b4f7a8a2e2c0b4f2e9d1c3b5a7f9e1d3c5b7a9","MergerID":1,"MergedUnix":1588572486}

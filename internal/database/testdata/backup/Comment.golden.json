@@ -1,0 +1,2 @@
+{"ID":1,"Type":0,"PosterID":2,"IssueID":1,"CommitID":0,"Line":0,"Content":"Me too.","CreatedUnix":1588568886,"UpdatedUnix":1588572486,"CommitSHA":""}
+{"ID":2,"Type":4,"PosterID":1,"IssueID":1,"CommitID":0,"Line":0,"Content":"Fix the crash","CreatedUnix":1588572486,"UpdatedUnix":1588572486,"CommitSHA":"a4b4f7a8a2e2c0b4f2e9d1c3b5a7f9e1d3c5b7a9"}

@@ -21,16 +21,16 @@ import (
 // ⚠️ WARNING: This list is meant to be read-only.
 var Tables = []any{
 	new(Access), new(AccessToken), new(Action), new(Attachment),
+	new(Comment),
 	new(DeployKey),
 	new(EmailAddress),
 	new(Follow),
 	new(HookTask),
-	new(IssueLabel),
+	new(Issue), new(IssueLabel), new(IssueUser),
 	new(Label), new(LFSObject), new(LoginSource),
 	new(Milestone), new(Mirror),
 	new(Notice),
-	new(Passkey),
-	new(PublicKey),
+	new(Passkey), new(PublicKey), new(PullRequest),
 	new(Release),
 	new(TwoFactor), new(TwoFactorRecoveryCode),
 	new(Upload),
@@ -140,12 +140,20 @@ func (db *DB) Attachments() *AttachmentsStore {
 	return newAttachmentsStore(db.db)
 }
 
+func (db *DB) Comments() *CommentsStore {
+	return newCommentsStore(db.db)
+}
+
 func (db *DB) DeployKeys() *DeployKeysStore {
 	return newDeployKeysStore(db.db)
 }
 
 func (db *DB) HookTasks() *HookTasksStore {
 	return newHookTasksStore(db.db)
+}
+
+func (db *DB) Issues() *IssuesStore {
+	return newIssuesStore(db.db)
 }
 
 func (db *DB) Labels() *LabelsStore {
@@ -194,6 +202,10 @@ func (db *DB) ProtectBranches() *ProtectBranchesStore {
 
 func (db *DB) PublicKeys() *PublicKeysStore {
 	return newPublicKeysStore(db.db)
+}
+
+func (db *DB) PullRequests() *PullRequestsStore {
+	return newPullRequestsStore(db.db)
 }
 
 func (db *DB) Releases() *ReleasesStore {

@@ -231,7 +231,7 @@ func TestAPIV1IssueComments(t *testing.T) {
 	status, body = commenterAPI.do(http.MethodDelete, issuePath+"/comments/"+apiV1Itoa(created.ID), nil)
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 	assert.Empty(t, listComments(issuePath+"/comments"))
-	_, err := database.GetCommentByID(created.ID)
+	_, err := database.Handle.Comments().GetByID(t.Context(), created.ID)
 	assert.True(t, database.IsErrCommentNotExist(err), "comment not deleted: %v", err)
 }
 

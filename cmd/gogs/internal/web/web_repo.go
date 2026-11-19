@@ -272,7 +272,7 @@ func maybeRedirectToExternalTracker(c flamego.Context, logger *logx.Logger, view
 		return
 	}
 	if index := c.ParamInt64("index"); index > 0 {
-		issue, err := database.GetRawIssueByIndex(repo.ID, index)
+		issue, err := database.Handle.Issues().GetByIndex(c.Request().Context(), repo.ID, index)
 		switch {
 		case database.IsErrIssueNotExist(err):
 		case err != nil:

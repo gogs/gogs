@@ -166,7 +166,7 @@ func TestPullLifecycle(t *testing.T) {
 	issue := issueFromDatabase(t, repo, index)
 	assert.True(t, issue.IsPull)
 	assert.Equal(t, title, issue.Title)
-	pr, err := database.GetPullRequestByIssueID(issue.ID)
+	pr, err := database.Handle.PullRequests().GetByIssueID(t.Context(), issue.ID)
 	require.NoError(t, err)
 	assert.Equal(t, branch, pr.HeadBranch)
 	assert.Equal(t, "main", pr.BaseBranch)
@@ -254,7 +254,7 @@ func TestPullLifecycle(t *testing.T) {
 			ID int64 `json:"id"`
 		}
 		otherClient.doJSON(http.MethodPost, issueAPIPath(repo, "pulls", index, "comments"), map[string]any{"content": "Looks good"}, http.StatusCreated, &created)
-		comment, err := database.GetCommentByID(created.ID)
+		comment, err := database.Handle.Comments().GetByID(t.Context(), created.ID)
 		require.NoError(t, err)
 		assert.Equal(t, issue.ID, comment.IssueID)
 	})
@@ -277,7 +277,7 @@ func TestPullLifecycle(t *testing.T) {
 		assert.Equal(t, "Merge the feature", pullMustGit(t, repo, "log", "-1", "--format=%s", "main"))
 		assert.Equal(t, mainBefore+" "+headCommit, pullMustGit(t, repo, "log", "-1", "--format=%P", "main"))
 
-		pr, err := database.GetPullRequestByIssueID(issue.ID)
+		pr, err := database.Handle.PullRequests().GetByIssueID(t.Context(), issue.ID)
 		require.NoError(t, err)
 		assert.True(t, pr.HasMerged)
 		assert.Equal(t, owner.ID, pr.MergerID)
@@ -353,6 +353,65 @@ func TestPullCloseAndReopen(t *testing.T) {
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 	assert.False(t, issueFromDatabase(t, repo, index).IsClosed)
 	pullWaitMergeable(t, c, repo, index)
+}
+
+func TestPullMergeConcurrently(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	c := authenticatedClient(t, owner)
+
+	branch := UniqueName("topic-")
+	pullCommitToNewBranch(t, c, repo, branch, "topic.md", "# Topic\n")
+	index := pullCreate(t, c, repo, branch, "Topic")
+	pullWaitMergeable(t, c, repo, index)
+
+	issue := issueFromDatabase(t, repo, index)
+	merge := lockedRequest{http.MethodPost, issueAPIPath(repo, "pulls", index, "merge"), map[string]any{}}
+	statuses := c.doBothWhileLocked("SELECT id FROM issue WHERE id = ? FOR UPDATE", issue.ID, merge, merge)
+	assert.ElementsMatch(t, []int{http.StatusNoContent, http.StatusNotFound}, statuses)
+
+	comments, err := database.Handle.Comments().ListByIssueID(t.Context(), issue.ID, 0)
+	require.NoError(t, err)
+	var closes int
+	for _, comment := range comments {
+		if comment.Type == database.CommentTypeClose {
+			closes++
+		}
+	}
+	assert.Equal(t, 1, closes, "pull request closed more than once")
+
+	t.Run("while closing it", func(t *testing.T) {
+		branch := UniqueName("other-")
+		pullCommitToNewBranch(t, c, repo, branch, "other.md", "# Other\n")
+		index := pullCreate(t, c, repo, branch, "Other")
+		pullWaitMergeable(t, c, repo, index)
+
+		// Whichever request runs second finds the pull request closed and does
+		// nothing.
+		issue := issueFromDatabase(t, repo, index)
+		statuses := c.doBothWhileLocked("SELECT id FROM issue WHERE id = ? FOR UPDATE", issue.ID,
+			lockedRequest{http.MethodPut, issueAPIPath(repo, "pulls", index, "closed"), map[string]any{}},
+			lockedRequest{http.MethodPost, issueAPIPath(repo, "pulls", index, "merge"), map[string]any{}})
+		assert.Equal(t, []int{http.StatusNoContent, http.StatusNotFound}, statuses)
+
+		pr, err := database.Handle.PullRequests().GetByIssueID(t.Context(), issue.ID)
+		require.NoError(t, err)
+		assert.False(t, pr.HasMerged)
+		comments, err := database.Handle.Comments().ListByIssueID(t.Context(), issue.ID, 0)
+		require.NoError(t, err)
+		var closes int
+		for _, comment := range comments {
+			if comment.Type == database.CommentTypeClose {
+				closes++
+			}
+		}
+		assert.Equal(t, 1, closes, "pull request closed more than once")
+		got, err := database.Handle.Repositories().GetByID(t.Context(), repo.ID)
+		require.NoError(t, err)
+		assert.Equal(t, 2, got.NumClosedPulls)
+	})
 }
 
 func TestPullPrivateRepository(t *testing.T) {
@@ -501,12 +560,12 @@ func TestPullFork(t *testing.T) {
 		v, _ = pullCompareFork(t, bobClient, fork, "main..."+branch)
 		assert.Equal(t, "exists", v.State)
 
-		inForkPull, err := database.GetPullRequestByIssueID(issueFromDatabase(t, fork, inFork).ID)
+		inForkPull, err := database.Handle.PullRequests().GetByIssueID(t.Context(), issueFromDatabase(t, fork, inFork).ID)
 		require.NoError(t, err)
 		assert.Equal(t, fork.ID, inForkPull.HeadRepoID)
 		assert.Equal(t, fork.ID, inForkPull.BaseRepoID)
 		assert.Equal(t, pullMustGit(t, fork, "rev-parse", "refs/heads/"+branch), pullMustGit(t, fork, "rev-parse", "refs/pull/"+strconv.FormatInt(inFork, 10)+"/head"))
-		intoBasePull, err := database.GetPullRequestByIssueID(issueFromDatabase(t, base, created.Index).ID)
+		intoBasePull, err := database.Handle.PullRequests().GetByIssueID(t.Context(), issueFromDatabase(t, base, created.Index).ID)
 		require.NoError(t, err)
 		assert.Equal(t, fork.ID, intoBasePull.HeadRepoID)
 		assert.Equal(t, base.ID, intoBasePull.BaseRepoID)

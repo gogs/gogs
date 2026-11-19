@@ -397,7 +397,7 @@ func listDashboardIssues(logger *logx.Logger, c flamego.Context, viewer *databas
 	case database.FilterModeCreate:
 		opts.PosterID = owner.ID
 	}
-	issues, err := database.Issues(opts)
+	issues, err := database.Handle.Issues().List(c.Request().Context(), opts)
 	if err != nil {
 		logger.Error("Failed to list issues of user", "userID", owner.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list issues")
@@ -424,7 +424,11 @@ func listDashboardIssues(logger *logx.Logger, c flamego.Context, viewer *databas
 		items = append(items, item)
 	}
 
-	stats := database.GetUserIssueStats(repoID, owner.ID, repoIDs, filterMode, isPull)
+	stats, err := database.Handle.Issues().UserStats(c.Request().Context(), repoID, owner.ID, repoIDs, filterMode, isPull)
+	if err != nil {
+		logger.Error("Failed to count issues of user", "userID", owner.ID, "error", err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "count issues")
+	}
 	resp.Counts = dashboardIssueCounts{
 		YourRepos: stats.YourReposCount,
 		Assigned:  stats.AssignCount,
