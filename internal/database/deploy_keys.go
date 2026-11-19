@@ -5,12 +5,13 @@ import (
 	"slices"
 
 	"github.com/cockroachdb/errors"
-	"github.com/glebarez/go-sqlite"
 	"github.com/go-sql-driver/mysql"
 	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"unknwon.dev/x/logx"
+
+	"gogs.io/gogs/internal/sqlite"
 )
 
 // DeployKeysStore is the storage layer for deploy keys.
@@ -102,10 +103,8 @@ func (s *DeployKeysStore) add(ctx context.Context, repoID int64, name, content, 
 // isUniqueViolation returns true when the error is an insert that violates a
 // unique index.
 func isUniqueViolation(err error) bool {
-	var sqliteErr *sqlite.Error
-	if errors.As(err, &sqliteErr) {
-		// SQLITE_CONSTRAINT_PRIMARYKEY and SQLITE_CONSTRAINT_UNIQUE.
-		return sqliteErr.Code() == 1555 || sqliteErr.Code() == 2067
+	if sqlite.IsUniqueViolation(err) {
+		return true
 	}
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {

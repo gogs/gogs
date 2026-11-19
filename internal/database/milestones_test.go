@@ -339,6 +339,9 @@ func milestonesUpdateIssueStats(t *testing.T, ctx context.Context, s *Milestones
 }
 
 func milestonesAssignIssue(t *testing.T, ctx context.Context, s *MilestonesStore) {
+	// The webhook payload reads the configuration that other tests mock.
+	conf.SetMockServer(t, conf.ServerOpts{})
+	conf.SetMockSSH(t, conf.SSHOpts{})
 	logger := logx.NewNoopLogger()
 	repo := newTestMilestoneRepo(t, ctx, s, "ms-assign")
 	newTestWebhook(t, ctx, newWebhooksStore(s.db), repo.ID, 0, HookEvents{Issues: true})

@@ -29,6 +29,8 @@ linters:
       - third_party$
       - builtin$
       - examples$
+      # Derived from github.com/glebarez/sqlite, kept close to upstream.
+      - internal/sqlite/(ddlmod|dialector|migrator)\.go$
 formatters:
   enable:
     - gofmt

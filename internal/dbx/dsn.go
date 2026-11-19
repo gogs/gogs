@@ -5,12 +5,12 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
-	"github.com/glebarez/sqlite"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/sqlite"
 )
 
 // ParsePostgreSQLHostPort parses given input in various forms defined in
@@ -52,7 +52,13 @@ func NewDSN(opts conf.DatabaseOpts) (dsn string, err error) {
 			opts.User, opts.Password, host, port, opts.Name, opts.SSLMode, opts.Schema)
 
 	case "sqlite3":
-		dsn = "file:" + opts.Path + "?cache=shared&mode=rwc"
+		// WAL lets processes that share the database, e.g., the server and "gogs
+		// serv", read while another writes. Transactions take the write lock when
+		// they begin, so one that reads and then writes waits for other writers
+		// instead of failing. Writers in other processes only poll for the lock,
+		// and may miss it for seconds while a busy server writes, hence the long
+		// busy timeout.
+		dsn = "file:" + opts.Path + "?mode=rwc&_pragma=busy_timeout(30000)&_pragma=journal_mode(WAL)&_txlock=immediate"
 
 	default:
 		return "", errors.Errorf("unrecognized dialect: %s", opts.Type)

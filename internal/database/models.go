@@ -13,7 +13,6 @@ import (
 	"unsafe"
 
 	"github.com/cockroachdb/errors"
-	"github.com/glebarez/go-sqlite"
 	"gorm.io/gorm"
 	"unknwon.dev/x/logx"
 	"xorm.io/core"
@@ -22,6 +21,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database/migrations"
 	"gogs.io/gogs/internal/dbx"
+	"gogs.io/gogs/internal/sqlite"
 )
 
 // Engine represents a XORM engine or session.
@@ -76,8 +76,8 @@ func legacyTx(e Engine) *gorm.DB {
 }
 
 func init() {
-	// Register the pure-Go SQLite driver as "sqlite3" for XORM compatibility.
-	sql.Register("sqlite3", &sqlite.Driver{})
+	// XORM looks up its SQLite dialect by the driver name "sqlite3".
+	sql.Register("sqlite3", sqlite.Driver)
 
 	legacyTables = append(legacyTables,
 		new(User),
@@ -127,7 +127,11 @@ func getEngine() (*xorm.Engine, error) {
 			return nil, errors.Newf("create directories: %v", err)
 		}
 		conf.UseSQLite3 = true
-		connStr = "file:" + conf.Database.Path + "?cache=shared&mode=rwc"
+		var err error
+		connStr, err = dbx.NewDSN(conf.Database)
+		if err != nil {
+			return nil, errors.Wrap(err, "new DSN")
+		}
 
 	default:
 		return nil, errors.Newf("unknown database type: %s", conf.Database.Type)

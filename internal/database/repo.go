@@ -1721,7 +1721,7 @@ func UpdateRepository(logger *logx.Logger, repo *Repository, visibilityChanged b
 		return err
 	}
 
-	if err = updateRepository(logger, x, repo, visibilityChanged); err != nil {
+	if err = updateRepository(logger, sess, repo, visibilityChanged); err != nil {
 		return errors.Newf("updateRepository: %v", err)
 	}
 

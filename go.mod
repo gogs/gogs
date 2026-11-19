@@ -17,7 +17,6 @@ require (
 	github.com/flamego/flamego v1.14.0
 	github.com/flamego/session v1.7.0
 	github.com/glebarez/go-sqlite v1.21.2
-	github.com/glebarez/sqlite v1.11.0
 	github.com/go-ldap/ldap/v3 v3.4.13
 	github.com/go-playground/validator/v10 v10.30.6
 	github.com/go-sql-driver/mysql v1.10.1
@@ -31,6 +30,7 @@ require (
 	github.com/issue9/identicon v1.2.1
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/klauspost/compress v1.18.7
+	github.com/liustack/sqlite v0.1.7
 	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/msteinert/pam v1.2.0
 	github.com/niklasfasching/go-org v1.9.1

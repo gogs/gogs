@@ -9,12 +9,13 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
 	"unknwon.dev/x/logx"
+
+	"gogs.io/gogs/internal/sqlite"
 )
 
 func TestLogger_Trace(t *testing.T) {
