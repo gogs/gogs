@@ -152,6 +152,16 @@ func TestMigrateScenarios(t *testing.T) {
 			},
 		},
 		{
+			// Gogs 0.12 created only missing tables, so databases that started on 0.11
+			// keep the tables as XORM created them.
+			name:   "Gogs 0.12, started on 0.11",
+			legacy: 19,
+			seed: func(t *testing.T, db *gorm.DB) {
+				require.NoError(t, db.Migrator().DropIndex("access_token", "idx_access_token_uid"))
+				require.NoError(t, db.Exec("CREATE INDEX "+quote(db, "IDX_access_token_uid")+" ON "+quote(db, "access_token")+" ("+quote(db, "uid")+")").Error)
+			},
+		},
+		{
 			// A bug in the legacy runner left some instances of 0.13 and 0.14 at
 			// version 21 and others at 22, which the migrations treat the same.
 			name:   "Gogs 0.13 and 0.14",
