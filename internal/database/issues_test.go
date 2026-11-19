@@ -51,6 +51,9 @@ func TestIssues(t *testing.T) {
 			// server and SSH settings, which other suites mock.
 			conf.SetMockServer(t, conf.ServerOpts{})
 			conf.SetMockSSH(t, conf.SSHOpts{})
+			// Finding mentions in issues reads the UI settings, which other suites
+			// mock. List pages by IssuePagingNum.
+			conf.SetMockUI(t, conf.UIOpts{IssuePagingNum: 2})
 			tc.test(t, ctx, s)
 		})
 		if t.Failed() {
