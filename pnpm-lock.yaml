@@ -112,6 +112,9 @@ importers:
       react-pdf:
         specifier: ^11.0.0
         version: 11.0.0(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      recharts:
+        specifier: ^3.11.0
+        version: 3.11.0(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react-is@19.3.1)(react@19.2.6)(redux@5.0.1)
       sonner:
         specifier: ^2.0.7
         version: 2.0.7(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -1033,6 +1036,20 @@ packages:
   '@radix-ui/rect@1.1.1':
     resolution: {integrity: sha512-HPwpGIzkl28mWyZqG52jiqDJ12waP11Pa1lGoiyUkIEuMLBP0oeK/C89esbXrxsky5we7dfd8U58nm0SgAWpVw==}
 
+  '@reduxjs/toolkit@2.14.0':
+    resolution: {integrity: sha512-m/PxMwRe0xLL6XUsAgy0YjInklHcfi9uMwFhJk+QINqjxqPvyc89T5cMjszA5bDmTE0gwGc7zr9LRO4gL+mhaw==}
+    peerDependencies:
+      '@types/react': '*'
+      react: ^16.9.0 || ^17.0.0 || ^18 || ^19
+      react-redux: ^7.2.1 || ^8.1.3 || ^9.0.0
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      react:
+        optional: true
+      react-redux:
+        optional: true
+
   '@rolldown/binding-android-arm64@1.1.5':
     resolution: {integrity: sha512-lZg8fqIv2v7FF237bwMgzGZEJvGL79/s5knJ/i6FmsGF4XXlzccZ4jb+TrFIxtSSxFtIpdsgrPZeMk1I9AFcyQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -1154,6 +1171,12 @@ packages:
 
   '@shikijs/vscode-textmate@10.0.2':
     resolution: {integrity: sha512-83yeghZ2xxin3Nj8z1NMd/NCuca+gsYXswywDy5bHvwlWL8tpTQmzGeUuHd9FC3E/SBEMvzJRwWEOz5gGes9Qg==}
+
+  '@standard-schema/spec@1.1.0':
+    resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
+
+  '@standard-schema/utils@0.3.0':
+    resolution: {integrity: sha512-e7Mew686owMaPJVNNLs55PUvgz371nKgwsc4vxE49zsODpJEnxgxRo2y/OKrqueavXgZNMDVj3DdHFlaSAeU8g==}
 
   '@tailwindcss/node@4.3.0':
     resolution: {integrity: sha512-aFb4gUhFOgdh9AXo4IzBEOzBkkAxm9VigwDJnMIYv3lcfXCJVesNfbEaBl4BNgVRyid92AmdviqwBUBRKSeY3g==}
@@ -1433,6 +1456,9 @@ packages:
 
   '@types/unist@3.0.3':
     resolution: {integrity: sha512-ko/gIFJRv177XgZsZcBwnqJN5x/Gien8qNOn0D5bQU/zAzVf9Zt3BlcUiLqhV9y4ARk0GbT3tnUiPNgnTXzc/Q==}
+
+  '@types/use-sync-external-store@0.0.6':
+    resolution: {integrity: sha512-zFDAD+tlpf2r4asuHEj0XH6pY6i0g5NeAHPn+15wk3BV6JA69eERFXC1gyGThDkVa1zCyKr5jox1+2LbV/AMLg==}
 
   '@typescript-eslint/eslint-plugin@8.59.4':
     resolution: {integrity: sha512-PegsU+XfyJJNjd4+u/k6f9yTyp0lEXXiPopUNobZcIAUJFGICFLN+sP0Rb3JehVmiij1Ph0dFGYqODoRo/2+6A==}
@@ -1846,6 +1872,9 @@ packages:
       supports-color:
         optional: true
 
+  decimal.js-light@2.5.1:
+    resolution: {integrity: sha512-qIMFpTMZmny+MMIitAB6D7iVPEorVw6YQRWkvarTkT4tBeSLLiHzcwj6q0MmYSFCiVpiqPJTJEYIrpcPzVEIvg==}
+
   deep-is@0.1.4:
     resolution: {integrity: sha512-oIPzksmTg4/MriiaYGO+okXDT7ztn/w3Eptv/+gSIdMdKsJo0u4CfYNFJPy+4SKMuCqGw2wxnA+URMg3t8a/bQ==}
 
@@ -2022,6 +2051,9 @@ packages:
     resolution: {integrity: sha512-kVscqXk4OCp68SZ0dkgEKVi6/8ij300KBWTJq32P/dYeWTSwK41WyTxalN1eRmA5Z9UU/LX9D7FWSmV9SAYx6g==}
     engines: {node: '>=0.10.0'}
 
+  eventemitter3@5.0.4:
+    resolution: {integrity: sha512-mlsTRyGaPBjPedk6Bvw+aqbsXDtoAyAzm5MO7JgU+yVRyMQ5O8bD4Kcci7BS85f93veegeCPkL8R4GLClnjLFw==}
+
   fast-deep-equal@3.1.3:
     resolution: {integrity: sha512-f3qQ9oQy9j2AhBe/H9VC91wLmKBCCU/gDOnKNAYG5hswO7BLKj09Hc5HYNz9cGI++xlpDCIgDaitVs03ATR84Q==}
 
@@ -2179,6 +2211,9 @@ packages:
   ignore@7.0.5:
     resolution: {integrity: sha512-Hs59xBNfUIunMFgWAbGX5cq6893IbWg4KnrjbYwX3tx0ztorVgTDA6B2sxf8ejHJ4wz8BqGUMYlnzNBer5NvGg==}
     engines: {node: '>= 4'}
+
+  immer@11.2.10:
+    resolution: {integrity: sha512-pzANBj+0A9u+prdhBJ14DVi44vCvVUQzBa8DKt6I0AMCokPHtt722BK9IX5bFC70xUSU9TnzLRIJLTGqIzjEFw==}
 
   import-meta-resolve@4.2.0:
     resolution: {integrity: sha512-Iqv2fzaTQN28s/FwZAoFq0ZSs/7hMAHJVX+w8PZl3cY19Pxk6jFFalxQoIfW2826i/fDLXv8IiEZRIT0lDuWcg==}
@@ -2759,6 +2794,9 @@ packages:
       typescript:
         optional: true
 
+  react-is@19.3.1:
+    resolution: {integrity: sha512-RRieF6IyxQBkcK6pP8xOHprLTPW6QjRkbGdImtqNme+/hYVwCZkLQLdlZGOhUqXwkS9IEynaGvPJtv6XB/cz0Q==}
+
   react-pdf@11.0.0:
     resolution: {integrity: sha512-x4Ierg3Sl+gOoqd0pVOQndiuFKeGcXQmUNtaSH0D/cs2nUW1HBDlFBT2Z8jDsDJv0Kh//jlOJT21ERyQtlRe7A==}
     peerDependencies:
@@ -2767,6 +2805,18 @@ packages:
       react-dom: ^19.0.0
     peerDependenciesMeta:
       '@types/react':
+        optional: true
+
+  react-redux@9.3.1:
+    resolution: {integrity: sha512-vxMLT0lalUjbZPkoTepWyKAZbjIIFssNx/CEL9lTfwQBU6XpkGSmCNdcCIrkOBUgB68uftZMnbXVb6DwGnhRKQ==}
+    peerDependencies:
+      '@types/react': ^18.2.25 || ^19
+      react: ^18.0 || ^19
+      redux: ^5.0.0
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      redux:
         optional: true
 
   react-remove-scroll-bar@2.3.8:
@@ -2803,6 +2853,26 @@ packages:
     resolution: {integrity: sha512-sfWGGfavi0xr8Pg0sVsyHMAOziVYKgPLNrS7ig+ivMNb3wbCBw3KxtflsGBAwD3gYQlE/AEZsTLgToRrSCjb0Q==}
     engines: {node: '>=0.10.0'}
 
+  recharts@3.11.0:
+    resolution: {integrity: sha512-Hs7vXskAYl82TKKkeikPxMFOaOqVJBoqxay6a4Oj+sBURVorpSKk8J732vyNsmedxK08lpPhyj2GL4E6ZMHR6Q==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      '@types/react': '*'
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+      react-dom: ^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+      react-is: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+
+  redux-thunk@3.1.0:
+    resolution: {integrity: sha512-NW2r5T6ksUKXCabzhL9z+h206HQw/NJkcLm1GPImRQ8IzfXwRGqjVhKJGauHirT0DAuyy6hjdnMZaRoAcy0Klw==}
+    peerDependencies:
+      redux: ^5.0.0
+
+  redux@5.0.1:
+    resolution: {integrity: sha512-M9/ELqF6fy8FwmkpnF0S3YKOqMyoWJ4+CS5Efg2ct3oY9daQvd/Pc71FpGZsVsbl3Cpb+IIcjBDUnnyBdQbq4w==}
+
   reflect.getprototypeof@1.0.10:
     resolution: {integrity: sha512-00o4I+DVrefhv+nX0ulyi3biSHCPDe+yLv5o/p6d/UVlirijB8E16FtfwSAi4g3tcqrQ4lRAqQSoFEZJehYEcw==}
     engines: {node: '>= 0.4'}
@@ -2819,6 +2889,9 @@ packages:
   regexp.prototype.flags@1.5.4:
     resolution: {integrity: sha512-dYqgNSZbDwkaJ2ceRd9ojCGjBq+mOm9LmtXnAnEGyHhN/5R7iDW2TRw3h+o/jCFxus3P2LfWIIiwowAjANm7IA==}
     engines: {node: '>= 0.4'}
+
+  reselect@5.2.0:
+    resolution: {integrity: sha512-AgZ3UOZm3YndfrJ4OYjgrT7bmCm/1iqkjvEfH/oYjzh6PD2qw4QuT3jjnXIrpdt4MTpMXclMT3lXbmRY+XRakw==}
 
   resolve@2.0.0-next.7:
     resolution: {integrity: sha512-tqt+NBWwyaMgw3zDsnygx4CByWjQEJHOPMdslYhppaQSJUtL/D4JO9CcBBlhPoI8lz9oJIDXkwXfhF4aWqP8xQ==}
@@ -3113,6 +3186,9 @@ packages:
 
   vfile@6.0.3:
     resolution: {integrity: sha512-KzIbH/9tXat2u30jf+smMwFCsno4wHVdNmzFyL+T/L3UGqqk6JKfVqOFOZEpZSHADH1k40ab6NUIXZq422ov3Q==}
+
+  victory-vendor@37.4.1:
+    resolution: {integrity: sha512-geV4p2GVfVM9lgm9ZRS3pvsbAPS+BUGhM9W9nPzPHTKi+/+KjNrFXdgP6KkG+XspNZuvcXmchcrtklfuQ4gniw==}
 
   vite@8.1.6:
     resolution: {integrity: sha512-aRAHIxx5SW5zc1sMqFwJU/t5qaFfXb5Hj0J7W0VXihu/X99+346tz6080tO1T1xVIJORX/b3zVTXGFqUXh35uw==}
@@ -4057,6 +4133,19 @@ snapshots:
 
   '@radix-ui/rect@1.1.1': {}
 
+  '@reduxjs/toolkit@2.14.0(@types/react@19.2.14)(react-redux@9.3.1(@types/react@19.2.14)(react@19.2.6)(redux@5.0.1))(react@19.2.6)':
+    dependencies:
+      '@standard-schema/spec': 1.1.0
+      '@standard-schema/utils': 0.3.0
+      immer: 11.2.10
+      redux: 5.0.1
+      redux-thunk: 3.1.0(redux@5.0.1)
+      reselect: 5.2.0
+    optionalDependencies:
+      '@types/react': 19.2.14
+      react: 19.2.6
+      react-redux: 9.3.1(@types/react@19.2.14)(react@19.2.6)(redux@5.0.1)
+
   '@rolldown/binding-android-arm64@1.1.5':
     optional: true
 
@@ -4142,6 +4231,10 @@ snapshots:
       '@types/hast': 3.0.4
 
   '@shikijs/vscode-textmate@10.0.2': {}
+
+  '@standard-schema/spec@1.1.0': {}
+
+  '@standard-schema/utils@0.3.0': {}
 
   '@tailwindcss/node@4.3.0':
     dependencies:
@@ -4415,6 +4508,8 @@ snapshots:
     optional: true
 
   '@types/unist@3.0.3': {}
+
+  '@types/use-sync-external-store@0.0.6': {}
 
   '@typescript-eslint/eslint-plugin@8.59.4(@typescript-eslint/parser@8.59.4(eslint@10.4.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.4.0(jiti@2.7.0))(typescript@6.0.3)':
     dependencies:
@@ -4895,6 +4990,8 @@ snapshots:
     dependencies:
       ms: 2.1.3
 
+  decimal.js-light@2.5.1: {}
+
   deep-is@0.1.4: {}
 
   define-data-property@1.1.4:
@@ -5162,6 +5259,8 @@ snapshots:
 
   esutils@2.0.3: {}
 
+  eventemitter3@5.0.4: {}
+
   fast-deep-equal@3.1.3: {}
 
   fast-json-stable-stringify@2.1.0: {}
@@ -5318,6 +5417,8 @@ snapshots:
   ignore@5.3.2: {}
 
   ignore@7.0.5: {}
+
+  immer@11.2.10: {}
 
   import-meta-resolve@4.2.0: {}
 
@@ -5849,6 +5950,8 @@ snapshots:
       react-dom: 19.2.6(react@19.2.6)
       typescript: 6.0.3
 
+  react-is@19.3.1: {}
+
   react-pdf@11.0.0(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6):
     dependencies:
       clsx: 2.1.1
@@ -5864,6 +5967,15 @@ snapshots:
       warning: 4.0.3
     optionalDependencies:
       '@types/react': 19.2.14
+
+  react-redux@9.3.1(@types/react@19.2.14)(react@19.2.6)(redux@5.0.1):
+    dependencies:
+      '@types/use-sync-external-store': 0.0.6
+      react: 19.2.6
+      use-sync-external-store: 1.7.0(react@19.2.6)
+    optionalDependencies:
+      '@types/react': 19.2.14
+      redux: 5.0.1
 
   react-remove-scroll-bar@2.3.8(@types/react@19.2.14)(react@19.2.6):
     dependencies:
@@ -5894,6 +6006,33 @@ snapshots:
 
   react@19.2.6: {}
 
+  recharts@3.11.0(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react-is@19.3.1)(react@19.2.6)(redux@5.0.1):
+    dependencies:
+      '@reduxjs/toolkit': 2.14.0(@types/react@19.2.14)(react-redux@9.3.1(@types/react@19.2.14)(react@19.2.6)(redux@5.0.1))(react@19.2.6)
+      clsx: 2.1.1
+      decimal.js-light: 2.5.1
+      es-toolkit: 1.53.2
+      eventemitter3: 5.0.4
+      immer: 11.2.10
+      react: 19.2.6
+      react-dom: 19.2.6(react@19.2.6)
+      react-is: 19.3.1
+      react-redux: 9.3.1(@types/react@19.2.14)(react@19.2.6)(redux@5.0.1)
+      reselect: 5.2.0
+      tiny-invariant: 1.3.3
+      use-sync-external-store: 1.7.0(react@19.2.6)
+      victory-vendor: 37.4.1
+    optionalDependencies:
+      '@types/react': 19.2.14
+    transitivePeerDependencies:
+      - redux
+
+  redux-thunk@3.1.0(redux@5.0.1):
+    dependencies:
+      redux: 5.0.1
+
+  redux@5.0.1: {}
+
   reflect.getprototypeof@1.0.10:
     dependencies:
       call-bind: 1.0.9
@@ -5923,6 +6062,8 @@ snapshots:
       get-proto: 1.0.1
       gopd: 1.2.0
       set-function-name: 2.0.2
+
+  reselect@5.2.0: {}
 
   resolve@2.0.0-next.7:
     dependencies:
@@ -6279,6 +6420,23 @@ snapshots:
     dependencies:
       '@types/unist': 3.0.3
       vfile-message: 4.0.3
+
+  victory-vendor@37.4.1:
+    dependencies:
+      '@types/d3-array': 3.2.2
+      '@types/d3-ease': 3.0.2
+      '@types/d3-interpolate': 3.0.4
+      '@types/d3-scale': 4.0.9
+      '@types/d3-shape': 3.2.0
+      '@types/d3-time': 3.0.4
+      '@types/d3-timer': 3.0.2
+      d3-array: 3.2.5
+      d3-ease: 3.0.2
+      d3-interpolate: 3.0.2
+      d3-scale: 4.0.3
+      d3-shape: 3.2.1
+      d3-time: 3.1.1
+      d3-timer: 3.0.2
 
   vite@8.1.6(@types/node@25.9.0)(jiti@2.7.0):
     dependencies:

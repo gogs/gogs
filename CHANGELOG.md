@@ -60,6 +60,7 @@ All notable changes to Gogs are documented in this file.
 - Avatars hosted by Gogs are now served from `/-/avatars/<id>` and `/-/repo-avatars/<id>`, so they no longer hide the pages of users named `avatars` or `repo-avatars`. Links to the old `/avatars/<id>` and `/repo-avatars/<id>` paths, e.g., in chat messages sent by webhooks, no longer load. [#8650](https://github.com/gogs/gogs/pull/8650)
 - External wiki and issue tracker URLs must start with `http://` or `https://`. Saving another URL, e.g., `javascript:alert(1)`, fails with a message, and repositories that already have one no longer send visitors to it. [#8638](https://github.com/gogs/gogs/pull/8638)
 - The API repository search matches `q` as given. A query such as `owner/name` no longer matches repositories named `name` from any owner. [#8587](https://github.com/gogs/gogs/pull/8587)
+- The admin panel is now a console that uses the whole window width, with its pages in a sidebar that collapses to icons, in place of the navbar and the footer. Its dashboard is now an overview of the requests, errors, latency and memory of the last hour with charts, next to what needs attention, the statistics and the build information. Each part of the overview loads on its own.
 
 ### Fixed
 

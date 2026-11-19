@@ -3,7 +3,6 @@ import { AlertCircle, ArrowLeft, ChevronDown, ChevronRight, Search as SearchIcon
 import { type FormEvent, type ReactNode, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 
-import { AdminLayout } from "@/components/AdminLayout";
 import { InlineCode } from "@/components/InlineCode";
 import { PageTabs } from "@/components/PageTabs";
 import { Button } from "@/components/ui/button";
@@ -146,7 +145,7 @@ function TracesLayout({
 }) {
   const { t } = useTranslation();
   return (
-    <AdminLayout active="traces">
+    <>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold">{t("admin.traces")}</h1>
@@ -169,7 +168,18 @@ function TracesLayout({
         )}
       />
       {children}
-    </AdminLayout>
+    </>
+  );
+}
+
+// TracingDisabledNote tells how to turn tracing on.
+export function TracingDisabledNote() {
+  return (
+    <Trans
+      i18nKey="admin.traces.disabled"
+      values={{ setting: "ENABLED = true", section: "[tracing]" }}
+      components={{ code: <InlineCode /> }}
+    />
   );
 }
 
@@ -178,16 +188,12 @@ function TracesLayout({
 function Disabled() {
   const { t } = useTranslation();
   return (
-    <AdminLayout active="traces">
+    <>
       <h1 className="text-xl font-semibold">{t("admin.traces")}</h1>
       <p className="mt-1 text-sm text-(--color-muted-foreground)">
-        <Trans
-          i18nKey="admin.traces.disabled"
-          values={{ setting: "ENABLED = true", section: "[tracing]" }}
-          components={{ code: <InlineCode /> }}
-        />
+        <TracingDisabledNote />
       </p>
-    </AdminLayout>
+    </>
   );
 }
 
@@ -1097,7 +1103,7 @@ function RouteComparison({ trace }: { trace: AdminTrace }) {
 export function AdminTraceView({ trace }: { trace: AdminTrace }) {
   const { t } = useTranslation();
   return (
-    <AdminLayout active="traces">
+    <>
       <Link
         to="/admin/traces"
         className="mb-3 inline-flex items-center gap-1 text-sm text-(--color-primary) hover:underline"
@@ -1132,6 +1138,6 @@ export function AdminTraceView({ trace }: { trace: AdminTrace }) {
       <RouteComparison trace={trace} />
       <RepeatedSpans trace={trace} />
       <Waterfall trace={trace} />
-    </AdminLayout>
+    </>
   );
 }

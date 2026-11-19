@@ -4,7 +4,6 @@ import { type FormEvent, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { AdminLayout } from "@/components/AdminLayout";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { CheckboxField, FormAlert, FormField } from "@/components/FormField";
 import { Button } from "@/components/ui/button";
@@ -105,7 +104,7 @@ export function AdminUserNew({ options }: { options: AdminUserOptions }) {
   });
 
   return (
-    <AdminLayout active="users">
+    <>
       <h1 className="mb-4 text-xl font-semibold">{t("admin.users.new_account")}</h1>
       <form onSubmit={onSubmit} noValidate>
         <fieldset disabled={create.isPending} className="contents">
@@ -152,7 +151,7 @@ export function AdminUserNew({ options }: { options: AdminUserOptions }) {
           </div>
         </fieldset>
       </form>
-    </AdminLayout>
+    </>
   );
 }
 
@@ -218,7 +217,7 @@ export function AdminUserEdit({ user, options }: { user: AdminUserDetail; option
   });
 
   return (
-    <AdminLayout active="users">
+    <>
       <h1 className="mb-4 text-xl font-semibold">{t("admin.users.edit_account")}</h1>
       <div className="mb-5 flex min-w-0 items-center gap-3">
         <img
@@ -326,6 +325,6 @@ export function AdminUserEdit({ user, options }: { user: AdminUserDetail; option
           </div>
         </fieldset>
       </form>
-    </AdminLayout>
+    </>
   );
 }

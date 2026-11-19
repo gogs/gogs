@@ -1,3 +1,6 @@
+import { queryOptions } from "@tanstack/react-query";
+
+import { LoaderResponseError } from "@/lib/loader-error";
 import { fetchJSON, send, submit } from "@/lib/queries/request";
 import { subUrl } from "@/lib/url";
 
@@ -7,6 +10,14 @@ function adminURL(path: string, search: { q?: string; page?: number } = {}) {
   if (search.page) query.set("page", String(search.page));
   const qs = query.toString();
   return subUrl(`/api/web/admin${path}`) + (qs ? `?${qs}` : "");
+}
+
+// Cards of the admin console fetch what they show with these queries, so a
+// slow or failed request holds back only the cards that read it. A failed
+// query is tried once more, unless the server turned the request away, which
+// trying again does not change.
+function retryOnce(failures: number, err: Error) {
+  return failures < 1 && !(err instanceof LoaderResponseError && err.status < 500);
 }
 
 // AdminList is one page of a list in the admin panel.
@@ -78,6 +89,14 @@ export interface AdminNotice {
 
 export function fetchAdminNotices(search: { page?: number }) {
   return fetchJSON<AdminList<AdminNotice>>(adminURL("/notices", search));
+}
+
+export function adminNoticesQuery(search: { page?: number }) {
+  return queryOptions({
+    queryKey: ["admin", "notices", search.page ?? 1] as const,
+    queryFn: () => fetchAdminNotices(search),
+    retry: retryOnce,
+  });
 }
 
 export function deleteAdminNotices(ids: number[]) {
@@ -183,8 +202,12 @@ export interface AdminDashboard {
   systemStatus: AdminReportSection;
 }
 
-export function fetchAdminDashboard() {
-  return fetchJSON<AdminDashboard>(adminURL("/dashboard"));
+export function adminDashboardQuery() {
+  return queryOptions({
+    queryKey: ["admin", "dashboard"] as const,
+    queryFn: ({ signal }) => fetchJSON<AdminDashboard>(adminURL("/dashboard"), signal),
+    retry: retryOnce,
+  });
 }
 
 export const ADMIN_OPERATIONS = [
@@ -401,6 +424,14 @@ export function fetchAdminTraceOverview(range: AdminTraceRange) {
   return fetchJSON<AdminTraceOverview>(subUrl(`/api/web/admin/traces/overview?range=${range}`));
 }
 
+export function adminTraceOverviewQuery(range: AdminTraceRange) {
+  return queryOptions({
+    queryKey: ["admin", "traces", "overview", range] as const,
+    queryFn: () => fetchAdminTraceOverview(range),
+    retry: retryOnce,
+  });
+}
+
 // AdminTraceKept tells why a trace was kept: it failed, it was slow, or it was
 // sampled from the rest.
 export type AdminTraceKept = "failed" | "slow" | "sampled";
@@ -538,4 +569,12 @@ export interface AdminHealth {
 
 export function fetchAdminHealth(range: AdminHealthRange) {
   return fetchJSON<AdminHealth>(subUrl(`/api/web/admin/health?range=${range}`));
+}
+
+export function adminHealthQuery(range: AdminHealthRange) {
+  return queryOptions({
+    queryKey: ["admin", "health", range] as const,
+    queryFn: () => fetchAdminHealth(range),
+    retry: retryOnce,
+  });
 }

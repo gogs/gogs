@@ -24,6 +24,7 @@ import { NoticeBanner } from "@/components/NoticeBanner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { webContext } from "@/lib/context";
 import { LoaderResponseError, authenticationRedirect } from "@/lib/loader-error";
+import { useUserInfo } from "@/lib/use-user-info";
 import type { UserInfo } from "@/lib/user-info";
 import { NotFound } from "@/pages/NotFound";
 import { ServerError } from "@/pages/ServerError";
@@ -43,6 +44,17 @@ interface RouterContext {
 }
 
 function RootLayout() {
+  const user = useUserInfo();
+  const inAdmin = useRouterState({ select: (state) => state.matches.some((match) => match.routeId === "/admin") });
+  // The admin console has its own navigation in place of the navbar and footer.
+  if (inAdmin && user?.isAdmin) {
+    return (
+      <div className="flex min-h-dvh flex-col">
+        <NoticeBanner />
+        <Outlet />
+      </div>
+    );
+  }
   return (
     <div className="flex min-h-dvh flex-col">
       <Navbar />
