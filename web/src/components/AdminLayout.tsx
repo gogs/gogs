@@ -146,7 +146,10 @@ function Sidebar({ rail }: { rail: boolean }) {
           </div>
         )}
       </div>
-      <nav aria-label={t("admin_panel")} className="mt-2 flex min-h-0 flex-1 flex-col overflow-y-auto px-2 pb-2">
+      <nav
+        aria-label={t("admin_panel")}
+        className="mt-1.5 flex min-h-0 flex-1 flex-col overflow-y-auto px-2 pt-0.5 pb-2"
+      >
         {NAV.map((group, i) => (
           <div
             key={i}
