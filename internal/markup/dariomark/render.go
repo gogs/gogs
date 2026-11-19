@@ -271,6 +271,11 @@ func (r *renderer) plainLeaf(n *node) bool {
 			continue
 		}
 		switch c {
+		case '>', '"', 0:
+			out.Write(src[text:i])
+			out.WriteString(escapes[c])
+			i++
+			text = i
 		case '.':
 			// Leaves possible extended autolinks to the inline parser.
 			if i >= 3 && string(src[i-3:i]) == "www" {
@@ -298,7 +303,7 @@ func (r *renderer) plainLeaf(n *node) bool {
 			for end-spaces > text && (src[end-spaces-1] == ' ' || src[end-spaces-1] == '\t') {
 				spaces++
 			}
-			writeEscaped(out, src[text:end-spaces])
+			out.Write(src[text : end-spaces])
 			if hard || opts.HardWraps {
 				r.html.start("br")
 			}
@@ -329,7 +334,7 @@ func (r *renderer) plainLeaf(n *node) bool {
 				i = end
 				continue
 			}
-			writeEscaped(out, src[text:i])
+			out.Write(src[text:i])
 			out.WriteString("<code>")
 			writeEscaped(out, r.codeContent(src[end:closer], inCell))
 			out.WriteString("</code>")
@@ -344,7 +349,7 @@ func (r *renderer) plainLeaf(n *node) bool {
 				return false
 			}
 			close := i + 1 + bytes.IndexByte(src[i+1:], ']')
-			writeEscaped(out, src[text:i])
+			out.Write(src[text:i])
 			bufLen := len(r.p.buf)
 			out.WriteString(`<a href="`)
 			writeEscaped(out, r.urlEscape(src[close+2:i+n-1]))
@@ -374,13 +379,13 @@ func (r *renderer) plainLeaf(n *node) bool {
 			tag := emTags[k-1]
 			switch {
 			case open == 0 && left && !right:
-				writeEscaped(out, src[text:i])
+				out.Write(src[text:i])
 				out.writeByte('<')
 				out.WriteString(tag)
 				out.writeByte('>')
 				open = k
 			case open == k && right && !left:
-				writeEscaped(out, src[text:i])
+				out.Write(src[text:i])
 				out.WriteString("</")
 				out.WriteString(tag)
 				out.writeByte('>')
@@ -400,7 +405,7 @@ func (r *renderer) plainLeaf(n *node) bool {
 		out.buf = out.buf[:start]
 		return false
 	}
-	writeEscaped(out, src[text:])
+	out.Write(src[text:])
 	return true
 }
 
@@ -415,7 +420,7 @@ func plainLink(src []byte, i int, opts *Options) int {
 	}
 	j := i + 1
 	for ; j < len(src) && src[j] != ']'; j++ {
-		if plainSpecial[src[j]] {
+		if c := src[j]; plainSpecial[c] && c != '>' && c != '"' && c != 0 {
 			return 0
 		}
 	}
@@ -441,6 +446,10 @@ func plainLink(src []byte, i int, opts *Options) int {
 	}
 	return k + 1 - i
 }
+
+// escapes are the escapes of the characters that writeEscaped escapes and
+// plainLeaf does not leave to the inline parser.
+var escapes = [256]string{'>': "&gt;", '"': "&quot;", 0: "\uFFFD"}
 
 var emTags = [2]string{"em", "strong"}
 
@@ -472,7 +481,7 @@ func flankClass(src []byte, i int) (int, bool) {
 // plainSpecial marks the characters that plainLeaf handles, or for which it
 // leaves the contents to the inline parser.
 var (
-	plainSpecial = withSpecial([256]bool{}, "\n\\`*_[]<&~")
+	plainSpecial = withSpecial([256]bool{}, "\n\\`*_[]<&~>\"\x00")
 	// plainSpecialLinkify adds the characters of autolinks: "@" of email
 	// addresses, "." after "www" and ":" before "//".
 	plainSpecialLinkify = withSpecial(plainSpecial, "@.:")
