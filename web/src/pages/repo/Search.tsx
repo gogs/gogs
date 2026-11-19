@@ -8,7 +8,6 @@ import { RefPicker } from "@/components/RefPicker";
 import { RepoHeader } from "@/components/RepoHeader";
 import { usePageTitle } from "@/lib/page-title";
 import { type RepoSearchData, refPath, repoHeaderQuery } from "@/lib/queries/repo";
-import { subUrl } from "@/lib/url";
 
 export interface RepoSearchSearch {
   q?: string;
@@ -99,7 +98,7 @@ export function RepoSearch({ owner, name, data }: { owner: string; name: string;
               keyword={data.keyword}
               matchCase={data.matchCase}
               urlOf={(file, line) =>
-                subUrl(`/${fullName}/src/${refPath(`${data.ref}/${file.path}`)}${line ? `#L${line}` : ""}`)
+                `/${fullName}/src/${refPath(`${data.ref}/${file.path}`)}${line ? `#L${line}` : ""}`
               }
             />
             {data.truncated ? (

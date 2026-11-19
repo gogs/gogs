@@ -15,7 +15,7 @@ import { webContext } from "@/lib/context";
 import { usePageTitle } from "@/lib/page-title";
 import { type RepoCommitListItem, type RepoCommitsData, refPath, repoHeaderQuery } from "@/lib/queries/repo";
 import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
-import { subUrl } from "@/lib/url";
+import { routePath } from "@/lib/url";
 import { cn } from "@/lib/utils";
 
 const DAY_FMT = new Intl.DateTimeFormat(webContext.lang, { dateStyle: "long" });
@@ -50,7 +50,7 @@ export function RepoCommits({ owner, name, data }: { owner: string; name: string
     `${data.path ? `${t("repo.commits.history_for")} ${data.path}` : t("repo.commits.commit_history")} - ${repo.owner}/${repo.name}`,
   );
   const params = { owner: repo.owner, repo: repo.name };
-  const srcURL = (rev: string, path = "") => subUrl(`/${repo.owner}/${repo.name}/src/${refPath(splatOf(rev, path))}`);
+  const srcURL = (rev: string, path = "") => `/${repo.owner}/${repo.name}/src/${refPath(splatOf(rev, path))}`;
   const pathParts = data.path ? data.path.split("/") : [];
 
   const onSearch = (e: FormEvent) => {
@@ -88,21 +88,26 @@ export function RepoCommits({ owner, name, data }: { owner: string; name: string
           {data.path ? (
             <p className="flex min-w-0 flex-wrap items-center gap-x-1 text-sm">
               <span className="text-(--color-muted-foreground)">{t("repo.commits.history_for")}</span>
-              <a href={srcURL(data.ref)} className="font-semibold text-(--color-primary) hover:underline">
+              <Link
+                activeOptions={{ exact: true }}
+                to={srcURL(data.ref)}
+                className="font-semibold text-(--color-primary) hover:underline"
+              >
                 {repo.name}
-              </a>
+              </Link>
               {pathParts.map((part, i) => (
                 <span key={i} className="contents">
                   <span className="text-(--color-muted-foreground)">/</span>
                   {i === pathParts.length - 1 ? (
                     <span className="font-semibold wrap-anywhere">{part}</span>
                   ) : (
-                    <a
-                      href={srcURL(data.ref, pathParts.slice(0, i + 1).join("/"))}
+                    <Link
+                      activeOptions={{ exact: true }}
+                      to={srcURL(data.ref, pathParts.slice(0, i + 1).join("/"))}
                       className="text-(--color-primary) wrap-anywhere hover:underline"
                     >
                       {part}
-                    </a>
+                    </Link>
                   )}
                 </span>
               ))}
@@ -185,7 +190,7 @@ export function CommitList({
                 owner={owner}
                 name={name}
                 commit={commit}
-                browseURL={subUrl(`/${owner}/${name}/src/${refPath(splatOf(commit.sha, path))}`)}
+                browseURL={`/${owner}/${name}/src/${refPath(splatOf(commit.sha, path))}`}
               />
             ))}
           </ul>
@@ -289,9 +294,9 @@ function CommitRow({
         <Tooltip>
           <TooltipTrigger asChild>
             <Button asChild variant="ghost" size="icon" className="size-8 text-(--color-muted-foreground)">
-              <a href={browseURL} aria-label={t("repo.browse_files")}>
+              <Link activeOptions={{ exact: true }} to={browseURL} aria-label={t("repo.browse_files")}>
                 <FolderCode className="size-4" aria-hidden />
-              </a>
+              </Link>
             </Button>
           </TooltipTrigger>
           <TooltipContent>{t("repo.browse_files")}</TooltipContent>
@@ -318,9 +323,13 @@ function CompactCommitRow({ owner, name, commit }: { owner: string; name: string
         <p className="flex shrink-0 items-center gap-x-1.5 text-xs text-(--color-muted-foreground)">
           <img src={author.avatarURL} alt="" className="size-4 shrink-0 rounded-full" />
           {author.profileURL ? (
-            <a href={author.profileURL} className="font-semibold text-(--color-foreground) hover:underline">
+            <Link
+              activeOptions={{ exact: true }}
+              to={routePath(author.profileURL)}
+              className="font-semibold text-(--color-foreground) hover:underline"
+            >
               {author.name}
-            </a>
+            </Link>
           ) : (
             <span className="font-semibold text-(--color-foreground)">{author.name}</span>
           )}

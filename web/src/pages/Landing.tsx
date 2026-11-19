@@ -36,11 +36,11 @@ export function Landing() {
             <span className="text-(--color-muted-foreground)">$ </span>
             <span>gogs help</span>
             {"\n"}
-            <CmdLink href="/user/sign-in" cmd="sign-in" desc={t("sign_in")} spa />
+            <CmdLink href="/user/sign-in" cmd="sign-in" desc={t("sign_in")} />
             {"\n"}
-            <CmdLink href="/user/sign-up" cmd="sign-up" desc={t("register")} spa />
+            <CmdLink href="/user/sign-up" cmd="sign-up" desc={t("register")} />
             {"\n"}
-            <CmdLink href="/explore/repos" cmd="explore" desc={t("explore")} spa />
+            <CmdLink href="/explore/repos" cmd="explore" desc={t("explore")} />
             {"\n"}
             <CmdLink href="https://gogs.io" cmd="help" desc={t("help")} external />
             {"\n"}
@@ -54,19 +54,7 @@ export function Landing() {
   );
 }
 
-function CmdLink({
-  href,
-  cmd,
-  desc,
-  external,
-  spa,
-}: {
-  href: string;
-  cmd: string;
-  desc: string;
-  external?: boolean;
-  spa?: boolean;
-}) {
+function CmdLink({ href, cmd, desc, external }: { href: string; cmd: string; desc: string; external?: boolean }) {
   const className =
     "group inline-flex items-baseline gap-2 rounded-sm hover:text-(--color-foreground) hover:[animation:flame-flicker_2.4s_ease-in-out_infinite]";
   const inner = (
@@ -76,20 +64,16 @@ function CmdLink({
       <span className="text-(--color-muted-foreground) group-hover:text-(--color-foreground)">→</span>
     </>
   );
-  if (spa) {
+  if (external) {
     return (
-      <Link to={href} className={className}>
+      <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
         {inner}
-      </Link>
+      </a>
     );
   }
   return (
-    <a
-      href={external ? href : subUrl(href)}
-      {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-      className={className}
-    >
+    <Link activeOptions={{ exact: true }} to={href} className={className}>
       {inner}
-    </a>
+    </Link>
   );
 }

@@ -1,5 +1,5 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { useLoaderData, useParams, useSearch } from "@tanstack/react-router";
+import { Link, useLoaderData, useParams, useSearch } from "@tanstack/react-router";
 import { Check, Copy, FileCode2 } from "lucide-react";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -11,7 +11,7 @@ import { RepoHeader } from "@/components/RepoHeader";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePageTitle } from "@/lib/page-title";
 import { repoHeaderQuery } from "@/lib/queries/repo";
-import { subUrl } from "@/lib/url";
+import { routePath, subUrl } from "@/lib/url";
 
 import type { RepoCommitSearch } from "./Commit.search";
 
@@ -70,14 +70,18 @@ export function RepoCommit() {
   usePageTitle(`${subject} - ${owner}/${repo}@${sha.slice(0, 7)}`);
 
   const authorLabel = author.profileURL ? (
-    <a href={author.profileURL} className="font-semibold text-(--color-foreground) hover:underline">
+    <Link
+      activeOptions={{ exact: true }}
+      to={routePath(author.profileURL)}
+      className="font-semibold text-(--color-foreground) hover:underline"
+    >
       {author.name}
-    </a>
+    </Link>
   ) : (
     <span className="font-semibold text-(--color-foreground)">{author.name}</span>
   );
 
-  const repoLink = subUrl(`/${owner}/${repo}`);
+  const repoLink = `/${owner}/${repo}`;
   const browseFilesHref = `${repoLink}/src/${sha}`;
 
   const copySha = useCallback(() => {
@@ -100,16 +104,17 @@ export function RepoCommit() {
         <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
           <h2 className="min-w-0 flex-1 text-xl font-semibold break-words text-(--color-foreground)">{subject}</h2>
           <div className="basis-full sm:basis-auto">
-            <a
-              href={browseFilesHref}
+            <Link
+              activeOptions={{ exact: true }}
+              to={browseFilesHref}
               className="glass-control inline-flex h-7 shrink-0 items-center gap-1 rounded-md border border-(--color-border) px-2 text-sm hover:bg-(--color-surface)"
             >
               <FileCode2 className="size-3.5" aria-hidden />
               <span>{t("repo.browse_files")}</span>
-            </a>
+            </Link>
           </div>
         </div>
-        {(body ?? "").trim() ? <CommitBody body={(body ?? "").trim()} /> : null}
+        {(body ?? "").trim() ? <CommitBody key={sha} body={(body ?? "").trim()} /> : null}
 
         <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-(--color-muted-foreground)">
           <span className="inline-flex items-center gap-1.5">
@@ -139,13 +144,14 @@ export function RepoCommit() {
                 <span aria-hidden>·</span>
                 <span>{parents.length > 1 ? `${parents.length} ${t("repo.parents")}` : t("repo.commit_parent")}</span>
                 {parents.map((p) => (
-                  <a
+                  <Link
+                    activeOptions={{ exact: true }}
                     key={p}
-                    href={`${repoLink}/commit/${p}`}
+                    to={`/${owner}/${repo}/commit/${p}`}
                     className="rounded bg-(--color-surface) px-1.5 py-0.5 text-(--color-foreground) hover:underline"
                   >
                     {p.slice(0, 7)}
-                  </a>
+                  </Link>
                 ))}
               </span>
             ) : null}
@@ -178,6 +184,9 @@ export function RepoCommit() {
       </section>
 
       <DiffWorkspace
+        // Files keep their ids from commit to commit, which would keep showing
+        // the diff of the previous commit.
+        key={sha}
         owner={owner}
         repo={repo}
         patch={patch}

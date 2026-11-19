@@ -1,15 +1,21 @@
+import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { RepoCommitAuthor } from "@/lib/queries/repo";
+import { routePath } from "@/lib/url";
 import { cn } from "@/lib/utils";
 
 function AuthorName({ author, className }: { author: RepoCommitAuthor; className?: string }) {
   return author.profileURL ? (
-    <a href={author.profileURL} className={cn("hover:underline", className)}>
+    <Link
+      activeOptions={{ exact: true }}
+      to={routePath(author.profileURL)}
+      className={cn("hover:underline", className)}
+    >
       {author.name}
-    </a>
+    </Link>
   ) : (
     <span className={className}>{author.name}</span>
   );

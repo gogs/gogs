@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import type { TFunction } from "i18next";
 import {
   Bell,
@@ -31,7 +32,6 @@ import {
   unwatchRepo,
   watchRepo,
 } from "@/lib/queries/repo";
-import { subUrl } from "@/lib/url";
 import { useUserInfo } from "@/lib/use-user-info";
 import { cn } from "@/lib/utils";
 
@@ -59,13 +59,11 @@ function formatCount(n: number): string {
 
 export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
   const { t } = useTranslation();
-  const repoLink = subUrl(`/${repo.owner}/${repo.name}`);
+  const repoLink = `/${repo.owner}/${repo.name}`;
   const user = useUserInfo();
   const queryClient = useQueryClient();
   const authenticated = user !== null;
-  const signInHref = subUrl(
-    `/user/sign-in?redirect_to=${encodeURIComponent(window.location.pathname + window.location.search + window.location.hash)}`,
-  );
+  const signInHref = `/user/sign-in?redirect_to=${encodeURIComponent(window.location.pathname + window.location.search + window.location.hash)}`;
 
   // Merge each mutation's response into the cached repository header so the
   // button labels and counts update without a refetch. The new `viewer*` flag is
@@ -121,15 +119,23 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
               alt=""
               className="relative size-5 shrink-0 rounded border border-(--color-border) bg-(--color-surface) object-cover"
             />
-            <a href={subUrl(`/${repo.owner}`)} className="text-(--color-primary) hover:underline">
+            <Link
+              activeOptions={{ exact: true }}
+              to={`/${repo.owner}`}
+              className="text-(--color-primary) hover:underline"
+            >
               {repo.owner}
-            </a>
+            </Link>
             <span className="text-(--color-muted-foreground)" aria-hidden>
               /
             </span>
-            <a href={repoLink} className="font-semibold text-(--color-primary) hover:underline">
+            <Link
+              activeOptions={{ exact: true }}
+              to={repoLink}
+              className="font-semibold text-(--color-primary) hover:underline"
+            >
               {repo.name}
-            </a>
+            </Link>
             <VisibilityBadge visibility={repo.visibility} />
             {repo.mirrorOf ? (
               <span className="inline-flex min-w-0 items-center gap-1 text-xs text-(--color-muted-foreground)">
@@ -175,7 +181,7 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
               countHref={`${repoLink}/forks`}
               // Fork opens the page that chooses where to fork to, so it is a
               // link rather than a one-click action.
-              actionHref={authenticated ? subUrl(`/repo/fork/${repo.id}`) : undefined}
+              actionHref={authenticated ? `/repo/fork/${repo.id}` : undefined}
               signInHref={signInHref}
               authenticated={authenticated}
               signInTooltip={t("repo.sign_in_to_fork")}
@@ -298,9 +304,10 @@ function OverflowMenu({ tabs, activeTab, t }: { tabs: TabDescriptor[]; activeTab
           const Icon = tab.icon;
           const active = tab.key === activeTab;
           return (
-            <a
+            <Link
               key={tab.key}
-              href={tab.href}
+              to={tab.href}
+              activeOptions={{ exact: true }}
               onClick={() => setOpen(false)}
               aria-current={active ? "page" : undefined}
               className={cn(
@@ -317,7 +324,7 @@ function OverflowMenu({ tabs, activeTab, t }: { tabs: TabDescriptor[]; activeTab
                   {formatCount(tab.badge)}
                 </span>
               ) : null}
-            </a>
+            </Link>
           );
         })}
       </PopoverContent>
@@ -410,9 +417,9 @@ function SplitActionButton({
     action = (
       <Tooltip>
         <TooltipTrigger asChild>
-          <a href={href} aria-label={ariaLabel} className={actionClassName}>
+          <Link activeOptions={{ exact: true }} to={href} aria-label={ariaLabel} className={actionClassName}>
             {actionContent}
-          </a>
+          </Link>
         </TooltipTrigger>
         {signInTooltip ? <TooltipContent>{signInTooltip}</TooltipContent> : null}
       </Tooltip>
@@ -432,22 +439,23 @@ function SplitActionButton({
   } else {
     const href = actionHref ?? countHref;
     action = (
-      <a href={href} aria-label={ariaLabel} className={actionClassName}>
+      <Link activeOptions={{ exact: true }} to={href} aria-label={ariaLabel} className={actionClassName}>
         {actionContent}
-      </a>
+      </Link>
     );
   }
 
   return (
     <span className="inline-flex h-7 items-stretch overflow-hidden rounded-md glass-control border border-(--color-border) text-xs">
       {action}
-      <a
-        href={countHref}
+      <Link
+        activeOptions={{ exact: true }}
+        to={countHref}
         aria-label={countAriaLabel}
         className="flex items-center border-l border-(--color-border) bg-(--color-surface)/60 px-2 tabular-nums hover:bg-(--color-surface)"
       >
         {formatCount(count)}
-      </a>
+      </Link>
     </span>
   );
 }
@@ -462,8 +470,11 @@ interface TabLinkProps {
 
 function TabLink({ href, icon: Icon, active, badge, children }: TabLinkProps) {
   return (
-    <a
-      href={href}
+    <Link
+      to={href}
+      // The code tab is a prefix of the others, so only the tab of this very
+      // page may count as the current one.
+      activeOptions={{ exact: true }}
       className={cn(
         "flex items-center gap-2 border-b-2 px-2 py-2 text-sm whitespace-nowrap",
         active
@@ -479,6 +490,6 @@ function TabLink({ href, icon: Icon, active, badge, children }: TabLinkProps) {
           {formatCount(badge)}
         </span>
       ) : null}
-    </a>
+    </Link>
   );
 }

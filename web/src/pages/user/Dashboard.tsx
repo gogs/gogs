@@ -9,7 +9,6 @@ import { ContextSwitcher, OrgNav } from "@/components/DashboardNav";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePageTitle } from "@/lib/page-title";
 import { type DashboardData, type DashboardRepo, dashboardActivityQuery, dashboardQuery } from "@/lib/queries/user";
-import { subUrl } from "@/lib/url";
 import { useUserInfo } from "@/lib/use-user-info";
 import { cn } from "@/lib/utils";
 
@@ -189,11 +188,11 @@ function DashboardLists({ data }: { data: DashboardData }) {
         <ul>
           {data.mirrors.map((mirror) => (
             <li key={mirror.name}>
-              <a href={subUrl(`/${data.name}/${mirror.name}`)} className={ROW_CLASS}>
+              <Link activeOptions={{ exact: true }} to={`/${data.name}/${mirror.name}`} className={ROW_CLASS}>
                 <RepoIcon repo={{ ...mirror, isFork: false, isMirror: true }} />
                 <span className="min-w-0 flex-1 truncate font-semibold">{mirror.name}</span>
                 <Count value={`${mirror.intervalHours}H`} icon={RefreshCw} />
-              </a>
+              </Link>
             </li>
           ))}
         </ul>
@@ -226,13 +225,14 @@ function ListHeader({
       {addLabel && addHref ? (
         <Tooltip>
           <TooltipTrigger asChild>
-            <a
-              href={subUrl(addHref)}
+            <Link
+              activeOptions={{ exact: true }}
+              to={addHref}
               aria-label={addLabel}
               className="ml-auto grid size-8 place-items-center rounded-md text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
             >
               <Plus className="size-4" aria-hidden />
-            </a>
+            </Link>
           </TooltipTrigger>
           <TooltipContent>{addLabel}</TooltipContent>
         </Tooltip>
@@ -245,14 +245,14 @@ function RepoRow({ repo, showOwner = false }: { repo: DashboardRepo; showOwner?:
   const { t } = useTranslation();
   return (
     <li>
-      <a href={subUrl(`/${repo.owner}/${repo.name}`)} className={ROW_CLASS}>
+      <Link activeOptions={{ exact: true }} to={`/${repo.owner}/${repo.name}`} className={ROW_CLASS}>
         <RepoIcon repo={repo} />
         <span className="min-w-0 flex-1 truncate">
           {showOwner ? <span className="text-(--color-muted-foreground)">{repo.owner} / </span> : null}
           <span className="font-semibold">{repo.name}</span>
         </span>
         <Count value={repo.starCount} icon={Star} label={t("repo.stargazers")} />
-      </a>
+      </Link>
     </li>
   );
 }

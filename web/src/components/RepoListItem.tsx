@@ -1,10 +1,10 @@
+import { Link } from "@tanstack/react-router";
 import { BookMarked, EyeOff, GitFork, Link as LinkIcon, Lock, Star } from "lucide-react";
 import type { ComponentType } from "react";
 import { useTranslation } from "react-i18next";
 
 import { RelativeTime } from "@/components/RelativeTime";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { subUrl } from "@/lib/url";
 
 export interface RepoListItemData {
   owner: string;
@@ -25,7 +25,7 @@ export interface RepoListItemData {
 // repositories leave out the owner name.
 export function RepoListItem({ repo, showOwner = false }: { repo: RepoListItemData; showOwner?: boolean }) {
   const { t } = useTranslation();
-  const repoLink = subUrl(`/${repo.owner}/${repo.name}`);
+  const repoLink = `/${repo.owner}/${repo.name}`;
   return (
     <li className="flex gap-3 border-b border-(--color-border) py-4">
       {repo.avatarURL ? (
@@ -42,10 +42,14 @@ export function RepoListItem({ repo, showOwner = false }: { repo: RepoListItemDa
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="flex min-w-0 items-center gap-0.5">
-            <a href={repoLink} className="min-w-0 wrap-anywhere text-(--color-primary) hover:underline">
+            <Link
+              activeOptions={{ exact: true }}
+              to={repoLink}
+              className="min-w-0 wrap-anywhere text-(--color-primary) hover:underline"
+            >
               {showOwner ? `${repo.owner} / ` : null}
               <span className="font-semibold">{repo.name}</span>
-            </a>
+            </Link>
             <RepoMarker repo={repo} />
           </span>
           <span className="ml-auto flex items-center gap-3 text-xs tabular-nums text-(--color-muted-foreground)">

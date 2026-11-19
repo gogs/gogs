@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { DashboardContextData } from "@/lib/queries/user";
-import { subUrl } from "@/lib/url";
 import { useUserInfo } from "@/lib/use-user-info";
 import { cn } from "@/lib/utils";
 
@@ -80,13 +79,14 @@ export function ContextSwitcher({ data, page }: { data: DashboardContextData; pa
         </ScrollArea>
         {user.canCreateOrganization ? (
           <div className="mt-1 border-t border-(--color-border) pt-1">
-            <a
-              href={subUrl("/org/create")}
+            <Link
+              activeOptions={{ exact: true }}
+              to="/org/create"
               className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-(--color-surface)"
             >
               <Plus className="size-4" aria-hidden />
               {t("new_org")}
-            </a>
+            </Link>
           </div>
         ) : null}
       </PopoverContent>
