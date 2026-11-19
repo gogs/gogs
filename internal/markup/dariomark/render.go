@@ -253,16 +253,17 @@ func (r *renderer) plainLeaf(n *node) bool {
 		return false
 	}
 	src := n.text
+	if n.kind == kindHeading && !n.setext && n.segEnd > n.segStart {
+		s := r.p.segs[n.segStart]
+		src = r.p.src[s.start:s.end]
+	}
 	special := &plainSpecial
 	if opts.Linkify {
 		special = &plainSpecialLinkify
 	}
-	if opts.RelativeLinks || opts.TextAutoLinksInRawAnchors ||
-		opts.TaskLists && len(src) > 0 && src[0] == '[' && n.parent != nil && n.parent.kind == kindListItem {
-		// See parser.walkLinks and inlineParser.taskCheckbox.
-		if bytes.IndexByte(src, '[') >= 0 {
-			return false
-		}
+	if (opts.RelativeLinks || opts.TextAutoLinksInRawAnchors) && bytes.IndexByte(src, '[') >= 0 {
+		// See parser.walkLinks.
+		return false
 	}
 	r.p.footnoteDefsBefore(n)
 	if r.sanitizing && r.p.hasRawHTML {
@@ -275,11 +276,23 @@ func (r *renderer) plainLeaf(n *node) bool {
 	inCell := n.kind == kindTableCell
 	// text is the start of the text not written yet, and noCloser has a bit
 	// for each length of backtick run that has no closing run left.
-	text := 0
+	text, from, box := 0, 0, boxNone
+	if opts.TaskLists && len(src) > 0 && src[0] == '[' {
+		// See inlineParser.taskCheckbox.
+		text, box = r.taskCheckbox(n, src)
+		from = text
+		if box == boxChecked {
+			r.html.start("input", attr{"checked", nil, false}, attr{"disabled", nil, false}, attr{"type", checkboxValue, false})
+			out.writeByte(' ')
+		} else if box == boxUnchecked {
+			r.html.start("input", attr{"disabled", nil, false}, attr{"type", checkboxValue, false})
+			out.writeByte(' ')
+		}
+	}
 	var noCloser uint64
 	// open is the length of the run of asterisks that opened emphasis, or 0.
 	open := 0
-	for i := 0; i < len(src); {
+	for i := from; i < len(src); {
 		c := src[i]
 		if !special[c] {
 			i++
@@ -424,20 +437,55 @@ func (r *renderer) plainLeaf(n *node) bool {
 	if san := r.s.san; san != nil {
 		// The HTML written above only showed that the contents are plain.
 		out.buf = out.buf[:start]
-		r.plainLeafSanitized(src, inCell, san)
+		r.plainLeafSanitized(src, inCell, from, box, san)
 	}
 	return true
+}
+
+const (
+	boxNone = iota
+	boxUnchecked
+	boxChecked
+)
+
+// taskCheckbox returns where the text of the leaf n, whose contents src
+// start with "[", starts after a task list item marker, and the checkbox the
+// marker renders, see inlineParser.taskCheckbox.
+func (r *renderer) taskCheckbox(n *node, src []byte) (int, int) {
+	item := n.parent
+	if n.kind != kindParagraph || item == nil || item.kind != kindListItem || item.first != n {
+		return 0, boxNone
+	}
+	task, checked := r.p.taskItem(item)
+	if !task {
+		return 0, boxNone
+	}
+	next := 3
+	for next < len(src) && (src[next] == ' ' || src[next] == '\t' || src[next] == '\n' || src[next] == '\r') {
+		next++
+	}
+	if checked {
+		return next, boxChecked
+	}
+	return next, boxUnchecked
 }
 
 // plainLeafSanitized passes the contents src of a leaf, which plainLeaf
 // found plain, to the sanitizing sink s with the calls that the inline
 // renderer would make.
-func (r *renderer) plainLeafSanitized(src []byte, inCell bool, s *sanitizeSink) {
+func (r *renderer) plainLeafSanitized(src []byte, inCell bool, text, box int, s *sanitizeSink) {
 	opts := r.opts
-	text := 0
+	switch box {
+	case boxChecked:
+		s.start("input", attr{"checked", nil, false}, attr{"disabled", nil, false}, attr{"type", checkboxValue, false})
+		s.text(spaces[:1])
+	case boxUnchecked:
+		s.start("input", attr{"disabled", nil, false}, attr{"type", checkboxValue, false})
+		s.text(spaces[:1])
+	}
 	var noCloser uint64
 	open := 0
-	for i := 0; i < len(src); {
+	for i := text; i < len(src); {
 		switch src[i] {
 		case '\n':
 			end := i
@@ -690,12 +738,22 @@ func (r *renderer) block(n *node) {
 			r.p.releaseLeaf(n, m)
 		}
 	case kindHeading:
+		tag := headingTags[n.level]
+		if !r.opts.HeadingIDs {
+			s.start(tag)
+			if r.plainLeaf(n) {
+				s.end(tag)
+				r.nl()
+				return
+			}
+		}
 		m, ok := r.parseLeaf(n, false)
 		if !ok {
 			return
 		}
-		tag := headingTags[n.level]
-		r.headingStart(n, tag)
+		if r.opts.HeadingIDs {
+			r.headingStart(n, tag)
+		}
 		r.inlines(n)
 		s.end(tag)
 		r.nl()
