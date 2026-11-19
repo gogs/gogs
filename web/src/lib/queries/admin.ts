@@ -500,6 +500,14 @@ export function fetchAdminTraceSearch(params: AdminTraceSearchParams) {
   return fetchJSON<AdminTraceSearch>(subUrl("/api/web/admin/traces") + (qs ? `?${qs}` : ""));
 }
 
+export function adminTraceSearchQuery(params: AdminTraceSearchParams) {
+  return queryOptions({
+    queryKey: ["admin", "traces", "search", params] as const,
+    queryFn: () => fetchAdminTraceSearch(params),
+    retry: retryOnce,
+  });
+}
+
 export interface AdminSpan {
   id: string;
   // Empty for the root span.

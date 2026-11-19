@@ -3,20 +3,23 @@ import { AlertCircle, ChevronDown, ChevronRight, Search as SearchIcon, X } from 
 import { type FormEvent, type ReactNode, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 
-import { AdminPageHeader, STAT_VALUE, SegmentedLinks, StatCard } from "@/components/AdminPage";
+import { AdminPageHeader, RefreshControl, STAT_VALUE, SegmentedLinks, StatCard } from "@/components/AdminPage";
 import { InlineCode } from "@/components/InlineCode";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useRefreshed } from "@/lib/admin-refresh";
 import { formatMinutes, formatMs, formatNumber } from "@/lib/format";
 import type { TraceSearch } from "@/lib/page-search";
-import type {
-  AdminSpan,
-  AdminTrace,
-  AdminTraceOverview as AdminTraceOverviewData,
-  AdminTraceSearch as AdminTraceSearchData,
+import {
+  type AdminSpan,
+  type AdminTrace,
+  type AdminTraceOverview as AdminTraceOverviewData,
+  type AdminTraceSearch as AdminTraceSearchData,
+  adminTraceOverviewQuery,
+  adminTraceSearchQuery,
 } from "@/lib/queries/admin";
 import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
 import { cn } from "@/lib/utils";
@@ -113,7 +116,7 @@ function TracesLayout({
             { value: "search", label: t("admin.traces.search"), search: { view: "search" } },
           ]}
         />
-        {toolbar}
+        {toolbar ? <div className="flex min-w-0 flex-wrap items-center gap-2">{toolbar}</div> : null}
       </div>
       {children}
     </div>
@@ -179,9 +182,14 @@ function TableCard({ title, description, children }: { title: string; descriptio
 }
 
 // AdminTraceOverview aggregates every request of the last 15 minutes or hour:
-// how many, how fast, and where their time went.
-export function AdminTraceOverview({ overview }: { overview: AdminTraceOverviewData }) {
+// how many, how fast, and where their time went. The page refreshes itself
+// while its tab is in view.
+export function AdminTraceOverview({ overview: loaded }: { overview: AdminTraceOverviewData }) {
   const { t } = useTranslation();
+  const { data: overview, refresh } = useRefreshed(
+    { ...adminTraceOverviewQuery(loaded.range), enabled: loaded.enabled },
+    loaded,
+  );
   const [allRoutes, setAllRoutes] = useState(false);
   const [allOperations, setAllOperations] = useState(false);
   if (!overview.enabled) {
@@ -201,15 +209,18 @@ export function AdminTraceOverview({ overview }: { overview: AdminTraceOverviewD
       view="overview"
       maxAgeMinutes={overview.maxAgeMinutes}
       toolbar={
-        <SegmentedLinks
-          to="/admin/traces"
-          label={t("admin.traces.range")}
-          active={overview.range}
-          options={[
-            { value: "15m", label: t("admin.traces.last_15m"), search: { range: "15m" } },
-            { value: "1h", label: t("admin.traces.last_hour"), search: {} },
-          ]}
-        />
+        <>
+          <SegmentedLinks
+            to="/admin/traces"
+            label={t("admin.traces.range")}
+            active={overview.range}
+            options={[
+              { value: "15m", label: t("admin.traces.last_15m"), search: { range: "15m" } },
+              { value: "1h", label: t("admin.traces.last_hour"), search: {} },
+            ]}
+          />
+          <RefreshControl {...refresh} />
+        </>
       }
     >
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
@@ -358,10 +369,15 @@ export function AdminTraceOverview({ overview }: { overview: AdminTraceOverviewD
 const DURATION_FILTERS = [100, 500, 1000, 5000];
 
 // AdminTraceSearch finds kept traces by ID, or filters them by route, duration
-// and status.
-export function AdminTraceSearch({ result, search }: { result: AdminTraceSearchData; search: TraceSearch }) {
+// and status. The matches of the filters refresh themselves while the tab of
+// the page is in view. The answer for a trace ID stays as it is.
+export function AdminTraceSearch({ result: loaded, search }: { result: AdminTraceSearchData; search: TraceSearch }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { data: result, refresh } = useRefreshed(
+    { ...adminTraceSearchQuery(search), enabled: loaded.enabled && !search.q },
+    loaded,
+  );
   const now = Date.parse(result.now);
   if (!result.enabled) {
     return <Disabled />;
@@ -398,7 +414,12 @@ export function AdminTraceSearch({ result, search }: { result: AdminTraceSearchD
   }
 
   return (
-    <TracesLayout view="search" q={search.q} maxAgeMinutes={result.maxAgeMinutes}>
+    <TracesLayout
+      view="search"
+      q={search.q}
+      maxAgeMinutes={result.maxAgeMinutes}
+      toolbar={search.q ? undefined : <RefreshControl {...refresh} />}
+    >
       {search.q ? null : (
         <div role="group" aria-label={t("admin.traces.filters")} className="flex flex-wrap items-center gap-2">
           <Select value={search.route ?? ALL} onValueChange={(v) => refine({ route: v === ALL ? undefined : v })}>

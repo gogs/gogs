@@ -55,7 +55,7 @@ export function AdminPageHeader({
 }
 
 // RefreshControl refreshes what a page shows: right away with its button, and
-// by itself at the interval picked beside it.
+// by itself at the interval picked beside it. The two wrap together.
 export function RefreshControl({
   seconds,
   onSecondsChange,
@@ -69,7 +69,7 @@ export function RefreshControl({
 }) {
   const { t } = useTranslation();
   return (
-    <>
+    <div className="flex items-center gap-2">
       <Button type="button" variant="outline" className="h-9 px-3" onClick={onRefresh}>
         <RefreshCw className={cn("size-4", refreshing && "animate-spin")} aria-hidden />
         {t("admin.refresh")}
@@ -90,7 +90,7 @@ export function RefreshControl({
           ))}
         </SelectContent>
       </Select>
-    </>
+    </div>
   );
 }
 

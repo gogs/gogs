@@ -1,4 +1,4 @@
-import type { QueryClient } from "@tanstack/react-query";
+import type { QueryClient, QueryKey } from "@tanstack/react-query";
 import { type AnyRoute, createRoute, notFound, redirect } from "@tanstack/react-router";
 import type { JSX } from "react";
 
@@ -17,7 +17,10 @@ import {
   validateTraceSearch,
 } from "@/lib/page-search";
 import {
+  adminHealthQuery,
   adminNoticesQuery,
+  adminTraceOverviewQuery,
+  adminTraceSearchQuery,
   fetchAdminAuthSource,
   fetchAdminAuthSources,
   fetchAdminConfig,
@@ -57,6 +60,12 @@ async function loadAdminPage<T>(location: { href: string }, load: () => Promise<
     if (leaveAdmin(err, webContext.subURL + location.href)) await new Promise<never>(() => undefined);
     throw err;
   }
+}
+
+// refreshedBy hands what a loader loaded to the query that keeps the page
+// fresh from then on (see `useRefreshed`).
+function refreshedBy<T>(context: unknown, query: { queryKey: QueryKey }, loaded: T) {
+  (context as { queryClient: QueryClient }).queryClient.setQueryData<T>(query.queryKey, loaded);
 }
 
 export function createAdminRoutes(rootRoute: AnyRoute) {
@@ -115,7 +124,11 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
     path: "health",
     validateSearch: validateHealthSearch,
     loaderDeps: ({ search }: { search: HealthSearch }) => ({ health: search.health ?? ("1h" as const) }),
-    loader: ({ deps, location }) => loadAdminPage(location, () => fetchAdminHealth(deps.health)),
+    loader: async ({ deps, context, location }) => {
+      const health = await loadAdminPage(location, () => fetchAdminHealth(deps.health));
+      refreshedBy(context, adminHealthQuery(deps.health), health);
+      return health;
+    },
     component: function Health() {
       const health = healthRoute.useLoaderData();
       // Remount on a range switch, so that a pinned moment does not outlive its range.
@@ -129,14 +142,15 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
     path: "traces",
     validateSearch: validateTraceSearch,
     loaderDeps: ({ search }: { search: TraceSearch }) => search,
-    loader: async ({ deps, location }) => {
+    loader: async ({ deps, context, location }) => {
       if (deps.view !== "search") {
-        return {
-          view: "overview" as const,
-          overview: await loadAdminPage(location, () => fetchAdminTraceOverview(deps.range ?? "1h")),
-        };
+        const range = deps.range ?? "1h";
+        const overview = await loadAdminPage(location, () => fetchAdminTraceOverview(range));
+        refreshedBy(context, adminTraceOverviewQuery(range), overview);
+        return { view: "overview" as const, overview };
       }
       const result = await loadAdminPage(location, () => fetchAdminTraceSearch(deps));
+      refreshedBy(context, adminTraceSearchQuery(deps), result);
       // A trace ID, or a prefix of one that only one trace has, opens the trace.
       if (deps.q && result.total === 1) {
         // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
