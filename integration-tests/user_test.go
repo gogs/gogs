@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/userx"
 )
 
 // captchaSessionKey is where the captcha middleware keeps the text of the last
@@ -118,8 +119,14 @@ func TestActivateAccount(t *testing.T) {
 
 	u := seedUser(t, CreateUserOptions{Inactive: true})
 
+	// A link that confirms the address of the account does not activate it.
+	stored := userGet(t, u.ID)
+	confirmEmailCode := userx.GenerateConfirmEmailCode(stored.ID, stored.Email, stored.LowerName, stored.Password, stored.Rands)
+	status, body := newClient(t).do(http.MethodPost, "/api/web/user/activate/complete", map[string]any{"code": confirmEmailCode})
+	require.Equal(t, http.StatusBadRequest, status, "response: %s", body)
+
 	c := newClient(t)
-	status, body := c.do(http.MethodPost, "/api/web/user/activate/complete", map[string]any{"code": u.ActivationCode})
+	status, body = c.do(http.MethodPost, "/api/web/user/activate/complete", map[string]any{"code": u.ActivationCode})
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 	assert.Equal(t, u.Name, c.username())
 

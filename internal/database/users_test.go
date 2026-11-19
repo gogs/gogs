@@ -1308,9 +1308,10 @@ func usersMarkEmailActivated(t *testing.T, ctx context.Context, s *UsersStore) {
 	require.NoError(t, err)
 	assert.True(t, gotEmail.IsActivated)
 
+	// Confirmation links of other email addresses are signed with the rands.
 	gotAlice, err := s.GetByID(ctx, alice.ID)
 	require.NoError(t, err)
-	assert.NotEqual(t, alice.Rands, gotAlice.Rands)
+	assert.Equal(t, alice.Rands, gotAlice.Rands)
 }
 
 func usersMarkEmailPrimary(t *testing.T, ctx context.Context, s *UsersStore) {

@@ -45,6 +45,16 @@ func (mu mailerUser) GenerateEmailActivateCode(email string) string {
 	)
 }
 
+func (mu mailerUser) GenerateConfirmEmailCode(email string) string {
+	return userx.GenerateConfirmEmailCode(
+		mu.user.ID,
+		email,
+		mu.user.Name,
+		mu.user.Password,
+		mu.user.Rands,
+	)
+}
+
 func (mu mailerUser) GenerateEmailResetPasswordCode(email string) string {
 	return userx.GenerateResetPasswordCode(
 		mu.user.ID,

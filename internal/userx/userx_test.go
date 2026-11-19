@@ -24,13 +24,17 @@ func TestTimeLimitedUserCode(t *testing.T) {
 
 	activateCode := GenerateActivateCode(1, "alice@example.com", "Alice", "123456", "rands")
 	resetPasswordCode := GenerateResetPasswordCode(1, "alice@example.com", "Alice", "123456", "rands")
+	confirmEmailCode := GenerateConfirmEmailCode(1, "alice@example.com", "Alice", "123456", "rands")
 
 	require.True(t, VerifyActivateCode(activateCode, 1, "alice@example.com", "Alice", "123456", "rands"))
 	require.True(t, VerifyResetPasswordCode(resetPasswordCode, 1, "alice@example.com", "Alice", "123456", "rands"))
+	require.True(t, VerifyConfirmEmailCode(confirmEmailCode, 1, "alice@example.com", "Alice", "123456", "rands"))
 
 	t.Run("codes are not interchangeable", func(t *testing.T) {
 		assert.False(t, VerifyActivateCode(resetPasswordCode, 1, "alice@example.com", "Alice", "123456", "rands"))
 		assert.False(t, VerifyResetPasswordCode(activateCode, 1, "alice@example.com", "Alice", "123456", "rands"))
+		assert.False(t, VerifyActivateCode(confirmEmailCode, 1, "alice@example.com", "Alice", "123456", "rands"))
+		assert.False(t, VerifyConfirmEmailCode(activateCode, 1, "alice@example.com", "Alice", "123456", "rands"))
 	})
 
 	t.Run("user information changed", func(t *testing.T) {
