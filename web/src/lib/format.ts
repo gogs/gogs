@@ -14,6 +14,18 @@ export function formatMinutes(minutes: number) {
   return new Intl.NumberFormat(webContext.lang, { style: "unit", unit, unitDisplay: "long" }).format(value);
 }
 
+// formatInterval formats a number of seconds in short and in its largest whole
+// unit, e.g., "30s", "5m" or "1h".
+export function formatInterval(seconds: number) {
+  const [value, unit] =
+    seconds % 3600 === 0
+      ? [seconds / 3600, "hour"]
+      : seconds % 60 === 0
+        ? [seconds / 60, "minute"]
+        : [seconds, "second"];
+  return new Intl.NumberFormat(webContext.lang, { style: "unit", unit, unitDisplay: "narrow" }).format(value);
+}
+
 // formatMs formats a duration in milliseconds with about three significant
 // digits, e.g., "0.42 ms", "97 ms" or "2.52 s".
 export function formatMs(ms: number) {

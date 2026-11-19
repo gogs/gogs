@@ -5,13 +5,14 @@ import { type ReactNode, useId } from "react";
 import { useTranslation } from "react-i18next";
 import { Area, AreaChart, XAxis, YAxis } from "recharts";
 
-import { Row, Rows, STAT_VALUE, StatCard, TrendChip } from "@/components/AdminPage";
+import { AdminPageHeader, RefreshControl, Row, Rows, STAT_VALUE, StatCard, TrendChip } from "@/components/AdminPage";
 import { InlineCode } from "@/components/InlineCode";
 import { Loaded, NotLoaded } from "@/components/Loaded";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { type ChartConfig, ChartContainer } from "@/components/ui/chart";
 import { Skeleton } from "@/components/ui/skeleton";
 import { METRICS, flag, flagText } from "@/lib/admin-health";
+import { useRefreshSeconds } from "@/lib/admin-refresh";
 import { formatNumber } from "@/lib/format";
 import {
   type AdminDashboard,
@@ -340,16 +341,26 @@ function BuildFacts({ dashboard }: { dashboard: AdminDashboard }) {
 // AdminOverview is the first page of the admin console: how the server is
 // doing right now and what needs attention, then how it was built, what its
 // database holds and what it uses. Each card shows when its own request
-// answers.
+// answers, and the page refreshes itself while its tab is in view.
 export function AdminOverview() {
   const { t } = useTranslation();
-  const dashboard = useQuery(adminDashboardQuery());
-  const health = useQuery(adminHealthQuery("1h"));
-  const traces = useQuery(adminTraceOverviewQuery("1h"));
-  const notices = useQuery(adminNoticesQuery({}));
+  const [refreshSeconds, setRefreshSeconds] = useRefreshSeconds();
+  const refetchInterval = refreshSeconds > 0 && refreshSeconds * 1000;
+  const dashboard = useQuery({ ...adminDashboardQuery(), refetchInterval });
+  const health = useQuery({ ...adminHealthQuery("1h"), refetchInterval });
+  const traces = useQuery({ ...adminTraceOverviewQuery("1h"), refetchInterval });
+  const notices = useQuery({ ...adminNoticesQuery({}), refetchInterval });
+  const queries = [dashboard, health, traces, notices];
   return (
     <div className="grid gap-4">
-      <h1 className="text-xl font-semibold">{t("admin.overview")}</h1>
+      <AdminPageHeader title={t("admin.overview")}>
+        <RefreshControl
+          seconds={refreshSeconds}
+          onSecondsChange={setRefreshSeconds}
+          refreshing={queries.some((query) => query.isFetching)}
+          onRefresh={() => queries.forEach((query) => void query.refetch())}
+        />
+      </AdminPageHeader>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {HEADLINE_METRICS.map((metric) => (
           <HealthStat key={metric.key} metric={metric} health={health} />
