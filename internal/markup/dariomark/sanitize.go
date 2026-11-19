@@ -11,8 +11,8 @@ import (
 
 // Sanitizer describes the parts of the sanitizer policy that depend on the
 // rendered content, see Policy.Sanitizer. Render emulates the rest of the
-// policy, which is the Policy of NewPolicy for Markdown: the UGC policy with
-// classes for code languages, alerts, footnotes and task lists, and
+// policy, which is the Policy of NewPolicy for Markdown: the allowlist for
+// user content with classes for code languages, alerts, footnotes and task lists, and
 // attributes for task list items and checkboxes, footnote roles and ordered
 // list start numbers.
 type Sanitizer struct {

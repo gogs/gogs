@@ -16,7 +16,7 @@ Dariomark was written from scratch, from the specifications, for the Markdown th
 - **YAML front matter**: with `Options.FrontMatter`, front matter at the start of a file renders as a table above the document, with nested tables for nested mappings and lists. Invalid YAML renders as a code block, and YAML that is not a mapping renders as Markdown.
 - **Editable task lists**: task list items carry their source lines, e.g., `<li class="task-list-item" data-source-lines="5-7">`, so a client can toggle or reorder items, e.g., by drag and drop, by editing those lines of the source.
 - **SmartyPants punctuation**: curly quotes, dashes, ellipses and fractions.
-- **HTML sanitizer**: `Policy` sanitizes HTML of user content with an allowlist, the same output as bluemonday's UGC policy plus rules for the HTML that Dariomark produces, 4 to 5 times faster than bluemonday.
+- **HTML sanitizer**: `Policy` sanitizes HTML of user content with an allowlist, the same output as the bluemonday policy it replaced plus rules for the HTML that Dariomark produces, 4 to 5 times faster than bluemonday.
 - **Built-in sanitizing**: documents without raw HTML are sanitized while they are written, with the same result as `Policy`.
 - **Safe for concurrent use**: `Render` can be called from any number of goroutines at once.
 

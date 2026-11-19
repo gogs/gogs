@@ -32,9 +32,9 @@ func isSafeDataURI(u *url.URL) bool {
 // allowed are removed. Elements that must have attributes, e.g., links, are
 // removed when none are left.
 //
-// It reproduces, byte for byte, the output of the UGC policy of bluemonday
-// v1.0.27, which it replaces, so that stored and cached HTML does not
-// change. The only exception is data URIs, which are always checked, even
+// It reproduces, byte for byte, the output of the user content policy of
+// bluemonday v1.0.27, which it replaces, so that stored and cached HTML does
+// not change. The only exception is data URIs, which are always checked, even
 // when the custom URL schemes list "data".
 //
 // A Policy is safe for concurrent use.
@@ -79,8 +79,8 @@ var bareElements = strings.Fields(`abbr acronym address article aside audio b bd
 	strike strong style sub summary sup svg table tbody td textarea tfoot th thead title time tr tt u
 	ul var video wbr`)
 
-// NewPolicy returns the UGC policy of bluemonday, extended with the rules for
-// the HTML that Render produces and the custom URL schemes if markdown.
+// NewPolicy returns the allowlist for user content, extended with the rules
+// for the HTML that Render produces and the custom URL schemes if markdown.
 func NewPolicy(markdown bool, customSchemes []string) *Policy {
 	p := &Policy{
 		elements: map[string]*elementPolicy{},
