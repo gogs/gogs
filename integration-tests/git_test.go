@@ -505,3 +505,121 @@ func TestGitPushWithoutWriteAccess(t *testing.T) {
 		})
 	}
 }
+
+func TestGitPushWiki(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	// wikiOf returns the repository whose URLs are those of the wiki.
+	wikiOf := func(repo *Repository) *Repository {
+		return &Repository{ID: repo.ID, Owner: repo.Owner, Name: repo.Name + ".wiki"}
+	}
+	wikiPath := func(repo *Repository) string {
+		return database.WikiPath(repo.Owner, repo.Name)
+	}
+	// newWikiCheckout returns a new checkout with a commit of the home page on
+	// the branch "main", whose remote "origin" is the URL.
+	newWikiCheckout := func(t *testing.T, remoteURL string) (dir, commit string) {
+		dir = t.TempDir()
+		gitRun(t, dir, "init", "--initial-branch=main")
+		gitRun(t, dir, "remote", "add", "origin", remoteURL)
+		return dir, gitCommitFile(t, dir, "Home.md")
+	}
+	getWiki := func(t *testing.T, repo *Repository) (hasWiki bool, pages []string) {
+		var wiki struct {
+			HasWiki bool     `json:"hasWiki"`
+			Pages   []string `json:"pages"`
+		}
+		newClient(t).doJSON(http.MethodGet, repoCodeAPI(repo)+"/wiki", nil, http.StatusOK, &wiki)
+		return wiki.HasWiki, wiki.Pages
+	}
+
+	for _, name := range []string{"http", "ssh", "serv"} {
+		t.Run("first push over "+name, func(t *testing.T) {
+			repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+			remote := gitTransports(t, owner, wikiOf(repo))[name]
+			hasWiki, _ := getWiki(t, repo)
+			require.False(t, hasWiki)
+
+			dir, want := newWikiCheckout(t, remote.url)
+			// Git names "master" in HEAD of a new wiki by default, and clones
+			// still check out the pushed branch.
+			out, err := remote.git(dir, "push", "origin", "main")
+			require.NoError(t, err, "push: %s", out)
+
+			assert.Equal(t, want, gitRun(t, t.TempDir(), "--git-dir", wikiPath(repo), "rev-parse", "refs/heads/main"))
+			hasWiki, pages := getWiki(t, repo)
+			assert.True(t, hasWiki)
+			assert.Equal(t, []string{"Home"}, pages)
+			assert.Equal(t, want, gitRun(t, remote.clone(t), "rev-parse", "HEAD"))
+		})
+	}
+
+	// Each case expects the push to fail and no wiki to be created.
+	other := seedUser(t, CreateUserOptions{})
+	readOnly := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	repoSettingsAddCollaborator(t, readOnly, other, database.AccessModeRead)
+	disabled := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	external := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	api := apiV1Client(t, owner)
+	for repo, form := range map[*Repository]map[string]any{
+		disabled: {"enable_wiki": false},
+		external: {"enable_wiki": true, "enable_external_wiki": true, "external_wiki_url": "https://wiki.example.com"},
+	} {
+		status, body := api.do(http.MethodPatch, apiV1RepoPath(repo, "/wiki"), form)
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	}
+	for _, test := range []struct {
+		name   string
+		pusher *User
+		repo   *Repository
+	}{
+		{name: "user without write access", pusher: other, repo: readOnly},
+		{name: "wiki disabled", pusher: owner, repo: disabled},
+		{name: "external wiki", pusher: owner, repo: external},
+	} {
+		for name, remote := range gitTransports(t, test.pusher, wikiOf(test.repo)) {
+			t.Run(test.name+" over "+name, func(t *testing.T) {
+				dir, _ := newWikiCheckout(t, remote.url)
+				out, err := remote.git(dir, "push", "origin", "main")
+				require.Error(t, err, "push succeeded: %s", out)
+				assert.NoDirExists(t, wikiPath(test.repo))
+			})
+		}
+	}
+
+	t.Run("clone of a wiki without pages", func(t *testing.T) {
+		repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+		for name, remote := range gitTransports(t, owner, wikiOf(repo)) {
+			out, err := remote.git(t.TempDir(), "clone", remote.url, "clone")
+			require.Error(t, err, "clone over %s succeeded: %s", name, out)
+		}
+		assert.NoDirExists(t, wikiPath(repo))
+	})
+
+	// A push that pushes nothing still creates the wiki repository, and the
+	// wiki has no pages until a page is pushed or created on the web.
+	t.Run("dry run", func(t *testing.T) {
+		repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+		remote := gitTransports(t, owner, wikiOf(repo))["http"]
+		dir, _ := newWikiCheckout(t, remote.url)
+		out, err := remote.git(dir, "push", "--dry-run", "origin", "main")
+		require.NoError(t, err, "push: %s", out)
+		require.DirExists(t, wikiPath(repo))
+
+		hasWiki, _ := getWiki(t, repo)
+		assert.False(t, hasWiki)
+		status, body := newClient(t).do(http.MethodGet, repoCodeAPI(repo)+"/wiki/pages", nil)
+		assert.Equal(t, http.StatusOK, status, "response: %s", body)
+		status, body = newClient(t).do(http.MethodGet, repoCodePage(repo)+"/wiki/logo.png", nil)
+		assert.Equal(t, http.StatusOK, status, "response: %s", body)
+
+		authenticatedClient(t, owner).doJSON(http.MethodPost, repoCodeAPI(repo)+"/wiki", map[string]any{
+			"title":   "Home",
+			"content": "Welcome.",
+		}, http.StatusCreated, &struct{}{})
+		hasWiki, pages := getWiki(t, repo)
+		assert.True(t, hasWiki)
+		assert.Equal(t, []string{"Home"}, pages)
+	})
+}

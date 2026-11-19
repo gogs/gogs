@@ -236,6 +236,15 @@ Please create and use personal access token on user settings page`)
 			return
 		}
 
+		if !isPull && isWiki {
+			repo.Owner = owner
+			if err := repo.InitWikiForPush(c.Request().Context()); err != nil {
+				c.ResponseWriter().WriteHeader(http.StatusInternalServerError)
+				logger.Error("Failed to initialize wiki", "repoID", repo.ID, "error", err)
+				return
+			}
+		}
+
 		c.Map(&HTTPContext{
 			Context:   c,
 			OwnerName: ownerName,
@@ -324,6 +333,8 @@ func serviceRPC(logger *logx.Logger, h serviceHandler, service string) {
 			database.PushUpdates(ctx, logger, h.authUser, h.ownerName, h.repoName, updates, func(branch string) {
 				database.TriggerPushTasks(logger, h.authUser, h.repoID, branch)
 			})
+		} else if err := database.UpdateWikiHEAD(ctx, h.dir); err != nil {
+			logger.Error("Failed to update wiki HEAD", "repoID", h.repoID, "error", err)
 		}
 	} else {
 		err = git.RunService(ctx, git.Service(service), h.dir, opts)

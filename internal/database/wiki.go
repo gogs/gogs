@@ -55,6 +55,13 @@ func (r *Repository) HasWiki() bool {
 	return osx.IsDir(r.WikiPath())
 }
 
+// HasWikiPages returns true if the wiki has a branch of pages. A wiki that a
+// push created before pushing anything, e.g., a dry run, has none.
+func (r *Repository) HasWikiPages(ctx context.Context) bool {
+	wikiPath := r.WikiPath()
+	return git.RepoHasBranch(ctx, wikiPath, WikiBranch(ctx, wikiPath))
+}
+
 // InitWiki initializes a wiki for repository,
 // it does nothing when repository already has wiki.
 func (r *Repository) InitWiki(ctx context.Context) error {
@@ -70,6 +77,24 @@ func (r *Repository) InitWiki(ctx context.Context) error {
 		return errors.Newf("init repository: %v", err)
 	}
 	return nil
+}
+
+// InitWikiForPush creates the wiki repository for a push to a wiki that has no
+// pages yet, so a wiki can be started by pushing to it instead of from the web.
+// It does nothing when the repository has no wiki or uses an external one.
+func (r *Repository) InitWikiForPush(ctx context.Context) error {
+	if !r.EnableWiki || r.EnableExternalWiki {
+		return nil
+	}
+	return r.InitWiki(ctx)
+}
+
+// UpdateWikiHEAD points HEAD of the wiki in the path to the branch of its pages
+// when the branch HEAD names does not exist, e.g., after the first push to the
+// wiki used another branch name, so that clones check out the pages.
+func UpdateWikiHEAD(ctx context.Context, wikiPath string) error {
+	_, err := resolveMissingDefaultBranch(ctx, wikiPath, "", WikiBranch(ctx, wikiPath))
+	return err
 }
 
 // wikiParent returns the branch that wiki pages are committed to and its

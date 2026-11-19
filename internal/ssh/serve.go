@@ -193,6 +193,12 @@ func Serve(ctx context.Context, logger *logx.Logger, opts ServeOptions) error {
 		}
 	}
 
+	if requestMode == database.AccessModeWrite && isWiki {
+		if err = repo.InitWikiForPush(ctx); err != nil {
+			return serveError("Internal error", "Failed to initialize wiki: %v", err)
+		}
+	}
+
 	// Git finds the repository without the suffix, but recording a push runs other
 	// Git commands in the directory of the repository.
 	repoPath := filepath.Join(conf.Repository.Root, repoFullName)
@@ -230,6 +236,8 @@ func Serve(ctx context.Context, logger *logx.Logger, opts ServeOptions) error {
 		database.PushUpdates(ctx, logger, user, owner.Name, repo.Name, updates, func(branch string) {
 			opts.TriggerPushTasks(user, repo, branch)
 		})
+	} else if err := database.UpdateWikiHEAD(ctx, repoPath); err != nil {
+		logger.Error("Failed to update wiki HEAD", "repoID", repo.ID, "error", err)
 	}
 	if err != nil {
 		return serveError("Internal error", "Failed to execute git command: %v", err)

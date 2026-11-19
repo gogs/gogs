@@ -333,7 +333,7 @@ func getRepoWikiFile(c flamego.Context, logger *logx.Logger, repoCtx *repoContex
 	w := c.ResponseWriter()
 	repo := repoCtx.Repo
 	name := c.Param("page")
-	if !repo.HasWiki() {
+	if !repo.HasWikiPages(c.Request().Context()) {
 		return
 	}
 
