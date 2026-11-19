@@ -36,6 +36,8 @@ func TestRestoreScenarios(t *testing.T) {
 
 		type repository struct {
 			ID                int64
+			CreatedUnix       int64
+			UpdatedUnix       int64
 			IsPrivate         bool
 			IsUnlisted        bool
 			PullsAllowMerge   bool
@@ -45,8 +47,8 @@ func TestRestoreScenarios(t *testing.T) {
 		var repos []repository
 		require.NoError(t, db.Table("repository").Order("id").Find(&repos).Error)
 		assert.Equal(t, []repository{
-			{ID: 1, IsPrivate: true, PullsAllowMerge: true},
-			{ID: 2, PullsAllowMerge: true},
+			{ID: 1, CreatedUnix: 1600000001, UpdatedUnix: 1600086401, IsPrivate: true, PullsAllowMerge: true},
+			{ID: 2, CreatedUnix: 1600000002, UpdatedUnix: 1600086402, PullsAllowMerge: true},
 		}, repos)
 
 		type protectBranch struct {
