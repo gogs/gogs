@@ -2,9 +2,10 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-// Table does not scroll sideways. Hide the columns a narrow screen can do
-// without, e.g., with `hidden sm:table-cell` on their cells, and let the main
-// column wrap.
+// Table does not scroll sideways. Hide the columns that do not fit a narrow
+// card, e.g., with `hidden @xl:table-cell` on their cells inside a
+// `@container` card, tell what they hold below the main column until they
+// show, and let the main column wrap.
 function Table({ className, ...props }: React.ComponentProps<"table">) {
   return <table className={cn("w-full caption-bottom text-sm", className)} {...props} />;
 }

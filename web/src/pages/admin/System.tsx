@@ -296,22 +296,22 @@ function NotAvailable() {
   return <span className="text-(--color-muted-foreground)">N/A</span>;
 }
 
-// AdminJobs lists the background jobs of the server and their schedules. On
-// narrow screens the schedule and the times of a job move below its name.
+// AdminJobs lists the background jobs of the server and their schedules. In
+// a narrow card the schedule and the times of a job move below its name.
 export function AdminJobs({ monitor }: { monitor: AdminMonitorData }) {
   const { t } = useTranslation();
   return (
     <div className="grid gap-4">
       <AdminPageHeader title={t("admin.monitor.cron")} />
-      <Card className="overflow-hidden">
+      <Card className="@container overflow-hidden">
         {monitor.cronTasks.length > 0 ? (
           <Table>
-            <TableHeader>
+            <TableHeader className="bg-(--color-surface)">
               <TableRow className="hover:bg-transparent">
                 <TableHead>{t("admin.monitor.name")}</TableHead>
-                <TableHead className="hidden sm:table-cell">{t("admin.monitor.schedule")}</TableHead>
-                <TableHead className="hidden lg:table-cell">{t("admin.monitor.next")}</TableHead>
-                <TableHead className="hidden lg:table-cell">{t("admin.monitor.previous")}</TableHead>
+                <TableHead className="hidden @xl:table-cell">{t("admin.monitor.schedule")}</TableHead>
+                <TableHead className="hidden @4xl:table-cell">{t("admin.monitor.next")}</TableHead>
+                <TableHead className="hidden @4xl:table-cell">{t("admin.monitor.previous")}</TableHead>
                 <TableHead className="text-right">{t("admin.monitor.execute_times")}</TableHead>
               </TableRow>
             </TableHeader>
@@ -324,8 +324,8 @@ export function AdminJobs({ monitor }: { monitor: AdminMonitorData }) {
                   <TableRow key={task.description}>
                     <TableCell>
                       <span className="font-medium wrap-anywhere">{task.description}</span>
-                      <dl className="mt-1 grid gap-0.5 text-xs text-(--color-muted-foreground) lg:hidden">
-                        <div className="flex flex-wrap gap-x-1.5 sm:hidden">
+                      <dl className="mt-1 grid gap-0.5 text-xs text-(--color-muted-foreground) @4xl:hidden">
+                        <div className="flex flex-wrap gap-x-1.5 @xl:hidden">
                           <dt>{t("admin.monitor.schedule")}</dt>
                           <dd>{schedule}</dd>
                         </div>
@@ -339,9 +339,9 @@ export function AdminJobs({ monitor }: { monitor: AdminMonitorData }) {
                         </div>
                       </dl>
                     </TableCell>
-                    <TableCell className="hidden sm:table-cell">{schedule}</TableCell>
-                    <TableCell className="hidden tabular-nums lg:table-cell">{next}</TableCell>
-                    <TableCell className="hidden tabular-nums lg:table-cell">{previous}</TableCell>
+                    <TableCell className="hidden @xl:table-cell">{schedule}</TableCell>
+                    <TableCell className="hidden tabular-nums @4xl:table-cell">{next}</TableCell>
+                    <TableCell className="hidden tabular-nums @4xl:table-cell">{previous}</TableCell>
                     <TableCell className="text-right tabular-nums">{formatNumber(task.execTimes)}</TableCell>
                   </TableRow>
                 );
