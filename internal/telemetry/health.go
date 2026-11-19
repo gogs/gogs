@@ -189,9 +189,10 @@ func (h *Health) Report(now time.Time, rangeName string, long bool) HealthReport
 	}
 
 	// The rings hold a number of points, which reach back further than the
-	// range when sampling paused, e.g., while the machine was suspended. The
-	// wall clock tells, since the monotonic clock stops along with the process.
-	start := out.Start.Round(0)
+	// range when sampling paused, e.g., while the machine was suspended. Unix
+	// times tell, since the monotonic clock that `Before` reads stops along
+	// with the process.
+	start := out.Start.UnixMilli()
 
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -203,7 +204,7 @@ func (h *Health) Report(now time.Time, rangeName string, long bool) HealthReport
 		points := ring.ordered()
 		series := HealthSeries{Key: g.Key, Points: make([][2]float64, 0, len(points)), Limit: g.Limit}
 		for _, p := range points {
-			if p.at.Before(start) {
+			if p.at.UnixMilli() < start {
 				continue
 			}
 			series.Points = append(series.Points, [2]float64{float64(p.at.UnixMilli()), math.Round(p.value*100) / 100})
