@@ -12,6 +12,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { usePageTitle } from "@/lib/page-title";
 import { repoHeaderQuery } from "@/lib/queries/repo";
 import { routePath, subUrl } from "@/lib/url";
+import { useAppLinkClick } from "@/lib/use-app-link-click";
 
 import type { RepoCommitSearch } from "./Commit.search";
 
@@ -49,11 +50,13 @@ function CommitBody({ html }: { html: string }) {
   const needsClamp = lines.length > BODY_CLAMP_LINES;
   const [expanded, setExpanded] = useState(!needsClamp);
   const visible = expanded ? html : lines.slice(0, BODY_CLAMP_LINES).join("\n");
+  const onLinkClick = useAppLinkClick();
 
   return (
     <div className="mt-2 max-w-3xl">
       <pre
         className={`text-sm wrap-anywhere whitespace-pre-wrap text-(--color-muted-foreground) ${messageLinkClass}`}
+        onClick={onLinkClick}
         dangerouslySetInnerHTML={{ __html: visible }}
       />
       {needsClamp ? (
@@ -77,6 +80,7 @@ export function RepoCommit() {
   const { data: repoHeader } = useSuspenseQuery(repoHeaderQuery(owner, repo));
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
+  const onLinkClick = useAppLinkClick();
   usePageTitle(`${subject} - ${owner}/${repo}@${sha.slice(0, 7)}`);
 
   const authorLabel = author.profileURL ? (
@@ -114,6 +118,7 @@ export function RepoCommit() {
         <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
           <h2
             className={`min-w-0 flex-1 text-xl font-semibold break-words text-(--color-foreground) ${messageLinkClass}`}
+            onClick={onLinkClick}
             dangerouslySetInnerHTML={{ __html: subjectHTML }}
           />
           <div className="basis-full sm:basis-auto">

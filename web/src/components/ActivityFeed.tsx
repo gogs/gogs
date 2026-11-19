@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import {
   BookMarked,
   CircleCheck,
@@ -14,13 +14,14 @@ import {
   Tag,
   TriangleAlert,
 } from "lucide-react";
-import { type ComponentType, type MouseEvent, useEffect, useRef } from "react";
+import { type ComponentType, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { RelativeTime } from "@/components/RelativeTime";
 import { Button } from "@/components/ui/button";
 import type { ActivityItem } from "@/lib/queries/user";
 import { routePath } from "@/lib/url";
+import { useAppLinkClick } from "@/lib/use-app-link-click";
 
 // Icons by `ActionType`.
 const ICONS: Record<number, ComponentType<{ className?: string }>> = {
@@ -99,19 +100,9 @@ export function ActivityFeed({
 
 function ActivityRow({ item }: { item: ActivityItem }) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const Icon = ICONS[item.opType];
-  // The headline is HTML from the translations, and its links all lead to
-  // pages of the app, so they navigate like router links.
-  const onHeadlineClick = (e: MouseEvent) => {
-    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-    const link = e.target instanceof Element ? e.target.closest("a") : null;
-    if (!link || link.origin !== window.location.origin) return;
-    e.preventDefault();
-    // The router reads a "$" in a path as a parameter, and the server leaves
-    // it unescaped in branch names.
-    void navigate({ to: routePath(link.pathname).replaceAll("$", "%24") + link.search + link.hash });
-  };
+  // The headline is HTML from the translations.
+  const onHeadlineClick = useAppLinkClick();
   return (
     <li className="flex gap-3 border-b border-(--color-border) py-4">
       <img

@@ -76,6 +76,7 @@ import {
 import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
 import { resolveTheme, useTheme } from "@/lib/theme-context";
 import { routePath, subUrl } from "@/lib/url";
+import { useAppLinkClick } from "@/lib/use-app-link-click";
 import { cn } from "@/lib/utils";
 
 const PdfView = lazy(() => import("@/components/PdfView"));
@@ -979,6 +980,7 @@ function LatestCommit({
   commit: RepoCommitListItem;
   history: ReactNode;
 }) {
+  const onLinkClick = useAppLinkClick();
   return (
     <div className="flex items-center gap-3 border-b border-(--color-border) bg-(--color-surface) px-4 py-2.5 text-sm">
       <CommitAuthors
@@ -988,6 +990,7 @@ function LatestCommit({
       />
       <span
         className="hidden min-w-0 flex-1 truncate text-(--color-muted-foreground) sm:block [&_a]:text-(--color-primary) [&_a]:hover:underline"
+        onClick={onLinkClick}
         dangerouslySetInnerHTML={{ __html: commit.subjectHTML }}
       />
       <span className="ml-auto flex shrink-0 items-center gap-3 text-(--color-muted-foreground)">
@@ -1029,6 +1032,7 @@ function EntryList({
   linkOf: (entry: RepoTreeEntry) => ReactNode;
 }) {
   const params = { owner, repo: name };
+  const onLinkClick = useAppLinkClick();
   return (
     <ul className="divide-y divide-(--color-border) text-sm">
       {parent ? (
@@ -1066,6 +1070,7 @@ function EntryList({
             <>
               <span
                 className="hidden min-w-0 flex-1 truncate text-(--color-muted-foreground) sm:block [&_a]:hover:text-(--color-primary) [&_a]:hover:underline"
+                onClick={onLinkClick}
                 dangerouslySetInnerHTML={{ __html: entry.commit.subjectHTML }}
               />
               <Link
