@@ -94,6 +94,10 @@ const RECENT_POINTS: Record<AdminHealthRange, number> = { "1h": 16, "24h": 6 };
 // A level is not read off fewer samples than this.
 const LEVEL_SAMPLES = 3;
 
+// Samples further apart than this, with idle time between them, are not
+// neighbors.
+const NEIGHBOR_MS = 2 * 60_000;
+
 // flag tells when a metric left its usual range, which is the first half of
 // the range: its recent level stands out, or it spiked. Both levels are
 // medians, which a few odd samples do not move. A spike is reported at its
@@ -128,8 +132,9 @@ export function flag(
   // minutes, which is worth a flag on its own.
   const measured = idleAtZero ? points.filter(([, v]) => v > 0) : points;
   const values = measured.map(([, v]) => v);
-  const held =
-    range === "1h" ? values.map((v, i) => Math.min(v, Math.max(values[i - 1] ?? 0, values[i + 1] ?? 0))) : values;
+  const near = (i: number, j: number) =>
+    measured[j] && Math.abs(measured[j][0] - measured[i][0]) <= NEIGHBOR_MS ? values[j] : 0;
+  const held = range === "1h" ? values.map((v, i) => Math.min(v, Math.max(near(i, i - 1), near(i, i + 1)))) : values;
   const peak = Math.max(...held);
   if (peak >= spikeFloor && peak > base + 6 * spread && peak >= 3 * base) {
     const start = held.findIndex((v) => v > base + (peak - base) / 2);
