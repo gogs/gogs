@@ -21,7 +21,7 @@ import (
 // ⚠️ WARNING: This list is meant to be read-only.
 var Tables = []any{
 	new(Access), new(AccessToken), new(Action), new(Attachment),
-	new(Comment),
+	new(Collaboration), new(Comment),
 	new(DeployKey),
 	new(EmailAddress),
 	new(Follow),
@@ -32,9 +32,10 @@ var Tables = []any{
 	new(Notice),
 	new(Passkey), new(PublicKey), new(PullRequest),
 	new(Release),
+	new(Star),
 	new(TwoFactor), new(TwoFactorRecoveryCode),
 	new(Upload),
-	new(Webhook),
+	new(Watch), new(Webhook),
 }
 
 // NewConnection returns a new database connection with the given logger. When

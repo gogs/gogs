@@ -27,7 +27,7 @@ func TestDumpAndImport(t *testing.T) {
 	}
 	t.Parallel()
 
-	const wantTables = 26
+	const wantTables = 29
 	if len(Tables) != wantTables {
 		t.Fatalf("New table has added (want %d got %d), please add new tests for the table and update this check", wantTables, len(Tables))
 	}
@@ -144,6 +144,19 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			UploaderID:  2,
 			Name:        "gogs.zip",
 			CreatedUnix: 1588572486,
+		},
+
+		&Collaboration{
+			ID:     1,
+			UserID: 2,
+			RepoID: 1,
+			Mode:   AccessModeWrite,
+		},
+		&Collaboration{
+			ID:     2,
+			UserID: 3,
+			RepoID: 1,
+			Mode:   AccessModeRead,
 		},
 
 		&Comment{
@@ -438,6 +451,12 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			CreatedUnix:  1588572486,
 		},
 
+		&Star{
+			ID:     1,
+			UserID: 2,
+			RepoID: 1,
+		},
+
 		&TwoFactor{
 			ID:          1,
 			UserID:      1,
@@ -461,6 +480,17 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			ID:   1,
 			UUID: "8c2d0f1e-5a6b-4c7d-9e8f-0a1b2c3d4e5f",
 			Name: "notes.txt",
+		},
+
+		&Watch{
+			ID:     1,
+			UserID: 1,
+			RepoID: 1,
+		},
+		&Watch{
+			ID:     2,
+			UserID: 2,
+			RepoID: 1,
 		},
 
 		&Webhook{
