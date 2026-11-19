@@ -150,7 +150,7 @@ function makeRouter(context: RouterContext) {
       if (err.status === 401) {
         // The location being loaded, which is not the current one yet.
         // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
-        throw authenticationRedirect(router.latestLocation.href);
+        throw authenticationRedirect(router.latestLocation.href, context.user !== null);
       }
       if (err.status === 403 && err.errorField === "account not activated") {
         // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
