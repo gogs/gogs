@@ -2,10 +2,10 @@ import { Link } from "@tanstack/react-router";
 import { type KeyboardEvent, type MouseEvent, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { SegmentedLinks } from "@/components/AdminPage";
 import { METRICS, SECTIONS, flag, flagText, formatCount } from "@/lib/admin-health";
 import type { AdminHealth, AdminHealthRange, AdminHealthSeries } from "@/lib/queries/admin";
 import { formatAbsoluteTime } from "@/lib/relative-time";
-import { cn } from "@/lib/utils";
 
 // valueAt returns the first value measured at or after the time, which sums
 // up the step that holds the time, or the last one when the time is after
@@ -184,7 +184,7 @@ export function AdminServerHealth({ health, range }: { health: AdminHealth; rang
     <>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-semibold">{t("admin.health")}</h1>
-        <RangeLinks
+        <SegmentedLinks
           label={t("admin.traces.range")}
           active={range}
           options={[
@@ -262,40 +262,5 @@ export function AdminServerHealth({ health, range }: { health: AdminHealth; rang
         );
       })}
     </>
-  );
-}
-
-// RangeLinks switches a page between ranges, e.g., the last hour and the last
-// day, through its search params, so that the loader fetches the range.
-export function RangeLinks<V extends string>({
-  label,
-  active,
-  options,
-  to,
-}: {
-  label: string;
-  active: V;
-  options: { value: V; label: string; search: Record<string, unknown> }[];
-  to: string;
-}) {
-  return (
-    <nav aria-label={label} className="flex gap-1">
-      {options.map((option) => (
-        <Link
-          key={option.value}
-          to={to}
-          search={option.search}
-          aria-current={option.value === active ? "page" : undefined}
-          className={cn(
-            "inline-flex h-8 items-center rounded-md border px-3 text-sm",
-            option.value === active
-              ? "border-(--color-ring) bg-(--color-surface) font-medium text-(--color-foreground)"
-              : "border-(--color-input) text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)",
-          )}
-        >
-          {option.label}
-        </Link>
-      ))}
-    </nav>
   );
 }
