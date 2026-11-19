@@ -86,7 +86,7 @@ export function ConfirmButton({
       )}
       <DialogContent>
         <DialogHeader className="pb-3">
-          <DialogTitle>{title}</DialogTitle>
+          <DialogTitle className="wrap-anywhere">{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -96,8 +96,8 @@ export function ConfirmButton({
           <Button
             type="button"
             variant="destructive"
-            // A long title wraps on narrow screens, so the button grows with it.
-            className="h-auto min-h-10"
+            // A long title wraps, also inside a name without spaces, so the button grows with it.
+            className="h-auto min-h-10 min-w-0 wrap-anywhere"
             disabled={mutation.isPending}
             onClick={() => mutation.mutate()}
           >

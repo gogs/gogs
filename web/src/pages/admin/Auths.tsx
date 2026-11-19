@@ -20,7 +20,8 @@ import {
   deleteAdminAuthSource,
   updateAdminAuthSource,
 } from "@/lib/queries/admin";
-import { FormError, formErrors } from "@/lib/queries/request";
+import { formErrors } from "@/lib/queries/request";
+import { useFocusFirstError } from "@/lib/use-focus-error";
 import { cn } from "@/lib/utils";
 
 const LDAP = 2;
@@ -164,12 +165,8 @@ function AuthSourceForm({ source }: { source?: AdminAuthSourceDetail }) {
       setForm({ ...form, bindPassword: "" });
       await router.invalidate();
     },
-    onError: (err) => {
-      const fields = err instanceof FormError ? err.fields : {};
-      const first = FIELD_ORDER.find((f) => f in fields);
-      if (first) requestAnimationFrame(() => document.getElementById(first)?.focus());
-    },
   });
+  useFocusFirstError(save.error, FIELD_ORDER);
   const { fields, formError } = formErrors(save.error);
 
   const isLDAP = form.type === LDAP || form.type === DLDAP;
