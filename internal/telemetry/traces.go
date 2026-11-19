@@ -528,7 +528,9 @@ func (r *ring) evict(cutoff time.Time, byID map[string]*storedTrace) {
 }
 
 func (s *Store) evict() {
-	cutoff := s.now().Add(-s.opts.MaxAge)
+	// Compare by the wall clock, since the monotonic clock stops while the
+	// machine is suspended, which would keep the traces from before it.
+	cutoff := s.now().Add(-s.opts.MaxAge).Round(0)
 	s.kept.evict(cutoff, s.byID)
 	s.sampled.evict(cutoff, s.byID)
 }
