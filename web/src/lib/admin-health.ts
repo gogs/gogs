@@ -89,12 +89,14 @@ export function flag(
   const first = values.slice(0, Math.floor(values.length / 2));
   const base = median(first);
   const spread = Math.max(median(first.map((v) => Math.abs(v - base))), 0.5);
-  const tail = values.slice(-Math.max(4, Math.round(values.length / 15)));
-  const tailMean = tail.reduce((a, b) => a + b, 0) / tail.length;
   // A point of the last hour is one sample, which on a quiet server can be a
-  // single request, so a spike there holds for two samples. A point of the
-  // last 24 hours sums up 5 minutes already.
-  const held = range === "1h" ? values.map((v, i) => Math.min(v, values[i + 1] ?? 0)) : values;
+  // single request, so there a value counts as far as a neighbor reaches it
+  // too. A point of the last 24 hours is the peak or the mean rate of 5
+  // minutes, which is worth a flag on its own.
+  const held =
+    range === "1h" ? values.map((v, i) => Math.min(v, Math.max(values[i - 1] ?? 0, values[i + 1] ?? 0))) : values;
+  const tail = held.slice(-Math.max(4, Math.round(held.length / 15)));
+  const tailMean = tail.reduce((a, b) => a + b, 0) / tail.length;
   const peak = Math.max(...held);
   if (!followsTraffic && base > 0 && tailMean >= floor && tailMean / base >= 1.5) return { up: tailMean / base };
   if (peak >= spikeFloor && peak > base + 6 * spread && peak >= 3 * base) {

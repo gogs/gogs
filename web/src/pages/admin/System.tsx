@@ -73,9 +73,9 @@ const OPERATION_LABELS: Record<AdminOperation, string> = {
   "reinit-missing-repos": "admin.dashboard.reinit_missing_repos",
 };
 
-// The form keys the server reports errors by are the IDs of the fields
-// elsewhere. Here the field has an ID of its own, so the error names it.
 const TEST_MAIL_FIELDS = ["email"] as const;
+// The "email" ID belongs to the section of the email settings.
+const TEST_MAIL_IDS = { email: "testMailEmail" };
 
 // TestMailForm sends a test email, to check the email settings work.
 function TestMailForm() {
@@ -85,7 +85,7 @@ function TestMailForm() {
     mutationFn: () => sendAdminTestMail(email),
     onSuccess: (message) => toast.success(message),
   });
-  useFocusFirstError(send.error, TEST_MAIL_FIELDS);
+  useFocusFirstError(send.error, TEST_MAIL_FIELDS, TEST_MAIL_IDS);
   const { fields, formError } = formErrors(send.error);
 
   const onSubmit = (e: FormEvent) => {
@@ -277,7 +277,7 @@ export function AdminConfig({ config }: { config: AdminConfigData }) {
                 <li key={section.id}>
                   <a
                     href={`#${section.id}`}
-                    className="block rounded-md px-2 py-1.5 text-sm text-(--color-muted-foreground) outline-none hover:bg-(--color-surface) hover:text-(--color-foreground) focus-visible:ring-1 focus-visible:ring-(--color-ring)"
+                    className="block rounded-md px-2 py-1.5 text-sm text-(--color-muted-foreground) outline-none hover:bg-(--color-surface) hover:text-(--color-foreground) focus-visible:ring-1 focus-visible:ring-(--color-ring) focus-visible:ring-inset"
                   >
                     {section.title}
                   </a>

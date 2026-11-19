@@ -211,6 +211,10 @@ func checkAdminAuthSource(l i18n.Locale, typ auth.Type, req *adminAuthSourceRequ
 func adminAuthSourceProvider(typ auth.Type, req *adminAuthSourceRequest, bindPassword string) auth.Provider {
 	switch typ {
 	case auth.LDAP, auth.DLDAP:
+		// Only a source that binds with a DN uses a bind password.
+		if typ == auth.DLDAP {
+			bindPassword = ""
+		}
 		return ldap.NewProvider(typ == auth.DLDAP, &ldap.Config{
 			Host:              req.Host,
 			Port:              req.Port,
