@@ -19,6 +19,7 @@ import (
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/cryptox"
 	"gogs.io/gogs/internal/database/migrations"
 	"gogs.io/gogs/internal/osx"
 )
@@ -152,7 +153,64 @@ func ImportDatabase(ctx context.Context, logger *logx.Logger, db *gorm.DB, dirPa
 	if err != nil {
 		return errors.Wrap(err, "merge duplicate public keys")
 	}
+	// Backups from before the allowlist was only for organization repositories may
+	// have it enabled on user repositories.
+	err = migrations.DisableProtectBranchAllowlistOfUserRepositories(db.WithContext(ctx))
+	if err != nil {
+		return errors.Wrap(err, "disable push allowlists of user repositories")
+	}
 	return nil
+}
+
+// legacyBackupKeys maps, by table, the JSON keys that backups of older versions
+// use to the keys of the fields that replaced them.
+var legacyBackupKeys = map[string]map[string]string{
+	"EmailAddress": {"UID": "UserID"},
+	"IssueUser":    {"UID": "UserID"},
+	"ProtectBranch": {
+		"EnableWhitelist":  "EnableAllowlist",
+		"WhitelistUserIDs": "AllowlistUserIDs",
+		"WhitelistTeamIDs": "AllowlistTeamIDs",
+	},
+	"Star": {"UID": "UserID"},
+	"User": {"Passwd": "Password"},
+}
+
+// decodeBackupRow decodes a row of the table in a backup into v, and returns the
+// lowercased JSON keys that the row has. A field that the row does not have,
+// e.g., one added after the version that made the backup, should take the
+// default value of its column instead of the zero value of its type.
+func decodeBackupRow(tableName string, data []byte, v any) (map[string]bool, error) {
+	var fields map[string]json.RawMessage
+	err := json.Unmarshal(data, &fields)
+	if err != nil {
+		return nil, err
+	}
+
+	renamed := make(map[string]json.RawMessage, len(fields))
+	keys := make(map[string]bool, len(fields))
+	for key, value := range fields {
+		if newKey, ok := legacyBackupKeys[tableName][key]; ok {
+			key = newKey
+		}
+		renamed[key] = value
+		keys[strings.ToLower(key)] = true
+	}
+
+	data, err = json.Marshal(renamed)
+	if err != nil {
+		return nil, err
+	}
+	return keys, json.Unmarshal(data, v)
+}
+
+// jsonKey returns the key of the field in JSON.
+func jsonKey(field reflect.StructField) string {
+	name, _, _ := strings.Cut(field.Tag.Get("json"), ",")
+	if name == "" {
+		return field.Name
+	}
+	return name
 }
 
 func importTable(ctx context.Context, db *gorm.DB, table any, r io.Reader) error {
@@ -166,6 +224,7 @@ func importTable(ctx context.Context, db *gorm.DB, table any, r io.Reader) error
 		return errors.Wrap(err, "parse schema")
 	}
 	rawTableName := s.Table
+	tableName := getTableType(table)
 	skipResetIDSeq := map[string]bool{
 		"lfs_object": true,
 	}
@@ -176,16 +235,27 @@ func importTable(ctx context.Context, db *gorm.DB, table any, r io.Reader) error
 		cleaned := bytes.ReplaceAll(scanner.Bytes(), []byte("\\u0000"), []byte(""))
 
 		elem := reflect.New(reflect.TypeOf(table).Elem())
-		err = json.Unmarshal(cleaned, elem.Interface())
+		keys, err := decodeBackupRow(tableName, cleaned, elem.Interface())
 		if err != nil {
 			return errors.Wrap(err, "unmarshal JSON to struct")
 		}
 
+		// Backups from before access tokens stored their SHA-256 have only the SHA-1,
+		// from which the migration of version 20 computes it.
+		if t, ok := elem.Interface().(*AccessToken); ok && t.SHA256 == "" {
+			t.SHA256 = cryptox.SHA256(t.Sha1)
+			keys["sha256"] = true
+		}
+
 		// Insert column values as they are in the archive, so that neither hooks nor
-		// column defaults (e.g., true for "repository.enable_wiki") change them.
+		// column defaults (e.g., true for "repository.enable_wiki") change them. Only
+		// the columns that the archive lacks take their defaults.
 		row := make(map[string]any, len(s.DBNames))
 		for _, name := range s.DBNames {
-			row[name], _ = s.FieldsByDBName[name].ValueOf(ctx, elem.Elem())
+			field := s.FieldsByDBName[name]
+			if keys[strings.ToLower(jsonKey(field.StructField))] {
+				row[name], _ = field.ValueOf(ctx, elem.Elem())
+			}
 		}
 		err = db.WithContext(ctx).Table(rawTableName).Create(row).Error
 		if err != nil {
