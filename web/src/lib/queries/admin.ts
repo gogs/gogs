@@ -197,8 +197,8 @@ export interface AdminDashboard {
   goVersion: string;
   buildTime: string;
   buildCommit: string;
-  // A translated sentence that marks each count with <b>.
-  statistics: string;
+  // How many records of each kind the database holds, with translated labels.
+  statistics: { label: string; count: number }[];
   systemStatus: AdminReportSection;
 }
 

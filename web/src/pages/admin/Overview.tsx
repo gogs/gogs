@@ -8,7 +8,6 @@ import { Area, AreaChart, Bar, CartesianGrid, ComposedChart, Line, XAxis, YAxis 
 import { Row, Rows, STAT_VALUE, StatCard } from "@/components/AdminPage";
 import { InlineCode } from "@/components/InlineCode";
 import { LoadError, Loaded } from "@/components/Loaded";
-import { RichText } from "@/components/RichText";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   type ChartConfig,
@@ -494,11 +493,16 @@ export function AdminOverview() {
             <CardTitle className="text-base">{t("admin.dashboard.statistic")}</CardTitle>
           </CardHeader>
           <CardContent className="pt-4 sm:pt-4">
-            <Loaded query={dashboard} what={t("admin.dashboard.statistic")} skeleton={<ReportSkeleton rows={4} />}>
+            <Loaded query={dashboard} what={t("admin.dashboard.statistic")} skeleton={<ReportSkeleton rows={6} />}>
               {(data) => (
-                <p className="text-sm leading-6">
-                  <RichText text={data.statistics} />
-                </p>
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6">
+                  {data.statistics.map((statistic) => (
+                    <div key={statistic.label} className="flex min-w-0 flex-col-reverse">
+                      <dt className="text-sm wrap-anywhere text-(--color-muted-foreground)">{statistic.label}</dt>
+                      <dd className="text-lg font-semibold tabular-nums">{formatNumber(statistic.count)}</dd>
+                    </div>
+                  ))}
+                </dl>
               )}
             </Loaded>
           </CardContent>
