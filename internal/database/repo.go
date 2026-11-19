@@ -1780,8 +1780,8 @@ func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 	if _, err = sess.Where("id = ?", repoID).Delete(new(Repository)); err != nil {
 		return errors.Newf("delete repository: %v", err)
 	}
-	if _, err = sess.Where("base_repo_id = ?", repoID).Delete(new(PullRequest)); err != nil {
-		return errors.Newf("delete pull requests: %v", err)
+	if err = deleteByColumn(sess, "base_repo_id", repoID, "pull_request"); err != nil {
+		return err
 	}
 	if err = deleteByColumn(sess, "repo_id", repoID,
 		"access",
@@ -1816,28 +1816,24 @@ func DeleteRepository(logger *logx.Logger, ownerID, repoID int64) error {
 	}
 
 	// Delete comments and attachments.
-	issues := make([]*Issue, 0, 25)
-	if err = sess.Where("repo_id=?", repoID).Find(&issues); err != nil {
-		return err
+	var issueIDs []int64
+	if err = tx.Model(new(Issue)).Where("repo_id = ?", repoID).Pluck("id", &issueIDs).Error; err != nil {
+		return errors.Wrap(err, "list issues")
 	}
-	for i := range issues {
-		if _, err = sess.Where("issue_id = ?", issues[i].ID).Delete(new(Comment)); err != nil {
-			return err
-		}
-
-		rows, err := sess.Query("SELECT uuid FROM attachment WHERE issue_id = ?", issues[i].ID)
+	for _, issueID := range issueIDs {
+		rows, err := sess.Query("SELECT uuid FROM attachment WHERE issue_id = ?", issueID)
 		if err != nil {
 			return errors.Newf("list attachments: %v", err)
 		}
 		for _, row := range rows {
 			attachmentPaths = append(attachmentPaths, AttachmentLocalPath(string(row["uuid"])))
 		}
-		if err = deleteByColumn(sess, "issue_id", issues[i].ID, "attachment", "issue_label"); err != nil {
+		if err = deleteByColumn(sess, "issue_id", issueID, "comment", "attachment", "issue_label"); err != nil {
 			return err
 		}
 	}
 
-	if _, err = sess.Where("repo_id = ?", repoID).Delete(new(Issue)); err != nil {
+	if err = deleteByColumn(sess, "repo_id", repoID, "issue"); err != nil {
 		return err
 	}
 

@@ -27,7 +27,7 @@ func TestDumpAndImport(t *testing.T) {
 	}
 	t.Parallel()
 
-	const wantTables = 22
+	const wantTables = 26
 	if len(Tables) != wantTables {
 		t.Fatalf("New table has added (want %d got %d), please add new tests for the table and update this check", wantTables, len(Tables))
 	}
@@ -146,6 +146,26 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			CreatedUnix: 1588572486,
 		},
 
+		&Comment{
+			ID:          1,
+			Type:        CommentTypeComment,
+			PosterID:    2,
+			IssueID:     1,
+			Content:     "Me too.",
+			CreatedUnix: 1588568886,
+			UpdatedUnix: 1588572486,
+		},
+		&Comment{
+			ID:          2,
+			Type:        CommentTypeCommitRef,
+			PosterID:    1,
+			IssueID:     1,
+			Content:     "Fix the crash",
+			CommitSHA:   "a4b4f7a8a2e2c0b4f2e9d1c3b5a7f9e1d3c5b7a9",
+			CreatedUnix: 1588572486,
+			UpdatedUnix: 1588572486,
+		},
+
 		&DeployKey{
 			ID:          1,
 			KeyID:       2,
@@ -199,10 +219,56 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			ResponseContent: `{"status":200}`,
 		},
 
+		&Issue{
+			ID:           1,
+			RepoID:       1,
+			Index:        1,
+			PosterID:     1,
+			Title:        "Crash on start",
+			Content:      "It **crashes**.",
+			MilestoneID:  1,
+			Priority:     1,
+			AssigneeID:   2,
+			NumComments:  2,
+			DeadlineUnix: 1588568886,
+			CreatedUnix:  1588568886,
+			UpdatedUnix:  1588572486,
+		},
+		&Issue{
+			ID:          2,
+			RepoID:      1,
+			Index:       2,
+			PosterID:    2,
+			Title:       "Fix the crash",
+			IsClosed:    true,
+			IsPull:      true,
+			CreatedUnix: 1588572486,
+			UpdatedUnix: 1588572486,
+		},
+
 		&IssueLabel{
 			ID:      1,
 			IssueID: 1,
 			LabelID: 1,
+		},
+
+		&IssueUser{
+			ID:          1,
+			UserID:      1,
+			IssueID:     1,
+			RepoID:      1,
+			MilestoneID: 1,
+			IsRead:      true,
+			IsPoster:    true,
+		},
+		&IssueUser{
+			ID:          2,
+			UserID:      2,
+			IssueID:     1,
+			RepoID:      1,
+			IsAssigned:  true,
+			IsMentioned: true,
+			IsClosed:    true,
 		},
 
 		&Label{
@@ -327,6 +393,24 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			Mode:        AccessModeRead,
 			Type:        KeyTypeDeploy,
 			CreatedUnix: 1588568886,
+		},
+
+		&PullRequest{
+			ID:             1,
+			Type:           PullRequestTypeGogs,
+			Status:         PullRequestStatusMergeable,
+			IssueID:        2,
+			Index:          2,
+			HeadRepoID:     2,
+			BaseRepoID:     1,
+			HeadUserName:   "bob",
+			HeadBranch:     "fix",
+			BaseBranch:     "main",
+			MergeBase:      "e180bd23085f8023cbe3625b21c3c387534c3b0d",
+			HasMerged:      true,
+			MergedCommitID: "a4b4f7a8a2e2c0b4f2e9d1c3b5a7f9e1d3c5b7a9",
+			MergerID:       1,
+			MergedUnix:     1588572486,
 		},
 
 		&Release{

@@ -45,24 +45,24 @@ type PullRequest struct {
 	Type   PullRequestType
 	Status PullRequestStatus
 
-	IssueID int64  `xorm:"INDEX" gorm:"index"`
-	Issue   *Issue `xorm:"-" json:"-" gorm:"-"`
+	IssueID int64  `gorm:"index:IDX_pull_request_issue_id"`
+	Issue   *Issue `json:"-" gorm:"-"`
 	Index   int64
 
 	HeadRepoID   int64
-	HeadRepo     *Repository `xorm:"-" json:"-" gorm:"-"`
+	HeadRepo     *Repository `json:"-" gorm:"-"`
 	BaseRepoID   int64
-	BaseRepo     *Repository `xorm:"-" json:"-" gorm:"-"`
+	BaseRepo     *Repository `json:"-" gorm:"-"`
 	HeadUserName string
 	HeadBranch   string
 	BaseBranch   string
-	MergeBase    string `xorm:"VARCHAR(64)" gorm:"type:VARCHAR(64)"`
+	MergeBase    string `gorm:"type:VARCHAR(64)"`
 
 	HasMerged      bool
-	MergedCommitID string `xorm:"VARCHAR(64)" gorm:"type:VARCHAR(64)"`
+	MergedCommitID string `gorm:"type:VARCHAR(64)"`
 	MergerID       int64
-	Merger         *User     `xorm:"-" json:"-" gorm:"-"`
-	Merged         time.Time `xorm:"-" json:"-" gorm:"-"`
+	Merger         *User     `json:"-" gorm:"-"`
+	Merged         time.Time `json:"-" gorm:"-"`
 	MergedUnix     int64
 }
 
