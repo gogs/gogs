@@ -187,6 +187,19 @@ func TestStore_AttributeValues(t *testing.T) {
 	assert.Contains(t, got.Spans[0].Attributes, Attribute{Key: "git.args", Value: `["log","--","<path>"]`})
 }
 
+func TestStore_LongSpanName(t *testing.T) {
+	store, tracer := newTestStore(t, defaultOptions())
+
+	_, root := tracer.Start(context.Background(), strings.Repeat("n", 4096), trace.WithTimestamp(testNow.Add(-2*time.Second)))
+	root.SetStatus(codes.Error, "")
+	root.End(trace.WithTimestamp(testNow))
+
+	got, ok := store.Get(root.SpanContext().TraceID().String())
+	require.True(t, ok)
+	assert.Equal(t, strings.Repeat("n", maxNameBytes)+"…", got.Spans[0].Name)
+	assert.Equal(t, got.Spans[0].Name, got.Route.Name)
+}
+
 // A client can send many requests with the trace ID of one that is still
 // running, and they must not grow that trace past the limit and push out the
 // other kept traces when it ends.
@@ -444,6 +457,10 @@ func TestStore_MemoryCap(t *testing.T) {
 	}
 	assert.LessOrEqual(t, store.kept.size, store.kept.budget)
 	assert.Greater(t, store.kept.size, store.kept.budget*3/4, "the budget is used")
+	kept, sampled := store.MemoryUse()
+	assert.Equal(t, MemoryUse{Used: store.kept.size, Limit: store.kept.budget}, kept)
+	assert.Equal(t, MemoryUse{Limit: store.sampled.budget}, sampled, "failed traces take none of the memory of sampled ones")
+	assert.Equal(t, opts.MaxMemory, kept.Limit+sampled.Limit)
 	_, ok := store.Get(first)
 	assert.False(t, ok, "the oldest traces are evicted")
 	_, ok = store.Get(last)

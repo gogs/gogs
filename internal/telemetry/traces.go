@@ -25,6 +25,7 @@ const (
 	maxSpansPerTrace     = 1000
 	maxAttributes        = 32
 	maxValueBytes        = 1024
+	maxNameBytes         = 256
 	maxRoutes            = 500
 	maxOperations        = 1000
 	// slowForRouteWindow and slowForRouteMinRequests decide when a request is
@@ -263,7 +264,7 @@ func (s *Store) dropExpiredPending(now time.Time) {
 func copySpan(sp sdktrace.ReadOnlySpan) span {
 	out := span{
 		id:       sp.SpanContext().SpanID().String(),
-		name:     sp.Name(),
+		name:     truncate(sp.Name(), maxNameBytes),
 		start:    sp.StartTime(),
 		duration: sp.EndTime().Sub(sp.StartTime()),
 	}
@@ -306,12 +307,16 @@ func copySpan(sp sdktrace.ReadOnlySpan) span {
 	out.attrs = make([]Attribute, 0, len(attrs))
 	for _, kv := range attrs {
 		value := attributeValue(kv.Value)
-		if len(value) > maxValueBytes {
-			value = value[:maxValueBytes] + "…"
-		}
-		out.attrs = append(out.attrs, Attribute{Key: string(kv.Key), Value: value})
+		out.attrs = append(out.attrs, Attribute{Key: string(kv.Key), Value: truncate(value, maxValueBytes)})
 	}
 	return out
+}
+
+func truncate(s string, maxBytes int) string {
+	if len(s) <= maxBytes {
+		return s
+	}
+	return s[:maxBytes] + "…"
 }
 
 // attributeValue returns the value of an attribute as text. Unlike Emit, it
@@ -602,13 +607,19 @@ func (s *Store) TakeInterval() Interval {
 	return out
 }
 
-// MemoryUse returns about how many bytes the kept traces take, and the most
-// they may take.
-func (s *Store) MemoryUse() (used, limit int64) {
+// MemoryUse is about how many bytes a set of traces takes, and the most it may
+// take before the oldest of them make room.
+type MemoryUse struct {
+	Used, Limit int64
+}
+
+// MemoryUse returns the memory of the traces kept for failing or being slow,
+// and of the sampled traces. Each set has its own limit.
+func (s *Store) MemoryUse() (kept, sampled MemoryUse) {
 	if s == nil {
-		return 0, 0
+		return MemoryUse{}, MemoryUse{}
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.kept.size + s.sampled.size, s.opts.MaxMemory
+	return MemoryUse{Used: s.kept.size, Limit: s.kept.budget}, MemoryUse{Used: s.sampled.size, Limit: s.sampled.budget}
 }

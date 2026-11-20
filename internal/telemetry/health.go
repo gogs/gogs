@@ -24,6 +24,9 @@ type Gauge struct {
 	Limit float64
 	// Read returns the value now, and false when it cannot be measured.
 	Read func() (float64, bool)
+	// ReadLimit returns the limit as of the last Read, for a limit that changes
+	// while the server runs, e.g., the size of a file system. It replaces Limit.
+	ReadLimit func() float64
 	// rate is set for values per second or minute, which are averaged over the
 	// long step instead of taking the highest.
 	rate bool
@@ -161,8 +164,12 @@ func (h *Health) Run(ctx context.Context) {
 func (h *Health) sample(now time.Time) {
 	values := make([]float64, len(h.gauges))
 	measured := make([]bool, len(h.gauges))
+	limits := make([]float64, len(h.gauges))
 	for i, g := range h.gauges {
 		values[i], measured[i] = g.Read()
+		if measured[i] && g.ReadLimit != nil {
+			limits[i] = g.ReadLimit()
+		}
 	}
 
 	h.mu.Lock()
@@ -170,6 +177,9 @@ func (h *Health) sample(now time.Time) {
 	h.ticks++
 	long := h.ticks%healthLongEvery == 0
 	for i, g := range h.gauges {
+		if measured[i] && g.ReadLimit != nil {
+			g.Limit = limits[i]
+		}
 		if measured[i] {
 			g.short.push(point{at: now, value: values[i]})
 			g.sum += values[i]
@@ -249,7 +259,7 @@ func (h *Health) Report(now time.Time, rangeName string, long bool) HealthReport
 // storeGauges returns the gauges of the requests the store records and of the
 // memory its traces take.
 func storeGauges(store *Store) []Gauge {
-	_, limit := store.MemoryUse()
+	kept, sampled := store.MemoryUse()
 	// The gauge of requests takes the interval that the gauges after it read.
 	var in Interval
 	perRequest := func(total *time.Duration) func() (float64, bool) {
@@ -277,9 +287,13 @@ func storeGauges(store *Store) []Gauge {
 		{Key: "droppedSpans", rate: true, Read: func() (float64, bool) {
 			return per(time.Minute, float64(in.DroppedSpans), in.Elapsed)
 		}},
-		{Key: "traceMemory", Limit: float64(limit), Read: func() (float64, bool) {
-			used, _ := store.MemoryUse()
-			return float64(used), true
+		{Key: "traceMemory", Limit: float64(kept.Limit), Read: func() (float64, bool) {
+			kept, _ := store.MemoryUse()
+			return float64(kept.Used), true
+		}},
+		{Key: "traceMemorySampled", Limit: float64(sampled.Limit), Read: func() (float64, bool) {
+			_, sampled := store.MemoryUse()
+			return float64(sampled.Used), true
 		}},
 	}
 }
