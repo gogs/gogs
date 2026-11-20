@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableSortHead } from "@/components/ui/table";
 import { useRefreshed } from "@/lib/admin-refresh";
 import { formatMinutes, formatMs, formatNumber } from "@/lib/format";
 import type { TraceSearch } from "@/lib/page-search";
@@ -167,14 +167,118 @@ function ShowAll({ count, onClick }: { count: number; onClick: () => void }) {
   );
 }
 
-// TableCard heads a table with what it lists and how to read it. The table
-// runs to the edges of the card.
-function TableCard({ title, description, children }: { title: string; description: string; children: ReactNode }) {
+type RouteStat = AdminTraceOverviewData["routes"][number];
+type OperationStat = AdminTraceOverviewData["operations"][number];
+
+// What a column of the routes sorts by. Errors sort by their share of the
+// calls, which is what the column shows, then by how many there are.
+const ROUTE_ORDERS = {
+  calls: (a, b) => a.requests - b.requests,
+  errors: (a, b) => a.errors / a.requests - b.errors / b.requests || a.errors - b.errors,
+  p50: (a, b) => a.p50Ms - b.p50Ms,
+  p95: (a, b) => a.p95Ms - b.p95Ms,
+  p99: (a, b) => a.p99Ms - b.p99Ms,
+} satisfies Record<string, (a: RouteStat, b: RouteStat) => number>;
+
+const OPERATION_ORDERS = {
+  calls: (a, b) => a.calls - b.calls,
+  p50: (a, b) => a.p50Ms - b.p50Ms,
+  p95: (a, b) => a.p95Ms - b.p95Ms,
+  share: (a, b) => a.selfMs - b.selfMs,
+} satisfies Record<string, (a: OperationStat, b: OperationStat) => number>;
+
+interface Sort<Column> {
+  column: Column;
+  descending: boolean;
+}
+
+const OPERATIONS_BY_SHARE: Sort<keyof typeof OPERATION_ORDERS> = { column: "share", descending: true };
+
+// useSorted sorts the rows by the column whose header was clicked: the largest
+// first, the smallest first on a second click, and back to the first order of
+// the table on a third. Rows that compare equal keep the order they came in.
+function useSorted<Row, Column extends string>(
+  rows: Row[],
+  orders: Record<Column, (a: Row, b: Row) => number>,
+  initial: Sort<Column> | null = null,
+) {
+  const [sort, setSort] = useState(initial);
+  const sorted = useMemo(() => {
+    if (!sort) return rows;
+    const order = orders[sort.column];
+    return [...rows].sort(sort.descending ? (a, b) => order(b, a) : order);
+  }, [rows, orders, sort]);
+  // head returns the props of the header of a column.
+  const head = (column: Column) => ({
+    sorted: sort?.column !== column ? undefined : sort.descending ? ("descending" as const) : ("ascending" as const),
+    onSort: () =>
+      setSort(
+        sort?.column !== column
+          ? { column, descending: true }
+          : sort.descending
+            ? { column, descending: false }
+            : initial,
+      ),
+  });
+  // by sorts by a column, the largest first, or in the first order of the table.
+  const by = (column: Column | null) => setSort(column === null ? initial : { column, descending: true });
+  return { sorted, head, column: sort?.column ?? null, by };
+}
+
+const FIRST_ORDER = "first";
+
+// SortMenu sorts a table by any of its columns while the card is too narrow to
+// show them all, and so their headers.
+function SortMenu<Column extends string>({
+  column,
+  options,
+  onChange,
+}: {
+  column: Column | null;
+  // A null column is the first order of the table.
+  options: { column: Column | null; label: string }[];
+  onChange: (column: Column | null) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <Select
+      value={column ?? FIRST_ORDER}
+      onValueChange={(v) => onChange(options.find((option) => (option.column ?? FIRST_ORDER) === v)?.column ?? null)}
+    >
+      <SelectTrigger aria-label={t("admin.traces.sort")} className="glass-control mt-2 h-9 w-auto gap-2 @lg:hidden">
+        <span className={MUTED}>{t("admin.traces.sort")}</span>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((option) => (
+          <SelectItem key={option.column ?? FIRST_ORDER} value={option.column ?? FIRST_ORDER}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+// TableCard heads a table with what it lists, how to read it and the menu
+// that sorts it. The table runs to the edges of the card.
+function TableCard({
+  title,
+  description,
+  sortMenu,
+  children,
+}: {
+  title: string;
+  description: string;
+  sortMenu: ReactNode;
+  children: ReactNode;
+}) {
   return (
     <Card className="@container min-w-0 overflow-hidden">
-      <CardHeader className="pb-4">
+      <CardHeader className="items-start pb-4">
         <CardTitle className={CARD_TITLE}>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
+        {sortMenu}
       </CardHeader>
       {children}
     </Card>
@@ -192,6 +296,10 @@ export function AdminTraceOverview({ overview: loaded }: { overview: AdminTraceO
   );
   const [allRoutes, setAllRoutes] = useState(false);
   const [allOperations, setAllOperations] = useState(false);
+  // The server lists routes by their total time, which no column shows.
+  const routes = useSorted(overview.routes, ROUTE_ORDERS);
+  // The server lists operations by their share of the time.
+  const operations = useSorted(overview.operations, OPERATION_ORDERS, OPERATIONS_BY_SHARE);
   if (!overview.enabled) {
     return <Disabled />;
   }
@@ -247,22 +355,47 @@ export function AdminTraceOverview({ overview: loaded }: { overview: AdminTraceO
       {overview.routes.length > 0 || overview.operations.length > 0 ? (
         <div className="grid items-start gap-4 xl:grid-cols-2">
           {overview.routes.length > 0 ? (
-            <TableCard title={t("admin.traces.routes")} description={t("admin.traces.routes_help")}>
+            <TableCard
+              title={t("admin.traces.routes")}
+              description={t("admin.traces.routes_help")}
+              sortMenu={
+                <SortMenu
+                  column={routes.column}
+                  onChange={routes.by}
+                  options={[
+                    { column: null, label: t("admin.traces.total_time") },
+                    { column: "calls", label: t("admin.traces.calls") },
+                    { column: "errors", label: t("admin.traces.errors") },
+                    { column: "p50", label: "p50" },
+                    { column: "p95", label: "p95" },
+                    { column: "p99", label: "p99" },
+                  ]}
+                />
+              }
+            >
               <Table className="border-t border-(--color-border)">
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
                     <TableHead>{t("admin.traces.route")}</TableHead>
-                    <TableHead className={NUMBER_HEAD}>{t("admin.traces.calls")}</TableHead>
-                    <TableHead className={cn(NUMBER_HEAD, "hidden @lg:table-cell")}>
+                    <TableSortHead align="right" {...routes.head("calls")}>
+                      {t("admin.traces.calls")}
+                    </TableSortHead>
+                    <TableSortHead align="right" className="hidden @lg:table-cell" {...routes.head("errors")}>
                       {t("admin.traces.errors")}
-                    </TableHead>
-                    <TableHead className={cn(NUMBER_HEAD, "hidden @lg:table-cell")}>p50</TableHead>
-                    <TableHead className={cn(NUMBER_HEAD, LAST_SHOWN, "@lg:pr-3")}>p95</TableHead>
-                    <TableHead className={cn(NUMBER_HEAD, "hidden @lg:table-cell")}>p99</TableHead>
+                    </TableSortHead>
+                    <TableSortHead align="right" className="hidden @lg:table-cell" {...routes.head("p50")}>
+                      p50
+                    </TableSortHead>
+                    <TableSortHead align="right" className={cn(LAST_SHOWN, "@lg:pr-3")} {...routes.head("p95")}>
+                      p95
+                    </TableSortHead>
+                    <TableSortHead align="right" className="hidden @lg:table-cell" {...routes.head("p99")}>
+                      p99
+                    </TableSortHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {overview.routes.slice(0, allRoutes ? undefined : COLLAPSED_ROWS).map((route) => {
+                  {routes.sorted.slice(0, allRoutes ? undefined : COLLAPSED_ROWS).map((route) => {
                     const errors = route.errors > 0 ? formatShare(route.errors / route.requests) : "0";
                     return (
                       <TableRow key={route.name}>
@@ -315,19 +448,42 @@ export function AdminTraceOverview({ overview: loaded }: { overview: AdminTraceO
           ) : null}
 
           {overview.operations.length > 0 ? (
-            <TableCard title={t("admin.traces.where_time_goes")} description={t("admin.traces.operations_help")}>
+            <TableCard
+              title={t("admin.traces.where_time_goes")}
+              description={t("admin.traces.operations_help")}
+              sortMenu={
+                <SortMenu
+                  column={operations.column}
+                  onChange={operations.by}
+                  options={[
+                    { column: "share", label: t("admin.traces.share") },
+                    { column: "calls", label: t("admin.traces.calls") },
+                    { column: "p50", label: "p50" },
+                    { column: "p95", label: "p95" },
+                  ]}
+                />
+              }
+            >
               <Table className="border-t border-(--color-border)">
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
                     <TableHead>{t("admin.traces.operation")}</TableHead>
-                    <TableHead className={NUMBER_HEAD}>{t("admin.traces.calls")}</TableHead>
-                    <TableHead className={cn(NUMBER_HEAD, "hidden @lg:table-cell")}>p50</TableHead>
-                    <TableHead className={cn(NUMBER_HEAD, "hidden @lg:table-cell")}>p95</TableHead>
-                    <TableHead className={NUMBER_HEAD}>{t("admin.traces.share")}</TableHead>
+                    <TableSortHead align="right" {...operations.head("calls")}>
+                      {t("admin.traces.calls")}
+                    </TableSortHead>
+                    <TableSortHead align="right" className="hidden @lg:table-cell" {...operations.head("p50")}>
+                      p50
+                    </TableSortHead>
+                    <TableSortHead align="right" className="hidden @lg:table-cell" {...operations.head("p95")}>
+                      p95
+                    </TableSortHead>
+                    <TableSortHead align="right" {...operations.head("share")}>
+                      {t("admin.traces.share")}
+                    </TableSortHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {overview.operations.slice(0, allOperations ? undefined : COLLAPSED_ROWS).map((op) => {
+                  {operations.sorted.slice(0, allOperations ? undefined : COLLAPSED_ROWS).map((op) => {
                     const share = overview.spanSelfMs > 0 ? op.selfMs / overview.spanSelfMs : 0;
                     return (
                       <TableRow key={op.name}>
