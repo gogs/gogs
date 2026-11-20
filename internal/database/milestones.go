@@ -277,6 +277,11 @@ func (s *MilestonesStore) ChangeStatus(ctx context.Context, m *Milestone, isClos
 // ID, and removes it from issues. Deleting a milestone that does not exist is
 // not an error.
 func (s *MilestonesStore) DeleteByID(ctx context.Context, repoID, id int64) error {
+	// Stopping between the transaction and clearing the issues after it, e.g.,
+	// when the client disconnects, would leave issues with the deleted
+	// milestone.
+	ctx = context.WithoutCancel(ctx)
+
 	var deleted bool
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Closing and moving an issue lock it before its milestone, so the
