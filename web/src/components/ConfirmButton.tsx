@@ -14,11 +14,14 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { isSessionExpired } from "@/lib/queries/request";
 import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 
-// Not `disabled`, which would take the focus off the button the dialog returns it to.
-const BUSY = "pointer-events-none opacity-60";
+// Not `disabled`, which would take the focus off the button the dialog returns it to. The text
+// dims, not the button, which would dim its focus ring too.
+const BUSY = "pointer-events-none text-(--color-destructive)/60";
+const BUSY_ICON = "pointer-events-none text-(--color-muted-foreground)/60";
 
 // ConfirmButton asks in a dialog before an action that cannot be taken back,
 // such as deleting a team or leaving a repository.
@@ -59,7 +62,12 @@ export function ConfirmButton({
       setOpen(false);
       await onDone();
     },
-    onError: (err) => toastError(err),
+    onError: (err) => {
+      // The toast of an expired session stays up, and an open dialog keeps the pointer and the
+      // keyboard from it.
+      if (isSessionExpired(err)) setOpen(false);
+      toastError(err);
+    },
   });
   return (
     <Dialog open={open} onOpenChange={(next) => setOpen(next && !busy)}>
@@ -74,7 +82,10 @@ export function ConfirmButton({
                 aria-label={ariaLabel ?? label}
                 aria-disabled={busy || undefined}
                 disabled={disabled}
-                className={cn("size-8 text-(--color-muted-foreground) hover:text-(--color-destructive)", busy && BUSY)}
+                className={cn(
+                  "size-8 text-(--color-muted-foreground) hover:text-(--color-destructive)",
+                  busy && BUSY_ICON,
+                )}
               >
                 {busy ? (
                   <LoaderCircle className="size-4 animate-spin" aria-hidden />

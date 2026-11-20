@@ -252,7 +252,8 @@ export function AdminOperations() {
   });
   const lastRuns: Partial<Record<AdminOperation, OperationRun>> = {};
   for (const state of runs) {
-    if (state.variables) lastRuns[state.variables] = state;
+    // A run that ended without an outcome, i.e., after the session expired, leaves its row as it was.
+    if (state.variables && state.status !== "error") lastRuns[state.variables] = state;
   }
   const anyRunning = runs.some((state) => state.status === "pending");
   return (
@@ -313,7 +314,8 @@ export function AdminOperations() {
                           // Not `disabled` while it runs, which takes the focus off the button.
                           aria-disabled={running || undefined}
                           disabled={anyRunning && !running}
-                          className={running ? "pointer-events-none opacity-60" : undefined}
+                          // The text dims, not the button, which would dim its focus ring too.
+                          className={running ? "pointer-events-none text-(--color-foreground)/60" : undefined}
                           onClick={running ? undefined : () => run.mutate(op)}
                         >
                           {running ? (
