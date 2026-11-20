@@ -16,6 +16,7 @@ import {
 import {
   AdminPageHeader,
   RefreshControl,
+  RefreshNote,
   STAT_VALUE,
   SegmentedLinks,
   StatCard,
@@ -71,7 +72,10 @@ function NearViewport({ className, children }: { className: string; children: Re
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!ref.current) return;
-    const observer = new IntersectionObserver(([entry]) => setNear(entry.isIntersecting), { rootMargin: "50% 0px" });
+    // One call can hold several changes, of which the last is how things are now.
+    const observer = new IntersectionObserver((entries) => setNear(entries.at(-1)?.isIntersecting ?? false), {
+      rootMargin: "50% 0px",
+    });
     observer.observe(ref.current);
     return () => observer.disconnect();
   }, []);
@@ -211,7 +215,7 @@ const MetricChart = memo(function MetricChart({
 // The page refreshes itself while its tab is in view.
 export function AdminServerHealth({ health: loaded, range }: { health: AdminHealth; range: AdminHealthRange }) {
   const { t } = useTranslation();
-  const { data: health, refresh } = useRefreshed(adminHealthQuery(range), loaded);
+  const { data: health, refresh, failedSince } = useRefreshed(adminHealthQuery(range), loaded);
   const [hover, setHover] = useState<number | null>(null);
   const [pinned, setPinned] = useState<number | null>(null);
   const cursor = pinned ?? hover;
@@ -274,7 +278,7 @@ export function AdminServerHealth({ health: loaded, range }: { health: AdminHeal
 
   return (
     <div className="grid gap-4">
-      <AdminPageHeader title={t("admin.health")}>
+      <AdminPageHeader title={t("admin.health")} note={<RefreshNote failedSince={failedSince} />}>
         <SegmentedLinks
           label={t("admin.traces.range")}
           active={range}
