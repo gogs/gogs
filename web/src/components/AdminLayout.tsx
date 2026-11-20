@@ -98,7 +98,6 @@ const NAV_LINK =
 // icons, each named by a tooltip.
 function Sidebar({ rail }: { rail: boolean }) {
   const { t } = useTranslation();
-  const user = useUserInfo();
   const notices = useQuery(adminNoticesQuery({}));
   const unread = notices.data?.total ?? 0;
 
@@ -188,15 +187,6 @@ function Sidebar({ rail }: { rail: boolean }) {
             {t("admin.back_to_site")}
           </a>
         )}
-        {user ? (
-          <UserMenu
-            user={user}
-            showName={!rail}
-            side="top"
-            align="start"
-            className={cn("hover:bg-(--color-foreground)/5", rail && "justify-center px-0")}
-          />
-        ) : null}
       </div>
     </>
   );
@@ -208,6 +198,7 @@ function Sidebar({ rail }: { rail: boolean }) {
 // current page above it. The pages use the whole window width.
 export function AdminLayout() {
   const { t } = useTranslation();
+  const user = useUserInfo();
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const [sheetOpen, setSheetOpen] = useState(false);
   const sheetToggle = useRef<HTMLButtonElement>(null);
@@ -258,7 +249,7 @@ export function AdminLayout() {
           className="flex w-64 flex-col bg-(--color-surface) py-2"
           onClick={closeOnLink}
           // Radix passes over links when it picks what to focus, which would
-          // be the user menu at the foot of the sheet.
+          // be the button that closes the sheet.
           onOpenAutoFocus={(e) => {
             e.preventDefault();
             const sheet = e.currentTarget as HTMLElement;
@@ -330,9 +321,13 @@ export function AdminLayout() {
                 )}
               </ol>
             </nav>
-            <div className="ml-auto flex shrink-0 items-center gap-1">
+            {/* The search field narrows before the breadcrumb truncates, which the large shrink factor says. */}
+            <div className="ml-auto flex min-w-0 shrink-0 items-center gap-1 md:shrink-10000">
               <PaletteButton />
-              <SettingsMenu />
+              <div className="flex shrink-0 items-center gap-1">
+                <SettingsMenu />
+                {user ? <UserMenu user={user} /> : null}
+              </div>
             </div>
           </header>
           <NoticeBanner fullWidth />
