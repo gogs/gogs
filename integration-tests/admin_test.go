@@ -100,8 +100,12 @@ func TestAdminDashboard(t *testing.T) {
 		GoVersion  string    `json:"goVersion"`
 		StartedAt  time.Time `json:"startedAt"`
 		Statistics []struct {
-			Label string `json:"label"`
-			Count int64  `json:"count"`
+			Title string `json:"title"`
+			Items []struct {
+				Key   string `json:"key"`
+				Label string `json:"label"`
+				Count int64  `json:"count"`
+			} `json:"items"`
 		} `json:"statistics"`
 		SystemStatus adminReportSection `json:"systemStatus"`
 	}
@@ -120,13 +124,24 @@ func TestAdminDashboard(t *testing.T) {
 	// Other tests add and delete data at the same time, so the counts are only
 	// checked to be there, with at least the users of this test.
 	require.NotEmpty(t, resp.Statistics)
-	assert.Equal(t, "Users", resp.Statistics[0].Label)
-	assert.GreaterOrEqual(t, resp.Statistics[0].Count, int64(2))
-	labels := make([]string, 0, len(resp.Statistics))
-	for _, statistic := range resp.Statistics {
-		labels = append(labels, statistic.Label)
+	people := resp.Statistics[0]
+	assert.Equal(t, "People", people.Title)
+	require.NotEmpty(t, people.Items)
+	assert.Equal(t, "users", people.Items[0].Key)
+	assert.Equal(t, "Users", people.Items[0].Label)
+	assert.GreaterOrEqual(t, people.Items[0].Count, int64(2))
+	labels := make(map[string]string)
+	for _, group := range resp.Statistics {
+		for _, statistic := range group.Items {
+			// A label without a translation would come back as its locale key.
+			assert.NotContains(t, statistic.Label, "statistic_")
+			labels[statistic.Key] = statistic.Label
+		}
 	}
-	assert.Subset(t, labels, []string{"Organizations", "Repositories", "Login sources"})
+	assert.Len(t, labels, 22)
+	assert.Equal(t, "Organizations", labels["organizations"])
+	assert.Equal(t, "Repositories", labels["repositories"])
+	assert.Equal(t, "Login sources", labels["login_sources"])
 }
 
 // adminRunOperation runs the site-wide operation as the admin, after checking

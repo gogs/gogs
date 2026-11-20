@@ -1,6 +1,35 @@
 import { type UseQueryResult, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Bell, CircleAlert, CircleCheck, ExternalLink, type LucideIcon, TriangleAlert } from "lucide-react";
+import {
+  AtSign,
+  Bell,
+  BookMarked,
+  Building2,
+  CircleAlert,
+  CircleCheck,
+  CircleDot,
+  ExternalLink,
+  Eye,
+  History,
+  KeyRound,
+  Link as LinkIcon,
+  ListChecks,
+  LogIn,
+  type LucideIcon,
+  MessageSquare,
+  Milestone,
+  Package,
+  Paperclip,
+  Send,
+  Star,
+  Tag,
+  TriangleAlert,
+  User,
+  UserCheck,
+  UserPlus,
+  Users,
+  Webhook,
+} from "lucide-react";
 import { type ReactNode, useId } from "react";
 import { useTranslation } from "react-i18next";
 import { Area, AreaChart, XAxis, YAxis } from "recharts";
@@ -19,6 +48,7 @@ import {
   type AdminHealth,
   type AdminList,
   type AdminNotice,
+  type AdminStatisticKey,
   type AdminTraceOverview,
   adminDashboardQuery,
   adminHealthQuery,
@@ -326,6 +356,62 @@ function ReportSkeleton({ rows }: { rows: number }) {
   );
 }
 
+const STATISTIC_ICONS: Record<AdminStatisticKey, LucideIcon> = {
+  users: User,
+  organizations: Building2,
+  social_accounts: AtSign,
+  follows: UserPlus,
+  teams: Users,
+  repositories: BookMarked,
+  watches: Eye,
+  stars: Star,
+  accesses: UserCheck,
+  mirrors: LinkIcon,
+  releases: Package,
+  actions: History,
+  issues: CircleDot,
+  comments: MessageSquare,
+  milestones: Milestone,
+  labels: Tag,
+  attachments: Paperclip,
+  public_keys: KeyRound,
+  login_sources: LogIn,
+  webhooks: Webhook,
+  hook_tasks: Send,
+  update_tasks: ListChecks,
+};
+
+// Statistics lists the record counts of the database in groups of related
+// kinds, side by side where the card is wide enough.
+function Statistics({ groups }: { groups: AdminDashboard["statistics"] }) {
+  const id = useId();
+  return (
+    <div className="grid gap-x-8 gap-y-5 @lg:grid-cols-2 @4xl:grid-cols-4">
+      {groups.map((group, i) => (
+        <div key={group.title} className="min-w-0">
+          <h3 id={`${id}-${i}`} className="mb-1 text-xs font-medium text-(--color-muted-foreground)">
+            {group.title}
+          </h3>
+          <dl aria-labelledby={`${id}-${i}`} className="text-sm">
+            {group.items.map((statistic) => {
+              const Icon = STATISTIC_ICONS[statistic.key];
+              return (
+                <div key={statistic.key} className="flex min-h-8 items-center justify-between gap-3">
+                  <dt className="flex min-w-0 items-center gap-2 wrap-anywhere">
+                    <Icon className="size-4 shrink-0 text-(--color-muted-foreground)" aria-hidden />
+                    {statistic.label}
+                  </dt>
+                  <dd className="font-semibold tabular-nums">{formatNumber(statistic.count)}</dd>
+                </div>
+              );
+            })}
+          </dl>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function BuildFacts({ dashboard }: { dashboard: AdminDashboard }) {
   const { t } = useTranslation();
   return (
@@ -416,22 +502,13 @@ export function AdminOverview() {
         <AttentionCard health={health} traces={traces} notices={notices} />
       </div>
       <div className="grid gap-4 xl:grid-cols-3">
-        <Card className="min-w-0 xl:col-span-2">
+        <Card className="@container min-w-0 xl:col-span-2">
           <CardHeader>
             <CardTitle className="text-base">{t("admin.dashboard.statistic")}</CardTitle>
           </CardHeader>
           <CardContent className="pt-4 sm:pt-4">
             <Loaded query={dashboard} what={t("admin.dashboard.statistic")} skeleton={<ReportSkeleton rows={6} />}>
-              {(data) => (
-                <dl className="grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6">
-                  {data.statistics.map((statistic) => (
-                    <div key={statistic.label} className="flex min-w-0 flex-col-reverse">
-                      <dt className="text-sm wrap-anywhere text-(--color-muted-foreground)">{statistic.label}</dt>
-                      <dd className="text-lg font-semibold tabular-nums">{formatNumber(statistic.count)}</dd>
-                    </div>
-                  ))}
-                </dl>
-              )}
+              {(data) => <Statistics groups={data.statistics} />}
             </Loaded>
           </CardContent>
         </Card>
