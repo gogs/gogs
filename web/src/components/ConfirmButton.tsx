@@ -14,7 +14,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { dismissSessionExpired, isSessionExpired } from "@/lib/queries/request";
+import { isSessionExpired } from "@/lib/queries/request";
 import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 
@@ -71,15 +71,7 @@ export function ConfirmButton({
     },
   });
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        // On a narrow screen that toast would cover the buttons of the dialog. It shows again when
-        // the action finds the session still expired.
-        if (next) dismissSessionExpired();
-        setOpen(next && !busy);
-      }}
-    >
+    <Dialog open={open} onOpenChange={(next) => setOpen(next && !busy)}>
       {Icon ? (
         <Tooltip>
           <TooltipTrigger asChild>

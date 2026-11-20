@@ -9,15 +9,15 @@ let sessionExpiredAt = -Infinity;
 
 // toastSessionExpired tells a viewer whose session expired to sign in again.
 // The toast holds a link, so it stays until it is closed or a change goes
-// through, once for however many changes fail.
+// through, once for however many changes fail. Its class hides it while a
+// dialog covers the place of the toasts (see index.css).
 export function toastSessionExpired() {
   sessionExpiredAt = performance.now();
-  toast.error(createElement(SessionExpired), { id: SESSION_EXPIRED_TOAST, duration: Infinity });
-}
-
-// dismissSessionExpired takes that toast away.
-export function dismissSessionExpired() {
-  if (toast.getToasts().some((shown) => shown.id === SESSION_EXPIRED_TOAST)) toast.dismiss(SESSION_EXPIRED_TOAST);
+  toast.error(createElement(SessionExpired), {
+    id: SESSION_EXPIRED_TOAST,
+    className: "toast-until-closed",
+    duration: Infinity,
+  });
 }
 
 // sessionWorks takes that toast away once a change went through, which tells
@@ -25,7 +25,8 @@ export function dismissSessionExpired() {
 // is when the change was sent, as of `performance.now()`: the answer to a
 // change sent before the toast showed says nothing about the session now.
 export function sessionWorks(sentAt: number) {
-  if (sentAt > sessionExpiredAt) dismissSessionExpired();
+  if (sentAt <= sessionExpiredAt) return;
+  if (toast.getToasts().some((shown) => shown.id === SESSION_EXPIRED_TOAST)) toast.dismiss(SESSION_EXPIRED_TOAST);
 }
 
 // A signal cancels the request, e.g., when the answer is no longer needed.
