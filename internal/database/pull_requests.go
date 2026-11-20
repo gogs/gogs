@@ -367,8 +367,8 @@ func (s *PullRequestsStore) Merge(ctx context.Context, logger *logx.Logger, doer
 
 	// Closing the issue locks its row too, so that a concurrent close waits.
 	// Everything else that closing it locks, e.g., the repository and the
-	// users of the issue, is locked only after the git work below, which may
-	// take long.
+	// users of the issue, is locked only once the merge result is built,
+	// which may take long.
 	issues := newIssuesStore(tx)
 	err = issues.setStatus(ctx, pr.Issue, true)
 	if errors.Is(err, errIssueStatusUnchanged) {
@@ -479,6 +479,11 @@ func (s *PullRequestsStore) Merge(ctx context.Context, logger *logx.Logger, doer
 		return errors.Newf("unknown merge style: %s", mergeStyle)
 	}
 
+	// Before the push, so that a failure leaves the base branch as it is.
+	if err = issues.recordStatus(ctx, logger, doer, pr.Issue.Repo, pr.Issue); err != nil {
+		return errors.Wrap(err, "close issue")
+	}
+
 	// Push changes on base branch to upstream.
 	if err = tmpRepo.Push(ctx, baseGitRepo.Path(), mergedCommitID+":"+git.RefsHeads+pr.BaseBranch); err != nil {
 		return errors.Newf("git push: %v", err)
@@ -487,10 +492,6 @@ func (s *PullRequestsStore) Merge(ctx context.Context, logger *logx.Logger, doer
 	pr.MergedCommitID, err = headGitRepo.BranchCommitID(ctx, pr.HeadBranch)
 	if err != nil {
 		return errors.Newf("get head branch %q commit ID: %v", pr.HeadBranch, err)
-	}
-
-	if err = issues.recordStatus(ctx, logger, doer, pr.Issue.Repo, pr.Issue); err != nil {
-		return errors.Wrap(err, "close issue")
 	}
 
 	pr.HasMerged = true

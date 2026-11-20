@@ -211,21 +211,26 @@ func (s *MilestonesStore) update(ctx context.Context, m *Milestone, columns ...s
 }
 
 // addToCounts adds to the numbers of issues and closed issues of the
-// milestone, and computes its completeness again. The database adds to the
+// milestone, and computes its completeness again. It returns
+// ErrMilestoneNotExist when the milestone is not in its repository, e.g.,
+// because it was deleted, and on MySQL also when both numbers to add are 0.
+// The database adds to the
 // numbers it has rather than saving the ones of the milestone, so that changes
 // made since the milestone was read are kept. It must run in a transaction,
 // which keeps others from changing the numbers until completeness is saved.
 func (s *MilestonesStore) addToCounts(ctx context.Context, m *Milestone, issues, closedIssues int) error {
 	db := s.db.WithContext(ctx)
-	err := db.Exec(
-		"UPDATE milestone SET num_issues = num_issues + ?, num_closed_issues = num_closed_issues + ? WHERE id = ?",
-		issues, closedIssues, m.ID,
-	).Error
-	if err != nil {
-		return errors.Wrap(err, "add to counts")
+	result := db.Exec(
+		"UPDATE milestone SET num_issues = num_issues + ?, num_closed_issues = num_closed_issues + ? WHERE repo_id = ? AND id = ?",
+		issues, closedIssues, m.RepoID, m.ID,
+	)
+	if result.Error != nil {
+		return errors.Wrap(result.Error, "add to counts")
+	} else if result.RowsAffected == 0 {
+		return ErrMilestoneNotExist{args: map[string]any{"repoID": m.RepoID, "milestoneID": m.ID}}
 	}
 
-	err = db.Select("num_issues", "num_closed_issues").Where("id = ?", m.ID).Take(m).Error
+	err := db.Select("num_issues", "num_closed_issues").Where("id = ?", m.ID).Take(m).Error
 	if err != nil {
 		return errors.Wrap(err, "get counts")
 	}
@@ -272,10 +277,22 @@ func (s *MilestonesStore) ChangeStatus(ctx context.Context, m *Milestone, isClos
 // not an error.
 func (s *MilestonesStore) DeleteByID(ctx context.Context, repoID, id int64) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// Closing and moving an issue lock it before its milestone.
-		err := tx.Exec("UPDATE issue SET milestone_id = 0 WHERE repo_id = ? AND milestone_id = ?", repoID, id).Error
+		// Closing and moving an issue lock it before its milestone, so the
+		// issues are locked first, one by one by their IDs. Any other condition
+		// may make MySQL scan and lock the gaps of an index, which creating an
+		// issue in the repository waits for while it holds the repository. An
+		// issue that a move commits after this keeps the deleted milestone,
+		// which counts as no milestone.
+		var issueIDs []int64
+		err := tx.Model(new(Issue)).Where("repo_id = ? AND milestone_id = ?", repoID, id).Pluck("id", &issueIDs).Error
 		if err != nil {
-			return errors.Wrap(err, "remove from issues")
+			return errors.Wrap(err, "list issues")
+		}
+		for _, issueID := range issueIDs {
+			err = tx.Exec("UPDATE issue SET milestone_id = 0 WHERE id = ? AND milestone_id = ?", issueID, id).Error
+			if err != nil {
+				return errors.Wrap(err, "remove from issue")
+			}
 		}
 
 		result := tx.Where("repo_id = ? AND id = ?", repoID, id).Delete(new(Milestone))
@@ -289,7 +306,14 @@ func (s *MilestonesStore) DeleteByID(ctx context.Context, repoID, id int64) erro
 		if err != nil {
 			return errors.Wrap(err, "count milestones")
 		}
-		return tx.Exec("UPDATE issue_user SET milestone_id = 0 WHERE milestone_id = ?", id).Error
+		// In chunks, because a statement can bind only so many parameters.
+		for ids := range slices.Chunk(issueIDs, 500) {
+			err = tx.Exec("UPDATE issue_user SET milestone_id = 0 WHERE issue_id IN ? AND milestone_id = ?", ids, id).Error
+			if err != nil {
+				return errors.Wrap(err, "remove from issue users")
+			}
+		}
+		return nil
 	})
 }
 
@@ -300,15 +324,15 @@ func (s *MilestonesStore) updateIssueStats(ctx context.Context, issue *Issue) er
 		return nil
 	}
 
-	m, err := s.GetByID(ctx, issue.RepoID, issue.MilestoneID)
-	if err != nil {
-		return err
-	}
 	closedIssues := -1
 	if issue.IsClosed {
 		closedIssues = 1
 	}
-	return s.addToCounts(ctx, m, 0, closedIssues)
+	err := s.addToCounts(ctx, &Milestone{ID: issue.MilestoneID, RepoID: issue.RepoID}, 0, closedIssues)
+	if IsErrMilestoneNotExist(err) {
+		return nil // The milestone was deleted while the issue was moved to it.
+	}
+	return err
 }
 
 // assignIssue moves the issue from the milestone it has in the database, if
@@ -360,11 +384,20 @@ func (s *MilestonesStore) assignIssue(ctx context.Context, issue *Issue) error {
 	// Locking the milestones in the order of their IDs keeps a move the other
 	// way from deadlocking with this one.
 	for _, id := range slices.Sorted(maps.Keys(counts)) {
-		m := &Milestone{ID: id}
+		if counts[id] == [2]int{} {
+			continue
+		}
+		m := &Milestone{ID: id, RepoID: issue.RepoID}
 		if id == issue.MilestoneID {
 			m = milestone
 		}
-		if err = s.addToCounts(ctx, m, counts[id][0], counts[id][1]); err != nil {
+		err = s.addToCounts(ctx, m, counts[id][0], counts[id][1])
+		if IsErrMilestoneNotExist(err) {
+			if id == current.MilestoneID {
+				continue // The milestone was deleted while the issue was moved to it.
+			}
+			return err
+		} else if err != nil {
 			return errors.Wrapf(err, "count issues of milestone %d", id)
 		}
 	}

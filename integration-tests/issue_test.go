@@ -529,6 +529,37 @@ func TestIssueChangeConcurrently(t *testing.T) {
 		assert.True(t, issue.IsClosed)
 		assert.Zero(t, issue.MilestoneID)
 	})
+
+	t.Run("deleting a milestone while moving an issue to it", func(t *testing.T) {
+		m := issueCreateMilestone(t, repo, "deleting-moved-to")
+		other := issueCreateMilestone(t, repo, "deleting-moved-to-other")
+		index, _ := create(0)
+
+		// The move commits after the delete has cleared the issues of the
+		// milestone, so the issue keeps the deleted milestone.
+		statuses := c.doBothWhileLocked("SELECT id FROM milestone WHERE id = ? FOR UPDATE", m, moveTo(index, m),
+			lockedRequest{http.MethodDelete, issueAPIPath(repo, "milestones", m), map[string]any{}})
+		assert.Equal(t, []int{http.StatusNoContent, http.StatusNoContent}, statuses)
+
+		var view issueView
+		c.doJSON(http.MethodGet, issueAPIPath(repo, "issues", index), nil, http.StatusOK, &view)
+		assert.Nil(t, view.Milestone)
+		for _, req := range []lockedRequest{closeIssue(index), moveTo(index, other)} {
+			status, body := c.do(req.method, req.path, req.body)
+			require.Equal(t, http.StatusNoContent, status, "%s %s: %s", req.method, req.path, body)
+		}
+		assert.Equal(t, []int{1, 1}, counts(other))
+	})
+
+	t.Run("moving an issue to a milestone being deleted", func(t *testing.T) {
+		m := issueCreateMilestone(t, repo, "moving-to-deleted")
+		index, _ := create(0)
+
+		statuses := c.doBothWhileLocked("SELECT id FROM milestone WHERE id = ? FOR UPDATE", m,
+			lockedRequest{http.MethodDelete, issueAPIPath(repo, "milestones", m), map[string]any{}}, moveTo(index, m))
+		assert.Equal(t, []int{http.StatusNoContent, http.StatusBadRequest}, statuses)
+		assert.Zero(t, issueFromDatabase(t, repo, index).MilestoneID)
+	})
 }
 
 // An edit whose client goes away after the content is saved still updates the

@@ -599,6 +599,9 @@ func putRepoIssueMilestone(c flamego.Context, logger *logx.Logger, viewer *datab
 	}
 	issue.MilestoneID = req.ID
 	if err = database.Handle.Milestones().AssignIssue(ctx, logger, viewer, issue); err != nil {
+		if database.IsErrMilestoneNotExist(err) {
+			return http.StatusBadRequest, nil, errors.New("milestone does not exist")
+		}
 		logger.Error("Failed to change issue milestone", "issueID", issue.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "change milestone")
 	}
