@@ -16,7 +16,6 @@ import (
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/i18n"
-	"gogs.io/gogs/internal/tool"
 	"gogs.io/gogs/internal/urlx"
 )
 
@@ -186,7 +185,7 @@ func getRepoSettings(c flamego.Context, logger *logx.Logger, viewer *database.Us
 	}
 	if avatarURL == "" {
 		// The repository shows the avatar of its owner until it has its own.
-		settings.AvatarURL = tool.AppendAvatarSize(rc.Owner.AvatarURLPath(), 200)
+		settings.AvatarURL = rc.Owner.AvatarURLPath()
 	}
 	if repo.IsMirror {
 		mirror, err := database.Handle.Mirrors().GetByRepoID(c.Request().Context(), repo.ID)
@@ -540,7 +539,7 @@ func getRepoCollaborators(logger *logx.Logger, rc *repoAdminContext) (statusCode
 		items = append(items, repoCollaborator{
 			Name:      u.Name,
 			FullName:  u.FullName,
-			AvatarURL: tool.AppendAvatarSize(u.AvatarURLPath(), 80),
+			AvatarURL: u.AvatarURLPath(),
 			Mode:      u.Collaboration.Mode.String(),
 		})
 	}

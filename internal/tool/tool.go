@@ -16,7 +16,6 @@ import (
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/cryptox"
 )
 
 // ShortSHA1 truncates the commit ID to at most 10 characters.
@@ -114,42 +113,6 @@ func CreateTimeLimitCode(data string, minutes int, startInf any) string {
 
 	code := fmt.Sprintf("%s%06d%s", startStr, minutes, encoded)
 	return code
-}
-
-// HashEmail hashes email address to MD5 string.
-// https://en.gravatar.com/site/implement/hash/
-func HashEmail(email string) string {
-	return cryptox.MD5(strings.ToLower(strings.TrimSpace(email)))
-}
-
-// AvatarLink returns the avatar link of the given email. It is a Libravatar
-// link when federated avatars are enabled, otherwise a Gravatar link unless
-// Gravatar is disabled. When neither applies, it is the link of the default
-// avatar relative to the site domain, with the subpath as prefix.
-func AvatarLink(logger *logx.Logger, email string) (url string) {
-	if conf.Picture.EnableFederatedAvatar && conf.Picture.LibravatarService != nil &&
-		strings.Contains(email, "@") {
-		var err error
-		url, err = conf.Picture.LibravatarService.FromEmail(email)
-		if err != nil {
-			logger.Warn("Failed to get Libravatar link", "email", email, "error", err)
-		}
-	}
-	if url == "" && !conf.Picture.DisableGravatar {
-		url = conf.Picture.GravatarSource + HashEmail(email) + "?d=identicon"
-	}
-	if url == "" {
-		url = conf.Server.Subpath + "/img/avatar_default.png"
-	}
-	return url
-}
-
-// AppendAvatarSize appends avatar size query parameter to the URL in the correct format.
-func AppendAvatarSize(url string, size int) string {
-	if strings.Contains(url, "?") {
-		return url + "&s=" + strconv.Itoa(size)
-	}
-	return url + "?s=" + strconv.Itoa(size)
 }
 
 // Seconds-based time units

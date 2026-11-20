@@ -75,6 +75,8 @@ func TestMigrate(t *testing.T) {
 		assert.True(t, db.Migrator().HasTable("passkey"))
 		assert.True(t, db.Migrator().HasColumn("attachment", "uploader_id"))
 		assert.False(t, db.Migrator().HasTable("protect_branch_whitelist"))
+		assert.False(t, db.Migrator().HasColumn("user", "avatar"))
+		assert.False(t, db.Migrator().HasColumn("user", "avatar_email"))
 
 		// Existing repositories keep allowing merge commits, do not allow squashing,
 		// keep head branches, and have no message presets.

@@ -9,8 +9,6 @@ import (
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/auth"
-	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/cryptox"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/i18n"
 	"gogs.io/gogs/internal/tool"
@@ -29,9 +27,6 @@ type userSettings struct {
 	// HasCustomAvatar is true when an avatar was uploaded, which can be
 	// deleted.
 	HasCustomAvatar bool `json:"hasCustomAvatar"`
-	// AvatarEmail is the email the avatar is looked up by on Gravatar. It is
-	// only sent when the site uses Gravatar.
-	AvatarEmail *string `json:"avatarEmail,omitempty"`
 }
 
 func getUserSettings(viewer *database.User) (statusCode int, resp *userSettings, err error) {
@@ -41,11 +36,8 @@ func getUserSettings(viewer *database.User) (statusCode int, resp *userSettings,
 		Website:         viewer.Website,
 		Location:        viewer.Location,
 		IsLocal:         viewer.IsLocal(),
-		AvatarURL:       tool.AppendAvatarSize(viewer.AvatarURLPath(), 200),
+		AvatarURL:       viewer.AvatarURLPath(),
 		HasCustomAvatar: viewer.UseCustomAvatar,
-	}
-	if !conf.Picture.DisableGravatar {
-		settings.AvatarEmail = &viewer.AvatarEmail
 	}
 	return http.StatusOK, settings, nil
 }
@@ -114,33 +106,6 @@ func putUserAvatar(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer
 
 func deleteUserAvatar(c flamego.Context, logger *logx.Logger, viewer *database.User) (statusCode int, resp any, err error) {
 	if err = database.Handle.Users().DeleteCustomAvatar(c.Request().Context(), viewer.ID); err != nil {
-		logger.Error("Failed to delete avatar", "userID", viewer.ID, "error", err)
-		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete avatar")
-	}
-	return http.StatusNoContent, nil, nil
-}
-
-type userGravatarRequest struct {
-	AvatarEmail string `json:"email" validate:"required,email,max=254"`
-}
-
-// putUserGravatar shows the Gravatar of the given email as the avatar of the
-// authenticated user, in place of any uploaded avatar.
-func putUserGravatar(c flamego.Context, logger *logx.Logger, viewer *database.User, req userGravatarRequest) (statusCode int, resp any, err error) {
-	if conf.Picture.DisableGravatar {
-		return http.StatusNotFound, nil, errors.New("gravatar is disabled")
-	}
-	ctx := c.Request().Context()
-	avatar := cryptox.MD5(req.AvatarEmail)
-	err = database.Handle.Users().Update(ctx, viewer.ID, database.UpdateUserOptions{
-		Avatar:      &avatar,
-		AvatarEmail: &req.AvatarEmail,
-	})
-	if err != nil {
-		logger.Error("Failed to update user", "userID", viewer.ID, "error", err)
-		return http.StatusInternalServerError, nil, errors.Wrap(err, "update user")
-	}
-	if err = database.Handle.Users().DeleteCustomAvatar(ctx, viewer.ID); err != nil {
 		logger.Error("Failed to delete avatar", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete avatar")
 	}

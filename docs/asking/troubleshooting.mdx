@@ -172,15 +172,9 @@ This page covers common problems you may encounter when installing, configuring,
 
 <AccordionGroup>
   <Accordion title="Extremely slow page response despite low reported render time">
-    **Possible cause**: This can happen for two reasons:
+    **Possible cause**: NGINX is trying to resolve `localhost` as an IPv6 address, causing a delay.
 
-    1. NGINX is trying to resolve `localhost` as an IPv6 address, causing a delay.
-    2. Gravatar avatar lookups are being attempted without a valid email address.
-
-    **Solution**:
-
-    1. In your NGINX config, change the `proxy_pass` upstream from `localhost` to `127.0.0.1` (e.g., `proxy_pass http://127.0.0.1:3000;`) so it resolves directly to IPv4. Then reload NGINX.
-    2. Either use a valid Gravatar email address for the administrator account or set `[picture] DISABLE_GRAVATAR = true` in `custom/conf/app.ini`.
+    **Solution**: In your NGINX config, change the `proxy_pass` upstream from `localhost` to `127.0.0.1` (e.g., `proxy_pass http://127.0.0.1:3000;`) so it resolves directly to IPv4. Then reload NGINX.
   </Accordion>
 
   <Accordion title="Duplicate entry for SSH key name">

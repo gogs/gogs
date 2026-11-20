@@ -1,8 +1,11 @@
 package database
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"image"
+	"image/png"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,7 +24,6 @@ import (
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/repox"
 	"gogs.io/gogs/internal/userx"
-	"gogs.io/gogs/public"
 )
 
 func TestUser_BeforeCreate(t *testing.T) {
@@ -509,8 +511,9 @@ func usersDeleteCustomAvatar(t *testing.T, ctx context.Context, s *UsersStore) {
 	alice, err := s.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 
-	avatar, err := public.Files.ReadFile("img/avatar_default.png")
-	require.NoError(t, err)
+	var img bytes.Buffer
+	require.NoError(t, png.Encode(&img, image.NewRGBA(image.Rect(0, 0, 1, 1))))
+	avatar := img.Bytes()
 
 	avatarPath := userx.CustomAvatarPath(alice.ID)
 	_ = os.Remove(avatarPath)
@@ -1179,9 +1182,6 @@ func usersUpdate(t *testing.T, ctx context.Context, s *UsersStore) {
 		AllowGitHook:     &lastRepoVisibility,
 		AllowImportLocal: &lastRepoVisibility,
 		ProhibitLogin:    &lastRepoVisibility,
-
-		Avatar:      &overLimitStr,
-		AvatarEmail: &overLimitStr,
 	}
 	err = s.Update(ctx, alice.ID, opts)
 	require.NoError(t, err)
@@ -1204,9 +1204,6 @@ func usersUpdate(t *testing.T, ctx context.Context, s *UsersStore) {
 		assert.Equal(t, lastRepoVisibility, alice.AllowGitHook)
 		assert.Equal(t, lastRepoVisibility, alice.AllowImportLocal)
 		assert.Equal(t, lastRepoVisibility, alice.ProhibitLogin)
-		wantStr2048 := strings.Repeat("a", 2048)
-		assert.Equal(t, wantStr2048, alice.Avatar)
-		assert.Equal(t, wantStr255, alice.AvatarEmail)
 	}
 	assertValues()
 
@@ -1223,8 +1220,9 @@ func usersUseCustomAvatar(t *testing.T, ctx context.Context, s *UsersStore) {
 	alice, err := s.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 
-	avatar, err := public.Files.ReadFile("img/avatar_default.png")
-	require.NoError(t, err)
+	var img bytes.Buffer
+	require.NoError(t, png.Encode(&img, image.NewRGBA(image.Rect(0, 0, 1, 1))))
+	avatar := img.Bytes()
 
 	avatarPath := userx.CustomAvatarPath(alice.ID)
 	_ = os.Remove(avatarPath)

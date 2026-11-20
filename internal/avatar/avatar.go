@@ -1,38 +1,40 @@
 package avatar
 
 import (
-	"image"
-	"image/color/palette"
-	"math/rand"
-	"time"
+	"sync"
 
 	"github.com/cockroachdb/errors"
-	"github.com/issue9/identicon"
+	dicebear "github.com/dicebear/dicebear-go/v10"
+	"github.com/dicebear/styles/v10"
 )
 
+// DefaultSize is the height and width that uploaded avatars are scaled to and
+// generated avatars are drawn at.
 const DefaultSize = 290
 
-// RandomImageWithSize generates and returns a random avatar image unique to
-// input data in custom size (height and width).
-func RandomImageWithSize(size int, data []byte) (image.Image, error) {
-	randExtent := len(palette.WebSafe) - 32
-	rand.Seed(time.Now().UnixNano())
-	colorIndex := rand.Intn(randExtent)
-	backColorIndex := colorIndex - 1
-	if backColorIndex < 0 {
-		backColorIndex = randExtent - 1
-	}
+// backgroundColors are the pastels behind the black ink of the drawings, one of
+// which is picked by the seed.
+var backgroundColors = []string{"b6e3f4", "c0aede", "d1d4f9", "ffd5dc", "ffdfbf"}
 
-	imgMaker, err := identicon.New(size,
-		palette.WebSafe[backColorIndex], palette.WebSafe[colorIndex:colorIndex+32]...)
+// notionistsStyle parses the style once, because parsing and validating its
+// definition takes far longer than drawing an avatar.
+var notionistsStyle = sync.OnceValues(func() (*dicebear.Style, error) {
+	return dicebear.NewStyle([]byte(styles.Notionists))
+})
+
+// Generate returns the SVG of the avatar drawn from the given seed in the
+// DiceBear Notionists style. The same seed always draws the same avatar.
+func Generate(seed string) ([]byte, error) {
+	style, err := notionistsStyle()
 	if err != nil {
-		return nil, errors.Newf("identicon.New: %v", err)
+		return nil, errors.Wrap(err, "parse style")
 	}
-	return imgMaker.Make(data), nil
-}
-
-// RandomImage generates and returns a random avatar image unique to input data
-// in DefaultSize (height and width).
-func RandomImage(data []byte) (image.Image, error) {
-	return RandomImageWithSize(DefaultSize, data)
+	a, err := dicebear.NewAvatar(style, map[string]any{
+		"seed":            seed,
+		"backgroundColor": backgroundColors,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "draw avatar")
+	}
+	return []byte(a.SVG()), nil
 }

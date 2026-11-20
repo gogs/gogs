@@ -253,7 +253,6 @@ EXTERNAL_URL = http://localhost:%[2]d/
 DOMAIN = 127.0.0.1
 HTTP_ADDR = 127.0.0.1
 HTTP_PORT = %[2]d
-OFFLINE_MODE = true
 ; Tests clone and push over the builtin SSH server. Rewriting the
 ; authorized_keys file, e.g., by an admin operation, writes to the work
 ; directory rather than the one of the user running the tests.

@@ -7,7 +7,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/gogs/go-libravatar"
 	"unknwon.dev/ini/v2"
 
 	"gogs.io/gogs/conf"
@@ -259,7 +258,6 @@ type ServerOpts struct {
 	UnixSocketPermission string
 	LocalRootURL         string `ini:"LOCAL_ROOT_URL"`
 
-	OfflineMode      bool
 	DisableRouterLog bool
 	EnableGzip       bool
 
@@ -384,12 +382,6 @@ var UI UIOpts
 type PictureOpts struct {
 	AvatarUploadPath           string
 	RepositoryAvatarUploadPath string
-	GravatarSource             string
-	DisableGravatar            bool
-	EnableFederatedAvatar      bool
-
-	// Derived from other static values
-	LibravatarService *libravatar.Libravatar `ini:"-"` // Initialized client for federated avatar.
 }
 
 // Picture settings
@@ -491,7 +483,6 @@ var (
 // a reserved username, so it never shadows the pages of a user.
 const UsersAvatarPathPrefix = "-/avatars"
 
-// UserDefaultAvatarURLPath returns the URL path of the default user avatar.
-func UserDefaultAvatarURLPath() string {
-	return Server.Subpath + "/img/avatar_default.png"
-}
+// GeneratedAvatarsPathPrefix is the path prefix to avatars generated from a
+// seed, for people who have no user, e.g., commit authors.
+const GeneratedAvatarsPathPrefix = UsersAvatarPathPrefix + "/seed"

@@ -82,7 +82,7 @@ func getOrgSettings(viewer *database.User, m *orgMembership) (statusCode int, re
 		Description:     org.Description,
 		Website:         org.Website,
 		Location:        org.Location,
-		AvatarURL:       tool.AppendAvatarSize(org.AvatarURLPath(), 200),
+		AvatarURL:       org.AvatarURLPath(),
 		HasCustomAvatar: org.UseCustomAvatar,
 	}
 	if viewer.IsAdmin {

@@ -389,6 +389,7 @@ func newRoutingHandler(logger *logx.Logger, localizer, sessioner, authenticate f
 		})
 		f.Get("/attachments/{uuid}", requireViewAccess, getAttachment)
 		f.Get("/-/avatars/{id}", getUserAvatar)
+		f.Get("/-/avatars/seed/{seed}", getGeneratedAvatar)
 		f.Get("/-/repo-avatars/{id}", getRepoAvatar)
 		f.Get("/{username}.keys", requireViewAccess, getUserPublicKeys)
 		f.Any("/user/activate_email", activateEmail)

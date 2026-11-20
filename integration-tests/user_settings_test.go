@@ -9,6 +9,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -19,7 +20,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ssh"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/userx"
 )
 
 func userSignedIn(t *testing.T) (*User, *client) {
@@ -57,14 +60,13 @@ func TestUserSettingsProfile(t *testing.T) {
 
 	u, c := userSignedIn(t)
 	type settings struct {
-		Name            string  `json:"name"`
-		FullName        string  `json:"fullName"`
-		Website         string  `json:"website"`
-		Location        string  `json:"location"`
-		IsLocal         bool    `json:"isLocal"`
-		AvatarURL       string  `json:"avatarURL"`
-		HasCustomAvatar bool    `json:"hasCustomAvatar"`
-		AvatarEmail     *string `json:"avatarEmail"`
+		Name            string `json:"name"`
+		FullName        string `json:"fullName"`
+		Website         string `json:"website"`
+		Location        string `json:"location"`
+		IsLocal         bool   `json:"isLocal"`
+		AvatarURL       string `json:"avatarURL"`
+		HasCustomAvatar bool   `json:"hasCustomAvatar"`
 	}
 	var got settings
 	c.doJSON(http.MethodGet, "/api/web/user/settings", nil, http.StatusOK, &got)
@@ -72,8 +74,6 @@ func TestUserSettingsProfile(t *testing.T) {
 	assert.True(t, got.IsLocal)
 	assert.False(t, got.HasCustomAvatar)
 	assert.NotEmpty(t, got.AvatarURL)
-	// The server under test is in offline mode, which disables Gravatar.
-	assert.Nil(t, got.AvatarEmail)
 
 	taken := seedUser(t, CreateUserOptions{})
 	status, body := c.do(http.MethodPatch, "/api/web/user/settings", map[string]any{"name": taken.Name})
@@ -150,6 +150,24 @@ func TestUserSettingsAvatar(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
 
 	u, c := userSignedIn(t)
+	avatarPath := "/-/avatars/" + strconv.FormatInt(u.ID, 10)
+	status, header, generated := anonymous.doRaw(http.MethodGet, avatarPath, "", nil)
+	require.Equal(t, http.StatusOK, status, "response: %s", generated)
+	assert.Equal(t, "image/png", header.Get("Content-Type"))
+	generatedImg, err := png.Decode(bytes.NewReader(generated))
+	require.NoError(t, err)
+	assert.Equal(t, image.Rect(0, 0, 290, 290), generatedImg.Bounds())
+	saved, err := os.ReadFile(userx.CustomAvatarPath(u.ID))
+	require.NoError(t, err, "the generated avatar is not saved")
+	assert.Equal(t, generated, saved)
+
+	// An avatar file saved by an earlier version, e.g., an identicon, is kept.
+	other := seedUser(t, CreateUserOptions{})
+	require.NoError(t, os.MkdirAll(conf.Picture.AvatarUploadPath, 0o755))
+	require.NoError(t, os.WriteFile(userx.CustomAvatarPath(other.ID), []byte("identicon"), 0o644))
+	_, _, body = anonymous.doRaw(http.MethodGet, "/-/avatars/"+strconv.FormatInt(other.ID, 10), "", nil)
+	assert.Equal(t, "identicon", string(body))
+
 	contentType, form = userAvatarForm(t, []byte("not an image"))
 	status, _, body = c.doRaw(http.MethodPut, "/api/web/user/settings/avatar", contentType, form)
 	assert.Equal(t, http.StatusBadRequest, status, "response: %s", body)
@@ -167,28 +185,25 @@ func TestUserSettingsAvatar(t *testing.T) {
 	c.doJSON(http.MethodGet, "/api/web/user/settings", nil, http.StatusOK, &settings)
 	assert.True(t, settings.HasCustomAvatar)
 
-	status, header, body := anonymous.doRaw(http.MethodGet, "/-/avatars/"+strconv.FormatInt(u.ID, 10), "", nil)
+	status, header, body = anonymous.doRaw(http.MethodGet, avatarPath, "", nil)
 	require.Equal(t, http.StatusOK, status, "response: %s", body)
 	assert.Equal(t, "image/png", header.Get("Content-Type"))
 	assert.Equal(t, "private", header.Get("Cache-Control"))
 	status, _, body = anonymous.doRaw(http.MethodGet, "/-/avatars/0", "", nil)
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 
+	// People who have no user, e.g., commit authors, get an avatar generated from a seed.
+	status, header, body = anonymous.doRaw(http.MethodGet, "/-/avatars/seed/0123456789abcdef", "", nil)
+	require.Equal(t, http.StatusOK, status, "response: %s", body)
+	assert.Equal(t, "image/png", header.Get("Content-Type"))
+	status, _, body = anonymous.doRaw(http.MethodGet, "/-/avatars/seed/"+strings.Repeat("a", 65), "", nil)
+	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
+
 	status, _, body = c.doRaw(http.MethodDelete, "/api/web/user/settings/avatar", "", nil)
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 	assert.False(t, userGet(t, u.ID).UseCustomAvatar)
-}
-
-func TestUserSettingsGravatar(t *testing.T) {
-	t.Parallel()
-
-	userAssertSignInRequired(t, "PUT /api/web/user/settings/gravatar")
-
-	u, c := userSignedIn(t)
-	// The server under test is in offline mode, which disables Gravatar.
-	status, body := c.do(http.MethodPut, "/api/web/user/settings/gravatar", map[string]any{"email": "avatar@example.com"})
-	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
-	assert.Equal(t, u.Email, userGet(t, u.ID).AvatarEmail, "avatar email changed")
+	_, _, body = anonymous.doRaw(http.MethodGet, avatarPath, "", nil)
+	assert.Equal(t, generated, body, "the generated avatar did not come back")
 }
 
 func TestUserSettingsRepositories(t *testing.T) {

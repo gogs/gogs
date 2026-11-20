@@ -245,7 +245,6 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 			r.code("admin.config.server.local_root_url", conf.Server.LocalRootURL),
 		),
 		rows(
-			r.flag("admin.config.server.offline_mode", conf.Server.OfflineMode),
 			r.flag("admin.config.server.disable_router_log", conf.Server.DisableRouterLog),
 			r.flag("admin.config.server.enable_gzip", conf.Server.EnableGzip),
 		),
@@ -422,9 +421,6 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 	sections = append(sections, r.section("picture", "admin.config.picture_config", rows(
 		r.code("admin.config.picture.avatar_upload_path", pic.AvatarUploadPath),
 		r.code("admin.config.picture.repo_avatar_upload_path", pic.RepositoryAvatarUploadPath),
-		r.code("admin.config.picture.gravatar_source", pic.GravatarSource),
-		r.flag("admin.config.picture.disable_gravatar", pic.DisableGravatar),
-		r.flag("admin.config.picture.enable_federated_avatar", pic.EnableFederatedAvatar),
 	)))
 
 	sections = append(sections,

@@ -190,12 +190,3 @@ RUN_MODE = dev
 [server]
 LOAD_ASSETS_FROM_DISK = true
 ```
-
-### Offline development
-
-Sometimes you will want to develop Gogs but it just so happens you will be on a plane or a train or perhaps a beach, and you will have no WiFi. And you may raise your fist toward heaven and say something like, "Why, we can put a man on the moon, so why can't we develop high-quality Git hosting without an Internet connection?" But lower your hand back to your keyboard and fret no further, you *can* develop Gogs with no connectivity by setting the following configuration in your `custom/conf/app.ini`:
-
-```ini
-[server]
-OFFLINE_MODE = true
-```

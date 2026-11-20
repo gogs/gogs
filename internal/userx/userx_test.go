@@ -1,6 +1,9 @@
 package userx
 
 import (
+	"bytes"
+	"image"
+	"image/png"
 	"os"
 	"runtime"
 	"testing"
@@ -11,7 +14,6 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/tool"
-	"gogs.io/gogs/public"
 )
 
 func TestTimeLimitedUserCode(t *testing.T) {
@@ -65,27 +67,6 @@ func TestCustomAvatarPath(t *testing.T) {
 	assert.Equal(t, want, got)
 }
 
-func TestGenerateRandomAvatar(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("Skipping testing on Windows")
-		return
-	}
-
-	conf.SetMockPicture(t,
-		conf.PictureOpts{
-			AvatarUploadPath: os.TempDir(),
-		},
-	)
-
-	avatarPath := CustomAvatarPath(1)
-	defer func() { _ = os.Remove(avatarPath) }()
-
-	err := GenerateRandomAvatar(1, "alice", "alice@example.com")
-	require.NoError(t, err)
-	got := osx.IsFile(avatarPath)
-	assert.True(t, got)
-}
-
 func TestSaveAvatar(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Skipping testing on Windows")
@@ -98,13 +79,14 @@ func TestSaveAvatar(t *testing.T) {
 		},
 	)
 
-	avatar, err := public.Files.ReadFile("img/avatar_default.png")
-	require.NoError(t, err)
+	var img bytes.Buffer
+	require.NoError(t, png.Encode(&img, image.NewRGBA(image.Rect(0, 0, 1, 1))))
+	avatar := img.Bytes()
 
 	avatarPath := CustomAvatarPath(1)
 	defer func() { _ = os.Remove(avatarPath) }()
 
-	err = SaveAvatar(1, avatar)
+	err := SaveAvatar(1, avatar)
 	require.NoError(t, err)
 	got := osx.IsFile(avatarPath)
 	assert.True(t, got)

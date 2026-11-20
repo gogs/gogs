@@ -20,14 +20,7 @@ Answers to common questions about Gogs configuration, administration, and usage.
   </Accordion>
 
   <Accordion title="How do I run Gogs in offline mode or on an intranet?">
-    Set the `OFFLINE_MODE` option to `true` in the `[server]` section of your `custom/conf/app.ini`:
-
-    ```ini
-    [server]
-    OFFLINE_MODE = true
-    ```
-
-    This disables external network calls such as CDN resource loading and Gravatar avatar fetching.
+    No setting is needed. Gogs serves all of its assets and generates avatars itself, so the web interface makes no calls to external services.
   </Accordion>
 
   <Accordion title="How do I make a custom robots.txt?">
