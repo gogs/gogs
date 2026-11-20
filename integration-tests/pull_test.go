@@ -1,6 +1,7 @@
 package integrationtests
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"os/exec"
@@ -11,8 +12,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/dbx"
 )
 
 // pullGit runs Git in the repository on disk and returns its trimmed output.
@@ -412,6 +416,48 @@ func TestPullMergeConcurrently(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 2, got.NumClosedPulls)
 	})
+}
+
+// A merge that fails to close the pull request leaves the base branch as it
+// is, so that the pull request can be merged again.
+func TestPullMergeDatabaseFailure(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	c := authenticatedClient(t, owner)
+
+	branch := UniqueName("topic-")
+	pullCommitToNewBranch(t, c, repo, branch, "topic.md", "# Topic\n")
+	index := pullCreate(t, c, repo, branch, "Topic")
+	pullWaitMergeable(t, c, repo, index)
+	issue := issueFromDatabase(t, repo, index)
+	baseCommit := pullMustGit(t, repo, "rev-parse", "main")
+
+	db, err := dbx.OpenDB(conf.Database, &gorm.Config{})
+	require.NoError(t, err)
+	sqlDB, err := db.DB()
+	require.NoError(t, err)
+	defer func() { _ = sqlDB.Close() }()
+	function := fmt.Sprintf("fail_close_comment_%d", issue.ID)
+	require.NoError(t, db.Exec(fmt.Sprintf(`CREATE FUNCTION %s() RETURNS trigger AS $$ BEGIN RAISE EXCEPTION 'injected failure'; END $$ LANGUAGE plpgsql`, function)).Error)
+	require.NoError(t, db.Exec(fmt.Sprintf(`CREATE TRIGGER %[1]s BEFORE INSERT ON comment FOR EACH ROW WHEN (NEW.issue_id = %[2]d) EXECUTE FUNCTION %[1]s()`, function, issue.ID)).Error)
+	dropTrigger := func() {
+		_ = db.Exec(fmt.Sprintf("DROP TRIGGER IF EXISTS %[1]s ON comment; DROP FUNCTION IF EXISTS %[1]s()", function)).Error
+	}
+	defer dropTrigger()
+
+	mergePath := issueAPIPath(repo, "pulls", index, "merge")
+	status, body := c.do(http.MethodPost, mergePath, map[string]any{})
+	require.Equal(t, http.StatusInternalServerError, status, "response: %s", body)
+	assert.Equal(t, baseCommit, pullMustGit(t, repo, "rev-parse", "main"))
+	assert.False(t, issueFromDatabase(t, repo, index).IsClosed)
+
+	dropTrigger()
+	pullWaitMergeable(t, c, repo, index)
+	status, body = c.do(http.MethodPost, mergePath, map[string]any{})
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	assert.NotEqual(t, baseCommit, pullMustGit(t, repo, "rev-parse", "main"))
 }
 
 func TestPullPrivateRepository(t *testing.T) {

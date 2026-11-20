@@ -389,13 +389,17 @@ func (s *IssuesStore) create(ctx context.Context, opts NewIssueOptions) error {
 
 		opts.Issue.MilestoneID = 0
 		if milestone != nil {
-			opts.Issue.MilestoneID = milestone.ID
-			opts.Issue.Milestone = milestone
 			closedIssues := 0
 			if opts.Issue.IsClosed {
 				closedIssues = 1
 			}
-			if err = milestones.addToCounts(ctx, milestone, 1, closedIssues); err != nil {
+			// On MySQL, the milestone read above may come from a snapshot taken
+			// before a delete committed.
+			err = milestones.addToCounts(ctx, milestone, 1, closedIssues)
+			if err == nil {
+				opts.Issue.MilestoneID = milestone.ID
+				opts.Issue.Milestone = milestone
+			} else if !IsErrMilestoneNotExist(err) {
 				return errors.Wrap(err, "count issues of milestone")
 			}
 		}
@@ -563,7 +567,11 @@ func (s *IssuesStore) LoadAttributes(ctx context.Context, issues ...*Issue) (err
 
 		if issue.Milestone == nil && issue.MilestoneID > 0 {
 			issue.Milestone, err = newMilestonesStore(s.db).GetByID(ctx, issue.RepoID, issue.MilestoneID)
-			if err != nil {
+			// A milestone deleted while the issue was moved to it counts as no
+			// milestone.
+			if IsErrMilestoneNotExist(err) {
+				issue.MilestoneID = 0
+			} else if err != nil {
 				return errors.Wrapf(err, "get milestone %d", issue.MilestoneID)
 			}
 		}
