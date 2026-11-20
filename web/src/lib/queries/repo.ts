@@ -60,12 +60,14 @@ export interface RepoStarResult {
 }
 
 async function repoAction<T>(method: "POST" | "DELETE", owner: string, name: string, action: "watch" | "star") {
+  const sentAt = performance.now();
   const res = await fetch(subUrl(`/api/web/${owner}/${name}/${action}`), {
     method,
     credentials: "same-origin",
     headers: { "Content-Type": "application/json" },
   });
   if (!res.ok) throw await loaderResponseError(res);
+  sessionWorks(sentAt);
   return (await res.json()) as T;
 }
 
@@ -95,12 +97,14 @@ export async function fetchRepoPeople(owner: string, name: string, list: "starga
 // removeRepoWatcher makes another user stop watching the repository. Only site
 // admins may do so.
 export async function removeRepoWatcher(owner: string, name: string, username: string) {
+  const sentAt = performance.now();
   const res = await fetch(subUrl(`/api/web/${owner}/${name}/watchers/${encodeURIComponent(username)}`), {
     method: "DELETE",
     credentials: "same-origin",
     headers: { "Content-Type": "application/json" },
   });
   if (!res.ok) throw await loaderResponseError(res);
+  sessionWorks(sentAt);
   return (await res.json()) as RepoWatchResult;
 }
 
@@ -956,13 +960,14 @@ export async function uploadRepoAttachment(
 ) {
   const body = new FormData();
   body.append("file", file);
+  const sentAt = performance.now();
   const res = await fetch(repoURL(owner, name, kind === "editor" ? "/editor/uploads" : `/${kind}/attachments`), {
     method: "POST",
     credentials: "same-origin",
     body,
   });
   if (!res.ok) throw await loaderResponseError(res);
-  sessionWorks();
+  sessionWorks(sentAt);
   return (await res.json()) as { uuid: string; url?: string };
 }
 
