@@ -191,6 +191,36 @@ export interface AdminReportSection {
   groups: AdminReportRow[][];
 }
 
+export type AdminStatisticKey =
+  | "users"
+  | "organizations"
+  | "social_accounts"
+  | "follows"
+  | "teams"
+  | "repositories"
+  | "watches"
+  | "stars"
+  | "accesses"
+  | "mirrors"
+  | "releases"
+  | "actions"
+  | "issues"
+  | "comments"
+  | "milestones"
+  | "labels"
+  | "attachments"
+  | "public_keys"
+  | "login_sources"
+  | "webhooks"
+  | "hook_tasks"
+  | "update_tasks";
+
+export interface AdminStatistic {
+  key: AdminStatisticKey;
+  label: string;
+  count: number;
+}
+
 export interface AdminDashboard {
   appVersion: string;
   gitVersion: string;
@@ -199,8 +229,9 @@ export interface AdminDashboard {
   buildCommit: string;
   // When the server started.
   startedAt: string;
-  // How many records of each kind the database holds, with translated labels.
-  statistics: { label: string; count: number }[];
+  // How many records of each kind the database holds, in groups of related
+  // kinds, with translated titles and labels.
+  statistics: { title: string; items: AdminStatistic[] }[];
   systemStatus: AdminReportSection;
 }
 
