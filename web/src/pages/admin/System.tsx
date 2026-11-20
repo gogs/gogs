@@ -139,7 +139,7 @@ export function AdminOperations() {
     onError: (err) => toast.error(err.message),
   });
   return (
-    <div className="grid max-w-4xl gap-4">
+    <div className="grid gap-4">
       <AdminPageHeader title={t("admin.dashboard.operations")} description={t("admin.operations_desc")} />
       <Card>
         <ul className="divide-y divide-(--color-border)">
