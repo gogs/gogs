@@ -176,9 +176,15 @@ func (t *storedTrace) summary() TraceSummary {
 		Start:      t.start,
 		DurationMs: ms(t.duration),
 		SpanCount:  len(t.spans),
-		Error:      t.failed,
+		Error:      t.anyFailed(),
 		Kept:       t.kept,
 	}
+}
+
+// anyFailed reports whether a request of the trace failed, be it the one that
+// ended last, whose status the trace shows, or one that joined it.
+func (t *storedTrace) anyFailed() bool {
+	return t.failed || t.kept == KeptFailed
 }
 
 type SearchPoint struct {
@@ -229,7 +235,7 @@ func (q *SearchQuery) match(t *storedTrace) bool {
 	}
 	switch q.Status {
 	case "5xx":
-		if !t.failed {
+		if !t.anyFailed() {
 			return false
 		}
 	case "4xx":
@@ -326,7 +332,7 @@ func (s *Store) Search(q SearchQuery) SearchResult {
 			Start:      t.start,
 			DurationMs: ms(t.duration),
 			Status:     t.status,
-			Error:      t.failed,
+			Error:      t.anyFailed(),
 		})
 	}
 	return out
