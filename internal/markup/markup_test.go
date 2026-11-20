@@ -326,7 +326,10 @@ func newCommitRepo(t *testing.T, objectFormat string) (repoPath, commitID, blobI
 	git := func(stdin string, args ...string) string {
 		cmd := exec.Command("git", append([]string{"-C", repoPath}, args...)...)
 		cmd.Stdin = strings.NewReader(stdin)
-		cmd.Env = append(os.Environ(), "GIT_AUTHOR_NAME=a", "GIT_AUTHOR_EMAIL=a@example.com", "GIT_COMMITTER_NAME=a", "GIT_COMMITTER_EMAIL=a@example.com")
+		cmd.Env = append(os.Environ(), "GIT_AUTHOR_NAME=a", "GIT_AUTHOR_EMAIL=a@example.com", "GIT_COMMITTER_NAME=a", "GIT_COMMITTER_EMAIL=a@example.com",
+			// A fixed date fixes the commit ID, whose abbreviations in tests must not
+			// be numbers, which never link.
+			"GIT_AUTHOR_DATE=2026-01-01T00:00:00Z", "GIT_COMMITTER_DATE=2026-01-01T00:00:00Z")
 		out, err := cmd.CombinedOutput()
 		require.NoError(t, err, string(out))
 		return strings.TrimSpace(string(out))
