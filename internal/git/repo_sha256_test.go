@@ -9,7 +9,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"unknwon.dev/x/logx"
 )
 
 // newSHA256TestRepo returns a SHA-256 copy of the test repository. It rewrites
@@ -131,12 +130,9 @@ func TestSHA256Repository(t *testing.T) {
 		assert.Equal(t, tagCommitID, c.ID.String())
 	})
 
-	t.Run("Diff", func(t *testing.T) {
-		diff, err := r.Diff(ctx, logx.NewNoopLogger(), headCommitID, 0, 0, 0)
-		require.NoError(t, err)
-		require.NotEmpty(t, diff.Files)
-		for _, f := range diff.Files {
-			assert.Len(t, f.Index, 64, f.Name)
-		}
+	t.Run("RawDiff", func(t *testing.T) {
+		var buf bytes.Buffer
+		require.NoError(t, r.RawDiff(ctx, headCommitID, RawDiffNormal, &buf))
+		assert.Regexp(t, `(?m)^index [0-9a-f]{64}\.\.[0-9a-f]{64}`, buf.String())
 	})
 }

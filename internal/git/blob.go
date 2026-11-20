@@ -39,5 +39,5 @@ func (b *Blob) Pipe(ctx context.Context, stdout io.Writer) (err error) {
 	ctx, span := tracer.Start(ctx, "git.Blob.Pipe", trace.WithAttributes(attribute.String("git.entry", b.name)))
 	defer func() { endSpan(span, err) }()
 
-	return pipe(ctx, b.parent.repo.path, []string{"show", "--end-of-options", b.id.String()}, nil, stdout)
+	return pipe(ctx, b.parent.repo.path, []string{"show", "--end-of-options", b.id.String()}, stdout)
 }

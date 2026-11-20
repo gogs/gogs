@@ -87,7 +87,7 @@ func (r *Repository) Grep(ctx context.Context, rev, keyword string, opts ...Grep
 		context:    opt.ContextLines,
 		cancel:     cancel,
 	}
-	err = pipe(ctx, r.path, args, nil, w)
+	err = pipe(ctx, r.path, args, w)
 	switch {
 	case w.err != nil:
 		return nil, false, w.err
