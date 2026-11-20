@@ -250,12 +250,14 @@ export function AdminOperations() {
     filters: { mutationKey: OPERATION_KEY },
     select: (mutation) => mutation.state as OperationRun,
   });
-  const lastRuns: Partial<Record<AdminOperation, OperationRun>> = {};
+  // A row keeps the outcome of its last run that had one, also while it runs again and after a run
+  // that ended without one, i.e., after the session expired. Taking it away and putting it back
+  // would announce the old outcome as news.
+  const outcomes: Partial<Record<AdminOperation, OperationOutcome>> = {};
   for (const state of runs) {
-    // A run that ended without an outcome, i.e., after the session expired, leaves its row as it was.
-    if (state.variables && state.status !== "error") lastRuns[state.variables] = state;
+    if (state.variables && state.data) outcomes[state.variables] = state.data;
   }
-  const anyRunning = runs.some((state) => state.status === "pending");
+  const runningOp = runs.find((state) => state.status === "pending")?.variables;
   return (
     <div className="grid gap-4">
       <AdminPageHeader title={t("admin.dashboard.operations")} description={t("admin.operations_desc")} />
@@ -272,8 +274,8 @@ export function AdminOperations() {
               {group.operations.map((op) => {
                 const { label: labelKey, description, confirm } = OPERATIONS[op];
                 const label = t(labelKey);
-                const running = lastRuns[op]?.status === "pending";
-                const outcome = lastRuns[op]?.data;
+                const running = runningOp === op;
+                const outcome = outcomes[op];
                 return (
                   <li
                     key={op}
@@ -297,7 +299,7 @@ export function AdminOperations() {
                           description={t(confirm.description)}
                           size="sm"
                           busy={running}
-                          disabled={anyRunning && !running}
+                          disabled={runningOp !== undefined && !running}
                           // The dialog closes once the operation starts, and its row shows it running.
                           action={() => {
                             run.mutate(op);
@@ -313,7 +315,7 @@ export function AdminOperations() {
                           aria-label={`${t("admin.dashboard.operation_run")} ${label}`}
                           // Not `disabled` while it runs, which takes the focus off the button.
                           aria-disabled={running || undefined}
-                          disabled={anyRunning && !running}
+                          disabled={runningOp !== undefined && !running}
                           // The text dims, not the button, which would dim its focus ring too.
                           className={running ? "pointer-events-none text-(--color-foreground)/60" : undefined}
                           onClick={running ? undefined : () => run.mutate(op)}
