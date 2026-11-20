@@ -10,6 +10,7 @@ import { readGlass, setGlass } from "@/lib/glass";
 import { LANGUAGES, switchLanguage } from "@/lib/languages";
 import { type Theme, useTheme } from "@/lib/theme-context";
 import { reloadWithParams } from "@/lib/url";
+import { useMenuFocus } from "@/lib/use-menu-focus";
 import { cn } from "@/lib/utils";
 
 // Dev-only feature flag: toggles a `?i18n_debug=1` query param that makes
@@ -33,6 +34,7 @@ const THEME_ITEM = "min-w-0 flex-auto gap-1.5 data-[state=on]:font-semibold glas
 export function SettingsMenu() {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const menu = useMenuFocus();
   const [currentLang] = useState(() => webContext.lang);
   const { theme, setTheme } = useTheme();
   const [glass, setGlassState] = useState(readGlass);
@@ -49,6 +51,7 @@ export function SettingsMenu() {
       }}
     >
       <PopoverTrigger
+        {...menu.trigger}
         aria-label={t("settings")}
         className="inline-flex size-9 cursor-pointer items-center justify-center rounded-md text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
       >
@@ -58,15 +61,7 @@ export function SettingsMenu() {
         align="end"
         collisionPadding={16}
         className="flex max-h-(--radix-popover-content-available-height) flex-col w-64 p-0 focus:outline-none"
-        // Focus the popover container itself rather than the first focusable
-        // child (the Light theme toggle) so an Enter/Space press right after
-        // opening the menu does not accidentally change the theme. Keyboard
-        // users can Tab forward to reach the controls.
-        onOpenAutoFocus={(e) => {
-          e.preventDefault();
-          (e.currentTarget as HTMLElement | null)?.focus();
-        }}
-        tabIndex={-1}
+        {...menu.content}
       >
         <div className="px-2 pt-2 pb-1 text-xs font-medium text-(--color-muted-foreground)">{t("theme")}</div>
         <div className="p-1">

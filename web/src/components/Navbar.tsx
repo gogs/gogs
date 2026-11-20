@@ -22,23 +22,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { paletteShortcut } from "@/lib/palette";
 import { signOut } from "@/lib/sign-out";
 import { subUrl } from "@/lib/url";
+import { useMenuFocus } from "@/lib/use-menu-focus";
 import { useUserInfo } from "@/lib/use-user-info";
 import type { UserInfo } from "@/lib/user-info";
-
-// MENU_FOCUS moves the focus to a menu itself when it opens, so Tab goes on to
-// its links. Focusing its first link instead would ring that link after a
-// click, and leaving the focus on the trigger would send Tab past the menu.
-const MENU_FOCUS = {
-  tabIndex: -1,
-  onOpenAutoFocus: (e: Event) => {
-    e.preventDefault();
-    (e.currentTarget as HTMLElement | null)?.focus();
-  },
-};
 
 export function Navbar() {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const menu = useMenuFocus();
   const user = useUserInfo();
 
   return (
@@ -88,12 +79,13 @@ export function Navbar() {
           <SettingsMenu />
           <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger
+              {...menu.trigger}
               aria-label="Open menu"
               className="inline-flex size-9 cursor-pointer items-center justify-center rounded-md text-(--color-foreground) hover:bg-(--color-surface)"
             >
               <Menu className="size-[18px]" aria-hidden />
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-56 p-1 focus:outline-none" {...MENU_FOCUS}>
+            <PopoverContent align="end" className="w-56 p-1 focus:outline-none" {...menu.content}>
               <ul className="flex flex-col text-sm">
                 {user ? (
                   <>
@@ -223,16 +215,18 @@ export function PaletteButton() {
 function CreateMenu({ canCreateOrganization }: { canCreateOrganization: boolean }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const menu = useMenuFocus();
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
+        {...menu.trigger}
         aria-label={t("create_new")}
         className="inline-flex h-9 cursor-pointer items-center gap-1 rounded-md px-2 text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
       >
         <Plus className="size-4" aria-hidden />
         <ChevronDown className="size-3" aria-hidden />
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-56 p-1 focus:outline-none" {...MENU_FOCUS}>
+      <PopoverContent align="end" className="w-56 p-1 focus:outline-none" {...menu.content}>
         <MenuLink href="/repo/create" icon={<Plus className="size-4" aria-hidden />} onSelect={() => setOpen(false)}>
           {t("new_repo")}
         </MenuLink>
@@ -258,9 +252,11 @@ function CreateMenu({ canCreateOrganization }: { canCreateOrganization: boolean 
 export function UserMenu({ user, inAdmin = false }: { user: UserInfo; inAdmin?: boolean }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const menu = useMenuFocus();
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
+        {...menu.trigger}
         aria-label={t("user_profile_and_more")}
         className="inline-flex h-9 cursor-pointer items-center gap-1 rounded-md px-1 hover:bg-(--color-surface)"
       >
@@ -271,7 +267,7 @@ export function UserMenu({ user, inAdmin = false }: { user: UserInfo; inAdmin?: 
         )}
         <ChevronDown className="size-3 text-(--color-muted-foreground)" aria-hidden />
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-60 p-1 focus:outline-none" {...MENU_FOCUS}>
+      <PopoverContent align="end" className="w-60 p-1 focus:outline-none" {...menu.content}>
         <div className="px-2 pt-2 pb-1 text-xs text-(--color-muted-foreground)">
           {t("signed_in_as")} <strong className="text-(--color-foreground)">{user.username}</strong>
         </div>
