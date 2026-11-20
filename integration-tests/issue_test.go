@@ -722,6 +722,26 @@ func TestIssueMarkdownCommitLinks(t *testing.T) {
 	}
 	ownerClient.doJSON(http.MethodPost, issueAPIPath(repo, "markdown"), map[string]any{"text": "修复了" + abbrev10 + "的问题", "wiki": true}, http.StatusOK, &resp)
 	assert.Contains(t, resp.HTML, "修复了"+link(commitID, abbrev10[:10])+"的问题")
+
+	t.Run("guests who cannot read the code", func(t *testing.T) {
+		private := seedRepository(t, owner.ID, CreateRepositoryOptions{Private: true, AutoInit: true})
+		repoVisibilityPutPublicAccess(t, ownerClient, private, false, true)
+		privateID := repoSettingsGit(t, database.RepoPath(private.Owner, private.Name), "rev-parse", "HEAD")
+		privateShort := issueCommitAbbrev(privateID, 7)
+		privateLink := `<a href="/` + private.Owner + "/" + private.Name + "/commit/" + privateID + `" rel="nofollow"><code>` + privateShort[:min(len(privateShort), 10)] + "</code></a>"
+		guestClient := authenticatedClient(t, seedUser(t, CreateUserOptions{}))
+
+		// Links to the full ID would tell guests which commits the code has.
+		index := issueCreate(t, ownerClient, private, "Commit links", "Fixed in "+privateShort+".")
+		assert.Contains(t, issueGet(t, ownerClient, private, index).ContentHTML, "Fixed in "+privateLink+".")
+		assert.Contains(t, issueGet(t, guestClient, private, index).ContentHTML, "Fixed in "+privateShort+".")
+
+		var resp struct {
+			HTML string `json:"html"`
+		}
+		guestClient.doJSON(http.MethodPost, issueAPIPath(private, "markdown"), map[string]any{"text": "Probe " + privateShort}, http.StatusOK, &resp)
+		assert.Equal(t, "<p>Probe "+privateShort+"</p>\n", resp.HTML)
+	})
 }
 
 // issueCommitAbbrev returns the shortest abbreviation of the commit ID that is

@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"maps"
 	"net/http"
 
 	"github.com/cockroachdb/errors"
@@ -73,6 +74,20 @@ type repoContext struct {
 	Owner  *database.User
 	Repo   *database.Repository
 	Viewer *Viewer
+}
+
+// metas returns the metas to render Markdown of the repository for the
+// viewer. Viewers who cannot read the code, e.g., guests of the issues of a
+// private repository, get no repository to resolve commit IDs in, so that
+// commit links do not reveal which commits it has.
+func (rc *repoContext) metas() map[string]string {
+	metas := rc.Repo.ComposeMetas()
+	if rc.Viewer.CanRead() {
+		return metas
+	}
+	metas = maps.Clone(metas)
+	delete(metas, "repoPath")
+	return metas
 }
 
 // withRepoContext injects the repoContext of the repository derived from the

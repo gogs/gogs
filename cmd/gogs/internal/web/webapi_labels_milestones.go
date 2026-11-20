@@ -235,7 +235,7 @@ func getRepoMilestones(c flamego.Context, logger *logx.Logger, repoCtx *repoCont
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list milestones")
 	}
 
-	metas := repo.ComposeMetas()
+	metas := repoCtx.metas()
 	descriptions := make([]string, 0, len(miles))
 	for _, m := range miles {
 		descriptions = append(descriptions, m.Content)
