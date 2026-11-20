@@ -1601,7 +1601,99 @@
             },
             "description": "Repository name"
           }
-        ]
+        ],
+        "description": "Lists the releases of the repository. Drafts are only listed for users with write access."
+      },
+      "post": {
+        "operationId": "createRelease",
+        "summary": "Create a release",
+        "description": "Creates a release. Unless it is a draft, the tag is created on the target branch when it does not exist yet, and the `release` webhook fires.",
+        "tags": [
+          "Releases"
+        ],
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tag_name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "description": "Name of the tag",
+                    "example": "v1.0.0"
+                  },
+                  "target_commitish": {
+                    "type": "string",
+                    "description": "Branch to tag when the tag does not exist yet. Defaults to the default branch."
+                  },
+                  "name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "description": "Title of the release"
+                  },
+                  "body": {
+                    "type": "string",
+                    "description": "Release notes in Markdown"
+                  },
+                  "draft": {
+                    "type": "boolean",
+                    "description": "Whether the release is a draft, which creates no tag"
+                  },
+                  "prerelease": {
+                    "type": "boolean",
+                    "description": "Whether the release is a prerelease"
+                  }
+                },
+                "required": [
+                  "tag_name"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Release"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No write access to the repository, or the repository is a mirror."
+          },
+          "404": {
+            "description": "Resource not found."
+          },
+          "422": {
+            "description": "Missing or invalid tag name, a name longer than 255 characters, a release of the tag already exists, or the target branch does not exist."
+          }
+        }
       }
     },
     "/repos/{owner}/{repo}/hooks": {
@@ -5621,6 +5713,198 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/releases/{id}": {
+      "get": {
+        "operationId": "getRelease",
+        "summary": "Get a release",
+        "tags": [
+          "Releases"
+        ],
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "description": "Release ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Release"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        },
+        "description": "Gets a release. Drafts are only visible to users with write access."
+      },
+      "patch": {
+        "operationId": "editRelease",
+        "summary": "Edit a release",
+        "description": "Updates the fields given. Setting `draft` to `false` publishes a draft, which creates its tag and fires the `release` webhook. A published release cannot become a draft again.",
+        "tags": [
+          "Releases"
+        ],
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "description": "Release ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "description": "Title of the release"
+                  },
+                  "body": {
+                    "type": "string",
+                    "description": "Release notes in Markdown"
+                  },
+                  "draft": {
+                    "type": "boolean",
+                    "description": "Whether the release is a draft"
+                  },
+                  "prerelease": {
+                    "type": "boolean",
+                    "description": "Whether the release is a prerelease"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Release"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No write access to the repository."
+          },
+          "404": {
+            "description": "Resource not found."
+          },
+          "422": {
+            "description": "The name is longer than 255 characters, a published release cannot become a draft, or publishing a draft fails because its tag name is invalid or its target branch no longer exists."
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteRelease",
+        "summary": "Delete a release",
+        "description": "Deletes the release and its tag.",
+        "tags": [
+          "Releases"
+        ],
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "description": "Release ID"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "403": {
+            "description": "No write access to the repository."
+          },
+          "404": {
+            "description": "Resource not found."
           }
         }
       }

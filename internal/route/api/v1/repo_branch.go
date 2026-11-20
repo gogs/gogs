@@ -49,7 +49,7 @@ func listBranches(c *apiContext) {
 }
 
 type createReferenceRequest struct {
-	Name string `json:"name" validate:"required"`
+	Name string `json:"name" binding:"Required"`
 	// The branch, tag or commit to point at, defaults to the default branch.
 	Target string `json:"target"`
 }
