@@ -67,7 +67,7 @@ export function TraceTrafficChart({ overview, className }: { overview: AdminTrac
         data={data}
         // The top margin holds the label of a peak that reaches the top of the plot.
         margin={{ top: 20, right: 0, bottom: 0, left: 0 }}
-        title={
+        aria-label={
           first && last
             ? t("admin.traces.chart_overview", { from: formatClockTime(first), to: formatClockTime(last) })
             : undefined
@@ -326,7 +326,7 @@ export function TraceScatterChart({ result, search }: { result: AdminTraceSearch
     >
       <ScatterChart
         margin={{ top: 8, right: 8, bottom: 0, left: 0 }}
-        title={t("admin.traces.chart_search", { count: result.points.length })}
+        aria-label={t("admin.traces.chart_search", { count: result.points.length })}
         desc={t("admin.traces.chart_search_keys")}
       >
         <CartesianGrid vertical={false} strokeDasharray="3 3" />
