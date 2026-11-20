@@ -253,9 +253,9 @@ export function AdminOperations() {
   // A row keeps the outcome of its last run that had one, also while it runs again and after a run
   // that ended without one, i.e., after the session expired. Taking it away and putting it back
   // would announce the old outcome as news.
-  const outcomes: Partial<Record<AdminOperation, OperationOutcome>> = {};
+  const outcomes: Partial<Record<AdminOperation, { outcome: OperationOutcome; runAt: number }>> = {};
   for (const state of runs) {
-    if (state.variables && state.data) outcomes[state.variables] = state.data;
+    if (state.variables && state.data) outcomes[state.variables] = { outcome: state.data, runAt: state.submittedAt };
   }
   const runningOp = runs.find((state) => state.status === "pending")?.variables;
   return (
@@ -275,7 +275,7 @@ export function AdminOperations() {
                 const { label: labelKey, description, confirm } = OPERATIONS[op];
                 const label = t(labelKey);
                 const running = runningOp === op;
-                const outcome = outcomes[op];
+                const last = outcomes[op];
                 return (
                   <li
                     key={op}
@@ -287,7 +287,9 @@ export function AdminOperations() {
                         <p className="text-(--color-muted-foreground)">{t(description)}</p>
                       </div>
                       <div role="status" className="min-w-0">
-                        {outcome ? <OperationResult outcome={outcome} /> : null}
+                        {/* A new run may end with the very words of the last one. The key makes it a
+                            change of the status all the same, which is announced. */}
+                        {last ? <OperationResult key={last.runAt} outcome={last.outcome} /> : null}
                       </div>
                     </div>
                     <div className="flex shrink-0 @xl:w-24 @xl:justify-end">
