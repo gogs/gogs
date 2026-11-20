@@ -233,6 +233,7 @@ Indexes:
 
 Primary keys: id
 Indexes: 
+	"IDX_issue_user_issue_id" (issue_id)
 	"IDX_issue_user_repo_id" (repo_id)
 	"IDX_issue_user_uid" (uid)
 ```

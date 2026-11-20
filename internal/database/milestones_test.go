@@ -180,6 +180,7 @@ func milestonesCountIssues(t *testing.T, ctx context.Context, s *MilestonesStore
 	newTestMilestoneIssue(t, s, 1, 3, m.ID, true, false)
 	newTestMilestoneIssue(t, s, 1, 4, m.ID, false, true)
 	newTestMilestoneIssue(t, s, 1, 5, 9999, false, false)
+	newTestMilestoneIssue(t, s, 2, 1, m.ID, false, false)
 
 	for _, tc := range []struct {
 		isClosed, includePulls bool
@@ -190,7 +191,7 @@ func milestonesCountIssues(t *testing.T, ctx context.Context, s *MilestonesStore
 		{true, false, 1},
 		{true, true, 1},
 	} {
-		got, err := s.CountIssues(ctx, m.ID, tc.isClosed, tc.includePulls)
+		got, err := s.CountIssues(ctx, m.RepoID, m.ID, tc.isClosed, tc.includePulls)
 		require.NoError(t, err)
 		assert.Equal(t, tc.want, got, "isClosed: %v, includePulls: %v", tc.isClosed, tc.includePulls)
 	}
@@ -382,7 +383,7 @@ func milestonesAssignIssue(t *testing.T, ctx context.Context, s *MilestonesStore
 	}
 
 	issue.MilestoneID = m2.ID
-	err = s.AssignIssue(ctx, logger, repo.Owner, issue, m1.ID)
+	err = s.AssignIssue(ctx, logger, repo.Owner, issue)
 	require.NoError(t, err)
 	assert.Equal(t, []int{0, 0}, counts(m1.ID))
 	assert.Equal(t, []int{1, 1}, counts(m2.ID))
@@ -394,7 +395,7 @@ func milestonesAssignIssue(t *testing.T, ctx context.Context, s *MilestonesStore
 	assert.Contains(t, got[0], `"action": "milestoned"`)
 
 	issue.MilestoneID = 0
-	err = s.AssignIssue(ctx, logger, repo.Owner, issue, m2.ID)
+	err = s.AssignIssue(ctx, logger, repo.Owner, issue)
 	require.NoError(t, err)
 	assert.Equal(t, []int{0, 0}, counts(m2.ID))
 	assert.Equal(t, []int64{0, 0}, assigned())
@@ -405,7 +406,7 @@ func milestonesAssignIssue(t *testing.T, ctx context.Context, s *MilestonesStore
 
 	// A milestone of another repository cannot be assigned.
 	issue.MilestoneID = 9999
-	err = s.AssignIssue(ctx, logger, repo.Owner, issue, 0)
+	err = s.AssignIssue(ctx, logger, repo.Owner, issue)
 	assert.True(t, IsErrMilestoneNotExist(err), "got %v", err)
 	assert.Equal(t, []int64{0, 0}, assigned())
 }

@@ -438,6 +438,133 @@ func TestIssueCreateConcurrently(t *testing.T) {
 	})
 }
 
+func TestIssueChangeConcurrently(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	c := authenticatedClient(t, owner)
+	create := func(milestoneID int64) (index, id int64) {
+		t.Helper()
+		var created struct {
+			Index int64 `json:"index"`
+		}
+		c.doJSON(http.MethodPost, issueAPIPath(repo, "issues"), map[string]any{"title": "Issue", "milestoneID": milestoneID}, http.StatusCreated, &created)
+		return created.Index, issueFromDatabase(t, repo, created.Index).ID
+	}
+	moveTo := func(index, milestoneID int64) lockedRequest {
+		return lockedRequest{http.MethodPut, issueAPIPath(repo, "issues", index, "milestone"), map[string]any{"id": milestoneID}}
+	}
+	closeIssue := func(index int64) lockedRequest {
+		return lockedRequest{http.MethodPut, issueAPIPath(repo, "issues", index, "closed"), map[string]any{}}
+	}
+	counts := func(milestoneID int64) []int {
+		t.Helper()
+		m, err := database.Handle.Milestones().GetByID(t.Context(), repo.ID, milestoneID)
+		require.NoError(t, err)
+		return []int{m.NumIssues, m.NumClosedIssues}
+	}
+
+	t.Run("moving issues between milestones both ways", func(t *testing.T) {
+		m1 := issueCreateMilestone(t, repo, "both-ways-1")
+		m2 := issueCreateMilestone(t, repo, "both-ways-2")
+		y, _ := create(m1)
+		v, _ := create(m2)
+
+		statuses := c.doBothWhileLocked("SELECT id FROM milestone WHERE id = ? FOR UPDATE", m1, moveTo(y, m2), moveTo(v, m1))
+		assert.Equal(t, []int{http.StatusNoContent, http.StatusNoContent}, statuses)
+		assert.Equal(t, m2, issueFromDatabase(t, repo, y).MilestoneID)
+		assert.Equal(t, m1, issueFromDatabase(t, repo, v).MilestoneID)
+		assert.Equal(t, []int{1, 0}, counts(m1))
+		assert.Equal(t, []int{1, 0}, counts(m2))
+	})
+
+	t.Run("closing an issue while moving it to another milestone", func(t *testing.T) {
+		m1 := issueCreateMilestone(t, repo, "closing-1")
+		m2 := issueCreateMilestone(t, repo, "closing-2")
+		index, _ := create(m1)
+
+		statuses := c.doBothWhileLocked("SELECT id FROM milestone WHERE id = ? FOR UPDATE", m1, moveTo(index, m2), closeIssue(index))
+		assert.Equal(t, []int{http.StatusNoContent, http.StatusNoContent}, statuses)
+		issue := issueFromDatabase(t, repo, index)
+		assert.True(t, issue.IsClosed)
+		assert.Equal(t, m2, issue.MilestoneID)
+		assert.Equal(t, []int{0, 0}, counts(m1))
+		assert.Equal(t, []int{1, 1}, counts(m2))
+	})
+
+	t.Run("moving an issue that was closed meanwhile", func(t *testing.T) {
+		// The move loads the issue while it is open and saves its milestone
+		// after the close.
+		m := issueCreateMilestone(t, repo, "closed-meanwhile")
+		index, id := create(0)
+
+		statuses := c.doBothWhileLocked("SELECT id FROM issue WHERE id = ? FOR UPDATE", id, closeIssue(index), moveTo(index, m))
+		assert.Equal(t, []int{http.StatusNoContent, http.StatusNoContent}, statuses)
+		issue := issueFromDatabase(t, repo, index)
+		assert.True(t, issue.IsClosed)
+		assert.Equal(t, m, issue.MilestoneID)
+		assert.Equal(t, []int{1, 1}, counts(m))
+	})
+
+	t.Run("changing the assignee while closing the issue", func(t *testing.T) {
+		index, _ := create(0)
+
+		statuses := c.doBothWhileLocked("SELECT id FROM repository WHERE id = ? FOR UPDATE", repo.ID, closeIssue(index),
+			lockedRequest{http.MethodPut, issueAPIPath(repo, "issues", index, "assignee"), map[string]any{"id": owner.ID}})
+		assert.Equal(t, []int{http.StatusNoContent, http.StatusNoContent}, statuses)
+		issue := issueFromDatabase(t, repo, index)
+		assert.True(t, issue.IsClosed)
+		assert.Equal(t, owner.ID, issue.AssigneeID)
+	})
+
+	t.Run("deleting a milestone while closing an issue in it", func(t *testing.T) {
+		m := issueCreateMilestone(t, repo, "deleting")
+		index, id := create(m)
+
+		statuses := c.doBothWhileLocked("SELECT id FROM issue WHERE id = ? FOR UPDATE", id, closeIssue(index),
+			lockedRequest{http.MethodDelete, issueAPIPath(repo, "milestones", m), map[string]any{}})
+		assert.Equal(t, []int{http.StatusNoContent, http.StatusNoContent}, statuses)
+		issue := issueFromDatabase(t, repo, index)
+		assert.True(t, issue.IsClosed)
+		assert.Zero(t, issue.MilestoneID)
+	})
+
+	t.Run("deleting a milestone while moving an issue to it", func(t *testing.T) {
+		m := issueCreateMilestone(t, repo, "deleting-moved-to")
+		other := issueCreateMilestone(t, repo, "deleting-moved-to-other")
+		index, _ := create(0)
+
+		// The move commits after the delete has listed the issues of the
+		// milestone.
+		statuses := c.doBothWhileLocked("SELECT id FROM milestone WHERE id = ? FOR UPDATE", m, moveTo(index, m),
+			lockedRequest{http.MethodDelete, issueAPIPath(repo, "milestones", m), map[string]any{}})
+		assert.Equal(t, []int{http.StatusNoContent, http.StatusNoContent}, statuses)
+		left, err := database.Handle.Milestones().CountIssues(t.Context(), repo.ID, m, false, true)
+		require.NoError(t, err)
+		assert.Zero(t, left, "issues left with the deleted milestone")
+
+		var view issueView
+		c.doJSON(http.MethodGet, issueAPIPath(repo, "issues", index), nil, http.StatusOK, &view)
+		assert.Nil(t, view.Milestone)
+		for _, req := range []lockedRequest{closeIssue(index), moveTo(index, other)} {
+			status, body := c.do(req.method, req.path, req.body)
+			require.Equal(t, http.StatusNoContent, status, "%s %s: %s", req.method, req.path, body)
+		}
+		assert.Equal(t, []int{1, 1}, counts(other))
+	})
+
+	t.Run("moving an issue to a milestone being deleted", func(t *testing.T) {
+		m := issueCreateMilestone(t, repo, "moving-to-deleted")
+		index, _ := create(0)
+
+		statuses := c.doBothWhileLocked("SELECT id FROM milestone WHERE id = ? FOR UPDATE", m,
+			lockedRequest{http.MethodDelete, issueAPIPath(repo, "milestones", m), map[string]any{}}, moveTo(index, m))
+		assert.Equal(t, []int{http.StatusNoContent, http.StatusBadRequest}, statuses)
+		assert.Zero(t, issueFromDatabase(t, repo, index).MilestoneID)
+	})
+}
+
 // An edit whose client goes away after the content is saved still updates the
 // files the content links.
 func TestIssueEditAttachmentsClientGone(t *testing.T) {
