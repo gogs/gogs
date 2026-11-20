@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/rand/v2"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -262,6 +263,129 @@ func TestStore_JoinedRequests(t *testing.T) {
 	}
 	assert.Equal(t, map[string]int{"GET": 1, "PROPFIND": 2}, requests)
 	assert.Equal(t, 3, overview.Requests)
+}
+
+// joinedTo returns a context whose requests all belong to one trace, as those
+// of a client that sends its own trace ID do.
+func joinedTo(id byte) context.Context {
+	parent := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    trace.TraceID{id, 1},
+		SpanID:     trace.SpanID{1},
+		TraceFlags: trace.FlagsSampled,
+		Remote:     true,
+	})
+	return trace.ContextWithRemoteSpanContext(context.Background(), parent)
+}
+
+// A request that joined the trace of another one is only found in that trace,
+// so one that failed or was slow keeps the trace, also when the request that
+// ended last is neither.
+func TestStore_JoinedRequestKeepsTrace(t *testing.T) {
+	tests := []struct {
+		name       string
+		status     int
+		duration   time.Duration
+		want       KeptReason
+		wantErrors int
+	}{
+		{name: "failed", status: 500, duration: time.Millisecond, want: KeptFailed, wantErrors: 1},
+		{name: "slow", status: 200, duration: 2 * time.Second, want: KeptSlow},
+		{name: "neither", status: 200, duration: time.Millisecond},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			store, tracer := newTestStore(t, defaultOptions())
+			// Takes the one sample of its route for the minute.
+			record(tracer, testRequest{route: "/a", status: 200, duration: time.Millisecond})
+
+			ctx := joinedTo(0xc1)
+			end := testNow.Add(-500 * time.Millisecond)
+			request := func(route string, status int, duration time.Duration) trace.Span {
+				_, sp := tracer.Start(ctx, "GET "+route,
+					trace.WithSpanKind(trace.SpanKindServer),
+					trace.WithTimestamp(end.Add(-duration)),
+					trace.WithAttributes(
+						attribute.String("http.route", route),
+						attribute.Int("http.response.status_code", status),
+					),
+				)
+				return sp
+			}
+			last := request("/a", 200, 10*time.Millisecond)
+			request("/b", test.status, test.duration+time.Millisecond).End(trace.WithTimestamp(end.Add(-time.Millisecond)))
+			last.End(trace.WithTimestamp(end))
+
+			got, ok := store.Get(last.SpanContext().TraceID().String())
+			require.Equal(t, test.want != "", ok)
+			if ok {
+				assert.Equal(t, test.want, got.Kept)
+			}
+
+			interval := store.TakeInterval()
+			assert.Equal(t, 3, interval.Requests)
+			assert.Equal(t, test.wantErrors, interval.Errors)
+			for _, route := range store.Overview(15, "15m").Routes {
+				if route.Name == "GET /b" {
+					assert.Equal(t, test.wantErrors, route.Errors)
+				}
+			}
+		})
+	}
+}
+
+// A request can carry the trace ID of background work, e.g., one that a Git
+// hook sends during a push. It counts as a request like any other, while the
+// interval leaves it out along with the time of the work it joined.
+func TestStore_RequestJoinedBackgroundWork(t *testing.T) {
+	store, tracer := newTestStore(t, defaultOptions())
+
+	ctx := joinedTo(0xc2)
+	start := testNow.Add(-time.Second)
+	_, background := tracer.Start(ctx, "ssh git-receive-pack", trace.WithTimestamp(start))
+	requestCtx, request := tracer.Start(ctx, "GET /a",
+		trace.WithSpanKind(trace.SpanKindServer),
+		trace.WithTimestamp(start),
+		trace.WithAttributes(attribute.String("http.route", "/a")),
+	)
+	_, query := tracer.Start(requestCtx, "db SELECT user", trace.WithTimestamp(start))
+	query.End(trace.WithTimestamp(start.Add(100 * time.Millisecond)))
+	request.End(trace.WithTimestamp(start.Add(300 * time.Millisecond)))
+	background.End(trace.WithTimestamp(start.Add(500 * time.Millisecond)))
+
+	overview := store.Overview(15, "15m")
+	assert.Equal(t, 1, overview.Requests)
+	assert.InDelta(t, 300, overview.TotalMs, 0.001)
+	// 500 ms of the background work, 200 ms of the request outside its query,
+	// and the 100 ms of the query.
+	assert.InDelta(t, 800, overview.SpanSelfMs, 0.001)
+	requests := make(map[string]int)
+	for _, route := range overview.Routes {
+		requests[route.Name] = route.Requests
+	}
+	assert.Equal(t, map[string]int{"GET /a": 1, "ssh git-receive-pack": 1}, requests)
+	assert.Zero(t, store.TakeInterval().Requests)
+}
+
+// Once the store holds as many routes as it keeps, a new one counts with the
+// others of its kind, and its traces are listed there too.
+func TestStore_RouteLimit(t *testing.T) {
+	store, tracer := newTestStore(t, defaultOptions())
+	for i := range maxRoutes {
+		record(tracer, testRequest{route: "/" + strconv.Itoa(i), status: 200, duration: time.Millisecond})
+	}
+
+	request := record(tracer, testRequest{route: "/new", status: 500, duration: time.Millisecond})
+	got, ok := store.Get(request)
+	require.True(t, ok)
+	assert.Equal(t, Route{Name: "GET", Kind: RouteKindOther, Method: "GET"}, got.Route)
+
+	_, background := tracer.Start(context.Background(), "mirror sync", trace.WithTimestamp(testNow.Add(-2*time.Second)))
+	background.End(trace.WithTimestamp(testNow))
+	got, ok = store.Get(background.SpanContext().TraceID().String())
+	require.True(t, ok)
+	assert.Equal(t, Route{Name: "other", Kind: RouteKindBackground}, got.Route)
+
+	assert.Equal(t, 1, store.Search(SearchQuery{Route: "GET"}).Total)
 }
 
 // A client can send many requests with the trace ID of one that is still
