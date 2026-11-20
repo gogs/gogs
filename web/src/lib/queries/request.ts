@@ -1,7 +1,18 @@
 import { type ReactNode, createElement } from "react";
+import { toast } from "sonner";
 
 import { SessionExpired } from "@/components/SessionExpired";
 import { LoaderResponseError, displayMessage, loaderResponseError } from "@/lib/loader-error";
+
+// SESSION_EXPIRED_TOAST is the ID of the toast that tells a viewer their
+// session expired, see `toastError`.
+export const SESSION_EXPIRED_TOAST = "session-expired";
+
+// sessionWorks takes that toast away once a change went through, which tells
+// that the viewer signed in again, e.g., on the tab its link opens.
+export function sessionWorks() {
+  if (toast.getToasts().some((shown) => shown.id === SESSION_EXPIRED_TOAST)) toast.dismiss(SESSION_EXPIRED_TOAST);
+}
 
 // A signal cancels the request, e.g., when the answer is no longer needed.
 export async function fetchJSON<T>(url: string, signal?: AbortSignal): Promise<T> {
@@ -14,6 +25,7 @@ export async function fetchJSON<T>(url: string, signal?: AbortSignal): Promise<T
 export async function send(method: "POST" | "PUT" | "DELETE", url: string) {
   const res = await fetch(url, { method, credentials: "same-origin", headers: { "Content-Type": "application/json" } });
   if (!res.ok) throw await loaderResponseError(res);
+  sessionWorks();
 }
 
 // FormError is a failed form submission, with the message for the whole form
@@ -58,6 +70,7 @@ export async function submit<T>(method: "POST" | "PUT" | "PATCH" | "DELETE", url
       data,
     );
   }
+  sessionWorks();
   // Some changes answer without a body, e.g., 201 Created for a new SSH key.
   const text = await res.text();
   return (text ? JSON.parse(text) : undefined) as T;
@@ -69,6 +82,7 @@ export async function uploadAvatar(url: string, file: File) {
   body.append("avatar", file);
   const res = await fetch(url, { method: "PUT", credentials: "same-origin", body });
   if (!res.ok) throw await loaderResponseError(res);
+  sessionWorks();
 }
 
 // formErrors returns the messages for the fields of a failed form, and the

@@ -853,3 +853,14 @@ diffs-container {
 html[data-fullwidth] :is(.max-w-6xl, .max-w-7xl) {
   max-width: none;
 }
+
+/* Toasts are sonner's, which sets its colors on these selectors. The red of an
+   error on its tint is below 4.5:1, and the button that closes a toast is
+   smaller than a 24px target. */
+:root [data-sonner-toaster][data-sonner-theme="light"] {
+  --error-text: #b3242d;
+}
+:root [data-sonner-toast][data-styled="true"] [data-close-button] {
+  width: 24px;
+  height: 24px;
+}

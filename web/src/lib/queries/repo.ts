@@ -2,7 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 
 import type { UserListPage } from "@/components/UserListItem";
 import { loaderResponseError } from "@/lib/loader-error";
-import { fetchJSON, send, submit, uploadAvatar } from "@/lib/queries/request";
+import { fetchJSON, send, sessionWorks, submit, uploadAvatar } from "@/lib/queries/request";
 import type { SSHKey } from "@/lib/queries/settings";
 import type { DashboardIssue, IssueLabel } from "@/lib/queries/user";
 import { subUrl } from "@/lib/url";
@@ -962,6 +962,7 @@ export async function uploadRepoAttachment(
     body,
   });
   if (!res.ok) throw await loaderResponseError(res);
+  sessionWorks();
   return (await res.json()) as { uuid: string; url?: string };
 }
 
