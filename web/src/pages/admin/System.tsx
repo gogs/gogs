@@ -25,6 +25,8 @@ import {
 import { formErrors } from "@/lib/queries/request";
 import { formatAbsoluteTime } from "@/lib/relative-time";
 import { useFocusFirstError } from "@/lib/use-focus-error";
+import { useIsLinked } from "@/lib/use-is-linked";
+import { cn } from "@/lib/utils";
 
 export function ReportValue({ row }: { row: AdminReportRow }) {
   switch (row.kind) {
@@ -193,9 +195,10 @@ function countRows(sections: AdminReportSection[]) {
 // ConfigSection shows the settings of one section of the configuration, with
 // the label beside the value where the card is wide enough for both.
 function ConfigSection({ section, emailEnabled }: { section: AdminReportSection; emailEnabled: boolean }) {
+  const linked = useIsLinked(section.id);
   return (
-    <section id={section.id} aria-labelledby={`${section.id}-title`} className="mb-4 scroll-mt-16 break-inside-avoid">
-      <Card className="@container">
+    <section id={section.id} aria-labelledby={`${section.id}-title`} className="scroll-mt-16">
+      <Card className={cn("@container", linked && "!border-(--color-primary) ring-2 ring-(--color-primary)/30")}>
         <CardHeader>
           <CardTitle id={`${section.id}-title`} className="text-base">
             {section.title}
@@ -283,7 +286,7 @@ export function AdminConfig({ config }: { config: AdminConfigData }) {
               ))}
             </ul>
           </nav>
-          <div className="-mb-4 gap-4 2xl:columns-2">
+          <div className="grid gap-4">
             {sections.map((section) => (
               <ConfigSection key={section.id} section={section} emailEnabled={config.emailEnabled} />
             ))}
