@@ -282,21 +282,41 @@ func joinedTo(id byte) context.Context {
 // ended last is neither.
 func TestStore_JoinedRequestKeepsTrace(t *testing.T) {
 	tests := []struct {
-		name       string
+		name string
+		// The joined request.
 		status     int
+		spanFailed bool
 		duration   time.Duration
-		want       KeptReason
-		wantErrors int
+		// The request that ends last.
+		lastStatus int
+		// sampleTaken is whether the route of that request has had its sample
+		// of the minute, so that the trace would be dropped.
+		sampleTaken   bool
+		slowThreshold time.Duration
+		want          KeptReason
+		wantErrors    int
 	}{
-		{name: "failed", status: 500, duration: time.Millisecond, want: KeptFailed, wantErrors: 1},
-		{name: "slow", status: 200, duration: 2 * time.Second, want: KeptSlow},
-		{name: "neither", status: 200, duration: time.Millisecond},
+		{name: "failed", status: 500, duration: time.Millisecond, lastStatus: 200, sampleTaken: true, slowThreshold: time.Second, want: KeptFailed, wantErrors: 1},
+		{name: "failed by the status of its span", status: 200, spanFailed: true, duration: time.Millisecond, lastStatus: 200, sampleTaken: true, slowThreshold: time.Second, want: KeptFailed, wantErrors: 1},
+		{name: "failed in a sampled trace", status: 500, duration: time.Millisecond, lastStatus: 200, slowThreshold: time.Second, want: KeptFailed, wantErrors: 1},
+		{name: "slow", status: 200, duration: 2 * time.Second, lastStatus: 200, sampleTaken: true, slowThreshold: time.Second, want: KeptSlow},
+		{name: "slow at the threshold", status: 200, duration: time.Second, lastStatus: 200, sampleTaken: true, slowThreshold: time.Second, want: KeptSlow},
+		{name: "slow in a sampled trace", status: 200, duration: 2 * time.Second, lastStatus: 200, slowThreshold: time.Second, want: KeptSlow},
+		{name: "slow in a failed trace", status: 200, duration: 2 * time.Second, lastStatus: 500, sampleTaken: true, slowThreshold: time.Second, want: KeptFailed, wantErrors: 1},
+		{name: "slow without a threshold", status: 200, duration: 2 * time.Second, lastStatus: 200, sampleTaken: true},
+		{name: "neither", status: 200, duration: time.Millisecond, lastStatus: 200, sampleTaken: true, slowThreshold: time.Second},
+		{name: "neither in a sampled trace", status: 200, duration: time.Millisecond, lastStatus: 200, slowThreshold: time.Second, want: KeptSampled},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			store, tracer := newTestStore(t, defaultOptions())
-			// Takes the one sample of its route for the minute.
-			record(tracer, testRequest{route: "/a", status: 200, duration: time.Millisecond})
+			opts := defaultOptions()
+			opts.SlowThreshold = test.slowThreshold
+			store, tracer := newTestStore(t, opts)
+			wantRequests := 2
+			if test.sampleTaken {
+				record(tracer, testRequest{route: "/a", status: 200, duration: time.Millisecond})
+				wantRequests++
+			}
 
 			ctx := joinedTo(0xc1)
 			end := testNow.Add(-500 * time.Millisecond)
@@ -311,24 +331,39 @@ func TestStore_JoinedRequestKeepsTrace(t *testing.T) {
 				)
 				return sp
 			}
-			last := request("/a", 200, 10*time.Millisecond)
-			request("/b", test.status, test.duration+time.Millisecond).End(trace.WithTimestamp(end.Add(-time.Millisecond)))
+			last := request("/a", test.lastStatus, 10*time.Millisecond)
+			joined := request("/b", test.status, test.duration+time.Millisecond)
+			if test.spanFailed {
+				joined.SetStatus(codes.Error, "")
+			}
+			joined.End(trace.WithTimestamp(end.Add(-time.Millisecond)))
 			last.End(trace.WithTimestamp(end))
 
-			got, ok := store.Get(last.SpanContext().TraceID().String())
+			id := last.SpanContext().TraceID().String()
+			got, ok := store.Get(id)
 			require.Equal(t, test.want != "", ok)
 			if ok {
 				assert.Equal(t, test.want, got.Kept)
+				assert.Equal(t, test.lastStatus, got.Status, "the trace shows the request that ended last")
+			}
+
+			// The search for failed requests finds the trace by the one that joined it.
+			failed := store.Search(SearchQuery{Status: "5xx"})
+			if test.want == KeptFailed {
+				require.Len(t, failed.Traces, 1)
+				assert.Equal(t, id, failed.Traces[0].ID)
+				assert.True(t, failed.Traces[0].Error)
+				require.Len(t, failed.Points, 1)
+				assert.True(t, failed.Points[0].Error)
+			} else {
+				assert.Empty(t, failed.Traces)
 			}
 
 			interval := store.TakeInterval()
-			assert.Equal(t, 3, interval.Requests)
+			assert.Equal(t, wantRequests, interval.Requests)
 			assert.Equal(t, test.wantErrors, interval.Errors)
-			for _, route := range store.Overview(15, "15m").Routes {
-				if route.Name == "GET /b" {
-					assert.Equal(t, test.wantErrors, route.Errors)
-				}
-			}
+			overview := store.Overview(15, "15m")
+			assert.Equal(t, test.wantErrors, overview.Errors)
 		})
 	}
 }
