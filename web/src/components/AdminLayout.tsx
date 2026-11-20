@@ -203,6 +203,14 @@ export function AdminLayout() {
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const [sheetOpen, setSheetOpen] = useState(false);
   const sheetToggle = useRef<HTMLButtonElement>(null);
+  // The sheet closes when the page changes under it, e.g., through a result of the command
+  // palette, which opens over the sheet.
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const [sheetPathname, setSheetPathname] = useState(pathname);
+  if (sheetPathname !== pathname) {
+    setSheetPathname(pathname);
+    setSheetOpen(false);
+  }
   const [crumbSlot, setCrumbSlot] = useState<HTMLElement | null>(null);
 
   // The deepest route tells the page, e.g., "/admin/users/$id".
@@ -227,7 +235,7 @@ export function AdminLayout() {
       // The choice lasts until the page reloads.
     }
   };
-  // The sheet closes after a click on a link, which stays in the app.
+  // The sheet also closes after a click on the link of the page it is on.
   const closeOnLink = (e: MouseEvent) => {
     if ((e.target as Element).closest("a")) setSheetOpen(false);
   };
