@@ -29,6 +29,7 @@ import {
   fetchAdminOrgs,
   fetchAdminRepos,
   fetchAdminTrace,
+  fetchAdminTraceSearch,
   fetchAdminUser,
   fetchAdminUserOptions,
   fetchAdminUsers,
@@ -59,6 +60,12 @@ async function loadAdminPage<T>(location: { href: string }, load: () => Promise<
   }
 }
 
+// turnedAway reports whether the server turned a request away for good, which
+// another try does not change. A 408 or a 429 may be answered the next time.
+function turnedAway(err: unknown) {
+  return err instanceof LoaderResponseError && err.status < 500 && err.status !== 408 && err.status !== 429;
+}
+
 // loadRefreshed loads what a page shows through the query that keeps it fresh
 // from then on (see `useRefreshed`), so the loader and the page ask once
 // between them. When the viewer returns to a view the router still holds, e.g.,
@@ -78,15 +85,14 @@ function loadRefreshed<T, K extends QueryKey>(
     const joined = queryClient.getQueryState(query.queryKey)?.fetchStatus === "fetching";
     try {
       return await load().catch((err: unknown) => {
-        if (!joined) throw err;
+        if (!joined || turnedAway(err)) throw err;
         return load();
       });
     } catch (err) {
       // Numbers the viewer has seen stay up when loading them again fails, as after a refresh
-      // that failed, and the RefreshNote of the page tells from when they are. They do not when
-      // the server turned the request away, which another try does not change.
+      // that failed, and the RefreshNote of the page tells from when they are.
       const last = queryClient.getQueryData<T>(query.queryKey);
-      if (last === undefined || (err instanceof LoaderResponseError && err.status < 500)) throw err;
+      if (last === undefined || turnedAway(err)) throw err;
       return last;
     }
   });
@@ -167,9 +173,15 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
         const overview = await loadRefreshed(context, location, adminTraceOverviewQuery(deps.range ?? "1h"));
         return { view: "overview" as const, overview };
       }
-      const result = await loadRefreshed(context, location, adminTraceSearchQuery(deps));
+      if (!deps.q) {
+        const result = await loadRefreshed(context, location, adminTraceSearchQuery(deps));
+        return { view: "search" as const, result };
+      }
+      // The lookup of a trace ID does not refresh itself and has no RefreshNote, so it always
+      // shows the answer to this very request.
+      const result = await loadAdminPage(location, () => fetchAdminTraceSearch(deps));
       // A trace ID, or a prefix of one that only one trace has, opens the trace.
-      if (deps.q && result.total === 1) {
+      if (result.total === 1) {
         // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
         throw redirect({ to: "/admin/traces/$id", params: { id: result.traces[0].id }, replace: true });
       }
