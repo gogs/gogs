@@ -292,7 +292,7 @@ function CommitForm({
   );
 }
 
-const TAB_CLASS = "cursor-pointer rounded-md px-3 py-1.5 text-sm whitespace-nowrap";
+const TAB_CLASS = "cursor-pointer rounded-md px-3 py-1.5 text-sm whitespace-nowrap glass-ui:px-2.5";
 
 function EditorTabs<K extends string>({
   id,
@@ -308,7 +308,7 @@ function EditorTabs<K extends string>({
   onChange: (key: K) => void;
 }) {
   return (
-    <div role="tablist" aria-label={label} className="mb-3 flex gap-1 overflow-x-auto">
+    <div role="tablist" aria-label={label} className="glass-control glass-tabs mb-3 flex gap-1 overflow-x-auto">
       {tabs.map((tab) => (
         <button
           key={tab.key}

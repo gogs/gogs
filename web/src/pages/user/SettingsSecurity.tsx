@@ -35,6 +35,7 @@ import {
   regenerateRecoveryCodes,
   setPrimaryEmail,
 } from "@/lib/queries/settings";
+import { toastError } from "@/lib/toast-error";
 import { subUrl } from "@/lib/url";
 import { useUserInfo } from "@/lib/use-user-info";
 import { PasswordSection } from "@/pages/user/Settings";
@@ -133,7 +134,7 @@ function EmailRow({ item }: { item: UserEmail }) {
   const primary = useMutation({
     mutationFn: () => setPrimaryEmail(item.email),
     onSuccess: () => router.invalidate(),
-    onError: (err) => toast.error(err.message),
+    onError: (err) => toastError(err),
   });
   return (
     <li className={ROW_CLASS}>
@@ -537,7 +538,7 @@ export function UserRecoveryCodes({ codes: initialCodes }: { codes: RecoveryCode
       setCodes(next);
       toast.success(t("settings.two_factor_regenerate_recovery_codes_success"));
     },
-    onError: (err) => toast.error(err.message),
+    onError: (err) => toastError(err),
   });
   return (
     <UserSettingsLayout active="security">

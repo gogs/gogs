@@ -1,4 +1,7 @@
-import { loaderResponseError } from "@/lib/loader-error";
+import { type ReactNode, createElement } from "react";
+
+import { SessionExpired } from "@/components/SessionExpired";
+import { LoaderResponseError, displayMessage, loaderResponseError } from "@/lib/loader-error";
 
 // A signal cancels the request, e.g., when the answer is no longer needed.
 export async function fetchJSON<T>(url: string, signal?: AbortSignal): Promise<T> {
@@ -16,16 +19,27 @@ export async function send(method: "POST" | "PUT" | "DELETE", url: string) {
 // FormError is a failed form submission, with the message for the whole form
 // or the messages for its fields.
 export class FormError extends Error {
+  status: number;
   fields: Record<string, string | null>;
   // body is the whole response, for errors that tell more, e.g., a conflict.
   body: Record<string, unknown>;
 
-  constructor(message: string, fields: Record<string, string | null>, body: Record<string, unknown> = {}) {
+  constructor(status: number, message: string, fields: Record<string, string | null>, body: Record<string, unknown>) {
     super(message);
     this.name = "FormError";
+    this.status = status;
     this.fields = fields;
     this.body = body;
   }
+}
+
+// isSessionExpired reports whether a change failed because the viewer is no
+// longer authenticated. The web API also answers 401 to a wrong password, so
+// the words of the error decide.
+export function isSessionExpired(err: unknown) {
+  if (err instanceof FormError) return err.status === 401 && err.body.error === "authentication required";
+  if (err instanceof LoaderResponseError) return err.status === 401 && err.errorField === "authentication required";
+  return false;
 }
 
 export async function submit<T>(method: "POST" | "PUT" | "PATCH" | "DELETE", url: string, body: unknown): Promise<T> {
@@ -37,7 +51,12 @@ export async function submit<T>(method: "POST" | "PUT" | "PATCH" | "DELETE", url
   });
   if (!res.ok) {
     const data = (await res.json().catch(() => ({}))) as { error?: string; fields?: Record<string, string | null> };
-    throw new FormError(data.error ?? `HTTP ${res.status}`, data.fields ?? {}, data);
+    throw new FormError(
+      res.status,
+      data.error ? displayMessage(data.error) : `HTTP ${res.status}`,
+      data.fields ?? {},
+      data,
+    );
   }
   // Some changes answer without a body, e.g., 201 Created for a new SSH key.
   const text = await res.text();
@@ -53,9 +72,10 @@ export async function uploadAvatar(url: string, file: File) {
 }
 
 // formErrors returns the messages for the fields of a failed form, and the
-// message for the whole form when no field is to blame.
-export function formErrors(error: Error | null) {
+// message for the whole form when no field is to blame. A viewer whose session
+// expired keeps what they typed and reads how to send it.
+export function formErrors(error: Error | null): { fields: Record<string, string | null>; formError: ReactNode } {
   const fields = error instanceof FormError ? error.fields : {};
-  const formError = error && Object.keys(fields).length === 0 ? error.message : null;
-  return { fields, formError };
+  if (!error || Object.keys(fields).length > 0) return { fields, formError: null };
+  return { fields, formError: isSessionExpired(error) ? createElement(SessionExpired) : error.message };
 }

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { usePageTitle } from "@/lib/page-title";
 import { inviteOrgMember } from "@/lib/queries/org";
+import { formErrors } from "@/lib/queries/request";
 import { userProfileQuery } from "@/lib/queries/user";
 
 // OrgInvite adds a user to an organization. Only owners get here.
@@ -34,7 +35,7 @@ export function OrgInvite({ org: orgName }: { org: string }) {
     e.preventDefault();
     if (username.trim()) mutation.mutate();
   };
-  const error = mutation.error?.message;
+  const error = formErrors(mutation.error).formError ?? mutation.error?.message;
 
   return (
     <main className="flex-1">

@@ -1290,7 +1290,7 @@ function ViewModeButton({ active, onClick, children }: { active: boolean; onClic
       className={cn(
         "min-w-11 cursor-pointer px-2.5",
         active
-          ? "bg-(--color-background) font-semibold text-(--color-foreground)"
+          ? "bg-(--color-background) font-semibold text-(--color-foreground) glass-ui:bg-(--color-surface)"
           : "text-(--color-muted-foreground) hover:text-(--color-foreground)",
       )}
     >

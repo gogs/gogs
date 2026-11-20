@@ -20,7 +20,7 @@ import {
   deleteOrgTeam,
   updateOrgTeam,
 } from "@/lib/queries/org";
-import { FormError } from "@/lib/queries/request";
+import { FormError, formErrors } from "@/lib/queries/request";
 import { userProfileQuery } from "@/lib/queries/user";
 
 const PERMISSIONS: TeamPermission[] = ["read", "write", "admin"];
@@ -59,8 +59,7 @@ export function TeamForm({ org: orgName, team }: { org: string; team?: OrgTeamDe
   });
   if (org.kind !== "organization") return null;
 
-  const fieldErrors = save.error instanceof FormError ? save.error.fields : {};
-  const formError = save.error && Object.keys(fieldErrors).length === 0 ? save.error.message : null;
+  const { fields: fieldErrors, formError } = formErrors(save.error);
   // The owners team keeps its name and its full access.
   const isOwnerTeam = team?.isOwnerTeam ?? false;
 

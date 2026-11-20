@@ -10,6 +10,7 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -28,6 +29,14 @@ import (
 )
 
 var tracer = otel.Tracer("gogs.io/gogs/internal/ssh")
+
+var connections atomic.Int64
+
+// Connections returns how many clients are connected to the builtin SSH
+// server.
+func Connections() int64 {
+	return connections.Load()
+}
 
 func cleanCommand(cmd string) string {
 	i := strings.Index(cmd, "git")
@@ -182,7 +191,12 @@ func listen(logger *logx.Logger, config *ssh.ServerConfig, host string, port int
 			logger.Debug("Accepted connection", "remoteAddr", sConn.RemoteAddr(), "clientVersion", string(sConn.ClientVersion()))
 			// The incoming Request channel must be serviced.
 			go ssh.DiscardRequests(reqs)
-			go handleServerConn(logger, sConn.Permissions.Extensions["key-id"], chans)
+			connections.Add(1)
+			go func() {
+				defer connections.Add(-1)
+				// It returns once the client disconnected.
+				handleServerConn(logger, sConn.Permissions.Extensions["key-id"], chans)
+			}()
 		}()
 	}
 }

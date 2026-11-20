@@ -5,6 +5,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"sync/atomic"
 
 	"github.com/cockroachdb/errors"
 	"github.com/inbucket/html2text"
@@ -118,6 +119,7 @@ func sendMessage(msg *message) error {
 
 func processMailQueue(logger *logx.Logger) {
 	for msg := range mailQueue {
+		queued.Add(-1)
 		to := strings.Join(msg.msg.GetToString(), ", ")
 		logger.Debug("Sending email", "to", to, "description", msg.info)
 		if err := sendMessage(msg); err != nil {
@@ -130,6 +132,15 @@ func processMailQueue(logger *logx.Logger) {
 }
 
 var mailQueue chan *message
+
+// queued counts the messages in the mail queue, since the queue itself is
+// replaced while it is read during a reinstall.
+var queued atomic.Int64
+
+// QueueLen returns how many messages wait to be sent.
+func QueueLen() int64 {
+	return queued.Load()
+}
 
 // NewContext initializes settings for mailer.
 func NewContext(logger *logx.Logger) {
@@ -152,6 +163,7 @@ func send(msg *message) {
 		return
 	}
 
+	queued.Add(1)
 	mailQueue <- msg
 
 	if conf.HookMode {

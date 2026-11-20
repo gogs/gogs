@@ -93,7 +93,9 @@
   --color-diff-removed: #dc2626;
   --color-border: #d4d4d4;
   --color-input: #8f8f8f;
-  --color-ring: #009fff;
+  /* The primary color. The blue of the dark theme falls short of 3:1 against
+     light surfaces. */
+  --color-ring: #0b6bcb;
 
   /* Token colors of CodeEditor, Pierre Light hues darkened where needed to
      reach 4.5:1 against the background. */
@@ -686,6 +688,9 @@ diffs-container {
    - glass-bar: full-width chrome that content scrolls under, e.g., the navbar.
    - glass-control: outline buttons and segmented button groups.
    - glass-solid: filled buttons, with --glass-solid set to their fill color.
+   - glass-tabs: beside glass-control, on a row of tabs or toggles that are
+     loose pills otherwise, e.g., Write and Preview above an editor, which
+     turn into the flush segments of one control.
    A state that recolors a panel's edge, e.g., a linked comment, needs
    `!border-...`. */
 :root.glass-ui :is(.glass, .glass-list, .glass-section) {
@@ -788,6 +793,45 @@ diffs-container {
      button fills itself through its own hover utility. */
   :root.glass-ui .glass-control:has(:is(a, button):hover) {
     border-color: var(--glass-line-hover);
+  }
+}
+
+/* The row shrinks to its tabs and draws the edge, and the tabs divide by a
+   line instead of a gap, so they stay on one row. The tab shown keeps the fill
+   and weight it has without glass. */
+:root.glass-ui .glass-tabs {
+  flex-wrap: nowrap;
+  gap: 0;
+  width: fit-content;
+  max-width: 100%;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 0.375rem;
+  padding: 0;
+}
+:root.glass-ui .glass-tabs > * {
+  border-width: 0;
+  border-radius: 0;
+}
+:root.glass-ui .glass-tabs > :not(:first-child) {
+  border-left: 1px solid var(--glass-line);
+}
+:root.glass-ui .glass-tabs > :first-child {
+  border-top-left-radius: calc(0.375rem - 1px);
+  border-bottom-left-radius: calc(0.375rem - 1px);
+}
+:root.glass-ui .glass-tabs > :last-child {
+  border-top-right-radius: calc(0.375rem - 1px);
+  border-bottom-right-radius: calc(0.375rem - 1px);
+}
+/* The focus outline stays inside the tab, where a neighbor or the scrolling
+   row cannot cover it. */
+:root.glass-ui .glass-tabs > :focus-visible {
+  outline-offset: -2px;
+}
+@media (hover: hover) {
+  :root.glass-ui .glass-tabs > :hover:not(:disabled) {
+    background-color: var(--color-surface);
   }
 }
 

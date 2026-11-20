@@ -86,7 +86,12 @@ func TestAdminTraces(t *testing.T) {
 		}
 		admin.doJSON(http.MethodGet, "/api/web/admin/health?range="+rangeName, nil, http.StatusOK, &health)
 		assert.Equal(t, rangeName, health.Range)
-		assert.NotEmpty(t, health.Series)
+		keys := make([]string, 0, len(health.Series))
+		for _, series := range health.Series {
+			keys = append(keys, series.Key)
+		}
+		// Measurements of the requests, the Go runtime and the server itself.
+		assert.Subset(t, keys, []string{"requests", "failedRequests", "heap", "dbConnections", "hookQueue"})
 	}
 	status, body = admin.do(http.MethodGet, "/api/web/admin/health?range=7d", nil)
 	assert.Equal(t, http.StatusBadRequest, status, "response: %s", body)

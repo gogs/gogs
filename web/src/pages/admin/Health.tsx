@@ -1,86 +1,36 @@
 import { Link } from "@tanstack/react-router";
-import { type KeyboardEvent, type MouseEvent, type ReactNode, useState } from "react";
+import { type KeyboardEvent, memo, useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  type MouseHandlerDataParam,
+  ReferenceDot,
+  ReferenceLine,
+  type TickItem,
+  XAxis,
+  YAxis,
+} from "recharts";
 
-import { AdminLayout } from "@/components/AdminLayout";
-import { formatMs, formatNumber } from "@/lib/format";
-import type { AdminHealth, AdminHealthKey, AdminHealthRange, AdminHealthSeries } from "@/lib/queries/admin";
-import { formatAbsoluteTime } from "@/lib/relative-time";
+import {
+  AdminPageHeader,
+  RefreshControl,
+  STAT_VALUE,
+  SegmentedLinks,
+  StatCard,
+  TrendChip,
+} from "@/components/AdminPage";
+import { type ChartConfig, ChartContainer, ChartTooltip } from "@/components/ui/chart";
+import { METRICS, SECTIONS, flag, flagText } from "@/lib/admin-health";
+import { useRefreshed } from "@/lib/admin-refresh";
+import { type AdminHealth, type AdminHealthRange, type AdminHealthSeries, adminHealthQuery } from "@/lib/queries/admin";
+import { formatAbsoluteTime, formatClockTime } from "@/lib/relative-time";
 import { cn } from "@/lib/utils";
 
-type HealthSection = "traffic" | "runtime" | "resources";
+const LINK = "inline-flex min-h-6 items-center text-(--color-primary) hover:underline";
 
-// METRICS lists the measurements in the order they are shown. Metrics that
-// follow traffic, e.g., requests, rise and fall every day, so only their spikes
-// are flagged, not their level.
-const METRICS: {
-  key: AdminHealthKey;
-  section: HealthSection;
-  label: string;
-  followsTraffic?: true;
-  format: (v: number) => string;
-}[] = [
-  {
-    key: "requests",
-    section: "traffic",
-    label: "admin.health.requests",
-    followsTraffic: true,
-    format: (v) => `${v.toFixed(1)} /s`,
-  },
-  { key: "p95", section: "traffic", label: "admin.health.p95", format: formatMs },
-  { key: "heap", section: "runtime", label: "admin.health.heap", format: formatBytes },
-  { key: "goroutines", section: "runtime", label: "admin.health.goroutines", format: formatCount },
-  { key: "gcPause", section: "runtime", label: "admin.health.gc_pause", format: formatMs },
-  { key: "dbConnections", section: "resources", label: "admin.health.db_connections", format: formatCount },
-  {
-    key: "gitProcesses",
-    section: "resources",
-    label: "admin.health.git_processes",
-    followsTraffic: true,
-    format: formatCount,
-  },
-  { key: "openFiles", section: "resources", label: "admin.health.open_files", format: formatCount },
-  { key: "mirrorQueue", section: "resources", label: "admin.health.mirror_queue", format: formatCount },
-];
-
-const SECTIONS: Record<HealthSection, string> = {
-  traffic: "admin.health.traffic",
-  runtime: "admin.health.runtime",
-  resources: "admin.health.resources",
-};
-
-function formatCount(v: number) {
-  return formatNumber(Math.round(v));
-}
-
-function formatBytes(v: number) {
-  if (v >= 1 << 30) return `${(v / (1 << 30)).toFixed(2)} GB`;
-  return `${Math.round(v / (1 << 20))} MB`;
-}
-
-function median(values: number[]) {
-  return [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)];
-}
-
-// flag tells when a metric left its usual range, which is the first half of
-// the range: its recent level stands out, or it spiked. A spike is reported at
-// its start.
-function flag(points: [number, number][], followsTraffic: boolean): { up: number } | { spikeAt: number } | null {
-  if (points.length < 20) return null;
-  const values = points.map(([, v]) => v);
-  const first = values.slice(0, Math.floor(values.length / 2));
-  const base = median(first);
-  const spread = Math.max(median(first.map((v) => Math.abs(v - base))), 0.5);
-  const tail = values.slice(-Math.max(4, Math.round(values.length / 15)));
-  const tailMean = tail.reduce((a, b) => a + b, 0) / tail.length;
-  const peak = Math.max(...values);
-  if (!followsTraffic && base > 0 && tailMean / base >= 1.5) return { up: tailMean / base };
-  if (peak > base + 6 * spread && peak >= 3 * base) {
-    const start = values.findIndex((v) => v > base + (peak - base) / 2);
-    return { spikeAt: points[start][0] };
-  }
-  return null;
-}
+const SYNC_ID = "admin-health";
 
 // valueAt returns the first value measured at or after the time, which sums
 // up the step that holds the time, or the last one when the time is after
@@ -89,183 +39,220 @@ function valueAt(points: [number, number][], at: number) {
   return (points.find(([t]) => t >= at) ?? points.at(-1))?.[1];
 }
 
-function Sparkline({
+// The series do not all hold the same times, e.g., one can start a sample
+// later than the others, so the charts follow each other by time instead of by
+// index, the same way valueAt reads a value.
+function syncByTime(ticks: readonly TickItem[], data: MouseHandlerDataParam) {
+  const at = Number(data.activeLabel);
+  const index = ticks.findIndex((tick) => Number(tick.value) >= at);
+  return index === -1 ? ticks.length - 1 : index;
+}
+
+// nearestTime snaps a time to the closest measurement, the way the cursor of
+// a hover does, or keeps it when there are no measurements.
+function nearestTime(points: [number, number][], at: number) {
+  return points.reduce(
+    (best, [time]) => (Math.abs(time - at) < Math.abs(best - at) ? time : best),
+    points[0]?.[0] ?? at,
+  );
+}
+
+function activeTime(state: MouseHandlerDataParam) {
+  const at = Number(state.activeLabel);
+  return state.activeLabel != null && Number.isFinite(at) ? at : null;
+}
+
+// MetricChart draws a measurement over the range. It only renders again when
+// the pinned moment changes, since the charts move the cursor of a hover
+// between themselves.
+const MetricChart = memo(function MetricChart({
   series,
   start,
   end,
-  cursor,
+  limit,
+  pinned,
   flagged,
-  label,
-  onCursor,
+  onHover,
   onPin,
-  onClear,
-  stepMs,
 }: {
   series: AdminHealthSeries;
   start: number;
   end: number;
-  cursor: number | null;
+  // The limit of the series as it reads, e.g., "64 GB".
+  limit: string;
+  pinned: number | null;
   flagged: boolean;
-  label: string;
-  onCursor: (at: number | null) => void;
+  onHover: (at: number | null) => void;
   onPin: (at: number) => void;
-  onClear: () => void;
-  stepMs: number;
 }) {
-  const W = 300;
-  const H = 100;
-  const values = series.points.map(([, v]) => v);
-  const peak = Math.max(0, ...values);
+  const { t } = useTranslation();
+  const gradient = `health-${useId().replace(/\W/g, "")}`;
+  const data = useMemo(
+    () =>
+      series.points.length > 0
+        ? series.points.map(([time, value]) => ({ time, value }))
+        : // Recharts draws no axis without data, so a chart without measurements holds its two ends.
+          [{ time: start }, { time: end }],
+    [series.points, start, end],
+  );
+  const peak = Math.max(0, ...series.points.map(([, v]) => v));
   // A limit far above the values, e.g., of open files, would flatten the line.
   const scaleToLimit = series.limit > 0 && series.limit <= peak * 10;
   const max = scaleToLimit ? series.limit : peak * 1.1 || 1;
-  const x = (t: number) => ((t - start) / (end - start)) * W;
-  const y = (v: number) => H - (Math.min(v, max) / max) * (H - 4) - 2;
-  const line = series.points.map(([t, v]) => `${x(t).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
-
-  const timeAt = (e: MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const ratio = Math.min(Math.max(0, (e.clientX - rect.left) / rect.width), 1);
-    return start + ratio * (end - start);
-  };
-  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    const at = cursor ?? end;
-    const step = e.shiftKey ? stepMs * 10 : stepMs;
-    if (e.key === "ArrowLeft") onPin(Math.max(start, at - step));
-    else if (e.key === "ArrowRight") onPin(Math.min(end, at + step));
-    else if (e.key === "Home") onPin(start);
-    else if (e.key === "End") onPin(end);
-    else if (e.key === "Escape") onClear();
-    else return;
-    e.preventDefault();
-  };
-
+  const pinnedPoint = pinned === null ? undefined : series.points.find(([time]) => time === pinned);
+  const config = {
+    value: { color: flagged ? "var(--color-primary)" : "var(--color-muted-foreground)" },
+  } satisfies ChartConfig;
+  const dot = { r: 4, stroke: "var(--color-card)", strokeWidth: 2 };
   return (
-    <div
-      role="slider"
-      tabIndex={0}
-      aria-label={label}
-      aria-valuemin={start}
-      aria-valuemax={end}
-      aria-valuenow={cursor ?? end}
-      aria-valuetext={formatAbsoluteTime(cursor ?? end)}
-      onPointerMove={(e) => {
-        if (e.pointerType === "mouse") onCursor(timeAt(e));
-      }}
-      onPointerLeave={() => onCursor(null)}
-      onClick={(e) => onPin(timeAt(e))}
-      onKeyDown={onKeyDown}
-      className="relative h-9 min-w-0 cursor-crosshair rounded-sm outline-none focus-visible:ring-1 focus-visible:ring-(--color-ring)"
+    <ChartContainer
+      config={config}
+      // Chromium lets Tab and clicks focus the SVG groups that Recharts renders its layers into,
+      // since React listens for focus events on them. The slider around the chart takes the focus.
+      className="aspect-auto h-32 w-full [&_.recharts-curve.recharts-tooltip-cursor]:stroke-(--color-foreground) [&_.recharts-surface]:pointer-events-none [&_.recharts-surface]:[interactivity:inert]"
     >
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="size-full" aria-hidden>
+      <AreaChart
+        data={data}
+        syncId={SYNC_ID}
+        syncMethod={syncByTime}
+        // The top margin holds the label of the limit.
+        margin={{ top: 16, right: 0, bottom: 0, left: 0 }}
+        accessibilityLayer={false}
+        style={{ cursor: "crosshair" }}
+        onMouseMove={(state) => onHover(state.isTooltipActive ? activeTime(state) : null)}
+        onTouchMove={(state) => onHover(state.isTooltipActive ? activeTime(state) : null)}
+        onMouseLeave={() => onHover(null)}
+        // Recharts moves its cursor a frame after the pointer, so a click reads its own position.
+        // Otherwise the first tap on a touch screen, which has no cursor yet, would pin nothing.
+        onClick={(_, e) => {
+          const box = e.currentTarget.getBoundingClientRect();
+          const ratio = Math.min(Math.max(0, (e.clientX - box.left) / box.width), 1);
+          onPin(nearestTime(series.points, start + ratio * (end - start)));
+        }}
+      >
+        <defs>
+          <linearGradient id={gradient} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--color-value)" stopOpacity={0.25} />
+            <stop offset="100%" stopColor="var(--color-value)" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid vertical={false} strokeDasharray="3 3" horizontalValues={[0, max / 2, max]} />
+        <XAxis
+          dataKey="time"
+          type="number"
+          domain={[start, end]}
+          ticks={[start, (start + end) / 2, end]}
+          interval="preserveStartEnd"
+          tickFormatter={formatClockTime}
+          tickLine={false}
+          axisLine={false}
+          tickMargin={8}
+        />
+        <YAxis domain={[0, max]} allowDataOverflow hide />
+        {/* A pinned moment holds the values, so a hover shows no cursor then. */}
+        <ChartTooltip content={() => null} cursor={pinned === null} />
+        <Area
+          dataKey="value"
+          type="monotone"
+          stroke="var(--color-value)"
+          strokeWidth={1.5}
+          fill={`url(#${gradient})`}
+          activeDot={pinned === null ? dot : false}
+          isAnimationActive={false}
+        />
         {scaleToLimit ? (
-          <line
-            x1={0}
-            x2={W}
-            y1={y(series.limit)}
-            y2={y(series.limit)}
-            className="stroke-(--color-border)"
+          <ReferenceLine
+            y={series.limit}
+            stroke="var(--color-muted-foreground)"
             strokeDasharray="3 3"
-            vectorEffect="non-scaling-stroke"
+            label={{
+              value: t("admin.health.limit", { limit }),
+              position: "insideBottomRight",
+              offset: 4,
+              fill: "var(--color-muted-foreground)",
+            }}
           />
         ) : null}
-        <polyline
-          points={line}
-          fill="none"
-          className={flagged ? "stroke-(--color-primary)" : "stroke-(--color-muted-foreground)"}
-          strokeWidth={1.5}
-          strokeLinejoin="round"
-          vectorEffect="non-scaling-stroke"
-        />
-      </svg>
-      {cursor !== null ? (
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-y-0 w-px bg-(--color-foreground)"
-          style={{ left: `${((cursor - start) / (end - start)) * 100}%` }}
-        />
-      ) : null}
-    </div>
+        {pinned !== null ? <ReferenceLine x={pinned} stroke="var(--color-foreground)" /> : null}
+        {pinnedPoint ? (
+          <ReferenceDot x={pinnedPoint[0]} y={Math.min(pinnedPoint[1], max)} fill="var(--color-value)" {...dot} />
+        ) : null}
+      </AreaChart>
+    </ChartContainer>
   );
-}
+});
 
-// AdminServerHealth shows how the server did over the last hour or day, one row
-// per measurement. Moving over a chart, or along it with the arrow keys, reads
-// every measurement at that moment, and links to the traces from then.
-export function AdminServerHealth({ health, range }: { health: AdminHealth; range: AdminHealthRange }) {
+// AdminServerHealth shows how the server did over the last hour or day, one
+// card per measurement. Moving over a chart, or along it with the arrow keys,
+// reads every measurement at that moment, and links to the traces from then.
+// The page refreshes itself while its tab is in view.
+export function AdminServerHealth({ health: loaded, range }: { health: AdminHealth; range: AdminHealthRange }) {
   const { t } = useTranslation();
+  const { data: health, refresh } = useRefreshed(adminHealthQuery(range), loaded);
   const [hover, setHover] = useState<number | null>(null);
   const [pinned, setPinned] = useState<number | null>(null);
-  const cursor = hover ?? pinned;
+  const cursor = pinned ?? hover;
   const end = Date.parse(health.end);
+  // The moments that were measured, oldest first.
+  const times = useMemo(
+    () => [...new Set(health.series.flatMap((s) => s.points.map(([time]) => time)))].sort((a, b) => a - b),
+    [health],
+  );
   // Start at the first measurement, so that a server that started recently
   // spreads its measurements over the charts.
-  const first = Math.min(end, ...health.series.flatMap((s) => (s.points.length > 0 ? [s.points[0][0]] : [])));
-  const start = Math.max(Date.parse(health.start), Math.min(first, end - 5 * 60_000));
+  const start = Math.max(Date.parse(health.start), Math.min(times[0] ?? end, end - 5 * 60_000));
+  const first = times[0] ?? start;
+  const last = times.at(-1) ?? end;
+  // The range moves on with each refresh, until it leaves a pinned moment behind.
+  if (pinned !== null && pinned < first) setPinned(null);
   const stepMs = health.stepSeconds * 1000;
   const rangeLabel = t(range === "1h" ? "admin.traces.last_hour" : "admin.health.last_24h");
 
-  const rows = METRICS.flatMap((metric) => {
-    const series = health.series.find((s) => s.key === metric.key);
-    return series ? [{ metric, series, flag: flag(series.points, metric.followsTraffic ?? false) }] : [];
-  });
+  // The cursor of a hover renders the page again at every move.
+  const rows = useMemo(
+    () =>
+      METRICS.flatMap((metric) => {
+        const series = health.series.find((s) => s.key === metric.key);
+        return series ? [{ metric, series, flag: flag(series.points, metric, health.range) }] : [];
+      }),
+    [health],
+  );
   const empty = rows.every((row) => row.series.points.length === 0);
 
   const format = (row: (typeof rows)[number], v: number | undefined) => {
     if (v === undefined) return "N/A";
     const value = row.metric.format(v);
-    return row.metric.key === "dbConnections" && row.series.limit > 0
-      ? t("admin.health.of", { value, limit: formatCount(row.series.limit) })
+    return row.metric.ofLimit && row.series.limit > 0
+      ? t("admin.health.of", { value, limit: row.metric.format(row.series.limit) })
       : value;
   };
-  const flagText = (f: ReturnType<typeof flag>) => {
-    if (!f) return "";
-    return "up" in f
-      ? t("admin.health.up_recently", { factor: f.up.toFixed(1) })
-      : t("admin.health.spike_from", { time: formatAbsoluteTime(f.spikeAt) });
+
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    const at = cursor ?? last;
+    // The cursor steps between the measurements, so it never rests on a moment
+    // without one, e.g., while the server was paused.
+    const move = (by: number) => {
+      const nearest = times.reduce((best, time, i) => (Math.abs(time - at) < Math.abs(times[best] - at) ? i : best), 0);
+      setPinned(times[Math.min(Math.max(0, nearest + by), times.length - 1)] ?? at);
+    };
+    const by = e.shiftKey ? 10 : 1;
+    if (e.key === "ArrowLeft") move(-by);
+    else if (e.key === "ArrowRight") move(by);
+    else if (e.key === "Home") setPinned(first);
+    else if (e.key === "End") setPinned(last);
+    else if (e.key === "Escape") setPinned(null);
+    else return;
+    e.preventDefault();
   };
 
-  let readout: ReactNode = t(empty ? "admin.health.collecting" : "admin.health.help");
-  if (cursor !== null) {
-    const clock = formatAbsoluteTime(cursor);
-    // Traces start before they end, and a point of the 24 hours sums up the 5
-    // minutes before it, so open a window of at least a step around the moment.
-    const around = Math.max(60_000, stepMs);
-    const from = Math.round(cursor - around);
-    const to = Math.round(cursor + around);
-    readout = (
-      <>
-        <span className="font-medium text-(--color-foreground)">
-          {hover === null ? t("admin.health.pinned", { time: clock }) : clock}
-        </span>
-        <Link
-          to="/admin/traces"
-          search={{ view: "search", from, to }}
-          className="text-(--color-primary) hover:underline"
-        >
-          {t("admin.health.open_traces", { from: formatAbsoluteTime(from), to: formatAbsoluteTime(to) })}
-        </Link>
-        {pinned !== null ? (
-          <button
-            type="button"
-            onClick={() => {
-              setPinned(null);
-              setHover(null);
-            }}
-            className="cursor-pointer text-(--color-primary) hover:underline"
-          >
-            {t("admin.health.clear")}
-          </button>
-        ) : null}
-      </>
-    );
-  }
+  // Traces start before they end, and a point of the 24 hours sums up the 5
+  // minutes before it, so open a window of at least a step around the moment.
+  const around = Math.max(60_000, stepMs);
 
   return (
-    <AdminLayout active="health">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-semibold">{t("admin.health")}</h1>
-        <RangeLinks
+    <div className="grid gap-4">
+      <AdminPageHeader title={t("admin.health")}>
+        <SegmentedLinks
           label={t("admin.traces.range")}
           active={range}
           options={[
@@ -274,109 +261,109 @@ export function AdminServerHealth({ health, range }: { health: AdminHealth; rang
           ]}
           to="/admin/health"
         />
+        <RefreshControl {...refresh} />
+      </AdminPageHeader>
+      {/* The help stays in the layout while a moment shows, so the charts do not jump under the pointer. */}
+      <div aria-live="polite" className="grid text-sm/6 text-(--color-muted-foreground)">
+        <p className={cn("col-start-1 row-start-1", cursor !== null && "invisible")}>
+          {t(empty ? "admin.health.collecting" : "admin.health.help")}
+        </p>
+        {cursor !== null ? (
+          <p className="col-start-1 row-start-1 flex flex-wrap items-center gap-x-3 self-start">
+            <span className="font-medium text-(--color-foreground)">
+              {pinned === null
+                ? formatAbsoluteTime(cursor)
+                : t("admin.health.pinned", { time: formatAbsoluteTime(cursor) })}
+            </span>
+            <Link
+              to="/admin/traces"
+              search={{ view: "search", from: Math.round(cursor - around), to: Math.round(cursor + around) }}
+              className={LINK}
+            >
+              {t("admin.health.open_traces", {
+                from: formatClockTime(cursor - around),
+                to: formatClockTime(cursor + around),
+              })}
+            </Link>
+            {pinned !== null ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setPinned(null);
+                  setHover(null);
+                }}
+                className={cn(LINK, "cursor-pointer")}
+              >
+                {t("admin.health.clear")}
+              </button>
+            ) : null}
+          </p>
+        ) : null}
       </div>
-      <p
-        aria-live="polite"
-        className="mb-2 flex min-h-6 flex-wrap items-center gap-x-3 gap-y-1 text-sm text-(--color-muted-foreground)"
-      >
-        {readout}
-      </p>
-      {rows.map((row, i) => {
-        const heading =
-          i === 0 || rows[i - 1].metric.section !== row.metric.section ? (
-            <div className="mt-4 flex items-center justify-between text-sm text-(--color-muted-foreground)">
-              <h3>{t(SECTIONS[row.metric.section])}</h3>
-              {row.metric.section === "traffic" ? (
-                <Link to="/admin/traces" className="text-(--color-primary) hover:underline">
+      {(Object.keys(SECTIONS) as (keyof typeof SECTIONS)[]).map((section) => {
+        const metrics = rows.filter((row) => row.metric.section === section);
+        if (metrics.length === 0) return null;
+        return (
+          <section key={section} aria-labelledby={`health-${section}`} className="grid gap-3">
+            <div className="flex min-h-6 items-center justify-between gap-4 text-sm">
+              <h2 id={`health-${section}`} className="font-medium">
+                {t(SECTIONS[section])}
+              </h2>
+              {section === "traffic" ? (
+                <Link to="/admin/traces" className={LINK}>
                   {t("admin.traces")}
                 </Link>
               ) : null}
             </div>
-          ) : null;
-        const points = row.series.points;
-        const now = points.at(-1)?.[1];
-        const shown = cursor === null ? now : valueAt(points, cursor);
-        const flagged = flagText(row.flag);
-        const label = t(row.metric.label);
-        return (
-          <div key={row.metric.key}>
-            {heading}
-            {/* Below `sm`, the chart moves under the label and value. */}
-            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 border-b border-(--color-border) py-2 text-sm sm:grid-cols-[minmax(0,13rem)_6.5rem_minmax(0,1fr)]">
-              <div className="min-w-0">
-                <div className="font-medium wrap-anywhere">{label}</div>
-                {flagged ? (
-                  <div className="flex items-center gap-1.5 text-xs text-(--color-muted-foreground)">
-                    <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-(--color-primary)" />
-                    {flagged}
-                  </div>
-                ) : null}
-              </div>
-              <div className="text-right tabular-nums">{format(row, shown)}</div>
-              <div className="col-span-2 min-w-0 sm:col-span-1">
-                <Sparkline
-                  series={row.series}
-                  start={start}
-                  end={end}
-                  cursor={cursor}
-                  flagged={flagged !== ""}
-                  label={
-                    t("admin.health.chart", { label, range: rangeLabel, value: format(row, now) }) +
-                    (flagged ? `, ${flagged}` : "")
-                  }
-                  onCursor={(at) => {
-                    if (pinned === null) setHover(at);
-                  }}
-                  onPin={(at) => {
-                    setPinned(at);
-                    setHover(null);
-                  }}
-                  onClear={() => {
-                    setPinned(null);
-                    setHover(null);
-                  }}
-                  stepMs={stepMs}
-                />
-              </div>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+              {metrics.map((row) => {
+                const points = row.series.points;
+                const now = points.at(-1)?.[1];
+                const shown = cursor === null ? now : valueAt(points, cursor);
+                const flagged = flagText(t, row.flag, formatClockTime);
+                const label = t(row.metric.label);
+                return (
+                  <StatCard
+                    key={row.metric.key}
+                    as="h3"
+                    label={label}
+                    chip={flagged ? <TrendChip>{flagged}</TrendChip> : null}
+                  >
+                    <p className={cn(STAT_VALUE, shown === undefined && "text-(--color-muted-foreground)")}>
+                      {format(row, shown)}
+                    </p>
+                    <div
+                      role="slider"
+                      tabIndex={0}
+                      aria-label={
+                        t("admin.health.chart", { label, range: rangeLabel, value: format(row, now) }) +
+                        (flagged ? `, ${flagged}` : "")
+                      }
+                      aria-valuemin={first}
+                      aria-valuemax={last}
+                      aria-valuenow={cursor ?? last}
+                      aria-valuetext={formatAbsoluteTime(cursor ?? last)}
+                      onKeyDown={onKeyDown}
+                      className="min-w-0 rounded-sm outline-none focus-visible:ring-1 focus-visible:ring-(--color-ring)"
+                    >
+                      <MetricChart
+                        series={row.series}
+                        start={start}
+                        end={end}
+                        limit={row.metric.format(row.series.limit)}
+                        pinned={pinned}
+                        flagged={flagged !== ""}
+                        onHover={setHover}
+                        onPin={setPinned}
+                      />
+                    </div>
+                  </StatCard>
+                );
+              })}
             </div>
-          </div>
+          </section>
         );
       })}
-    </AdminLayout>
-  );
-}
-
-// RangeLinks switches a page between ranges, e.g., the last hour and the last
-// day, through its search params, so that the loader fetches the range.
-export function RangeLinks<V extends string>({
-  label,
-  active,
-  options,
-  to,
-}: {
-  label: string;
-  active: V;
-  options: { value: V; label: string; search: Record<string, unknown> }[];
-  to: string;
-}) {
-  return (
-    <nav aria-label={label} className="flex gap-1">
-      {options.map((option) => (
-        <Link
-          key={option.value}
-          to={to}
-          search={option.search}
-          aria-current={option.value === active ? "page" : undefined}
-          className={cn(
-            "inline-flex h-8 items-center rounded-md border px-3 text-sm",
-            option.value === active
-              ? "border-(--color-ring) bg-(--color-surface) font-medium text-(--color-foreground)"
-              : "border-(--color-input) text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)",
-          )}
-        >
-          {option.label}
-        </Link>
-      ))}
-    </nav>
+    </div>
   );
 }

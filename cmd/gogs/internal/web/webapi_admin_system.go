@@ -29,8 +29,8 @@ var initTime = time.Now()
 // with its label already translated.
 type adminReportRow struct {
 	Label string `json:"label"`
-	// Kind tells how to show the value: "text", "code", "block" for multi-line
-	// code, "bool", or "unset" when the setting has no value.
+	// Kind tells how to show the value: "code", "block" for multi-line code,
+	// "bool", or "unset" when the setting has no value.
 	Kind  string `json:"kind"`
 	Value string `json:"value,omitempty"`
 	// On is the value of a "bool" row.
@@ -52,10 +52,6 @@ type adminReportSection struct {
 // adminReport builds the rows of a report, translating their labels.
 type adminReport struct {
 	l i18n.Locale
-}
-
-func (r adminReport) text(key string, value any) adminReportRow {
-	return adminReportRow{Label: r.l.Tr(key), Kind: "text", Value: fmt.Sprint(value)}
 }
 
 // withHint returns the row with a translated note shown after its value.
@@ -108,14 +104,34 @@ type adminDashboard struct {
 	GoVersion   string `json:"goVersion"`
 	BuildTime   string `json:"buildTime"`
 	BuildCommit string `json:"buildCommit"`
-	// Statistics is a translated sentence that marks each count with <b>.
-	Statistics   string             `json:"statistics"`
-	SystemStatus adminReportSection `json:"systemStatus"`
+	// StartedAt is when the server started, which its uptime counts from.
+	StartedAt    time.Time             `json:"startedAt"`
+	Statistics   []adminStatisticGroup `json:"statistics"`
+	SystemStatus adminReportSection    `json:"systemStatus"`
+}
+
+// adminStatisticGroup is a set of related statistics, with its title already
+// translated.
+type adminStatisticGroup struct {
+	Title string           `json:"title"`
+	Items []adminStatistic `json:"items"`
+}
+
+// adminStatistic is the number of records of one kind in the database, with
+// its label already translated. The key names the kind, e.g., "public_keys".
+type adminStatistic struct {
+	Key   string `json:"key"`
+	Label string `json:"label"`
+	Count int64  `json:"count"`
 }
 
 func getAdminDashboard(logger *logx.Logger, c flamego.Context, l i18n.Locale) (statusCode int, resp *adminDashboard, err error) {
 	s := database.GetStatistic(c.Request().Context(), logger).Counter
 	r := adminReport{l: l}
+	// The key of a statistic also names its label in the locale files.
+	statistic := func(key string, count int64) adminStatistic {
+		return adminStatistic{Key: key, Label: l.Tr("admin.dashboard.statistic_" + key), Count: count}
+	}
 	// Measurements show the whole value, with its unit, as code.
 	size := func(key string, n uint64) adminReportRow {
 		return r.code(key, tool.FileSize(int64(n)))
@@ -128,10 +144,7 @@ func getAdminDashboard(logger *logx.Logger, c flamego.Context, l i18n.Locale) (s
 	runtime.ReadMemStats(m)
 	status := r.section("system-status", "admin.dashboard.system_status",
 		rows(
-			r.text("admin.dashboard.server_uptime", tool.TimeSincePro(initTime)),
 			r.code("admin.dashboard.current_goroutine", runtime.NumGoroutine()),
-		),
-		rows(
 			size("admin.dashboard.current_memory_usage", m.Alloc),
 			size("admin.dashboard.total_memory_allocated", m.TotalAlloc),
 			size("admin.dashboard.memory_obtained", m.Sys),
@@ -173,10 +186,39 @@ func getAdminDashboard(logger *logx.Logger, c flamego.Context, l i18n.Locale) (s
 		GoVersion:   runtime.Version(),
 		BuildTime:   conf.BuildTime,
 		BuildCommit: conf.BuildCommit,
-		Statistics: l.Tr("admin.dashboard.statistic_info",
-			s.User, s.Org, s.PublicKey, s.Repo, s.Watch, s.Star, s.Action, s.Access, s.Issue, s.Comment, s.Oauth,
-			s.Follow, s.Mirror, s.Release, s.LoginSource, s.Webhook, s.Milestone, s.Label, s.HookTask, s.Team,
-			s.UpdateTask, s.Attachment),
+		StartedAt:   initTime,
+		Statistics: []adminStatisticGroup{
+			{l.Tr("admin.dashboard.statistic_group_people"), []adminStatistic{
+				statistic("users", s.User),
+				statistic("organizations", s.Org),
+				statistic("social_accounts", s.Oauth),
+				statistic("follows", s.Follow),
+				statistic("teams", s.Team),
+			}},
+			{l.Tr("admin.dashboard.statistic_group_repositories"), []adminStatistic{
+				statistic("repositories", s.Repo),
+				statistic("watches", s.Watch),
+				statistic("stars", s.Star),
+				statistic("accesses", s.Access),
+				statistic("mirrors", s.Mirror),
+				statistic("releases", s.Release),
+			}},
+			{l.Tr("admin.dashboard.statistic_group_issues"), []adminStatistic{
+				statistic("actions", s.Action),
+				statistic("issues", s.Issue),
+				statistic("comments", s.Comment),
+				statistic("milestones", s.Milestone),
+				statistic("labels", s.Label),
+				statistic("attachments", s.Attachment),
+			}},
+			{l.Tr("admin.dashboard.statistic_group_access"), []adminStatistic{
+				statistic("public_keys", s.PublicKey),
+				statistic("login_sources", s.LoginSource),
+				statistic("webhooks", s.Webhook),
+				statistic("hook_tasks", s.HookTask),
+				statistic("update_tasks", s.UpdateTask),
+			}},
+		},
 		SystemStatus: status,
 	}, nil
 }
