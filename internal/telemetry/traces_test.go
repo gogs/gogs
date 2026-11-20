@@ -200,6 +200,59 @@ func TestStore_LongSpanName(t *testing.T) {
 	assert.Equal(t, got.Spans[0].Name, got.Route.Name)
 }
 
+func TestTruncate(t *testing.T) {
+	tests := []struct {
+		name     string
+		s        string
+		maxBytes int
+		want     string
+	}{
+		{name: "shorter", s: "abc", maxBytes: 4, want: "abc"},
+		{name: "as long", s: "abcd", maxBytes: 4, want: "abcd"},
+		{name: "longer", s: "abcde", maxBytes: 4, want: "abcd…"},
+		{name: "cut inside a character", s: "abc日本", maxBytes: 4, want: "abc…"},
+		{name: "cut between characters", s: "abc日本", maxBytes: 6, want: "abc日…"},
+		{name: "only a part of a character fits", s: "日本", maxBytes: 2, want: "…"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.want, truncate(test.s, test.maxBytes))
+		})
+	}
+}
+
+// A client can send requests with the trace ID of one that is still running,
+// each with a path that matches no route and so names its span.
+func TestStore_JoinedRequestsAreNotOperations(t *testing.T) {
+	store, tracer := newTestStore(t, defaultOptions())
+
+	parent := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    trace.TraceID{0xce, 1},
+		SpanID:     trace.SpanID{1},
+		TraceFlags: trace.FlagsSampled,
+		Remote:     true,
+	})
+	ctx := trace.ContextWithRemoteSpanContext(context.Background(), parent)
+	start := testNow.Add(-2 * time.Second)
+	request := func(name string) (context.Context, trace.Span) {
+		return tracer.Start(ctx, name, trace.WithSpanKind(trace.SpanKindServer), trace.WithTimestamp(start))
+	}
+	openCtx, open := request("GET /a")
+	_, query := tracer.Start(openCtx, "db SELECT user", trace.WithTimestamp(start))
+	query.End(trace.WithTimestamp(start.Add(time.Millisecond)))
+	for _, path := range []string{"/made-up-1", "/made-up-2"} {
+		_, joined := request("PROPFIND " + path)
+		joined.End(trace.WithTimestamp(start.Add(time.Millisecond)))
+	}
+	open.End(trace.WithTimestamp(testNow))
+
+	var names []string
+	for _, op := range store.Overview(15, "15m").Operations {
+		names = append(names, op.Name)
+	}
+	assert.Equal(t, []string{"db SELECT user"}, names)
+}
+
 // A client can send many requests with the trace ID of one that is still
 // running, and they must not grow that trace past the limit and push out the
 // other kept traces when it ends.

@@ -8,7 +8,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"sync/atomic"
 	"syscall"
 	"time"
 )
@@ -51,7 +50,8 @@ func processGauges() []Gauge {
 	return []Gauge{
 		// The share of the CPUs the process may use that it used since the last
 		// sample, in percent. Git runs in processes of its own, which this
-		// leaves out.
+		// leaves out. Go counts at least two CPUs for a container limited to
+		// fewer, so such a server reads lower than it is.
 		{Key: "cpu", Read: func() (float64, bool) {
 			var usage syscall.Rusage
 			if err := syscall.Getrusage(syscall.RUSAGE_SELF, &usage); err != nil {
@@ -63,8 +63,9 @@ func processGauges() []Gauge {
 				return 0, false
 			}
 			// GOMAXPROCS follows the CPU limit of a container, unlike the count
-			// of CPUs of the machine.
-			return delta / elapsed.Seconds() / float64(runtime.GOMAXPROCS(0)) * 100, true
+			// of CPUs of the machine, but can be set above that count.
+			cpus := min(runtime.GOMAXPROCS(0), runtime.NumCPU())
+			return delta / elapsed.Seconds() / float64(cpus) * 100, true
 		}},
 		{Key: "residentMemory", Read: func() (float64, bool) {
 			kb, ok := procStatus("VmRSS")
@@ -110,8 +111,10 @@ func DiskGauges(disks ...Disk) []Gauge {
 		}
 		seen[dev] = true
 
-		usage := &diskUsage{path: path}
-		if _, ok := usage.read(); !ok {
+		usage := &diskUsage{path: path, timeout: diskUsageTimeout, statfs: syscall.Statfs}
+		// A file system that answers with an error is left out. One that is yet
+		// to answer is measured once it does.
+		if _, ok := usage.read(); !ok && usage.pending == nil {
 			continue
 		}
 		gauges = append(gauges, Gauge{Key: disk.Key, Limit: usage.limit(), Read: usage.read, ReadLimit: usage.limit})
@@ -123,26 +126,60 @@ func DiskGauges(disks ...Disk) []Gauge {
 // goes on without it.
 const diskUsageTimeout = 2 * time.Second
 
+// diskSpace is what a file system answered.
+type diskSpace struct {
+	used, usable float64
+}
+
 // diskUsage measures the file system of a path. A file system that does not
-// answer, e.g., a network mount whose server is gone, costs the reader the
-// timeout once and nothing until it answers.
+// answer in time, e.g., a network mount whose server is gone, costs a reading
+// the timeout once. The readings after it do not wait, and the first of them
+// to find the answer takes it. One goroutine at a time calls its methods, as
+// Health does with its gauges.
 type diskUsage struct {
-	path string
-	busy atomic.Bool
-	// usable holds the bits of the space the server can use, as a float64.
-	usable atomic.Uint64
+	path    string
+	timeout time.Duration
+	// statfs is syscall.Statfs, which tests replace.
+	statfs func(path string, fs *syscall.Statfs_t) error
+	// pending receives the answer that a reading is still waiting for.
+	pending chan diskSpace
+	// usable is the space the server could use as of the last answer.
+	usable float64
 }
 
 func (d *diskUsage) read() (used float64, ok bool) {
-	if !d.busy.CompareAndSwap(false, true) {
-		return 0, false
+	waited := d.pending != nil
+	if !waited {
+		d.pending = d.ask()
 	}
-	done := make(chan float64, 1)
+	var space diskSpace
+	select {
+	case space, ok = <-d.pending:
+	default:
+		if waited {
+			return 0, false
+		}
+		select {
+		case space, ok = <-d.pending:
+		case <-time.After(d.timeout):
+			return 0, false
+		}
+	}
+	d.pending = nil
+	if ok {
+		d.usable = space.usable
+	}
+	return space.used, ok
+}
+
+// ask asks the file system, and returns the channel that receives its answer,
+// or is closed without one when the file system answers with an error.
+func (d *diskUsage) ask() chan diskSpace {
+	answer := make(chan diskSpace, 1)
 	go func() {
-		defer d.busy.Store(false)
-		defer close(done)
+		defer close(answer)
 		var fs syscall.Statfs_t
-		if err := syscall.Statfs(d.path, &fs); err != nil {
+		if err := d.statfs(d.path, &fs); err != nil {
 			return
 		}
 		// Blocks are counted in fragments, which some file systems, e.g., NFS,
@@ -154,17 +191,11 @@ func (d *diskUsage) read() (used float64, ok bool) {
 		// Unprivileged processes cannot use the blocks the file system
 		// reserves, so those count neither as used nor as usable.
 		used := float64(fs.Blocks-fs.Bfree) * size
-		d.usable.Store(math.Float64bits(used + float64(fs.Bavail)*size))
-		done <- used
+		answer <- diskSpace{used: used, usable: used + float64(fs.Bavail)*size}
 	}()
-	select {
-	case used, ok = <-done:
-		return used, ok
-	case <-time.After(diskUsageTimeout):
-		return 0, false
-	}
+	return answer
 }
 
 func (d *diskUsage) limit() float64 {
-	return math.Float64frombits(d.usable.Load())
+	return d.usable
 }
