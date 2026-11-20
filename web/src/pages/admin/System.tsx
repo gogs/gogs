@@ -24,6 +24,7 @@ import {
 } from "@/lib/queries/admin";
 import { formErrors } from "@/lib/queries/request";
 import { formatAbsoluteTime } from "@/lib/relative-time";
+import { toastError } from "@/lib/toast-error";
 import { useFocusFirstError } from "@/lib/use-focus-error";
 import { useIsLinked } from "@/lib/use-is-linked";
 import { cn } from "@/lib/utils";
@@ -136,7 +137,7 @@ export function AdminOperations() {
   const run = useMutation({
     mutationFn: (op: AdminOperation) => runAdminOperation(op),
     onSuccess: (message) => toast.success(message),
-    onError: (err) => toast.error(err.message),
+    onError: (err) => toastError(err),
   });
   return (
     <div className="grid gap-4">

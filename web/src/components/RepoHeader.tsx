@@ -18,7 +18,6 @@ import {
 import type { ComponentType, ReactNode } from "react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -32,6 +31,7 @@ import {
   unwatchRepo,
   watchRepo,
 } from "@/lib/queries/repo";
+import { toastError } from "@/lib/toast-error";
 import { useUserInfo } from "@/lib/use-user-info";
 import { cn } from "@/lib/utils";
 
@@ -97,7 +97,7 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
       return { result, next };
     },
     onSuccess: ({ result, next }) => applyWatchResult(result, next),
-    onError: (err) => toast.error(t("status.internal_server_error"), { description: err.message }),
+    onError: (err) => toastError(err, t("status.internal_server_error")),
   });
   const starMutation = useMutation({
     mutationFn: async () => {
@@ -106,7 +106,7 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
       return { result, next };
     },
     onSuccess: ({ result, next }) => applyStarResult(result, next),
-    onError: (err) => toast.error(t("status.internal_server_error"), { description: err.message }),
+    onError: (err) => toastError(err, t("status.internal_server_error")),
   });
 
   return (

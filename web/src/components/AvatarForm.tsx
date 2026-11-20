@@ -1,10 +1,10 @@
 import { useMutation } from "@tanstack/react-query";
 import { type FormEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 
 import { FormField } from "@/components/FormField";
 import { Button } from "@/components/ui/button";
+import { toastError } from "@/lib/toast-error";
 
 // AvatarForm shows an avatar and uploads a new image for it, or deletes the
 // uploaded one. onChanged runs after either, with whether an image was
@@ -36,12 +36,12 @@ export function AvatarForm({
   const uploading = useMutation({
     mutationFn: () => upload(file as File),
     onSuccess: () => changed(true),
-    onError: (err) => toast.error(err.message),
+    onError: (err) => toastError(err),
   });
   const removing = useMutation({
     mutationFn: remove,
     onSuccess: () => changed(false),
-    onError: (err) => toast.error(err.message),
+    onError: (err) => toastError(err),
   });
   const pending = uploading.isPending || removing.isPending;
   const src = version ? `${avatarURL}${avatarURL.includes("?") ? "&" : "?"}v=${version}` : avatarURL;

@@ -23,6 +23,7 @@ import {
   updateRepoLabel,
 } from "@/lib/queries/repo";
 import { formErrors } from "@/lib/queries/request";
+import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 
 // The colors offered next to the color picker.
@@ -388,7 +389,7 @@ function LabelTemplates({ owner, name, templates }: { owner: string; name: strin
   const mutation = useMutation({
     mutationFn: () => initializeRepoLabels(owner, name, template),
     onSuccess: () => router.invalidate(),
-    onError: (err) => toast.error(err.message),
+    onError: (err) => toastError(err),
   });
   return (
     <section className="mb-4 glass rounded-md border border-(--color-border) p-4">

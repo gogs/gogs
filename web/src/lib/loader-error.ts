@@ -50,15 +50,15 @@ export async function loaderResponseError(res: Response): Promise<LoaderResponse
 // then, i.e., `sessionEnded`, there with a full page load. Without one, the
 // sign-in page still counts them as authenticated and sends them home.
 export function authenticationRedirect(href: string, sessionEnded = false) {
-  const search = { redirect_to: webContext.subURL + href };
-  if (sessionEnded) {
-    return redirect({
-      href: `${webContext.subURL}/user/sign-in?${new URLSearchParams(search).toString()}`,
-      replace: true,
-      reloadDocument: true,
-    });
-  }
-  return redirect({ to: "/user/sign-in", search, replace: true });
+  const redirectTo = webContext.subURL + href;
+  if (sessionEnded) return redirect({ href: signInURL(redirectTo), replace: true, reloadDocument: true });
+  return redirect({ to: "/user/sign-in", search: { redirect_to: redirectTo }, replace: true });
+}
+
+// signInURL is the sign-in page that leads on to the URL `redirectTo`, which
+// includes the subpath.
+export function signInURL(redirectTo: string) {
+  return `${webContext.subURL}/user/sign-in?${new URLSearchParams({ redirect_to: redirectTo }).toString()}`;
 }
 
 // loadAuthenticatedPage maps the errors of loading a page that needs an

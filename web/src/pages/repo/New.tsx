@@ -225,7 +225,7 @@ function NewRepoPage({
   title: string;
   onSubmit: () => void;
   pending: boolean;
-  formError: string | null;
+  formError: ReactNode;
   submitLabel: string;
   children: ReactNode;
 }) {

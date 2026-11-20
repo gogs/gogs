@@ -23,6 +23,7 @@ import {
 } from "@/lib/queries/repo";
 import { formErrors } from "@/lib/queries/request";
 import { formatRelativeTime } from "@/lib/relative-time";
+import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 import { IssueTrackerLayout } from "@/pages/repo/Labels";
 
@@ -150,7 +151,7 @@ function MilestoneRow({
   const toggle = useMutation({
     mutationFn: () => setRepoMilestoneClosed(owner, name, milestone.id, !milestone.isClosed),
     onSuccess: afterRemoval,
-    onError: (err) => toast.error(err.message),
+    onError: (err) => toastError(err),
   });
   const state = milestone.isClosed ? "closed" : "open";
 

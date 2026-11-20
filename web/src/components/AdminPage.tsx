@@ -223,7 +223,7 @@ export function AdminFormCard({
   children,
 }: {
   pending: boolean;
-  error: string | null;
+  error: ReactNode;
   actions: ReactNode;
   onSubmit: () => void;
   children: ReactNode;
