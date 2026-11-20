@@ -96,10 +96,11 @@ func TestAdminDashboard(t *testing.T) {
 	adminAssertTurnedAway(t, nonAdmin, anonymous, http.MethodGet, "/api/web/admin/dashboard", nil)
 
 	var resp struct {
-		AppVersion string    `json:"appVersion"`
-		GoVersion  string    `json:"goVersion"`
-		StartedAt  time.Time `json:"startedAt"`
-		Statistics []struct {
+		AppVersion    string    `json:"appVersion"`
+		GoVersion     string    `json:"goVersion"`
+		StartedAt     time.Time `json:"startedAt"`
+		UptimeSeconds int64     `json:"uptimeSeconds"`
+		Statistics    []struct {
 			Title string `json:"title"`
 			Items []struct {
 				Key   string `json:"key"`
@@ -118,6 +119,7 @@ func TestAdminDashboard(t *testing.T) {
 	assert.Equal(t, runtime.Version(), resp.GoVersion)
 	assert.False(t, resp.StartedAt.IsZero())
 	assert.True(t, resp.StartedAt.Before(time.Now()), "the server started at %s", resp.StartedAt)
+	assert.InDelta(t, time.Since(resp.StartedAt).Seconds(), resp.UptimeSeconds, 5)
 	assert.Equal(t, "system-status", resp.SystemStatus.ID)
 	assert.NotEmpty(t, resp.SystemStatus.Groups)
 

@@ -105,9 +105,12 @@ type adminDashboard struct {
 	BuildTime   string `json:"buildTime"`
 	BuildCommit string `json:"buildCommit"`
 	// StartedAt is when the server started, which its uptime counts from.
-	StartedAt    time.Time             `json:"startedAt"`
-	Statistics   []adminStatisticGroup `json:"statistics"`
-	SystemStatus adminReportSection    `json:"systemStatus"`
+	StartedAt time.Time `json:"startedAt"`
+	// UptimeSeconds is how long the server has run. A browser cannot count it
+	// from StartedAt, since its clock may differ from the clock of the server.
+	UptimeSeconds int64                 `json:"uptimeSeconds"`
+	Statistics    []adminStatisticGroup `json:"statistics"`
+	SystemStatus  adminReportSection    `json:"systemStatus"`
 }
 
 // adminStatisticGroup is a set of related statistics, with its title already
@@ -181,12 +184,13 @@ func getAdminDashboard(logger *logx.Logger, c flamego.Context, l i18n.Locale) (s
 	)
 
 	return http.StatusOK, &adminDashboard{
-		AppVersion:  conf.App.Version,
-		GitVersion:  conf.Git.Version,
-		GoVersion:   runtime.Version(),
-		BuildTime:   conf.BuildTime,
-		BuildCommit: conf.BuildCommit,
-		StartedAt:   initTime,
+		AppVersion:    conf.App.Version,
+		GitVersion:    conf.Git.Version,
+		GoVersion:     runtime.Version(),
+		BuildTime:     conf.BuildTime,
+		BuildCommit:   conf.BuildCommit,
+		StartedAt:     initTime,
+		UptimeSeconds: int64(time.Since(initTime).Seconds()),
 		Statistics: []adminStatisticGroup{
 			{l.Tr("admin.dashboard.statistic_group_people"), []adminStatistic{
 				statistic("users", s.User),

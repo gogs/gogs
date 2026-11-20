@@ -33,17 +33,29 @@ export function useRefreshSeconds() {
   return [seconds, change] as const;
 }
 
+// refreshOptions are the options of a query that refreshes itself at the
+// interval of useRefreshSeconds. Turning that off also stops React Query from
+// asking again when the viewer comes back to the tab or goes online.
+export function refreshOptions(seconds: number) {
+  return {
+    refetchInterval: seconds > 0 && seconds * 1000,
+    refetchOnWindowFocus: seconds > 0,
+    refetchOnReconnect: seconds > 0,
+  };
+}
+
 // useRefreshed keeps what the loader of a page loaded fresh. The loader fills
 // the query, and the page reads it again at the interval of useRefreshSeconds
-// while its tab is in view. A refresh that fails keeps the last answer. It
-// returns what to show and the props of the RefreshControl of the page.
+// while its tab is in view. A refresh that fails keeps the last answer, which
+// the RefreshControl tells. It returns what to show and the props of the
+// RefreshControl of the page.
 export function useRefreshed<T, K extends QueryKey>(query: UseQueryOptions<T, Error, T, K>, loaded: T) {
   const [seconds, setSeconds] = useRefreshSeconds();
   const result = useQuery({
     ...query,
     // The loader has just asked.
     refetchOnMount: false,
-    refetchInterval: seconds > 0 && seconds * 1000,
+    ...refreshOptions(seconds),
   });
   return {
     data: result.data ?? loaded,
@@ -52,6 +64,7 @@ export function useRefreshed<T, K extends QueryKey>(query: UseQueryOptions<T, Er
       onSecondsChange: setSeconds,
       refreshing: result.isFetching,
       onRefresh: () => void result.refetch(),
+      failedSince: result.isError ? result.dataUpdatedAt : undefined,
     },
   };
 }

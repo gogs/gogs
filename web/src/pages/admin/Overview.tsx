@@ -10,6 +10,7 @@ import {
   CircleDot,
   ExternalLink,
   Eye,
+  Hash,
   History,
   KeyRound,
   Link as LinkIcon,
@@ -41,7 +42,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { type ChartConfig, ChartContainer } from "@/components/ui/chart";
 import { Skeleton } from "@/components/ui/skeleton";
 import { METRICS, flag, flagText } from "@/lib/admin-health";
-import { useRefreshSeconds } from "@/lib/admin-refresh";
+import { refreshOptions, useRefreshSeconds } from "@/lib/admin-refresh";
 import { formatDuration, formatNumber } from "@/lib/format";
 import {
   type AdminDashboard,
@@ -158,9 +159,7 @@ function UptimeStat({ dashboard }: { dashboard: UseQueryResult<AdminDashboard> }
       <Loaded query={dashboard} what={label} skeleton={STAT_SKELETON} compact>
         {(data) => (
           <>
-            <p className={STAT_VALUE}>
-              {formatDuration((dashboard.dataUpdatedAt - Date.parse(data.startedAt)) / 1000)}
-            </p>
+            <p className={STAT_VALUE}>{formatDuration(data.uptimeSeconds)}</p>
             <p className="text-sm text-(--color-muted-foreground)">
               {t("admin.overview.since", { time: formatAbsoluteTime(data.startedAt) })}
             </p>
@@ -394,7 +393,8 @@ function Statistics({ groups }: { groups: AdminDashboard["statistics"] }) {
           </h3>
           <dl aria-labelledby={`${id}-${i}`} className="text-sm">
             {group.items.map((statistic) => {
-              const Icon = STATISTIC_ICONS[statistic.key];
+              // A server newer than the page, e.g., right after an upgrade, counts kinds the page has no icon for.
+              const Icon = (STATISTIC_ICONS as Partial<typeof STATISTIC_ICONS>)[statistic.key] ?? Hash;
               return (
                 <div key={statistic.key} className="flex min-h-8 items-center justify-between gap-3">
                   <dt className="flex min-w-0 items-center gap-2 wrap-anywhere">
@@ -454,12 +454,14 @@ function BuildFacts({ dashboard }: { dashboard: AdminDashboard }) {
 export function AdminOverview() {
   const { t } = useTranslation();
   const [refreshSeconds, setRefreshSeconds] = useRefreshSeconds();
-  const refetchInterval = refreshSeconds > 0 && refreshSeconds * 1000;
-  const dashboard = useQuery({ ...adminDashboardQuery(), refetchInterval });
-  const health = useQuery({ ...adminHealthQuery("1h"), refetchInterval });
-  const traces = useQuery({ ...adminTraceOverviewQuery("1h"), refetchInterval });
-  const notices = useQuery({ ...adminNoticesQuery({}), refetchInterval });
+  const refreshing = refreshOptions(refreshSeconds);
+  const dashboard = useQuery({ ...adminDashboardQuery(), ...refreshing });
+  const health = useQuery({ ...adminHealthQuery("1h"), ...refreshing });
+  const traces = useQuery({ ...adminTraceOverviewQuery("1h"), ...refreshing });
+  const notices = useQuery({ ...adminNoticesQuery({}), ...refreshing });
   const queries = [dashboard, health, traces, notices];
+  // A card without an answer shows its own error.
+  const stale = queries.filter((query) => query.isError && query.data !== undefined);
   return (
     <div className="grid gap-4">
       <AdminPageHeader title={t("admin.overview")}>
@@ -467,6 +469,7 @@ export function AdminOverview() {
           seconds={refreshSeconds}
           onSecondsChange={setRefreshSeconds}
           refreshing={queries.some((query) => query.isFetching)}
+          failedSince={stale.length > 0 ? Math.min(...stale.map((query) => query.dataUpdatedAt)) : undefined}
           onRefresh={() => queries.forEach((query) => void query.refetch())}
         />
       </AdminPageHeader>
