@@ -392,6 +392,28 @@ func routeOf(root *span) Route {
 	return Route{Name: method, Kind: RouteKindOther, Method: method}
 }
 
+// seriesOf returns the series of the route. Once the store holds as many
+// routes as it keeps, a route it has not seen is counted with the others of its
+// kind, i.e., under its method or as other background work.
+func (s *Store) seriesOf(route Route) *routeSeries {
+	if rs := s.routes[route.Name]; rs != nil {
+		return rs
+	}
+	if len(s.routes) >= maxRoutes {
+		if route.Kind == RouteKindBackground {
+			route = Route{Name: "other", Kind: RouteKindBackground}
+		} else {
+			route = Route{Name: route.Method, Kind: RouteKindOther, Method: route.Method}
+		}
+		if rs := s.routes[route.Name]; rs != nil {
+			return rs
+		}
+	}
+	rs := &routeSeries{route: route}
+	s.routes[route.Name] = rs
+	return rs
+}
+
 func spanSize(sp *span) int64 {
 	size := int64(200 + len(sp.name) + len(sp.err))
 	for _, a := range sp.attrs {
@@ -442,21 +464,8 @@ func (s *Store) finish(id string, p *pendingTrace) {
 	}
 	end := t.end()
 
-	rs := s.routes[t.route.Name]
-	if rs == nil {
-		if len(s.routes) >= maxRoutes {
-			if t.route.Kind == RouteKindBackground {
-				t.route = Route{Name: "other", Kind: RouteKindBackground}
-			} else {
-				t.route = Route{Name: t.route.Method, Kind: RouteKindOther, Method: t.route.Method}
-			}
-			rs = s.routes[t.route.Name]
-		}
-		if rs == nil {
-			rs = &routeSeries{route: t.route}
-			s.routes[t.route.Name] = rs
-		}
-	}
+	rs := s.seriesOf(t.route)
+	t.route = rs.route
 
 	t.kept = s.keepReason(t, rs)
 
@@ -482,9 +491,20 @@ func (s *Store) finish(id string, p *pendingTrace) {
 	}
 	for i := 1; i < len(spans); i++ {
 		sp := &spans[i]
-		// A request that joined the trace of another one is not an operation of
-		// it, and the client writes its name when no route matches.
+		// A request that joined the trace of another one, e.g., two calls a
+		// client made at once, is not an operation of it, and the client writes
+		// its name when no route matches. It is a request of its own route.
 		if sp.kind == SpanKindRequest {
+			status, _ := strconv.Atoi(sp.attr("http.response.status_code"))
+			failed := sp.err != "" || status >= 500
+			s.seriesOf(routeOf(sp)).add(end, sp.duration, selfTime(sp), failed)
+			if t.route.Kind != RouteKindBackground {
+				s.requests.add(end, sp.duration, selfTime(sp), failed)
+				s.interval.hist.add(sp.duration)
+				if failed {
+					s.interval.errors++
+				}
+			}
 			continue
 		}
 		os := s.operations[sp.name]
