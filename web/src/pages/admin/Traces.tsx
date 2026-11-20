@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { AlertCircle, ChevronDown, ChevronRight, Search as SearchIcon, X } from "lucide-react";
-import { type FormEvent, type ReactNode, useMemo, useState } from "react";
+import { type FormEvent, type ReactNode, type RefObject, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { Trans, useTranslation } from "react-i18next";
 
 import { AdminPageHeader, RefreshControl, STAT_VALUE, SegmentedLinks, StatCard } from "@/components/AdminPage";
@@ -155,12 +156,28 @@ function ShareBar({ share, className }: { share: number; className?: string }) {
 // COLLAPSED_ROWS is how many routes and operations show before "Show all".
 const COLLAPSED_ROWS = 10;
 
-function ShowAll({ count, onClick }: { count: number; onClick: () => void }) {
+function ShowAll({
+  count,
+  rows,
+  onClick,
+}: {
+  count: number;
+  // The body of the table the button shows all rows of.
+  rows: RefObject<HTMLTableSectionElement | null>;
+  onClick: () => void;
+}) {
   const { t } = useTranslation();
   if (count <= COLLAPSED_ROWS) return null;
+  const showAll = () => {
+    flushSync(onClick);
+    // The button is gone by now, so the focus goes on to the first row it brought: to its link, or
+    // to the row itself when it has none.
+    const row = rows.current?.rows[COLLAPSED_ROWS];
+    (row?.querySelector("a") ?? row)?.focus();
+  };
   return (
     <CardFooter className="border-t border-(--color-border) py-3 sm:py-3">
-      <button type="button" onClick={onClick} className={cn("min-h-6 cursor-pointer text-sm", LINK)}>
+      <button type="button" onClick={showAll} className={cn("min-h-6 cursor-pointer text-sm", LINK)}>
         {t("admin.traces.show_all", { count })}
       </button>
     </CardFooter>
@@ -246,7 +263,8 @@ function SortMenu<Column extends string>({
       onValueChange={(v) => onChange(options.find((option) => (option.column ?? FIRST_ORDER) === v)?.column ?? null)}
     >
       <SelectTrigger aria-label={t("admin.traces.sort")} className="glass-control mt-2 h-9 w-auto gap-2 @lg:hidden">
-        <span className={MUTED}>{t("admin.traces.sort")}</span>
+        {/* The muted color is too faint on the fill of a glass control. */}
+        <span className={cn(MUTED, "glass-ui:text-(--color-foreground)")}>{t("admin.traces.sort")}</span>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
@@ -296,6 +314,8 @@ export function AdminTraceOverview({ overview: loaded }: { overview: AdminTraceO
   );
   const [allRoutes, setAllRoutes] = useState(false);
   const [allOperations, setAllOperations] = useState(false);
+  const routeRows = useRef<HTMLTableSectionElement>(null);
+  const operationRows = useRef<HTMLTableSectionElement>(null);
   // The server lists routes by their total time, which no column shows.
   const routes = useSorted(overview.routes, ROUTE_ORDERS);
   // The server lists operations by their share of the time.
@@ -394,7 +414,7 @@ export function AdminTraceOverview({ overview: loaded }: { overview: AdminTraceO
                     </TableSortHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
+                <TableBody ref={routeRows}>
                   {routes.sorted.slice(0, allRoutes ? undefined : COLLAPSED_ROWS).map((route) => {
                     const errors = route.errors > 0 ? formatShare(route.errors / route.requests) : "0";
                     return (
@@ -443,7 +463,9 @@ export function AdminTraceOverview({ overview: loaded }: { overview: AdminTraceO
                   })}
                 </TableBody>
               </Table>
-              {allRoutes ? null : <ShowAll count={overview.routes.length} onClick={() => setAllRoutes(true)} />}
+              {allRoutes ? null : (
+                <ShowAll count={overview.routes.length} rows={routeRows} onClick={() => setAllRoutes(true)} />
+              )}
             </TableCard>
           ) : null}
 
@@ -482,11 +504,12 @@ export function AdminTraceOverview({ overview: loaded }: { overview: AdminTraceO
                     </TableSortHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
-                  {operations.sorted.slice(0, allOperations ? undefined : COLLAPSED_ROWS).map((op) => {
+                <TableBody ref={operationRows}>
+                  {operations.sorted.slice(0, allOperations ? undefined : COLLAPSED_ROWS).map((op, i) => {
                     const share = overview.spanSelfMs > 0 ? op.selfMs / overview.spanSelfMs : 0;
                     return (
-                      <TableRow key={op.name}>
+                      // "Show all" hands the focus to the first row it brings, which has no link to take it.
+                      <TableRow key={op.name} tabIndex={i === COLLAPSED_ROWS ? -1 : undefined}>
                         <TableCell>
                           <span className="inline-flex max-w-full items-baseline gap-1.5">
                             <KindChip kind={op.kind} />
@@ -512,7 +535,11 @@ export function AdminTraceOverview({ overview: loaded }: { overview: AdminTraceO
                 </TableBody>
               </Table>
               {allOperations ? null : (
-                <ShowAll count={overview.operations.length} onClick={() => setAllOperations(true)} />
+                <ShowAll
+                  count={overview.operations.length}
+                  rows={operationRows}
+                  onClick={() => setAllOperations(true)}
+                />
               )}
             </TableCard>
           ) : null}
