@@ -1334,7 +1334,9 @@ func (u *User) HTMLURL() string {
 }
 
 // AvatarURLPath returns the URL path to the user or organization avatar, which
-// is the uploaded avatar when there is one, otherwise the generated one.
+// is the uploaded avatar when there is one, otherwise the generated one. The
+// path carries the update time, so the new avatar shows right after an upload
+// or a removal instead of the one cached by the browser.
 //
 // TODO(unknwon): This is also used in templates, which should be fixed by
 // having a dedicated type `template.User` and move this to the "userx"
@@ -1343,7 +1345,7 @@ func (u *User) AvatarURLPath() string {
 	if u.ID <= 0 {
 		return userx.GeneratedAvatarURLPath(u.Name)
 	}
-	return fmt.Sprintf("%s/%s/%d", conf.Server.Subpath, conf.UsersAvatarPathPrefix, u.ID)
+	return fmt.Sprintf("%s/%s/%d?v=%d", conf.Server.Subpath, conf.UsersAvatarPathPrefix, u.ID, u.UpdatedUnix)
 }
 
 // AvatarURL returns the full URL to the user or organization avatar.

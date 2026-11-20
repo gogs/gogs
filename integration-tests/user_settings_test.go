@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/ed25519"
 	"crypto/rand"
+	"fmt"
 	"image"
 	"image/png"
 	"mime/multipart"
@@ -180,10 +181,13 @@ func TestUserSettingsAvatar(t *testing.T) {
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 	assert.True(t, userGet(t, u.ID).UseCustomAvatar)
 	var settings struct {
-		HasCustomAvatar bool `json:"hasCustomAvatar"`
+		HasCustomAvatar bool   `json:"hasCustomAvatar"`
+		AvatarURL       string `json:"avatarURL"`
 	}
 	c.doJSON(http.MethodGet, "/api/web/user/settings", nil, http.StatusOK, &settings)
 	assert.True(t, settings.HasCustomAvatar)
+	// The URL changes with every upload, so browsers do not show the cached avatar.
+	assert.Equal(t, fmt.Sprintf("%s?v=%d", avatarPath, userGet(t, u.ID).UpdatedUnix), settings.AvatarURL)
 
 	status, header, body = anonymous.doRaw(http.MethodGet, avatarPath, "", nil)
 	require.Equal(t, http.StatusOK, status, "response: %s", body)

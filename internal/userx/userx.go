@@ -106,7 +106,8 @@ func CustomAvatarPath(userID int64) string {
 // SaveGeneratedAvatar draws the avatar of the user and saves it as the avatar
 // file of the user, so it is drawn only once. It writes a temporary file and
 // links it in place, so concurrent requests never serve a partly written file
-// and an avatar uploaded in the meantime is never replaced.
+// and an avatar uploaded in the meantime is never replaced where the file system
+// supports hard links.
 func SaveGeneratedAvatar(userID int64) error {
 	// The seed is the ID so that the avatar stays the same after a rename.
 	img, err := avatar.GeneratePNG(strconv.FormatInt(userID, 10), avatar.DefaultSize)
@@ -131,10 +132,12 @@ func SaveGeneratedAvatar(userID int64) error {
 		return errors.Wrap(err, "write temporary file")
 	}
 	err = os.Link(f.Name(), avatarPath)
-	if os.IsExist(err) {
+	if err == nil || os.IsExist(err) {
 		return nil
 	}
-	return errors.Wrap(err, "link temporary file")
+	// Some file systems, e.g., SMB shares and FUSE mounts of object storage, do
+	// not support hard links.
+	return errors.Wrap(os.Rename(f.Name(), avatarPath), "rename temporary file")
 }
 
 // GeneratedAvatarURLPath returns the URL path to the avatar generated for the
