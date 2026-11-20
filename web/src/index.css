@@ -872,15 +872,16 @@ html[data-fullwidth] :is(.max-w-6xl, .max-w-7xl) {
 }
 /* Below sm a dialog is a sheet at the bottom, where the toasts show, and on a
    short screen, e.g., a phone held sideways, a centered dialog reaches down to
-   them. A toast that stays until it is closed would cover the buttons of the
-   dialog for as long as that is open, so it hides, and shows again when the
-   dialog closes. So do the toasts stacked behind it, which sonner draws as
-   empty boxes that the hidden toast no longer covers. */
-@media (width < 40rem), (height < 36rem) {
+   them, unless the window is wide enough for the toasts to show beside it.
+   A toast that stays until it is closed would cover the buttons of the dialog
+   for as long as that is open, so it hides, and shows again when the dialog
+   closes. So do the toasts stacked behind it, which the hidden toast no longer
+   covers. The height is that of the tallest dialog with messages in its form
+   plus the room the toast takes. */
+@media (width < 40rem), (height < 44rem) and (width < 76rem) {
   body:has([data-bottom-sheet][data-state="open"]) {
     [data-sonner-toast].toast-until-closed,
-    [data-sonner-toaster]:has(.toast-until-closed[data-front="true"])
-      [data-sonner-toast][data-front="false"][data-expanded="false"] {
+    [data-sonner-toaster]:has(.toast-until-closed[data-front="true"]) [data-sonner-toast][data-front="false"] {
       visibility: hidden;
     }
   }
