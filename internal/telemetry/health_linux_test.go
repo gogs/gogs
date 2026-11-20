@@ -71,10 +71,11 @@ func TestDiskUsage(t *testing.T) {
 		_, ok := usage.read()
 		require.False(t, ok, "the first reading gives up after the timeout")
 
-		// A reading that waited again would never return within a minute.
 		usage.timeout = time.Minute
+		start := time.Now()
 		_, ok = usage.read()
 		require.False(t, ok)
+		assert.Less(t, time.Since(start), 10*time.Second, "the readings after the timeout do not wait")
 		assert.Equal(t, int32(1), asked.Load(), "the file system is not asked again while it is yet to answer")
 
 		close(release)

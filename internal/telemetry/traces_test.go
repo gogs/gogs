@@ -222,8 +222,9 @@ func TestTruncate(t *testing.T) {
 }
 
 // A client can send requests with the trace ID of one that is still running,
-// each with a path that matches no route and so names its span.
-func TestStore_JoinedRequestsAreNotOperations(t *testing.T) {
+// each with a path that matches no route and so names its span. They are
+// requests of their own, counted under their method.
+func TestStore_JoinedRequests(t *testing.T) {
 	store, tracer := newTestStore(t, defaultOptions())
 
 	parent := trace.NewSpanContext(trace.SpanContextConfig{
@@ -244,13 +245,23 @@ func TestStore_JoinedRequestsAreNotOperations(t *testing.T) {
 		_, joined := request("PROPFIND " + path)
 		joined.End(trace.WithTimestamp(start.Add(time.Millisecond)))
 	}
+	_, lateQuery := tracer.Start(openCtx, "db UPDATE user", trace.WithTimestamp(start.Add(time.Second)))
+	lateQuery.End(trace.WithTimestamp(start.Add(time.Second + time.Millisecond)))
 	open.End(trace.WithTimestamp(testNow))
 
-	var names []string
-	for _, op := range store.Overview(15, "15m").Operations {
-		names = append(names, op.Name)
+	overview := store.Overview(15, "15m")
+	var operations []string
+	for _, op := range overview.Operations {
+		operations = append(operations, op.Name)
 	}
-	assert.Equal(t, []string{"db SELECT user"}, names)
+	assert.ElementsMatch(t, []string{"db SELECT user", "db UPDATE user"}, operations)
+
+	requests := make(map[string]int)
+	for _, route := range overview.Routes {
+		requests[route.Name] = route.Requests
+	}
+	assert.Equal(t, map[string]int{"GET": 1, "PROPFIND": 2}, requests)
+	assert.Equal(t, 3, overview.Requests)
 }
 
 // A client can send many requests with the trace ID of one that is still

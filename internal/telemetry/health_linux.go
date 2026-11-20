@@ -134,8 +134,10 @@ type diskSpace struct {
 // diskUsage measures the file system of a path. A file system that does not
 // answer in time, e.g., a network mount whose server is gone, costs a reading
 // the timeout once. The readings after it do not wait, and the first of them
-// to find the answer takes it. One goroutine at a time calls its methods, as
-// Health does with its gauges.
+// to find the answer takes it. A file system that always answers late
+// therefore costs the timeout once per answer, and has fewer points than the
+// others. One goroutine at a time calls its methods, as Health does with its
+// gauges.
 type diskUsage struct {
 	path    string
 	timeout time.Duration
