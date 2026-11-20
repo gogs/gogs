@@ -29,8 +29,8 @@ var initTime = time.Now()
 // with its label already translated.
 type adminReportRow struct {
 	Label string `json:"label"`
-	// Kind tells how to show the value: "text", "code", "block" for multi-line
-	// code, "bool", or "unset" when the setting has no value.
+	// Kind tells how to show the value: "code", "block" for multi-line code,
+	// "bool", or "unset" when the setting has no value.
 	Kind  string `json:"kind"`
 	Value string `json:"value,omitempty"`
 	// On is the value of a "bool" row.
@@ -52,10 +52,6 @@ type adminReportSection struct {
 // adminReport builds the rows of a report, translating their labels.
 type adminReport struct {
 	l i18n.Locale
-}
-
-func (r adminReport) text(key string, value any) adminReportRow {
-	return adminReportRow{Label: r.l.Tr(key), Kind: "text", Value: fmt.Sprint(value)}
 }
 
 // withHint returns the row with a translated note shown after its value.
@@ -103,11 +99,13 @@ func (r adminReport) section(id, titleKey string, groups ...[]adminReportRow) ad
 func rows(rs ...adminReportRow) []adminReportRow { return rs }
 
 type adminDashboard struct {
-	AppVersion   string             `json:"appVersion"`
-	GitVersion   string             `json:"gitVersion"`
-	GoVersion    string             `json:"goVersion"`
-	BuildTime    string             `json:"buildTime"`
-	BuildCommit  string             `json:"buildCommit"`
+	AppVersion  string `json:"appVersion"`
+	GitVersion  string `json:"gitVersion"`
+	GoVersion   string `json:"goVersion"`
+	BuildTime   string `json:"buildTime"`
+	BuildCommit string `json:"buildCommit"`
+	// StartedAt is when the server started, which its uptime counts from.
+	StartedAt    time.Time          `json:"startedAt"`
 	Statistics   []adminStatistic   `json:"statistics"`
 	SystemStatus adminReportSection `json:"systemStatus"`
 }
@@ -134,16 +132,13 @@ func getAdminDashboard(logger *logx.Logger, c flamego.Context, l i18n.Locale) (s
 	runtime.ReadMemStats(m)
 	status := r.section("system-status", "admin::dashboard.system_status",
 		rows(
-			r.text("admin::dashboard.server_uptime", timeSincePro(initTime)),
-			r.code("admin::dashboard.current_goroutine", runtime.NumGoroutine()),
-		),
-		rows(
-			size("admin::dashboard.current_memory_usage", m.Alloc),
-			size("admin::dashboard.total_memory_allocated", m.TotalAlloc),
-			size("admin::dashboard.memory_obtained", m.Sys),
-			r.code("admin::dashboard.pointer_lookup_times", m.Lookups),
-			r.code("admin::dashboard.memory_allocate_times", m.Mallocs),
-			r.code("admin::dashboard.memory_free_times", m.Frees),
+			r.code("admin.dashboard.current_goroutine", runtime.NumGoroutine()),
+			size("admin.dashboard.current_memory_usage", m.Alloc),
+			size("admin.dashboard.total_memory_allocated", m.TotalAlloc),
+			size("admin.dashboard.memory_obtained", m.Sys),
+			r.code("admin.dashboard.pointer_lookup_times", m.Lookups),
+			r.code("admin.dashboard.memory_allocate_times", m.Mallocs),
+			r.code("admin.dashboard.memory_free_times", m.Frees),
 		),
 		rows(
 			size("admin::dashboard.current_heap_usage", m.HeapAlloc),
@@ -179,6 +174,7 @@ func getAdminDashboard(logger *logx.Logger, c flamego.Context, l i18n.Locale) (s
 		GoVersion:   runtime.Version(),
 		BuildTime:   conf.BuildTime,
 		BuildCommit: conf.BuildCommit,
+		StartedAt:   initTime,
 		Statistics: []adminStatistic{
 			{l.Tr("admin.dashboard.statistic_users"), s.User},
 			{l.Tr("admin.dashboard.statistic_organizations"), s.Org},
@@ -558,88 +554,4 @@ func fileSize(s int64) string {
 		f = "%.1f"
 	}
 	return fmt.Sprintf(f+" %s", val, sizes[int(e)])
-}
-
-func computeTimeDiff(diff int64) (int64, string) {
-	const (
-		minute = 60
-		hour   = 60 * minute
-		day    = 24 * hour
-		week   = 7 * day
-		month  = 30 * day
-		year   = 12 * month
-	)
-
-	diffStr := ""
-	switch {
-	case diff <= 0:
-		diff = 0
-		diffStr = "now"
-	case diff < 2:
-		diff = 0
-		diffStr = "1 second"
-	case diff < 1*minute:
-		diffStr = fmt.Sprintf("%d seconds", diff)
-		diff = 0
-
-	case diff < 2*minute:
-		diff -= 1 * minute
-		diffStr = "1 minute"
-	case diff < 1*hour:
-		diffStr = fmt.Sprintf("%d minutes", diff/minute)
-		diff -= diff / minute * minute
-
-	case diff < 2*hour:
-		diff -= 1 * hour
-		diffStr = "1 hour"
-	case diff < 1*day:
-		diffStr = fmt.Sprintf("%d hours", diff/hour)
-		diff -= diff / hour * hour
-
-	case diff < 2*day:
-		diff -= 1 * day
-		diffStr = "1 day"
-	case diff < 1*week:
-		diffStr = fmt.Sprintf("%d days", diff/day)
-		diff -= diff / day * day
-
-	case diff < 2*week:
-		diff -= 1 * week
-		diffStr = "1 week"
-	case diff < 1*month:
-		diffStr = fmt.Sprintf("%d weeks", diff/week)
-		diff -= diff / week * week
-
-	case diff < 2*month:
-		diff -= 1 * month
-		diffStr = "1 month"
-	case diff < 1*year:
-		diffStr = fmt.Sprintf("%d months", diff/month)
-		diff -= diff / month * month
-
-	case diff < 2*year:
-		diff -= 1 * year
-		diffStr = "1 year"
-	default:
-		diffStr = fmt.Sprintf("%d years", diff/year)
-		diff = 0
-	}
-	return diff, diffStr
-}
-
-// timeSincePro calculates the time interval and generates a full user-friendly string.
-func timeSincePro(then time.Time) string {
-	now := time.Now()
-	diff := now.Unix() - then.Unix()
-
-	if then.After(now) {
-		return "future"
-	}
-
-	var timeStr, diffStr string
-	for diff != 0 {
-		diff, diffStr = computeTimeDiff(diff)
-		timeStr += ", " + diffStr
-	}
-	return strings.TrimPrefix(timeStr, ", ")
 }

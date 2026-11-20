@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -95,8 +96,9 @@ func TestAdminDashboard(t *testing.T) {
 	adminAssertTurnedAway(t, nonAdmin, anonymous, http.MethodGet, "/api/web/admin/dashboard", nil)
 
 	var resp struct {
-		AppVersion string `json:"appVersion"`
-		GoVersion  string `json:"goVersion"`
+		AppVersion string    `json:"appVersion"`
+		GoVersion  string    `json:"goVersion"`
+		StartedAt  time.Time `json:"startedAt"`
 		Statistics []struct {
 			Label string `json:"label"`
 			Count int64  `json:"count"`
@@ -110,6 +112,8 @@ func TestAdminDashboard(t *testing.T) {
 	assert.Equal(t, "Gogs version "+resp.AppVersion, strings.TrimSpace(string(version)))
 	// The server is built by the same toolchain as the tests.
 	assert.Equal(t, runtime.Version(), resp.GoVersion)
+	assert.False(t, resp.StartedAt.IsZero())
+	assert.True(t, resp.StartedAt.Before(time.Now()), "the server started at %s", resp.StartedAt)
 	assert.Equal(t, "system-status", resp.SystemStatus.ID)
 	assert.NotEmpty(t, resp.SystemStatus.Groups)
 
