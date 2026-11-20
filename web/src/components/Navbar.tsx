@@ -25,6 +25,17 @@ import { subUrl } from "@/lib/url";
 import { useUserInfo } from "@/lib/use-user-info";
 import type { UserInfo } from "@/lib/user-info";
 
+// MENU_FOCUS moves the focus to a menu itself when it opens, so Tab goes on to
+// its links. Focusing its first link instead would ring that link after a
+// click, and leaving the focus on the trigger would send Tab past the menu.
+const MENU_FOCUS = {
+  tabIndex: -1,
+  onOpenAutoFocus: (e: Event) => {
+    e.preventDefault();
+    (e.currentTarget as HTMLElement | null)?.focus();
+  },
+};
+
 export function Navbar() {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -82,7 +93,7 @@ export function Navbar() {
             >
               <Menu className="size-[18px]" aria-hidden />
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-56 p-1" onOpenAutoFocus={(e) => e.preventDefault()}>
+            <PopoverContent align="end" className="w-56 p-1 focus:outline-none" {...MENU_FOCUS}>
               <ul className="flex flex-col text-sm">
                 {user ? (
                   <>
@@ -221,7 +232,7 @@ function CreateMenu({ canCreateOrganization }: { canCreateOrganization: boolean 
         <Plus className="size-4" aria-hidden />
         <ChevronDown className="size-3" aria-hidden />
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-56 p-1" onOpenAutoFocus={(e) => e.preventDefault()}>
+      <PopoverContent align="end" className="w-56 p-1 focus:outline-none" {...MENU_FOCUS}>
         <MenuLink href="/repo/create" icon={<Plus className="size-4" aria-hidden />} onSelect={() => setOpen(false)}>
           {t("new_repo")}
         </MenuLink>
@@ -260,7 +271,7 @@ export function UserMenu({ user, inAdmin = false }: { user: UserInfo; inAdmin?: 
         )}
         <ChevronDown className="size-3 text-(--color-muted-foreground)" aria-hidden />
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-60 p-1" onOpenAutoFocus={(e) => e.preventDefault()}>
+      <PopoverContent align="end" className="w-60 p-1 focus:outline-none" {...MENU_FOCUS}>
         <div className="px-2 pt-2 pb-1 text-xs text-(--color-muted-foreground)">
           {t("signed_in_as")} <strong className="text-(--color-foreground)">{user.username}</strong>
         </div>

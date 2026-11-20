@@ -321,8 +321,10 @@ export function AdminLayout() {
                 )}
               </ol>
             </nav>
-            {/* The search field narrows before the breadcrumb truncates, which the large shrink factor says. */}
-            <div className="ml-auto flex min-w-0 shrink-0 items-center gap-1 md:shrink-10000">
+            {/* The search field narrows before the breadcrumb truncates, which the large shrink factor says.
+                The least width holds the narrowest search field beside the two menus, so a long crumb
+                cannot push those out of the bar. */}
+            <div className="ml-auto flex shrink-0 items-center gap-1 md:min-w-55 md:shrink-10000">
               <PaletteButton />
               <div className="flex shrink-0 items-center gap-1">
                 <SettingsMenu />
