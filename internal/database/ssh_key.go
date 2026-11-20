@@ -199,6 +199,10 @@ func sshKeygenFingerprint(keygenPath, path string) (stdout, stderr string, err e
 	cmd.Stdout = &outBuf
 	cmd.Stderr = &errBuf
 	err = cmd.Run()
+	if ctx.Err() != nil {
+		// On Windows, the killed process exits with 1 as if it rejected the key.
+		err = errors.Wrapf(ctx.Err(), "run ssh-keygen: %v", err)
+	}
 	return outBuf.String(), errBuf.String(), err
 }
 
@@ -206,21 +210,34 @@ func sshKeygenFingerprint(keygenPath, path string) (stdout, stderr string, err e
 func SSHKeygenParsePublicKey(key, keyTestPath, keygenPath string) (string, int, error) {
 	tmpName, err := writeTmpKeyFile(key, keyTestPath)
 	if err != nil {
-		return "", 0, errors.Newf("writeTmpKeyFile: %v", err)
+		return "", 0, ErrKeyCheckFailed{errors.Wrap(err, "writeTmpKeyFile")}
 	}
 	defer os.Remove(tmpName)
 
 	stdout, stderr, err := sshKeygenFingerprint(keygenPath, tmpName)
 	if err != nil {
-		return "", 0, errors.Newf("fail to parse public key: %s - %s", err, stderr)
-	}
-	if strings.Contains(stdout, "is not a public key file") {
-		return "", 0, ErrKeyUnableVerify{stdout}
+		// ssh-keygen that ran to its end rejected the key, e.g., "is not a public
+		// key file", while one that did not start or was killed failed the check.
+		// Exit codes 126 and 127 are of a shell that could not run the command.
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) && exitErr.ExitCode() > 0 && exitErr.ExitCode() != 126 && exitErr.ExitCode() != 127 {
+			// The message comes last, on stdout before OpenSSH 6.9, and starts with
+			// the path of the temporary file, which users must not see. The path is
+			// cut at the file name, because ssh-keygen on Windows may spell the
+			// directories differently, e.g., in their short names.
+			lines := strings.Split(strings.TrimSpace(stdout+stderr), "\n")
+			msg := "key rejected by ssh-keygen"
+			if line, base := lines[len(lines)-1], filepath.Base(tmpName); strings.Contains(line, base) {
+				msg = "key" + line[strings.LastIndex(line, base)+len(base):]
+			}
+			return "", 0, ErrKeyUnableVerify{strings.TrimSpace(msg)}
+		}
+		return "", 0, ErrKeyCheckFailed{errors.Newf("fail to parse public key: %s - %s", err, stderr)}
 	}
 
 	fields := strings.Split(stdout, " ")
 	if len(fields) < 4 {
-		return "", 0, errors.Newf("invalid public key line: %s", stdout)
+		return "", 0, ErrKeyCheckFailed{errors.Newf("invalid public key line: %s", stdout)}
 	}
 
 	keyType := strings.Trim(fields[len(fields)-1], "()\r\n")
@@ -276,7 +293,7 @@ func SSHNativeParsePublicKey(keyLine string) (string, int, error) {
 // It returns the actual public key line on success.
 func CheckPublicKeyString(logger *logx.Logger, content string) (_ string, err error) {
 	if conf.SSH.Disabled {
-		return "", errors.New("SSH is disabled")
+		return "", ErrSSHDisabled
 	}
 
 	content, err = parseKeyString(content)
@@ -309,7 +326,7 @@ func CheckPublicKeyString(logger *logx.Logger, content string) (_ string, err er
 		keyType, length, err = SSHKeygenParsePublicKey(content, conf.SSH.KeyTestPath, conf.SSH.KeygenPath)
 	}
 	if err != nil {
-		return "", errors.Newf("%s: %v", fnName, err)
+		return "", errors.Wrap(err, fnName)
 	}
 	logger.Debug("Parsed public key", "builtinServer", conf.SSH.StartBuiltinServer, "keyType", keyType, "length", length)
 

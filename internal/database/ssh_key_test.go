@@ -1,10 +1,16 @@
 package database
 
 import (
+	"encoding/base64"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/ssh"
+	"unknwon.dev/x/logx"
+
+	"gogs.io/gogs/internal/conf"
 )
 
 func TestSSHParsePublicKey(t *testing.T) {
@@ -59,4 +65,52 @@ func TestSSHParsePublicKey(t *testing.T) {
 			assert.Equal(t, test.expLength, length)
 		})
 	}
+}
+
+func TestCheckPublicKeyStringUnknownAlgorithm(t *testing.T) {
+	conf.SetMockSSH(t, conf.SSHOpts{
+		StartBuiltinServer:  true,
+		MinimumKeySizeCheck: true,
+	})
+
+	// A well-formed key line whose algorithm the SSH library does not know.
+	key := base64.StdEncoding.EncodeToString(ssh.Marshal(struct{ Name string }{"ssh-unknown"}))
+	_, err := CheckPublicKeyString(logx.NewNoopLogger(), "ssh-unknown "+key)
+	assert.True(t, IsErrKeyUnableVerify(err), "error: %v", err)
+}
+
+func TestCheckPublicKeyStringWithSSHKeygen(t *testing.T) {
+	keyTestPath := t.TempDir()
+	conf.SetMockSSH(t, conf.SSHOpts{
+		KeygenPath:          "ssh-keygen",
+		KeyTestPath:         keyTestPath,
+		MinimumKeySizeCheck: true,
+	})
+	// A key line whose type matches but whose key data ssh-keygen cannot read.
+	truncated := "ssh-ed25519 " + base64.StdEncoding.EncodeToString(ssh.Marshal(struct{ Name string }{"ssh-ed25519"}))
+
+	t.Run("key ssh-keygen rejects", func(t *testing.T) {
+		for _, content := range []string{
+			truncated,
+			// ssh-keygen reads it as a private key and answers "is not a key file".
+			truncated + " PRIVATE KEY",
+		} {
+			_, err := CheckPublicKeyString(logx.NewNoopLogger(), content)
+			require.Error(t, err)
+			assert.True(t, IsErrKeyUnableVerify(err), "error: %v", err)
+			assert.Regexp(t, `\[result: key is not a (public )?key file\.\]$`, err.Error())
+		}
+	})
+
+	t.Run("server fails to check", func(t *testing.T) {
+		for name, opts := range map[string]conf.SSHOpts{
+			"missing ssh-keygen":    {KeygenPath: filepath.Join(keyTestPath, "missing"), KeyTestPath: keyTestPath, MinimumKeySizeCheck: true},
+			"missing key test path": {KeygenPath: "ssh-keygen", KeyTestPath: filepath.Join(keyTestPath, "missing"), MinimumKeySizeCheck: true},
+		} {
+			conf.SSH = opts
+			_, err := CheckPublicKeyString(logx.NewNoopLogger(), truncated)
+			assert.True(t, IsErrKeyCheckFailed(err), "%s, error: %v", name, err)
+			assert.False(t, IsErrKeyUnableVerify(err), "%s, error: %v", name, err)
+		}
+	})
 }

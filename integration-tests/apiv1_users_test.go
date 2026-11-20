@@ -1,6 +1,7 @@
 package integrationtests
 
 import (
+	"encoding/json"
 	"net/http"
 	"strings"
 	"testing"
@@ -283,6 +284,11 @@ func TestAPIV1UserKeys(t *testing.T) {
 
 	status, body := api.do(http.MethodPost, "/api/v1/user/keys", map[string]any{"title": UniqueName("key-"), "key": "not a key"})
 	assert.Equal(t, http.StatusUnprocessableEntity, status, "response: %s", body)
+	var invalid struct {
+		Message string `json:"message"`
+	}
+	require.NoError(t, json.Unmarshal(body, &invalid), "response: %s", body)
+	assert.Regexp(t, `^Invalid key content: [^%]+$`, invalid.Message)
 
 	status, body = other.do(http.MethodDelete, "/api/v1/user/keys/"+apiV1Itoa(created.ID), nil)
 	assert.Equal(t, http.StatusForbidden, status, "key of another user, response: %s", body)

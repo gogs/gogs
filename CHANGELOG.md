@@ -138,6 +138,9 @@ All notable changes to Gogs are documented in this file.
 - After adding several email addresses, every confirmation link now works, not only the first one opened. Confirmation links sent before upgrading no longer work. [#8645](https://github.com/gogs/gogs/pull/8645)
 - Images inside links in Markdown, e.g., README badges with a relative path, and images written in raw HTML as `<img ... />` with a relative path now load instead of showing as broken. [#8642](https://github.com/gogs/gogs/pull/8642)
 - Pushing to a wiki without pages creates the wiki instead of failing with "repository not found". [#8635](https://github.com/gogs/gogs/pull/8635)
+- Adding a deploy key through the API that the repository already has, or with a title it already uses, now says so instead of failing with a server error. [#8641](https://github.com/gogs/gogs/pull/8641)
+- When SSH keys are checked with `ssh-keygen`, adding a key it cannot read no longer shows paths of temporary files on the server, and a failure to run the check is reported as a server error instead of an invalid key. [#8641](https://github.com/gogs/gogs/pull/8641)
+- Adding an SSH or deploy key while SSH is disabled now says that SSH is disabled, instead of saying that the key is invalid. [#8641](https://github.com/gogs/gogs/pull/8641)
 
 ### Removed
 

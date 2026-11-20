@@ -159,7 +159,13 @@ type userSSHKeyRequest struct {
 
 func postUserSSHKey(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, req userSSHKeyRequest) (statusCode int, resp any, err error) {
 	content, err := database.CheckPublicKeyString(logger, req.Content)
-	if err != nil {
+	if database.IsErrKeyCheckFailed(err) {
+		logger.Error("Failed to check public key", "userID", viewer.ID, "error", err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "check public key")
+	} else if errors.Is(err, database.ErrSSHDisabled) {
+		msg := l.Tr("settings.ssh_disabled")
+		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
+	} else if err != nil {
 		msg := l.Tr("form.invalid_ssh_key", err.Error())
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
 	}

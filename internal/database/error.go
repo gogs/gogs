@@ -2,6 +2,8 @@ package database
 
 import (
 	"fmt"
+
+	"github.com/cockroachdb/errors"
 )
 
 type ErrWikiAlreadyExist struct {
@@ -22,12 +24,33 @@ type ErrKeyUnableVerify struct {
 }
 
 func IsErrKeyUnableVerify(err error) bool {
-	_, ok := err.(ErrKeyUnableVerify)
-	return ok
+	return errors.As(err, new(ErrKeyUnableVerify))
 }
 
 func (err ErrKeyUnableVerify) Error() string {
 	return fmt.Sprintf("Unable to verify key content [result: %s]", err.Result)
+}
+
+// ErrSSHDisabled is returned when adding a public key while SSH is disabled.
+var ErrSSHDisabled = errors.New("SSH is disabled")
+
+// ErrKeyCheckFailed is returned when the server fails to check a public key,
+// e.g., because it cannot run ssh-keygen, rather than because the key is
+// invalid. Its details are for the server log, not for the user.
+type ErrKeyCheckFailed struct {
+	Err error
+}
+
+func IsErrKeyCheckFailed(err error) bool {
+	return errors.As(err, new(ErrKeyCheckFailed))
+}
+
+func (err ErrKeyCheckFailed) Error() string {
+	return err.Err.Error()
+}
+
+func (err ErrKeyCheckFailed) Unwrap() error {
+	return err.Err
 }
 
 type ErrKeyNotExist struct {

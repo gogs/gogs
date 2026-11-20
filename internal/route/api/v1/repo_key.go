@@ -49,10 +49,15 @@ func getDeployKey(c *apiContext) {
 }
 
 func handleCheckKeyStringError(c *apiContext, err error) {
-	if database.IsErrKeyUnableVerify(err) {
+	switch {
+	case errors.Is(err, database.ErrSSHDisabled):
+		c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("SSH is disabled on this site, so SSH keys cannot be added"))
+	case database.IsErrKeyCheckFailed(err):
+		c.Error(err, "check key content")
+	case database.IsErrKeyUnableVerify(err):
 		c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("Unable to verify key content"))
-	} else {
-		c.ErrorStatus(http.StatusUnprocessableEntity, errors.Wrap(err, "Invalid key content: %v"))
+	default:
+		c.ErrorStatus(http.StatusUnprocessableEntity, errors.Wrap(err, "Invalid key content"))
 	}
 }
 
@@ -60,7 +65,9 @@ func handleAddKeyError(c *apiContext, err error) {
 	switch {
 	case database.IsErrKeyAlreadyExist(err):
 		c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("Key content has been used as non-deploy key"))
-	case database.IsErrKeyNameAlreadyUsed(err):
+	case database.IsErrDeployKeyAlreadyExist(err):
+		c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("Key has already been added to this repository"))
+	case database.IsErrKeyNameAlreadyUsed(err), database.IsErrDeployKeyNameAlreadyUsed(err):
 		c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("Key title has been used"))
 	default:
 		c.Error(err, "add key")
