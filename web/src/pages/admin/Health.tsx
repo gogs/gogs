@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { type KeyboardEvent, memo, useId, useMemo, useState } from "react";
+import { type KeyboardEvent, type ReactNode, memo, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Area,
@@ -62,6 +62,26 @@ function activeTime(state: MouseHandlerDataParam) {
   return state.activeLabel != null && Number.isFinite(at) ? at : null;
 }
 
+// NearViewport renders its children only while it is in or near the part of
+// the page in view, and holds their room otherwise. The page has dozens of
+// charts, which all draw again on a refresh and on every move of the pointer
+// over one of them.
+function NearViewport({ className, children }: { className: string; children: ReactNode }) {
+  const [near, setNear] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!ref.current) return;
+    const observer = new IntersectionObserver(([entry]) => setNear(entry.isIntersecting), { rootMargin: "50% 0px" });
+    observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+  return (
+    <div ref={ref} className={className}>
+      {near ? children : null}
+    </div>
+  );
+}
+
 // MetricChart draws a measurement over the range. It only renders again when
 // the pinned moment changes, since the charts move the cursor of a hover
 // between themselves.
@@ -70,6 +90,7 @@ const MetricChart = memo(function MetricChart({
   start,
   end,
   limit,
+  ofLimit,
   pinned,
   flagged,
   onHover,
@@ -80,6 +101,8 @@ const MetricChart = memo(function MetricChart({
   end: number;
   // The limit of the series as it reads, e.g., "64 GB".
   limit: string;
+  // The value reads against the limit, so the chart shows how much of it is used.
+  ofLimit: boolean;
   pinned: number | null;
   flagged: boolean;
   onHover: (at: number | null) => void;
@@ -97,7 +120,7 @@ const MetricChart = memo(function MetricChart({
   );
   const peak = Math.max(0, ...series.points.map(([, v]) => v));
   // A limit far above the values, e.g., of open files, would flatten the line.
-  const scaleToLimit = series.limit > 0 && series.limit <= peak * 10;
+  const scaleToLimit = series.limit > 0 && (ofLimit || series.limit <= peak * 10);
   const max = scaleToLimit ? series.limit : peak * 1.1 || 1;
   const pinnedPoint = pinned === null ? undefined : series.points.find(([time]) => time === pinned);
   const config = {
@@ -346,16 +369,19 @@ export function AdminServerHealth({ health: loaded, range }: { health: AdminHeal
                       onKeyDown={onKeyDown}
                       className="min-w-0 rounded-sm outline-none focus-visible:ring-1 focus-visible:ring-(--color-ring)"
                     >
-                      <MetricChart
-                        series={row.series}
-                        start={start}
-                        end={end}
-                        limit={row.metric.format(row.series.limit)}
-                        pinned={pinned}
-                        flagged={flagged !== ""}
-                        onHover={setHover}
-                        onPin={setPinned}
-                      />
+                      <NearViewport className="h-32">
+                        <MetricChart
+                          series={row.series}
+                          start={start}
+                          end={end}
+                          limit={row.metric.format(row.series.limit)}
+                          ofLimit={row.metric.ofLimit ?? false}
+                          pinned={pinned}
+                          flagged={flagged !== ""}
+                          onHover={setHover}
+                          onPin={setPinned}
+                        />
+                      </NearViewport>
                     </div>
                   </StatCard>
                 );
