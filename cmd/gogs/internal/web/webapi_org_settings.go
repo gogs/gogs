@@ -11,7 +11,9 @@ import (
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/i18n"
+	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/tool"
+	"gogs.io/gogs/internal/userx"
 )
 
 type orgCreateRequest struct {
@@ -64,8 +66,9 @@ type orgSettings struct {
 	Website     string `json:"website"`
 	Location    string `json:"location"`
 	AvatarURL   string `json:"avatarURL"`
-	// HasCustomAvatar is true when an avatar was uploaded, which can be
-	// deleted.
+	// HasCustomAvatar is true when the avatar file exists, which can be deleted.
+	// It may also hold an identicon saved by an earlier version, or an upload
+	// that an earlier version stopped showing without deleting it.
 	HasCustomAvatar bool `json:"hasCustomAvatar"`
 	// MaxRepoCreation is only sent to site admins, who can change it.
 	MaxRepoCreation *int `json:"maxRepoCreation,omitempty"`
@@ -83,7 +86,7 @@ func getOrgSettings(viewer *database.User, m *orgMembership) (statusCode int, re
 		Website:         org.Website,
 		Location:        org.Location,
 		AvatarURL:       org.AvatarURLPath(),
-		HasCustomAvatar: org.UseCustomAvatar,
+		HasCustomAvatar: osx.IsFile(userx.CustomAvatarPath(org.ID)),
 	}
 	if viewer.IsAdmin {
 		settings.MaxRepoCreation = &org.MaxRepoCreation

@@ -11,6 +11,7 @@ import (
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/i18n"
+	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/tool"
 	"gogs.io/gogs/internal/userx"
 )
@@ -24,8 +25,9 @@ type userSettings struct {
 	// authentication source. They cannot change their username or password.
 	IsLocal   bool   `json:"isLocal"`
 	AvatarURL string `json:"avatarURL"`
-	// HasCustomAvatar is true when an avatar was uploaded, which can be
-	// deleted.
+	// HasCustomAvatar is true when the avatar file exists, which can be deleted.
+	// It may also hold an identicon saved by an earlier version, or an upload
+	// that an earlier version stopped showing without deleting it.
 	HasCustomAvatar bool `json:"hasCustomAvatar"`
 }
 
@@ -37,7 +39,7 @@ func getUserSettings(viewer *database.User) (statusCode int, resp *userSettings,
 		Location:        viewer.Location,
 		IsLocal:         viewer.IsLocal(),
 		AvatarURL:       viewer.AvatarURLPath(),
-		HasCustomAvatar: viewer.UseCustomAvatar,
+		HasCustomAvatar: osx.IsFile(userx.CustomAvatarPath(viewer.ID)),
 	}
 	return http.StatusOK, settings, nil
 }

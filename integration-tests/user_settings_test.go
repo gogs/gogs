@@ -169,6 +169,19 @@ func TestUserSettingsAvatar(t *testing.T) {
 	_, _, body = anonymous.doRaw(http.MethodGet, "/-/avatars/"+strconv.FormatInt(other.ID, 10), "", nil)
 	assert.Equal(t, "identicon", string(body))
 
+	// An upload that an earlier version stopped showing without deleting it can
+	// be deleted.
+	require.NoError(t, os.WriteFile(userx.CustomAvatarPath(u.ID), []byte("leftover"), 0o644))
+	var leftover struct {
+		HasCustomAvatar bool `json:"hasCustomAvatar"`
+	}
+	c.doJSON(http.MethodGet, "/api/web/user/settings", nil, http.StatusOK, &leftover)
+	assert.True(t, leftover.HasCustomAvatar)
+	status, _, body = c.doRaw(http.MethodDelete, "/api/web/user/settings/avatar", "", nil)
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	_, _, body = anonymous.doRaw(http.MethodGet, avatarPath, "", nil)
+	assert.Equal(t, generated, body)
+
 	contentType, form = userAvatarForm(t, []byte("not an image"))
 	status, _, body = c.doRaw(http.MethodPut, "/api/web/user/settings/avatar", contentType, form)
 	assert.Equal(t, http.StatusBadRequest, status, "response: %s", body)
