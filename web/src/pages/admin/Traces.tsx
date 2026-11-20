@@ -893,7 +893,10 @@ function Waterfall({ trace }: { trace: AdminTrace }) {
   const origin = Math.min(0, ...trace.spans.map((s) => s.startMs));
   const end = Math.max(trace.durationMs, ...trace.spans.map((s) => s.startMs + s.durationMs), origin + 0.001);
   const total = end - origin;
-  const step = niceStep(total);
+  let step = niceStep(total);
+  // With an early span, both sides of 0 may be shorter than a step, which would leave 0 as the
+  // only gridline. Half a step always fits on the longer side.
+  if (Math.max(end, -origin) < step) step /= 2;
   const firstTick = Math.ceil(origin / step) * step;
   const ticks = Array.from({ length: Math.floor((end - firstTick) / step) + 1 }, (_, i) => firstTick + i * step);
   const at = (ms: number) => (ms - origin) / total;
