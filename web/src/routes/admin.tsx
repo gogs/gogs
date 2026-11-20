@@ -70,10 +70,26 @@ function loadRefreshed<T, K extends QueryKey>(
   query: FetchQueryOptions<T, Error, T, K>,
 ): Promise<T> {
   const { queryClient } = context as { queryClient: QueryClient };
-  return loadAdminPage(location, () =>
-    // A loader waits neither for a second try nor for the browser to be online again.
-    queryClient.fetchQuery({ ...query, retry: false, networkMode: "always" }),
-  );
+  // A loader waits neither for a second try nor for the browser to be online again.
+  const load = () => queryClient.fetchQuery({ ...query, retry: false, networkMode: "always" });
+  return loadAdminPage(location, async () => {
+    // The request may be one that a card of the overview started. It gives up its second try
+    // when the overview goes away, which this very load causes, so the loader asks for itself.
+    const joined = queryClient.getQueryState(query.queryKey)?.fetchStatus === "fetching";
+    try {
+      return await load().catch((err: unknown) => {
+        if (!joined) throw err;
+        return load();
+      });
+    } catch (err) {
+      // Numbers the viewer has seen stay up when loading them again fails, as after a refresh
+      // that failed, and the RefreshNote of the page tells from when they are. They do not when
+      // the server turned the request away, which another try does not change.
+      const last = queryClient.getQueryData<T>(query.queryKey);
+      if (last === undefined || (err instanceof LoaderResponseError && err.status < 500)) throw err;
+      return last;
+    }
+  });
 }
 
 export function createAdminRoutes(rootRoute: AnyRoute) {
