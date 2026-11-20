@@ -45,12 +45,15 @@ export function CodeBlock({ code, lang, className }: { code: string; lang: Suppo
       <Tooltip open={tooltipOpen || copied} onOpenChange={setTooltipOpen}>
         <TooltipTrigger asChild>
           {/* Pointers that can hover reveal the button on hover. Touch screens
-              hide it, since it would cover the end of the first line. */}
+              hide it, since it would cover the end of the first line. It centers
+              on the first line, using the library's padding and line height
+              with their defaults, so a single line has equal space above and
+              below it, and keeps the same space to the right. */}
           <button
             type="button"
             onClick={() => void copy()}
             aria-label={label}
-            className="glass-control absolute top-1.5 right-1.5 grid size-7 cursor-pointer place-items-center rounded-md border border-(--color-border) bg-(--color-background) text-(--color-muted-foreground) group-hover:opacity-100 hover:text-(--color-foreground) focus-visible:opacity-100 pointer-coarse:hidden pointer-fine:opacity-0"
+            className="glass-control absolute top-(--copy-inset) right-(--copy-inset) grid [--copy-inset:calc(var(--diffs-gap-block,8px)+var(--diffs-line-height,20px)/2-0.875rem)] size-7 cursor-pointer place-items-center rounded-md border border-(--color-border) bg-(--color-background) text-(--color-muted-foreground) group-hover:opacity-100 hover:text-(--color-foreground) focus-visible:opacity-100 pointer-coarse:hidden pointer-fine:opacity-0"
           >
             {copied ? (
               <Check className="size-3.5 text-(--color-success)" aria-hidden />
