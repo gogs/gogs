@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"time"
 )
@@ -48,8 +49,9 @@ func processGauges() []Gauge {
 	}
 	var cpuTime counter
 	return []Gauge{
-		// The share of all CPUs the process used since the last sample, in
-		// percent.
+		// The share of the CPUs the process may use that it used since the last
+		// sample, in percent. Git runs in processes of its own, which this
+		// leaves out.
 		{Key: "cpu", Read: func() (float64, bool) {
 			var usage syscall.Rusage
 			if err := syscall.Getrusage(syscall.RUSAGE_SELF, &usage); err != nil {
@@ -60,7 +62,9 @@ func processGauges() []Gauge {
 			if !ok || elapsed <= 0 {
 				return 0, false
 			}
-			return delta / elapsed.Seconds() / float64(runtime.NumCPU()) * 100, true
+			// GOMAXPROCS follows the CPU limit of a container, unlike the count
+			// of CPUs of the machine.
+			return delta / elapsed.Seconds() / float64(runtime.GOMAXPROCS(0)) * 100, true
 		}},
 		{Key: "residentMemory", Read: func() (float64, bool) {
 			kb, ok := procStatus("VmRSS")
@@ -97,29 +101,70 @@ func DiskGauges(disks ...Disk) []Gauge {
 			continue
 		}
 		stat, ok := info.Sys().(*syscall.Stat_t)
-		if !ok || seen[stat.Dev] {
-			continue
-		}
-		seen[stat.Dev] = true
-
-		// Unprivileged processes cannot use the blocks the file system
-		// reserves, so those count neither as used nor as usable.
-		usage := func() (used, usable float64, ok bool) {
-			var fs syscall.Statfs_t
-			if err := syscall.Statfs(path, &fs); err != nil {
-				return 0, 0, false
-			}
-			used = float64(fs.Blocks-fs.Bfree) * float64(fs.Bsize)
-			return used, used + float64(fs.Bavail)*float64(fs.Bsize), true
-		}
-		_, usable, ok := usage()
 		if !ok {
 			continue
 		}
-		gauges = append(gauges, Gauge{Key: disk.Key, Limit: usable, Read: func() (float64, bool) {
-			used, _, ok := usage()
-			return used, ok
-		}})
+		dev := uint64(stat.Dev) //nolint:unconvert // The type of the device differs between architectures.
+		if seen[dev] {
+			continue
+		}
+		seen[dev] = true
+
+		usage := &diskUsage{path: path}
+		if _, ok := usage.read(); !ok {
+			continue
+		}
+		gauges = append(gauges, Gauge{Key: disk.Key, Limit: usage.limit(), Read: usage.read, ReadLimit: usage.limit})
 	}
 	return gauges
+}
+
+// diskUsageTimeout is how long a file system gets to answer before a sample
+// goes on without it.
+const diskUsageTimeout = 2 * time.Second
+
+// diskUsage measures the file system of a path. A file system that does not
+// answer, e.g., a network mount whose server is gone, costs the reader the
+// timeout once and nothing until it answers.
+type diskUsage struct {
+	path string
+	busy atomic.Bool
+	// usable holds the bits of the space the server can use, as a float64.
+	usable atomic.Uint64
+}
+
+func (d *diskUsage) read() (used float64, ok bool) {
+	if !d.busy.CompareAndSwap(false, true) {
+		return 0, false
+	}
+	done := make(chan float64, 1)
+	go func() {
+		defer d.busy.Store(false)
+		defer close(done)
+		var fs syscall.Statfs_t
+		if err := syscall.Statfs(d.path, &fs); err != nil {
+			return
+		}
+		// Blocks are counted in fragments, which some file systems, e.g., NFS,
+		// size apart from the block size.
+		size := float64(fs.Frsize)
+		if size <= 0 {
+			size = float64(fs.Bsize)
+		}
+		// Unprivileged processes cannot use the blocks the file system
+		// reserves, so those count neither as used nor as usable.
+		used := float64(fs.Blocks-fs.Bfree) * size
+		d.usable.Store(math.Float64bits(used + float64(fs.Bavail)*size))
+		done <- used
+	}()
+	select {
+	case used, ok = <-done:
+		return used, ok
+	case <-time.After(diskUsageTimeout):
+		return 0, false
+	}
+}
+
+func (d *diskUsage) limit() float64 {
+	return math.Float64frombits(d.usable.Load())
 }

@@ -53,6 +53,25 @@ func TestHealth_Report(t *testing.T) {
 		got := series(t, h.Report(testNow, "1h", false))
 		assert.Equal(t, [][2]float64{{float64(start.UnixMilli()), 1}}, got.Points)
 	})
+
+	t.Run("follows a limit that changes", func(t *testing.T) {
+		limit, measured := 100.0, true
+		h := NewHealth(nil, Gauge{
+			Key:       key,
+			Limit:     limit,
+			Read:      func() (float64, bool) { return 1, measured },
+			ReadLimit: func() float64 { return limit },
+		})
+		assert.Equal(t, 100.0, series(t, h.Report(testNow, "1h", false)).Limit)
+
+		limit = 200
+		h.sample(testNow.Add(-healthStep))
+		assert.Equal(t, 200.0, series(t, h.Report(testNow, "1h", false)).Limit)
+
+		limit, measured = 0, false
+		h.sample(testNow)
+		assert.Equal(t, 200.0, series(t, h.Report(testNow, "1h", false)).Limit, "a sample that cannot be measured keeps the last limit")
+	})
 }
 
 func TestCounter(t *testing.T) {

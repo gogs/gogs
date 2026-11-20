@@ -615,6 +615,7 @@ export type AdminHealthKey =
   | "diskData"
   | "diskLFS"
   | "traceMemory"
+  | "traceMemorySampled"
   | "droppedSpans";
 
 export interface AdminHealthSeries {

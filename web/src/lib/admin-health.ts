@@ -240,6 +240,14 @@ export const METRICS: Metric[] = [
     ofLimit: true,
     format: formatBytes,
   },
+  {
+    key: "traceMemorySampled",
+    section: "tracing",
+    label: "admin.health.trace_memory_sampled",
+    floor: NEVER,
+    ofLimit: true,
+    format: formatBytes,
+  },
   { key: "droppedSpans", section: "tracing", label: "admin.health.dropped_spans", floor: 1, format: perMinute },
 ];
 
