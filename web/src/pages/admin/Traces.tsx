@@ -841,7 +841,7 @@ function SpanDetails({ node, trace }: { node: SpanNode; trace: AdminTrace }) {
   const typical = trace.operations[span.name];
   // Attributes are set in code, the other rows are labels of the panel.
   const rows: { key: string; value: ReactNode; code?: true }[] = [
-    { key: t("admin.traces.start"), value: `+${formatMs(span.startMs)}` },
+    { key: t("admin.traces.start"), value: `${span.startMs < 0 ? "-" : "+"}${formatMs(Math.abs(span.startMs))}` },
     { key: t("admin.traces.duration"), value: formatMs(span.durationMs) },
     ...(span.error ? [{ key: t("admin.traces.error"), value: span.error }] : []),
     ...span.attributes.map((a) => ({ key: a.key, value: a.value, code: true as const })),
@@ -888,9 +888,15 @@ function Waterfall({ trace }: { trace: AdminTrace }) {
   const [selected, setSelected] = useState<string | null>(
     () => [...trace.spans].reverse().find((span) => span.error)?.id ?? null,
   );
-  const total = Math.max(trace.durationMs, ...trace.spans.map((s) => s.startMs + s.durationMs), 0.001);
+  // Times count from the start of the root. A request that joined the trace of another one may
+  // have started before it, so the timeline starts at the earliest span.
+  const origin = Math.min(0, ...trace.spans.map((s) => s.startMs));
+  const end = Math.max(trace.durationMs, ...trace.spans.map((s) => s.startMs + s.durationMs), origin + 0.001);
+  const total = end - origin;
   const step = niceStep(total);
-  const ticks = Array.from({ length: Math.floor(total / step) + 1 }, (_, i) => i * step);
+  const firstTick = Math.ceil(origin / step) * step;
+  const ticks = Array.from({ length: Math.floor((end - firstTick) / step) + 1 }, (_, i) => firstTick + i * step);
+  const at = (ms: number) => (ms - origin) / total;
 
   const rows: SpanNode[] = [];
   const walk = (node: SpanNode) => {
@@ -914,7 +920,7 @@ function Waterfall({ trace }: { trace: AdminTrace }) {
           key={tick}
           aria-hidden
           className="absolute inset-y-0 w-px bg-(--color-border)"
-          style={{ left: `${(tick / total) * 100}%` }}
+          style={{ left: `${at(tick) * 100}%` }}
         />
       ))}
       {children}
@@ -929,14 +935,14 @@ function Waterfall({ trace }: { trace: AdminTrace }) {
           {ticks.map((tick) => (
             <span
               key={tick}
-              // Labels near the end stay inside the timeline.
+              // Labels near either end stay inside the timeline.
               className={cn(
                 "absolute whitespace-nowrap tabular-nums",
-                tick === 0 ? "" : tick / total > 0.85 ? "-translate-x-full" : "-translate-x-1/2",
+                at(tick) < 0.08 ? "" : at(tick) > 0.85 ? "-translate-x-full" : "-translate-x-1/2",
               )}
-              style={{ left: `${(tick / total) * 100}%` }}
+              style={{ left: `${at(tick) * 100}%` }}
             >
-              {tick === 0 ? "0" : formatMs(tick)}
+              {tick === 0 ? "0" : `${tick < 0 ? "-" : ""}${formatMs(Math.abs(tick))}`}
             </span>
           ))}
         </div>
@@ -994,7 +1000,7 @@ function Waterfall({ trace }: { trace: AdminTrace }) {
                       span.error ? "bg-(--color-destructive)" : KIND_FILLS[span.kind],
                     )}
                     style={{
-                      left: `${(span.startMs / total) * 100}%`,
+                      left: `${at(span.startMs) * 100}%`,
                       width: `${(span.durationMs / total) * 100}%`,
                     }}
                   />,
