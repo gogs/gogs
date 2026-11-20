@@ -327,7 +327,7 @@ export function AdminLayout() {
               <PaletteButton />
               <div className="flex shrink-0 items-center gap-1">
                 <SettingsMenu />
-                {user ? <UserMenu user={user} /> : null}
+                {user ? <UserMenu user={user} inAdmin /> : null}
               </div>
             </div>
           </header>

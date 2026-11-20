@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import {
+  ArrowLeft,
   Building2,
   ChevronDown,
   HelpCircle,
@@ -241,8 +242,9 @@ function CreateMenu({ canCreateOrganization }: { canCreateOrganization: boolean 
   );
 }
 
-// UserMenu opens the links of the viewer's account from their avatar.
-export function UserMenu({ user }: { user: UserInfo }) {
+// UserMenu opens the links of the viewer's account from their avatar. In the
+// admin console, i.e., `inAdmin`, the link to it leads back to the site.
+export function UserMenu({ user, inAdmin = false }: { user: UserInfo; inAdmin?: boolean }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   return (
@@ -288,13 +290,19 @@ export function UserMenu({ user }: { user: UserInfo }) {
         {user.isAdmin && (
           <>
             <div className="my-1 h-px bg-(--color-border)" />
-            <MenuLink
-              href="/admin"
-              icon={<LayoutDashboard className="size-4" aria-hidden />}
-              onSelect={() => setOpen(false)}
-            >
-              {t("admin_panel")}
-            </MenuLink>
+            {inAdmin ? (
+              <MenuLink href="/" icon={<ArrowLeft className="size-4" aria-hidden />} onSelect={() => setOpen(false)}>
+                {t("admin.back_to_site")}
+              </MenuLink>
+            ) : (
+              <MenuLink
+                href="/admin"
+                icon={<LayoutDashboard className="size-4" aria-hidden />}
+                onSelect={() => setOpen(false)}
+              >
+                {t("admin_panel")}
+              </MenuLink>
+            )}
           </>
         )}
         <div className="my-1 h-px bg-(--color-border)" />
