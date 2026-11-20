@@ -1,4 +1,4 @@
-import { Link, type LinkProps } from "@tanstack/react-router";
+import { Link, type LinkProps, useLinkProps } from "@tanstack/react-router";
 import { ArrowLeft, CircleAlert, RefreshCw, TrendingUp } from "lucide-react";
 import { type ReactNode, use } from "react";
 import { createPortal } from "react-dom";
@@ -151,11 +151,32 @@ export function Segmented({ label, className, children }: { label: string; class
 export const SEGMENTED_ITEM =
   "inline-flex h-8 items-center rounded-md border border-transparent px-3 text-sm font-medium whitespace-nowrap text-(--color-muted-foreground) outline-none hover:text-(--color-foreground) focus-visible:ring-1 focus-visible:ring-(--color-ring) aria-[current=page]:border-(--color-border) aria-[current=page]:bg-(--color-background) aria-[current=page]:text-(--color-foreground) aria-[current=page]:shadow-xs glass-ui:h-8.5 glass-ui:focus-visible:ring-inset glass-ui:aria-[current=page]:bg-(--color-surface) glass-ui:aria-[current=page]:font-semibold glass-ui:aria-[current=page]:shadow-none";
 
+// The router marks a link as the current page from the URL, which changes
+// before the loader of the new view answers, and whenever the search params of
+// the link are among those of the URL, which the params of the first view
+// always are. The page tells which view it shows instead.
+function SegmentedLink({
+  to,
+  search,
+  current,
+  children,
+}: {
+  to: string;
+  search: Record<string, unknown>;
+  current: boolean;
+  children: ReactNode;
+}) {
+  const props = useLinkProps({ to, search });
+  return (
+    <a {...props} aria-current={current ? "page" : undefined} className={SEGMENTED_ITEM}>
+      {children}
+    </a>
+  );
+}
+
 // SegmentedLinks switches a page between views through its search params, so
-// that the loader fetches the view, e.g., the last hour or the last day. The
-// router marks a link as the current page when its search params are among
-// those of the URL, which the params of the first view always are, so each
-// link only counts as current on exactly its own params.
+// that the loader fetches the view, e.g., the last hour or the last day.
+// `active` is the view the page shows, which stays marked while another loads.
 export function SegmentedLinks<V extends string>({
   label,
   active,
@@ -172,16 +193,9 @@ export function SegmentedLinks<V extends string>({
   return (
     <Segmented label={label} className={className}>
       {options.map((option) => (
-        <Link
-          key={option.value}
-          to={to}
-          search={option.search}
-          activeOptions={{ exact: true }}
-          aria-current={option.value === active ? "page" : undefined}
-          className={SEGMENTED_ITEM}
-        >
+        <SegmentedLink key={option.value} to={to} search={option.search} current={option.value === active}>
           {option.label}
-        </Link>
+        </SegmentedLink>
       ))}
     </Segmented>
   );
