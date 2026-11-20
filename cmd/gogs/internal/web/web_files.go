@@ -197,14 +197,22 @@ func getGeneratedAvatar(c flamego.Context, logger *logx.Logger, viewer *database
 }
 
 func serveGeneratedAvatar(c flamego.Context, seed string) error {
+	// The avatar depends only on the seed and the version that draws it, so a
+	// revalidation is answered without drawing it again.
+	etag := fmt.Sprintf(`"%x"`, sha256.Sum256([]byte(conf.App.Version+"\x00"+seed)))
+	h := c.ResponseWriter().Header()
+	h.Set("Cache-Control", "private, max-age=86400")
+	h.Set("ETag", etag)
+	if strings.Contains(c.Request().Header.Get("If-None-Match"), etag) {
+		c.ResponseWriter().WriteHeader(http.StatusNotModified)
+		return nil
+	}
+
 	img, err := avatar.GeneratePNG(seed, avatar.DefaultSize)
 	if err != nil {
 		return errors.Wrap(err, "generate avatar")
 	}
-	h := c.ResponseWriter().Header()
 	h.Set("Content-Type", "image/png")
-	h.Set("Cache-Control", "private")
-	h.Set("ETag", fmt.Sprintf(`"%x"`, sha256.Sum256(img)))
 	http.ServeContent(c.ResponseWriter(), c.Request().Request, "", time.Time{}, bytes.NewReader(img))
 	return nil
 }

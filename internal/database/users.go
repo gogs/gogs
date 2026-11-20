@@ -323,7 +323,7 @@ func (s *UsersStore) Create(ctx context.Context, username, email string, opts Cr
 }
 
 // DeleteCustomAvatar deletes the current user custom avatar and falls back to
-// looking up avatar by email.
+// the generated avatar.
 func (s *UsersStore) DeleteCustomAvatar(ctx context.Context, userID int64) error {
 	_ = os.Remove(userx.CustomAvatarPath(userID))
 	return s.db.WithContext(ctx).

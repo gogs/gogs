@@ -92,6 +92,31 @@ func TestSaveAvatar(t *testing.T) {
 	assert.True(t, got)
 }
 
+func TestSaveGeneratedAvatar(t *testing.T) {
+	conf.SetMockPicture(t,
+		conf.PictureOpts{
+			AvatarUploadPath: t.TempDir(),
+		},
+	)
+
+	require.NoError(t, SaveGeneratedAvatar(1))
+	data, err := os.ReadFile(CustomAvatarPath(1))
+	require.NoError(t, err)
+	_, err = png.Decode(bytes.NewReader(data))
+	assert.NoError(t, err)
+
+	// An avatar uploaded while the generated one was drawn is kept.
+	require.NoError(t, os.WriteFile(CustomAvatarPath(2), []byte("uploaded"), 0o600))
+	require.NoError(t, SaveGeneratedAvatar(2))
+	data, err = os.ReadFile(CustomAvatarPath(2))
+	require.NoError(t, err)
+	assert.Equal(t, "uploaded", string(data))
+
+	entries, err := os.ReadDir(conf.Picture.AvatarUploadPath)
+	require.NoError(t, err)
+	assert.Len(t, entries, 2, "temporary files are removed")
+}
+
 func TestEncodePassword(t *testing.T) {
 	want := EncodePassword("123456", "rands")
 	tests := []struct {

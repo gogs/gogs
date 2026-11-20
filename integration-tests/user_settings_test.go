@@ -196,6 +196,10 @@ func TestUserSettingsAvatar(t *testing.T) {
 	status, header, body = anonymous.doRaw(http.MethodGet, "/-/avatars/seed/0123456789abcdef", "", nil)
 	require.Equal(t, http.StatusOK, status, "response: %s", body)
 	assert.Equal(t, "image/png", header.Get("Content-Type"))
+	revalidating := newClient(t)
+	revalidating.header = http.Header{"If-None-Match": {header.Get("ETag")}}
+	status, _, body = revalidating.doRaw(http.MethodGet, "/-/avatars/seed/0123456789abcdef", "", nil)
+	assert.Equal(t, http.StatusNotModified, status, "response: %s", body)
 	status, _, body = anonymous.doRaw(http.MethodGet, "/-/avatars/seed/"+strings.Repeat("a", 65), "", nil)
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 
