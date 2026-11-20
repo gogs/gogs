@@ -1,19 +1,19 @@
 import { useMutation } from "@tanstack/react-query";
-import { Check, LoaderCircle, Minus, Play, Search } from "lucide-react";
+import { Check, CircleAlert, CircleCheck, LoaderCircle, Minus, Play, Search } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { AdminPageHeader } from "@/components/AdminPage";
+import { ConfirmButton } from "@/components/ConfirmButton";
 import { FormAlert, FormField } from "@/components/FormField";
 import { InlineCode } from "@/components/InlineCode";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatNumber } from "@/lib/format";
+import { formatMs, formatNumber } from "@/lib/format";
 import {
-  ADMIN_OPERATIONS,
   type AdminConfig as AdminConfigData,
   type AdminMonitor as AdminMonitorData,
   type AdminOperation,
@@ -22,7 +22,7 @@ import {
   runAdminOperation,
   sendAdminTestMail,
 } from "@/lib/queries/admin";
-import { formErrors } from "@/lib/queries/request";
+import { formErrors, isSessionExpired } from "@/lib/queries/request";
 import { formatAbsoluteTime } from "@/lib/relative-time";
 import { toastError } from "@/lib/toast-error";
 import { useFocusFirstError } from "@/lib/use-focus-error";
@@ -64,15 +64,102 @@ export function ReportValue({ row }: { row: AdminReportRow }) {
   }
 }
 
-const OPERATION_LABELS: Record<AdminOperation, string> = {
-  "delete-inactive-users": "admin.dashboard.delete_inactivate_accounts",
-  "delete-repo-archives": "admin.dashboard.delete_repo_archives",
-  "delete-missing-repos": "admin.dashboard.delete_missing_repos",
-  "git-gc-repos": "admin.dashboard.git_gc_repos",
-  "resync-ssh-keys": "admin.dashboard.resync_all_sshkeys",
-  "resync-repo-hooks": "admin.dashboard.resync_all_hooks",
-  "reinit-missing-repos": "admin.dashboard.reinit_missing_repos",
+interface OperationInfo {
+  label: string;
+  description: string;
+  // confirm asks before an operation that loses data, with the label of its
+  // button and what is lost.
+  confirm?: { button: string; description: string };
+}
+
+const OPERATIONS: Record<AdminOperation, OperationInfo> = {
+  "delete-repo-archives": {
+    label: "admin.dashboard.delete_repo_archives",
+    description: "admin.operations.delete_repo_archives_desc",
+  },
+  "git-gc-repos": {
+    label: "admin.dashboard.git_gc_repos",
+    description: "admin.operations.git_gc_repos_desc",
+  },
+  "resync-repo-hooks": {
+    label: "admin.dashboard.resync_all_hooks",
+    description: "admin.operations.resync_all_hooks_desc",
+  },
+  "resync-ssh-keys": {
+    label: "admin.dashboard.resync_all_sshkeys",
+    description: "admin.operations.resync_all_sshkeys_desc",
+    confirm: { button: "admin.operations.rewrite", description: "admin.operations.resync_all_sshkeys_confirm" },
+  },
+  "reinit-missing-repos": {
+    label: "admin.dashboard.reinit_missing_repos",
+    description: "admin.operations.reinit_missing_repos_desc",
+  },
+  "delete-inactive-users": {
+    label: "admin.dashboard.delete_inactivate_accounts",
+    description: "admin.operations.delete_inactivate_accounts_desc",
+    confirm: { button: "admin.operations.delete", description: "admin.operations.delete_inactivate_accounts_confirm" },
+  },
+  "delete-missing-repos": {
+    label: "admin.dashboard.delete_missing_repos",
+    description: "admin.operations.delete_missing_repos_desc",
+    confirm: { button: "admin.operations.delete", description: "admin.operations.delete_missing_repos_confirm" },
+  },
 };
+
+const OPERATION_GROUPS: { id: string; title: string; hint: string; operations: AdminOperation[] }[] = [
+  {
+    id: "upkeep",
+    title: "admin.operations.upkeep",
+    hint: "admin.operations.upkeep_hint",
+    operations: ["delete-repo-archives", "git-gc-repos", "resync-repo-hooks"],
+  },
+  {
+    id: "repair",
+    title: "admin.operations.repair",
+    hint: "admin.operations.repair_hint",
+    operations: ["resync-ssh-keys", "reinit-missing-repos"],
+  },
+  {
+    id: "deletion",
+    title: "admin.operations.deletion",
+    hint: "admin.operations.deletion_hint",
+    operations: ["delete-inactive-users", "delete-missing-repos"],
+  },
+];
+
+// OperationOutcome is how the last run of an operation ended, kept until the
+// page is left.
+interface OperationOutcome {
+  failed: boolean;
+  message: string;
+  ms: number;
+}
+
+function OperationResult({ outcome }: { outcome: OperationOutcome }) {
+  const { t } = useTranslation();
+  const Icon = outcome.failed ? CircleAlert : CircleCheck;
+  return (
+    <p className="mt-1 flex items-start gap-1.5 text-sm @4xl:mt-0">
+      <Icon
+        className={cn(
+          "mt-0.5 size-4 shrink-0",
+          outcome.failed ? "text-(--color-destructive)" : "text-(--color-success)",
+        )}
+        aria-hidden
+      />
+      <span className="min-w-0 wrap-anywhere">
+        {outcome.failed ? (
+          <>
+            {t("admin.operations.failed")} <span className="font-mono text-xs">{outcome.message}</span>
+          </>
+        ) : (
+          outcome.message
+        )}{" "}
+        <span className="whitespace-nowrap text-(--color-muted-foreground)">{formatMs(outcome.ms)}</span>
+      </span>
+    </p>
+  );
+}
 
 const TEST_MAIL_FIELDS = ["email"] as const;
 // The "email" ID belongs to the section of the email settings.
@@ -129,47 +216,102 @@ function TestMailForm() {
   );
 }
 
-// AdminOperations lists the maintenance tasks of the site, each run with its
-// own button. One task runs at a time, since each works through every
-// repository or user.
+// AdminOperations lists the maintenance tasks of the site by what they are
+// for, each run with its own button and showing how its last run ended. One
+// task runs at a time, since each works through every repository or user.
 export function AdminOperations() {
   const { t } = useTranslation();
+  const [outcomes, setOutcomes] = useState<Partial<Record<AdminOperation, OperationOutcome>>>({});
   const run = useMutation({
-    mutationFn: (op: AdminOperation) => runAdminOperation(op),
-    onSuccess: (message) => toast.success(message),
+    mutationFn: async (op: AdminOperation): Promise<OperationOutcome> => {
+      const started = performance.now();
+      const outcome = await runAdminOperation(op).then(
+        (message) => ({ failed: false, message }),
+        (err: Error) => {
+          if (isSessionExpired(err)) throw err;
+          return { failed: true, message: err.message };
+        },
+      );
+      return { ...outcome, ms: performance.now() - started };
+    },
+    onSuccess: (outcome, op) => setOutcomes((prev) => ({ ...prev, [op]: outcome })),
     onError: (err) => toastError(err),
   });
   return (
     <div className="grid gap-4">
       <AdminPageHeader title={t("admin.dashboard.operations")} description={t("admin.operations_desc")} />
-      <Card>
-        <ul className="divide-y divide-(--color-border)">
-          {ADMIN_OPERATIONS.map((op) => {
-            const label = t(OPERATION_LABELS[op]);
-            const running = run.isPending && run.variables === op;
-            return (
-              <li key={op} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3 sm:px-6">
-                <span className="min-w-0 flex-1 basis-56 text-sm wrap-anywhere">{label}</span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="shrink-0"
-                  aria-label={`${t("admin.dashboard.operation_run")} ${label}`}
-                  disabled={run.isPending}
-                  onClick={() => run.mutate(op)}
-                >
-                  {running ? (
-                    <LoaderCircle className="size-3.5 animate-spin" aria-hidden />
-                  ) : (
-                    <Play className="size-3.5" aria-hidden />
-                  )}
-                  {t("admin.dashboard.operation_run")}
-                </Button>
-              </li>
-            );
-          })}
-        </ul>
+      <Card className="@container overflow-hidden">
+        {OPERATION_GROUPS.map((group) => (
+          <section key={group.id} aria-labelledby={`operations-${group.id}`}>
+            <div className="flex flex-wrap items-baseline gap-x-2 border-y border-(--color-border) bg-(--color-surface) px-5 py-2 text-xs sm:px-6 [section:first-child>&]:border-t-0">
+              <h2 id={`operations-${group.id}`} className="font-semibold">
+                {t(group.title)}
+              </h2>
+              <p className="text-(--color-muted-foreground)">{t(group.hint)}</p>
+            </div>
+            <ul className="divide-y divide-(--color-border)">
+              {group.operations.map((op) => {
+                const { label: labelKey, description, confirm } = OPERATIONS[op];
+                const label = t(labelKey);
+                const running = run.isPending && run.variables === op;
+                const outcome = running ? undefined : outcomes[op];
+                return (
+                  <li
+                    key={op}
+                    className="flex flex-col gap-x-4 gap-y-2 px-5 py-3 sm:px-6 @xl:flex-row @xl:items-center"
+                  >
+                    <div className="grid min-w-0 flex-1 gap-x-4 @4xl:grid-cols-2 @4xl:items-center">
+                      <div className="min-w-0 text-sm wrap-anywhere">
+                        <p className="font-medium">{label}</p>
+                        <p className="text-(--color-muted-foreground)">{t(description)}</p>
+                      </div>
+                      <div role="status" className="min-w-0">
+                        {outcome ? <OperationResult outcome={outcome} /> : null}
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 @xl:w-24 @xl:justify-end">
+                      {confirm ? (
+                        <ConfirmButton
+                          label={t(confirm.button)}
+                          ariaLabel={label}
+                          title={label}
+                          description={t(confirm.description)}
+                          size="sm"
+                          // The dialog covers its own button while its operation runs.
+                          disabled={run.isPending && !running}
+                          action={async () => {
+                            // The row shows a failure, so the dialog closes either way.
+                            await run.mutateAsync(op).catch(() => undefined);
+                          }}
+                          onDone={() => undefined}
+                        />
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          aria-label={`${t("admin.dashboard.operation_run")} ${label}`}
+                          // Not `disabled` while it runs, which takes the focus off the button.
+                          aria-disabled={running || undefined}
+                          disabled={run.isPending && !running}
+                          className={running ? "pointer-events-none opacity-60" : undefined}
+                          onClick={running ? undefined : () => run.mutate(op)}
+                        >
+                          {running ? (
+                            <LoaderCircle className="size-3.5 animate-spin" aria-hidden />
+                          ) : (
+                            <Play className="size-3.5" aria-hidden />
+                          )}
+                          {t("admin.dashboard.operation_run")}
+                        </Button>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ))}
       </Card>
     </div>
   );
