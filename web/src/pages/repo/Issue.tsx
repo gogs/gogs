@@ -1,5 +1,5 @@
 import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
-import { Link, useRouter, useRouterState } from "@tanstack/react-router";
+import { Link, useRouter } from "@tanstack/react-router";
 import { CircleCheck, CircleDot, Download, GitCommitHorizontal, GitMerge, Pencil, Plus, Trash2 } from "lucide-react";
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -34,6 +34,7 @@ import {
 import { formErrors } from "@/lib/queries/request";
 import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
 import { linkedUploads, useAttachmentUploads } from "@/lib/use-attachment-uploads";
+import { useIsLinked } from "@/lib/use-is-linked";
 import { useUserInfo } from "@/lib/use-user-info";
 import { cn } from "@/lib/utils";
 
@@ -304,12 +305,6 @@ export function UserLink({ user, className, children }: { user: IssueUser; class
       {children}
     </Link>
   );
-}
-
-// useIsLinked reports whether the URL links to the anchor, e.g., to a comment,
-// which is then highlighted like on GitHub.
-function useIsLinked(anchor: string) {
-  return useRouterState({ select: (state) => state.location.hash === anchor });
 }
 
 // EventSentence renders a translated sentence about something that happened,

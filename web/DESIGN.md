@@ -187,7 +187,7 @@ When in doubt, hover-test the new control: if the cursor is still an I-beam or a
 
 ## Linked items
 
-When the URL links to an item on the page, e.g., `#issuecomment-1` or `#event-2`, highlight it like GitHub does: a primary-colored 1px edge with a soft `ring-2 ring-(--color-primary)/30` halo. Read the hash from the router state, not `:target`, which doesn't match items that render after the page loads or links that update the URL through the router. The page's `scroll-padding-top` keeps the item clear of the sticky navbar.
+When the URL links to an item on the page, e.g., `#issuecomment-1`, `#event-2` or a section of the admin configuration, highlight it like GitHub does: a primary-colored 1px edge with a soft `ring-2 ring-(--color-primary)/30` halo. Read the hash from the router state with `useIsLinked` from `@/lib/use-is-linked`, not `:target`, which doesn't match items that render after the page loads or links that update the URL through the router. The page's `scroll-padding-top` keeps the item clear of the sticky navbar.
 
 ## Tabs
 
