@@ -35,7 +35,16 @@ import { type ReactNode, useId } from "react";
 import { useTranslation } from "react-i18next";
 import { Area, AreaChart, XAxis, YAxis } from "recharts";
 
-import { AdminPageHeader, RefreshControl, Row, Rows, STAT_VALUE, StatCard, TrendChip } from "@/components/AdminPage";
+import {
+  AdminPageHeader,
+  RefreshControl,
+  RefreshNote,
+  Row,
+  Rows,
+  STAT_VALUE,
+  StatCard,
+  TrendChip,
+} from "@/components/AdminPage";
 import { InlineCode } from "@/components/InlineCode";
 import { Loaded, NotLoaded } from "@/components/Loaded";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -464,12 +473,18 @@ export function AdminOverview() {
   const stale = queries.filter((query) => query.isError && query.data !== undefined);
   return (
     <div className="grid gap-4">
-      <AdminPageHeader title={t("admin.overview")}>
+      <AdminPageHeader
+        title={t("admin.overview")}
+        note={
+          <RefreshNote
+            failedSince={stale.length > 0 ? Math.min(...stale.map((query) => query.dataUpdatedAt)) : undefined}
+          />
+        }
+      >
         <RefreshControl
           seconds={refreshSeconds}
           onSecondsChange={setRefreshSeconds}
           refreshing={queries.some((query) => query.isFetching)}
-          failedSince={stale.length > 0 ? Math.min(...stale.map((query) => query.dataUpdatedAt)) : undefined}
           onRefresh={() => queries.forEach((query) => void query.refetch())}
         />
       </AdminPageHeader>

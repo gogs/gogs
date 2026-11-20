@@ -4,7 +4,14 @@ import { type FormEvent, type ReactNode, type RefObject, useMemo, useRef, useSta
 import { flushSync } from "react-dom";
 import { Trans, useTranslation } from "react-i18next";
 
-import { AdminPageHeader, RefreshControl, STAT_VALUE, SegmentedLinks, StatCard } from "@/components/AdminPage";
+import {
+  AdminPageHeader,
+  RefreshControl,
+  RefreshNote,
+  STAT_VALUE,
+  SegmentedLinks,
+  StatCard,
+} from "@/components/AdminPage";
 import { InlineCode } from "@/components/InlineCode";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -89,6 +96,7 @@ function TracesLayout({
   q,
   maxAgeMinutes,
   toolbar,
+  note,
   children,
 }: {
   view: "overview" | "search";
@@ -96,6 +104,8 @@ function TracesLayout({
   maxAgeMinutes: number;
   // Controls of the view shown, at the end of the row that switches views.
   toolbar?: ReactNode;
+  // A line below that row, e.g., a RefreshNote.
+  note?: ReactNode;
   children: ReactNode;
 }) {
   const { t } = useTranslation();
@@ -107,17 +117,20 @@ function TracesLayout({
       >
         <TraceIDForm q={q} />
       </AdminPageHeader>
-      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-        <SegmentedLinks
-          to="/admin/traces"
-          label={t("admin.traces")}
-          active={view}
-          options={[
-            { value: "overview", label: t("admin.traces.overview"), search: {} },
-            { value: "search", label: t("admin.traces.search"), search: { view: "search" } },
-          ]}
-        />
-        {toolbar ? <div className="flex min-w-0 flex-wrap items-center gap-2">{toolbar}</div> : null}
+      <div className="min-w-0">
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+          <SegmentedLinks
+            to="/admin/traces"
+            label={t("admin.traces")}
+            active={view}
+            options={[
+              { value: "overview", label: t("admin.traces.overview"), search: {} },
+              { value: "search", label: t("admin.traces.search"), search: { view: "search" } },
+            ]}
+          />
+          {toolbar ? <div className="flex min-w-0 flex-wrap items-center gap-2">{toolbar}</div> : null}
+        </div>
+        {note}
       </div>
       {children}
     </div>
@@ -308,10 +321,11 @@ function TableCard({
 // while its tab is in view.
 export function AdminTraceOverview({ overview: loaded }: { overview: AdminTraceOverviewData }) {
   const { t } = useTranslation();
-  const { data: overview, refresh } = useRefreshed(
-    { ...adminTraceOverviewQuery(loaded.range), enabled: loaded.enabled },
-    loaded,
-  );
+  const {
+    data: overview,
+    refresh,
+    failedSince,
+  } = useRefreshed({ ...adminTraceOverviewQuery(loaded.range), enabled: loaded.enabled }, loaded);
   const [allRoutes, setAllRoutes] = useState(false);
   const [allOperations, setAllOperations] = useState(false);
   const routeRows = useRef<HTMLTableSectionElement>(null);
@@ -336,6 +350,7 @@ export function AdminTraceOverview({ overview: loaded }: { overview: AdminTraceO
     <TracesLayout
       view="overview"
       maxAgeMinutes={overview.maxAgeMinutes}
+      note={<RefreshNote failedSince={failedSince} />}
       toolbar={
         <>
           <SegmentedLinks
@@ -505,11 +520,12 @@ export function AdminTraceOverview({ overview: loaded }: { overview: AdminTraceO
                   </TableRow>
                 </TableHeader>
                 <TableBody ref={operationRows}>
-                  {operations.sorted.slice(0, allOperations ? undefined : COLLAPSED_ROWS).map((op, i) => {
+                  {operations.sorted.slice(0, allOperations ? undefined : COLLAPSED_ROWS).map((op) => {
                     const share = overview.spanSelfMs > 0 ? op.selfMs / overview.spanSelfMs : 0;
                     return (
                       // "Show all" hands the focus to the first row it brings, which has no link to take it.
-                      <TableRow key={op.name} tabIndex={i === COLLAPSED_ROWS ? -1 : undefined}>
+                      // Every row can hold it, since a refresh may put the operation on another row.
+                      <TableRow key={op.name} tabIndex={-1}>
                         <TableCell>
                           <span className="inline-flex max-w-full items-baseline gap-1.5">
                             <KindChip kind={op.kind} />
@@ -557,10 +573,11 @@ const DURATION_FILTERS = [100, 500, 1000, 5000];
 export function AdminTraceSearch({ result: loaded, search }: { result: AdminTraceSearchData; search: TraceSearch }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { data: result, refresh } = useRefreshed(
-    { ...adminTraceSearchQuery(search), enabled: loaded.enabled && !search.q },
-    loaded,
-  );
+  const {
+    data: result,
+    refresh,
+    failedSince,
+  } = useRefreshed({ ...adminTraceSearchQuery(search), enabled: loaded.enabled && !search.q }, loaded);
   const now = Date.parse(result.now);
   if (!result.enabled) {
     return <Disabled />;
@@ -602,6 +619,7 @@ export function AdminTraceSearch({ result: loaded, search }: { result: AdminTrac
       q={search.q}
       maxAgeMinutes={result.maxAgeMinutes}
       toolbar={search.q ? undefined : <RefreshControl {...refresh} />}
+      note={search.q ? undefined : <RefreshNote failedSince={failedSince} />}
     >
       {search.q ? null : (
         <div role="group" aria-label={t("admin.traces.filters")} className="flex flex-wrap items-center gap-2">

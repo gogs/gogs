@@ -17,18 +17,21 @@ import { cn } from "@/lib/utils";
 // AdminPageHeader heads a page of the admin console with its title and what
 // the page is about, and holds the actions of the page at its end. A page
 // below a page of the navigation links back to that page, and names itself in
-// the breadcrumb with `crumb`.
+// the breadcrumb with `crumb`. A `note` is a line of its own below the header,
+// e.g., a RefreshNote, which comes and goes without moving the actions.
 export function AdminPageHeader({
   title,
   description,
   back,
   crumb,
+  note,
   children,
 }: {
   title: ReactNode;
   description?: ReactNode;
   back?: { to: LinkProps["to"]; label: string };
   crumb?: string;
+  note?: ReactNode;
   children?: ReactNode;
 }) {
   const slot = use(AdminCrumbSlot);
@@ -44,69 +47,82 @@ export function AdminPageHeader({
           {back.label}
         </Link>
       ) : null}
-      <div className="flex min-w-0 flex-wrap items-end justify-between gap-x-4 gap-y-3">
-        <div className="min-w-0">
-          <h1 className="text-xl font-semibold wrap-anywhere">{title}</h1>
-          {description ? <p className="mt-1 text-sm text-(--color-muted-foreground)">{description}</p> : null}
+      <div className="min-w-0">
+        <div className="flex min-w-0 flex-wrap items-end justify-between gap-x-4 gap-y-3">
+          <div className="min-w-0">
+            <h1 className="text-xl font-semibold wrap-anywhere">{title}</h1>
+            {description ? <p className="mt-1 text-sm text-(--color-muted-foreground)">{description}</p> : null}
+          </div>
+          {children ? <div className="flex min-w-0 flex-wrap items-center gap-2">{children}</div> : null}
         </div>
-        {children ? <div className="flex min-w-0 flex-wrap items-center gap-2">{children}</div> : null}
+        {note}
       </div>
     </div>
   );
 }
 
-// RefreshControl refreshes what a page shows: right away with its button, and
-// by itself at the interval picked beside it. The two wrap together. While the
-// latest refresh failed, it tells from when the page shows its numbers.
-export function RefreshControl({
-  seconds,
-  onSecondsChange,
-  refreshing,
-  onRefresh,
+// RefreshNote tells from when a page shows its numbers while the latest
+// refresh failed, so that old numbers do not pass for current ones. Render it
+// in a block right below the controls of the page, not in a grid or a row with
+// a gap: its status is on the page from the start, for screen readers to
+// announce it, and takes no room while empty.
+export function RefreshNote({
   failedSince,
 }: {
-  seconds: number;
-  onSecondsChange: (seconds: number) => void;
-  refreshing: boolean;
-  onRefresh: () => void;
   // When the page got what it shows, in Unix milliseconds, set while the
   // latest refresh failed.
   failedSince?: number;
 }) {
   const { t } = useTranslation();
   return (
-    // The status is on the page from the start, for screen readers to announce it, and takes no room while empty.
-    <div className="flex min-w-0 flex-wrap items-center gap-y-2">
-      <div role="status" className="min-w-0 text-sm">
-        {failedSince ? (
-          <p className="mr-3 flex items-start gap-1.5">
-            <CircleAlert className="mt-0.5 size-4 shrink-0 text-(--color-destructive)" aria-hidden />
-            {t("admin.refresh.failed", { time: formatClockTime(failedSince) })}
-          </p>
-        ) : null}
-      </div>
-      <div className="flex items-center gap-2">
-        <Button type="button" variant="outline" className="h-9 px-3" onClick={onRefresh}>
-          <RefreshCw className={cn("size-4", refreshing && "animate-spin")} aria-hidden />
-          {t("admin.refresh")}
-        </Button>
-        <Select value={String(seconds)} onValueChange={(value) => onSecondsChange(Number(value))}>
-          <SelectTrigger aria-label={t("admin.refresh.auto")} className="glass-control h-9 w-auto gap-2">
-            <SelectValue>
-              {seconds === 0
-                ? t("admin.refresh.auto_off")
-                : t("admin.refresh.every", { interval: formatInterval(seconds) })}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent align="end">
-            {REFRESH_SECONDS.map((option) => (
-              <SelectItem key={option} value={String(option)}>
-                {option === 0 ? t("admin.refresh.off") : formatInterval(option)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+    <div role="status" className="min-w-0 text-sm">
+      {failedSince ? (
+        <p className="mt-3 flex items-start gap-1.5">
+          <CircleAlert className="mt-0.5 size-4 shrink-0 text-(--color-destructive)" aria-hidden />
+          {t("admin.refresh.failed", { time: formatClockTime(failedSince) })}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+// RefreshControl refreshes what a page shows: right away with its button, and
+// by itself at the interval picked beside it. The two wrap together. A
+// RefreshNote below the controls tells when a refresh failed.
+export function RefreshControl({
+  seconds,
+  onSecondsChange,
+  refreshing,
+  onRefresh,
+}: {
+  seconds: number;
+  onSecondsChange: (seconds: number) => void;
+  refreshing: boolean;
+  onRefresh: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-center gap-2">
+      <Button type="button" variant="outline" className="h-9 px-3" onClick={onRefresh}>
+        <RefreshCw className={cn("size-4", refreshing && "animate-spin")} aria-hidden />
+        {t("admin.refresh")}
+      </Button>
+      <Select value={String(seconds)} onValueChange={(value) => onSecondsChange(Number(value))}>
+        <SelectTrigger aria-label={t("admin.refresh.auto")} className="glass-control h-9 w-auto gap-2">
+          <SelectValue>
+            {seconds === 0
+              ? t("admin.refresh.auto_off")
+              : t("admin.refresh.every", { interval: formatInterval(seconds) })}
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent align="end">
+          {REFRESH_SECONDS.map((option) => (
+            <SelectItem key={option} value={String(option)}>
+              {option === 0 ? t("admin.refresh.off") : formatInterval(option)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
