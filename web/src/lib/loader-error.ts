@@ -2,6 +2,13 @@ import { notFound, redirect } from "@tanstack/react-router";
 
 import { webContext } from "@/lib/context";
 
+// displayMessage starts a message of the web API with a capital letter for
+// showing it to people. The API words its errors like Go errors, e.g.,
+// "authentication required", and callers compare those words as codes.
+export function displayMessage(message: string) {
+  return message.charAt(0).toUpperCase() + message.slice(1);
+}
+
 // LoaderResponseError carries enough of a failed loader fetch for the route
 // error component to render a useful message: the HTTP status, the parsed
 // `error` field when the body is JSON-shaped like the webapi 4xx/5xx
@@ -13,7 +20,7 @@ export class LoaderResponseError extends Error {
   errorField: string | null;
 
   constructor(status: number, body: string, errorField: string | null) {
-    super(errorField ?? `HTTP ${status}`);
+    super(errorField ? displayMessage(errorField) : `HTTP ${status}`);
     this.name = "LoaderResponseError";
     this.status = status;
     this.body = body;
