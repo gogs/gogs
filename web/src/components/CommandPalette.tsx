@@ -51,7 +51,16 @@ import {
   Webhook,
   X,
 } from "lucide-react";
-import { type ComponentType, type KeyboardEvent, useEffect, useId, useMemo, useRef, useState } from "react";
+import {
+  type ComponentType,
+  type KeyboardEvent,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -217,6 +226,13 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open, onOpenChange]);
 
+  // The dialog has no trigger to hand the focus back to when it closes, so it remembers what had
+  // the focus. A layout effect runs before the box takes the focus.
+  const opener = useRef<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    if (open) opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  }, [open]);
+
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
@@ -226,6 +242,10 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
           // The box takes the focus, not the button before it that drops the
           // repository scope.
           onOpenAutoFocus={(e) => e.preventDefault()}
+          onCloseAutoFocus={(e) => {
+            e.preventDefault();
+            opener.current?.focus({ preventScroll: true });
+          }}
           className={cn(
             "fixed inset-0 z-50 flex flex-col bg-(--color-popover) text-(--color-popover-foreground) shadow-lg glass-ui:backdrop-blur-2xl outline-none",
             "sm:inset-auto sm:top-[12vh] sm:left-1/2 sm:max-h-[min(32rem,76vh)] sm:w-[min(40rem,calc(100%-2rem))] sm:-translate-x-1/2 sm:rounded-lg sm:border sm:border-(--color-border)",
