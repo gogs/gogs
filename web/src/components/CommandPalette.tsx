@@ -76,6 +76,7 @@ import {
 import { fetchJSON } from "@/lib/queries/request";
 import { signOut } from "@/lib/sign-out";
 import { resolveTheme, useTheme } from "@/lib/theme-context";
+import { toastError } from "@/lib/toast-error";
 import { subUrl } from "@/lib/url";
 import { useDebounced } from "@/lib/use-debounced";
 import { useUserInfo } from "@/lib/use-user-info";
@@ -707,7 +708,7 @@ function PaletteBody({
       );
       toast.success(t(next ? "command_palette.starred" : "command_palette.unstarred", { repo: full }));
     } catch (err) {
-      toast.error(t("status.internal_server_error"), { description: (err as Error).message });
+      toastError(err as Error, t("status.internal_server_error"));
     }
   }
 
@@ -720,7 +721,7 @@ function PaletteBody({
       );
       toast.success(t(next ? "command_palette.watching" : "command_palette.unwatched", { repo: full }));
     } catch (err) {
-      toast.error(t("status.internal_server_error"), { description: (err as Error).message });
+      toastError(err as Error, t("status.internal_server_error"));
     }
   }
 

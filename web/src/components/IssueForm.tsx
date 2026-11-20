@@ -50,7 +50,7 @@ export function MarkdownEditor({
   label: string;
   value: string;
   onChange: (value: string) => void;
-  error?: string | null;
+  error?: ReactNode;
   autoFocus?: boolean;
   disabled?: boolean;
   // uploads attaches the files pasted or dropped into the editor.

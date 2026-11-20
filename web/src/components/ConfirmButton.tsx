@@ -2,7 +2,6 @@ import { useMutation } from "@tanstack/react-query";
 import type { LucideIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +14,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 
 // ConfirmButton asks in a dialog before an action that cannot be taken back,
@@ -50,7 +50,7 @@ export function ConfirmButton({
       setOpen(false);
       await onDone();
     },
-    onError: (err) => toast.error(err.message),
+    onError: (err) => toastError(err),
   });
   return (
     <Dialog open={open} onOpenChange={setOpen}>

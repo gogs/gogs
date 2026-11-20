@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 
 import { DiffWorkspace } from "@/components/DiffWorkspace";
 import { PageTabs } from "@/components/PageTabs";
@@ -41,6 +40,7 @@ import {
 } from "@/lib/queries/repo";
 import { formErrors } from "@/lib/queries/request";
 import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
+import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 
 import type { RepoCommitSearch } from "./Commit.search";
@@ -311,7 +311,7 @@ function BranchActions({ issueRef, branch, deleted }: { issueRef: IssueRef; bran
   const mutation = useMutation({
     mutationFn: () => (deleted ? restoreRepoPullBranch(issueRef) : deleteRepoPullBranch(issueRef)),
     onSuccess: () => router.invalidate(),
-    onError: (err) => toast.error(err.message),
+    onError: (err) => toastError(err),
   });
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-(--color-border) px-4 py-3 text-sm">

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { usePageTitle } from "@/lib/page-title";
 import { createOrg } from "@/lib/queries/org";
-import { FormError } from "@/lib/queries/request";
+import { formErrors } from "@/lib/queries/request";
 
 // OrgCreate creates an organization owned by the viewer.
 export function OrgCreate() {
@@ -28,8 +28,7 @@ export function OrgCreate() {
     onError: () => requestAnimationFrame(() => inputRef.current?.focus()),
   });
 
-  const fields = mutation.error instanceof FormError ? mutation.error.fields : {};
-  const formError = mutation.error && Object.keys(fields).length === 0 ? mutation.error.message : null;
+  const { fields, formError } = formErrors(mutation.error);
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
     mutation.mutate();

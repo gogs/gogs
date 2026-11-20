@@ -27,6 +27,7 @@ import {
   deleteAdminRepo,
   deleteAllAdminNotices,
 } from "@/lib/queries/admin";
+import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 
 const DATE_FMT = new Intl.DateTimeFormat(webContext.lang, { year: "numeric", month: "short", day: "2-digit" });
@@ -536,7 +537,7 @@ export function AdminNotices({ list }: { list: AdminList<AdminNotice> }) {
     // The notices after an emptied page move up into it, unless it was the last one.
     onSuccess: () =>
       onDeleted(selected.size === list.items.length && list.page >= list.totalPages ? list.page - 1 : list.page),
-    onError: (err) => toast.error(err.message),
+    onError: (err) => toastError(err),
   });
 
   const allSelected = list.items.length > 0 && selected.size === list.items.length;

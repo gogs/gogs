@@ -76,6 +76,7 @@ import {
 } from "@/lib/queries/repo";
 import { formErrors } from "@/lib/queries/request";
 import type { SSHKey } from "@/lib/queries/settings";
+import { toastError } from "@/lib/toast-error";
 import { subUrl } from "@/lib/url";
 import { cn } from "@/lib/utils";
 import { DescriptionField } from "@/pages/repo/New";
@@ -399,7 +400,7 @@ function MirrorSettings({ owner, name, mirror }: { owner: string; name: string; 
   const sync = useMutation({
     mutationFn: () => syncRepoMirror(owner, name),
     onSuccess: () => toast.info(t("repo.settings.mirror_sync_in_progress")),
-    onError: (err) => toast.error(err.message),
+    onError: (err) => toastError(err),
   });
   const { fields, formError } = formErrors(save.error);
 
@@ -1267,7 +1268,7 @@ function CollaboratorRow({
   const change = useMutation({
     mutationFn: (mode: RepoCollaboratorMode) => changeRepoCollaborator(owner, name, collaborator.name, mode),
     onSuccess: () => router.invalidate(),
-    onError: (err) => toast.error(err.message),
+    onError: (err) => toastError(err),
   });
   const nameID = `collaborator-${collaborator.name}`;
   return (

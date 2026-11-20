@@ -21,7 +21,7 @@ import {
   updateOrgSettings,
   uploadOrgAvatar,
 } from "@/lib/queries/org";
-import { FormError } from "@/lib/queries/request";
+import { FormError, formErrors } from "@/lib/queries/request";
 import { userProfileQuery } from "@/lib/queries/user";
 
 const FIELD_ORDER = ["name", "fullName", "description", "website", "location", "maxRepoCreation"] as const;
@@ -125,8 +125,7 @@ function OptionsForm({ org, settings }: { org: string; settings: OrgSettingsData
       if (first) requestAnimationFrame(() => refs.current[first]?.focus());
     },
   });
-  const fields = save.error instanceof FormError ? save.error.fields : {};
-  const formError = save.error && Object.keys(fields).length === 0 ? save.error.message : null;
+  const { fields, formError } = formErrors(save.error);
   const renaming = form.name.toLowerCase() !== settings.name.toLowerCase();
 
   const onSubmit = (e: FormEvent) => {
