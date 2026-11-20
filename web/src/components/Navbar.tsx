@@ -2,7 +2,6 @@ import { Link } from "@tanstack/react-router";
 import {
   Building2,
   ChevronDown,
-  ChevronsUpDown,
   HelpCircle,
   Import,
   LayoutDashboard,
@@ -24,7 +23,6 @@ import { signOut } from "@/lib/sign-out";
 import { subUrl } from "@/lib/url";
 import { useUserInfo } from "@/lib/use-user-info";
 import type { UserInfo } from "@/lib/user-info";
-import { cn } from "@/lib/utils";
 
 export function Navbar() {
   const { t } = useTranslation();
@@ -188,7 +186,7 @@ export function PaletteButton() {
         type="button"
         onClick={() => setPaletteOpen(true)}
         aria-keyshortcuts={paletteShortcut.aria}
-        className="hidden h-8 w-48 shrink cursor-pointer items-center gap-2 rounded-md border border-(--color-input) bg-(--color-background) pr-1.5 pl-2.5 text-(--color-muted-foreground) hover:border-(--color-ring) md:flex lg:w-64"
+        className="hidden h-8 w-48 min-w-32 shrink cursor-pointer items-center gap-2 rounded-md border border-(--color-input) bg-(--color-background) pr-1.5 pl-2.5 text-(--color-muted-foreground) hover:border-(--color-ring) md:flex lg:w-64"
       >
         <Search className="size-4 shrink-0" aria-hidden />
         <span className="min-w-0 flex-1 truncate text-left">{t("command_palette.placeholder")}</span>
@@ -243,50 +241,24 @@ function CreateMenu({ canCreateOrganization }: { canCreateOrganization: boolean 
   );
 }
 
-// UserMenu opens the links of the viewer's account from their avatar. With
-// `showName`, their username follows the avatar and the trigger fills its row,
-// e.g., at the end of the sidebar of the admin console.
-export function UserMenu({
-  user,
-  showName = false,
-  side,
-  align = "end",
-  className,
-}: {
-  user: UserInfo;
-  showName?: boolean;
-  side?: "top" | "bottom";
-  align?: "start" | "end";
-  className?: string;
-}) {
+// UserMenu opens the links of the viewer's account from their avatar.
+export function UserMenu({ user }: { user: UserInfo }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
-        // The name starts with the text the button shows, for speech input.
-        aria-label={showName ? `${user.username}, ${t("user_profile_and_more")}` : t("user_profile_and_more")}
-        className={cn(
-          "inline-flex h-9 cursor-pointer items-center gap-1 rounded-md px-1 hover:bg-(--color-surface)",
-          showName && "w-full gap-2 px-2",
-          className,
-        )}
+        aria-label={t("user_profile_and_more")}
+        className="inline-flex h-9 cursor-pointer items-center gap-1 rounded-md px-1 hover:bg-(--color-surface)"
       >
         {user.avatarURL ? (
-          <img src={user.avatarURL} alt="" width="24" height="24" className="size-6 shrink-0 rounded-full" />
+          <img src={user.avatarURL} alt="" width="24" height="24" className="size-6 rounded-full" />
         ) : (
-          <UserIcon className="size-5 shrink-0" aria-hidden />
+          <UserIcon className="size-5" aria-hidden />
         )}
-        {showName ? (
-          <>
-            <span className="min-w-0 flex-1 truncate text-left text-sm">{user.username}</span>
-            <ChevronsUpDown className="size-3.5 shrink-0 text-(--color-muted-foreground)" aria-hidden />
-          </>
-        ) : (
-          <ChevronDown className="size-3 text-(--color-muted-foreground)" aria-hidden />
-        )}
+        <ChevronDown className="size-3 text-(--color-muted-foreground)" aria-hidden />
       </PopoverTrigger>
-      <PopoverContent side={side} align={align} className="w-60 p-1" onOpenAutoFocus={(e) => e.preventDefault()}>
+      <PopoverContent align="end" className="w-60 p-1" onOpenAutoFocus={(e) => e.preventDefault()}>
         <div className="px-2 pt-2 pb-1 text-xs text-(--color-muted-foreground)">
           {t("signed_in_as")} <strong className="text-(--color-foreground)">{user.username}</strong>
         </div>
