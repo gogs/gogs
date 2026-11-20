@@ -489,6 +489,47 @@ func TestOrgMembers(t *testing.T) {
 	assert.NotContains(t, listMembers(ownerClient), outsider.Name)
 }
 
+// A member removed from an organization loses the access their teams gave
+// them to its repositories, and stops watching them.
+func TestOrgMemberRemovedLosesAccess(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	member := seedUser(t, CreateUserOptions{})
+	org := orgSeed(t, owner.ID)
+	repo := seedRepository(t, org.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
+	ownerClient := authenticatedClient(t, owner)
+	memberClient := authenticatedClient(t, member)
+	orgPath := "/api/web/orgs/" + org.Name
+
+	orgAddMember(t, org, member.ID)
+	var team struct {
+		LowerName string `json:"lowerName"`
+	}
+	ownerClient.doJSON(http.MethodPost, orgPath+"/teams", map[string]any{"teamName": UniqueName("Team-"), "permission": "write"}, http.StatusCreated, &team)
+	teamPath := orgPath + "/teams/" + team.LowerName
+	status, body := ownerClient.do(http.MethodPut, teamPath+"/members/"+member.Name, orgNoBody)
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	status, body = ownerClient.do(http.MethodPut, teamPath+"/repos/"+repo.Name, orgNoBody)
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+
+	accessMode := func() database.AccessMode {
+		return database.Handle.Permissions().AccessMode(t.Context(), logger, member.ID, repo.ID, database.AccessModeOptions{OwnerID: org.ID, Private: true})
+	}
+	require.Equal(t, database.AccessModeWrite, accessMode())
+	status, body = memberClient.do(http.MethodPost, repoSettingsAPIPath(repo, "/watch"), repoSettingsNoBody)
+	require.Equal(t, http.StatusOK, status, "response: %s", body)
+	watches := repoSettingsGetRepo(t, repo.ID).NumWatches
+
+	status, body = ownerClient.do(http.MethodDelete, orgPath+"/members/"+member.Name, orgNoBody)
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	assert.Equal(t, database.AccessModeNone, accessMode())
+	assert.False(t, database.Handle.Repositories().IsWatching(t.Context(), member.ID, repo.ID))
+	assert.Equal(t, watches-1, repoSettingsGetRepo(t, repo.ID).NumWatches)
+	status, body = memberClient.do(http.MethodGet, issueAPIPath(repo, "issues"), nil)
+	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
+}
+
 func TestOrgTeams(t *testing.T) {
 	t.Parallel()
 

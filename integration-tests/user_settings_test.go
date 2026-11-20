@@ -240,7 +240,7 @@ func TestUserSettingsRepositories(t *testing.T) {
 	unrelated := seedRepository(t, owner.ID, CreateRepositoryOptions{Private: true})
 	sharedRepo, err := getRepository(t, shared.ID)
 	require.NoError(t, err)
-	require.NoError(t, sharedRepo.AddCollaborator(userGet(t, u.ID)))
+	require.NoError(t, database.Handle.Collaborations().Add(t.Context(), sharedRepo, u.ID))
 
 	type repo struct {
 		ID        int64  `json:"id"`
@@ -272,7 +272,7 @@ func TestUserSettingsRepositories(t *testing.T) {
 
 	status, body := leave(shared.ID)
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-	assert.False(t, database.IsCollaborator(logger, shared.ID, u.ID))
+	assert.False(t, database.Handle.Collaborations().IsCollaborator(t.Context(), logger, shared.ID, u.ID))
 	assert.Equal(t, []repo{{ID: own.ID, Owner: u.Name, Name: own.Name, IsPrivate: true, IsOwner: true}}, list())
 }
 

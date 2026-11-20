@@ -144,7 +144,8 @@ func (s *ActionsStore) notifyWatchers(ctx context.Context, act *Action) error {
 		actions = append(actions, clone(watch.UserID))
 	}
 
-	return s.db.Create(actions).Error
+	// In batches, because a statement can bind only so many parameters.
+	return s.db.CreateInBatches(actions, 500).Error
 }
 
 // NewRepo creates an action for creating a new repository. The action type

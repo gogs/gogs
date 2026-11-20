@@ -77,8 +77,8 @@ func repoSettingsAddCollaborator(t *testing.T, repo *Repository, u *User, mode d
 	require.NoError(t, err)
 	collaborator, err := database.Handle.Users().GetByID(t.Context(), u.ID)
 	require.NoError(t, err)
-	require.NoError(t, r.AddCollaborator(collaborator))
-	require.NoError(t, r.ChangeCollaborationAccessMode(database.AccessModeOwner, u.ID, mode))
+	require.NoError(t, database.Handle.Collaborations().Add(t.Context(), r, collaborator.ID))
+	require.NoError(t, database.Handle.Collaborations().ChangeMode(t.Context(), r, database.AccessModeOwner, u.ID, mode))
 }
 
 // repoSettingsFieldError returns the message of the field in a response of
@@ -484,7 +484,7 @@ func TestRepoSettingsTransfer(t *testing.T) {
 	assert.DirExists(t, database.RepoPath(newOwner.Name, repo.Name))
 	assert.NoDirExists(t, database.RepoPath(owner.Name, repo.Name))
 	// The new owner stops being a collaborator, and the others stay.
-	collaborators, err := got.GetCollaborators()
+	collaborators, err := database.Handle.Collaborations().List(t.Context(), got.ID)
 	require.NoError(t, err)
 	var names []string
 	for _, c := range collaborators {
@@ -562,7 +562,7 @@ func TestRepoSettingsCollaborators(t *testing.T) {
 	assert.Equal(t, map[string]string{collaborator.Name: "read"}, modes())
 	r, err := getRepository(t, repo.ID)
 	require.NoError(t, err)
-	got, err := r.GetCollaborators()
+	got, err := database.Handle.Collaborations().List(t.Context(), r.ID)
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	assert.Equal(t, database.AccessModeRead, got[0].Collaboration.Mode)
@@ -570,7 +570,7 @@ func TestRepoSettingsCollaborators(t *testing.T) {
 	status, body = c.do(http.MethodDelete, path+"/"+collaborator.Name, repoSettingsNoBody)
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 	assert.Empty(t, modes())
-	got, err = r.GetCollaborators()
+	got, err = database.Handle.Collaborations().List(t.Context(), r.ID)
 	require.NoError(t, err)
 	assert.Empty(t, got)
 }

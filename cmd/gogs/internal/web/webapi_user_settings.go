@@ -203,10 +203,10 @@ func deleteUserSettingsRepo(c flamego.Context, logger *logx.Logger, viewer *data
 	}
 	// Answer the same for repositories the user does not collaborate on, so
 	// the IDs of private repositories cannot be probed.
-	if !database.IsCollaborator(logger, repo.ID, viewer.ID) {
+	if !database.Handle.Collaborations().IsCollaborator(c.Request().Context(), logger, repo.ID, viewer.ID) {
 		return http.StatusNotFound, nil, errors.New("repository not found")
 	}
-	if err = repo.DeleteCollaboration(logger, viewer.ID); err != nil {
+	if err = database.Handle.Collaborations().Delete(c.Request().Context(), repo, viewer.ID); err != nil {
 		logger.Error("Failed to delete collaboration", "userID", viewer.ID, "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete collaboration")
 	}

@@ -1,11 +1,16 @@
 package database
 
 import (
+	"cmp"
 	"context"
+	"slices"
 
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"unknwon.dev/x/logx"
+
+	"gogs.io/gogs/internal/conf"
 )
 
 // Access represents the highest access level that a user has to a repository. The
@@ -14,8 +19,8 @@ import (
 // this table.
 type Access struct {
 	ID     int64      `gorm:"primaryKey"`
-	UserID int64      `xorm:"UNIQUE(s)" gorm:"uniqueIndex:access_user_repo_unique;not null"`
-	RepoID int64      `xorm:"UNIQUE(s)" gorm:"uniqueIndex:access_user_repo_unique;not null"`
+	UserID int64      `gorm:"uniqueIndex:access_user_repo_unique;not null"`
+	RepoID int64      `gorm:"uniqueIndex:access_user_repo_unique;not null"`
 	Mode   AccessMode `gorm:"not null"`
 }
 
@@ -145,24 +150,178 @@ func (s *PermissionsStore) Authorize(ctx context.Context, logger *logx.Logger, u
 	return desired <= s.AccessMode(ctx, logger, userID, repoID, opts)
 }
 
-// SetRepoPerms does a full update to which users have which level of access to
-// given repository. Keys of the "accessMap" are user IDs.
+// SetRepoPerms sets which users have which access mode to the repository.
+// Keys of the "accessMap" are user IDs, and users not in it lose their access.
+// It writes only the rows that differ, so that it keeps concurrent changes to
+// the accesses of other users, and does not fail on concurrent rows of the
+// same users.
 func (s *PermissionsStore) SetRepoPerms(ctx context.Context, repoID int64, accessMap map[int64]AccessMode) error {
-	records := make([]*Access, 0, len(accessMap))
-	for userID, mode := range accessMap {
-		records = append(records, &Access{
-			UserID: userID,
-			RepoID: repoID,
-			Mode:   mode,
-		})
-	}
-
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		err := tx.Where("repo_id = ?", repoID).Delete(new(Access)).Error
-		if err != nil {
-			return err
+		// On SQLite, two transactions that read before they write deadlock each
+		// other, so take the write lock first.
+		if conf.UseSQLite3 {
+			err := tx.Exec("UPDATE access SET mode = mode WHERE repo_id = ?", repoID).Error
+			if err != nil {
+				return errors.Wrap(err, "lock accesses")
+			}
 		}
 
-		return tx.Create(&records).Error
+		var existing []*Access
+		err := tx.Where("repo_id = ?", repoID).Find(&existing).Error
+		if err != nil {
+			return errors.Wrap(err, "list accesses")
+		}
+
+		var removed []int64
+		have := make(map[int64]AccessMode, len(existing))
+		for _, a := range existing {
+			have[a.UserID] = a.Mode
+			if _, ok := accessMap[a.UserID]; !ok {
+				removed = append(removed, a.UserID)
+			}
+		}
+		var changed []*Access
+		for userID, mode := range accessMap {
+			if m, ok := have[userID]; !ok || m != mode {
+				changed = append(changed, &Access{UserID: userID, RepoID: repoID, Mode: mode})
+			}
+		}
+		// Sorted, so that concurrent calls lock the rows in the same order.
+		slices.Sort(removed)
+		slices.SortFunc(changed, func(a, b *Access) int { return cmp.Compare(a.UserID, b.UserID) })
+
+		// In chunks, because a statement can bind only so many parameters.
+		for userIDs := range slices.Chunk(removed, 500) {
+			err = tx.Where("repo_id = ? AND user_id IN ?", repoID, userIDs).Delete(new(Access)).Error
+			if err != nil {
+				return errors.Wrap(err, "delete accesses")
+			}
+		}
+		if len(changed) == 0 {
+			return nil
+		}
+		return errors.Wrap(tx.Clauses(upsertAccess).CreateInBatches(changed, 500).Error, "upsert accesses")
 	})
+}
+
+// upsertAccess makes inserting an access update the mode of an existing one.
+var upsertAccess = clause.OnConflict{
+	Columns:   []clause.Column{{Name: "user_id"}, {Name: "repo_id"}},
+	DoUpdates: clause.AssignmentColumns([]string{"mode"}),
+}
+
+// recalculateUserAccess sets the user's access mode to the repository from
+// their collaboration and, when an organization owns the repository, from
+// their teams. Unlike recalculateAccesses, it writes only the user's row.
+func (s *PermissionsStore) recalculateUserAccess(ctx context.Context, repo *Repository, userID int64) error {
+	db := s.db.WithContext(ctx)
+	mode := AccessModeNone
+	collaboration := new(Collaboration)
+	err := db.Where("repo_id = ? AND user_id = ?", repo.ID, userID).Take(collaboration).Error
+	if err == nil {
+		mode = collaboration.Mode
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return errors.Wrap(err, "get collaboration")
+	}
+
+	if err = repo.getOwner(db); err != nil {
+		return errors.Wrap(err, "get owner")
+	}
+	if repo.Owner.IsOrganization() {
+		var teams []*Team
+		err = db.Joins("JOIN team_user ON team_user.team_id = team.id").
+			Where("team.org_id = ? AND team_user.uid = ?", repo.OwnerID, userID).
+			Find(&teams).Error
+		if err != nil {
+			return errors.Wrap(err, "list teams")
+		}
+		for _, t := range teams {
+			if t.IsOwnerTeam() {
+				mode = AccessModeOwner
+			} else if t.hasRepository(db, repo.ID) {
+				mode = max(mode, t.Authorize)
+			}
+		}
+	}
+
+	if mode == AccessModeNone {
+		err = db.Where("user_id = ? AND repo_id = ?", userID, repo.ID).Delete(new(Access)).Error
+		return errors.Wrap(err, "delete access")
+	}
+	err = db.Clauses(upsertAccess).Create(&Access{UserID: userID, RepoID: repo.ID, Mode: mode}).Error
+	return errors.Wrap(err, "upsert access")
+}
+
+// recalculateAccesses sets the access modes of the repository from its
+// collaborators and, when an organization owns it, from the teams of the
+// organization.
+func (s *PermissionsStore) recalculateAccesses(ctx context.Context, repo *Repository) error {
+	if err := repo.getOwner(s.db.WithContext(ctx)); err != nil {
+		return errors.Wrap(err, "get owner")
+	}
+	if repo.Owner.IsOrganization() {
+		return s.recalculateTeamAccesses(ctx, repo, 0)
+	}
+
+	accessMap, err := s.collaboratorAccesses(ctx, repo.ID)
+	if err != nil {
+		return err
+	}
+	return s.SetRepoPerms(ctx, repo.ID, accessMap)
+}
+
+// collaboratorAccesses returns the access modes of the collaborators of the
+// repository with given ID, keyed by their user IDs.
+func (s *PermissionsStore) collaboratorAccesses(ctx context.Context, repoID int64) (map[int64]AccessMode, error) {
+	collaborations, err := newCollaborationsStore(s.db).listByRepoID(ctx, repoID)
+	if err != nil {
+		return nil, errors.Wrap(err, "list collaborations")
+	}
+
+	accessMap := make(map[int64]AccessMode, len(collaborations))
+	for _, c := range collaborations {
+		accessMap[c.UserID] = c.Mode
+	}
+	return accessMap, nil
+}
+
+// recalculateTeamAccesses sets the access modes of an organization's repository
+// from its collaborators and the organization's teams, except the team with
+// given ID. The owner team always gets owner access, and a member of several
+// teams gets their highest mode.
+func (s *PermissionsStore) recalculateTeamAccesses(ctx context.Context, repo *Repository, ignoredTeamID int64) error {
+	db := s.db.WithContext(ctx)
+	if err := repo.getOwner(db); err != nil {
+		return errors.Wrap(err, "get owner")
+	} else if !repo.Owner.IsOrganization() {
+		return errors.Newf("owner is not an organization: %d", repo.OwnerID)
+	}
+
+	accessMap, err := s.collaboratorAccesses(ctx, repo.ID)
+	if err != nil {
+		return err
+	}
+
+	if err = repo.Owner.getTeams(db); err != nil {
+		return errors.Wrap(err, "list teams")
+	}
+	for _, t := range repo.Owner.Teams {
+		if t.ID == ignoredTeamID {
+			continue
+		}
+
+		if t.IsOwnerTeam() {
+			t.Authorize = AccessModeOwner
+		} else if !t.hasRepository(db, repo.ID) {
+			continue
+		}
+
+		if err = t.getMembers(db); err != nil {
+			return errors.Wrapf(err, "list members of team %d", t.ID)
+		}
+		for _, m := range t.Members {
+			accessMap[m.ID] = max(accessMap[m.ID], t.Authorize)
+		}
+	}
+	return s.SetRepoPerms(ctx, repo.ID, accessMap)
 }
