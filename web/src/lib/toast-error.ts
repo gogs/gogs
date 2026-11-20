@@ -1,16 +1,17 @@
+import { createElement } from "react";
 import { toast } from "sonner";
 
-import { signInURL } from "@/lib/loader-error";
+import { SessionExpired } from "@/components/SessionExpired";
 import { isSessionExpired } from "@/lib/queries/request";
 
 // toastError tells why a change made with a button failed, under `title` when
 // the message alone does not say what went wrong. A viewer whose session
-// expired signs in and comes back to the page instead: unlike in a form,
-// nothing they typed went into the change.
+// expired reads how to sign in again, and stays on the page, which may hold
+// what they typed for another change, e.g., the draft of a comment.
 export function toastError(err: Error, title?: string) {
   if (isSessionExpired(err)) {
-    const { pathname, search, hash } = window.location;
-    window.location.assign(signInURL(pathname + search + hash));
+    // The toast holds a link, so it stays until it is closed, once for however many changes fail.
+    toast.error(createElement(SessionExpired), { id: "session-expired", duration: Infinity });
     return;
   }
   if (title) toast.error(title, { description: err.message });

@@ -11,6 +11,7 @@ import { PendingFiles } from "@/components/IssueForm";
 import { Markdown } from "@/components/Markdown";
 import { RepoHeader } from "@/components/RepoHeader";
 import { RichText } from "@/components/RichText";
+import { SessionExpired } from "@/components/SessionExpired";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { codeLanguageOf } from "@/lib/code-language";
@@ -28,7 +29,7 @@ import {
   repoHeaderQuery,
   uploadRepoFiles,
 } from "@/lib/queries/repo";
-import { FormError, formErrors } from "@/lib/queries/request";
+import { FormError, formErrors, isSessionExpired } from "@/lib/queries/request";
 import { resolveTheme, useTheme } from "@/lib/theme-context";
 import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { useUserInfo } from "@/lib/use-user-info";
@@ -532,7 +533,9 @@ export function RepoFileEditor({
                   ) : preview.data !== undefined ? (
                     <Markdown html={preview.data} />
                   ) : preview.isError ? (
-                    <p className="text-sm text-(--color-destructive)">{preview.error.message}</p>
+                    <p className="text-sm text-(--color-destructive)">
+                      {isSessionExpired(preview.error) ? <SessionExpired /> : preview.error.message}
+                    </p>
                   ) : (
                     <p className="text-sm text-(--color-muted-foreground)">{t("repo.release.loading")}</p>
                   )}
