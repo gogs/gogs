@@ -870,3 +870,11 @@ html[data-fullwidth] :is(.max-w-6xl, .max-w-7xl) {
 :root [data-sonner-toast][data-visible="true"] {
   pointer-events: auto;
 }
+/* Below sm a dialog is a sheet at the bottom, where the toasts show. A toast
+   that stays until it is closed would cover the buttons of the sheet for as
+   long as that is open, so it hides, and shows again when the sheet closes. */
+@media (width < 40rem) {
+  body:has([data-bottom-sheet][data-state="open"]) [data-sonner-toast].toast-until-closed {
+    visibility: hidden;
+  }
+}
