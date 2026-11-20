@@ -180,6 +180,7 @@ func milestonesCountIssues(t *testing.T, ctx context.Context, s *MilestonesStore
 	newTestMilestoneIssue(t, s, 1, 3, m.ID, true, false)
 	newTestMilestoneIssue(t, s, 1, 4, m.ID, false, true)
 	newTestMilestoneIssue(t, s, 1, 5, 9999, false, false)
+	newTestMilestoneIssue(t, s, 2, 1, m.ID, false, false)
 
 	for _, tc := range []struct {
 		isClosed, includePulls bool
@@ -190,7 +191,7 @@ func milestonesCountIssues(t *testing.T, ctx context.Context, s *MilestonesStore
 		{true, false, 1},
 		{true, true, 1},
 	} {
-		got, err := s.CountIssues(ctx, m.ID, tc.isClosed, tc.includePulls)
+		got, err := s.CountIssues(ctx, m.RepoID, m.ID, tc.isClosed, tc.includePulls)
 		require.NoError(t, err)
 		assert.Equal(t, tc.want, got, "isClosed: %v, includePulls: %v", tc.isClosed, tc.includePulls)
 	}
