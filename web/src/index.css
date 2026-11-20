@@ -864,3 +864,9 @@ html[data-fullwidth] :is(.max-w-6xl, .max-w-7xl) {
   width: 24px;
   height: 24px;
 }
+/* An open dialog turns the pointer off for everything outside it. A toast
+   shows above the dialog, so a click on it would land on what is under it,
+   e.g., the button that confirms. */
+:root [data-sonner-toast][data-visible="true"] {
+  pointer-events: auto;
+}

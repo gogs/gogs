@@ -14,13 +14,14 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { isSessionExpired } from "@/lib/queries/request";
+import { dismissSessionExpired, isSessionExpired } from "@/lib/queries/request";
 import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 
 // Not `disabled`, which would take the focus off the button the dialog returns it to. The text
-// dims, not the button, which would dim its focus ring too.
-const BUSY = "pointer-events-none text-(--color-destructive)/60";
+// dims, not the button, which would dim its focus ring too, nor the spinner, which tells that the
+// button is at work.
+const BUSY = "pointer-events-none text-(--color-destructive)/60 [&>svg]:text-(--color-destructive)";
 const BUSY_ICON = "pointer-events-none text-(--color-muted-foreground)/60";
 
 // ConfirmButton asks in a dialog before an action that cannot be taken back,
@@ -70,7 +71,15 @@ export function ConfirmButton({
     },
   });
   return (
-    <Dialog open={open} onOpenChange={(next) => setOpen(next && !busy)}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        // On a narrow screen that toast would cover the buttons of the dialog. It shows again when
+        // the action finds the session still expired.
+        if (next) dismissSessionExpired();
+        setOpen(next && !busy);
+      }}
+    >
       {Icon ? (
         <Tooltip>
           <TooltipTrigger asChild>
