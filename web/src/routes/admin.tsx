@@ -1,4 +1,4 @@
-import type { QueryClient, QueryKey } from "@tanstack/react-query";
+import type { FetchQueryOptions, QueryClient, QueryKey } from "@tanstack/react-query";
 import { type AnyRoute, createRoute, notFound, redirect } from "@tanstack/react-router";
 import type { JSX } from "react";
 
@@ -24,14 +24,11 @@ import {
   fetchAdminAuthSource,
   fetchAdminAuthSources,
   fetchAdminConfig,
-  fetchAdminHealth,
   fetchAdminMonitor,
   fetchAdminNotices,
   fetchAdminOrgs,
   fetchAdminRepos,
   fetchAdminTrace,
-  fetchAdminTraceOverview,
-  fetchAdminTraceSearch,
   fetchAdminUser,
   fetchAdminUserOptions,
   fetchAdminUsers,
@@ -62,10 +59,21 @@ async function loadAdminPage<T>(location: { href: string }, load: () => Promise<
   }
 }
 
-// refreshedBy hands what a loader loaded to the query that keeps the page
-// fresh from then on (see `useRefreshed`).
-function refreshedBy<T>(context: unknown, query: { queryKey: QueryKey }, loaded: T) {
-  (context as { queryClient: QueryClient }).queryClient.setQueryData<T>(query.queryKey, loaded);
+// loadRefreshed loads what a page shows through the query that keeps it fresh
+// from then on (see `useRefreshed`), so the loader and the page ask once
+// between them. When the viewer returns to a view the router still holds, e.g.,
+// with Back, the page shows at once, scrolled to where it was, and both wait
+// for the same answer.
+function loadRefreshed<T, K extends QueryKey>(
+  context: unknown,
+  location: { href: string },
+  query: FetchQueryOptions<T, Error, T, K>,
+): Promise<T> {
+  const { queryClient } = context as { queryClient: QueryClient };
+  return loadAdminPage(location, () =>
+    // A loader waits neither for a second try nor for the browser to be online again.
+    queryClient.fetchQuery({ ...query, retry: false, networkMode: "always" }),
+  );
 }
 
 export function createAdminRoutes(rootRoute: AnyRoute) {
@@ -124,11 +132,7 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
     path: "health",
     validateSearch: validateHealthSearch,
     loaderDeps: ({ search }: { search: HealthSearch }) => ({ health: search.health ?? ("1h" as const) }),
-    loader: async ({ deps, context, location }) => {
-      const health = await loadAdminPage(location, () => fetchAdminHealth(deps.health));
-      refreshedBy(context, adminHealthQuery(deps.health), health);
-      return health;
-    },
+    loader: ({ deps, context, location }) => loadRefreshed(context, location, adminHealthQuery(deps.health)),
     component: function Health() {
       const health = healthRoute.useLoaderData();
       // Remount on a range switch, so that a pinned moment does not outlive its range.
@@ -141,19 +145,13 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
     ...PAGE,
     path: "traces",
     validateSearch: validateTraceSearch,
-    // The router would show what it loaded for a range or a filter the last time while it loads it
-    // again, and the page would then ask a second time, since those numbers are old.
-    gcTime: 0,
     loaderDeps: ({ search }: { search: TraceSearch }) => search,
     loader: async ({ deps, context, location }) => {
       if (deps.view !== "search") {
-        const range = deps.range ?? "1h";
-        const overview = await loadAdminPage(location, () => fetchAdminTraceOverview(range));
-        refreshedBy(context, adminTraceOverviewQuery(range), overview);
+        const overview = await loadRefreshed(context, location, adminTraceOverviewQuery(deps.range ?? "1h"));
         return { view: "overview" as const, overview };
       }
-      const result = await loadAdminPage(location, () => fetchAdminTraceSearch(deps));
-      refreshedBy(context, adminTraceSearchQuery(deps), result);
+      const result = await loadRefreshed(context, location, adminTraceSearchQuery(deps));
       // A trace ID, or a prefix of one that only one trace has, opens the trace.
       if (deps.q && result.total === 1) {
         // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
