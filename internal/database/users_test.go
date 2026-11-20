@@ -1,8 +1,11 @@
 package database
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"image"
+	"image/png"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,7 +24,6 @@ import (
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/repox"
 	"gogs.io/gogs/internal/userx"
-	"gogs.io/gogs/public"
 )
 
 func TestUser_BeforeCreate(t *testing.T) {
@@ -123,6 +125,9 @@ func TestUsers(t *testing.T) {
 				err := clearTables(t, s.db)
 				require.NoError(t, err)
 			})
+			// Deleting a user removes the generated avatar, whose path comes
+			// from the server settings, which other suites mock.
+			conf.SetMockServer(t, conf.ServerOpts{AppDataPath: t.TempDir()})
 			tc.test(t, ctx, s)
 		})
 		if t.Failed() {
@@ -509,8 +514,9 @@ func usersDeleteCustomAvatar(t *testing.T, ctx context.Context, s *UsersStore) {
 	alice, err := s.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 
-	avatar, err := public.Files.ReadFile("img/avatar_default.png")
-	require.NoError(t, err)
+	var img bytes.Buffer
+	require.NoError(t, png.Encode(&img, image.NewRGBA(image.Rect(0, 0, 1, 1))))
+	avatar := img.Bytes()
 
 	avatarPath := userx.CustomAvatarPath(alice.ID)
 	_ = os.Remove(avatarPath)
@@ -652,6 +658,11 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 	tempCustomAvatarPath := userx.CustomAvatarPath(testUser.ID)
 	err = os.WriteFile(tempCustomAvatarPath, []byte("test"), 0o600)
 	require.NoError(t, err)
+	tempGeneratedAvatarPath := userx.GeneratedAvatarPath(testUser.ID)
+	err = os.MkdirAll(filepath.Dir(tempGeneratedAvatarPath), os.ModePerm)
+	require.NoError(t, err)
+	err = os.WriteFile(tempGeneratedAvatarPath, []byte("test"), 0o600)
+	require.NoError(t, err)
 
 	// Verify mock data.
 	repo2, err = reposStore.GetByID(ctx, repo2.ID)
@@ -698,6 +709,7 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 
 	assert.True(t, osx.Exist(tempUserPath))
 	assert.True(t, osx.Exist(tempCustomAvatarPath))
+	assert.True(t, osx.Exist(tempGeneratedAvatarPath))
 
 	err = s.DeleteByID(ctx, testUser.ID, false)
 	require.NoError(t, err)
@@ -745,6 +757,7 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 
 	assert.False(t, osx.Exist(tempUserPath))
 	assert.False(t, osx.Exist(tempCustomAvatarPath))
+	assert.False(t, osx.Exist(tempGeneratedAvatarPath))
 
 	_, err = s.GetByID(ctx, testUser.ID)
 	wantErr := ErrUserNotExist{errx.Args{"userID": testUser.ID}}
@@ -1179,9 +1192,6 @@ func usersUpdate(t *testing.T, ctx context.Context, s *UsersStore) {
 		AllowGitHook:     &lastRepoVisibility,
 		AllowImportLocal: &lastRepoVisibility,
 		ProhibitLogin:    &lastRepoVisibility,
-
-		Avatar:      &overLimitStr,
-		AvatarEmail: &overLimitStr,
 	}
 	err = s.Update(ctx, alice.ID, opts)
 	require.NoError(t, err)
@@ -1204,9 +1214,6 @@ func usersUpdate(t *testing.T, ctx context.Context, s *UsersStore) {
 		assert.Equal(t, lastRepoVisibility, alice.AllowGitHook)
 		assert.Equal(t, lastRepoVisibility, alice.AllowImportLocal)
 		assert.Equal(t, lastRepoVisibility, alice.ProhibitLogin)
-		wantStr2048 := strings.Repeat("a", 2048)
-		assert.Equal(t, wantStr2048, alice.Avatar)
-		assert.Equal(t, wantStr255, alice.AvatarEmail)
 	}
 	assertValues()
 
@@ -1223,8 +1230,9 @@ func usersUseCustomAvatar(t *testing.T, ctx context.Context, s *UsersStore) {
 	alice, err := s.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 
-	avatar, err := public.Files.ReadFile("img/avatar_default.png")
-	require.NoError(t, err)
+	var img bytes.Buffer
+	require.NoError(t, png.Encode(&img, image.NewRGBA(image.Rect(0, 0, 1, 1))))
+	avatar := img.Bytes()
 
 	avatarPath := userx.CustomAvatarPath(alice.ID)
 	_ = os.Remove(avatarPath)

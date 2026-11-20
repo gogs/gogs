@@ -17,7 +17,6 @@ import (
 	"gogs.io/gogs/internal/i18n"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/template"
-	"gogs.io/gogs/internal/tool"
 )
 
 // profileUser is the user or organization whose profile is requested.
@@ -86,8 +85,7 @@ func getUserProfile(logger *logx.Logger, c flamego.Context, viewer *database.Use
 		FollowingCount: puser.NumFollowing,
 		Organizations:  make([]userProfileOrg, 0, len(orgs)),
 	}
-	// The avatar fills the sidebar, at most 296px wide, so request it for 2x displays.
-	profile.AvatarURL = tool.AppendAvatarSize(puser.AvatarURLPath(), 592)
+	profile.AvatarURL = puser.AvatarURLPath()
 	profile.Website = puser.Website
 	for _, org := range orgs {
 		profile.Organizations = append(profile.Organizations, userProfileOrg{
@@ -402,8 +400,7 @@ func getOrgProfile(logger *logx.Logger, viewer *database.User, org *profileUser)
 		Members:     []orgProfileMember{},
 	}
 	profile.Description = org.Description
-	// The avatar is shown at 100px wide, so request it for 2x displays.
-	profile.AvatarURL = tool.AppendAvatarSize(org.AvatarURLPath(), 200)
+	profile.AvatarURL = org.AvatarURLPath()
 	profile.Website = org.Website
 	if viewer != nil {
 		// Admins have the access of owners.

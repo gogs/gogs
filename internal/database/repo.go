@@ -309,7 +309,7 @@ func (r *Repository) CustomAvatarPath() string {
 
 // RelAvatarLink returns relative avatar link to the site domain,
 // which includes app sub-url as prefix, or an empty string when the
-// repository has no custom avatar. Repositories do not use Gravatar.
+// repository has no custom avatar.
 func (r *Repository) RelAvatarLink() string {
 	defaultImgURL := ""
 	if !osx.Exist(r.CustomAvatarPath()) {

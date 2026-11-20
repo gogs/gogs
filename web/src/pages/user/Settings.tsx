@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useRouter } from "@tanstack/react-router";
-import { type FormEvent, useRef, useState } from "react";
+import { type FormEvent, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -23,7 +23,6 @@ import {
   deleteAccount,
   deleteUserAvatar,
   leaveRepo,
-  setGravatarEmail,
   updateUserProfile,
   uploadUserAvatar,
 } from "@/lib/queries/settings";
@@ -138,9 +137,6 @@ export function UserProfileSettings({ settings }: { settings: UserSettingsData }
           remove={deleteUserAvatar}
           onChanged={avatarChanged}
         />
-        {settings.avatarEmail !== undefined ? (
-          <GravatarForm email={settings.avatarEmail} onChanged={avatarChanged} />
-        ) : null}
       </section>
     </UserSettingsLayout>
   );
@@ -163,55 +159,6 @@ function useAvatarChanged() {
       router.invalidate(),
     ]);
   };
-}
-
-function GravatarForm({ email: initialEmail, onChanged }: { email: string; onChanged: () => Promise<void> }) {
-  const { t } = useTranslation();
-  const [email, setEmail] = useState(initialEmail);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const save = useMutation({
-    mutationFn: () => setGravatarEmail(email),
-    onSuccess: onChanged,
-    onError: () => requestAnimationFrame(() => inputRef.current?.focus()),
-  });
-  const { fields, formError } = formErrors(save.error);
-
-  const onSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    save.mutate();
-  };
-
-  return (
-    <form onSubmit={onSubmit} noValidate className="mt-8 border-t border-(--color-border) pt-6">
-      <fieldset disabled={save.isPending} className="contents">
-        <FormAlert message={formError} />
-        <div className="flex flex-col gap-3">
-          <FormField
-            id="avatarEmail"
-            label={t("settings.avatar_email")}
-            error={fields.email}
-            invalid={"email" in fields}
-          >
-            <Input
-              ref={inputRef}
-              id="avatarEmail"
-              name="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </FormField>
-          <div>
-            <Button type="submit" size="sm">
-              {t("settings.lookup_avatar_by_mail")}
-            </Button>
-          </div>
-        </div>
-      </fieldset>
-    </form>
-  );
 }
 
 const PASSWORD_FIELDS = ["oldPassword", "password", "retype"] as const;

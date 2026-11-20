@@ -34,6 +34,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Changed
 
+- Users and organizations without an uploaded avatar get a generated avatar in the style of [DiceBear Notionists](https://www.dicebear.com/styles/notionists/), which stays the same after a rename. Commit authors without an account get one generated from their email, in place of the default gopher. Avatars are never fetched from external services.
 - Docker builds from `main` are now published only as `gogs/gogs:edge`, using the next-generation `Dockerfile.next`. The legacy `Dockerfile` no longer produces `main` builds. The `gogs/gogs:latest` and `gogs/gogs:next-latest` tags now always point to the highest published stable release, never to a back-patch on an older line. [#8278](https://github.com/gogs/gogs/pull/8278)
 - The minimum required Git version on the server is now 2.43.1. Gogs refuses to start with an older Git. [#8437](https://github.com/gogs/gogs/pull/8437)
 - The minimum supported database versions are now PostgreSQL 12 and MariaDB 10.6. MySQL 5.7 is still supported. [#8546](https://github.com/gogs/gogs/pull/8546)
@@ -144,6 +145,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Removed
 
+- Gravatar and Libravatar avatars, the avatar email setting, and the `[server] OFFLINE_MODE`, `[picture] GRAVATAR_SOURCE`, `[picture] DISABLE_GRAVATAR` and `[picture] ENABLE_FEDERATED_AVATAR` configuration options.
 - The "Processes" page of the admin panel. [#8667](https://github.com/gogs/gogs/pull/8667)
 - _Security:_ GitHub authentication sources, which let anyone with a GitHub account sign in as any user of the source with their own GitHub token. Existing GitHub sources and `custom/conf/auth.d` files with `type = github` are ignored. [#8466](https://github.com/gogs/gogs/pull/8466) - [GHSA-v5w5-6j48-6jv2](https://github.com/gogs/gogs/security/advisories/GHSA-v5w5-6j48-6jv2)
 - The web-based first-time install page at `/install`, along with the `[security] INSTALL_LOCK` configuration option. A working `custom/conf/app.ini` is now always required. [#8350](https://github.com/gogs/gogs/pull/8350)

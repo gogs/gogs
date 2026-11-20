@@ -16,7 +16,7 @@ import (
 	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/pathx"
-	"gogs.io/gogs/internal/tool"
+	"gogs.io/gogs/internal/userx"
 )
 
 var commitIDPattern = lazyregexp.New(`^[0-9a-f]{7,64}$`)
@@ -113,7 +113,7 @@ func (a *commitAuthors) signature(s *git.Signature) repoCommitSignature {
 		Name:      s.Name,
 		Email:     s.Email,
 		When:      s.When.UTC(),
-		AvatarURL: tool.AvatarLink(a.logger, s.Email),
+		AvatarURL: userx.GeneratedAvatarURLPath(s.Email),
 	}
 	if u != nil {
 		sig.AvatarURL = u.AvatarURLPath()

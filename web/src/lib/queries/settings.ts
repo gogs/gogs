@@ -16,8 +16,6 @@ export interface UserSettingsData {
   isLocal: boolean;
   avatarURL: string;
   hasCustomAvatar: boolean;
-  // Only sent when the site uses Gravatar.
-  avatarEmail?: string;
 }
 
 export interface UserProfileForm {
@@ -66,12 +64,6 @@ export function uploadUserAvatar(file: File) {
 
 export function deleteUserAvatar() {
   return send("DELETE", settingsURL("/avatar"));
-}
-
-// setGravatarEmail shows the Gravatar of the email as the avatar of the
-// viewer, in place of any uploaded avatar.
-export function setGravatarEmail(email: string) {
-  return submit<void>("PUT", settingsURL("/gravatar"), { email });
 }
 
 export function changePassword(form: UserPasswordForm) {

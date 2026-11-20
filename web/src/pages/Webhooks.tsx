@@ -44,7 +44,7 @@ const FIELD_ORDER = ["url", "channel"] as const;
 const WEBHOOK_TYPES: Record<WebhookType, { name: string; logo: string; site: string }> = {
   gogs: { name: "Gogs", logo: "/img/favicon.png", site: "https://gogs.io/advancing/webhooks" },
   slack: { name: "Slack", logo: "/img/slack.png", site: "https://slack.com" },
-  discord: { name: "Discord", logo: "/img/discord.png", site: "https://discordapp.com/" },
+  discord: { name: "Discord", logo: "/img/discord.svg", site: "https://discord.com/" },
   dingtalk: { name: "Dingtalk", logo: "/img/dingtalk.png", site: "https://open-doc.dingtalk.com/" },
 };
 

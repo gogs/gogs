@@ -101,8 +101,8 @@ func TestOrgSettings(t *testing.T) {
 	var got settings
 	ownerClient.doJSON(http.MethodGet, path, nil, http.StatusOK, &got)
 	assert.Equal(t, org.Name, got.Name)
-	// Organizations are created with a generated avatar.
-	assert.True(t, got.HasCustomAvatar)
+	// Organizations are created without an uploaded avatar.
+	assert.False(t, got.HasCustomAvatar)
 	assert.Nil(t, got.MaxRepoCreation, "only site admins get the repository limit")
 
 	newName := UniqueName("org-")
@@ -142,8 +142,6 @@ func TestOrgSettings(t *testing.T) {
 		Description: "We make everything.",
 		Website:     "https://acme.example.com",
 		Location:    "Earth",
-		// The generated avatar is kept.
-		HasCustomAvatar: true,
 	}, got)
 	status, body = ownerClient.do(http.MethodGet, path, nil)
 	assert.Equal(t, http.StatusNotFound, status, "old name, response: %s", body)
@@ -404,8 +402,13 @@ func TestOrgAvatar(t *testing.T) {
 		assert.Equal(t, stored.UseCustomAvatar, settings.HasCustomAvatar)
 		return stored.UseCustomAvatar
 	}
-	// Organizations are created with a generated avatar.
-	require.True(t, hasCustomAvatar())
+	// Organizations are created without an uploaded avatar.
+	require.False(t, hasCustomAvatar())
+
+	contentType, form = orgAvatarForm(t, img.Bytes())
+	status, _, body = c.doRaw(http.MethodPut, path, contentType, form)
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	assert.True(t, hasCustomAvatar())
 
 	status, _, body = authenticatedClient(t, member).doRaw(http.MethodDelete, path, "", nil)
 	assert.Equal(t, http.StatusForbidden, status, "member, response: %s", body)
@@ -414,11 +417,6 @@ func TestOrgAvatar(t *testing.T) {
 	status, _, body = c.doRaw(http.MethodDelete, path, "", nil)
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 	assert.False(t, hasCustomAvatar())
-
-	contentType, form = orgAvatarForm(t, img.Bytes())
-	status, _, body = c.doRaw(http.MethodPut, path, contentType, form)
-	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-	assert.True(t, hasCustomAvatar())
 }
 
 func TestOrgMembers(t *testing.T) {

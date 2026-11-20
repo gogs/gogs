@@ -22,7 +22,7 @@ import (
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 	"gogs.io/gogs/internal/strx"
 	"gogs.io/gogs/internal/testx"
-	"gogs.io/gogs/internal/tool"
+	"gogs.io/gogs/internal/userx"
 )
 
 // ActionsStore is the storage layer for actions.
@@ -929,7 +929,7 @@ func (pcs *PushCommits) AvatarLink(email string) string {
 	if !ok {
 		u, err := Handle.Users().GetByEmail(context.Background(), email)
 		if err != nil {
-			pcs.avatars[email] = tool.AvatarLink(handleLogger(), email)
+			pcs.avatars[email] = userx.GeneratedAvatarURLPath(email)
 			if !IsErrUserNotExist(err) {
 				handleLogger().Error("Failed to get user", "email", email, "error", err)
 			}

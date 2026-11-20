@@ -274,7 +274,6 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Delete("", requireAuthenticated, bindJSON(userDeleteRequest{}), deleteUser)
 			f.Group("/settings", func() {
 				f.Combo("").Get(getUserSettings).Patch(bindJSON(userSettingsRequest{}), patchUserSettings)
-				f.Put("/gravatar", bindJSON(userGravatarRequest{}), putUserGravatar)
 				f.Put("/password", bindJSON(userPasswordRequest{}), putUserPassword)
 				f.Get("/repositories", getUserSettingsRepos)
 				f.Delete("/repositories/{id}", deleteUserSettingsRepo)

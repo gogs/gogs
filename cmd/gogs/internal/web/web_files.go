@@ -3,6 +3,7 @@ package web
 import (
 	"bytes"
 	stdctx "context"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"mime"
@@ -10,12 +11,14 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
 	"github.com/unknwon/com"
 	"unknwon.dev/x/logx"
 
+	"gogs.io/gogs/internal/avatar"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
@@ -146,10 +149,74 @@ func getUserAvatar(c flamego.Context, logger *logx.Logger, viewer *database.User
 		pages.NotFound(c)
 		return
 	}
-	if err := serveAvatar(c, pages, userx.CustomAvatarPath(c.ParamInt64("id"))); err != nil {
-		logger.Error("Failed to serve user avatar", "userID", c.ParamInt64("id"), "error", err)
+
+	id := c.ParamInt64("id")
+	// The uploaded avatar file also holds identicons saved by earlier versions.
+	avatarPath := userx.CustomAvatarPath(id)
+	if !osx.IsFile(avatarPath) {
+		avatarPath = userx.GeneratedAvatarPath(id)
+	}
+	if !osx.IsFile(avatarPath) {
+		_, err := database.Handle.Users().GetByID(c.Request().Context(), id)
+		if err != nil {
+			if errx.IsNotFound(err) {
+				pages.NotFound(c)
+				return
+			}
+			logger.Error("Failed to get user by ID", "userID", id, "error", err)
+			writeErrorResponse(c.ResponseWriter(), http.StatusInternalServerError, errors.Wrap(err, "get user"))
+			return
+		}
+		if err = userx.SaveGeneratedAvatar(id); err != nil {
+			logger.Error("Failed to save generated user avatar", "userID", id, "error", err)
+			writeErrorResponse(c.ResponseWriter(), http.StatusInternalServerError, err)
+			return
+		}
+	}
+	if err := serveAvatar(c, pages, avatarPath); err != nil {
+		logger.Error("Failed to serve user avatar", "userID", id, "error", err)
 		writeErrorResponse(c.ResponseWriter(), http.StatusInternalServerError, err)
 	}
+}
+
+// getGeneratedAvatar serves the avatar generated from a seed, which is used for
+// people who have no user, e.g., commit authors. It is not saved, because
+// anyone can request any seed.
+func getGeneratedAvatar(c flamego.Context, logger *logx.Logger, viewer *database.User, pages webAppPages) {
+	if viewer == nil && conf.Auth.RequireSigninView {
+		pages.NotFound(c)
+		return
+	}
+	seed := c.Param("seed")
+	if len(seed) > 64 {
+		pages.NotFound(c)
+		return
+	}
+	if err := serveGeneratedAvatar(c, seed); err != nil {
+		logger.Error("Failed to generate avatar", "seed", seed, "error", err)
+		writeErrorResponse(c.ResponseWriter(), http.StatusInternalServerError, err)
+	}
+}
+
+func serveGeneratedAvatar(c flamego.Context, seed string) error {
+	// The avatar depends only on the seed and the version that draws it, so a
+	// revalidation is answered without drawing it again.
+	etag := fmt.Sprintf(`"%x"`, sha256.Sum256([]byte(conf.App.Version+"\x00"+seed)))
+	h := c.ResponseWriter().Header()
+	h.Set("Cache-Control", "private, max-age=86400")
+	h.Set("ETag", etag)
+	if strings.Contains(c.Request().Header.Get("If-None-Match"), etag) {
+		c.ResponseWriter().WriteHeader(http.StatusNotModified)
+		return nil
+	}
+
+	img, err := avatar.GeneratePNG(seed, avatar.DefaultSize)
+	if err != nil {
+		return errors.Wrap(err, "generate avatar")
+	}
+	h.Set("Content-Type", "image/png")
+	http.ServeContent(c.ResponseWriter(), c.Request().Request, "", time.Time{}, bytes.NewReader(img))
+	return nil
 }
 
 // getRepoAvatar serves the uploaded avatar of a repository to the viewers who

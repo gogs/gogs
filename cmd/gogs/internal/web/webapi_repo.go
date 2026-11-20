@@ -18,7 +18,7 @@ import (
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/pathx"
 	"gogs.io/gogs/internal/repox"
-	"gogs.io/gogs/internal/tool"
+	"gogs.io/gogs/internal/userx"
 )
 
 type repoHeader struct {
@@ -170,7 +170,7 @@ func getRepoCommit(logger *logx.Logger, c flamego.Context, repoCtx *repoContext)
 			Name:      s.Name,
 			Email:     s.Email,
 			When:      s.When.UTC(),
-			AvatarURL: tool.AvatarLink(logger, s.Email),
+			AvatarURL: userx.GeneratedAvatarURLPath(s.Email),
 		}
 		if u, err := database.Handle.Users().GetByEmail(ctx, s.Email); err == nil && u != nil {
 			sig.ProfileURL = conf.Server.Subpath + "/" + u.Name

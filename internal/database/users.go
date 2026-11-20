@@ -15,7 +15,6 @@ import (
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/cryptox"
 	"gogs.io/gogs/internal/dbx"
 	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/markup"
@@ -23,7 +22,6 @@ import (
 	"gogs.io/gogs/internal/repox"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 	"gogs.io/gogs/internal/strx"
-	"gogs.io/gogs/internal/tool"
 	"gogs.io/gogs/internal/userx"
 )
 
@@ -309,8 +307,6 @@ func (s *UsersStore) Create(ctx context.Context, username, email string, opts Cr
 		MaxRepoCreation: -1,
 		IsActive:        opts.Activated,
 		IsAdmin:         opts.Admin,
-		Avatar:          cryptox.MD5(email), // Gravatar URL uses the MD5 hash of the email, see https://en.gravatar.com/site/implement/hash/
-		AvatarEmail:     email,
 	}
 
 	user.Rands, err = userx.RandomSalt()
@@ -327,7 +323,7 @@ func (s *UsersStore) Create(ctx context.Context, username, email string, opts Cr
 }
 
 // DeleteCustomAvatar deletes the current user custom avatar and falls back to
-// looking up avatar by email.
+// the generated avatar.
 func (s *UsersStore) DeleteCustomAvatar(ctx context.Context, userID int64) error {
 	_ = os.Remove(userx.CustomAvatarPath(userID))
 	return s.db.WithContext(ctx).
@@ -526,6 +522,7 @@ func (s *UsersStore) DeleteByID(ctx context.Context, userID int64, skipRewriteAu
 
 	_ = os.RemoveAll(repox.UserPath(user.Name))
 	_ = os.Remove(userx.CustomAvatarPath(userID))
+	_ = os.Remove(userx.GeneratedAvatarPath(userID))
 
 	if needsRewriteAuthorizedKeys {
 		err = newPublicKeysStore(s.db).RewriteAuthorizedKeys()
@@ -889,9 +886,6 @@ type UpdateUserOptions struct {
 	AllowGitHook     *bool
 	AllowImportLocal *bool
 	ProhibitLogin    *bool
-
-	Avatar      *string
-	AvatarEmail *string
 }
 
 // Update updates fields for the given user.
@@ -970,13 +964,6 @@ func (s *UsersStore) Update(ctx context.Context, userID int64, opts UpdateUserOp
 	}
 	if opts.ProhibitLogin != nil {
 		updates["prohibit_login"] = *opts.ProhibitLogin
-	}
-
-	if opts.Avatar != nil {
-		updates["avatar"] = strx.Truncate(*opts.Avatar, 2048)
-	}
-	if opts.AvatarEmail != nil {
-		updates["avatar_email"] = strx.Truncate(*opts.AvatarEmail, 255)
 	}
 
 	return s.db.WithContext(ctx).Model(&User{}).Where("id = ?", userID).Updates(updates).Error
@@ -1230,8 +1217,6 @@ type User struct {
 	ProhibitLogin    bool
 
 	// Avatar
-	Avatar          string `xorm:"VARCHAR(2048) NOT NULL" gorm:"type:VARCHAR(2048);not null"`
-	AvatarEmail     string `xorm:"NOT NULL" gorm:"not null"`
 	UseCustomAvatar bool
 
 	// Counters
@@ -1349,38 +1334,22 @@ func (u *User) HTMLURL() string {
 	return conf.Server.ExternalURL + u.Name
 }
 
-// AvatarURLPath returns the URL path to the user or organization avatar. If the
-// user enables Gravatar-like service, then an external URL will be returned.
+// AvatarURLPath returns the URL path to the user or organization avatar, which
+// is the uploaded avatar when there is one, otherwise the generated one. The
+// path carries the update time, so the new avatar shows right after an upload
+// or a removal instead of the one cached by the browser.
 //
 // TODO(unknwon): This is also used in templates, which should be fixed by
 // having a dedicated type `template.User` and move this to the "userx"
 // package.
 func (u *User) AvatarURLPath() string {
-	defaultURLPath := conf.UserDefaultAvatarURLPath()
 	if u.ID <= 0 {
-		return defaultURLPath
+		return userx.GeneratedAvatarURLPath(u.Name)
 	}
-
-	hasCustomAvatar := osx.IsFile(userx.CustomAvatarPath(u.ID))
-	switch {
-	case u.UseCustomAvatar:
-		if !hasCustomAvatar {
-			return defaultURLPath
-		}
-		return fmt.Sprintf("%s/%s/%d", conf.Server.Subpath, conf.UsersAvatarPathPrefix, u.ID)
-	case conf.Picture.DisableGravatar:
-		if !hasCustomAvatar {
-			if err := userx.GenerateRandomAvatar(u.ID, u.Name, u.Email); err != nil {
-				handleLogger().Error("Failed to generate random avatar", "userID", u.ID, "error", err)
-			}
-		}
-		return fmt.Sprintf("%s/%s/%d", conf.Server.Subpath, conf.UsersAvatarPathPrefix, u.ID)
-	}
-	return tool.AvatarLink(handleLogger(), u.AvatarEmail)
+	return fmt.Sprintf("%s/%s/%d?v=%d", conf.Server.Subpath, conf.UsersAvatarPathPrefix, u.ID, u.UpdatedUnix)
 }
 
-// AvatarURL returns the full URL to the user or organization avatar. If the
-// user enables Gravatar-like service, then an external URL will be returned.
+// AvatarURL returns the full URL to the user or organization avatar.
 //
 // TODO(unknwon): This is also used in templates, which should be fixed by
 // having a dedicated type `template.User` and move this to the "userx"

@@ -2,6 +2,7 @@ package userx
 
 import (
 	"bytes"
+	"crypto/hmac"
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/hex"
@@ -102,35 +103,49 @@ func CustomAvatarPath(userID int64) string {
 	return filepath.Join(conf.Picture.AvatarUploadPath, strconv.FormatInt(userID, 10))
 }
 
-// GenerateRandomAvatar generates a random avatar and stores to local file
-// system using given user information.
-func GenerateRandomAvatar(userID int64, name, email string) error {
-	seed := email
-	if seed == "" {
-		seed = name
+// GeneratedAvatarPath returns the absolute path of the user generated avatar
+// file. Generated avatars are kept apart from uploaded ones, so saving one never
+// replaces an upload.
+func GeneratedAvatarPath(userID int64) string {
+	return filepath.Join(conf.Server.AppDataPath, "generated-avatars", strconv.FormatInt(userID, 10))
+}
+
+// SaveGeneratedAvatar draws the avatar of the user and saves it as the generated
+// avatar file of the user, so it is drawn only once. It writes a temporary file
+// and renames it, so concurrent requests never serve a partly written file.
+func SaveGeneratedAvatar(userID int64) error {
+	// The seed is the ID so that the avatar stays the same after a rename.
+	img, err := avatar.GeneratePNG(strconv.FormatInt(userID, 10), avatar.DefaultSize)
+	if err != nil {
+		return errors.Wrap(err, "generate avatar")
 	}
 
-	img, err := avatar.RandomImage([]byte(seed))
-	if err != nil {
-		return errors.Wrap(err, "generate random image")
-	}
-
-	avatarPath := CustomAvatarPath(userID)
-	err = os.MkdirAll(filepath.Dir(avatarPath), os.ModePerm)
-	if err != nil {
+	avatarPath := GeneratedAvatarPath(userID)
+	if err = os.MkdirAll(filepath.Dir(avatarPath), os.ModePerm); err != nil {
 		return errors.Wrap(err, "create avatar directory")
 	}
-
-	f, err := os.Create(avatarPath)
+	f, err := os.CreateTemp(filepath.Dir(avatarPath), filepath.Base(avatarPath)+".*.tmp")
 	if err != nil {
-		return errors.Wrap(err, "create avatar file")
+		return errors.Wrap(err, "create temporary file")
 	}
-	defer func() { _ = f.Close() }()
+	defer func() { _ = os.Remove(f.Name()) }()
+	_, err = f.Write(img)
+	if closeErr := f.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		return errors.Wrap(err, "write temporary file")
+	}
+	return errors.Wrap(os.Rename(f.Name(), avatarPath), "rename temporary file")
+}
 
-	if err = png.Encode(f, img); err != nil {
-		return errors.Wrap(err, "encode avatar image to file")
-	}
-	return nil
+// GeneratedAvatarURLPath returns the URL path to the avatar generated for the
+// given key, e.g., the email of a commit author. The key is hashed with the
+// secret key so that the URL does not reveal it.
+func GeneratedAvatarURLPath(key string) string {
+	mac := hmac.New(sha256.New, []byte(conf.Security.SecretKey))
+	_, _ = mac.Write([]byte(strings.ToLower(strings.TrimSpace(key))))
+	return fmt.Sprintf("%s/%s/%x", conf.Server.Subpath, conf.GeneratedAvatarsPathPrefix, mac.Sum(nil)[:16])
 }
 
 // SaveAvatar saves the given avatar for the user.

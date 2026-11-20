@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
-	"github.com/gogs/go-libravatar"
 	"unknwon.dev/ini/v2"
 	"unknwon.dev/x/logx"
 
@@ -280,36 +279,6 @@ func Init(logger *logx.Logger, customConf string) error {
 	}
 	Picture.AvatarUploadPath = ensureAbs(Picture.AvatarUploadPath)
 	Picture.RepositoryAvatarUploadPath = ensureAbs(Picture.RepositoryAvatarUploadPath)
-
-	switch Picture.GravatarSource {
-	case "gravatar":
-		Picture.GravatarSource = "https://secure.gravatar.com/avatar/"
-	case "libravatar":
-		Picture.GravatarSource = "https://seccdn.libravatar.org/avatar/"
-	}
-
-	if Server.OfflineMode {
-		Picture.DisableGravatar = true
-		Picture.EnableFederatedAvatar = false
-	}
-	if Picture.DisableGravatar {
-		Picture.EnableFederatedAvatar = false
-	}
-	if Picture.EnableFederatedAvatar {
-		gravatarURL, err := url.Parse(Picture.GravatarSource)
-		if err != nil {
-			return errors.Wrapf(err, "parse Gravatar source %q", Picture.GravatarSource)
-		}
-
-		Picture.LibravatarService = libravatar.New()
-		if gravatarURL.Scheme == "https" {
-			Picture.LibravatarService.SetUseHTTPS(true)
-			Picture.LibravatarService.SetSecureFallbackHost(gravatarURL.Host)
-		} else {
-			Picture.LibravatarService.SetUseHTTPS(false)
-			Picture.LibravatarService.SetFallbackHost(gravatarURL.Host)
-		}
-	}
 
 	// ***************************
 	// ----- Mirror settings -----

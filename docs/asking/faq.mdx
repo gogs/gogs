@@ -19,17 +19,6 @@ Answers to common questions about Gogs configuration, administration, and usage.
     Make sure to update `[server] HTTP_PORT` in `custom/conf/app.ini` to match, so subsequent restarts pick up the same port.
   </Accordion>
 
-  <Accordion title="How do I run Gogs in offline mode or on an intranet?">
-    Set the `OFFLINE_MODE` option to `true` in the `[server]` section of your `custom/conf/app.ini`:
-
-    ```ini
-    [server]
-    OFFLINE_MODE = true
-    ```
-
-    This disables external network calls such as CDN resource loading and Gravatar avatar fetching.
-  </Accordion>
-
   <Accordion title="How do I make a custom robots.txt?">
     Create a file named `robots.txt` in the `custom` directory at the root of your Gogs installation:
 

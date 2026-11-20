@@ -10,6 +10,8 @@ require (
 	github.com/charmbracelet/colorprofile v0.4.2
 	github.com/cockroachdb/errors v1.13.0
 	github.com/derision-test/go-mockgen/v2 v2.1.1
+	github.com/dicebear/dicebear-go/v10 v10.7.0
+	github.com/dicebear/styles/v10 v10.6.0
 	github.com/editorconfig/editorconfig-core-go/v2 v2.6.4
 	github.com/flamego/binding v1.4.0
 	github.com/flamego/cache v1.5.1
@@ -24,11 +26,9 @@ require (
 	github.com/go-webauthn/webauthn v0.18.2
 	github.com/gogs/chardet v0.0.0-20150115103509-2404f7772561
 	github.com/gogs/cron v0.0.0-20171120032916-9f6c956d3e14
-	github.com/gogs/go-libravatar v0.0.0-20191106065024-33a75213d0a0
 	github.com/gogs/minwinsvc v0.0.0-20170301035411-95be6356811a
 	github.com/google/uuid v1.6.0
 	github.com/inbucket/html2text v1.0.0
-	github.com/issue9/identicon v1.2.1
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/klauspost/compress v1.18.7
 	github.com/msteinert/pam v1.2.0
@@ -87,6 +87,7 @@ require (
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/cockroachdb/logtags v0.0.0-20230118201751-21c54148d20b // indirect
 	github.com/cockroachdb/redact v1.1.5 // indirect
+	github.com/dicebear/schema v1.5.1 // indirect
 	github.com/djherbis/buffer v1.2.0 // indirect
 	github.com/djherbis/nio/v3 v3.0.1 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
@@ -141,6 +142,7 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/saintfish/chardet v0.0.0-20120816061221-3af4cd4741ca // indirect
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
 	github.com/sethvargo/go-retry v0.3.0 // indirect
 	github.com/smartystreets/goconvey v1.8.1 // indirect
 	github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf // indirect
