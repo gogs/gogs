@@ -1,5 +1,5 @@
 import { Link, type LinkProps } from "@tanstack/react-router";
-import { ArrowLeft, RefreshCw, TrendingUp } from "lucide-react";
+import { ArrowLeft, CircleAlert, RefreshCw, TrendingUp } from "lucide-react";
 import { type ReactNode, use } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AdminCrumbSlot } from "@/lib/admin-crumb-context";
 import { REFRESH_SECONDS } from "@/lib/admin-refresh";
 import { formatInterval } from "@/lib/format";
+import { formatClockTime } from "@/lib/relative-time";
 import { cn } from "@/lib/utils";
 
 // AdminPageHeader heads a page of the admin console with its title and what
@@ -55,41 +56,57 @@ export function AdminPageHeader({
 }
 
 // RefreshControl refreshes what a page shows: right away with its button, and
-// by itself at the interval picked beside it. The two wrap together.
+// by itself at the interval picked beside it. The two wrap together. While the
+// latest refresh failed, it tells from when the page shows its numbers.
 export function RefreshControl({
   seconds,
   onSecondsChange,
   refreshing,
   onRefresh,
+  failedSince,
 }: {
   seconds: number;
   onSecondsChange: (seconds: number) => void;
   refreshing: boolean;
   onRefresh: () => void;
+  // When the page got what it shows, in Unix milliseconds, set while the
+  // latest refresh failed.
+  failedSince?: number;
 }) {
   const { t } = useTranslation();
   return (
-    <div className="flex items-center gap-2">
-      <Button type="button" variant="outline" className="h-9 px-3" onClick={onRefresh}>
-        <RefreshCw className={cn("size-4", refreshing && "animate-spin")} aria-hidden />
-        {t("admin.refresh")}
-      </Button>
-      <Select value={String(seconds)} onValueChange={(value) => onSecondsChange(Number(value))}>
-        <SelectTrigger aria-label={t("admin.refresh.auto")} className="glass-control h-9 w-auto gap-2">
-          <SelectValue>
-            {seconds === 0
-              ? t("admin.refresh.auto_off")
-              : t("admin.refresh.every", { interval: formatInterval(seconds) })}
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent align="end">
-          {REFRESH_SECONDS.map((option) => (
-            <SelectItem key={option} value={String(option)}>
-              {option === 0 ? t("admin.refresh.off") : formatInterval(option)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+    // The status is on the page from the start, for screen readers to announce it, and takes no room while empty.
+    <div className="flex min-w-0 flex-wrap items-center gap-y-2">
+      <div role="status" className="min-w-0 text-sm">
+        {failedSince ? (
+          <p className="mr-3 flex items-start gap-1.5">
+            <CircleAlert className="mt-0.5 size-4 shrink-0 text-(--color-destructive)" aria-hidden />
+            {t("admin.refresh.failed", { time: formatClockTime(failedSince) })}
+          </p>
+        ) : null}
+      </div>
+      <div className="flex items-center gap-2">
+        <Button type="button" variant="outline" className="h-9 px-3" onClick={onRefresh}>
+          <RefreshCw className={cn("size-4", refreshing && "animate-spin")} aria-hidden />
+          {t("admin.refresh")}
+        </Button>
+        <Select value={String(seconds)} onValueChange={(value) => onSecondsChange(Number(value))}>
+          <SelectTrigger aria-label={t("admin.refresh.auto")} className="glass-control h-9 w-auto gap-2">
+            <SelectValue>
+              {seconds === 0
+                ? t("admin.refresh.auto_off")
+                : t("admin.refresh.every", { interval: formatInterval(seconds) })}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent align="end">
+            {REFRESH_SECONDS.map((option) => (
+              <SelectItem key={option} value={String(option)}>
+                {option === 0 ? t("admin.refresh.off") : formatInterval(option)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
     </div>
   );
 }

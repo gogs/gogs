@@ -229,6 +229,8 @@ export interface AdminDashboard {
   buildCommit: string;
   // When the server started.
   startedAt: string;
+  // How long the server has run, by its own clock.
+  uptimeSeconds: number;
   // How many records of each kind the database holds, in groups of related
   // kinds, with translated titles and labels.
   statistics: { title: string; items: AdminStatistic[] }[];
