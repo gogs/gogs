@@ -698,7 +698,8 @@ diffs-container {
   border-color: var(--glass-line);
   border-radius: var(--glass-radius, 0.75rem);
   background-color: var(--glass-fill);
-  box-shadow: var(--glass-edge), var(--glass-shadow);
+  box-shadow:
+    var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--glass-edge), var(--glass-shadow);
   -webkit-backdrop-filter: blur(20px) saturate(1.6);
   backdrop-filter: blur(20px) saturate(1.6);
 }
