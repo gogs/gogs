@@ -1,4 +1,4 @@
-import { loaderResponseError } from "@/lib/loader-error";
+import { displayMessage, loaderResponseError } from "@/lib/loader-error";
 
 // A signal cancels the request, e.g., when the answer is no longer needed.
 export async function fetchJSON<T>(url: string, signal?: AbortSignal): Promise<T> {
@@ -37,7 +37,7 @@ export async function submit<T>(method: "POST" | "PUT" | "PATCH" | "DELETE", url
   });
   if (!res.ok) {
     const data = (await res.json().catch(() => ({}))) as { error?: string; fields?: Record<string, string | null> };
-    throw new FormError(data.error ?? `HTTP ${res.status}`, data.fields ?? {}, data);
+    throw new FormError(data.error ? displayMessage(data.error) : `HTTP ${res.status}`, data.fields ?? {}, data);
   }
   // Some changes answer without a body, e.g., 201 Created for a new SSH key.
   const text = await res.text();
