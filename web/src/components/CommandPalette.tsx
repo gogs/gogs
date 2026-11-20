@@ -227,10 +227,13 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
   }, [open, onOpenChange]);
 
   // The dialog has no trigger to hand the focus back to when it closes, so it remembers what had
-  // the focus. A layout effect runs before the box takes the focus.
-  const opener = useRef<HTMLElement | null>(null);
+  // the focus, which may be a chart, i.e., an SVG element. A layout effect runs before the box
+  // takes the focus.
+  const opener = useRef<HTMLElement | SVGElement | null>(null);
   useLayoutEffect(() => {
-    if (open) opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    if (!open) return;
+    const focused = document.activeElement;
+    opener.current = focused instanceof HTMLElement || focused instanceof SVGElement ? focused : null;
   }, [open]);
 
   return (
@@ -240,8 +243,12 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
         <DialogPrimitive.Content
           aria-describedby={undefined}
           // The box takes the focus, not the button before it that drops the
-          // repository scope.
-          onOpenAutoFocus={(e) => e.preventDefault()}
+          // repository scope. It does so here, once the dialog guards the focus: a sheet or a
+          // dialog the palette opens over would take back a focus that moved any earlier.
+          onOpenAutoFocus={(e) => {
+            e.preventDefault();
+            (e.currentTarget as HTMLElement | null)?.querySelector<HTMLElement>('input[role="combobox"]')?.focus();
+          }}
           onCloseAutoFocus={(e) => {
             e.preventDefault();
             opener.current?.focus({ preventScroll: true });
@@ -281,8 +288,6 @@ function PaletteBody({
   const [input, setInput] = useState("");
   const [scoped, setScoped] = useState(scope !== null);
   const [active, setActive] = useState(0);
-
-  useEffect(() => inputRef.current?.focus(), []);
 
   const { prefix, text } = parseInput(input);
   const inRepo = scoped && scope !== null ? scope : null;
