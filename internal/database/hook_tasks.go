@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/cockroachdb/errors"
@@ -28,6 +29,14 @@ import (
 )
 
 var HookQueue = sync.NewUniqueQueue(1000)
+
+var failedHookDeliveries atomic.Int64
+
+// FailedHookDeliveries returns how many deliveries of webhooks failed since
+// the server started.
+func FailedHookDeliveries() int64 {
+	return failedHookDeliveries.Load()
+}
 
 type HookTaskType int
 
@@ -196,6 +205,7 @@ func (t *HookTask) deliver(ctx context.Context, logger *logx.Logger, webhooks *W
 		if t.IsSucceed {
 			logger.Debug("Hook delivered", "uuid", t.UUID)
 		} else {
+			failedHookDeliveries.Add(1)
 			logger.Debug("Hook delivery failed", "uuid", t.UUID)
 		}
 

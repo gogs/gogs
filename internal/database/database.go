@@ -1,6 +1,7 @@
 package database
 
 import (
+	"database/sql"
 	"path/filepath"
 	"time"
 
@@ -220,20 +221,39 @@ func (db *DB) Webhooks() *WebhooksStore {
 	return newWebhooksStore(db.db)
 }
 
-// ConnectionsInUse returns how many database connections are in use, across
-// the pools of both ORMs, and how many they may open at most, or 0 when there
-// is no limit.
-func ConnectionsInUse() (inUse, limit int) {
+// ConnectionStats tells how busy the database connections are, across the
+// pools of both ORMs.
+type ConnectionStats struct {
+	InUse int
+	Idle  int
+	// Limit is how many connections the pools may open at most, or 0 when
+	// there is no limit.
+	Limit int
+	// WaitCount is how many times a query waited for a connection since the
+	// server started, and WaitDuration how long they waited in total.
+	WaitCount    int64
+	WaitDuration time.Duration
+}
+
+// GetConnectionStats returns how busy the database connections are.
+func GetConnectionStats() ConnectionStats {
+	var out ConnectionStats
+	add := func(stats sql.DBStats) {
+		out.InUse += stats.InUse
+		out.Idle += stats.Idle
+		out.WaitCount += stats.WaitCount
+		out.WaitDuration += stats.WaitDuration
+	}
 	if x != nil {
-		inUse += x.DB().Stats().InUse
+		add(x.DB().Stats())
 	}
 	if Handle != nil {
 		if sqlDB, err := Handle.db.DB(); err == nil {
-			inUse += sqlDB.Stats().InUse
+			add(sqlDB.Stats())
 		}
 	}
 	if conf.Database.MaxOpenConns > 0 {
-		limit = 2 * conf.Database.MaxOpenConns
+		out.Limit = 2 * conf.Database.MaxOpenConns
 	}
-	return inUse, limit
+	return out
 }

@@ -451,6 +451,28 @@ func TestStore_MemoryCap(t *testing.T) {
 	assert.Len(t, store.byID, len(store.kept.traces)+len(store.sampled.traces))
 }
 
+func TestStore_TakeInterval(t *testing.T) {
+	store, tracer := newTestStore(t, defaultOptions())
+	store.intervalStart = testNow.Add(-15 * time.Second)
+
+	record(tracer, testRequest{route: "/a", status: 200, duration: 40 * time.Millisecond, git: 30 * time.Millisecond})
+	record(tracer, testRequest{route: "/a", status: 500, duration: 20 * time.Millisecond})
+	record(tracer, testRequest{route: "/b", status: 404, duration: 10 * time.Millisecond})
+
+	got := store.TakeInterval()
+	assert.Equal(t, 15*time.Second, got.Elapsed)
+	assert.Equal(t, 3, got.Requests)
+	assert.Equal(t, 1, got.Errors, "only the response with status 500 failed")
+	assert.Equal(t, 30*time.Millisecond, got.Git)
+	assert.Zero(t, got.DB)
+	// The request with the Git command spent 10 ms outside of it.
+	assert.Equal(t, 40*time.Millisecond, got.Other)
+
+	got = store.TakeInterval()
+	assert.Zero(t, got.Requests, "the interval starts over")
+	assert.Zero(t, got.Git)
+}
+
 func TestHistogram_Quantile(t *testing.T) {
 	// A skewed distribution: mostly fast, with a long tail.
 	r := rand.New(rand.NewPCG(1, 2))

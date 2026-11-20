@@ -54,3 +54,20 @@ func TestHealth_Report(t *testing.T) {
 		assert.Equal(t, [][2]float64{{float64(start.UnixMilli()), 1}}, got.Points)
 	})
 }
+
+func TestCounter(t *testing.T) {
+	var c counter
+	_, _, ok := c.take(100, testNow)
+	assert.False(t, ok, "the first reading has nothing to compare with")
+
+	delta, elapsed, ok := c.take(130, testNow.Add(15*time.Second))
+	require.True(t, ok)
+	assert.Equal(t, 30.0, delta)
+	assert.Equal(t, 15*time.Second, elapsed)
+
+	got, ok := per(time.Minute, delta, elapsed)
+	require.True(t, ok)
+	assert.Equal(t, 120.0, got)
+	_, ok = per(time.Minute, delta, 0)
+	assert.False(t, ok)
+}

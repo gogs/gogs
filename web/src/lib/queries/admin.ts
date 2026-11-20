@@ -573,19 +573,49 @@ export function fetchAdminTrace(id: string) {
 
 export type AdminHealthRange = "1h" | "24h";
 
-// AdminHealthKey names a measurement of the server. Units: requests per second,
-// milliseconds for p95 and GC pauses, bytes for the heap, and counts for the
-// rest.
+// AdminHealthKey names a measurement of the server. Units: milliseconds for
+// latencies, pauses, waits and the time per request, bytes for memory and
+// disks, bytes per second for the allocation rate, percent for CPU, requests
+// per second, the other rates per minute, and counts for the rest.
 export type AdminHealthKey =
   | "requests"
+  | "failedRequests"
+  | "p50"
   | "p95"
+  | "p99"
+  | "dbTime"
+  | "gitTime"
+  | "otherTime"
+  | "cpu"
+  | "residentMemory"
+  | "threads"
+  | "openFiles"
   | "heap"
+  | "goMemory"
+  | "allocRate"
   | "goroutines"
   | "gcPause"
+  | "gcCycles"
+  | "gcCPU"
+  | "schedLatency"
   | "dbConnections"
+  | "dbIdleConnections"
+  | "dbWaits"
+  | "dbWaitTime"
   | "gitProcesses"
-  | "openFiles"
-  | "mirrorQueue";
+  | "codeSearches"
+  | "sshConnections"
+  | "mirrorQueue"
+  | "hookQueue"
+  | "failedHookDeliveries"
+  | "pullRequestQueue"
+  | "mailQueue"
+  | "notices"
+  | "diskRepositories"
+  | "diskData"
+  | "diskLFS"
+  | "traceMemory"
+  | "droppedSpans";
 
 export interface AdminHealthSeries {
   key: AdminHealthKey;
@@ -603,8 +633,9 @@ export interface AdminHealth {
   stepSeconds: number;
   start: string;
   end: string;
-  // Measurements the server cannot take, e.g., open files outside Linux, or
-  // requests while tracing is off, are left out.
+  // Measurements the server cannot take, e.g., of the process outside Linux,
+  // requests while tracing is off, or the mail queue while email is off, are
+  // left out.
   series: AdminHealthSeries[];
 }
 

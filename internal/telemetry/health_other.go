@@ -2,7 +2,12 @@
 
 package telemetry
 
-// openFilesGauge reports that open files are only measured on Linux.
-func openFilesGauge() (Gauge, bool) {
-	return Gauge{}, false
+// processGauges reports that the process is only measured on Linux.
+func processGauges() []Gauge {
+	return nil
+}
+
+// DiskGauges reports that file systems are only measured on Linux.
+func DiskGauges(...Disk) []Gauge {
+	return nil
 }

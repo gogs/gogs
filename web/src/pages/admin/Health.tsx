@@ -22,7 +22,7 @@ import {
   TrendChip,
 } from "@/components/AdminPage";
 import { type ChartConfig, ChartContainer, ChartTooltip } from "@/components/ui/chart";
-import { METRICS, SECTIONS, flag, flagText, formatCount } from "@/lib/admin-health";
+import { METRICS, SECTIONS, flag, flagText } from "@/lib/admin-health";
 import { useRefreshed } from "@/lib/admin-refresh";
 import { type AdminHealth, type AdminHealthRange, type AdminHealthSeries, adminHealthQuery } from "@/lib/queries/admin";
 import { formatAbsoluteTime, formatClockTime } from "@/lib/relative-time";
@@ -69,6 +69,7 @@ const MetricChart = memo(function MetricChart({
   series,
   start,
   end,
+  limit,
   pinned,
   flagged,
   onHover,
@@ -77,6 +78,8 @@ const MetricChart = memo(function MetricChart({
   series: AdminHealthSeries;
   start: number;
   end: number;
+  // The limit of the series as it reads, e.g., "64 GB".
+  limit: string;
   pinned: number | null;
   flagged: boolean;
   onHover: (at: number | null) => void;
@@ -163,7 +166,7 @@ const MetricChart = memo(function MetricChart({
             stroke="var(--color-muted-foreground)"
             strokeDasharray="3 3"
             label={{
-              value: t("admin.health.limit", { limit: formatCount(series.limit) }),
+              value: t("admin.health.limit", { limit }),
               position: "insideBottomRight",
               offset: 4,
               fill: "var(--color-muted-foreground)",
@@ -205,17 +208,22 @@ export function AdminServerHealth({ health: loaded, range }: { health: AdminHeal
   const stepMs = health.stepSeconds * 1000;
   const rangeLabel = t(range === "1h" ? "admin.traces.last_hour" : "admin.health.last_24h");
 
-  const rows = METRICS.flatMap((metric) => {
-    const series = health.series.find((s) => s.key === metric.key);
-    return series ? [{ metric, series, flag: flag(series.points, metric, health.range) }] : [];
-  });
+  // The cursor of a hover renders the page again at every move.
+  const rows = useMemo(
+    () =>
+      METRICS.flatMap((metric) => {
+        const series = health.series.find((s) => s.key === metric.key);
+        return series ? [{ metric, series, flag: flag(series.points, metric, health.range) }] : [];
+      }),
+    [health],
+  );
   const empty = rows.every((row) => row.series.points.length === 0);
 
   const format = (row: (typeof rows)[number], v: number | undefined) => {
     if (v === undefined) return "N/A";
     const value = row.metric.format(v);
-    return row.metric.key === "dbConnections" && row.series.limit > 0
-      ? t("admin.health.of", { value, limit: formatCount(row.series.limit) })
+    return row.metric.ofLimit && row.series.limit > 0
+      ? t("admin.health.of", { value, limit: row.metric.format(row.series.limit) })
       : value;
   };
 
@@ -307,7 +315,7 @@ export function AdminServerHealth({ health: loaded, range }: { health: AdminHeal
                 </Link>
               ) : null}
             </div>
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
               {metrics.map((row) => {
                 const points = row.series.points;
                 const now = points.at(-1)?.[1];
@@ -342,6 +350,7 @@ export function AdminServerHealth({ health: loaded, range }: { health: AdminHeal
                         series={row.series}
                         start={start}
                         end={end}
+                        limit={row.metric.format(row.series.limit)}
                         pinned={pinned}
                         flagged={flagged !== ""}
                         onHover={setHover}
