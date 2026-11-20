@@ -434,9 +434,9 @@ function BuildFacts({ dashboard }: { dashboard: AdminDashboard }) {
             href={`https://github.com/gogs/gogs/commit/${dashboard.buildCommit}`}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1 text-(--color-primary) hover:underline"
+            className="group inline-flex items-center gap-1 text-(--color-primary)"
           >
-            <InlineCode>{dashboard.buildCommit}</InlineCode>
+            <InlineCode className="text-(--color-primary) group-hover:underline">{dashboard.buildCommit}</InlineCode>
             <ExternalLink className="size-3.5 shrink-0" aria-hidden />
           </a>
         ) : (
