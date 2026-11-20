@@ -498,12 +498,21 @@ func (s *Store) finish(id string, p *pendingTrace) {
 			status, _ := strconv.Atoi(sp.attr("http.response.status_code"))
 			failed := sp.err != "" || status >= 500
 			s.seriesOf(routeOf(sp)).add(end, sp.duration, selfTime(sp), failed)
+			s.requests.add(end, sp.duration, selfTime(sp), failed)
+			// The time of background work is not in the interval, so neither is
+			// that of a request that joined it.
 			if t.route.Kind != RouteKindBackground {
-				s.requests.add(end, sp.duration, selfTime(sp), failed)
 				s.interval.hist.add(sp.duration)
 				if failed {
 					s.interval.errors++
 				}
+			}
+			// The trace is the only place to look such a request up.
+			switch {
+			case failed:
+				t.kept = KeptFailed
+			case t.kept != KeptFailed && s.opts.SlowThreshold > 0 && sp.duration >= s.opts.SlowThreshold:
+				t.kept = KeptSlow
 			}
 			continue
 		}
