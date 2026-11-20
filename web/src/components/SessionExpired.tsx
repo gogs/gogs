@@ -3,7 +3,7 @@ import { Trans } from "react-i18next";
 import { subUrl } from "@/lib/url";
 
 // SessionExpired tells a viewer whose session expired while they filled in a
-// form how to send it. They sign in on another tab, since leaving the page
+// form to sign in again. The link opens on another tab, since leaving the page
 // would lose what they typed.
 export function SessionExpired() {
   return (

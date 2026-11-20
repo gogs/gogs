@@ -112,7 +112,7 @@ Anchor links inside the form aren't covered by `disabled`. For each, set `tabInd
 
 Swap the submit label to a present-continuous string ("Signing in…", "Verifying…") while submitting. Keep idle and active strings as separate locale keys.
 
-Take the message for a whole form from `formErrors` (`@/lib/queries/request`) and show it in the form, e.g., in `FormAlert`. It tells a viewer whose session expired to sign in on another tab, so the form keeps what they typed. Report the failure of a change made with a button, where nothing typed is lost, with `toastError` (`@/lib/toast-error`): it takes that viewer to sign in and back to the page instead of showing a toast.
+Take the message for a whole form from `formErrors` (`@/lib/queries/request`) and show it in the form, e.g., in `FormAlert`. It tells a viewer whose session expired to sign in again, with a link that opens on another tab, so the form keeps what they typed. Report the failure of a change made with a button, where nothing typed is lost, with `toastError` (`@/lib/toast-error`): it takes that viewer to sign in and back to the page instead of showing a toast.
 
 ## Settings pages
 
