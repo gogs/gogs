@@ -1,5 +1,6 @@
 import { type KeyboardEvent, useId, useRef } from "react";
 
+const SCROLL_KEYS = new Set([" ", "ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End"]);
 const FOCUSABLE = 'a[href], button:not(:disabled), input:not(:disabled), [tabindex]:not([tabindex="-1"])';
 
 // useMenuFocus leads the keyboard through a popover menu. It returns the props
@@ -23,12 +24,21 @@ export function useMenuFocus() {
         e.preventDefault();
         (e.currentTarget as HTMLElement | null)?.focus();
       },
-      // Shift+Tab from the menu itself would go to whatever is before it in the document, which is
-      // the end of the page.
       onKeyDown: (e: KeyboardEvent<HTMLElement>) => {
-        if (e.key !== "Tab" || !e.shiftKey || e.target !== e.currentTarget) return;
-        const last = [...e.currentTarget.querySelectorAll<HTMLElement>(FOCUSABLE)].at(-1);
-        if (!last) return;
+        const menu = e.currentTarget;
+        // The menu itself does nothing with these keys, so they would scroll the page behind it.
+        if (e.target === menu && SCROLL_KEYS.has(e.key)) {
+          e.preventDefault();
+          return;
+        }
+        if (e.key !== "Tab" || !e.shiftKey) return;
+        // Shift+Tab from the menu itself, or from its first control when that is a group that
+        // moves the focus between its items, e.g., the themes, would go to whatever is before the
+        // menu in the document, which is the end of the page.
+        const controls = [...menu.querySelectorAll<HTMLElement>(FOCUSABLE)];
+        const last = controls.at(-1);
+        if (!last || last.contains(e.target as Node)) return;
+        if (e.target !== menu && !controls[0].contains(e.target as Node)) return;
         e.preventDefault();
         last.focus();
       },

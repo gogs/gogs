@@ -258,7 +258,8 @@ export function AdminLayout() {
           // The sheet has no trigger of its own to give the focus back to.
           onCloseAutoFocus={(e) => {
             e.preventDefault();
-            sheetToggle.current?.focus();
+            // Without `preventScroll`, Chromium scrolls the page to its top to show the toggle in the sticky bar.
+            sheetToggle.current?.focus({ preventScroll: true });
           }}
         >
           <SheetTitle className="sr-only">{t("admin_panel")}</SheetTitle>
