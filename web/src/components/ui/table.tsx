@@ -1,3 +1,4 @@
+import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
@@ -43,6 +44,40 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
   );
 }
 
+// TableSortHead heads a column that sorts the table when clicked. `sorted` is
+// the direction the table is sorted in by this column, if it is. Numbers align
+// right, with the arrow before the label, so the label stays over them.
+function TableSortHead({
+  sorted,
+  onSort,
+  align = "left",
+  className,
+  children,
+  ...props
+}: React.ComponentProps<"th"> & {
+  sorted?: "ascending" | "descending";
+  onSort: () => void;
+  align?: "left" | "right";
+}) {
+  const Icon = sorted === "ascending" ? ArrowUp : sorted === "descending" ? ArrowDown : ChevronsUpDown;
+  return (
+    <TableHead aria-sort={sorted} className={cn(align === "right" && "text-right", className)} {...props}>
+      <button
+        type="button"
+        onClick={onSort}
+        className={cn(
+          "-mx-1 inline-flex min-h-6 cursor-pointer items-center gap-1 rounded-sm px-1 font-medium outline-none hover:text-(--color-foreground) focus-visible:ring-1 focus-visible:ring-(--color-ring)",
+          align === "right" && "flex-row-reverse",
+          sorted && "text-(--color-foreground)",
+        )}
+      >
+        {children}
+        <Icon className="size-3.5 shrink-0" aria-hidden />
+      </button>
+    </TableHead>
+  );
+}
+
 function TableCell({ className, ...props }: React.ComponentProps<"td">) {
   return (
     <td
@@ -56,4 +91,4 @@ function TableCaption({ className, ...props }: React.ComponentProps<"caption">) 
   return <caption className={cn("mt-4 text-sm text-(--color-muted-foreground)", className)} {...props} />;
 }
 
-export { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow };
+export { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow, TableSortHead };
