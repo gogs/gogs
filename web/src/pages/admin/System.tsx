@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query";
+import { type MutationState, useMutation, useMutationState } from "@tanstack/react-query";
 import { Check, CircleAlert, CircleCheck, LoaderCircle, Minus, Play, Search } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -22,7 +22,7 @@ import {
   runAdminOperation,
   sendAdminTestMail,
 } from "@/lib/queries/admin";
-import { formErrors, isSessionExpired } from "@/lib/queries/request";
+import { FormError, formErrors, isSessionExpired } from "@/lib/queries/request";
 import { formatAbsoluteTime } from "@/lib/relative-time";
 import { toastError } from "@/lib/toast-error";
 import { useFocusFirstError } from "@/lib/use-focus-error";
@@ -127,8 +127,7 @@ const OPERATION_GROUPS: { id: string; title: string; hint: string; operations: A
   },
 ];
 
-// OperationOutcome is how the last run of an operation ended, kept until the
-// page is left.
+// OperationOutcome is how a run of an operation ended.
 interface OperationOutcome {
   failed: boolean;
   message: string;
@@ -216,27 +215,46 @@ function TestMailForm() {
   );
 }
 
+const OPERATION_KEY = ["admin", "operation"];
+
+type OperationRun = MutationState<OperationOutcome, Error, AdminOperation>;
+
 // AdminOperations lists the maintenance tasks of the site by what they are
 // for, each run with its own button and showing how its last run ended. One
 // task runs at a time, since each works through every repository or user.
 export function AdminOperations() {
   const { t } = useTranslation();
-  const [outcomes, setOutcomes] = useState<Partial<Record<AdminOperation, OperationOutcome>>>({});
   const run = useMutation({
+    mutationKey: OPERATION_KEY,
+    // The runs outlive the page, see `runs`.
+    gcTime: Infinity,
     mutationFn: async (op: AdminOperation): Promise<OperationOutcome> => {
       const started = performance.now();
       const outcome = await runAdminOperation(op).then(
         (message) => ({ failed: false, message }),
         (err: Error) => {
           if (isSessionExpired(err)) throw err;
-          return { failed: true, message: err.message };
+          // The row shows the error in the words of the server, which its log holds too.
+          const raw = err instanceof FormError ? err.body.error : undefined;
+          return { failed: true, message: typeof raw === "string" ? raw : err.message };
         },
       );
       return { ...outcome, ms: performance.now() - started };
     },
-    onSuccess: (outcome, op) => setOutcomes((prev) => ({ ...prev, [op]: outcome })),
     onError: (err) => toastError(err),
   });
+  // The page reads the runs from the cache of React Query instead of its own
+  // state, oldest first. An operation goes on after the viewer left the page,
+  // and they find it running, or how it ended, when they come back.
+  const runs = useMutationState({
+    filters: { mutationKey: OPERATION_KEY },
+    select: (mutation) => mutation.state as OperationRun,
+  });
+  const lastRuns: Partial<Record<AdminOperation, OperationRun>> = {};
+  for (const state of runs) {
+    if (state.variables) lastRuns[state.variables] = state;
+  }
+  const anyRunning = runs.some((state) => state.status === "pending");
   return (
     <div className="grid gap-4">
       <AdminPageHeader title={t("admin.dashboard.operations")} description={t("admin.operations_desc")} />
@@ -253,8 +271,8 @@ export function AdminOperations() {
               {group.operations.map((op) => {
                 const { label: labelKey, description, confirm } = OPERATIONS[op];
                 const label = t(labelKey);
-                const running = run.isPending && run.variables === op;
-                const outcome = running ? undefined : outcomes[op];
+                const running = lastRuns[op]?.status === "pending";
+                const outcome = lastRuns[op]?.data;
                 return (
                   <li
                     key={op}
@@ -277,11 +295,12 @@ export function AdminOperations() {
                           title={label}
                           description={t(confirm.description)}
                           size="sm"
-                          // The dialog covers its own button while its operation runs.
-                          disabled={run.isPending && !running}
-                          action={async () => {
-                            // The row shows a failure, so the dialog closes either way.
-                            await run.mutateAsync(op).catch(() => undefined);
+                          busy={running}
+                          disabled={anyRunning && !running}
+                          // The dialog closes once the operation starts, and its row shows it running.
+                          action={() => {
+                            run.mutate(op);
+                            return Promise.resolve();
                           }}
                           onDone={() => undefined}
                         />
@@ -293,7 +312,7 @@ export function AdminOperations() {
                           aria-label={`${t("admin.dashboard.operation_run")} ${label}`}
                           // Not `disabled` while it runs, which takes the focus off the button.
                           aria-disabled={running || undefined}
-                          disabled={run.isPending && !running}
+                          disabled={anyRunning && !running}
                           className={running ? "pointer-events-none opacity-60" : undefined}
                           onClick={running ? undefined : () => run.mutate(op)}
                         >
