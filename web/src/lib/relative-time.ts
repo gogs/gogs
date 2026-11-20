@@ -1,5 +1,5 @@
 // Date formatting helpers used by commit metadata and similar timestamps.
-//   - Relative time matches the thresholds of `computeTimeDiff` in `internal/tool/tool.go`
+//   - Relative time matches the thresholds of `computeTimeDiff` in `cmd/gogs/internal/web/webapi_admin_system.go`
 //     (now / seconds / minutes / hours / days / weeks / months / years ago).
 //     Strings come from Gogs's `[tool]` section so the SPA reuses the existing
 //     community translations. Quantity templates carry `%d` (count) and `%s`

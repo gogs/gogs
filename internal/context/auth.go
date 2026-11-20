@@ -12,9 +12,9 @@ import (
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/auth"
+	"gogs.io/gogs/internal/authx"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/tool"
 )
 
 type AuthStore interface {
@@ -127,12 +127,9 @@ func AuthenticatedUser(logger *logx.Logger, store AuthStore, r *http.Request, se
 		// "//api/web/...". Before routing, there is no route and basic auth is
 		// refused.
 		_, route, _ := strings.Cut(r.Pattern, " ")
-		baHead := r.Header.Get("Authorization")
-		if len(baHead) > 0 && route != "" && !strings.HasPrefix(route, "/api/web/") {
-			auths := strings.Fields(baHead)
-			if len(auths) == 2 && auths[0] == "Basic" {
-				uname, passwd, _ := tool.BasicAuthDecode(auths[1])
-
+		if route != "" && !strings.HasPrefix(route, "/api/web/") {
+			uname, passwd := authx.DecodeBasic(r.Header)
+			if uname != "" || passwd != "" {
 				u, err := store.AuthenticateUser(r.Context(), uname, passwd, -1)
 				if err != nil {
 					if !auth.IsErrBadCredentials(err) {

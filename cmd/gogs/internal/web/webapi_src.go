@@ -18,10 +18,10 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/markup"
+	"gogs.io/gogs/internal/mimex"
 	"gogs.io/gogs/internal/pathx"
 	"gogs.io/gogs/internal/repox"
 	"gogs.io/gogs/internal/template"
-	"gogs.io/gogs/internal/tool"
 )
 
 type repoCloneLinks struct {
@@ -474,7 +474,7 @@ func readOverviewFiles(ctx context.Context, logger *logx.Logger, commit *git.Com
 		if err != nil {
 			return nil, errors.Wrapf(err, "read %q", path.Join(f.dir, f.entry.Name()))
 		}
-		if !tool.IsTextFile(p) {
+		if !mimex.IsText(p) {
 			continue
 		}
 		file := repoOverviewFile{Kind: kind, Path: path.Join(f.dir, f.entry.Name())}
@@ -506,7 +506,7 @@ func describeRepoFile(ctx context.Context, logger *logx.Logger, repo *database.R
 		IsSymlink: entry.IsSymlink(),
 	}
 	switch {
-	case tool.IsTextFile(p):
+	case mimex.IsText(p):
 		if file.Size >= conf.UI.MaxDisplayFileSize {
 			file.Kind = "too_large"
 			break
@@ -536,11 +536,11 @@ func describeRepoFile(ctx context.Context, logger *logx.Logger, repo *database.R
 		default:
 			file.Kind = "text"
 		}
-	case tool.IsPDFFile(p):
+	case mimex.IsPDF(p):
 		file.Kind = "pdf"
-	case tool.IsVideoFile(p):
+	case mimex.IsVideo(p):
 		file.Kind = "video"
-	case tool.IsImageFile(p):
+	case mimex.IsImage(p):
 		file.Kind = "image"
 	default:
 		file.Kind = "binary"

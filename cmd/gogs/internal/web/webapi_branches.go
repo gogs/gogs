@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,7 +15,6 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/i18n"
-	"gogs.io/gogs/internal/tool"
 )
 
 type repoBranch struct {
@@ -378,8 +378,8 @@ func withRepoProtectedBranch(c flamego.Context, logger *logx.Logger, repoCtx *re
 
 func splitIDs(s string) []int64 {
 	ids := []int64{}
-	for _, id := range tool.StringsToInt64s(strings.Split(s, ",")) {
-		if id > 0 {
+	for field := range strings.SplitSeq(s, ",") {
+		if id, _ := strconv.ParseInt(field, 10, 64); id > 0 {
 			ids = append(ids, id)
 		}
 	}

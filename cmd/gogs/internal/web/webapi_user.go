@@ -20,16 +20,15 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/i18n"
-	"gogs.io/gogs/internal/tool"
 	"gogs.io/gogs/internal/userx"
 )
 
 func parseUserFromCode(ctx stdctx.Context, logger *logx.Logger, code string) (user *database.User) {
-	if len(code) <= tool.TimeLimitCodeLength {
+	if len(code) <= userx.TimeLimitCodeLength {
 		return nil
 	}
 
-	hexStr := code[tool.TimeLimitCodeLength:]
+	hexStr := code[userx.TimeLimitCodeLength:]
 	if b, err := hex.DecodeString(hexStr); err == nil {
 		if user, err = database.Handle.Users().GetByUsername(ctx, string(b)); user != nil {
 			return user

@@ -7,7 +7,7 @@ import (
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/markup"
-	"gogs.io/gogs/internal/tool"
+	"gogs.io/gogs/internal/mimex"
 )
 
 // maxNoticeBannerSize is the largest notice banner file shown, so a large file
@@ -36,7 +36,7 @@ func readNoticeBanner(logger *logx.Logger, customDir string) string {
 		logger.Error("Failed to read notice banner file", "path", fpath, "error", err)
 		return ""
 	}
-	if !tool.IsTextFile(data) {
+	if !mimex.IsText(data) {
 		logger.Warn("Notice banner file is not a text file", "path", fpath)
 		return ""
 	}

@@ -14,7 +14,6 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/i18n"
-	"gogs.io/gogs/internal/tool"
 )
 
 // requireAdmin turns away users who are not site admins. Mount it after
@@ -179,7 +178,7 @@ func getAdminRepos(logger *logx.Logger, c flamego.Context) (statusCode int, resp
 			WatchCount: repo.NumWatches,
 			StarCount:  repo.NumStars,
 			IssueCount: repo.NumIssues,
-			Size:       tool.FileSize(repo.Size),
+			Size:       fileSize(repo.Size),
 			CreatedAt:  unixTime(repo.CreatedUnix),
 		})
 	}

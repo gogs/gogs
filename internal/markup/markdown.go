@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/markup/dariomark"
-	"gogs.io/gogs/internal/tool"
 )
 
 // IsMarkdownFile reports whether name looks like a Markdown file based on its extension.
@@ -93,7 +93,7 @@ func shortenAutoLink(link []byte, urlPrefix string) ([]byte, bool) {
 		}
 		html := append([]byte(`<code><a href="`), dariomark.AppendEscaped(nil, m)...)
 		html = append(html, `">`...)
-		html = append(html, tool.ShortSHA1(string(m[i+7:j]))...)
+		html = append(html, git.ShortID(string(m[i+7:j]))...)
 		return append(html, "</a></code>"...), true
 	}
 

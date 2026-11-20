@@ -11,11 +11,11 @@ import (
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/tool"
+	"gogs.io/gogs/internal/git"
 )
 
 func ToUTF8WithErr(logger *logx.Logger, content []byte) (string, error) {
-	charsetLabel, err := tool.DetectEncoding(logger, content)
+	charsetLabel, err := git.DetectEncoding(logger, content)
 	if err != nil {
 		return "", err
 	} else if charsetLabel == "UTF-8" {
