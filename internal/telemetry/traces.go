@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -316,6 +317,10 @@ func truncate(s string, maxBytes int) string {
 	if len(s) <= maxBytes {
 		return s
 	}
+	// A cut in the middle of a character would leave bytes that are not text.
+	for maxBytes > 0 && !utf8.RuneStart(s[maxBytes]) {
+		maxBytes--
+	}
 	return s[:maxBytes] + "…"
 }
 
@@ -477,6 +482,11 @@ func (s *Store) finish(id string, p *pendingTrace) {
 	}
 	for i := 1; i < len(spans); i++ {
 		sp := &spans[i]
+		// A request that joined the trace of another one is not an operation of
+		// it, and the client writes its name when no route matches.
+		if sp.kind == SpanKindRequest {
+			continue
+		}
 		os := s.operations[sp.name]
 		if os == nil {
 			if len(s.operations) >= maxOperations {
