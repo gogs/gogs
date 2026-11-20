@@ -141,6 +141,9 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
     ...PAGE,
     path: "traces",
     validateSearch: validateTraceSearch,
+    // The router would show what it loaded for a range or a filter the last time while it loads it
+    // again, and the page would then ask a second time, since those numbers are old.
+    gcTime: 0,
     loaderDeps: ({ search }: { search: TraceSearch }) => search,
     loader: async ({ deps, context, location }) => {
       if (deps.view !== "search") {
