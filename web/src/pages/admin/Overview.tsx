@@ -453,7 +453,9 @@ export function AdminOverview() {
         <CardContent className="pt-4 sm:pt-4">
           <Loaded query={dashboard} what={t("admin.dashboard.system_status")} skeleton={<ReportSkeleton rows={8} />}>
             {(data) => (
-              <div className="-mb-6 gap-x-8 lg:columns-2 2xl:columns-3 [&>dl]:mb-6 [&>dl]:break-inside-avoid">
+              // Only the groups before the last take a margin: the browser drops the margin a column
+              // ends with, except in the last column, where it would add to the padding of the card.
+              <div className="gap-x-8 lg:columns-2 2xl:columns-3 [&>dl]:break-inside-avoid [&>dl:not(:last-child)]:mb-6">
                 {data.systemStatus.groups.map((group, i) => (
                   <Rows key={i}>
                     {group.map((row) => (
