@@ -180,7 +180,7 @@ func TestAdminOperations(t *testing.T) {
 		require.Empty(t, before, "repository already packed")
 
 		msg := adminRunOperation(t, admin, nonAdmin, anonymous, "git-gc-repos")
-		assert.Equal(t, "All repositories have done garbage collection successfully.", msg)
+		assert.Equal(t, "Collected garbage in all repositories.", msg)
 		after, err := filepath.Glob(packs)
 		require.NoError(t, err)
 		assert.NotEmpty(t, after, "repository not packed")
@@ -200,7 +200,7 @@ func TestAdminOperations(t *testing.T) {
 		}
 
 		msg := adminRunOperation(t, admin, nonAdmin, anonymous, "resync-repo-hooks")
-		assert.Equal(t, "All repositories' pre-receive, update and post-receive hooks have been resynced successfully.", msg)
+		assert.Equal(t, "Resynced the hooks of all repositories.", msg)
 		assert.NoFileExists(t, hook(unprotected))
 		content, err := os.ReadFile(hook(protected))
 		require.NoError(t, err)
@@ -217,7 +217,7 @@ func TestAdminOperations(t *testing.T) {
 		require.NoError(t, os.WriteFile(archive, []byte("archive"), 0o644))
 
 		msg := adminRunOperation(t, admin, nonAdmin, anonymous, "delete-repo-archives")
-		assert.Equal(t, "All repositories archives have been deleted successfully.", msg)
+		assert.Equal(t, "Deleted the archives of all repositories.", msg)
 		_, err := os.Stat(filepath.Join(repoPath, "archives"))
 		assert.True(t, os.IsNotExist(err), "archives not deleted: %v", err)
 		_, err = os.Stat(filepath.Join(repoPath, "HEAD"))
@@ -230,7 +230,7 @@ func TestAdminOperations(t *testing.T) {
 		require.NoError(t, os.RemoveAll(repoPath))
 
 		msg := adminRunOperation(t, admin, nonAdmin, anonymous, "reinit-missing-repos")
-		assert.Equal(t, "All repository records that lost Git files have been reinitialized successfully.", msg)
+		assert.Equal(t, "Reinitialized the repositories that lost their Git files.", msg)
 		_, err := os.Stat(filepath.Join(repoPath, "HEAD"))
 		assert.NoError(t, err, "repository not reinitialized")
 		_, err = getRepository(t, repo.ID)
@@ -243,7 +243,7 @@ func TestAdminOperations(t *testing.T) {
 		require.NoError(t, os.RemoveAll(repox.RepositoryPath(missing.Owner, missing.Name)))
 
 		msg := adminRunOperation(t, admin, nonAdmin, anonymous, "delete-missing-repos")
-		assert.Equal(t, "All repository records that lost Git files have been deleted successfully.", msg)
+		assert.Equal(t, "Deleted the records of repositories that lost their Git files.", msg)
 		_, err := getRepository(t, missing.ID)
 		assert.True(t, database.IsErrRepoNotExist(err), "repository not deleted: %v", err)
 		_, err = getRepository(t, kept.ID)
