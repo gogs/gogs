@@ -575,11 +575,14 @@ func TestIssueChangeConcurrently(t *testing.T) {
 		other := issueCreateMilestone(t, repo, "deleting-moved-to-other")
 		index, _ := create(0)
 
-		// The move commits after the delete has cleared the issues of the
-		// milestone, so the issue keeps the deleted milestone.
+		// The move commits after the delete has listed the issues of the
+		// milestone.
 		statuses := c.doBothWhileLocked("SELECT id FROM milestone WHERE id = ? FOR UPDATE", m, moveTo(index, m),
 			lockedRequest{http.MethodDelete, issueAPIPath(repo, "milestones", m), map[string]any{}})
 		assert.Equal(t, []int{http.StatusNoContent, http.StatusNoContent}, statuses)
+		left, err := database.Handle.Milestones().CountIssues(t.Context(), repo.ID, m, false, true)
+		require.NoError(t, err)
+		assert.Zero(t, left, "issues left with the deleted milestone")
 
 		var view issueView
 		c.doJSON(http.MethodGet, issueAPIPath(repo, "issues", index), nil, http.StatusOK, &view)
