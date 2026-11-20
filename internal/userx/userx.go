@@ -103,11 +103,16 @@ func CustomAvatarPath(userID int64) string {
 	return filepath.Join(conf.Picture.AvatarUploadPath, strconv.FormatInt(userID, 10))
 }
 
-// SaveGeneratedAvatar draws the avatar of the user and saves it as the avatar
-// file of the user, so it is drawn only once. It writes a temporary file and
-// links it in place, so concurrent requests never serve a partly written file
-// and an avatar uploaded in the meantime is never replaced where the file system
-// supports hard links.
+// GeneratedAvatarPath returns the absolute path of the user generated avatar
+// file. Generated avatars are kept apart from uploaded ones, so saving one never
+// replaces an upload.
+func GeneratedAvatarPath(userID int64) string {
+	return filepath.Join(conf.Server.AppDataPath, "generated-avatars", strconv.FormatInt(userID, 10))
+}
+
+// SaveGeneratedAvatar draws the avatar of the user and saves it as the generated
+// avatar file of the user, so it is drawn only once. It writes a temporary file
+// and renames it, so concurrent requests never serve a partly written file.
 func SaveGeneratedAvatar(userID int64) error {
 	// The seed is the ID so that the avatar stays the same after a rename.
 	img, err := avatar.GeneratePNG(strconv.FormatInt(userID, 10), avatar.DefaultSize)
@@ -115,7 +120,7 @@ func SaveGeneratedAvatar(userID int64) error {
 		return errors.Wrap(err, "generate avatar")
 	}
 
-	avatarPath := CustomAvatarPath(userID)
+	avatarPath := GeneratedAvatarPath(userID)
 	if err = os.MkdirAll(filepath.Dir(avatarPath), os.ModePerm); err != nil {
 		return errors.Wrap(err, "create avatar directory")
 	}
@@ -131,12 +136,6 @@ func SaveGeneratedAvatar(userID int64) error {
 	if err != nil {
 		return errors.Wrap(err, "write temporary file")
 	}
-	err = os.Link(f.Name(), avatarPath)
-	if err == nil || os.IsExist(err) {
-		return nil
-	}
-	// Some file systems, e.g., SMB shares and FUSE mounts of object storage, do
-	// not support hard links.
 	return errors.Wrap(os.Rename(f.Name(), avatarPath), "rename temporary file")
 }
 

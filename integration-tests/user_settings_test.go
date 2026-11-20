@@ -158,7 +158,7 @@ func TestUserSettingsAvatar(t *testing.T) {
 	generatedImg, err := png.Decode(bytes.NewReader(generated))
 	require.NoError(t, err)
 	assert.Equal(t, image.Rect(0, 0, 290, 290), generatedImg.Bounds())
-	saved, err := os.ReadFile(userx.CustomAvatarPath(u.ID))
+	saved, err := os.ReadFile(userx.GeneratedAvatarPath(u.ID))
 	require.NoError(t, err, "the generated avatar is not saved")
 	assert.Equal(t, generated, saved)
 
@@ -193,6 +193,7 @@ func TestUserSettingsAvatar(t *testing.T) {
 	require.Equal(t, http.StatusOK, status, "response: %s", body)
 	assert.Equal(t, "image/png", header.Get("Content-Type"))
 	assert.Equal(t, "private", header.Get("Cache-Control"))
+	assert.NotEqual(t, generated, body, "the uploaded avatar is not preferred over the generated one")
 	status, _, body = anonymous.doRaw(http.MethodGet, "/-/avatars/0", "", nil)
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 

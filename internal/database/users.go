@@ -522,6 +522,7 @@ func (s *UsersStore) DeleteByID(ctx context.Context, userID int64, skipRewriteAu
 
 	_ = os.RemoveAll(repox.UserPath(user.Name))
 	_ = os.Remove(userx.CustomAvatarPath(userID))
+	_ = os.Remove(userx.GeneratedAvatarPath(userID))
 
 	if needsRewriteAuthorizedKeys {
 		err = newPublicKeysStore(s.db).RewriteAuthorizedKeys()
