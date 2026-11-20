@@ -13,7 +13,7 @@ import { type ChartConfig, ChartContainer } from "@/components/ui/chart";
 import { Skeleton } from "@/components/ui/skeleton";
 import { METRICS, flag, flagText } from "@/lib/admin-health";
 import { useRefreshSeconds } from "@/lib/admin-refresh";
-import { formatNumber } from "@/lib/format";
+import { formatDuration, formatNumber } from "@/lib/format";
 import {
   type AdminDashboard,
   type AdminHealth,
@@ -25,7 +25,7 @@ import {
   adminNoticesQuery,
   adminTraceOverviewQuery,
 } from "@/lib/queries/admin";
-import { formatClockTime } from "@/lib/relative-time";
+import { formatAbsoluteTime, formatClockTime } from "@/lib/relative-time";
 import { cn } from "@/lib/utils";
 import { ReportValue } from "@/pages/admin/System";
 import { TraceTrafficChart } from "@/pages/admin/TraceCharts";
@@ -111,6 +111,29 @@ function HealthStat({ metric, health }: { metric: (typeof METRICS)[number]; heal
             ) : (
               <div className="h-12" />
             )}
+          </>
+        )}
+      </Loaded>
+    </StatCard>
+  );
+}
+
+// UptimeStat tells how long the server has run, as of the latest answer, and
+// since when.
+function UptimeStat({ dashboard }: { dashboard: UseQueryResult<AdminDashboard> }) {
+  const { t } = useTranslation();
+  const label = t("admin.dashboard.server_uptime");
+  return (
+    <StatCard label={label} className="sm:col-span-2 xl:col-span-1">
+      <Loaded query={dashboard} what={label} skeleton={STAT_SKELETON} compact>
+        {(data) => (
+          <>
+            <p className={STAT_VALUE}>
+              {formatDuration((dashboard.dataUpdatedAt - Date.parse(data.startedAt)) / 1000)}
+            </p>
+            <p className="text-sm text-(--color-muted-foreground)">
+              {t("admin.overview.since", { time: formatAbsoluteTime(data.startedAt) })}
+            </p>
           </>
         )}
       </Loaded>
@@ -361,7 +384,8 @@ export function AdminOverview() {
           onRefresh={() => queries.forEach((query) => void query.refetch())}
         />
       </AdminPageHeader>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <UptimeStat dashboard={dashboard} />
         {HEADLINE_METRICS.map((metric) => (
           <HealthStat key={metric.key} metric={metric} health={health} />
         ))}

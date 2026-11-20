@@ -175,7 +175,7 @@ export function deleteAdminUser(id: number) {
 export interface AdminReportRow {
   label: string;
   // "block" is multi-line code, and "unset" a setting with no value.
-  kind: "text" | "code" | "block" | "bool" | "unset";
+  kind: "code" | "block" | "bool" | "unset";
   value?: string;
   on?: boolean;
   // Text that follows a "code" value, e.g., seconds.
@@ -197,6 +197,8 @@ export interface AdminDashboard {
   goVersion: string;
   buildTime: string;
   buildCommit: string;
+  // When the server started.
+  startedAt: string;
   // How many records of each kind the database holds, with translated labels.
   statistics: { label: string; count: number }[];
   systemStatus: AdminReportSection;

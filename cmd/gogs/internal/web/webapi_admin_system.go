@@ -29,8 +29,8 @@ var initTime = time.Now()
 // with its label already translated.
 type adminReportRow struct {
 	Label string `json:"label"`
-	// Kind tells how to show the value: "text", "code", "block" for multi-line
-	// code, "bool", or "unset" when the setting has no value.
+	// Kind tells how to show the value: "code", "block" for multi-line code,
+	// "bool", or "unset" when the setting has no value.
 	Kind  string `json:"kind"`
 	Value string `json:"value,omitempty"`
 	// On is the value of a "bool" row.
@@ -52,10 +52,6 @@ type adminReportSection struct {
 // adminReport builds the rows of a report, translating their labels.
 type adminReport struct {
 	l i18n.Locale
-}
-
-func (r adminReport) text(key string, value any) adminReportRow {
-	return adminReportRow{Label: r.l.Tr(key), Kind: "text", Value: fmt.Sprint(value)}
 }
 
 // withHint returns the row with a translated note shown after its value.
@@ -103,11 +99,13 @@ func (r adminReport) section(id, titleKey string, groups ...[]adminReportRow) ad
 func rows(rs ...adminReportRow) []adminReportRow { return rs }
 
 type adminDashboard struct {
-	AppVersion   string             `json:"appVersion"`
-	GitVersion   string             `json:"gitVersion"`
-	GoVersion    string             `json:"goVersion"`
-	BuildTime    string             `json:"buildTime"`
-	BuildCommit  string             `json:"buildCommit"`
+	AppVersion  string `json:"appVersion"`
+	GitVersion  string `json:"gitVersion"`
+	GoVersion   string `json:"goVersion"`
+	BuildTime   string `json:"buildTime"`
+	BuildCommit string `json:"buildCommit"`
+	// StartedAt is when the server started, which its uptime counts from.
+	StartedAt    time.Time          `json:"startedAt"`
 	Statistics   []adminStatistic   `json:"statistics"`
 	SystemStatus adminReportSection `json:"systemStatus"`
 }
@@ -134,10 +132,7 @@ func getAdminDashboard(logger *logx.Logger, c flamego.Context, l i18n.Locale) (s
 	runtime.ReadMemStats(m)
 	status := r.section("system-status", "admin.dashboard.system_status",
 		rows(
-			r.text("admin.dashboard.server_uptime", tool.TimeSincePro(initTime)),
 			r.code("admin.dashboard.current_goroutine", runtime.NumGoroutine()),
-		),
-		rows(
 			size("admin.dashboard.current_memory_usage", m.Alloc),
 			size("admin.dashboard.total_memory_allocated", m.TotalAlloc),
 			size("admin.dashboard.memory_obtained", m.Sys),
@@ -179,6 +174,7 @@ func getAdminDashboard(logger *logx.Logger, c flamego.Context, l i18n.Locale) (s
 		GoVersion:   runtime.Version(),
 		BuildTime:   conf.BuildTime,
 		BuildCommit: conf.BuildCommit,
+		StartedAt:   initTime,
 		Statistics: []adminStatistic{
 			{l.Tr("admin.dashboard.statistic_users"), s.User},
 			{l.Tr("admin.dashboard.statistic_organizations"), s.Org},

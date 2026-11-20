@@ -58,8 +58,6 @@ export function ReportValue({ row }: { row: AdminReportRow }) {
       );
     case "unset":
       return <i>{row.value}</i>;
-    default:
-      return row.value;
   }
 }
 

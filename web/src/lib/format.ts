@@ -33,6 +33,29 @@ export function formatInterval(seconds: number) {
   return new Intl.NumberFormat(webContext.lang, { style: "unit", unit, unitDisplay: "narrow" }).format(value);
 }
 
+const DURATION_UNITS = [
+  ["day", 86400],
+  ["hour", 3600],
+  ["minute", 60],
+  ["second", 1],
+] as const;
+
+// formatDuration formats a number of seconds in short and in its two largest
+// units, e.g., "3d 4h", "4h 13m" or "42s".
+export function formatDuration(seconds: number) {
+  const total = Math.max(0, Math.floor(seconds));
+  const first = DURATION_UNITS.findIndex(([, size], i) => total >= size || i === DURATION_UNITS.length - 1);
+  const [unit, size] = DURATION_UNITS[first];
+  const parts: [number, string][] = [[Math.floor(total / size), unit]];
+  const next = DURATION_UNITS.at(first + 1);
+  if (next && total % size >= next[1]) parts.push([Math.floor((total % size) / next[1]), next[0]]);
+  return new Intl.ListFormat(webContext.lang, { style: "narrow", type: "unit" }).format(
+    parts.map(([value, unit]) =>
+      new Intl.NumberFormat(webContext.lang, { style: "unit", unit, unitDisplay: "narrow" }).format(value),
+    ),
+  );
+}
+
 // formatMs formats a duration in milliseconds with about three significant
 // digits, e.g., "0.42 ms", "97 ms" or "2.52 s".
 export function formatMs(ms: number) {
