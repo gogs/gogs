@@ -125,6 +125,9 @@ func TestUsers(t *testing.T) {
 				err := clearTables(t, s.db)
 				require.NoError(t, err)
 			})
+			// Deleting a user removes the generated avatar, whose path comes
+			// from the server settings, which other suites mock.
+			conf.SetMockServer(t, conf.ServerOpts{AppDataPath: t.TempDir()})
 			tc.test(t, ctx, s)
 		})
 		if t.Failed() {
@@ -655,6 +658,11 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 	tempCustomAvatarPath := userx.CustomAvatarPath(testUser.ID)
 	err = os.WriteFile(tempCustomAvatarPath, []byte("test"), 0o600)
 	require.NoError(t, err)
+	tempGeneratedAvatarPath := userx.GeneratedAvatarPath(testUser.ID)
+	err = os.MkdirAll(filepath.Dir(tempGeneratedAvatarPath), os.ModePerm)
+	require.NoError(t, err)
+	err = os.WriteFile(tempGeneratedAvatarPath, []byte("test"), 0o600)
+	require.NoError(t, err)
 
 	// Verify mock data.
 	repo2, err = reposStore.GetByID(ctx, repo2.ID)
@@ -701,6 +709,7 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 
 	assert.True(t, osx.Exist(tempUserPath))
 	assert.True(t, osx.Exist(tempCustomAvatarPath))
+	assert.True(t, osx.Exist(tempGeneratedAvatarPath))
 
 	err = s.DeleteByID(ctx, testUser.ID, false)
 	require.NoError(t, err)
@@ -748,6 +757,7 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 
 	assert.False(t, osx.Exist(tempUserPath))
 	assert.False(t, osx.Exist(tempCustomAvatarPath))
+	assert.False(t, osx.Exist(tempGeneratedAvatarPath))
 
 	_, err = s.GetByID(ctx, testUser.ID)
 	wantErr := ErrUserNotExist{errx.Args{"userID": testUser.ID}}
