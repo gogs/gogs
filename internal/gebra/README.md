@@ -98,7 +98,7 @@ Until the flip, queries that name no model use the old model from its view, and 
 
 ## Performance
 
-Gebra is benchmarked against OpenFGA through each server's HTTP API, with the same dataset, the same request stream at the same arrival rates, and the same correctness check. On a store of 100,000 repos, Gebra holds 5,000 requests/s with 0 violations, twice OpenFGA's rate. At 2,500 requests/s its check p99 is 2.5 ms against 634 ms for OpenFGA.
+Gebra is benchmarked against OpenFGA through each server's HTTP API, with the same dataset, the same request stream at the same arrival rates, and the same correctness check. On a store of 100,000 repos, Gebra holds 10,000 requests/s with 0 violations, four times OpenFGA's rate. At 2,500 requests/s its check p99 is 2.2 ms against 634 ms for OpenFGA.
 
 ### Dataset and traffic
 
@@ -117,28 +117,30 @@ p50 / p99 in milliseconds, requests completed per second, and the CPU cores Post
 
 | Server | Rate/s | Completed/s | Check | Token check | List | Write | Violations | Errors | Postgres cores |
 |---|---|---|---|---|---|---|---|---|---|
-| Gebra | 500 | 501 | **1.5 / 2.6** | 1.1 / 16.5 | 22.4 / 33.7 | **2.6 / 5.4** | 0 | 0 | 0.9 |
+| Gebra | 500 | 501 | **1.5 / 2.7** | 1.1 / 12.0 | 3.6 / 5.7 | **2.6 / 7.4** | 0 | 0 | 0.2 |
 | OpenFGA | 500 | 501 | 2.6 / 10.9 | **1.7 / 3.4** | **3.1 / 15.6** | 3.4 / 12.2 | 0 | 0 | 0.6 |
-| Gebra | 1,000 | 1,009 | **1.3 / 2.5** | **1.1 / 15.8** | **20.6 / 33.5** | **2.4 / 4.9** | 0 | 0 | 1.8 |
+| Gebra | 1,000 | 1,009 | **1.3 / 2.5** | **1.1 / 15.7** | **3.5 / 5.9** | **2.6 / 4.8** | 0 | 0 | 0.5 |
 | OpenFGA | 1,000 | 1,009 | 2.4 / 61.8 | 1.6 / 33.4 | 3.0 / 69.7 | 3.0 / 42.3 | 0 | 0 | 1.0 |
-| Gebra | 1,500 | 1,500 | **1.2 / 2.4** | **1.0 / 13.8** | **19.9 / 33.3** | **2.2 / 4.4** | 0 | 0 | 2.6 |
+| Gebra | 1,500 | 1,500 | **1.2 / 2.4** | **1.3 / 14.9** | **3.4 / 6.0** | **2.5 / 5.2** | 0 | 0 | 0.7 |
 | OpenFGA | 1,500 | 1,500 | 3.0 / 355 | 2.1 / 234 | 5.4 / 256 | 3.4 / 215 | 0 | 0 | 1.3 |
-| Gebra | 2,000 | 2,000 | **1.1 / 2.6** | **1.0 / 14.9** | **21.6 / 34.2** | **2.3 / 4.8** | 0 | 0 | 3.5 |
+| Gebra | 2,000 | 2,000 | **1.1 / 2.2** | **1.6 / 15.7** | **3.3 / 5.3** | **2.3 / 4.1** | 0 | 0 | 0.9 |
 | OpenFGA | 2,000 | 2,000 | 28.7 / 655 | 9.5 / 492 | 19.9 / 515 | 16.6 / 451 | 0 | 0 | 1.4 |
-| Gebra | 2,500 | 2,503 | **1.0 / 2.5** | **1.0 / 14.7** | **23.0 / 32.8** | **2.3 / 4.9** | 0 | 0 | 4.5 |
+| Gebra | 2,500 | 2,502 | **1.0 / 2.2** | **1.8 / 15.2** | **3.1 / 5.4** | **2.3 / 4.4** | 0 | 0 | 1.1 |
 | OpenFGA | 2,500 | 2,503 | 70.5 / 634 | 36.8 / 523 | 49.6 / 493 | 43.2 / 481 | 0 | 1 | 1.6 |
-| Gebra | 5,000 | 5,008 | **1.0 / 15.1** | **1.4 / 21.0** | **24.7 / 66.6** | **2.6 / 29.0** | 0 | 0 | 8.7 |
+| Gebra | 5,000 | 5,008 | **0.9 / 2.4** | **1.1 / 14.8** | **3.0 / 6.0** | **2.2 / 4.9** | 0 | 0 | 2.1 |
 | OpenFGA | 5,000 | 4,586 | saturated | saturated | saturated | saturated | 0 | 0 | 2.0 |
-| Gebra | 7,500 | 3,150 | saturated | saturated | saturated | saturated | 0 | 1,310 timeouts | 11.0 |
+| Gebra | 7,500 | 7,500 | 0.9 / 4.5 | 1.1 / 15.3 | 3.2 / 8.7 | 2.4 / 8.4 | 0 | 0 | 3.4 |
+| Gebra | 10,000 | 10,003 | 0.9 / 21.4 | 1.1 / 22.1 | 3.0 / 34.9 | 2.4 / 28.9 | 0 | 0 | 4.1 |
+| Gebra | 15,000 | 8,126 | saturated | saturated | saturated | saturated | 0 | 384 timeouts | 7.3 |
 
 | Server | Highest rate held | Checks within 20 ms p99 | Token checks within 20 ms p99 | Bottleneck |
 |---|---|---|---|---|
-| Gebra | **5,000/s** | **up to 5,000/s** | **up to 2,500/s** | Postgres CPU: 4.5 cores of the machine's 6.4 at 2,500/s, 11 at 7,500/s |
+| Gebra | **10,000/s** | **up to 7,500/s** | **up to 7,500/s** | The machine: at 15,000/s it used 14.3 of 16 cores, 7.3 of them Postgres, and the rest `cmd/gebra` and the load generator together |
 | OpenFGA | 2,500/s | up to 500/s | up to 500/s | OpenFGA's own CPU: the machine used 10.8 cores at 2,500/s, Postgres only 1.6 |
 
-OpenFGA's one error at 2,500/s was `400 cancelled: Request Cancelled`. At 5,000/s it queued for up to 30 s, and Gebra at 7,500/s for over a minute, until requests hit the 10 s client timeout.
+OpenFGA's one error at 2,500/s was `400 cancelled: Request Cancelled`. At 5,000/s OpenFGA queued for up to 30 s, and Gebra at 15,000/s for up to 37 s, until requests hit the 10 s client timeout.
 
-Loading took 2 min 19 s for Gebra, with `COPY` and its view build, and 11 s for OpenFGA through its Write API, including the vacuum.
+Loading took 2 min 7 s for Gebra, with `COPY` and its view build, and 11 s for OpenFGA through its Write API, including the vacuum.
 
 ### Configuration
 
@@ -150,6 +152,7 @@ The benchmark is `TestApplierBenchHTTP` in `applierbench_http_test.go`, whose do
   - Connections and durability: `max_connections` 300, `synchronous_commit` on, `fsync` on.
   - WAL: `max_wal_size` 8 GB, `checkpoint_timeout` 15 min.
   - Planner: `random_page_cost` 1.1, `effective_io_concurrency` 200, `max_parallel_workers_per_gather` 0.
+  - `pg_stat_statements` and `track_io_timing` were on for Gebra's run and off for OpenFGA's, which only costs Gebra.
 - **Gebra**, `cmd/gebra` built from this tree, as its own process:
   - `--db-type postgres`, `--db-max-open-conns 96`, which also sets 96 idle connections.
   - `--max-staleness 1s`, the default, which matches OpenFGA's 1s cache TTL below.
@@ -184,4 +187,4 @@ What differs between the two:
 ## Known limits
 
 - **View builds are slow on large stores**: a build covers one set at a time on one core, so a store of 1 million repos and 1,000 teams takes about 1 h 40 min to make a new model live.
-- **Lists are the slowest query**: about 20 ms at p50 on the dataset above, since they sort their candidates before paging.
+- **Lists sorted by an attribute sort every object the user can access** before paging, so their cost grows with that number. Lists in ID order stop at the page size: 3 ms at p50 on the dataset above.
