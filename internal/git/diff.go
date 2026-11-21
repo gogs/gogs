@@ -597,6 +597,11 @@ func DetectEncoding(logger *logx.Logger, content []byte) string {
 	if utf8.Valid(content) {
 		logger.Debug("Detected encoding via fast path", "charset", "UTF-8")
 		return "UTF-8"
+	} else if isMostlyUTF8(content) {
+		// A few invalid bytes in otherwise UTF-8 content, e.g., a truncated
+		// character, should not turn the whole file into mojibake.
+		logger.Debug("Detected encoding as mostly UTF-8", "charset", "UTF-8")
+		return "UTF-8"
 	}
 
 	if len(conf.Repository.ANSICharset) > 0 {
@@ -609,6 +614,23 @@ func DetectEncoding(logger *logx.Logger, content []byte) string {
 	guess := d.Guess(false)
 	logger.Debug("Detected encoding", "charset", guess)
 	return guess
+}
+
+// isMostlyUTF8 returns true if the content has more than ten times as many
+// valid multibyte UTF-8 characters as invalid bytes. Legacy encodings rarely
+// form valid multibyte UTF-8 sequences by chance.
+func isMostlyUTF8(content []byte) bool {
+	var multibyte, invalid int
+	for len(content) > 0 {
+		r, size := utf8.DecodeRune(content)
+		if r == utf8.RuneError && size == 1 {
+			invalid++
+		} else if size > 1 {
+			multibyte++
+		}
+		content = content[size:]
+	}
+	return multibyte > 10*invalid
 }
 
 // decodeCharsets converts the content of each file in the diff to UTF-8 when

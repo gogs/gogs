@@ -985,6 +985,10 @@ func TestDetectEncoding(t *testing.T) {
 		// Shift_JIS.
 		{name: "short GBK", content: []byte("\xd0\xde\xb8\xb4\xb4\xed\xce\xf3"), want: "GBK"},
 		{name: "windows-1252", content: []byte("caf\xe9"), want: "windows-1252"},
+		// A UTF-8 comment with a stray byte, which should stay UTF-8 rather
+		// than decode as windows-1252.
+		{name: "mostly UTF-8", content: []byte("// Это тестовый файл на русском языке.\xff\n"), want: "UTF-8"},
+		{name: "GBK with a few UTF-8 characters", content: append([]byte("\xd0\xde\xb8\xb4\xb4\xed\xce\xf3 "), "é"...), want: "GBK"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
