@@ -440,90 +440,27 @@ func serveGitHTTP(logger *logx.Logger, c *gitHTTPContext) {
 	c.ResponseWriter().WriteHeader(http.StatusNotFound)
 }
 
-// gitHTTPStore is the data layer carrier for context middleware. This interface
-// is meant to abstract away and limit the exposure of the underlying data layer
-// to the handler through a thin-wrapper.
+// gitHTTPStore is the data layer that gitHTTPContexter authenticates requests
+// and finds their repositories with.
 type gitHTTPStore interface {
-	// GetAccessTokenBySHA1 returns the access token with given SHA1. It returns
-	// database.ErrAccessTokenNotExist when not found.
-	GetAccessTokenBySHA1(ctx stdctx.Context, sha1 string) (*database.AccessToken, error)
-	// TouchAccessTokenByID updates the updated time of the given access token to
-	// the current time.
-	TouchAccessTokenByID(ctx stdctx.Context, id int64) error
+	context.AuthStore
 
 	// GetRepositoryByName returns the repository with given owner and name. It
 	// returns database.ErrRepoNotExist when not found.
 	GetRepositoryByName(ctx stdctx.Context, ownerID int64, name string) (*database.Repository, error)
-
-	// IsTwoFactorEnabled returns true if the user has enabled 2FA.
-	IsTwoFactorEnabled(ctx stdctx.Context, userID int64) bool
-
-	// GetUserByID returns the user with given ID. It returns
-	// database.ErrUserNotExist when not found.
-	GetUserByID(ctx stdctx.Context, id int64) (*database.User, error)
-	// GetUserByUsername returns the user with given username. It returns
-	// database.ErrUserNotExist when not found.
-	GetUserByUsername(ctx stdctx.Context, username string) (*database.User, error)
-	// CreateUser creates a new user and persists to database. It returns
-	// database.ErrNameNotAllowed if the given name or pattern of the name is not
-	// allowed as a username, or database.ErrUserAlreadyExist when a user with same
-	// name already exists, or database.ErrEmailAlreadyUsed if the email has been
-	// verified by another user.
-	CreateUser(ctx stdctx.Context, username, email string, opts database.CreateUserOptions) (*database.User, error)
-	// AuthenticateUser validates username and password via given login source ID.
-	// It returns database.ErrUserNotExist when the user was not found.
-	//
-	// When the "loginSourceID" is negative, it aborts the process and returns
-	// database.ErrUserNotExist if the user was not found in the database.
-	//
-	// When the "loginSourceID" is non-negative, it returns
-	// database.ErrLoginSourceMismatch if the user has different login source ID
-	// than the "loginSourceID".
-	//
-	// When the "loginSourceID" is positive, it tries to authenticate via given
-	// login source and creates a new user when it does not exist in the database yet.
-	AuthenticateUser(ctx stdctx.Context, login, password string, loginSourceID int64) (*database.User, error)
 }
 
 type gitHTTPDatabaseStore struct {
-	logger *logx.Logger
+	context.Store
 }
 
 // newGitHTTPStore returns a new gitHTTPStore using the global database handle.
 func newGitHTTPStore(logger *logx.Logger) gitHTTPStore {
-	return &gitHTTPDatabaseStore{logger: logger}
+	return gitHTTPDatabaseStore{Store: context.NewStore(logger)}
 }
 
-func (*gitHTTPDatabaseStore) GetAccessTokenBySHA1(ctx stdctx.Context, sha1 string) (*database.AccessToken, error) {
-	return database.Handle.AccessTokens().GetBySHA1(ctx, sha1)
-}
-
-func (*gitHTTPDatabaseStore) TouchAccessTokenByID(ctx stdctx.Context, id int64) error {
-	return database.Handle.AccessTokens().Touch(ctx, id)
-}
-
-func (*gitHTTPDatabaseStore) GetRepositoryByName(ctx stdctx.Context, ownerID int64, name string) (*database.Repository, error) {
+func (gitHTTPDatabaseStore) GetRepositoryByName(ctx stdctx.Context, ownerID int64, name string) (*database.Repository, error) {
 	return database.Handle.Repositories().GetByName(ctx, ownerID, name)
-}
-
-func (s *gitHTTPDatabaseStore) IsTwoFactorEnabled(ctx stdctx.Context, userID int64) bool {
-	return database.Handle.TwoFactors().IsEnabled(ctx, s.logger, userID)
-}
-
-func (*gitHTTPDatabaseStore) GetUserByID(ctx stdctx.Context, id int64) (*database.User, error) {
-	return database.Handle.Users().GetByID(ctx, id)
-}
-
-func (*gitHTTPDatabaseStore) GetUserByUsername(ctx stdctx.Context, username string) (*database.User, error) {
-	return database.Handle.Users().GetByUsername(ctx, username)
-}
-
-func (*gitHTTPDatabaseStore) CreateUser(ctx stdctx.Context, username, email string, opts database.CreateUserOptions) (*database.User, error) {
-	return database.Handle.Users().Create(ctx, username, email, opts)
-}
-
-func (s *gitHTTPDatabaseStore) AuthenticateUser(ctx stdctx.Context, login, password string, loginSourceID int64) (*database.User, error) {
-	return database.Handle.Users().Authenticate(ctx, s.logger, login, password, loginSourceID)
 }
 
 func triggerTask(logger *logx.Logger, c flamego.Context) {
