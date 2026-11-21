@@ -70,7 +70,7 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 
 ## 💾 Hardware requirements
 
-- A Raspberry Pi or $5 Digital Ocean Droplet is more than enough to get you started. Some even use 64MB RAM Docker [CaaS](https://www.docker.com/blog/containers-as-a-service-caas/).
+- A Raspberry Pi or $5 Digital Ocean Droplet is more than enough to get you started.
 - 2 CPU cores and 512MB RAM would be the baseline for teamwork.
 - Increase CPU cores when your team size gets significantly larger, memory footprint remains low.
 
