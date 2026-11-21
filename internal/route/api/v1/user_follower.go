@@ -88,7 +88,8 @@ func follow(c *apiContext) {
 	if c.Written() {
 		return
 	}
-	// Organizations cannot be followed, as in the web interface.
+	// Organizations cannot be followed, as in the web interface. Unfollowing one
+	// stays possible for follows from before that was enforced.
 	if target.IsOrganization() {
 		c.NotFound()
 		return
@@ -103,11 +104,6 @@ func follow(c *apiContext) {
 func unfollow(c *apiContext) {
 	target := getUserByParams(c)
 	if c.Written() {
-		return
-	}
-	// Organizations cannot be followed, as in the web interface.
-	if target.IsOrganization() {
-		c.NotFound()
 		return
 	}
 	if err := database.Handle.Users().Unfollow(c.Request().Context(), c.User.ID, target.ID); err != nil {
