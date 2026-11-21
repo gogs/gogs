@@ -1,6 +1,7 @@
 package integrationtests
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -165,13 +166,22 @@ func TestUserSiteCaptchaImage(t *testing.T) {
 	t.Parallel()
 
 	c := newClient(t)
-	status, header, body := c.doRaw(http.MethodGet, "/captcha/image.jpeg", "", nil)
+	status, header, body := c.doRaw(http.MethodGet, "/captcha/image.png", "", nil)
 	require.Equal(t, http.StatusOK, status)
-	assert.Equal(t, "image/jpeg", header.Get("Content-Type"))
-	assert.True(t, len(body) > 2 && body[0] == 0xFF && body[1] == 0xD8, "not a JPEG")
+	assert.Equal(t, "image/png", header.Get("Content-Type"))
+	assert.True(t, bytes.HasPrefix(body, []byte("\x89PNG\r\n\x1a\n")), "not a PNG")
 	text, ok := c.sessionValue(captchaSessionKey).(string)
 	require.True(t, ok, "no captcha text in session")
 	assert.NotEmpty(t, text)
+}
+
+func TestUserSiteAltchaWorker(t *testing.T) {
+	t.Parallel()
+
+	status, header, body := newClient(t).doRaw(http.MethodGet, "/-/altcha/worker.js", "", nil)
+	require.Equal(t, http.StatusOK, status)
+	assert.Equal(t, "text/javascript; charset=utf-8", header.Get("Content-Type"))
+	assert.Contains(t, string(body), "self.onmessage")
 }
 
 func TestUserSiteRedirect(t *testing.T) {

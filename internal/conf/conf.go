@@ -221,6 +221,11 @@ func Init(logger *logx.Logger, customConf string) error {
 	if err = File.Section("auth").MapTo(&Auth); err != nil {
 		return errors.Wrap(err, "mapping [auth] section")
 	}
+	switch Auth.RegistrationCaptchaType {
+	case CaptchaTypeAltcha, CaptchaTypeImage:
+	default:
+		return errors.Newf("[auth] REGISTRATION_CAPTCHA_TYPE must be %q or %q, but got %q", CaptchaTypeAltcha, CaptchaTypeImage, Auth.RegistrationCaptchaType)
+	}
 	// Reset before re-parsing so repeated Init calls (e.g., via the web installer)
 	// do not carry over CIDRs from a previous configuration.
 	Auth.TrustedProxyCIDRs = nil

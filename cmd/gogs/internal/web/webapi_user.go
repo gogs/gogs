@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
+	"github.com/flamego/altcha"
 	"github.com/flamego/cache"
 	"github.com/flamego/captcha"
 	"github.com/flamego/session"
@@ -66,14 +67,16 @@ type getUserSignInResponse struct {
 }
 
 type getUserSignUpResponse struct {
-	RegistrationDisabled bool `json:"registrationDisabled"`
-	CaptchaEnabled       bool `json:"captchaEnabled"`
+	RegistrationDisabled bool   `json:"registrationDisabled"`
+	CaptchaEnabled       bool   `json:"captchaEnabled"`
+	CaptchaType          string `json:"captchaType"`
 }
 
 func getUserSignUp() (statusCode int, resp *getUserSignUpResponse, err error) {
 	return http.StatusOK, &getUserSignUpResponse{
 		RegistrationDisabled: conf.Auth.DisableRegistration,
 		CaptchaEnabled:       conf.Auth.EnableRegistrationCaptcha,
+		CaptchaType:          conf.Auth.RegistrationCaptchaType,
 	}, nil
 }
 
@@ -81,7 +84,9 @@ type userSignUpRequest struct {
 	UserName string `json:"userName" validate:"required,alphadashdot,max=35"`
 	Email    string `json:"email" validate:"required,email,max=254"`
 	Password string `json:"password" validate:"required,max=255"`
-	Captcha  string `json:"captcha"`
+	// Captcha is the text of the captcha image, or the solution of the altcha
+	// challenge, depending on [auth] REGISTRATION_CAPTCHA_TYPE.
+	Captcha string `json:"captcha"`
 }
 
 type userSignUpResponse struct {
@@ -90,15 +95,27 @@ type userSignUpResponse struct {
 	Hours                     int    `json:"hours,omitempty"`
 }
 
-func postUserSignUp(logger *logx.Logger, r *http.Request, ca cache.Cache, l i18n.Locale, cpt captcha.Captcha, req userSignUpRequest) (statusCode int, resp any, err error) {
+func postUserSignUp(logger *logx.Logger, r *http.Request, ca cache.Cache, l i18n.Locale, cpt captcha.Captcha, challenge altcha.Challenge, req userSignUpRequest) (statusCode int, resp any, err error) {
 	if conf.Auth.DisableRegistration {
 		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("auth::disable_register_prompt")}, nil
 	}
-	if conf.Auth.EnableRegistrationCaptcha && !cpt.ValidText(req.Captcha) {
-		msg := l.Tr("form::captcha_incorrect")
-		return http.StatusUnauthorized, &bindingErrorResponse{
-			Fields: fieldErrors{"captcha": &msg},
-		}, nil
+	if conf.Auth.EnableRegistrationCaptcha {
+		var msg string
+		switch conf.Auth.RegistrationCaptchaType {
+		case conf.CaptchaTypeAltcha:
+			if err = challenge.Verify(req.Captcha); err != nil {
+				msg = l.Tr("form::captcha_verification_failed")
+			}
+		default:
+			if !cpt.ValidText(req.Captcha) {
+				msg = l.Tr("form::captcha_incorrect")
+			}
+		}
+		if msg != "" {
+			return http.StatusUnauthorized, &bindingErrorResponse{
+				Fields: fieldErrors{"captcha": &msg},
+			}, nil
+		}
 	}
 	u, err := database.Handle.Users().Create(
 		r.Context(),

@@ -2,9 +2,17 @@ package integrationtests
 
 import (
 	"context"
+	"crypto/pbkdf2"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/binary"
+	"encoding/hex"
+	"encoding/json"
+	"math"
 	"net"
 	"net/http"
 	"net/textproto"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -26,8 +34,7 @@ const captchaSessionKey = "flamego::captcha::text"
 func TestSignUp(t *testing.T) {
 	t.Parallel()
 
-	c := newClient(t)
-	signUp := func(name, captcha string) (int, []byte) {
+	signUp := func(c *client, name, captcha string) (int, []byte) {
 		return c.do(http.MethodPost, "/api/web/user/sign-up", map[string]any{
 			"userName": name,
 			"email":    name + "@example.com",
@@ -35,25 +42,107 @@ func TestSignUp(t *testing.T) {
 			"captcha":  captcha,
 		})
 	}
-	newCaptcha := func() string {
-		status, _ := c.do(http.MethodGet, "/captcha/image.jpeg", nil)
-		require.Equal(t, http.StatusOK, status)
-		text, ok := c.sessionValue(captchaSessionKey).(string)
-		require.True(t, ok, "no captcha text in session")
-		return text
+	assertNotCreated := func(t *testing.T, name string) {
+		_, err := database.Handle.Users().GetByUsername(t.Context(), name)
+		require.True(t, database.IsErrUserNotExist(err), "user created with a wrong captcha: %v", err)
+	}
+	assertCreated := func(t *testing.T, name string) {
+		u, err := database.Handle.Users().GetByUsername(t.Context(), name)
+		require.NoError(t, err)
+		assert.True(t, u.IsActive)
 	}
 
-	name := UniqueName("signup-")
-	status, body := signUp(name, newCaptcha()+"x")
-	require.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
-	_, err := database.Handle.Users().GetByUsername(t.Context(), name)
-	require.True(t, database.IsErrUserNotExist(err), "user created with the wrong captcha: %v", err)
+	t.Run("altcha", func(t *testing.T) {
+		t.Parallel()
 
-	status, body = signUp(name, newCaptcha())
-	require.Equal(t, http.StatusOK, status, "response: %s", body)
-	u, err := database.Handle.Users().GetByUsername(t.Context(), name)
+		c := newClient(t)
+		name := UniqueName("signup-")
+		status, body := signUp(c, name, "")
+		require.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
+		assertNotCreated(t, name)
+
+		solution := solveAltcha(t, c)
+		status, body = signUp(c, name, solution)
+		require.Equal(t, http.StatusOK, status, "response: %s", body)
+		assertCreated(t, name)
+
+		// A solution is accepted only once.
+		other := UniqueName("signup-")
+		status, body = signUp(c, other, solution)
+		require.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
+		assertNotCreated(t, other)
+	})
+
+	t.Run("image", func(t *testing.T) {
+		t.Parallel()
+
+		// The server with FORCE_PRIVATE uses the image captcha.
+		c := newClient(t)
+		c.baseURL = forcePrivateServerURL
+		newCaptcha := func() string {
+			status, _ := c.do(http.MethodGet, "/captcha/image.png", nil)
+			require.Equal(t, http.StatusOK, status)
+			text, ok := c.sessionValue(captchaSessionKey).(string)
+			require.True(t, ok, "no captcha text in session")
+			return text
+		}
+
+		name := UniqueName("signup-")
+		status, body := signUp(c, name, newCaptcha()+"x")
+		require.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
+		assertNotCreated(t, name)
+
+		status, body = signUp(c, name, newCaptcha())
+		require.Equal(t, http.StatusOK, status, "response: %s", body)
+		assertCreated(t, name)
+	})
+}
+
+// solveAltcha fetches an altcha challenge from the server and solves it like
+// the browser does, by trying counters until the derived key starts with the
+// key prefix. It returns the payload to submit.
+func solveAltcha(t *testing.T, c *client) string {
+	t.Helper()
+
+	var challenge struct {
+		Parameters struct {
+			Algorithm string `json:"algorithm"`
+			Cost      int    `json:"cost"`
+			KeyLength int    `json:"keyLength"`
+			KeyPrefix string `json:"keyPrefix"`
+			Nonce     string `json:"nonce"`
+			Salt      string `json:"salt"`
+		} `json:"parameters"`
+		Signature string `json:"signature"`
+	}
+	var raw json.RawMessage
+	c.doJSON(http.MethodGet, "/-/altcha/challenge.json", nil, http.StatusOK, &raw)
+	require.NoError(t, json.Unmarshal(raw, &challenge))
+	p := challenge.Parameters
+	require.Equal(t, "PBKDF2/SHA-256", p.Algorithm)
+
+	nonce, err := hex.DecodeString(p.Nonce)
 	require.NoError(t, err)
-	assert.True(t, u.IsActive)
+	salt, err := hex.DecodeString(p.Salt)
+	require.NoError(t, err)
+	for counter := uint32(0); counter < math.MaxUint32; counter++ {
+		password := binary.BigEndian.AppendUint32(slices.Clone(nonce), counter)
+		key, err := pbkdf2.Key(sha256.New, string(password), salt, p.Cost, p.KeyLength)
+		require.NoError(t, err)
+		derivedKey := hex.EncodeToString(key)
+		if !strings.HasPrefix(derivedKey, p.KeyPrefix) {
+			continue
+		}
+
+		payload, err := json.Marshal(map[string]any{
+			"challenge": raw,
+			"solution":  map[string]any{"counter": counter, "derivedKey": derivedKey},
+		})
+		require.NoError(t, err)
+		return base64.StdEncoding.EncodeToString(payload)
+	}
+	t.Fatal("no solution found")
+	return ""
 }
 
 func TestSignInWithTwoFactor(t *testing.T) {

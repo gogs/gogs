@@ -52,13 +52,15 @@ func TestUserSignUpPage(t *testing.T) {
 	t.Parallel()
 
 	var resp struct {
-		RegistrationDisabled bool `json:"registrationDisabled"`
-		CaptchaEnabled       bool `json:"captchaEnabled"`
+		RegistrationDisabled bool   `json:"registrationDisabled"`
+		CaptchaEnabled       bool   `json:"captchaEnabled"`
+		CaptchaType          string `json:"captchaType"`
 	}
 	newClient(t).doJSON(http.MethodGet, "/api/web/user/sign-up", nil, http.StatusOK, &resp)
 	// The server under test allows registration with a captcha.
 	assert.False(t, resp.RegistrationDisabled)
 	assert.True(t, resp.CaptchaEnabled)
+	assert.Equal(t, "altcha", resp.CaptchaType)
 }
 
 func TestUserResetPassword(t *testing.T) {

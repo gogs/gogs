@@ -389,6 +389,7 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 			r.flag("admin::config.auth.require_sign_in_view", auth.RequireSigninView),
 			r.flag("admin::config.auth.disable_registration", auth.DisableRegistration),
 			r.flag("admin::config.auth.enable_registration_captcha", auth.EnableRegistrationCaptcha),
+			r.code("admin::config.auth.registration_captcha_type", auth.RegistrationCaptchaType),
 		),
 		rows(
 			r.flag("admin::config.auth.enable_reverse_proxy_authentication", auth.EnableReverseProxyAuthentication),

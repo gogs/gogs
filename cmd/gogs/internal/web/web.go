@@ -2,6 +2,7 @@ package web
 
 import (
 	gocontext "context"
+	"crypto/sha256"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -16,6 +17,7 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
+	"github.com/flamego/altcha"
 	"github.com/flamego/cache"
 	"github.com/flamego/captcha"
 	"github.com/flamego/flamego"
@@ -354,6 +356,10 @@ func newRoutingHandler(logger *logx.Logger, localizer, sessioner, authenticate f
 		return nil, errors.Wrap(err, "initialize cross-origin protection")
 	}
 
+	// The middleware requires a secret of at least 16 bytes, which the secret
+	// key may be shorter than.
+	altchaSecret := sha256.Sum256([]byte("altcha:" + conf.Security.SecretKey))
+
 	f.Get("/healthcheck", healthCheck)
 	f.Get("/-/metrics", app.MetricsFilter, promhttp.Handler().ServeHTTP)
 	mountGitHTTPRoutes(logger, f)
@@ -363,8 +369,10 @@ func newRoutingHandler(logger *logx.Logger, localizer, sessioner, authenticate f
 		f.Get("/redirect", getRedirect)
 		f.Get("/robots.txt", getRobotsTxt)
 
-		// The captcha middleware writes the response. This route exists so the request reaches it.
-		f.Get("/captcha/image.jpeg", func() {})
+		// The captcha middlewares write the responses. These routes exist so the requests reach them.
+		f.Get("/captcha/image.png", func() {})
+		f.Get(altchaURLPrefix+"challenge.json", func() {})
+		f.Get(altchaURLPrefix+"worker.js", func() {})
 
 		f.Group("/{owner}/{repo}", func() {
 			f.Get("/commit/{sha: /[0-9a-f]{7,64}/}.{format: /(diff|patch)/}", getRepoCommitRaw)
@@ -418,12 +426,20 @@ func newRoutingHandler(logger *logx.Logger, localizer, sessioner, authenticate f
 		corsHeaders,
 		withWebContext,
 		captcha.Captchaer(captcha.Options{URLPrefix: "/captcha/"}),
+		altcha.Challenger(altcha.Options{
+			URLPrefix: altchaURLPrefix,
+			Secret:    altchaSecret[:],
+		}),
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "mount web app routes")
 	}
 	return f, nil
 }
+
+// altchaURLPrefix is where the altcha middleware serves challenges and the
+// script that solves them.
+const altchaURLPrefix = "/-/altcha/"
 
 // mountGitHTTPRoutes mounts the routes of Git over HTTP, Git LFS, and the task
 // trigger of Git hooks.

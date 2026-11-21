@@ -232,6 +232,7 @@ type AuthOpts struct {
 	RequireSigninView         bool
 	DisableRegistration       bool
 	EnableRegistrationCaptcha bool
+	RegistrationCaptchaType   string
 
 	EnableReverseProxyAuthentication   bool
 	EnableReverseProxyAutoRegistration bool
@@ -245,6 +246,14 @@ type AuthOpts struct {
 
 // Authentication settings
 var Auth AuthOpts
+
+// Values of [auth] REGISTRATION_CAPTCHA_TYPE.
+const (
+	// CaptchaTypeAltcha asks the browser to solve a proof-of-work challenge.
+	CaptchaTypeAltcha = "altcha"
+	// CaptchaTypeImage asks the user to type the characters shown in an image.
+	CaptchaTypeImage = "image"
+)
 
 type ServerOpts struct {
 	ExternalURL          string `ini:"EXTERNAL_URL"`
