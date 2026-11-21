@@ -92,6 +92,10 @@ func createIssue(c *apiContext, form createIssueRequest) {
 				}
 				return
 			}
+			if assignee.IsOrganization() {
+				c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("assignee is an organization: [name: %s]", form.Assignee))
+				return
+			}
 			issue.AssigneeID = assignee.ID
 		}
 		issue.MilestoneID = form.Milestone
@@ -163,6 +167,10 @@ func editIssue(c *apiContext, form editIssueRequest) {
 				} else {
 					c.Error(err, "get user by name")
 				}
+				return
+			}
+			if assignee.IsOrganization() {
+				c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("assignee is an organization: [name: %s]", *form.Assignee))
 				return
 			}
 			issue.AssigneeID = assignee.ID

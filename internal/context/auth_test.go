@@ -196,3 +196,31 @@ func TestReverseProxyUser_concurrentRegistration(t *testing.T) {
 	require.NotNil(t, user)
 	assert.Equal(t, int64(7), user.ID)
 }
+
+type orgStore struct {
+	AuthStore
+}
+
+func (orgStore) GetUserByUsername(_ context.Context, username string) (*database.User, error) {
+	return &database.User{ID: 7, Name: username, Type: database.UserTypeOrganization}, nil
+}
+
+func TestReverseProxyUser_organization(t *testing.T) {
+	_, trusted, err := net.ParseCIDR("127.0.0.0/8")
+	require.NoError(t, err)
+	conf.SetMockAuth(t, conf.AuthOpts{
+		EnableReverseProxyAuthentication:   true,
+		EnableReverseProxyAutoRegistration: true,
+		ReverseProxyAuthenticationHeader:   "X-WEBAUTH-USER",
+		TrustedProxyCIDRs:                  []*net.IPNet{trusted},
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.RemoteAddr = "127.0.0.1:1234"
+	req.Header.Set("X-WEBAUTH-USER", "acme")
+
+	user, ok, err := ReverseProxyUser(orgStore{}, req)
+	require.NoError(t, err)
+	assert.True(t, ok, "the header still decides the viewer")
+	assert.Nil(t, user)
+}

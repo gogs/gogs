@@ -91,6 +91,13 @@ func TestAPIV1Issues(t *testing.T) {
 	status, body := otherAPI.do(http.MethodPatch, apiV1RepoPath(repo, "/issues/"+apiV1Itoa(open)), map[string]any{"title": "Hijacked"})
 	assert.Equal(t, http.StatusForbidden, status, "edited by another user, response: %s", body)
 
+	orgName := UniqueName("org-")
+	api.doJSON(http.MethodPost, "/api/v1/user/orgs", map[string]any{"username": orgName}, http.StatusCreated, &apiV1Org{})
+	status, body = api.do(http.MethodPost, apiV1RepoPath(repo, "/issues"), map[string]any{"title": "Assigned to an organization", "assignee": orgName})
+	assert.Equal(t, http.StatusUnprocessableEntity, status, "created, response: %s", body)
+	status, body = api.do(http.MethodPatch, apiV1RepoPath(repo, "/issues/"+apiV1Itoa(open)), map[string]any{"assignee": orgName})
+	assert.Equal(t, http.StatusUnprocessableEntity, status, "edited, response: %s", body)
+
 	issue = apiV1Issue{}
 	api.doJSON(http.MethodPatch, apiV1RepoPath(repo, "/issues/"+apiV1Itoa(open)), map[string]any{
 		"title":     "Edited issue",

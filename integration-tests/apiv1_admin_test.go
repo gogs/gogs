@@ -180,6 +180,11 @@ func TestAPIV1AdminCreateForUser(t *testing.T) {
 
 		status, body = admin.do(http.MethodPost, "/api/v1/admin/users/"+name+"/orgs", map[string]any{"username": UniqueName("org-")})
 		assert.Equal(t, http.StatusNotFound, status, "created for an organization, response: %s", body)
+
+		// Organizations still own repositories created for them.
+		var repo apiV1Repo
+		admin.doJSON(http.MethodPost, "/api/v1/admin/users/"+name+"/repos", map[string]any{"name": UniqueName("repo-")}, http.StatusCreated, &repo)
+		assert.Equal(t, name, repo.Owner.UserName)
 	})
 
 	t.Run("repository", func(t *testing.T) {
@@ -248,6 +253,9 @@ func TestAPIV1AdminTeams(t *testing.T) {
 		status, body = admin.do(http.MethodPut, teamPath+"/members/"+orgName, nil)
 		assert.Equal(t, http.StatusNotFound, status, "added an organization, response: %s", body)
 		assert.Empty(t, listMembers())
+		// Removing stays possible, for organizations added before they were rejected.
+		status, body = admin.do(http.MethodDelete, teamPath+"/members/"+orgName, nil)
+		assert.Equal(t, http.StatusNoContent, status, "removed an organization, response: %s", body)
 
 		status, body = nonAdmin.do(http.MethodGet, teamPath+"/members", nil)
 		assert.Equal(t, http.StatusForbidden, status, "listed by non-admin, response: %s", body)
