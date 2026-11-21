@@ -93,6 +93,7 @@ Other acknowledgments:
 
 - Thanks [Egon Elbre](https://twitter.com/egonelbre) for designing the original version of the logo.
 - Thanks [Mintlify](https://mintlify.com) for sponsoring open source documentation plan.
+- Thanks [Crowdin](https://crowdin.com) for sponsoring open source translation plan.
 - Thanks [Buildkite](https://buildkite.com) for sponsoring open source CI/CD plan.
 
 ## ⚖️ License
