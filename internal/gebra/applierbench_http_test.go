@@ -12,7 +12,11 @@ package gebra
 // its own process, as OpenFGA runs, on the same database on 127.0.0.1, with
 // GEBRA_BENCH_CONNS connections (default 96, as OpenFGA's) and a max
 // staleness of GEBRA_BENCH_MAX_STALENESS (default 1s, the TTL of OpenFGA's
-// caches), and stops it at the end.
+// caches), and stops it at the end. GEBRA_BENCH_GOMAXPROCS sets cmd/gebra's
+// GOMAXPROCS, which otherwise is the number of CPUs. As the servers share the
+// machine with Postgres and the load generator, a Go server that runs on every
+// CPU wakes more threads than there are CPUs left and delays Postgres; set
+// GOMAXPROCS for OpenFGA's script to compare the two at the same value.
 // GEBRA_BENCH_GEBRA_BIN is a prebuilt cmd/gebra, which the benchmark
 // otherwise builds. The benchmark prints the path of cmd/gebra's log, which it
 // keeps when the test fails:
@@ -244,6 +248,9 @@ func startGebra(t *testing.T, dbName string) string {
 	// Spans are not exported without an OTLP endpoint, and not recorded
 	// either with this, like OpenFGA's with tracing disabled.
 	cmd.Env = append(os.Environ(), "OTEL_TRACES_SAMPLER=always_off")
+	if procs := os.Getenv("GEBRA_BENCH_GOMAXPROCS"); procs != "" {
+		cmd.Env = append(cmd.Env, "GOMAXPROCS="+procs)
+	}
 	cmd.Stdout, cmd.Stderr = logFile, logFile
 	require.NoError(t, cmd.Start())
 	_ = logFile.Close()
