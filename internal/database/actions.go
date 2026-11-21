@@ -15,11 +15,11 @@ import (
 	"gorm.io/gorm"
 	"unknwon.dev/x/logx"
 
+	"gogs.io/gogs/internal/api/v1types"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/repox"
-	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 	"gogs.io/gogs/internal/strx"
 	"gogs.io/gogs/internal/testx"
 	"gogs.io/gogs/internal/userx"
@@ -232,7 +232,7 @@ func (s *ActionsStore) MirrorSyncPush(ctx context.Context, logger *logx.Logger, 
 	err = newWebhooksStore(s.db).Prepare(ctx, logger,
 		opts.Repo,
 		HookEventTypePush,
-		&apiv1types.WebhookPushPayload{
+		&v1types.WebhookPushPayload{
 			Ref:        opts.RefName,
 			Before:     opts.OldCommitID,
 			After:      opts.NewCommitID,
@@ -503,10 +503,10 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, logger *logx.Logger, opts
 		err = newWebhooksStore(s.db).Prepare(ctx, logger,
 			opts.Repo,
 			HookEventTypeDelete,
-			&apiv1types.WebhookDeletePayload{
+			&v1types.WebhookDeletePayload{
 				Ref:        refName,
 				RefType:    "branch",
-				PusherType: apiv1types.WebhookPusherTypeUser,
+				PusherType: v1types.WebhookPusherTypeUser,
 				Repo:       apiRepo,
 				Sender:     apiPusher,
 			},
@@ -547,7 +547,7 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, logger *logx.Logger, opts
 		err = newWebhooksStore(s.db).Prepare(ctx, logger,
 			opts.Repo,
 			HookEventTypeCreate,
-			&apiv1types.WebhookCreatePayload{
+			&v1types.WebhookCreatePayload{
 				Ref:           refName,
 				RefType:       "branch",
 				DefaultBranch: opts.Repo.DefaultBranch,
@@ -580,7 +580,7 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, logger *logx.Logger, opts
 	err = newWebhooksStore(s.db).Prepare(ctx, logger,
 		opts.Repo,
 		HookEventTypePush,
-		&apiv1types.WebhookPushPayload{
+		&v1types.WebhookPushPayload{
 			Ref:        opts.RefFullName,
 			Before:     opts.OldCommitID,
 			After:      opts.NewCommitID,
@@ -642,10 +642,10 @@ func (s *ActionsStore) PushTag(ctx context.Context, logger *logx.Logger, opts Pu
 		err = newWebhooksStore(s.db).Prepare(ctx, logger,
 			opts.Repo,
 			HookEventTypeDelete,
-			&apiv1types.WebhookDeletePayload{
+			&v1types.WebhookDeletePayload{
 				Ref:        refName,
 				RefType:    "tag",
-				PusherType: apiv1types.WebhookPusherTypeUser,
+				PusherType: v1types.WebhookPusherTypeUser,
 				Repo:       apiRepo,
 				Sender:     apiPusher,
 			},
@@ -665,7 +665,7 @@ func (s *ActionsStore) PushTag(ctx context.Context, logger *logx.Logger, opts Pu
 	err = newWebhooksStore(s.db).Prepare(ctx, logger,
 		opts.Repo,
 		HookEventTypeCreate,
-		&apiv1types.WebhookCreatePayload{
+		&v1types.WebhookCreatePayload{
 			Ref:           refName,
 			RefType:       "tag",
 			Sha:           opts.NewCommitID,
@@ -855,7 +855,7 @@ func NewPushCommits() *PushCommits {
 	}
 }
 
-func (pcs *PushCommits) APIFormat(ctx context.Context, usersStore *UsersStore, repoPath, repoURL string) ([]*apiv1types.WebhookPayloadCommit, error) {
+func (pcs *PushCommits) APIFormat(ctx context.Context, usersStore *UsersStore, repoPath, repoURL string) ([]*v1types.WebhookPayloadCommit, error) {
 	// NOTE: We cache query results in case there are many commits in a single push.
 	usernameByEmail := make(map[string]string)
 	getUsernameByEmail := func(email string) (string, error) {
@@ -877,7 +877,7 @@ func (pcs *PushCommits) APIFormat(ctx context.Context, usersStore *UsersStore, r
 		return user.Name, nil
 	}
 
-	commits := make([]*apiv1types.WebhookPayloadCommit, len(pcs.Commits))
+	commits := make([]*v1types.WebhookPayloadCommit, len(pcs.Commits))
 	for i, commit := range pcs.Commits {
 		authorUsername, err := getUsernameByEmail(commit.AuthorEmail)
 		if err != nil {
@@ -897,16 +897,16 @@ func (pcs *PushCommits) APIFormat(ctx context.Context, usersStore *UsersStore, r
 			}
 		}
 
-		commits[i] = &apiv1types.WebhookPayloadCommit{
+		commits[i] = &v1types.WebhookPayloadCommit{
 			ID:      commit.Sha1,
 			Message: commit.Message,
 			URL:     fmt.Sprintf("%s/commit/%s", repoURL, commit.Sha1),
-			Author: &apiv1types.WebhookPayloadUser{
+			Author: &v1types.WebhookPayloadUser{
 				Name:     commit.AuthorName,
 				Email:    commit.AuthorEmail,
 				UserName: authorUsername,
 			},
-			Committer: &apiv1types.WebhookPayloadUser{
+			Committer: &v1types.WebhookPayloadUser{
 				Name:     commit.CommitterName,
 				Email:    commit.CommitterEmail,
 				UserName: committerUsername,

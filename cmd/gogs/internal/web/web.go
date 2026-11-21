@@ -28,6 +28,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"unknwon.dev/x/logx"
 
+	apiv1 "gogs.io/gogs/cmd/gogs/internal/api/v1"
+	"gogs.io/gogs/cmd/gogs/internal/lfs"
 	"gogs.io/gogs/cmd/gogs/internal/tracing"
 	embedconf "gogs.io/gogs/conf"
 	"gogs.io/gogs/internal/app"
@@ -40,9 +42,6 @@ import (
 	"gogs.io/gogs/internal/i18n"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/osx"
-	apiv1 "gogs.io/gogs/internal/route/api/v1"
-	"gogs.io/gogs/internal/route/lfs"
-	"gogs.io/gogs/internal/route/repo"
 	"gogs.io/gogs/internal/ssh"
 	"gogs.io/gogs/internal/telemetry"
 	"gogs.io/gogs/internal/urlx"
@@ -430,13 +429,13 @@ func newRoutingHandler(logger *logx.Logger, localizer, sessioner, authenticate f
 // trigger of Git hooks.
 func mountGitHTTPRoutes(logger *logx.Logger, f *flamego.Flame) {
 	f.Group("/{owner}/{repo}", func() {
-		f.Get("/tasks/trigger", repo.TriggerTask)
+		f.Get("/tasks/trigger", triggerTask)
 
 		f.Group("/info/lfs", func() {
 			lfs.RegisterRoutes(logger.Scoped("lfs"), f)
 		})
 
-		gitHTTP := []flamego.Handler{serveGoGet, repo.HTTPContexter(logger.Scoped("git"), repo.NewStore(logger)), repo.HTTP}
+		gitHTTP := []flamego.Handler{serveGoGet, gitHTTPContexter(logger.Scoped("git"), newGitHTTPStore(logger)), serveGitHTTP}
 		f.Routes("/info/refs", "GET,OPTIONS", gitHTTP...)
 		f.Routes("/git-upload-pack", "POST,OPTIONS", gitHTTP...)
 		f.Routes("/git-receive-pack", "POST,OPTIONS", gitHTTP...)

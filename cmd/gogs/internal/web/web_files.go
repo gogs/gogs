@@ -27,7 +27,6 @@ import (
 	"gogs.io/gogs/internal/mimex"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/repox"
-	routerepo "gogs.io/gogs/internal/route/repo"
 	"gogs.io/gogs/internal/userx"
 )
 
@@ -373,7 +372,7 @@ func getRepoArchive(c flamego.Context, logger *logx.Logger, repoCtx *repoContext
 		return
 	}
 
-	archivePath, name, err := routerepo.PrepareArchive(c.Request().Context(), gitRepo, repo.Name, c.Param("**"))
+	archivePath, name, err := repox.PrepareArchive(c.Request().Context(), gitRepo, repo.Name, c.Param("**"))
 	if err != nil {
 		if errx.IsNotFound(err) {
 			pages.NotFound(c)
@@ -383,7 +382,7 @@ func getRepoArchive(c flamego.Context, logger *logx.Logger, repoCtx *repoContext
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "prepare archive"))
 		return
 	}
-	routerepo.ServeArchive(w, c.Request().Request, archivePath, name)
+	repox.ServeArchive(w, c.Request().Request, archivePath, name)
 }
 
 // isWikiPageName returns true if the name in a wiki path is a page, which the

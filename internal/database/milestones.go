@@ -9,9 +9,9 @@ import (
 	"gorm.io/gorm"
 	"unknwon.dev/x/logx"
 
+	"gogs.io/gogs/internal/api/v1types"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
-	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 
 // Milestone represents a milestone of repository.
@@ -67,15 +67,15 @@ func (m *Milestone) AfterFind(_ *gorm.DB) error {
 }
 
 // State returns string representation of milestone status.
-func (m *Milestone) State() apiv1types.IssueStateType {
+func (m *Milestone) State() v1types.IssueStateType {
 	if m.IsClosed {
-		return apiv1types.IssueStateClosed
+		return v1types.IssueStateClosed
 	}
-	return apiv1types.IssueStateOpen
+	return v1types.IssueStateOpen
 }
 
-func (m *Milestone) APIFormat() *apiv1types.IssueMilestone {
-	apiMilestone := &apiv1types.IssueMilestone{
+func (m *Milestone) APIFormat() *v1types.IssueMilestone {
+	apiMilestone := &v1types.IssueMilestone{
 		ID:           m.ID,
 		State:        m.State(),
 		Title:        m.Name,
@@ -373,15 +373,15 @@ func (s *MilestonesStore) AssignIssue(ctx context.Context, logger *logx.Logger, 
 		return err
 	}
 
-	hookAction := apiv1types.WebhookIssueDemilestoned
+	hookAction := v1types.WebhookIssueDemilestoned
 	if issue.MilestoneID > 0 {
-		hookAction = apiv1types.WebhookIssueMilestoned
+		hookAction = v1types.WebhookIssueMilestoned
 	}
 
 	webhooks := newWebhooksStore(s.db)
 	if issue.IsPull {
 		issue.PullRequest.Issue = issue
-		err = webhooks.Prepare(ctx, logger, issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
+		err = webhooks.Prepare(ctx, logger, issue.Repo, HookEventTypePullRequest, &v1types.WebhookPullRequestPayload{
 			Action:      hookAction,
 			Index:       issue.Index,
 			PullRequest: issue.PullRequest.APIFormat(logger),
@@ -389,7 +389,7 @@ func (s *MilestonesStore) AssignIssue(ctx context.Context, logger *logx.Logger, 
 			Sender:      doer.APIFormat(),
 		})
 	} else {
-		err = webhooks.Prepare(ctx, logger, issue.Repo, HookEventTypeIssues, &apiv1types.WebhookIssuesPayload{
+		err = webhooks.Prepare(ctx, logger, issue.Repo, HookEventTypeIssues, &v1types.WebhookIssuesPayload{
 			Action:     hookAction,
 			Index:      issue.Index,
 			Issue:      issue.APIFormat(),
