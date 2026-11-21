@@ -7,6 +7,7 @@ import (
 	"path"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
@@ -181,6 +182,11 @@ func addCustomDirToBackup(logger *logx.Logger, z *zip.ZipArchive) error {
 			// Skip the "data" directory because it lives under the "custom" directory in
 			// the Docker setup and will be backed up separately.
 			logger.Debug(`Skipping "data" directory in custom directory`)
+			continue
+		}
+		if strings.HasSuffix(e.Name(), ".bak") {
+			// Skip what a restore kept of the files it replaced, so the next restore does not bring them back.
+			logger.Info("Skipping backup kept by an earlier restore", "path", filepath.Join(customDir, e.Name()))
 			continue
 		}
 
