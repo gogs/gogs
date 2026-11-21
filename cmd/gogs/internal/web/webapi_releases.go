@@ -438,6 +438,11 @@ func patchRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, vie
 
 	// A published release has its tag, so it cannot go back to a draft.
 	isPublish := rel.IsDraft && !req.IsDraft
+	// Drafts stored before their tag names were checked may have an invalid
+	// one. The tag name cannot be edited, so it is not a field error.
+	if isPublish && !gitRepo.IsValidTagName(c.Request().Context(), rel.TagName) {
+		return http.StatusBadRequest, nil, errors.New(l.Tr("repo.release.tag_name_invalid"))
+	}
 	rel.Title = req.Title
 	rel.Note = req.Content
 	rel.IsDraft = rel.IsDraft && req.IsDraft

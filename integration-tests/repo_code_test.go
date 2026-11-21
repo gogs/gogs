@@ -1200,20 +1200,22 @@ func TestRepoCodeReleaseChanges(t *testing.T) {
 	require.NoError(t, err)
 	assert.Zero(t, late.ReleaseID, "file attached to a deleted release")
 
-	// Drafts get their tag only when published, which is when an invalid tag
-	// name is found. The tag name cannot be edited then, so the error is not
-	// one of a field.
-	status, body = c.do(http.MethodPost, api+"/releases", map[string]any{"tagName": "bad..name", "target": "main", "title": "Draft", "isDraft": true})
-	require.Equal(t, http.StatusCreated, status, "response: %s", body)
-	status, body = c.do(http.MethodPatch, api+"/releases/edit/bad..name", map[string]any{"title": "Draft", "isDraft": false})
-	require.Equal(t, http.StatusBadRequest, status, "response: %s", body)
-	var resp struct {
-		Error  string         `json:"error"`
-		Fields map[string]any `json:"fields"`
+	// Drafts stored before tag names were checked may have an invalid one,
+	// which is found when they are published. The tag name cannot be edited
+	// then, so the error is not one of a field.
+	for _, tagName := range []string{"bad..name", "-v7"} {
+		apiV1SeedDraft(t, repo, owner.ID, tagName)
+		status, body = c.do(http.MethodPatch, api+"/releases/edit/"+tagName, map[string]any{"title": "Draft", "isDraft": false})
+		require.Equal(t, http.StatusBadRequest, status, "%q, response: %s", tagName, body)
+		var resp struct {
+			Error  string         `json:"error"`
+			Fields map[string]any `json:"fields"`
+		}
+		require.NoError(t, json.Unmarshal(body, &resp))
+		assert.Equal(t, "Tag name is not valid.", resp.Error, tagName)
+		assert.Empty(t, resp.Fields, tagName)
 	}
-	require.NoError(t, json.Unmarshal(body, &resp))
-	assert.Equal(t, "Tag name is not valid.", resp.Error)
-	assert.Empty(t, resp.Fields)
+	assert.Empty(t, repoCodeGit(t, repo, "for-each-ref", "refs/tags/v7", "refs/tags/-v7"))
 }
 
 func TestRepoCodeWiki(t *testing.T) {
