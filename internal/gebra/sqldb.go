@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -76,18 +77,34 @@ type dbtx struct {
 // handle returns a dbtx that runs statements on the pool.
 func (d *database) handle() dbtx { return dbtx{database: d, q: d.pool} }
 
+// pgArray is an argument that Postgres takes as one array parameter, e.g., a
+// []string for "x = ANY(?)", unlike other slices, which expand into lists of
+// placeholders.
+type pgArray struct{ values any }
+
 // rebind expands slice arguments and numbers the placeholders for Postgres.
 func (d *database) rebind(query string, args []any) (string, []any) {
-	hasSlice := false
+	hasSlice, hasArray := false, false
 	for _, a := range args {
 		if isListArg(a) {
 			hasSlice = true
 			break
 		}
+		if _, ok := a.(pgArray); ok {
+			hasArray = true
+		}
 	}
 	if !hasSlice {
 		if d.dialect != DialectPostgres {
 			return query, args
+		}
+		if hasArray {
+			args = slices.Clone(args)
+			for i, a := range args {
+				if arr, ok := a.(pgArray); ok {
+					args[i] = arr.values
+				}
+			}
 		}
 		if q, ok := d.numbered.Load(query); ok {
 			return q.(string), args
@@ -112,6 +129,9 @@ func (d *database) rebind(query string, args []any) (string, []any) {
 		i++
 		if !isListArg(a) {
 			b.WriteRune('?')
+			if arr, ok := a.(pgArray); ok {
+				a = arr.values
+			}
 			out = append(out, a)
 			continue
 		}
@@ -157,6 +177,47 @@ func isListArg(a any) bool {
 	}
 	t := reflect.TypeOf(a)
 	return t.Kind() == reflect.Slice && t.Elem().Kind() != reflect.Uint8
+}
+
+// anyOf returns the condition that col is one of the values, a []string or
+// []int64, and its argument. Postgres takes the values as one array
+// parameter, so that the statement's text is the same for any number of them.
+func (d *database) anyOf(col string, values any) (string, any) {
+	if d.dialect == DialectPostgres {
+		return col + " = ANY(?)", pgArray{values}
+	}
+	return col + " IN ?", values
+}
+
+// keysIn returns the condition that the columns' values are one of the keys,
+// and its arguments. Postgres takes each column of the keys as one array
+// parameter, so that the statement's text is the same for any number of keys.
+func (d *database) keysIn(cols []string, keys [][]string) (string, []any) {
+	list := "(" + strings.Join(cols, ", ") + ")"
+	if d.dialect != DialectPostgres {
+		return list + " IN ?", []any{keys}
+	}
+	args := make([]any, len(cols))
+	arrays := make([]string, len(cols))
+	for j := range cols {
+		column := make([]string, len(keys))
+		for i, k := range keys {
+			column[i] = k[j]
+		}
+		args[j] = pgArray{column}
+		arrays[j] = "?::text[]"
+	}
+	return list + " IN (SELECT * FROM unnest(" + strings.Join(arrays, ", ") + "))", args
+}
+
+// listChunks splits a list that a statement takes as an argument into chunks
+// of up to size. Postgres takes the list as one array parameter, which needs
+// no splitting.
+func listChunks[T any](d *database, s []T, size int) [][]T {
+	if d.dialect == DialectPostgres && len(s) > 0 {
+		return [][]T{s}
+	}
+	return chunksOf(s, size)
 }
 
 // numberPlaceholders turns ? placeholders into $1, $2, and so on.
@@ -565,6 +626,28 @@ func (db dbtx) insertRows(ctx context.Context, table string, cols []string, rows
 	if len(rows) == 0 {
 		return 0, nil
 	}
+	var suffix string
+	switch {
+	case conflict.ignore && db.dialect != DialectMySQL:
+		suffix = " ON CONFLICT DO NOTHING"
+	case len(conflict.update) > 0 && db.dialect == DialectMySQL:
+		sets := make([]string, len(conflict.update))
+		for i, c := range conflict.update {
+			sets[i] = c + " = VALUES(" + c + ")"
+		}
+		suffix = " ON DUPLICATE KEY UPDATE " + strings.Join(sets, ", ")
+	case len(conflict.update) > 0:
+		sets := make([]string, len(conflict.update))
+		for i, c := range conflict.update {
+			sets[i] = c + " = excluded." + c
+		}
+		suffix = fmt.Sprintf(" ON CONFLICT (%s) DO UPDATE SET %s", strings.Join(conflict.key, ", "), strings.Join(sets, ", "))
+	}
+	if db.dialect == DialectPostgres {
+		if arrays, args, ok := columnArrays(rows); ok {
+			return db.exec(ctx, "INSERT INTO "+table+" ("+strings.Join(cols, ", ")+") SELECT * FROM unnest("+strings.Join(arrays, ", ")+")"+suffix, args...)
+		}
+	}
 	per := max(1, 30000/len(cols))
 	var total int64
 	for start := 0; start < len(rows); start += per {
@@ -584,22 +667,7 @@ func (db dbtx) insertRows(ctx context.Context, table string, cols []string, rows
 			b.WriteString(row)
 			args = append(args, r...)
 		}
-		switch {
-		case conflict.ignore && db.dialect != DialectMySQL:
-			b.WriteString(" ON CONFLICT DO NOTHING")
-		case len(conflict.update) > 0 && db.dialect == DialectMySQL:
-			sets := make([]string, len(conflict.update))
-			for i, c := range conflict.update {
-				sets[i] = c + " = VALUES(" + c + ")"
-			}
-			b.WriteString(" ON DUPLICATE KEY UPDATE " + strings.Join(sets, ", "))
-		case len(conflict.update) > 0:
-			sets := make([]string, len(conflict.update))
-			for i, c := range conflict.update {
-				sets[i] = c + " = excluded." + c
-			}
-			fmt.Fprintf(&b, " ON CONFLICT (%s) DO UPDATE SET %s", strings.Join(conflict.key, ", "), strings.Join(sets, ", "))
-		}
+		b.WriteString(suffix)
 		n, err := db.exec(ctx, b.String(), args...)
 		if err != nil {
 			return total, err
@@ -607,6 +675,56 @@ func (db dbtx) insertRows(ctx context.Context, table string, cols []string, rows
 		total += n
 	}
 	return total, nil
+}
+
+// columnArrays returns the columns of the rows as Postgres array arguments
+// for unnest, with their placeholders, so that an insert of any number of rows
+// has one statement text. It returns false when a column's values are not all
+// of one supported type.
+func columnArrays(rows [][]any) (arrays []string, args []any, ok bool) {
+	for j := range rows[0] {
+		var values any
+		var typ string
+		switch rows[0][j].(type) {
+		case string:
+			values, ok = columnOf(rows, j, func(v string) string { return v })
+			typ = "text"
+		case int64:
+			values, ok = columnOf(rows, j, func(v int64) int64 { return v })
+			typ = "bigint"
+		case int:
+			values, ok = columnOf(rows, j, func(v int) int64 { return int64(v) })
+			typ = "bigint"
+		case bool:
+			values, ok = columnOf(rows, j, func(v bool) bool { return v })
+			typ = "boolean"
+		case time.Time:
+			values, ok = columnOf(rows, j, func(v time.Time) time.Time { return v })
+			typ = "timestamptz"
+		default:
+			ok = false
+		}
+		if !ok {
+			return nil, nil, false
+		}
+		arrays = append(arrays, "?::"+typ+"[]")
+		args = append(args, pgArray{values})
+	}
+	return arrays, args, true
+}
+
+// columnOf returns the j-th values of the rows, converted, or false when one
+// is not a T.
+func columnOf[T, U any](rows [][]any, j int, convert func(T) U) (any, bool) {
+	out := make([]U, len(rows))
+	for i, r := range rows {
+		v, ok := r[j].(T)
+		if !ok {
+			return nil, false
+		}
+		out[i] = convert(v)
+	}
+	return out, true
 }
 
 // ignoreDone drops the error of rolling back a transaction that the

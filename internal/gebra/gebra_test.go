@@ -740,6 +740,59 @@ func TestBatchesMatchRebuild(t *testing.T) {
 	}
 }
 
+// TestViewEdgeRefs checks a view edge that two tuples put in place, as its
+// reference count goes from 1 to 2 and back to 0.
+func TestViewEdgeRefs(t *testing.T) {
+	ctx := context.Background()
+	e, storeID := newTestEngineWith(t, `
+model
+  schema 1.1
+
+type user
+
+type folder
+  relations
+    define parent: [folder]
+    define owner: [folder]
+    define reader: [user]
+    define viewer: reader or viewer from parent or viewer from owner
+`, Options{manualApply: true})
+	mustWrite(t, e, storeID, &WriteRequest{Writes: []TupleKey{tk("user:anne", "reader", "folder:root")}})
+	drainView(t, e, storeID)
+
+	edge := "edge " + setKey("folder", "root", "viewer") + " " + setKey("folder", "plans", "viewer") + " "
+	for _, step := range []struct {
+		req  *WriteRequest
+		refs string
+	}{
+		{&WriteRequest{Writes: []TupleKey{tk("folder:root", "parent", "folder:plans")}}, "1"},
+		{&WriteRequest{Writes: []TupleKey{tk("folder:root", "owner", "folder:plans")}}, "2"},
+		{&WriteRequest{Deletes: []TupleKey{tk("folder:root", "parent", "folder:plans")}}, "1"},
+		{&WriteRequest{Deletes: []TupleKey{tk("folder:root", "owner", "folder:plans")}}, ""},
+	} {
+		mustWrite(t, e, storeID, step.req)
+		drainView(t, e, storeID)
+		snapshot := viewSnapshot(t, e.db.handle(), storeID)
+		var edges []string
+		for _, s := range snapshot {
+			if strings.HasPrefix(s, "edge ") {
+				edges = append(edges, s)
+			}
+		}
+		if step.refs == "" {
+			assert.Empty(t, edges, "refs %s", step.refs)
+		} else {
+			assert.Equal(t, []string{edge + step.refs}, edges)
+		}
+		require.Equal(t, rebuiltSnapshot(t, e, storeID), snapshot, "refs %s", step.refs)
+		requireViewCounts(t, e.db.handle(), storeID, "refs %s", step.refs)
+
+		allowed, err := e.Check(ctx, storeID, &CheckRequest{TupleKey: CheckTupleKey{User: "user:anne", Relation: "viewer", Object: "folder:plans"}})
+		require.NoError(t, err)
+		assert.Equal(t, step.refs != "", allowed, "refs %s", step.refs)
+	}
+}
+
 // TestTelemetry checks the spans and metrics that queries and writes record.
 func TestTelemetry(t *testing.T) {
 	ctx := context.Background()

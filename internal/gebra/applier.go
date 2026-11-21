@@ -595,8 +595,9 @@ func consumeWrites(ctx context.Context, tx dbtx, storeID string, rows []inboxRow
 		ids[i] = r.ID
 		b.created = append(b.created, r.CreatedAt)
 	}
-	for _, batch := range chunks(ids) {
-		n, err := tx.exec(ctx, "DELETE FROM gebra_inbox WHERE store_id = ? AND id IN ?", storeID, batch)
+	for _, batch := range listChunks(tx.database, ids, sqlBatchSize) {
+		cond, arg := tx.anyOf("id", batch)
+		n, err := tx.exec(ctx, "DELETE FROM gebra_inbox WHERE store_id = ? AND "+cond, storeID, arg)
 		if err != nil {
 			return errors.Wrap(err, "delete applied writes")
 		}
@@ -604,7 +605,8 @@ func consumeWrites(ctx context.Context, tx dbtx, storeID string, rows []inboxRow
 			return errors.Wrapf(errApplierRace, "%d of %d writes of store %q", int64(len(batch))-n, len(batch), storeID)
 		}
 		if len(log) > 0 {
-			if _, err := tx.exec(ctx, "DELETE FROM gebra_pending WHERE inbox_id IN ?", batch); err != nil {
+			cond, arg := tx.anyOf("inbox_id", batch)
+			if _, err := tx.exec(ctx, "DELETE FROM gebra_pending WHERE "+cond, arg); err != nil {
 				return errors.Wrap(err, "delete pending changes")
 			}
 		}

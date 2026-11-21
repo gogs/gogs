@@ -2,6 +2,7 @@ package gebra
 
 import (
 	"context"
+	"database/sql"
 	"maps"
 	"slices"
 	"strconv"
@@ -234,12 +235,13 @@ func (v *viewMaintainer) apply() error {
 		return err
 	}
 	// Deletes go first: an applier batch can remove a tuple and add it again.
-	for _, batch := range rowChunks(v.memberDels) {
-		keys := make([][]any, len(batch))
+	for _, batch := range listChunks(v.tx.database, v.memberDels, sqlRowBatchSize) {
+		keys := make([][]string, len(batch))
 		for i, m := range batch {
-			keys[i] = []any{m.SetKey, m.UserType, m.UserID}
+			keys[i] = []string{m.SetKey, m.UserType, m.UserID}
 		}
-		n, err := v.tx.exec(v.ctx, "DELETE FROM gebra_view_member WHERE store_id = ? AND gen = ? AND (set_key, user_type, user_id) IN ?", v.storeID, v.gen, keys)
+		cond, args := v.tx.keysIn([]string{"set_key", "user_type", "user_id"}, keys)
+		n, err := v.tx.exec(v.ctx, "DELETE FROM gebra_view_member WHERE store_id = ? AND gen = ? AND "+cond, append([]any{v.storeID, v.gen}, args...)...)
 		if err != nil {
 			return errors.Wrap(err, "delete view members")
 		}
@@ -407,12 +409,9 @@ func (v *viewMaintainer) applyEdges(delta map[viewEdge]int64) (appeared, disappe
 		}
 	}
 	refs := map[viewEdge]int64{}
-	for _, batch := range rowChunks(pairs) {
-		keys := make([][]any, len(batch))
-		for i, e := range batch {
-			keys[i] = []any{e.child, e.parent}
-		}
-		rows, err := queryStructs[viewEdgeRow](v.ctx, v.tx, "SELECT child_key, parent_key, refs FROM gebra_view_edge WHERE store_id = ? AND gen = ? AND (child_key, parent_key) IN ?", v.storeID, v.gen, keys)
+	for _, batch := range listChunks(v.tx.database, pairs, sqlRowBatchSize) {
+		cond, args := v.tx.keysIn([]string{"child_key", "parent_key"}, edgeKeys(batch))
+		rows, err := queryStructs[viewEdgeRow](v.ctx, v.tx, "SELECT child_key, parent_key, refs FROM gebra_view_edge WHERE store_id = ? AND gen = ? AND "+cond, append([]any{v.storeID, v.gen}, args...)...)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "read view edges")
 		}
@@ -422,7 +421,7 @@ func (v *viewMaintainer) applyEdges(delta map[viewEdge]int64) (appeared, disappe
 	}
 
 	var creates []viewEdgeRow
-	var deletes [][]any
+	var deletes []viewEdge
 	var updates []viewEdge
 	for _, e := range pairs {
 		before := refs[e]
@@ -435,10 +434,24 @@ func (v *viewMaintainer) applyEdges(delta map[viewEdge]int64) (appeared, disappe
 			creates = append(creates, viewEdgeRow{StoreID: v.storeID, Gen: v.gen, ChildKey: e.child, ParentKey: e.parent, Refs: after})
 		case after == 0:
 			disappeared = append(disappeared, e)
-			deletes = append(deletes, []any{e.child, e.parent})
+			deletes = append(deletes, e)
 		default:
 			updates = append(updates, e)
 		}
+	}
+	if len(updates) > 0 && v.tx.dialect == DialectPostgres {
+		children, parents, counts := make([]string, len(updates)), make([]string, len(updates)), make([]int64, len(updates))
+		for i, e := range updates {
+			children[i], parents[i], counts[i] = e.child, e.parent, refs[e]+delta[e]
+		}
+		_, err := v.tx.exec(v.ctx, `UPDATE gebra_view_edge e SET refs = u.refs
+			FROM unnest(?::text[], ?::text[], ?::bigint[]) AS u(child_key, parent_key, refs)
+			WHERE e.store_id = ? AND e.gen = ? AND e.child_key = u.child_key AND e.parent_key = u.parent_key`,
+			pgArray{children}, pgArray{parents}, pgArray{counts}, v.storeID, v.gen)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "update view edges")
+		}
+		updates = nil
 	}
 	for _, batch := range rowChunks(updates) {
 		// The counts are literals, which every database types as integers,
@@ -469,8 +482,9 @@ func (v *viewMaintainer) applyEdges(delta map[viewEdge]int64) (appeared, disappe
 		}
 		v.added.edge += n
 	}
-	for _, batch := range rowChunks(deletes) {
-		n, err := v.tx.exec(v.ctx, "DELETE FROM gebra_view_edge WHERE store_id = ? AND gen = ? AND (child_key, parent_key) IN ?", v.storeID, v.gen, batch)
+	for _, batch := range listChunks(v.tx.database, deletes, sqlRowBatchSize) {
+		cond, args := v.tx.keysIn([]string{"child_key", "parent_key"}, edgeKeys(batch))
+		n, err := v.tx.exec(v.ctx, "DELETE FROM gebra_view_edge WHERE store_id = ? AND gen = ? AND "+cond, append([]any{v.storeID, v.gen}, args...)...)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "delete view edges")
 		}
@@ -479,10 +493,33 @@ func (v *viewMaintainer) applyEdges(delta map[viewEdge]int64) (appeared, disappe
 	return appeared, disappeared, nil
 }
 
+// edgeKeys returns the child and parent keys of the edges.
+func edgeKeys(edges []viewEdge) [][]string {
+	keys := make([][]string, len(edges))
+	for i, e := range edges {
+		keys[i] = []string{e.child, e.parent}
+	}
+	return keys
+}
+
 // anchored reports which of the sets have direct members or are the child of
 // an edge. The view keeps reach rows only for anchored sets.
 func (v *viewMaintainer) anchored(sets []string) (map[string]bool, error) {
 	out := make(map[string]bool, len(sets))
+	if v.tx.dialect == DialectPostgres && len(sets) > 0 {
+		err := v.tx.query(v.ctx, `SELECT s.key, EXISTS (SELECT 1 FROM gebra_view_member WHERE store_id = ? AND gen = ? AND set_key = s.key)
+				OR EXISTS (SELECT 1 FROM gebra_view_edge WHERE store_id = ? AND gen = ? AND child_key = s.key)
+			FROM unnest(?::text[]) AS s(key)`, []any{v.storeID, v.gen, v.storeID, v.gen, pgArray{sets}}, func(rows *sql.Rows) error {
+			var key string
+			var anchored bool
+			if err := rows.Scan(&key, &anchored); err != nil {
+				return err
+			}
+			out[key] = anchored
+			return nil
+		})
+		return out, errors.Wrap(err, "read view anchors")
+	}
 	for _, batch := range chunks(sets) {
 		// EXISTS stops at the first row, which matters for sets with many
 		// members. CASE makes the result an integer on every database.
@@ -511,13 +548,14 @@ func (v *viewMaintainer) anchored(sets []string) (map[string]bool, error) {
 // descendants returns the anchored sets that each of the sets contains.
 func (v *viewMaintainer) descendants(sets []string) (map[string][]string, error) {
 	out := map[string][]string{}
-	for _, batch := range rowChunks(sets) {
-		keys := make([][]any, len(batch))
+	for _, batch := range listChunks(v.tx.database, sets, sqlRowBatchSize) {
+		keys := make([][]string, len(batch))
 		for i, s := range batch {
 			typ, id, rel := splitSetKey(s)
-			keys[i] = []any{typ, id, rel}
+			keys[i] = []string{typ, id, rel}
 		}
-		rows, err := queryStructs[viewReachRow](v.ctx, v.tx, "SELECT desc_key, anc_type, anc_id, anc_rel FROM gebra_view_reach WHERE store_id = ? AND gen = ? AND (anc_type, anc_id, anc_rel) IN ?", v.storeID, v.gen, keys)
+		cond, args := v.tx.keysIn([]string{"anc_type", "anc_id", "anc_rel"}, keys)
+		rows, err := queryStructs[viewReachRow](v.ctx, v.tx, "SELECT desc_key, anc_type, anc_id, anc_rel FROM gebra_view_reach WHERE store_id = ? AND gen = ? AND "+cond, append([]any{v.storeID, v.gen}, args...)...)
 		if err != nil {
 			return nil, errors.Wrap(err, "read view descendants")
 		}
@@ -586,8 +624,9 @@ func (v *viewMaintainer) walkUp(sets []string) (map[string][]string, error) {
 				parents[c] = nil
 			}
 		}
-		for _, batch := range chunks(unread) {
-			edges, err := queryStructs[viewEdgeRow](v.ctx, v.tx, "SELECT child_key, parent_key FROM gebra_view_edge WHERE store_id = ? AND gen = ? AND child_key IN ?", v.storeID, v.gen, batch)
+		for _, batch := range listChunks(v.tx.database, unread, sqlBatchSize) {
+			cond, arg := v.tx.anyOf("child_key", batch)
+			edges, err := queryStructs[viewEdgeRow](v.ctx, v.tx, "SELECT child_key, parent_key FROM gebra_view_edge WHERE store_id = ? AND gen = ? AND "+cond, v.storeID, v.gen, arg)
 			if err != nil {
 				return nil, errors.Wrap(err, "read view edges")
 			}
@@ -633,8 +672,9 @@ func (v *viewMaintainer) recompute(sets []string) error {
 		}
 	}
 	have := map[string]map[string]struct{}{}
-	for _, batch := range chunks(anchoredBefore) {
-		rows, err := queryStructs[viewReachRow](v.ctx, v.tx, "SELECT desc_key, anc_type, anc_id, anc_rel FROM gebra_view_reach WHERE store_id = ? AND gen = ? AND desc_key IN ?", v.storeID, v.gen, batch)
+	for _, batch := range listChunks(v.tx.database, anchoredBefore, sqlBatchSize) {
+		cond, arg := v.tx.anyOf("desc_key", batch)
+		rows, err := queryStructs[viewReachRow](v.ctx, v.tx, "SELECT desc_key, anc_type, anc_id, anc_rel FROM gebra_view_reach WHERE store_id = ? AND gen = ? AND "+cond, v.storeID, v.gen, arg)
 		if err != nil {
 			return errors.Wrap(err, "read view reach")
 		}
@@ -654,7 +694,7 @@ func (v *viewMaintainer) recompute(sets []string) error {
 		return out, nil
 	}
 	var inserts []viewReachRow
-	var deletes [][]any
+	var deletes [][]string
 	for _, d := range sets {
 		want := map[string]struct{}{}
 		if is, ok := v.isAnchored[d]; !ok || is {
@@ -668,12 +708,13 @@ func (v *viewMaintainer) recompute(sets []string) error {
 		for a := range have[d] {
 			if _, ok := want[a]; !ok {
 				typ, id, rel := splitSetKey(a)
-				deletes = append(deletes, []any{d, typ, id, rel})
+				deletes = append(deletes, []string{d, typ, id, rel})
 			}
 		}
 	}
-	for _, batch := range rowChunks(deletes) {
-		n, err := v.tx.exec(v.ctx, "DELETE FROM gebra_view_reach WHERE store_id = ? AND gen = ? AND (desc_key, anc_type, anc_id, anc_rel) IN ?", v.storeID, v.gen, batch)
+	for _, batch := range listChunks(v.tx.database, deletes, sqlRowBatchSize) {
+		cond, args := v.tx.keysIn([]string{"desc_key", "anc_type", "anc_id", "anc_rel"}, batch)
+		n, err := v.tx.exec(v.ctx, "DELETE FROM gebra_view_reach WHERE store_id = ? AND gen = ? AND "+cond, append([]any{v.storeID, v.gen}, args...)...)
 		if err != nil {
 			return errors.Wrap(err, "delete view reach")
 		}
