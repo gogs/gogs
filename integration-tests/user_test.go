@@ -34,17 +34,17 @@ const captchaSessionKey = "flamego::captcha::text"
 func TestSignUp(t *testing.T) {
 	t.Parallel()
 
-	signUp := func(c *client, name, captcha string) (int, []byte) {
+	signUp := func(c *client, name, antiBotPayload string) (int, []byte) {
 		return c.do(http.MethodPost, "/api/web/user/sign-up", map[string]any{
-			"userName": name,
-			"email":    name + "@example.com",
-			"password": "password",
-			"captcha":  captcha,
+			"userName":       name,
+			"email":          name + "@example.com",
+			"password":       "password",
+			"antiBotPayload": antiBotPayload,
 		})
 	}
 	assertNotCreated := func(t *testing.T, name string) {
 		_, err := database.Handle.Users().GetByUsername(t.Context(), name)
-		require.True(t, database.IsErrUserNotExist(err), "user created with a wrong captcha: %v", err)
+		require.True(t, database.IsErrUserNotExist(err), "user created with a wrong anti-bot payload: %v", err)
 	}
 	assertCreated := func(t *testing.T, name string) {
 		u, err := database.Handle.Users().GetByUsername(t.Context(), name)

@@ -52,15 +52,15 @@ func TestUserSignUpPage(t *testing.T) {
 	t.Parallel()
 
 	var resp struct {
-		RegistrationDisabled bool   `json:"registrationDisabled"`
-		CaptchaEnabled       bool   `json:"captchaEnabled"`
-		CaptchaType          string `json:"captchaType"`
+		RegistrationDisabled       bool   `json:"registrationDisabled"`
+		AntiBotVerificationEnabled bool   `json:"antiBotVerificationEnabled"`
+		AntiBotVerification        string `json:"antiBotVerification"`
 	}
 	newClient(t).doJSON(http.MethodGet, "/api/web/user/sign-up", nil, http.StatusOK, &resp)
-	// The server under test allows registration with a captcha.
+	// The server under test allows registration with anti-bot verification.
 	assert.False(t, resp.RegistrationDisabled)
-	assert.True(t, resp.CaptchaEnabled)
-	assert.Equal(t, "altcha", resp.CaptchaType)
+	assert.True(t, resp.AntiBotVerificationEnabled)
+	assert.Equal(t, "altcha", resp.AntiBotVerification)
 }
 
 func TestUserResetPassword(t *testing.T) {

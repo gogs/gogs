@@ -65,16 +65,16 @@ type getUserSignInResponse struct {
 }
 
 type getUserSignUpResponse struct {
-	RegistrationDisabled bool   `json:"registrationDisabled"`
-	CaptchaEnabled       bool   `json:"captchaEnabled"`
-	CaptchaType          string `json:"captchaType"`
+	RegistrationDisabled       bool   `json:"registrationDisabled"`
+	AntiBotVerificationEnabled bool   `json:"antiBotVerificationEnabled"`
+	AntiBotVerification        string `json:"antiBotVerification"`
 }
 
 func getUserSignUp() (statusCode int, resp *getUserSignUpResponse, err error) {
 	return http.StatusOK, &getUserSignUpResponse{
-		RegistrationDisabled: conf.Auth.DisableRegistration,
-		CaptchaEnabled:       conf.Auth.EnableRegistrationCaptcha,
-		CaptchaType:          conf.Auth.AntiBotVerification,
+		RegistrationDisabled:       conf.Auth.DisableRegistration,
+		AntiBotVerificationEnabled: conf.Auth.EnableRegistrationCaptcha,
+		AntiBotVerification:        conf.Auth.AntiBotVerification,
 	}, nil
 }
 
@@ -82,9 +82,9 @@ type userSignUpRequest struct {
 	UserName string `json:"userName" validate:"required,alphadashdot,max=35"`
 	Email    string `json:"email" validate:"required,email,max=254"`
 	Password string `json:"password" validate:"required,max=255"`
-	// Captcha is the text of the captcha image, or the solution of the altcha
+	// AntiBotPayload is the text of the captcha image, or the solution of the altcha
 	// challenge, depending on [auth] ANTI_BOT_VERIFICATION.
-	Captcha string `json:"captcha"`
+	AntiBotPayload string `json:"antiBotPayload"`
 }
 
 type userSignUpResponse struct {
@@ -97,13 +97,13 @@ func postUserSignUp(logger *logx.Logger, r *http.Request, ca cache.Cache, l i18n
 	if conf.Auth.DisableRegistration {
 		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("auth::disable_register_prompt")}, nil
 	}
-	if !verifyAntiBot(req.Captcha) {
+	if !verifyAntiBot(req.AntiBotPayload) {
 		msg := l.Tr("form::captcha_incorrect")
 		if conf.Auth.AntiBotVerification == conf.AntiBotVerificationAltcha {
-			msg = l.Tr("form::captcha_verification_failed")
+			msg = l.Tr("form::anti_bot_verification_failed")
 		}
 		return http.StatusUnauthorized, &bindingErrorResponse{
-			Fields: fieldErrors{"captcha": &msg},
+			Fields: fieldErrors{"antiBotPayload": &msg},
 		}, nil
 	}
 	u, err := database.Handle.Users().Create(

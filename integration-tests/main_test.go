@@ -231,7 +231,7 @@ func freePort() (int, error) {
 // writeConfig writes the configuration of a server under test, which uses the
 // Postgres database of the name on the server the PG* environment variables
 // point to.
-func writeConfig(dir, path string, port, sshPort int, dbName, secretKey string, forcePrivate bool, captchaType string) error {
+func writeConfig(dir, path string, port, sshPort int, dbName, secretKey string, forcePrivate bool, antiBotVerification string) error {
 	u, err := user.Current()
 	if err != nil {
 		return errors.Wrap(err, "get current user")
@@ -295,7 +295,7 @@ ENABLE_REVERSE_PROXY_AUTO_REGISTRATION = true
 [log]
 MODE = console
 LEVEL = Info
-`, u.Username, port, filepath.Join(dir, "repositories"), database, secretKey, filepath.Join(dir, "ssh"), sshPort, forcePrivate, captchaType)
+`, u.Username, port, filepath.Join(dir, "repositories"), database, secretKey, filepath.Join(dir, "ssh"), sshPort, forcePrivate, antiBotVerification)
 	return os.WriteFile(path, []byte(config), 0o600)
 }
 

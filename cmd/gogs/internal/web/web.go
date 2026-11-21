@@ -445,7 +445,7 @@ type antiBotVerifier func(payload string) bool
 
 // antiBotMiddlewares returns the middlewares of [auth] ANTI_BOT_VERIFICATION
 // that serve what the sign-up page needs and map an antiBotVerifier. Only the
-// configured one is mounted, and none when the registration captcha is off.
+// configured one is mounted, and none when anti-bot verification is off.
 func antiBotMiddlewares() ([]flamego.Handler, error) {
 	if !conf.Auth.EnableRegistrationCaptcha {
 		return []flamego.Handler{func(c flamego.Context) {

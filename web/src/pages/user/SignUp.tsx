@@ -15,8 +15,8 @@ import { cn } from "@/lib/utils";
 
 export interface SignUpPage {
   registrationDisabled: boolean;
-  captchaEnabled: boolean;
-  captchaType: "altcha" | "image";
+  antiBotVerificationEnabled: boolean;
+  antiBotVerification: "altcha" | "image";
 }
 
 type AltchaState = "idle" | "verifying" | "verified" | "error";
@@ -32,7 +32,7 @@ interface SignUpErrorResponse {
   fields?: Record<string, string | null>;
 }
 
-const FIELD_ORDER = ["userName", "email", "password", "confirmPassword", "captcha"] as const;
+const FIELD_ORDER = ["userName", "email", "password", "confirmPassword", "antiBotPayload"] as const;
 
 const route = getRouteApi("/user/sign-up");
 
@@ -40,9 +40,9 @@ export function SignUp() {
   const { t } = useTranslation();
   usePageTitle(t("register"));
   const navigate = useNavigate();
-  const { registrationDisabled, captchaEnabled, captchaType } = route.useLoaderData();
-  const altchaEnabled = captchaEnabled && captchaType === "altcha";
-  const imageCaptchaEnabled = captchaEnabled && captchaType === "image";
+  const { registrationDisabled, antiBotVerificationEnabled, antiBotVerification } = route.useLoaderData();
+  const altchaEnabled = antiBotVerificationEnabled && antiBotVerification === "altcha";
+  const imageCaptchaEnabled = antiBotVerificationEnabled && antiBotVerification === "image";
 
   const [userName, setUserName] = useState("");
   const [email, setEmail] = useState("");
@@ -75,7 +75,7 @@ export function SignUp() {
     return () => clearTimeout(timer);
   }, [altchaState]);
 
-  function refreshCaptcha() {
+  function resetAntiBotVerification() {
     if (altchaEnabled) {
       resetAltcha();
       return;
@@ -126,7 +126,12 @@ export function SignUp() {
           method: "POST",
           credentials: "same-origin",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userName, email, password, captcha: altchaEnabled ? solution?.payload : captcha }),
+          body: JSON.stringify({
+            userName,
+            email,
+            password,
+            antiBotPayload: altchaEnabled ? solution?.payload : captcha,
+          }),
         });
         if (!res.ok) {
           const body = (await res.json().catch(() => ({}))) as SignUpErrorResponse;
@@ -140,13 +145,13 @@ export function SignUp() {
             setFormError(t("auth.sign_up_failed"));
           }
           setSubmitting(false);
-          if (captchaEnabled) refreshCaptcha();
+          if (antiBotVerificationEnabled) resetAntiBotVerification();
           requestAnimationFrame(() => {
             if (focusField === "userName") userNameRef.current?.focus();
             else if (focusField === "email") emailRef.current?.focus();
             else if (focusField === "password") passwordRef.current?.focus();
             else if (focusField === "confirmPassword") confirmPasswordRef.current?.focus();
-            else if (focusField === "captcha") (altchaEnabled ? altchaRef : captchaRef).current?.focus();
+            else if (focusField === "antiBotPayload") (altchaEnabled ? altchaRef : captchaRef).current?.focus();
           });
           return;
         }
@@ -161,7 +166,7 @@ export function SignUp() {
       } catch {
         setFormError(t("auth.sign_up_failed"));
         setSubmitting(false);
-        if (captchaEnabled) refreshCaptcha();
+        if (antiBotVerificationEnabled) resetAntiBotVerification();
       }
     })();
   }
@@ -318,7 +323,7 @@ export function SignUp() {
                     type="button"
                     tabIndex={7}
                     disabled={submitting}
-                    onClick={refreshCaptcha}
+                    onClick={resetAntiBotVerification}
                     aria-label={t("refresh_captcha")}
                     className="block w-full cursor-pointer overflow-hidden rounded-md border border-(--color-border) bg-(--color-surface) outline-none focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-60"
                   >
@@ -346,12 +351,12 @@ export function SignUp() {
                   placeholder={t("captcha_placeholder")}
                   value={captcha}
                   onChange={(e) => setCaptcha(e.target.value)}
-                  aria-invalid={"captcha" in fieldErrors ? true : undefined}
-                  aria-describedby={fieldErrors.captcha ? "captcha-error" : undefined}
+                  aria-invalid={"antiBotPayload" in fieldErrors ? true : undefined}
+                  aria-describedby={fieldErrors.antiBotPayload ? "antiBotPayload-error" : undefined}
                 />
-                {fieldErrors.captcha && (
-                  <p id="captcha-error" className="text-sm text-(--color-destructive)">
-                    {fieldErrors.captcha}
+                {fieldErrors.antiBotPayload && (
+                  <p id="antiBotPayload-error" className="text-sm text-(--color-destructive)">
+                    {fieldErrors.antiBotPayload}
                   </p>
                 )}
               </div>
@@ -403,7 +408,7 @@ export function SignUp() {
         className={cn("col-start-1 row-start-1 flex flex-col gap-0.5 self-center", !current && "invisible")}
       >
         <span
-          id={current ? "captcha-label" : undefined}
+          id={current ? "altcha-label" : undefined}
           aria-live={current ? "polite" : undefined}
           className={cn(
             "text-sm font-medium",
@@ -413,7 +418,7 @@ export function SignUp() {
           {labels[state]}
         </span>
         {state === "error" && (
-          <span id={current ? "captcha-note" : undefined} className="text-xs text-(--color-muted-foreground)">
+          <span id={current ? "altcha-note" : undefined} className="text-xs text-(--color-muted-foreground)">
             {t("altcha_retry")}
           </span>
         )}
@@ -424,7 +429,7 @@ export function SignUp() {
         <div
           className={cn(
             "flex items-center gap-3 rounded-md border bg-(--color-surface) px-3 py-2.5 transition-[border-color,box-shadow]",
-            altchaState === "error" || "captcha" in fieldErrors
+            altchaState === "error" || "antiBotPayload" in fieldErrors
               ? "border-(--color-destructive) ring-1 ring-(--color-destructive)"
               : altchaState === "verified"
                 ? "border-(--color-success) ring-1 ring-(--color-success)"
@@ -435,15 +440,16 @@ export function SignUp() {
             ref={altchaRef}
             type="button"
             role="checkbox"
-            id="captcha"
+            id="altcha"
             tabIndex={7}
             aria-checked={altchaState === "verified"}
             aria-busy={altchaState === "verifying" || undefined}
-            aria-labelledby="captcha-label"
+            aria-labelledby="altcha-label"
             aria-describedby={
-              cn(altchaState === "error" && "captcha-note", fieldErrors.captcha && "captcha-error") || undefined
+              cn(altchaState === "error" && "altcha-note", fieldErrors.antiBotPayload && "antiBotPayload-error") ||
+              undefined
             }
-            aria-invalid={"captcha" in fieldErrors ? true : undefined}
+            aria-invalid={"antiBotPayload" in fieldErrors ? true : undefined}
             disabled={submitting}
             onClick={() => {
               if (altchaState !== "verifying" && altchaState !== "verified") verifyAltcha();
@@ -483,9 +489,9 @@ export function SignUp() {
             {(Object.keys(labels) as AltchaState[]).map((state) => message(state, state === altchaState))}
           </div>
         </div>
-        {fieldErrors.captcha && (
-          <p id="captcha-error" className="text-sm text-(--color-destructive)">
-            {fieldErrors.captcha}
+        {fieldErrors.antiBotPayload && (
+          <p id="antiBotPayload-error" className="text-sm text-(--color-destructive)">
+            {fieldErrors.antiBotPayload}
           </p>
         )}
       </div>
