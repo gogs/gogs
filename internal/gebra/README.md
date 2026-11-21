@@ -100,7 +100,7 @@ Until the flip, queries that name no model use the old model from its view, and 
 
 Gebra is benchmarked against OpenFGA through each server's HTTP API, with the same dataset, the same request stream at the same arrival rates, and the same correctness check. On a store of 100,000 repos, with 0 violations:
 
-- **Sustained**: Gebra holds 15,000 requests/s on the 16-vCPU benchmark machine with check p99 of 79 ms, six times OpenFGA's rate, and at least 25,000 requests/s, confirmed on a larger machine.
+- **Sustained**: Gebra holds 15,000 requests/s on the 16-vCPU benchmark machine with check p99 of 79 ms, six times OpenFGA's rate.
 - **Fast**: Gebra keeps check, token check and list p99 within 20 ms up to 10,000 requests/s, OpenFGA up to 500/s.
 - **Overloaded**: offered 20,000 requests/s on the benchmark machine, Gebra completes 19,800/s, but p99 rises to 1.3 s.
 - **Latency**: at 2,500 requests/s, Gebra's check p99 is 2.1 ms against 634 ms for OpenFGA.
@@ -172,7 +172,7 @@ Writes are 1% of requests, at most about 760 tuples/s, so these numbers measure 
 
 Bulk and fan-out writes are few, 22 to 334 and 6 to 134 per step, so their p99 is close to their maximum. Gebra's catch-up stays at 7 to 9 ms at every rate, and its view was never more than 0.14 s behind during a step. At 20,000/s, the second of latency is requests queued in front of `cmd/gebra`, not the applier falling behind.
 
-Adding a user to a team adds one view row, however many repos the team reaches. On an otherwise idle store, on the 18-vCPU machine below, adding a member to a team with read access to 3,000 repos returns in 0.5 ms, default checks see it after 3.4 ms, and the member's first page of 50 repos takes 0.2 ms (medians of 20).
+Adding a user to a team adds one view row, however many repos the team reaches. On an otherwise idle store, on an 18-vCPU machine, adding a member to a team with read access to 3,000 repos returns in 0.5 ms, default checks see it after 3.4 ms, and the member's first page of 50 repos takes 0.2 ms (medians of 20).
 
 #### Write capacity
 
@@ -204,22 +204,6 @@ A write-only run measures how many writes each server accepts, with the same ste
 
 Loading took 2 min 7 s for Gebra, with `COPY` and its view build, and 11 s for OpenFGA through its Write API, including the vacuum.
 
-### On a larger machine
-
-At 20,000 requests/s the benchmark machine runs out of CPU: Postgres, `cmd/gebra` and the load generator together use 14 of its 16 vCPUs, which are 8 cores with hyperthreading. On a machine with 18 vCPUs, one thread per core, and 49 GiB of RAM, Gebra holds at least 25,000 requests/s with 0 violations and 0 errors. Rates above 25,000/s were not tried. Latencies are p50 / p99 in milliseconds.
-
-| Rate/s | Completed/s | Check | Token check | List | Write |
-|---|---|---|---|---|---|
-| 15,000 | 15,018 | 0.5 / 3.2 | 0.5 / 6.5 | 1.1 / 4.2 | 1.6 / 10.2 |
-| 20,000 | 20,027 | 0.6 / 50.3 | 0.8 / 31.0 | 1.3 / 49.1 | 2.0 / 55.4 |
-| 25,000 | 25,028 | 0.8 / 73.5 | 1.1 / 43.4 | 1.6 / 75.6 | 2.5 / 74.4 |
-
-These runs use `GOMAXPROCS=8` as above, and differ in:
-
-- **Build**: an earlier one, before the applier sent lists to Postgres as arrays, which on the benchmark machine held 10,000 requests/s instead of 15,000/s.
-- **Steps**: one run per rate, of 30 s after a 5 s warmup, from a copy of the same dataset.
-- **Postgres 15.20** with the settings in the configuration below, except `max_wal_size` 1 GB, `checkpoint_timeout` 5 min, `maintenance_work_mem` 64 MB and `effective_io_concurrency` 1.
-
 ### Configuration
 
 The benchmark is `TestApplierBenchHTTP` in `applierbench_http_test.go`, whose doc comment has the commands. Every setting below is chosen so that neither server gets an advantage the other lacks.
@@ -235,7 +219,7 @@ The benchmark is `TestApplierBenchHTTP` in `applierbench_http_test.go`, whose do
   - `--max-staleness 1s`, the default, which matches OpenFGA's 1s cache TTL below.
   - Tracing off (`OTEL_TRACES_SAMPLER=always_off`), Prometheus metrics on, as for OpenFGA.
   - Sessions set `max_parallel_workers_per_gather=0`, which `cmd/gebra` does for its short index lookups.
-  - `GOMAXPROCS=8` (`GEBRA_BENCH_GOMAXPROCS`). With Go's default of one thread per vCPU, Gebra wakes more threads than the vCPUs left beside Postgres and the load generator, and Postgres waits for a CPU as long as it runs. On an 18-vCPU machine at 15,000/s, check p99 was over 75 ms in every run with the default, and 3 to 11 ms in all but one of seven runs with 8. On the benchmark machine at 15,000/s, with the earlier build, 8 completed 13,811/s against 8,126/s with the default.
+  - `GOMAXPROCS=8` (`GEBRA_BENCH_GOMAXPROCS`). With Go's default of one thread per vCPU, Gebra wakes more threads than the vCPUs left beside Postgres and the load generator, and Postgres waits for a CPU as long as it runs. On the benchmark machine at 15,000/s, with an earlier build, 8 completed 13,811/s against 8,126/s with the default.
 - **OpenFGA v1.23.0**, started by `testdata/openfga-bench.sh`, which downloads the release and checks its sha256:
   - `--datastore-engine postgres`, `--datastore-max-open-conns 96`, `--datastore-max-idle-conns 96`, to match Gebra's pool.
   - `--check-query-cache-enabled`, `--check-iterator-cache-enabled` and `--list-objects-iterator-cache-enabled`, each with a TTL of 1s, so default reads may be as stale as Gebra's. `HIGHER_CONSISTENCY` bypasses them.
