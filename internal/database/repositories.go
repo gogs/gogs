@@ -902,6 +902,10 @@ func (s *RepositoriesStore) ListForks(ctx context.Context, repo *Repository) ([]
 // on behalf of the doer. It returns ErrRepoAlreadyExist when the new owner
 // has a repository of the same name.
 func (s *RepositoriesStore) Transfer(ctx context.Context, doer *User, newOwnerName string, repo *Repository) error {
+	// Stopping midway, e.g., when the client disconnects, would roll back the
+	// database after the repository moved on disk.
+	ctx = context.WithoutCancel(ctx)
+
 	newOwner, err := newUsersStore(s.db).GetByUsername(ctx, newOwnerName)
 	if err != nil {
 		return errors.Newf("get new owner '%s': %v", newOwnerName, err)
@@ -1071,6 +1075,10 @@ func (s *RepositoriesStore) Rename(ctx context.Context, owner *User, oldName, ne
 // organization repositories. Descriptions longer than 512 bytes and websites
 // longer than 255 bytes are cut.
 func (s *RepositoriesStore) Update(ctx context.Context, logger *logx.Logger, repo *Repository, visibilityChanged bool) error {
+	// Stopping midway, e.g., when the client disconnects, would roll back the
+	// database but keep the changed Git daemon export file.
+	ctx = context.WithoutCancel(ctx)
+
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := newReposStore(tx).update(ctx, logger, repo, visibilityChanged); err != nil {
 			return errors.Newf("updateRepository: %v", err)
