@@ -62,6 +62,13 @@ export function SignUp() {
   const confirmPasswordRef = useRef<HTMLInputElement>(null);
   const captchaRef = useRef<HTMLInputElement>(null);
   const [altchaState, setAltchaState] = useState<AltchaState>("idle");
+  const formFilled =
+    userName.trim() !== "" &&
+    email.trim() !== "" &&
+    password !== "" &&
+    confirmPassword !== "" &&
+    (!imageCaptchaEnabled || captcha.trim() !== "") &&
+    (!altchaEnabled || altchaState === "verified");
   const altchaSolution = useRef<AltchaSolution | null>(null);
   const altchaRef = useRef<HTMLButtonElement>(null);
 
@@ -108,7 +115,8 @@ export function SignUp() {
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const solution = altchaSolution.current;
-    if (registrationDisabled || (altchaEnabled && !(solution && solution.expiresAt > Date.now()))) return;
+    if (registrationDisabled || !formFilled || (altchaEnabled && !(solution && solution.expiresAt > Date.now())))
+      return;
 
     setFormError(null);
     if (password !== confirmPassword) {
@@ -363,12 +371,7 @@ export function SignUp() {
             )}
 
             <div className="mt-2 flex flex-col gap-3">
-              <Button
-                type="submit"
-                disabled={submitting || (altchaEnabled && altchaState !== "verified")}
-                tabIndex={9}
-                className="w-full"
-              >
+              <Button type="submit" disabled={submitting || !formFilled} tabIndex={9} className="w-full">
                 {submitting ? t("auth.sign_up_submitting") : t("auth.create_new_account")}
               </Button>
               <Button variant="link" size="inline" asChild className="self-center">
