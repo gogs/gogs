@@ -230,8 +230,12 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
   // the focus, which may be a chart, i.e., an SVG element. A layout effect runs before the box
   // takes the focus.
   const opener = useRef<HTMLElement | SVGElement | null>(null);
+  // A result that opens a page leaves the focus to that page, which starts at its top. The
+  // opener may be far down the page shown, e.g., when the result is that very page.
+  const leaving = useRef(false);
   useLayoutEffect(() => {
     if (!open) return;
+    leaving.current = false;
     const focused = document.activeElement;
     opener.current = focused instanceof HTMLElement || focused instanceof SVGElement ? focused : null;
   }, [open]);
@@ -251,7 +255,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
           }}
           onCloseAutoFocus={(e) => {
             e.preventDefault();
-            opener.current?.focus({ preventScroll: true });
+            if (!leaving.current) opener.current?.focus({ preventScroll: true });
           }}
           className={cn(
             "fixed inset-0 z-50 flex flex-col bg-(--color-popover) text-(--color-popover-foreground) shadow-lg glass-ui:backdrop-blur-2xl outline-none",
@@ -259,7 +263,15 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
           )}
         >
           <DialogPrimitive.Title className="sr-only">{t("command_palette.title")}</DialogPrimitive.Title>
-          <PaletteBody user={user} scope={scope} repo={scopedRepo} close={() => onOpenChange(false)} />
+          <PaletteBody
+            user={user}
+            scope={scope}
+            repo={scopedRepo}
+            close={(toPage = false) => {
+              leaving.current = toPage;
+              onOpenChange(false);
+            }}
+          />
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
@@ -277,7 +289,8 @@ function PaletteBody({
   user: UserInfo | null;
   scope: { owner: string; name: string } | null;
   repo: RepoHeaderData | undefined;
-  close: () => void;
+  // close closes the palette, `toPage` when a result opens a page.
+  close: (toPage?: boolean) => void;
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -873,7 +886,7 @@ function PaletteBody({
       inputRef.current?.focus();
       return;
     }
-    close();
+    close(item.to !== undefined);
     if (item.to !== undefined) void navigate({ href: subUrl(item.to) });
     else if (item.download !== undefined) window.location.assign(subUrl(item.download));
     else if (item.external !== undefined) window.open(item.external, "_blank", "noopener,noreferrer");
