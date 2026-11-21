@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/cockroachdb/errors"
@@ -10,7 +11,6 @@ import (
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/git"
-	"gogs.io/gogs/internal/tool"
 )
 
 // ProtectBranchesStore is the storage layer for the protection of branches.
@@ -102,10 +102,17 @@ func (s *ProtectBranchesStore) isUserInAllowlist(ctx context.Context, protectBra
 	if userID <= 0 {
 		return false, nil
 	}
-	if slices.Contains(tool.StringsToInt64s(strings.Split(protectBranch.AllowlistUserIDs, ",")), userID) {
-		return true, nil
+	for field := range strings.SplitSeq(protectBranch.AllowlistUserIDs, ",") {
+		if id, _ := strconv.ParseInt(field, 10, 64); id == userID {
+			return true, nil
+		}
 	}
-	teamIDs := tool.StringsToInt64s(strings.Split(protectBranch.AllowlistTeamIDs, ","))
+	var teamIDs []int64
+	for field := range strings.SplitSeq(protectBranch.AllowlistTeamIDs, ",") {
+		if id, _ := strconv.ParseInt(field, 10, 64); id > 0 {
+			teamIDs = append(teamIDs, id)
+		}
+	}
 	if len(teamIDs) == 0 {
 		return false, nil
 	}
@@ -176,7 +183,7 @@ func (s *ProtectBranchesStore) SaveForOrg(ctx context.Context, logger *logx.Logg
 	}
 
 	permissions := newPermissionsStore(s.db)
-	validUserIDs := make([]int64, 0, len(allowlistUserIDs))
+	validUserIDs := make([]string, 0, len(allowlistUserIDs))
 	for _, userID := range allowlistUserIDs {
 		if userID > 0 && permissions.Authorize(ctx, logger, userID, repo.ID, AccessModeWrite,
 			AccessModeOptions{
@@ -184,10 +191,10 @@ func (s *ProtectBranchesStore) SaveForOrg(ctx context.Context, logger *logx.Logg
 				Private: repo.IsPrivate,
 			},
 		) {
-			validUserIDs = append(validUserIDs, userID)
+			validUserIDs = append(validUserIDs, strconv.FormatInt(userID, 10))
 		}
 	}
-	protectBranch.AllowlistUserIDs = strings.Join(tool.Int64sToStrings(validUserIDs), ",")
+	protectBranch.AllowlistUserIDs = strings.Join(validUserIDs, ",")
 
 	var writerTeamIDs []int64
 	err = s.db.WithContext(ctx).
@@ -199,13 +206,13 @@ func (s *ProtectBranchesStore) SaveForOrg(ctx context.Context, logger *logx.Logg
 	if err != nil {
 		return errors.Wrap(err, "list teams that can write")
 	}
-	validTeamIDs := make([]int64, 0, len(allowlistTeamIDs))
+	validTeamIDs := make([]string, 0, len(allowlistTeamIDs))
 	for _, teamID := range writerTeamIDs {
 		if slices.Contains(allowlistTeamIDs, teamID) {
-			validTeamIDs = append(validTeamIDs, teamID)
+			validTeamIDs = append(validTeamIDs, strconv.FormatInt(teamID, 10))
 		}
 	}
-	protectBranch.AllowlistTeamIDs = strings.Join(tool.Int64sToStrings(validTeamIDs), ",")
+	protectBranch.AllowlistTeamIDs = strings.Join(validTeamIDs, ",")
 
 	return s.Save(ctx, protectBranch)
 }

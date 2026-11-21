@@ -14,13 +14,13 @@ import (
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/auth"
+	"gogs.io/gogs/internal/authx"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/osx"
-	"gogs.io/gogs/internal/tool"
 )
 
 type HTTPContext struct {
@@ -158,19 +158,8 @@ func HTTPContexter(logger *logx.Logger, store Store) flamego.Handler {
 
 		if !viaProxy {
 			// Handle HTTP Basic Authentication
-			authHead := c.Request().Header.Get("Authorization")
-			if authHead == "" {
-				askCredentials(c, http.StatusUnauthorized, "")
-				return
-			}
-
-			auths := strings.Fields(authHead)
-			if len(auths) != 2 || auths[0] != "Basic" {
-				askCredentials(c, http.StatusUnauthorized, "")
-				return
-			}
-			authUsername, authPassword, err := tool.BasicAuthDecode(auths[1])
-			if err != nil {
+			authUsername, authPassword := authx.DecodeBasic(c.Request().Header)
+			if authUsername == "" && authPassword == "" {
 				askCredentials(c, http.StatusUnauthorized, "")
 				return
 			}

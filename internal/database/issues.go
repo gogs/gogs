@@ -17,7 +17,6 @@ import (
 	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/markup"
 	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
-	"gogs.io/gogs/internal/tool"
 )
 
 var ErrMissingIssueNumber = errors.New("no issue number specified")
@@ -628,7 +627,11 @@ func (s *IssuesStore) buildListQuery(ctx context.Context, opts *IssuesOptions) *
 	db = db.Where("issue.is_pull = ?", opts.IsPull)
 
 	if len(opts.Labels) > 0 && opts.Labels != "0" {
-		labelIDs := tool.StringsToInt64s(strings.Split(opts.Labels, ","))
+		var labelIDs []int64
+		for field := range strings.SplitSeq(opts.Labels, ",") {
+			id, _ := strconv.ParseInt(field, 10, 64)
+			labelIDs = append(labelIDs, id)
+		}
 		db = db.Where("issue.id IN (?)", s.db.Model(new(IssueLabel)).Select("issue_id").Where("label_id IN ?", labelIDs))
 	}
 
@@ -795,7 +798,11 @@ func countOpenClosed(db *gorm.DB) (open, closed int64, err error) {
 func (s *IssuesStore) Stats(ctx context.Context, opts *IssueStatsOptions) (*IssueStats, error) {
 	db := s.db.WithContext(ctx).Model(new(Issue)).Where("issue.repo_id = ? AND issue.is_pull = ?", opts.RepoID, opts.IsPull)
 	if len(opts.Labels) > 0 && opts.Labels != "0" {
-		labelIDs := tool.StringsToInt64s(strings.Split(opts.Labels, ","))
+		var labelIDs []int64
+		for field := range strings.SplitSeq(opts.Labels, ",") {
+			id, _ := strconv.ParseInt(field, 10, 64)
+			labelIDs = append(labelIDs, id)
+		}
 		db = db.Where("issue.id IN (?)", s.db.Model(new(IssueLabel)).Select("issue_id").Where("label_id IN ?", labelIDs))
 	}
 	if opts.MilestoneID > 0 {

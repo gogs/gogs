@@ -12,7 +12,6 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/i18n"
 	"gogs.io/gogs/internal/osx"
-	"gogs.io/gogs/internal/tool"
 	"gogs.io/gogs/internal/userx"
 )
 
@@ -177,7 +176,7 @@ func getUserSettingsRepos(c flamego.Context, logger *logx.Logger, viewer *databa
 			IsPrivate: repo.IsPrivate,
 			IsFork:    repo.IsFork,
 			IsMirror:  repo.IsMirror,
-			Size:      tool.FileSize(repo.Size),
+			Size:      fileSize(repo.Size),
 			IsOwner:   repo.OwnerID == viewer.ID,
 		})
 	}

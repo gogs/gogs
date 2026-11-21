@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cockroachdb/errors"
 	"golang.org/x/crypto/pbkdf2"
@@ -21,7 +22,6 @@ import (
 	"gogs.io/gogs/internal/avatar"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/strx"
-	"gogs.io/gogs/internal/tool"
 )
 
 // codePurpose is signed into every time-limited user code so that a code issued
@@ -76,7 +76,7 @@ func timeLimitedUserCodeData(purpose codePurpose, userID int64, email, name, pas
 }
 
 func generateTimeLimitedUserCode(purpose codePurpose, userID int64, email, name, password, rands string, minutes int) string {
-	code := tool.CreateTimeLimitCode(
+	code := createTimeLimitCode(
 		timeLimitedUserCodeData(purpose, userID, email, name, password, rands),
 		minutes,
 		nil,
@@ -88,13 +88,13 @@ func generateTimeLimitedUserCode(purpose codePurpose, userID int64, email, name,
 }
 
 func verifyTimeLimitedUserCode(purpose codePurpose, code string, userID int64, email, name, password, rands string, minutes int) bool {
-	if len(code) <= tool.TimeLimitCodeLength {
+	if len(code) <= TimeLimitCodeLength {
 		return false
 	}
-	return tool.VerifyTimeLimitCode(
+	return verifyTimeLimitCode(
 		timeLimitedUserCodeData(purpose, userID, email, name, password, rands),
 		minutes,
-		code[:tool.TimeLimitCodeLength],
+		code[:TimeLimitCodeLength],
 	)
 }
 
@@ -202,4 +202,63 @@ func TwoFactorCacheKey(userID int64, passcode string) string {
 // the user salt.
 func RandomSalt() (string, error) {
 	return strx.RandomChars(10)
+}
+
+// TimeLimitCodeLength is the length of a time limit code created by
+// createTimeLimitCode.
+const TimeLimitCodeLength = 12 + 6 + 64
+
+// createTimeLimitCode generates a time limit code based on given input data.
+// Format: 12-character date time string + 6-digit minutes string + 64-character
+// hex-encoded HMAC-SHA256 string. A nil startInf starts the code now, otherwise
+// it is the date time string to start the code from.
+func createTimeLimitCode(data string, minutes int, startInf any) string {
+	format := "200601021504"
+
+	var start, end time.Time
+	var startStr, endStr string
+
+	if startInf == nil {
+		start = time.Now()
+		startStr = start.Format(format)
+	} else {
+		startStr = startInf.(string)
+		start, _ = time.ParseInLocation(format, startStr, time.Local)
+		startStr = start.Format(format)
+	}
+
+	end = start.Add(time.Minute * time.Duration(minutes))
+	endStr = end.Format(format)
+
+	mac := hmac.New(sha256.New, []byte(conf.Security.SecretKey))
+	_, _ = mac.Write([]byte(data + startStr + endStr + strconv.Itoa(minutes)))
+	encoded := hex.EncodeToString(mac.Sum(nil))
+
+	code := fmt.Sprintf("%s%06d%s", startStr, minutes, encoded)
+	return code
+}
+
+// verifyTimeLimitCode returns true if the code is a valid time limit code for
+// the given data that has not expired.
+func verifyTimeLimitCode(data string, minutes int, code string) bool {
+	if len(code) <= 18 {
+		return false
+	}
+
+	start := code[:12]
+	lives, err := strconv.Atoi(code[12:18])
+	if err != nil || lives <= 0 {
+		return false
+	}
+
+	retCode := createTimeLimitCode(data, lives, start)
+	if !hmac.Equal([]byte(retCode), []byte(code)) {
+		return false
+	}
+
+	// The code expires by the lifetime it was issued with or the currently
+	// configured one, whichever is shorter, so that lowering the configured
+	// lifetime also applies to codes already sent.
+	before, _ := time.ParseInLocation("200601021504", start, time.Local)
+	return before.Add(time.Minute*time.Duration(min(lives, minutes))).Unix() > time.Now().Unix()
 }

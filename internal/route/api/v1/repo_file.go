@@ -12,8 +12,8 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
+	"gogs.io/gogs/internal/mimex"
 	routerepo "gogs.io/gogs/internal/route/repo"
-	"gogs.io/gogs/internal/tool"
 )
 
 func getRawFile(c *apiContext) {
@@ -105,8 +105,8 @@ func serveBlob(c *apiContext, commit *git.Commit, treePath string, blob *git.Blo
 
 	w := c.ResponseWriter()
 	w.Header().Set("Last-Modified", pathCommit.Committer.When.Format(http.TimeFormat))
-	if !tool.IsTextFile(data) {
-		if !tool.IsImageFile(data) {
+	if !mimex.IsText(data) {
+		if !mimex.IsImage(data) {
 			w.Header().Set("Content-Disposition", "attachment; filename=\""+path.Base(treePath)+"\"")
 			w.Header().Set("Content-Transfer-Encoding", "binary")
 		}

@@ -21,9 +21,9 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/i18n"
+	"gogs.io/gogs/internal/mimex"
 	"gogs.io/gogs/internal/pathx"
 	"gogs.io/gogs/internal/template"
-	"gogs.io/gogs/internal/tool"
 )
 
 // limitEditorContent caps the size of a file written in the browser.
@@ -187,7 +187,7 @@ func getRepoEditorTarget(c flamego.Context, logger *logx.Logger, l i18n.Locale, 
 		logger.Error("Failed to read blob", "treePath", treePath, "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "read blob")
 	}
-	if tool.IsTextFile(p) {
+	if mimex.IsText(p) {
 		content, err := template.ToUTF8WithErr(logger, p)
 		if err != nil {
 			content = string(p)

@@ -24,10 +24,10 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/git"
+	"gogs.io/gogs/internal/mimex"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/repox"
 	routerepo "gogs.io/gogs/internal/route/repo"
-	"gogs.io/gogs/internal/tool"
 	"gogs.io/gogs/internal/userx"
 )
 
@@ -436,8 +436,8 @@ func getRepoWikiFile(c flamego.Context, logger *logx.Logger, repoCtx *repoContex
 
 	// Like raw repository files, only images are shown inline, and text is
 	// served as plain text so it never runs as a page of this site.
-	if !tool.IsTextFile(data) {
-		if !tool.IsImageFile(data) {
+	if !mimex.IsText(data) {
+		if !mimex.IsImage(data) {
 			w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": name}))
 			w.Header().Set("Content-Transfer-Encoding", "binary")
 		}

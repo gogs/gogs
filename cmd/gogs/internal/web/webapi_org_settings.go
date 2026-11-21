@@ -11,8 +11,8 @@ import (
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/i18n"
+	"gogs.io/gogs/internal/mimex"
 	"gogs.io/gogs/internal/osx"
-	"gogs.io/gogs/internal/tool"
 	"gogs.io/gogs/internal/userx"
 )
 
@@ -169,7 +169,7 @@ func readAvatarUpload(r *http.Request, l i18n.Locale) (data []byte, statusCode i
 	if len(data) > avatarMaxSize {
 		return nil, http.StatusRequestEntityTooLarge, errors.New(l.Tr("settings.uploaded_avatar_too_large", avatarMaxSize>>20))
 	}
-	if !tool.IsImageFile(data) {
+	if !mimex.IsImage(data) {
 		return nil, http.StatusBadRequest, errors.New(l.Tr("settings.uploaded_avatar_not_a_image"))
 	}
 	return data, http.StatusOK, nil

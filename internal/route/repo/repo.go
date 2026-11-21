@@ -13,7 +13,6 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/osx"
-	"gogs.io/gogs/internal/tool"
 )
 
 type archiveNotExistError struct {
@@ -77,7 +76,7 @@ func PrepareArchive(ctx stdctx.Context, gitRepo *git.Repository, repoName, uri s
 		return "", "", archiveNotExistError{errors.Newf("unknown reference %q", refName)}
 	}
 
-	archivePath = path.Join(archivePath, tool.ShortSHA1(commit.ID.String())+ext)
+	archivePath = path.Join(archivePath, git.ShortID(commit.ID.String())+ext)
 	if !osx.IsFile(archivePath) {
 		// Generate into a temporary file and rename it into place, so an interrupted
 		// or concurrent generation never leaves a partial archive at the path that

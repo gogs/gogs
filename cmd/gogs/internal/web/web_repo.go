@@ -16,8 +16,8 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
+	"gogs.io/gogs/internal/mimex"
 	"gogs.io/gogs/internal/repox"
-	"gogs.io/gogs/internal/tool"
 )
 
 // whitespaceFlag maps the `whitespace` query value to its `git diff` flag.
@@ -218,10 +218,10 @@ func getRepoRawFile(logger *logx.Logger, c flamego.Context, repoCtx *repoContext
 		// scripts never run when it is opened directly.
 		w.Header().Set("Content-Type", "image/svg+xml")
 		w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox")
-	case !tool.IsTextFile(data) && !tool.IsImageFile(data):
+	case !mimex.IsText(data) && !mimex.IsImage(data):
 		w.Header().Set("Content-Disposition", `attachment; filename="`+path.Base(filepath)+`"`)
 		w.Header().Set("Content-Transfer-Encoding", "binary")
-	case tool.IsTextFile(data) && (!conf.Repository.EnableRawFileRenderMode || !render):
+	case mimex.IsText(data) && (!conf.Repository.EnableRawFileRenderMode || !render):
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	}
 

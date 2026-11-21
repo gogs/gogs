@@ -8,14 +8,35 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/osx"
-	"gogs.io/gogs/internal/tool"
 )
+
+func TestVerifyTimeLimitCode(t *testing.T) {
+	const format = "200601021504"
+	issued := time.Now().Add(-30 * time.Minute).Format(format)
+	code := createTimeLimitCode("data", 60, issued)
+
+	assert.True(t, verifyTimeLimitCode("data", 60, code))
+	assert.False(t, verifyTimeLimitCode("other", 60, code))
+
+	t.Run("expires by the issued lifetime", func(t *testing.T) {
+		assert.False(t, verifyTimeLimitCode("data", 60, createTimeLimitCode("data", 20, issued)))
+	})
+
+	t.Run("expires by a lowered configured lifetime", func(t *testing.T) {
+		assert.False(t, verifyTimeLimitCode("data", 20, code))
+	})
+
+	t.Run("raised configured lifetime does not extend", func(t *testing.T) {
+		assert.False(t, verifyTimeLimitCode("data", 600, createTimeLimitCode("data", 20, issued)))
+	})
+}
 
 func TestTimeLimitedUserCode(t *testing.T) {
 	conf.SetMockAuth(t,
@@ -47,7 +68,7 @@ func TestTimeLimitedUserCode(t *testing.T) {
 
 	t.Run("malformed code", func(t *testing.T) {
 		assert.False(t, VerifyActivateCode("", 1, "alice@example.com", "Alice", "123456", "rands"))
-		assert.False(t, VerifyActivateCode(activateCode[:tool.TimeLimitCodeLength], 1, "alice@example.com", "Alice", "123456", "rands"))
+		assert.False(t, VerifyActivateCode(activateCode[:TimeLimitCodeLength], 1, "alice@example.com", "Alice", "123456", "rands"))
 	})
 }
 

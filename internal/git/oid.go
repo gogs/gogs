@@ -40,6 +40,14 @@ func IsEmptyID(id string) bool {
 	return id == ObjectFormatSHA1.EmptyID() || id == ObjectFormatSHA256.EmptyID()
 }
 
+// ShortID truncates the object ID to at most 10 characters.
+func ShortID(id string) string {
+	if len(id) > 10 {
+		return id[:10]
+	}
+	return id
+}
+
 // OID is the ID of a Git object, i.e., a *SHA1 or a *SHA256 depending on the
 // object format of the repository.
 type OID interface {
