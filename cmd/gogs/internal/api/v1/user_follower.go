@@ -1,6 +1,10 @@
 package v1
 
 import (
+	"net/http"
+
+	"github.com/cockroachdb/errors"
+
 	"gogs.io/gogs/internal/api/v1types"
 	"gogs.io/gogs/internal/database"
 )
@@ -91,7 +95,7 @@ func follow(c *apiContext) {
 	// Organizations cannot be followed, as in the web interface. Existing follows
 	// of an organization can still be removed.
 	if target.IsOrganization() {
-		c.NotFound()
+		c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("%s is an organization, not a user", target.Name))
 		return
 	}
 	if err := database.Handle.Users().Follow(c.Request().Context(), c.User.ID, target.ID); err != nil {

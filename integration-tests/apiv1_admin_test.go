@@ -109,11 +109,11 @@ func TestAPIV1AdminUsers(t *testing.T) {
 		apiV1Client(t, seedUser(t, CreateUserOptions{})).doJSON(http.MethodPost, "/api/v1/user/orgs", map[string]any{"username": orgName}, http.StatusCreated, &org)
 
 		status, body := admin.do(http.MethodPatch, "/api/v1/admin/users/"+orgName, map[string]any{"email": orgName + "@example.com", "password": "password", "admin": true})
-		assert.Equal(t, http.StatusNotFound, status, "edited, response: %s", body)
+		assert.Equal(t, http.StatusUnprocessableEntity, status, "edited, response: %s", body)
 		status, body = admin.do(http.MethodPost, "/api/v1/admin/users/"+orgName+"/keys", map[string]any{"title": UniqueName("key-"), "key": apiV1PublicKey(t)})
-		assert.Equal(t, http.StatusNotFound, status, "public key added, response: %s", body)
+		assert.Equal(t, http.StatusUnprocessableEntity, status, "public key added, response: %s", body)
 		status, body = admin.do(http.MethodDelete, "/api/v1/admin/users/"+orgName, nil)
-		assert.Equal(t, http.StatusNotFound, status, "deleted, response: %s", body)
+		assert.Equal(t, http.StatusUnprocessableEntity, status, "deleted, response: %s", body)
 
 		got, err := database.Handle.Users().GetByID(t.Context(), org.ID)
 		require.NoError(t, err)
@@ -179,7 +179,7 @@ func TestAPIV1AdminCreateForUser(t *testing.T) {
 		assert.True(t, database.Handle.Organizations().IsOwner(t.Context(), got.ID, u.ID), "user does not own the organization")
 
 		status, body = admin.do(http.MethodPost, "/api/v1/admin/users/"+name+"/orgs", map[string]any{"username": UniqueName("org-")})
-		assert.Equal(t, http.StatusNotFound, status, "created for an organization, response: %s", body)
+		assert.Equal(t, http.StatusUnprocessableEntity, status, "created for an organization, response: %s", body)
 
 		// Organizations still own repositories created for them.
 		var repo apiV1Repo
@@ -251,7 +251,7 @@ func TestAPIV1AdminTeams(t *testing.T) {
 		assert.Empty(t, listMembers())
 
 		status, body = admin.do(http.MethodPut, teamPath+"/members/"+orgName, nil)
-		assert.Equal(t, http.StatusNotFound, status, "added an organization, response: %s", body)
+		assert.Equal(t, http.StatusUnprocessableEntity, status, "added an organization, response: %s", body)
 		assert.Empty(t, listMembers())
 		// Removing an organization from a team stays possible, to clean up existing data.
 		status, body = admin.do(http.MethodDelete, teamPath+"/members/"+orgName, nil)

@@ -3,6 +3,8 @@ package v1
 import (
 	"net/http"
 
+	"github.com/cockroachdb/errors"
+
 	"gogs.io/gogs/internal/api/v1types"
 	"gogs.io/gogs/internal/database"
 )
@@ -38,7 +40,7 @@ func adminAddTeamMember(c *apiContext) {
 		return
 	}
 	if u.IsOrganization() {
-		c.NotFound()
+		c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("%s is an organization, not a user", u.Name))
 		return
 	}
 	if err := database.Handle.Teams().AddMember(c.Request().Context(), c.Org.Team.OrgID, c.Org.Team.ID, u.ID); err != nil {

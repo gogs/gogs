@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 
@@ -67,9 +68,29 @@ func (s *OrganizationsStore) SearchByName(ctx context.Context, keyword string, p
 	return searchUserByName(ctx, s.db, UserTypeOrganization, keyword, page, pageSize, orderBy)
 }
 
+// ErrOrgOwnerIsOrganization is returned when an organization is given as the
+// owner of a new organization, which only users can own.
+type ErrOrgOwnerIsOrganization struct {
+	args errx.Args
+}
+
+// IsErrOrgOwnerIsOrganization returns true if the underlying error has the type
+// ErrOrgOwnerIsOrganization.
+func IsErrOrgOwnerIsOrganization(err error) bool {
+	return errors.As(err, &ErrOrgOwnerIsOrganization{})
+}
+
+func (err ErrOrgOwnerIsOrganization) Error() string {
+	return fmt.Sprintf("organization cannot own an organization: %v", err.args)
+}
+
 // Create creates the organization with the owner as its first member, and
-// the owner team of the organization with the owner in it.
+// the owner team of the organization with the owner in it. It returns
+// ErrOrgOwnerIsOrganization when the owner is an organization.
 func (s *OrganizationsStore) Create(ctx context.Context, org, owner *User) (err error) {
+	if owner.IsOrganization() {
+		return ErrOrgOwnerIsOrganization{args: errx.Args{"ownerID": owner.ID}}
+	}
 	if err = isUsernameAllowed(org.Name); err != nil {
 		return err
 	}

@@ -103,7 +103,7 @@ func adminEditUser(c *apiContext, form adminEditUserRequest) {
 		return
 	}
 	if u.IsOrganization() {
-		c.NotFound()
+		c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("%s is an organization, not a user", u.Name))
 		return
 	}
 
@@ -159,7 +159,7 @@ func adminDeleteUser(c *apiContext) {
 		return
 	}
 	if u.IsOrganization() {
-		c.NotFound()
+		c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("%s is an organization, not a user", u.Name))
 		return
 	}
 
@@ -183,7 +183,7 @@ func adminCreatePublicKey(c *apiContext, form createPublicKeyRequest) {
 		return
 	}
 	if u.IsOrganization() {
-		c.NotFound()
+		c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("%s is an organization, not a user", u.Name))
 		return
 	}
 	createUserPublicKey(c, form, u.ID)
