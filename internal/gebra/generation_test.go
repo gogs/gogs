@@ -479,3 +479,27 @@ func TestRevisionAcrossFlip(t *testing.T) {
 	require.False(t, raceQuery.Load(), "the query raced with the flip")
 	assert.True(t, ok, "the query sees the write that committed before it")
 }
+
+// TestListAcrossFlip lists a page, which reads the view that the engine saw
+// serving, then flips the view to a model where folder owners are not
+// viewers, and checks that the next page answers under the new model rather
+// than from the old generation, whose rows remain until they are collected.
+func TestListAcrossFlip(t *testing.T) {
+	ctx := context.Background()
+	e, storeID := newTestEngineWith(t, testModel, Options{manualApply: true})
+	mustWrite(t, e, storeID, &WriteRequest{Writes: []TupleKey{tk("user:bob", "owner", "folder:plans")}})
+	drainView(t, e, storeID)
+	list := func() []string {
+		t.Helper()
+		objects, _, err := e.ListObjects(ctx, storeID, &ListObjectsRequest{Type: "folder", Relation: "viewer", User: "user:bob", PageSize: 10})
+		require.NoError(t, err)
+		return objects
+	}
+	require.Equal(t, []string{"folder:plans"}, list())
+
+	_, err := e.WriteAuthorizationModel(ctx, storeID, withoutOwnerViewers(t))
+	require.NoError(t, err)
+	drainView(t, e, storeID)
+	require.True(t, modelLive(t, e, storeID))
+	assert.Empty(t, list())
+}

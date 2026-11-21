@@ -43,14 +43,25 @@ func (e *Engine) ListObjects(ctx context.Context, storeID string, req *ListObjec
 		o.end(err, attribute.Int("gebra.results", len(out)), attribute.Int("gebra.page_size", req.PageSize))
 	}()
 	var rows []cursorRow
-	err = e.listObjects(ctx, storeID, req, req.PageSize, func(r cursorRow) error {
+	emit := func(r cursorRow) error {
 		rows = append(rows, r)
 		out = append(out, req.Type+":"+r.ID)
 		if req.PageSize > 0 && len(out) > req.PageSize {
 			return errStop
 		}
 		return nil
-	})
+	}
+	page, ok, err := e.fastList(ctx, o, storeID, req)
+	if err != nil {
+		return nil, "", err
+	}
+	if ok {
+		for _, r := range page {
+			_ = emit(r)
+		}
+	} else {
+		err = e.listObjects(ctx, storeID, req, req.PageSize, emit)
+	}
 	if err != nil && !errors.Is(err, errStop) {
 		return nil, "", err
 	}
@@ -189,6 +200,100 @@ SELECT object_id FROM gebra_pending WHERE store_id = ? AND object_type = ? AND d
 		}
 	}
 	return e.walkSorted(ev, src, after, extras, verify, pageSize, check, emit)
+}
+
+// fastList answers a page of objects of a materialized relation in ID order
+// with one statement when it can, as fastCheck does a check: the statement
+// reads the page from the view that the engine last saw serving, and checks
+// that the view still serves and the store exists. A single statement reads
+// one point in time, so the list needs no snapshot transaction. Otherwise it
+// returns false and leaves the list to listObjects.
+func (e *Engine) fastList(ctx context.Context, o *op, storeID string, req *ListObjectsRequest) ([]cursorRow, bool, error) {
+	c := req.Consistency
+	if req.PageSize <= 0 || e.db.dialect != DialectPostgres || req.Sort.Attribute != "" || len(req.ContextualTuples) > 0 ||
+		c.MinRevision != "" || c.Preference == ConsistencyHigher {
+		return nil, false, nil
+	}
+	// listObjects rejects an invalid consistency.
+	if _, err := minRevision(c); err != nil {
+		return nil, false, nil
+	}
+	lv, ok, err := e.liveView(ctx, storeID)
+	if err != nil || !ok || req.AuthorizationModelID != "" && req.AuthorizationModelID != lv.modelID {
+		return nil, false, err
+	}
+	m, err := e.model(ctx, e.db.handle(), storeID, lv.modelID)
+	if err != nil {
+		return nil, false, nil
+	}
+	if r := m.relation(req.Type, req.Relation); r == nil || !r.materialized {
+		return nil, false, nil
+	}
+	sub, err := parseSubject(req.User)
+	if err != nil || sub.rel != "" || m.validateSubject(sub) != nil {
+		return nil, false, nil
+	}
+	after, err := parseCursor(req.ContinuationToken)
+	if err != nil {
+		return nil, false, nil
+	}
+	if c.Preference != ConsistencyMinimizeLatency {
+		stale, err := e.viewStale(ctx, e.db.handle(), storeID)
+		if err != nil || stale {
+			return nil, false, err
+		}
+	}
+	ids := []string{sub.id}
+	if sub.id != "*" {
+		ids = append(ids, "*")
+	}
+	v := viewObjects{storeID: storeID, gen: lv.gen, m: m, userType: sub.typ, userIDs: ids, objectType: req.Type, rels: []string{req.Relation}, sort: req.Sort, collation: e.collation()}
+	page, args := v.query(after, req.PageSize+1)
+	dir, cmp := "ASC", ">"
+	if req.Sort.Descending {
+		dir, cmp = "DESC", "<"
+	}
+	id := "c.obj_id" + e.collation()
+	cursor := ""
+	if after != nil {
+		cursor = " WHERE " + id + " " + cmp + " ?"
+		args = append(args, after.ID)
+	}
+	query := `SELECT s.gen, s.alive, COALESCE(c.id, '') AS id FROM (SELECT
+	COALESCE((SELECT gen FROM gebra_view_state WHERE store_id = ?), 0) AS gen,
+	(SELECT COUNT(*) FROM gebra_store WHERE id = ? AND deleted_at IS NULL) AS alive) s
+LEFT JOIN LATERAL (SELECT c.obj_id AS id FROM (` + page + `) c` + cursor + ` ORDER BY ` + id + ` ` + dir + ` LIMIT ?) c ON TRUE
+ORDER BY c.id` + e.collation() + ` ` + dir
+	args = append([]any{storeID, storeID}, append(args, req.PageSize+1)...)
+	conn, err := e.conn(ctx)
+	if err != nil {
+		return nil, false, err
+	}
+	defer func() { _ = conn.Close() }()
+	type row struct {
+		Gen   int64
+		Alive int64
+		ID    string
+	}
+	rows, err := queryStructs[row](ctx, dbtx{database: e.db, q: conn}, query, args...)
+	if err != nil {
+		return nil, false, errors.Wrap(err, "list view")
+	}
+	if len(rows) == 0 || rows[0].Alive == 0 || rows[0].Gen != lv.gen {
+		e.live.Delete(storeID)
+		return nil, false, nil
+	}
+	if o != nil {
+		o.target(req.Type, req.Relation)
+		o.setPath("view")
+	}
+	out := make([]cursorRow, 0, len(rows))
+	for _, r := range rows {
+		if r.ID != "" {
+			out = append(out, cursorRow{ID: r.ID})
+		}
+	}
+	return out, true, nil
 }
 
 // viewObjects reads from the view the objects of a type that subjects are in
