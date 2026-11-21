@@ -30,11 +30,12 @@ var Tables = []any{
 	new(Label), new(LFSObject), new(LoginSource),
 	new(Milestone), new(Mirror),
 	new(Notice),
-	new(Passkey), new(PublicKey), new(PullRequest),
+	new(OrgUser),
+	new(Passkey), new(ProtectBranch), new(PublicKey), new(PullRequest),
 	new(Release),
 	new(Star),
-	new(TwoFactor), new(TwoFactorRecoveryCode),
-	new(Upload),
+	new(Team), new(TeamRepo), new(TeamUser), new(TwoFactor), new(TwoFactorRecoveryCode),
+	new(Upload), new(User),
 	new(Watch), new(Webhook),
 }
 
@@ -190,7 +191,7 @@ func (db *DB) Notices() *NoticesStore {
 }
 
 func (db *DB) Organizations() *OrganizationsStore {
-	return newOrganizationsStoreStore(db.db)
+	return newOrganizationsStore(db.db)
 }
 
 func (db *DB) Passkeys() *PasskeysStore {
@@ -219,6 +220,10 @@ func (db *DB) Releases() *ReleasesStore {
 
 func (db *DB) Repositories() *RepositoriesStore {
 	return newReposStore(db.db)
+}
+
+func (db *DB) Teams() *TeamsStore {
+	return newTeamsStore(db.db)
 }
 
 func (db *DB) TwoFactors() *TwoFactorsStore {

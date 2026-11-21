@@ -27,7 +27,7 @@ func TestDumpAndImport(t *testing.T) {
 	}
 	t.Parallel()
 
-	const wantTables = 29
+	const wantTables = 35
 	if len(Tables) != wantTables {
 		t.Fatalf("New table has added (want %d got %d), please add new tests for the table and update this check", wantTables, len(Tables))
 	}
@@ -370,6 +370,15 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			CreatedUnix: 1588568886,
 		},
 
+		&OrgUser{
+			ID:       1,
+			UID:      1,
+			OrgID:    3,
+			IsPublic: true,
+			IsOwner:  true,
+			NumTeams: 1,
+		},
+
 		&Passkey{
 			ID:     1,
 			UserID: 1,
@@ -384,6 +393,17 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			},
 			CreatedUnix: 1588568886,
 			UpdatedUnix: 1588572486, // 1 hour later
+		},
+
+		&ProtectBranch{
+			ID:                 1,
+			RepoID:             1,
+			Name:               "main",
+			Protected:          true,
+			RequirePullRequest: true,
+			EnableAllowlist:    true,
+			AllowlistUserIDs:   "1,2",
+			AllowlistTeamIDs:   "1",
 		},
 
 		&PublicKey{
@@ -457,6 +477,31 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			RepoID: 1,
 		},
 
+		&Team{
+			ID:          1,
+			OrgID:       3,
+			LowerName:   "owners",
+			Name:        "Owners",
+			Description: "Owners of the organization",
+			Authorize:   AccessModeOwner,
+			NumRepos:    1,
+			NumMembers:  1,
+		},
+
+		&TeamRepo{
+			ID:     1,
+			OrgID:  3,
+			TeamID: 1,
+			RepoID: 2,
+		},
+
+		&TeamUser{
+			ID:     1,
+			OrgID:  3,
+			TeamID: 1,
+			UID:    1,
+		},
+
 		&TwoFactor{
 			ID:          1,
 			UserID:      1,
@@ -480,6 +525,61 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			ID:   1,
 			UUID: "8c2d0f1e-5a6b-4c7d-9e8f-0a1b2c3d4e5f",
 			Name: "notes.txt",
+		},
+
+		&User{
+			ID:               1,
+			LowerName:        "alice",
+			Name:             "Alice",
+			FullName:         "Alice Anders",
+			Email:            "alice@example.com",
+			Password:         "6c1f1a9d0e2b3c4d5e6f7a8b9c0d1e2f",
+			LoginName:        "alice",
+			Type:             UserTypeIndividual,
+			Location:         "Earth",
+			Website:          "https://alice.example.com",
+			Rands:            "abcdefghij",
+			Salt:             "klmnopqrst",
+			CreatedUnix:      1588568886,
+			UpdatedUnix:      1588572486,
+			MaxRepoCreation:  -1,
+			IsActive:         true,
+			IsAdmin:          true,
+			AllowGitHook:     true,
+			AllowImportLocal: true,
+			UseCustomAvatar:  true,
+			NumFollowers:     1,
+			NumFollowing:     1,
+			NumStars:         1,
+			NumRepos:         1,
+			Description:      "Hello",
+		},
+		&User{
+			ID:              2,
+			LowerName:       "bob",
+			Name:            "bob",
+			Email:           "bob@example.com",
+			LoginSource:     1,
+			LoginName:       "bob",
+			Type:            UserTypeIndividual,
+			CreatedUnix:     1588568886,
+			UpdatedUnix:     1588568886,
+			MaxRepoCreation: 10,
+			ProhibitLogin:   true,
+		},
+		&User{
+			ID:              3,
+			LowerName:       "acme",
+			Name:            "acme",
+			FullName:        "Acme Inc.",
+			Type:            UserTypeOrganization,
+			CreatedUnix:     1588568886,
+			UpdatedUnix:     1588568886,
+			MaxRepoCreation: -1,
+			IsActive:        true,
+			NumRepos:        1,
+			NumTeams:        1,
+			NumMembers:      1,
 		},
 
 		&Watch{
@@ -527,6 +627,9 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 	}
 	// Creating leaves out a false EnablePrune for the column default to apply.
 	err := db.Model(new(Mirror)).Where("id = ?", 2).Update("enable_prune", false).Error
+	require.NoError(t, err)
+	// The create hook replaces a zero creation limit and timestamps.
+	err = db.Model(&User{ID: 2}).UpdateColumns(map[string]any{"max_repo_creation": 0, "created_unix": 0, "updated_unix": 0}).Error
 	require.NoError(t, err)
 }
 

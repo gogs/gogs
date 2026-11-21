@@ -101,7 +101,7 @@ func TestProfileUser(t *testing.T) {
 	assert.False(t, other.ViewerIsSelf)
 	assert.Empty(t, other.orgNames(), "private membership shown")
 
-	require.NoError(t, database.ChangeOrgUserStatus(org.ID, u.ID, true))
+	require.NoError(t, database.Handle.Organizations().SetMemberVisibility(t.Context(), org.ID, u.ID, true))
 	assert.Equal(t, []string{org.Name}, orgGetProfile(t, viewerClient, u.Name).orgNames())
 
 	status, body := newClient(t).do(http.MethodGet, "/api/web/users/"+UniqueName("missing-"), nil)

@@ -76,7 +76,7 @@ func TestAPIV1Organizations(t *testing.T) {
 		orgs = nil
 		newClient(t).doJSON(http.MethodGet, "/api/v1/users/"+owner.Name+"/orgs", nil, http.StatusOK, &orgs)
 		assert.Empty(t, orgs)
-		require.NoError(t, database.ChangeOrgUserStatus(created.ID, owner.ID, true))
+		require.NoError(t, database.Handle.Organizations().SetMemberVisibility(t.Context(), created.ID, owner.ID, true))
 		orgs = nil
 		newClient(t).doJSON(http.MethodGet, "/api/v1/users/"+owner.Name+"/orgs", nil, http.StatusOK, &orgs)
 		assert.Equal(t, []string{name}, apiV1OrgNames(orgs))

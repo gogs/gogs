@@ -67,12 +67,12 @@ type userProfile struct {
 // getUserProfile returns the profile of a user, or the home page of an
 // organization.
 func getUserProfile(logger *logx.Logger, c flamego.Context, viewer *database.User, puser *profileUser) (statusCode int, resp any, err error) {
+	ctx := c.Request().Context()
 	if puser.IsOrganization() {
-		return getOrgProfile(logger, viewer, puser)
+		return getOrgProfile(ctx, logger, viewer, puser)
 	}
 
-	ctx := c.Request().Context()
-	orgs, err := database.GetOrgsByUserID(puser.ID, puser.canSeePrivate(viewer))
+	orgs, err := database.Handle.Organizations().List(ctx, database.ListOrgsOptions{MemberID: puser.ID, IncludePrivateMembers: puser.canSeePrivate(viewer)})
 	if err != nil {
 		logger.Error("Failed to get organizations of user", "userID", puser.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get organizations")
@@ -103,6 +103,7 @@ func getUserProfile(logger *logx.Logger, c flamego.Context, viewer *database.Use
 }
 
 func getUserProfileRepos(logger *logx.Logger, c flamego.Context, viewer *database.User, puser *profileUser) (statusCode int, resp *listPage[exploreRepo], err error) {
+	ctx := c.Request().Context()
 	page := pageParam(c)
 	var (
 		repos []*database.Repository
@@ -111,7 +112,7 @@ func getUserProfileRepos(logger *logx.Logger, c flamego.Context, viewer *databas
 	if puser.IsOrganization() && viewer != nil && !viewer.IsAdmin {
 		// Authenticated users see the public repositories of the organization and
 		// those of their teams.
-		repos, total, err = puser.GetUserRepositories(viewer.ID, page, conf.UI.User.RepoPagingNum)
+		repos, total, err = database.Handle.Organizations().ListAccessibleRepos(ctx, puser.ID, viewer.ID, page, conf.UI.User.RepoPagingNum)
 	} else {
 		showPrivate := puser.canSeePrivate(viewer)
 		repos, err = database.GetUserRepositories(&database.UserRepoOptions{
@@ -392,7 +393,7 @@ type orgProfile struct {
 // organization.
 const orgMembersShown = 12
 
-func getOrgProfile(logger *logx.Logger, viewer *database.User, org *profileUser) (statusCode int, resp *orgProfile, err error) {
+func getOrgProfile(ctx context.Context, logger *logx.Logger, viewer *database.User, org *profileUser) (statusCode int, resp *orgProfile, err error) {
 	profile := &orgProfile{
 		Kind:        "organization",
 		exploreUser: toExploreUser(org.User),
@@ -404,17 +405,18 @@ func getOrgProfile(logger *logx.Logger, viewer *database.User, org *profileUser)
 	profile.Website = org.Website
 	if viewer != nil {
 		// Admins have the access of owners.
-		profile.ViewerIsOwner = viewer.IsAdmin || org.IsOwnedBy(viewer.ID)
-		profile.ViewerIsMember = profile.ViewerIsOwner || org.IsOrgMember(viewer.ID)
+		profile.ViewerIsOwner = viewer.IsAdmin || database.Handle.Organizations().IsOwner(ctx, org.ID, viewer.ID)
+		profile.ViewerIsMember = profile.ViewerIsOwner || database.Handle.Organizations().IsMember(ctx, org.ID, viewer.ID)
 	}
 
-	if err = org.GetMembers(orgMembersShown); err != nil {
+	members, err := database.Handle.Organizations().ListMembers(ctx, org.ID, orgMembersShown)
+	if err != nil {
 		logger.Error("Failed to get members of organization", "orgID", org.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get members")
 	}
-	for _, m := range org.Members {
+	for _, m := range members {
 		// Members see everyone, others only the public members.
-		if !profile.ViewerIsMember && !m.IsPublicMember(org.ID) {
+		if !profile.ViewerIsMember && !database.Handle.Organizations().IsPublicMember(ctx, org.ID, m.ID) {
 			continue
 		}
 		member := toExploreUser(m)
@@ -433,10 +435,9 @@ func getOrgProfile(logger *logx.Logger, viewer *database.User, org *profileUser)
 	// Owners see every team, other members only their own.
 	var teams []*database.Team
 	if profile.ViewerIsOwner {
-		err = org.GetTeams()
-		teams = org.Teams
+		teams, err = database.Handle.Teams().ListByOrg(ctx, org.ID)
 	} else {
-		teams, err = org.GetUserTeams(viewer.ID)
+		teams, err = database.Handle.Teams().ListByMember(ctx, org.ID, viewer.ID)
 	}
 	if err != nil {
 		logger.Error("Failed to get teams of organization", "orgID", org.ID, "error", err)

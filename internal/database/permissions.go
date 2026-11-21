@@ -238,7 +238,7 @@ func (s *PermissionsStore) recalculateUserAccess(ctx context.Context, repo *Repo
 		for _, t := range teams {
 			if t.IsOwnerTeam() {
 				mode = AccessModeOwner
-			} else if t.hasRepository(db, repo.ID) {
+			} else if newTeamsStore(db).HasRepo(ctx, repo.OwnerID, t.ID, repo.ID) {
 				mode = max(mode, t.Authorize)
 			}
 		}
@@ -302,24 +302,27 @@ func (s *PermissionsStore) recalculateTeamAccesses(ctx context.Context, repo *Re
 		return err
 	}
 
-	if err = repo.Owner.getTeams(db); err != nil {
+	teams := newTeamsStore(s.db)
+	orgTeams, err := teams.ListByOrg(ctx, repo.OwnerID)
+	if err != nil {
 		return errors.Wrap(err, "list teams")
 	}
-	for _, t := range repo.Owner.Teams {
+	for _, t := range orgTeams {
 		if t.ID == ignoredTeamID {
 			continue
 		}
 
 		if t.IsOwnerTeam() {
 			t.Authorize = AccessModeOwner
-		} else if !t.hasRepository(db, repo.ID) {
+		} else if !teams.HasRepo(ctx, repo.OwnerID, t.ID, repo.ID) {
 			continue
 		}
 
-		if err = t.getMembers(db); err != nil {
+		members, err := teams.ListMembers(ctx, t.ID)
+		if err != nil {
 			return errors.Wrapf(err, "list members of team %d", t.ID)
 		}
-		for _, m := range t.Members {
+		for _, m := range members {
 			accessMap[m.ID] = max(accessMap[m.ID], t.Authorize)
 		}
 	}

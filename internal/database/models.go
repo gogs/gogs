@@ -79,12 +79,7 @@ func init() {
 	// Register the pure-Go SQLite driver as "sqlite3" for XORM compatibility.
 	sql.Register("sqlite3", &sqlite.Driver{})
 
-	legacyTables = append(legacyTables,
-		new(User),
-		new(Repository),
-		new(ProtectBranch),
-		new(Team), new(OrgUser), new(TeamUser), new(TeamRepo),
-	)
+	legacyTables = append(legacyTables, new(Repository))
 
 	gonicNames := []string{"SSL"}
 	for _, name := range gonicNames {
@@ -276,7 +271,7 @@ func GetStatistic(ctx context.Context, logger *logx.Logger) (stats Statistic) {
 	}
 
 	stats.Counter.User = Handle.Users().Count(ctx)
-	stats.Counter.Org = CountOrganizations()
+	stats.Counter.Org = Handle.Organizations().Count(ctx)
 	stats.Counter.PublicKey = count(new(PublicKey))
 	stats.Counter.Repo = CountRepositories(logger, true)
 	stats.Counter.Watch = count(new(Watch))

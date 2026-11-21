@@ -34,7 +34,7 @@ func repoOwner(ctx context.Context, viewer *database.User, ownerID int64) (*data
 	} else if err != nil {
 		return nil, errors.Wrap(err, "get owner")
 	}
-	if !owner.IsOrganization() || !(viewer.IsAdmin || owner.IsOwnedBy(viewer.ID)) {
+	if !owner.IsOrganization() || !(viewer.IsAdmin || database.Handle.Organizations().IsOwner(ctx, owner.ID, viewer.ID)) {
 		return nil, errRepoOwnerNotAllowed
 	}
 	return owner, nil
@@ -64,8 +64,8 @@ type repoNewOptions struct {
 // repoNewOwners lists the owners the viewer can create repositories for: the
 // viewer and the organizations they own, and then the given owner when it is
 // none of them, e.g., an organization a site admin asks for.
-func repoNewOwners(viewer, owner *database.User) ([]repoNewOwner, error) {
-	orgs, err := database.GetOwnedOrgsByUserIDDesc(viewer.ID, "updated_unix")
+func repoNewOwners(ctx context.Context, viewer, owner *database.User) ([]repoNewOwner, error) {
+	orgs, err := database.Handle.Organizations().ListOwnedBy(ctx, viewer.ID)
 	if err != nil {
 		return nil, errors.Wrap(err, "get owned organizations")
 	}
@@ -82,6 +82,7 @@ func repoNewOwners(viewer, owner *database.User) ([]repoNewOwner, error) {
 }
 
 func getRepoNew(c flamego.Context, logger *logx.Logger, viewer *database.User) (statusCode int, resp any, err error) {
+	ctx := c.Request().Context()
 	orgID, _ := strconv.ParseInt(c.Query("org"), 10, 64)
 	owner, err := repoOwner(c.Request().Context(), viewer, orgID)
 	if errors.Is(err, errRepoOwnerNotAllowed) {
@@ -91,7 +92,7 @@ func getRepoNew(c flamego.Context, logger *logx.Logger, viewer *database.User) (
 		logger.Error("Failed to get owner", "ownerID", orgID, "error", err)
 		return http.StatusInternalServerError, nil, err
 	}
-	owners, err := repoNewOwners(viewer, owner)
+	owners, err := repoNewOwners(ctx, viewer, owner)
 	if err != nil {
 		logger.Error("Failed to list owners", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, err

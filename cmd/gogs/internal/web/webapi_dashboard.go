@@ -25,6 +25,7 @@ type dashboardOwner struct {
 // as *dashboardOwner, or the authenticated user when there is none. Only
 // members see the dashboard of an organization.
 func withDashboardOwner(logger *logx.Logger, c flamego.Context, viewer *database.User) {
+	ctx := c.Request().Context()
 	w := c.ResponseWriter()
 	name := c.Param("org")
 	if name == "" {
@@ -38,7 +39,7 @@ func withDashboardOwner(logger *logx.Logger, c flamego.Context, viewer *database
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "get organization"))
 		return
 	}
-	if err != nil || !org.IsOrganization() || !(viewer.IsAdmin || org.IsOwnedBy(viewer.ID) || org.IsOrgMember(viewer.ID)) {
+	if err != nil || !org.IsOrganization() || !(viewer.IsAdmin || database.Handle.Organizations().IsOwner(ctx, org.ID, viewer.ID) || database.Handle.Organizations().IsMember(ctx, org.ID, viewer.ID)) {
 		writeErrorResponse(w, http.StatusNotFound, errors.New("organization does not exist"))
 		return
 	}
@@ -146,9 +147,9 @@ func getDashboard(logger *logx.Logger, c flamego.Context, viewer *database.User,
 		repoCount      int64
 	)
 	if owner.IsOrganization() {
-		repos, repoCount, err = owner.GetUserRepositories(viewer.ID, 1, conf.UI.User.RepoPagingNum)
+		repos, repoCount, err = database.Handle.Organizations().ListAccessibleRepos(ctx, owner.ID, viewer.ID, 1, conf.UI.User.RepoPagingNum)
 		if err == nil {
-			mirrors, err = owner.GetUserMirrorRepositories(viewer.ID)
+			mirrors, err = database.Handle.Organizations().ListAccessibleMirrors(ctx, owner.ID, viewer.ID)
 		}
 	} else {
 		repos, err = database.GetUserRepositories(&database.UserRepoOptions{
@@ -290,6 +291,7 @@ func getDashboardPulls(logger *logx.Logger, c flamego.Context, viewer *database.
 // filtered and sorted by the `type`, `repo`, `state`, `sort` and `page` query
 // parameters.
 func listDashboardIssues(logger *logx.Logger, c flamego.Context, viewer *database.User, owner *dashboardOwner, isPull bool) (statusCode int, resp *dashboardIssues, err error) {
+	ctx := c.Request().Context()
 	filterMode := database.FilterModeYourRepos
 	if !owner.IsOrganization() {
 		switch mode := database.FilterMode(c.Query("type")); mode {
@@ -314,7 +316,7 @@ func listDashboardIssues(logger *logx.Logger, c flamego.Context, viewer *databas
 
 	var repos []*database.Repository
 	if owner.IsOrganization() {
-		repos, _, err = owner.GetUserRepositories(viewer.ID, 1, owner.NumRepos)
+		repos, _, err = database.Handle.Organizations().ListAccessibleRepos(ctx, owner.ID, viewer.ID, 1, owner.NumRepos)
 	} else {
 		repos, err = database.GetUserRepositories(&database.UserRepoOptions{
 			UserID:   owner.ID,
