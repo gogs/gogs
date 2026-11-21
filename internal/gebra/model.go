@@ -1,7 +1,9 @@
 package gebra
 
 import (
+	"cmp"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 )
@@ -113,6 +115,10 @@ type compiledModel struct {
 	// revTTU[type][tupleset] lists every tuple to userset that reads tupleset,
 	// materialized or not.
 	revTTU map[string]map[string][]ttuEdge
+	// inner[type][relation] lists, as type and relation pairs, the relations
+	// whose sets the view can put inside a set of the materialized relation,
+	// directly or indirectly, i.e., those that can have reach rows to it.
+	inner map[string]map[string][][2]string
 }
 
 type typeInfo struct {
@@ -175,6 +181,7 @@ func compileModel(src *AuthorizationModel, conditionCostLimit uint64) (*compiled
 		ttuEdges:        make(map[string]map[string][]ttuEdge),
 		revComputed:     make(map[string]map[string][]string),
 		revTTU:          make(map[string]map[string][]ttuEdge),
+		inner:           make(map[string]map[string][][2]string),
 	}
 
 	for name, c := range src.Conditions {
@@ -256,6 +263,7 @@ func compileModel(src *AuthorizationModel, conditionCostLimit uint64) (*compiled
 
 	m.computeMaterialized()
 	m.buildIndexes()
+	m.buildInner()
 	return m, nil
 }
 
@@ -569,6 +577,73 @@ func (m *compiledModel) buildIndexes() {
 					}
 				}
 			})
+		}
+	}
+}
+
+// buildInner fills inner by walking the edges that viewEffects and
+// implicitParents can give, from parent relation to child relation.
+func (m *compiledModel) buildInner() {
+	children := map[[2]string][][2]string{}
+	add := func(child, parent [2]string) {
+		if !slices.Contains(children[parent], child) {
+			children[parent] = append(children[parent], child)
+		}
+	}
+	for _, t := range m.types {
+		for _, r := range t.relations {
+			if r.materialized {
+				for _, ref := range r.direct {
+					if ref.Relation != "" {
+						add([2]string{ref.Type, ref.Relation}, [2]string{t.name, r.name})
+					}
+				}
+			}
+		}
+		for c, parents := range m.computedParents[t.name] {
+			for _, p := range parents {
+				add([2]string{t.name, c}, [2]string{t.name, p})
+			}
+		}
+		for ts, edges := range m.ttuEdges[t.name] {
+			for _, ref := range m.relation(t.name, ts).direct {
+				if ref.Relation != "" || ref.Wildcard != nil {
+					continue
+				}
+				for _, e := range edges {
+					if m.relation(ref.Type, e.target) != nil {
+						add([2]string{ref.Type, e.target}, [2]string{t.name, e.parent})
+					}
+				}
+			}
+		}
+	}
+	for _, t := range m.types {
+		for _, r := range t.relations {
+			if !r.materialized {
+				continue
+			}
+			seen := map[[2]string]bool{}
+			frontier := [][2]string{{t.name, r.name}}
+			for len(frontier) > 0 {
+				next := frontier[len(frontier)-1]
+				frontier = frontier[:len(frontier)-1]
+				for _, c := range children[next] {
+					if !seen[c] {
+						seen[c] = true
+						frontier = append(frontier, c)
+					}
+				}
+			}
+			inner := slices.Collect(maps.Keys(seen))
+			// Sorted, so that list statements have the same text each time.
+			slices.SortFunc(inner, func(a, b [2]string) int {
+				return cmp.Or(strings.Compare(a[0], b[0]), strings.Compare(a[1], b[1]))
+			})
+			if m.inner[t.name] == nil {
+				m.inner[t.name] = map[string][][2]string{}
+			}
+			m.inner[t.name][r.name] = inner
 		}
 	}
 }

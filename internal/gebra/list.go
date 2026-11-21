@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"slices"
+	"strings"
 	"sync"
 
 	"github.com/cockroachdb/errors"
@@ -42,7 +43,7 @@ func (e *Engine) ListObjects(ctx context.Context, storeID string, req *ListObjec
 		o.end(err, attribute.Int("gebra.results", len(out)), attribute.Int("gebra.page_size", req.PageSize))
 	}()
 	var rows []cursorRow
-	err = e.listObjects(ctx, storeID, req, func(r cursorRow) error {
+	err = e.listObjects(ctx, storeID, req, req.PageSize, func(r cursorRow) error {
 		rows = append(rows, r)
 		out = append(out, req.Type+":"+r.ID)
 		if req.PageSize > 0 && len(out) > req.PageSize {
@@ -67,7 +68,7 @@ func (e *Engine) StreamListObjects(ctx context.Context, storeID string, req *Lis
 	ctx, o := e.startOp(ctx, "streamed_list_objects", storeID)
 	results := 0
 	defer func() { o.end(err, attribute.Int("gebra.results", results)) }()
-	return e.listObjects(ctx, storeID, req, func(r cursorRow) error {
+	return e.listObjects(ctx, storeID, req, 0, func(r cursorRow) error {
 		results++
 		return emit(req.Type + ":" + r.ID)
 	})
@@ -75,7 +76,7 @@ func (e *Engine) StreamListObjects(ctx context.Context, storeID string, req *Lis
 
 var errStop = errors.New("stop")
 
-func (e *Engine) listObjects(ctx context.Context, storeID string, req *ListObjectsRequest, emit func(cursorRow) error) error {
+func (e *Engine) listObjects(ctx context.Context, storeID string, req *ListObjectsRequest, pageSize int, emit func(cursorRow) error) error {
 	ev, err := e.newEvaluator(ctx, storeID, req.AuthorizationModelID, req.Consistency, req.ContextualTuples, req.Context, true)
 	if err != nil {
 		return err
@@ -139,13 +140,12 @@ func (e *Engine) listObjects(ctx context.Context, storeID string, req *ListObjec
 			if sub.id != "*" {
 				ids = append(ids, "*")
 			}
-			src.sub = `SELECT m.set_id AS obj_id FROM gebra_view_member m
-WHERE m.store_id = ? AND m.gen = ? AND m.user_type = ? AND m.user_id IN ? AND m.set_type = ? AND m.set_rel IN ?
-UNION
-SELECT r.anc_id FROM gebra_view_member m
-JOIN gebra_view_reach r ON r.store_id = m.store_id AND r.gen = m.gen AND r.desc_key = m.set_key
-WHERE m.store_id = ? AND m.gen = ? AND m.user_type = ? AND m.user_id IN ? AND r.anc_type = ? AND r.anc_rel IN ?`
-			src.args = []any{storeID, ev.gen, sub.typ, ids, req.Type, rels, storeID, ev.gen, sub.typ, ids, req.Type, rels}
+			v := viewObjects{storeID: storeID, gen: ev.gen, m: ev.m, userType: sub.typ, userIDs: ids, objectType: req.Type, rels: rels, sort: req.Sort, collation: e.collation()}
+			src.sub, src.args = v.query(nil, 0)
+			// SQLite has no LATERAL, and MySQL needs only to be correct.
+			if e.db.dialect == DialectPostgres && req.Sort.Attribute == "" {
+				src.paged = v.query
+			}
 		}
 	}
 	var extras []string
@@ -188,7 +188,81 @@ SELECT object_id FROM gebra_pending WHERE store_id = ? AND object_type = ? AND d
 			return ev.check(object{typ: req.Type, id: id}, req.Relation, sub)
 		}
 	}
-	return e.walkSorted(ev, src, after, extras, verify, check, emit)
+	return e.walkSorted(ev, src, after, extras, verify, pageSize, check, emit)
+}
+
+// viewObjects reads from the view the objects of a type that subjects are in
+// with any of the materialized relations: as a member of the object's set, or
+// of a set that reaches it. Each part of the query reads one relation of the
+// object and one relation of the subjects' sets, of those that can reach it,
+// so that every part reads one range of an index in ID order.
+type viewObjects struct {
+	storeID    string
+	gen        int64
+	m          *compiledModel
+	userType   string
+	userIDs    []string
+	objectType string
+	rels       []string
+	sort       Sort
+	collation  string
+}
+
+// query returns the objects. With a limit, each part reads at most limit
+// objects after the cursor in ID order, which include the first limit objects
+// of all parts together, so that a page costs about the same however many
+// objects the subjects can access.
+func (v viewObjects) query(after *cursorRow, limit int) (string, []any) {
+	dir, op := "ASC", ">"
+	if v.sort.Descending {
+		dir, op = "DESC", "<"
+	}
+	page := func(col string, args []any) (string, []any) {
+		if limit == 0 {
+			return "", args
+		}
+		var q string
+		if after != nil {
+			q = " AND " + col + v.collation + " " + op + " ?"
+			args = append(args, after.ID)
+		}
+		return q + " ORDER BY " + col + v.collation + " " + dir + " LIMIT ?", append(args, limit)
+	}
+	var parts []string
+	var args []any
+	for _, id := range v.userIDs {
+		for _, rel := range v.rels {
+			q := `SELECT m.set_id AS obj_id FROM gebra_view_member m
+WHERE m.store_id = ? AND m.gen = ? AND m.user_type = ? AND m.user_id = ? AND m.set_type = ? AND m.set_rel = ?`
+			args = append(args, v.storeID, v.gen, v.userType, id, v.objectType, rel)
+			p, a := page("m.set_id", nil)
+			if limit > 0 {
+				q = "(" + q + p + ")"
+			}
+			parts = append(parts, q)
+			args = append(args, a...)
+		}
+	}
+	for _, rel := range v.rels {
+		for _, in := range v.m.inner[v.objectType][rel] {
+			if limit == 0 {
+				parts = append(parts, `SELECT r.anc_id FROM gebra_view_member m
+JOIN gebra_view_reach r ON r.store_id = m.store_id AND r.gen = m.gen AND r.desc_key = m.set_key
+WHERE m.store_id = ? AND m.gen = ? AND m.user_type = ? AND m.user_id IN ? AND m.set_type = ? AND m.set_rel = ? AND r.anc_type = ? AND r.anc_rel = ?`)
+				args = append(args, v.storeID, v.gen, v.userType, v.userIDs, in[0], in[1], v.objectType, rel)
+				continue
+			}
+			p, a := page("r.anc_id", []any{v.objectType, rel})
+			parts = append(parts, `SELECT x.anc_id FROM gebra_view_member m CROSS JOIN LATERAL (
+	SELECT r.anc_id FROM gebra_view_reach r
+	WHERE r.store_id = m.store_id AND r.gen = m.gen AND r.desc_key = m.set_key AND r.anc_type = ? AND r.anc_rel = ?`+p+`
+) x
+WHERE m.store_id = ? AND m.gen = ? AND m.user_type = ? AND m.user_id IN ? AND m.set_type = ? AND m.set_rel = ?`)
+			args = append(args, a...)
+			args = append(args, v.storeID, v.gen, v.userType, v.userIDs, in[0], in[1])
+		}
+	}
+	return strings.Join(parts, "\nUNION\n"), args
 }
 
 // cover returns materialized relations of the type whose union contains every
@@ -413,7 +487,7 @@ SELECT object_id FROM gebra_pending WHERE store_id = ? AND object_type = ? AND d
 		extras = append(extras, obj.id)
 	}
 	var rows []cursorRow
-	err = e.walkSorted(ev, src, after, extras, verify, check, func(row cursorRow) error {
+	err = e.walkSorted(ev, src, after, extras, verify, req.PageSize, check, func(row cursorRow) error {
 		rows = append(rows, row)
 		var u User
 		switch {
@@ -449,6 +523,9 @@ type sortedSource struct {
 	sort       Sort
 	sub        string
 	args       []any
+	// paged, when set, returns a query like sub that may leave out
+	// candidates after the first limit after the cursor.
+	paged func(after *cursorRow, limit int) (string, []any)
 }
 
 type cursorRow struct {
@@ -501,11 +578,14 @@ func (e *Engine) fetchPage(ev *evaluator, s *sortedSource, after *cursorRow, lim
 	if s.sort.Descending {
 		dir, op = "DESC", "<"
 	}
-	args := slices.Clone(s.args)
+	sub, args := s.sub, slices.Clone(s.args)
+	if s.paged != nil {
+		sub, args = s.paged(after, limit)
+	}
 	id := "c.obj_id" + coll
 	var q string
 	if s.sort.Attribute == "" {
-		q = "SELECT c.obj_id AS id, '' AS v FROM (" + s.sub + ") c"
+		q = "SELECT c.obj_id AS id, '' AS v FROM (" + sub + ") c"
 		if after != nil {
 			q += " WHERE " + id + " " + op + " ?"
 			args = append(args, after.ID)
@@ -513,7 +593,7 @@ func (e *Engine) fetchPage(ev *evaluator, s *sortedSource, after *cursorRow, lim
 		q += " ORDER BY " + id + " " + dir
 	} else {
 		v := "COALESCE(a.value, '')" + coll
-		q = "SELECT c.obj_id AS id, COALESCE(a.value, '') AS v FROM (" + s.sub + ") c" +
+		q = "SELECT c.obj_id AS id, COALESCE(a.value, '') AS v FROM (" + sub + ") c" +
 			" LEFT JOIN gebra_object_attribute a ON a.store_id = ? AND a.object_type = ? AND a.name = ? AND a.object_id = c.obj_id"
 		args = append(args, s.storeID, s.objectType, s.sort.Attribute)
 		if after != nil {
@@ -589,13 +669,17 @@ const verifyWorkers = 8
 
 // walkSorted emits the candidates of the source, merged with extra IDs, in
 // sort order. When verify is true, only candidates that pass check are
-// emitted.
-func (e *Engine) walkSorted(ev *evaluator, s *sortedSource, after *cursorRow, extraIDs []string, verify bool, check func(*evaluator, string) (bool, error), emit func(cursorRow) error) error {
+// emitted. Without verify, a page size makes the first read one page and one
+// more row, which tells whether another page follows.
+func (e *Engine) walkSorted(ev *evaluator, s *sortedSource, after *cursorRow, extraIDs []string, verify bool, pageSize int, check func(*evaluator, string) (bool, error), emit func(cursorRow) error) error {
 	extras, err := e.extraRows(ev, s, extraIDs, after)
 	if err != nil {
 		return err
 	}
 	batch := 1000
+	if pageSize > 0 {
+		batch = min(batch, pageSize+1)
+	}
 	var workers []*evaluator
 	if verify {
 		batch = 200

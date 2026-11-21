@@ -118,7 +118,7 @@ CREATE TABLE `gebra_view_member` (
     PRIMARY KEY (`store_id`,`gen`,`set_key`,`user_type`,`user_id`)
 );
 
-CREATE INDEX `gebra_view_member_user_set` ON `gebra_view_member`(`store_id`,`gen`,`user_type`,`user_id`,`set_type`,`set_rel`,`set_key`);
+CREATE INDEX `gebra_view_member_user_set` ON `gebra_view_member`(`store_id`,`gen`,`user_type`,`user_id`,`set_type`,`set_rel`,`set_id`,`set_key`);
 
 CREATE TABLE `gebra_view_edge` (
     `store_id` text,

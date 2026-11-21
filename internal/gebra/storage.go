@@ -193,9 +193,10 @@ type viewGCRow struct {
 //     edge child (an "anchored" set) is contained in, directly or indirectly,
 //     including the containment that computed usersets imply.
 
-// The user index ends with set_key rather than set_id so that joining a
-// user's sets to the closure reads only the index, and so that it fits MySQL's
-// 3072-byte key limit.
+// The user index ends with set_id so that a list reads a user's sets of a
+// relation in sort order and stops at the page size. It also covers set_key,
+// in INCLUDE on Postgres and through the primary key on MySQL, so that joining
+// a user's sets to the closure reads only the index.
 type viewMemberRow struct {
 	StoreID  string
 	Gen      int64
