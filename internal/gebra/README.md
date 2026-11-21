@@ -146,6 +146,25 @@ A rate is held when the server completes at least 90% of it with every p99 under
 
 Each server runs at its better `GOMAXPROCS`: Gebra at 8 and OpenFGA at its default of 16. With 8, OpenFGA holds only 1,500/s, its check p99 at 1,000/s is 167 ms instead of 62 ms, and no rate keeps its lists within 20 ms p99, since at 2,000/s it uses 6.9 of its 8 threads while the machine has 7 vCPUs free. Its cross-check passes in both runs.
 
+#### Writes
+
+Writes are 1% of requests, at most about 600 tuples/s, so these numbers measure write latency under read load, not write capacity. Every kind of write had 0 errors at every rate on both servers. Single writes add or remove 1 tuple, bulk writes 100 collaborators at once, and fan-out writes add a team to an org, which reaches all of the org's repos. Catch-up is how long Gebra's view took to include every write once a step ended; until then, default reads may not see a write, and reads with its token always do. p50 / p99 in milliseconds.
+
+| Server | Rate/s | Single | Bulk | Fan-out | Catch-up |
+|---|---|---|---|---|---|
+| Gebra | 500 | **3.2 / 6.1** | 45.2 / 64.5 | none in the step | 13 |
+| OpenFGA | 500 | 3.4 / 12.2 | **27.6 / 50.8** | none in the step | no view |
+| Gebra | 2,500 | **2.5 / 4.8** | **42.6 / 60.1** | **2.3 / 9.5** | 11 |
+| OpenFGA | 2,500 | 43.2 / 481 | 66.4 / 550 | 6.9 / 447 | no view |
+| Gebra | 5,000 | 2.3 / 5.9 | 44.0 / 126 | 2.5 / 4.4 | 11 |
+| Gebra | 7,500 | 2.3 / 11.4 | 42.3 / 70.5 | 2.2 / 44.2 | 9 |
+| Gebra | 10,000 | 2.4 / 40.4 | 44.7 / 83.3 | 2.4 / 14.8 | 10 |
+| Gebra | 15,000 | 26.0 / 10,800 | 78.5 / 10,600 | 29.0 / 10,200 | 12 |
+
+Bulk and fan-out writes are few, 22 to 277 and 6 to 117 per step, so their p99 is close to their maximum. Gebra's catch-up stays at 9 to 13 ms even at 15,000/s, where the seconds of latency are requests queued in front of `cmd/gebra`, not the applier falling behind.
+
+Adding a user to a team adds one view row, however many repos the team reaches. On an otherwise idle store, on the 18-vCPU machine below, adding a member to a team with read access to 3,000 repos returns in 0.5 ms, default checks see it after 3.4 ms, and the member's first page of 50 repos takes 0.2 ms (medians of 20).
+
 Loading took 2 min 7 s for Gebra, with `COPY` and its view build, and 11 s for OpenFGA through its Write API, including the vacuum.
 
 ### On a larger machine
