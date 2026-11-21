@@ -1240,29 +1240,36 @@ func reposLifecycleDeleteWhileUpdating(t *testing.T, ctx context.Context, s *Rep
 	logger := logx.NewNoopLogger()
 	alice := newTestIssueUser(t, ctx, s.db, "dwu-alice")
 	bob := newTestIssueUser(t, ctx, s.db, "dwu-bob")
-	repo := newTestGitRepo(t, ctx, s, alice, CreateRepoOptionsLegacy{Name: "base"})
-	_, err := s.Fork(ctx, logger, bob, bob, repo, "fork", "")
-	require.NoError(t, err)
 
-	// Hold the repository row so that updating its visibility and deleting it
-	// both wait on it, the update first.
-	hold := s.db.Begin()
-	require.NoError(t, hold.Error)
-	defer hold.Rollback()
-	require.NoError(t, hold.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", repo.ID).Find(new(Repository)).Error)
+	for _, deleteFork := range []bool{false, true} {
+		repo := newTestGitRepo(t, ctx, s, alice, CreateRepoOptionsLegacy{Name: fmt.Sprintf("base-%t", deleteFork)})
+		fork, err := s.Fork(ctx, logger, bob, bob, repo, repo.Name+"-fork", "")
+		require.NoError(t, err)
+		deleted := repo
+		if deleteFork {
+			deleted = fork
+		}
 
-	var wg sync.WaitGroup
-	var updateErr, deleteErr error
-	wg.Go(func() {
-		repo.IsPrivate = true
-		updateErr = s.Update(ctx, logger, repo, true)
-	})
-	time.Sleep(500 * time.Millisecond)
-	wg.Go(func() { deleteErr = s.Delete(ctx, logger, alice.ID, repo.ID) })
-	time.Sleep(500 * time.Millisecond)
-	require.NoError(t, hold.Rollback().Error)
-	wg.Wait()
+		// Hold the base repository row so that updating its visibility and
+		// deleting either repository both wait on it, the update first.
+		hold := s.db.Begin()
+		require.NoError(t, hold.Error)
+		defer hold.Rollback()
+		require.NoError(t, hold.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", repo.ID).Find(new(Repository)).Error)
 
-	assert.NoError(t, updateErr)
-	assert.NoError(t, deleteErr)
+		var wg sync.WaitGroup
+		var updateErr, deleteErr error
+		wg.Go(func() {
+			repo.IsPrivate = true
+			updateErr = s.Update(ctx, logger, repo, true)
+		})
+		time.Sleep(500 * time.Millisecond)
+		wg.Go(func() { deleteErr = s.Delete(ctx, logger, deleted.OwnerID, deleted.ID) })
+		time.Sleep(500 * time.Millisecond)
+		require.NoError(t, hold.Rollback().Error)
+		wg.Wait()
+
+		assert.NoError(t, updateErr, "delete fork: %t", deleteFork)
+		assert.NoError(t, deleteErr, "delete fork: %t", deleteFork)
+	}
 }

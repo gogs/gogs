@@ -1237,6 +1237,13 @@ func (s *RepositoriesStore) Delete(ctx context.Context, logger *logx.Logger, own
 		if err := deleteByColumn(tx, "repo_id", repoID, "label", "milestone"); err != nil {
 			return err
 		}
+		// A base repository is locked before its forks, the order updating its
+		// visibility and deleting it lock them in, so they cannot deadlock.
+		if repo.IsFork {
+			if err := tx.Exec("UPDATE repository SET num_forks = num_forks - 1 WHERE id = ?", repo.ForkID).Error; err != nil {
+				return errors.Newf("decrease fork count: %v", err)
+			}
+		}
 		if err := tx.Where("id = ?", repoID).Delete(new(Repository)).Error; err != nil {
 			return errors.Wrap(err, "delete repository")
 		}
@@ -1323,12 +1330,6 @@ func (s *RepositoriesStore) Delete(ctx context.Context, logger *logx.Logger, own
 		var err error
 		if publicKeyDeleted, err = deleteUnusedPublicKeys(tx, deployKeyIDs...); err != nil {
 			return err
-		}
-
-		if repo.IsFork {
-			if err := tx.Exec("UPDATE repository SET num_forks = num_forks - 1 WHERE id = ?", repo.ForkID).Error; err != nil {
-				return errors.Newf("decrease fork count: %v", err)
-			}
 		}
 
 		return tx.Exec(dbx.Quote("UPDATE %s SET num_repos = num_repos - 1 WHERE id = ?", "user"), ownerID).Error
