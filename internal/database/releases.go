@@ -12,9 +12,9 @@ import (
 	"gorm.io/gorm"
 	"unknwon.dev/x/logx"
 
+	"gogs.io/gogs/internal/api/v1types"
 	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/git"
-	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 
 // Release represents a release of repository.
@@ -58,8 +58,8 @@ func (r *Release) AfterFind(_ *gorm.DB) error {
 // APIFormat returns the API format of the release. It assumes some fields have
 // been assigned with values:
 // Required - Publisher
-func (r *Release) APIFormat() *apiv1types.RepositoryRelease {
-	return &apiv1types.RepositoryRelease{
+func (r *Release) APIFormat() *v1types.RepositoryRelease {
+	return &v1types.RepositoryRelease{
 		ID:              r.ID,
 		TagName:         r.TagName,
 		TargetCommitish: r.Target,
@@ -225,8 +225,8 @@ func (s *ReleasesStore) Create(ctx context.Context, logger *logx.Logger, gitRepo
 func (s *ReleasesStore) preparePublishWebhooks(ctx context.Context, logger *logx.Logger, r *Release) {
 	err := s.LoadAttributes(ctx, r)
 	if err == nil {
-		err = newWebhooksStore(s.db).Prepare(ctx, logger, r.Repo, HookEventTypeRelease, &apiv1types.WebhookReleasePayload{
-			Action:     apiv1types.WebhookReleasePublished,
+		err = newWebhooksStore(s.db).Prepare(ctx, logger, r.Repo, HookEventTypeRelease, &v1types.WebhookReleasePayload{
+			Action:     v1types.WebhookReleasePublished,
 			Release:    r.APIFormat(),
 			Repository: r.Repo.APIFormatLegacy(logger, nil),
 			Sender:     r.Publisher.APIFormat(),

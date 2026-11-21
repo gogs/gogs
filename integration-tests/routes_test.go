@@ -40,12 +40,11 @@ var dynamicRoutePaths = map[string]string{
 
 // routePackages are the packages, relative to this one, that register routes.
 var routePackages = map[string]string{
-	"gogs.io/gogs/cmd/gogs/internal/web": "../cmd/gogs/internal/web",
-	"gogs.io/gogs/internal/route/api/v1": "../internal/route/api/v1",
-	"gogs.io/gogs/internal/route/lfs":    "../internal/route/lfs",
+	"gogs.io/gogs/cmd/gogs/internal/api/v1": "../cmd/gogs/internal/api/v1",
+	"gogs.io/gogs/cmd/gogs/internal/lfs":    "../cmd/gogs/internal/lfs",
+	"gogs.io/gogs/cmd/gogs/internal/web":    "../cmd/gogs/internal/web",
 	// Only read for the handlers of pages.
-	"gogs.io/gogs/internal/route/repo": "../internal/route/repo",
-	"gogs.io/gogs/internal/route/user": "../internal/route/user",
+	"gogs.io/gogs/cmd/gogs/internal/repo": "../cmd/gogs/internal/repo",
 }
 
 // routeRoots are the functions of the web package that set up routers, with

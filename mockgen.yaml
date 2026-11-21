@@ -32,8 +32,8 @@ mocks:
       - path: gogs.io/gogs/internal/auth
         interfaces:
           - Provider
-  - filename: internal/route/lfs/mocks_test.go
+  - filename: cmd/gogs/internal/lfs/mocks_test.go
     sources:
-      - path: gogs.io/gogs/internal/route/lfs
+      - path: gogs.io/gogs/cmd/gogs/internal/lfs
         interfaces:
           - Store

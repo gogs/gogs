@@ -20,10 +20,10 @@ import (
 	"gorm.io/gorm"
 	"unknwon.dev/x/logx"
 
+	"gogs.io/gogs/internal/api/v1types"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/netx"
-	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 	"gogs.io/gogs/internal/sync"
 )
 
@@ -97,21 +97,21 @@ type HookResponse struct {
 
 // HookTask represents a hook task.
 type HookTask struct {
-	ID                          int64
-	RepoID                      int64 `gorm:"index:IDX_hook_task_repo_id"`
-	HookID                      int64
-	UUID                        string       `gorm:"size:255"`
-	Type                        HookTaskType `gorm:"size:32"`
-	URL                         string       `gorm:"type:TEXT"`
-	Signature                   string       `gorm:"type:TEXT"`
-	apiv1types.WebhookPayloader `json:"-" gorm:"-"`
-	PayloadContent              string          `gorm:"type:TEXT"`
-	ContentType                 HookContentType `gorm:"size:32"`
-	EventType                   HookEventType   `gorm:"size:255"`
-	IsSSL                       bool
-	IsDelivered                 bool
-	Delivered                   int64
-	DeliveredString             string `json:"-" gorm:"-"`
+	ID                       int64
+	RepoID                   int64 `gorm:"index:IDX_hook_task_repo_id"`
+	HookID                   int64
+	UUID                     string       `gorm:"size:255"`
+	Type                     HookTaskType `gorm:"size:32"`
+	URL                      string       `gorm:"type:TEXT"`
+	Signature                string       `gorm:"type:TEXT"`
+	v1types.WebhookPayloader `json:"-" gorm:"-"`
+	PayloadContent           string          `gorm:"type:TEXT"`
+	ContentType              HookContentType `gorm:"size:32"`
+	EventType                HookEventType   `gorm:"size:255"`
+	IsSSL                    bool
+	IsDelivered              bool
+	Delivered                int64
+	DeliveredString          string `json:"-" gorm:"-"`
 
 	// History info.
 	IsSucceed       bool
@@ -376,7 +376,7 @@ func (s *HookTasksStore) listUndelivered(ctx context.Context, repoID int64) ([]*
 // Prepare creates a delivery of given event for each active webhook of the
 // repository and of its owner, when the owner is an organization, that is
 // subscribed to the event, and queues them.
-func (s *WebhooksStore) Prepare(ctx context.Context, logger *logx.Logger, repo *Repository, event HookEventType, p apiv1types.WebhookPayloader) error {
+func (s *WebhooksStore) Prepare(ctx context.Context, logger *logx.Logger, repo *Repository, event HookEventType, p v1types.WebhookPayloader) error {
 	webhooks, err := s.listActive(ctx, repo)
 	if err != nil {
 		return err
@@ -388,7 +388,7 @@ func (s *WebhooksStore) Prepare(ctx context.Context, logger *logx.Logger, repo *
 // repository when it is subscribed to the event, even if it is not active, and
 // queues it. It returns ErrWebhookNotExist when the repository has no such
 // webhook.
-func (s *WebhooksStore) Test(ctx context.Context, logger *logx.Logger, repo *Repository, event HookEventType, p apiv1types.WebhookPayloader, webhookID int64) error {
+func (s *WebhooksStore) Test(ctx context.Context, logger *logx.Logger, repo *Repository, event HookEventType, p v1types.WebhookPayloader, webhookID int64) error {
 	webhook, err := s.GetOfRepo(ctx, repo.ID, webhookID)
 	if err != nil {
 		return err
@@ -421,7 +421,7 @@ func (w *Webhook) hasEvent(event HookEventType) bool {
 
 // prepareHookTasks creates a delivery of given event for each of given
 // webhooks that is subscribed to the event, and queues them.
-func (s *WebhooksStore) prepareHookTasks(ctx context.Context, logger *logx.Logger, repo *Repository, event HookEventType, p apiv1types.WebhookPayloader, webhooks []*Webhook) (err error) {
+func (s *WebhooksStore) prepareHookTasks(ctx context.Context, logger *logx.Logger, repo *Repository, event HookEventType, p v1types.WebhookPayloader, webhooks []*Webhook) (err error) {
 	if len(webhooks) == 0 {
 		return nil
 	}
@@ -434,7 +434,7 @@ func (s *WebhooksStore) prepareHookTasks(ctx context.Context, logger *logx.Logge
 
 		// Use separate objects so modifications won't be made on payload on
 		// non-Gogs type hooks.
-		var payloader apiv1types.WebhookPayloader
+		var payloader v1types.WebhookPayloader
 		switch w.HookTaskType {
 		case SLACK:
 			payloader, err = GetSlackPayload(p, event, w.Meta)

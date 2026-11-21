@@ -8,11 +8,11 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
 
+	"gogs.io/gogs/internal/api/v1types"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/i18n"
-	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 	"unknwon.dev/x/logx"
 )
 
@@ -391,7 +391,7 @@ func postRepoPullBranch(c flamego.Context, logger *logx.Logger, viewer *database
 	}
 	// The branch exists now, so its webhook is queued even when the client has
 	// gone away.
-	if err = database.Handle.Webhooks().Prepare(context.WithoutCancel(ctx), logger, repo, database.HookEventTypeCreate, &apiv1types.WebhookCreatePayload{
+	if err = database.Handle.Webhooks().Prepare(context.WithoutCancel(ctx), logger, repo, database.HookEventTypeCreate, &v1types.WebhookCreatePayload{
 		Ref:           pull.HeadBranch,
 		RefType:       "branch",
 		DefaultBranch: repo.DefaultBranch,
@@ -446,10 +446,10 @@ func deleteHeadBranch(ctx context.Context, logger *logx.Logger, viewer *database
 	}
 	// The branch is gone now, so its webhook is queued even when the client has
 	// gone away.
-	if err = database.Handle.Webhooks().Prepare(context.WithoutCancel(ctx), logger, repo, database.HookEventTypeDelete, &apiv1types.WebhookDeletePayload{
+	if err = database.Handle.Webhooks().Prepare(context.WithoutCancel(ctx), logger, repo, database.HookEventTypeDelete, &v1types.WebhookDeletePayload{
 		Ref:        pull.HeadBranch,
 		RefType:    "branch",
-		PusherType: apiv1types.WebhookPusherTypeUser,
+		PusherType: v1types.WebhookPusherTypeUser,
 		Repo:       repo.APIFormatLegacy(logger, nil),
 		Sender:     viewer.APIFormat(),
 	}); err != nil {

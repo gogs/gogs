@@ -18,6 +18,7 @@ import (
 	"github.com/unknwon/com"
 	"unknwon.dev/x/logx"
 
+	routerepo "gogs.io/gogs/cmd/gogs/internal/repo"
 	"gogs.io/gogs/internal/avatar"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
@@ -27,7 +28,6 @@ import (
 	"gogs.io/gogs/internal/mimex"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/repox"
-	routerepo "gogs.io/gogs/internal/route/repo"
 	"gogs.io/gogs/internal/userx"
 )
 

@@ -27,6 +27,7 @@ import (
 	"xorm.io/xorm"
 
 	embedConf "gogs.io/gogs/conf"
+	"gogs.io/gogs/internal/api/v1types"
 	"gogs.io/gogs/internal/avatar"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/dbx"
@@ -35,7 +36,6 @@ import (
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/repox"
-	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 	"gogs.io/gogs/internal/semverx"
 	"gogs.io/gogs/internal/strx"
 	"gogs.io/gogs/internal/sync"
@@ -368,9 +368,9 @@ func (r *Repository) DeleteAvatar(logger *logx.Logger) error {
 // Arguments that are allowed to be nil: permission
 //
 // Deprecated: Use APIFormat instead.
-func (r *Repository) APIFormatLegacy(logger *logx.Logger, permission *apiv1types.RepositoryPermission, user ...*User) *apiv1types.Repository {
+func (r *Repository) APIFormatLegacy(logger *logx.Logger, permission *v1types.RepositoryPermission, user ...*User) *v1types.Repository {
 	cloneLink := r.CloneLink()
-	apiRepo := &apiv1types.Repository{
+	apiRepo := &v1types.Repository{
 		ID:            r.ID,
 		Owner:         r.Owner.APIFormat(),
 		Name:          r.Name,
@@ -397,7 +397,7 @@ func (r *Repository) APIFormatLegacy(logger *logx.Logger, permission *apiv1types
 		//		AvatarUrl:     r.AvatarLink(),
 	}
 	if r.IsFork {
-		p := &apiv1types.RepositoryPermission{Pull: true}
+		p := &v1types.RepositoryPermission{Pull: true}
 		if len(user) != 0 {
 			accessMode := Handle.Permissions().AccessMode(
 				context.TODO(), logger,
@@ -2434,7 +2434,7 @@ func ForkRepository(ctx context.Context, logger *logx.Logger, doer, owner *User,
 	if err = repo.UpdateSize(ctx); err != nil {
 		logger.Error("Failed to update repository size", "repoID", repo.ID, "error", err)
 	}
-	if err = Handle.Webhooks().Prepare(ctx, logger, baseRepo, HookEventTypeFork, &apiv1types.WebhookForkPayload{
+	if err = Handle.Webhooks().Prepare(ctx, logger, baseRepo, HookEventTypeFork, &v1types.WebhookForkPayload{
 		Forkee: repo.APIFormatLegacy(logger, nil),
 		Repo:   baseRepo.APIFormatLegacy(logger, nil),
 		Sender: doer.APIFormat(),

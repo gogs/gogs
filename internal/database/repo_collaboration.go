@@ -1,7 +1,7 @@
 package database
 
 import (
-	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
+	"gogs.io/gogs/internal/api/v1types"
 )
 
 // Collaboration represents the relation between an individual and a repository.
@@ -31,10 +31,10 @@ type Collaborator struct {
 	Collaboration *Collaboration
 }
 
-func (c *Collaborator) APIFormat() *apiv1types.RepositoryCollaborator {
-	return &apiv1types.RepositoryCollaborator{
+func (c *Collaborator) APIFormat() *v1types.RepositoryCollaborator {
+	return &v1types.RepositoryCollaborator{
 		User: c.User.APIFormat(),
-		Permissions: apiv1types.RepositoryPermission{
+		Permissions: v1types.RepositoryPermission{
 			Admin: c.Collaboration.Mode >= AccessModeAdmin,
 			Push:  c.Collaboration.Mode >= AccessModeWrite,
 			Pull:  c.Collaboration.Mode >= AccessModeRead,
