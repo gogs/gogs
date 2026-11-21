@@ -7,15 +7,12 @@ import (
 	"strconv"
 	"strings"
 
-	"unicode/utf8"
-
 	"github.com/cockroachdb/errors"
-	"github.com/gogs/chardet"
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/transform"
 	"unknwon.dev/x/logx"
 
-	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/encodingx"
 )
 
 // DiffLineType is the line type in diff.
@@ -592,23 +589,6 @@ func streamParseDiff(logger *logx.Logger, r io.Reader, done chan<- streamParseDi
 	}
 }
 
-// DetectEncoding returns best guess of encoding of given content.
-func DetectEncoding(logger *logx.Logger, content []byte) (string, error) {
-	if utf8.Valid(content) {
-		logger.Debug("Detected encoding via fast path", "charset", "UTF-8")
-		return "UTF-8", nil
-	}
-
-	result, err := chardet.NewTextDetector().DetectBest(content)
-	if result.Charset != "UTF-8" && len(conf.Repository.ANSICharset) > 0 {
-		logger.Debug("Using default ANSI charset", "charset", conf.Repository.ANSICharset)
-		return conf.Repository.ANSICharset, err
-	}
-
-	logger.Debug("Detected encoding", "charset", result.Charset)
-	return result.Charset, err
-}
-
 // decodeCharsets converts the content of each file in the diff to UTF-8 when
 // the file is detected to be in another encoding.
 func decodeCharsets(logger *logx.Logger, diff *Diff) {
@@ -622,8 +602,8 @@ func decodeCharsets(logger *logx.Logger, diff *Diff) {
 			}
 		}
 
-		charsetLabel, err := DetectEncoding(logger, buf.Bytes())
-		if charsetLabel == "UTF-8" || err != nil {
+		charsetLabel := encodingx.Detect(logger, buf.Bytes())
+		if charsetLabel == "UTF-8" {
 			continue
 		}
 		encoding, _ := charset.Lookup(charsetLabel)
