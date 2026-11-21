@@ -144,7 +144,7 @@ p50 / p99 in milliseconds, requests completed per second, and the CPU cores Post
 
 A rate is held when the server completes at least 90% of it with every p99 under 1 s. At Gebra's 15,000/s, the server completes 92% but falls 1,200 requests/s behind, so requests queue longer the longer the load lasts, and some hit the 10 s client timeout. That rate is what Gebra can push through in a burst, not a rate to run at. OpenFGA's one error at 2,500/s was `400 cancelled: Request Cancelled`.
 
-OpenFGA's rows are from its run at its default `GOMAXPROCS` of 16, Gebra's at 8; see the configuration.
+Each server runs at its better `GOMAXPROCS`: Gebra at 8 and OpenFGA at its default of 16. With 8, OpenFGA holds only 1,500/s, its check p99 at 1,000/s is 167 ms instead of 62 ms, and no rate keeps its lists within 20 ms p99, since at 2,000/s it uses 6.9 of its 8 threads while the machine has 7 vCPUs free. Its cross-check passes in both runs.
 
 Loading took 2 min 7 s for Gebra, with `COPY` and its view build, and 11 s for OpenFGA through its Write API, including the vacuum.
 
@@ -187,6 +187,7 @@ The benchmark is `TestApplierBenchHTTP` in `applierbench_http_test.go`, whose do
   - `--listObjects-max-results 50`, the page size, since OpenFGA has no paging.
   - `--listObjects-deadline 10s`, `--request-timeout 10s` and `--http-upstream-timeout 10s`, the benchmark's request timeout.
   - `--authn-method none`, `--trace-enabled=false`, `--log-level warn`, playground and profiler off.
+- **OpenFGA's `GOMAXPROCS`**: the default of 16 for the results above. A second run with `GOMAXPROCS=8` exported before `testdata/openfga-bench.sh` held less, as the results say.
 - **Client**: one Go HTTP client for both servers, with keep-alives and 4,096 connections per host, so that it is never the bottleneck, and a 10s timeout per request.
 
 What differs between the two:
