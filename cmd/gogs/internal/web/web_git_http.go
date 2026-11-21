@@ -450,16 +450,16 @@ type gitHTTPStore interface {
 	GetRepositoryByName(ctx stdctx.Context, ownerID int64, name string) (*database.Repository, error)
 }
 
-type gitHTTPDatabaseStore struct {
+type defaultGitHTTPStore struct {
 	context.Store
 }
 
 // newGitHTTPStore returns a new gitHTTPStore using the global database handle.
 func newGitHTTPStore(logger *logx.Logger) gitHTTPStore {
-	return gitHTTPDatabaseStore{Store: context.NewStore(logger)}
+	return defaultGitHTTPStore{Store: context.NewStore(logger)}
 }
 
-func (gitHTTPDatabaseStore) GetRepositoryByName(ctx stdctx.Context, ownerID int64, name string) (*database.Repository, error) {
+func (defaultGitHTTPStore) GetRepositoryByName(ctx stdctx.Context, ownerID int64, name string) (*database.Repository, error) {
 	return database.Handle.Repositories().GetByName(ctx, ownerID, name)
 }
 
