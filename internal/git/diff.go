@@ -6,15 +6,14 @@ import (
 	"io"
 	"strconv"
 	"strings"
-
 	"unicode/utf8"
 
 	"github.com/cockroachdb/errors"
-	"github.com/gogs/chardet"
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/transform"
 	"unknwon.dev/x/logx"
 
+	"gogs.io/gogs/internal/chardet"
 	"gogs.io/gogs/internal/conf"
 )
 
@@ -592,21 +591,46 @@ func streamParseDiff(logger *logx.Logger, r io.Reader, done chan<- streamParseDi
 	}
 }
 
-// DetectEncoding returns best guess of encoding of given content.
-func DetectEncoding(logger *logx.Logger, content []byte) (string, error) {
+// DetectEncoding returns the best guess of the encoding of the content, as a
+// WHATWG encoding name.
+func DetectEncoding(logger *logx.Logger, content []byte) string {
 	if utf8.Valid(content) {
 		logger.Debug("Detected encoding via fast path", "charset", "UTF-8")
-		return "UTF-8", nil
+		return "UTF-8"
+	} else if isMostlyUTF8(content) {
+		// A few invalid bytes in otherwise UTF-8 content, e.g., a truncated
+		// character, should not turn the whole file into mojibake.
+		logger.Debug("Detected encoding as mostly UTF-8", "charset", "UTF-8")
+		return "UTF-8"
 	}
 
-	result, err := chardet.NewTextDetector().DetectBest(content)
-	if result.Charset != "UTF-8" && len(conf.Repository.ANSICharset) > 0 {
+	if len(conf.Repository.ANSICharset) > 0 {
 		logger.Debug("Using default ANSI charset", "charset", conf.Repository.ANSICharset)
-		return conf.Repository.ANSICharset, err
+		return conf.Repository.ANSICharset
 	}
 
-	logger.Debug("Detected encoding", "charset", result.Charset)
-	return result.Charset, err
+	d := chardet.New()
+	d.Feed(content, true)
+	guess := d.Guess(false)
+	logger.Debug("Detected encoding", "charset", guess)
+	return guess
+}
+
+// isMostlyUTF8 reports whether the content has more than ten times as many
+// valid multibyte UTF-8 characters as invalid bytes. Legacy encodings rarely
+// form valid multibyte UTF-8 sequences by chance.
+func isMostlyUTF8(content []byte) bool {
+	var multibyte, invalid int
+	for len(content) > 0 {
+		r, size := utf8.DecodeRune(content)
+		if r == utf8.RuneError && size == 1 {
+			invalid++
+		} else if size > 1 {
+			multibyte++
+		}
+		content = content[size:]
+	}
+	return multibyte > 10*invalid
 }
 
 // decodeCharsets converts the content of each file in the diff to UTF-8 when
@@ -622,8 +646,8 @@ func decodeCharsets(logger *logx.Logger, diff *Diff) {
 			}
 		}
 
-		charsetLabel, err := DetectEncoding(logger, buf.Bytes())
-		if charsetLabel == "UTF-8" || err != nil {
+		charsetLabel := DetectEncoding(logger, buf.Bytes())
+		if charsetLabel == "UTF-8" {
 			continue
 		}
 		encoding, _ := charset.Lookup(charsetLabel)
