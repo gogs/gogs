@@ -63,7 +63,6 @@ export function SignUp() {
   const captchaRef = useRef<HTMLInputElement>(null);
   const [altchaState, setAltchaState] = useState<AltchaState>("idle");
   const altchaSolution = useRef<AltchaSolution | null>(null);
-  const altchaSolving = useRef<Promise<string> | null>(null);
   const altchaRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -90,36 +89,26 @@ export function SignUp() {
     setAltchaState("idle");
   }
 
-  // verifyAltcha returns the solution of the proof-of-work challenge, solving
-  // one when there is none yet.
-  function verifyAltcha(): Promise<string> {
-    const solution = altchaSolution.current;
-    if (solution && solution.expiresAt > Date.now()) return Promise.resolve(solution.payload);
-    if (altchaSolving.current) return altchaSolving.current;
-
+  // verifyAltcha solves a proof-of-work challenge and keeps the solution for
+  // the next submit.
+  function verifyAltcha() {
     setAltchaState("verifying");
-    altchaSolving.current = solveAltcha()
-      .then(
-        (solved) => {
-          altchaSolution.current = solved;
-          setAltchaState("verified");
-          return solved.payload;
-        },
-        (err: unknown) => {
-          altchaSolution.current = null;
-          setAltchaState("error");
-          throw err;
-        },
-      )
-      .finally(() => {
-        altchaSolving.current = null;
-      });
-    return altchaSolving.current;
+    solveAltcha().then(
+      (solved) => {
+        altchaSolution.current = solved;
+        setAltchaState("verified");
+      },
+      () => {
+        altchaSolution.current = null;
+        setAltchaState("error");
+      },
+    );
   }
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (registrationDisabled) return;
+    const solution = altchaSolution.current;
+    if (registrationDisabled || (altchaEnabled && !(solution && solution.expiresAt > Date.now()))) return;
 
     setFormError(null);
     if (password !== confirmPassword) {
@@ -131,24 +120,13 @@ export function SignUp() {
     setSubmitting(true);
     void (async () => {
       try {
-        let captchaValue = captcha;
-        if (altchaEnabled) {
-          try {
-            captchaValue = await verifyAltcha();
-          } catch {
-            setFieldErrors({ captcha: t("form.captcha_verification_failed") });
-            setSubmitting(false);
-            requestAnimationFrame(() => altchaRef.current?.focus());
-            return;
-          }
-          // The server accepts a solution only once.
-          altchaSolution.current = null;
-        }
+        // The server accepts an altcha solution only once.
+        if (altchaEnabled) altchaSolution.current = null;
         const res = await fetch(subUrl("/api/web/user/sign-up"), {
           method: "POST",
           credentials: "same-origin",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userName, email, password, captcha: captchaValue }),
+          body: JSON.stringify({ userName, email, password, captcha: altchaEnabled ? solution?.payload : captcha }),
         });
         if (!res.ok) {
           const body = (await res.json().catch(() => ({}))) as SignUpErrorResponse;
@@ -380,7 +358,12 @@ export function SignUp() {
             )}
 
             <div className="mt-2 flex flex-col gap-3">
-              <Button type="submit" disabled={submitting} tabIndex={9} className="w-full">
+              <Button
+                type="submit"
+                disabled={submitting || (altchaEnabled && altchaState !== "verified")}
+                tabIndex={9}
+                className="w-full"
+              >
                 {submitting ? t("auth.sign_up_submitting") : t("auth.create_new_account")}
               </Button>
               <Button variant="link" size="inline" asChild className="self-center">
@@ -463,7 +446,7 @@ export function SignUp() {
             aria-invalid={"captcha" in fieldErrors ? true : undefined}
             disabled={submitting}
             onClick={() => {
-              if (altchaState !== "verifying" && altchaState !== "verified") verifyAltcha().catch(() => {});
+              if (altchaState !== "verifying" && altchaState !== "verified") verifyAltcha();
             }}
             className={cn(
               "flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-sm border-2 border-(--color-input) bg-(--color-field) outline-none transition-colors",
