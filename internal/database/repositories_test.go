@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
@@ -888,6 +889,7 @@ func TestReposLifecycle(t *testing.T) {
 		{"Rename", reposLifecycleRename},
 		{"Update", reposLifecycleUpdate},
 		{"Delete", reposLifecycleDelete},
+		{"DeleteWhileUpdating", reposLifecycleDeleteWhileUpdating},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
@@ -1228,4 +1230,39 @@ func reposLifecycleDelete(t *testing.T, ctx context.Context, s *RepositoriesStor
 	kept, err = s.GetByID(ctx, kept.ID)
 	require.NoError(t, err)
 	assert.Zero(t, kept.NumForks)
+}
+
+func reposLifecycleDeleteWhileUpdating(t *testing.T, ctx context.Context, s *RepositoriesStore) {
+	// SQLite lets only one transaction write, so the two cannot interleave.
+	if conf.UseSQLite3 {
+		t.Skip()
+	}
+	logger := logx.NewNoopLogger()
+	alice := newTestIssueUser(t, ctx, s.db, "dwu-alice")
+	bob := newTestIssueUser(t, ctx, s.db, "dwu-bob")
+	repo := newTestGitRepo(t, ctx, s, alice, CreateRepoOptionsLegacy{Name: "base"})
+	_, err := s.Fork(ctx, logger, bob, bob, repo, "fork", "")
+	require.NoError(t, err)
+
+	// Hold the repository row so that updating its visibility and deleting it
+	// both wait on it, the update first.
+	hold := s.db.Begin()
+	require.NoError(t, hold.Error)
+	defer hold.Rollback()
+	require.NoError(t, hold.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", repo.ID).Find(new(Repository)).Error)
+
+	var wg sync.WaitGroup
+	var updateErr, deleteErr error
+	wg.Go(func() {
+		repo.IsPrivate = true
+		updateErr = s.Update(ctx, logger, repo, true)
+	})
+	time.Sleep(500 * time.Millisecond)
+	wg.Go(func() { deleteErr = s.Delete(ctx, logger, alice.ID, repo.ID) })
+	time.Sleep(500 * time.Millisecond)
+	require.NoError(t, hold.Rollback().Error)
+	wg.Wait()
+
+	assert.NoError(t, updateErr)
+	assert.NoError(t, deleteErr)
 }

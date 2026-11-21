@@ -1227,8 +1227,19 @@ func (s *RepositoriesStore) Delete(ctx context.Context, logger *logx.Logger, own
 			}
 		}
 
-		// Forks are updated by primary key, because fork_id has no index and
-		// updating by it would lock every repository until commit on MySQL.
+		// Delete labels and milestones before the repository, the order issue
+		// creation locks them in, so the two cannot deadlock.
+		if err := deleteByColumn(tx, "repo_id", repoID, "label", "milestone"); err != nil {
+			return err
+		}
+		if err := tx.Where("id = ?", repoID).Delete(new(Repository)).Error; err != nil {
+			return errors.Wrap(err, "delete repository")
+		}
+
+		// Reset forks after the repository, the order updating its visibility
+		// locks them in, so the two cannot deadlock. Forks are updated by primary
+		// key, because fork_id has no index and updating by it would lock every
+		// repository until commit on MySQL.
 		var forkIDs []int64
 		if err := tx.Model(new(Repository)).Where("fork_id = ?", repoID).Pluck("id", &forkIDs).Error; err != nil {
 			return errors.Wrap(err, "list forks")
@@ -1237,15 +1248,6 @@ func (s *RepositoriesStore) Delete(ctx context.Context, logger *logx.Logger, own
 			if err := tx.Exec("UPDATE repository SET fork_id = 0, is_fork = ? WHERE id IN ?", false, ids).Error; err != nil {
 				return errors.Wrap(err, "reset forks")
 			}
-		}
-
-		// Delete labels and milestones before the repository, the order issue
-		// creation locks them in, so the two cannot deadlock.
-		if err := deleteByColumn(tx, "repo_id", repoID, "label", "milestone"); err != nil {
-			return err
-		}
-		if err := tx.Where("id = ?", repoID).Delete(new(Repository)).Error; err != nil {
-			return errors.Wrap(err, "delete repository")
 		}
 		if err := deleteByColumn(tx, "base_repo_id", repoID, "pull_request"); err != nil {
 			return err
