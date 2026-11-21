@@ -1,9 +1,9 @@
-package repo
+package web
 
 import (
 	"bytes"
 	"compress/gzip"
-	gocontext "context"
+	stdctx "context"
 	"fmt"
 	"net/http"
 	"path"
@@ -17,13 +17,14 @@ import (
 	"gogs.io/gogs/internal/authx"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/cryptox"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/osx"
 )
 
-type HTTPContext struct {
+type gitHTTPContext struct {
 	flamego.Context
 	OwnerName string
 	OwnerSalt string
@@ -77,7 +78,7 @@ func gitHTTPIsPull(c flamego.Context, action string) bool {
 	return action != "git-receive-pack"
 }
 
-func HTTPContexter(logger *logx.Logger, store Store) flamego.Handler {
+func gitHTTPContexter(logger *logx.Logger, store gitHTTPStore) flamego.Handler {
 	return func(c flamego.Context) {
 		if len(conf.HTTP.AccessControlAllowOrigin) > 0 {
 			c.ResponseWriter().Header().Set("Access-Control-Allow-Origin", conf.HTTP.AccessControlAllowOrigin)
@@ -124,7 +125,7 @@ func HTTPContexter(logger *logx.Logger, store Store) flamego.Handler {
 
 		// Authentication is not required for pulling from public repositories.
 		if isPull && !repo.IsPrivate && !conf.Auth.RequireSigninView {
-			c.Map(&HTTPContext{
+			c.Map(&gitHTTPContext{
 				Context:  c,
 				RepoPath: repoPath,
 			})
@@ -234,7 +235,7 @@ Please create and use personal access token on user settings page`)
 			}
 		}
 
-		c.Map(&HTTPContext{
+		c.Map(&gitHTTPContext{
 			Context:   c,
 			OwnerName: ownerName,
 			OwnerSalt: owner.Salt,
@@ -303,7 +304,7 @@ func serviceRPC(logger *logx.Logger, h serviceHandler, service string) {
 	// running hooks after refs were updated, nor stop recording what it pushed.
 	ctx := h.r.Context()
 	if service == "receive-pack" {
-		ctx = gocontext.WithoutCancel(ctx)
+		ctx = stdctx.WithoutCancel(ctx)
 	}
 	var stderr bytes.Buffer
 	opts := git.ServiceOptions{
@@ -390,7 +391,7 @@ func getInfoRefs(logger *logx.Logger, h serviceHandler) {
 	_, _ = h.w.Write(refs.Bytes())
 }
 
-var routes = []struct {
+var gitHTTPRoutes = []struct {
 	re      *lazyregexp.Regexp
 	method  string
 	handler func(*logx.Logger, serviceHandler)
@@ -400,8 +401,8 @@ var routes = []struct {
 	{lazyregexp.New("/info/refs$"), "GET", getInfoRefs},
 }
 
-func HTTP(logger *logx.Logger, c *HTTPContext) {
-	for _, route := range routes {
+func serveGitHTTP(logger *logx.Logger, c *gitHTTPContext) {
+	for _, route := range gitHTTPRoutes {
 		if !route.re.MatchString(strings.ToLower(c.Request().URL.Path)) {
 			continue
 		}
@@ -437,4 +438,148 @@ func HTTP(logger *logx.Logger, c *HTTPContext) {
 	}
 
 	c.ResponseWriter().WriteHeader(http.StatusNotFound)
+}
+
+// gitHTTPStore is the data layer carrier for context middleware. This interface
+// is meant to abstract away and limit the exposure of the underlying data layer
+// to the handler through a thin-wrapper.
+type gitHTTPStore interface {
+	// GetAccessTokenBySHA1 returns the access token with given SHA1. It returns
+	// database.ErrAccessTokenNotExist when not found.
+	GetAccessTokenBySHA1(ctx stdctx.Context, sha1 string) (*database.AccessToken, error)
+	// TouchAccessTokenByID updates the updated time of the given access token to
+	// the current time.
+	TouchAccessTokenByID(ctx stdctx.Context, id int64) error
+
+	// GetRepositoryByName returns the repository with given owner and name. It
+	// returns database.ErrRepoNotExist when not found.
+	GetRepositoryByName(ctx stdctx.Context, ownerID int64, name string) (*database.Repository, error)
+
+	// IsTwoFactorEnabled returns true if the user has enabled 2FA.
+	IsTwoFactorEnabled(ctx stdctx.Context, userID int64) bool
+
+	// GetUserByID returns the user with given ID. It returns
+	// database.ErrUserNotExist when not found.
+	GetUserByID(ctx stdctx.Context, id int64) (*database.User, error)
+	// GetUserByUsername returns the user with given username. It returns
+	// database.ErrUserNotExist when not found.
+	GetUserByUsername(ctx stdctx.Context, username string) (*database.User, error)
+	// CreateUser creates a new user and persists to database. It returns
+	// database.ErrNameNotAllowed if the given name or pattern of the name is not
+	// allowed as a username, or database.ErrUserAlreadyExist when a user with same
+	// name already exists, or database.ErrEmailAlreadyUsed if the email has been
+	// verified by another user.
+	CreateUser(ctx stdctx.Context, username, email string, opts database.CreateUserOptions) (*database.User, error)
+	// AuthenticateUser validates username and password via given login source ID.
+	// It returns database.ErrUserNotExist when the user was not found.
+	//
+	// When the "loginSourceID" is negative, it aborts the process and returns
+	// database.ErrUserNotExist if the user was not found in the database.
+	//
+	// When the "loginSourceID" is non-negative, it returns
+	// database.ErrLoginSourceMismatch if the user has different login source ID
+	// than the "loginSourceID".
+	//
+	// When the "loginSourceID" is positive, it tries to authenticate via given
+	// login source and creates a new user when it does not exist in the database yet.
+	AuthenticateUser(ctx stdctx.Context, login, password string, loginSourceID int64) (*database.User, error)
+}
+
+type gitHTTPDatabaseStore struct {
+	logger *logx.Logger
+}
+
+// newGitHTTPStore returns a new gitHTTPStore using the global database handle.
+func newGitHTTPStore(logger *logx.Logger) gitHTTPStore {
+	return &gitHTTPDatabaseStore{logger: logger}
+}
+
+func (*gitHTTPDatabaseStore) GetAccessTokenBySHA1(ctx stdctx.Context, sha1 string) (*database.AccessToken, error) {
+	return database.Handle.AccessTokens().GetBySHA1(ctx, sha1)
+}
+
+func (*gitHTTPDatabaseStore) TouchAccessTokenByID(ctx stdctx.Context, id int64) error {
+	return database.Handle.AccessTokens().Touch(ctx, id)
+}
+
+func (*gitHTTPDatabaseStore) GetRepositoryByName(ctx stdctx.Context, ownerID int64, name string) (*database.Repository, error) {
+	return database.Handle.Repositories().GetByName(ctx, ownerID, name)
+}
+
+func (s *gitHTTPDatabaseStore) IsTwoFactorEnabled(ctx stdctx.Context, userID int64) bool {
+	return database.Handle.TwoFactors().IsEnabled(ctx, s.logger, userID)
+}
+
+func (*gitHTTPDatabaseStore) GetUserByID(ctx stdctx.Context, id int64) (*database.User, error) {
+	return database.Handle.Users().GetByID(ctx, id)
+}
+
+func (*gitHTTPDatabaseStore) GetUserByUsername(ctx stdctx.Context, username string) (*database.User, error) {
+	return database.Handle.Users().GetByUsername(ctx, username)
+}
+
+func (*gitHTTPDatabaseStore) CreateUser(ctx stdctx.Context, username, email string, opts database.CreateUserOptions) (*database.User, error) {
+	return database.Handle.Users().Create(ctx, username, email, opts)
+}
+
+func (s *gitHTTPDatabaseStore) AuthenticateUser(ctx stdctx.Context, login, password string, loginSourceID int64) (*database.User, error) {
+	return database.Handle.Users().Authenticate(ctx, s.logger, login, password, loginSourceID)
+}
+
+func triggerTask(logger *logx.Logger, c flamego.Context) {
+	branch := c.Query("branch")
+	pusherID := c.QueryInt64("pusher")
+	secret := c.Query("secret")
+	if branch == "" || pusherID <= 0 || secret == "" {
+		writeError(c.ResponseWriter(), http.StatusBadRequest, "Incomplete branch, pusher or secret")
+		return
+	}
+
+	username := c.Param("owner")
+	reponame := c.Param("repo")
+
+	owner, err := database.Handle.Users().GetByUsername(c.Request().Context(), username)
+	if err != nil {
+		if database.IsErrUserNotExist(err) {
+			writeError(c.ResponseWriter(), http.StatusBadRequest, "Owner does not exist")
+		} else {
+			c.ResponseWriter().WriteHeader(http.StatusInternalServerError)
+			logger.Error("Failed to get user", "userName", username, "error", err)
+		}
+		return
+	}
+
+	// 🚨 SECURITY: No need to check existence of the repository if the client
+	// can't even get the valid secret. Most likely not a legitimate request.
+	if secret != cryptox.MD5(owner.Salt) {
+		writeError(c.ResponseWriter(), http.StatusBadRequest, "Invalid secret")
+		return
+	}
+
+	repo, err := database.Handle.Repositories().GetByName(c.Request().Context(), owner.ID, reponame)
+	if err != nil {
+		if database.IsErrRepoNotExist(err) {
+			writeError(c.ResponseWriter(), http.StatusBadRequest, "Repository does not exist")
+		} else {
+			c.ResponseWriter().WriteHeader(http.StatusInternalServerError)
+			logger.Error("Failed to get repository", "ownerID", owner.ID, "repoName", reponame, "error", err)
+		}
+		return
+	}
+
+	pusher, err := database.Handle.Users().GetByID(c.Request().Context(), pusherID)
+	if err != nil {
+		if database.IsErrUserNotExist(err) {
+			writeError(c.ResponseWriter(), http.StatusBadRequest, "Pusher does not exist")
+		} else {
+			c.ResponseWriter().WriteHeader(http.StatusInternalServerError)
+			logger.Error("Failed to get user", "userID", pusherID, "error", err)
+		}
+		return
+	}
+
+	logger.Debug("Task triggered", "ownerName", owner.Name, "repoName", repo.Name, "branch", branch, "pusherName", pusher.Name)
+
+	database.TriggerPushTasks(logger, pusher, repo.ID, branch)
+	c.ResponseWriter().WriteHeader(http.StatusAccepted)
 }

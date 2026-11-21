@@ -43,8 +43,6 @@ var routePackages = map[string]string{
 	"gogs.io/gogs/cmd/gogs/internal/api/v1": "../cmd/gogs/internal/api/v1",
 	"gogs.io/gogs/cmd/gogs/internal/lfs":    "../cmd/gogs/internal/lfs",
 	"gogs.io/gogs/cmd/gogs/internal/web":    "../cmd/gogs/internal/web",
-	// Only read for the handlers of pages.
-	"gogs.io/gogs/cmd/gogs/internal/repo": "../cmd/gogs/internal/repo",
 }
 
 // routeRoots are the functions of the web package that set up routers, with

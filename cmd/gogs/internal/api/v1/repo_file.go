@@ -9,11 +9,11 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/editorconfig/editorconfig-core-go/v2"
 
-	routerepo "gogs.io/gogs/cmd/gogs/internal/repo"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/mimex"
+	"gogs.io/gogs/internal/repox"
 )
 
 func getRawFile(c *apiContext) {
@@ -128,14 +128,14 @@ func getArchive(c *apiContext) {
 		return
 	}
 
-	archivePath, name, err := routerepo.PrepareArchive(c.Request().Context(), gitRepo, c.Repo.Repository.Name, c.Param("**"))
+	archivePath, name, err := repox.PrepareArchive(c.Request().Context(), gitRepo, c.Repo.Repository.Name, c.Param("**"))
 	if err != nil {
 		// Responds with the web pages, as it did before migrating to Flamego.
 		c.webNotFoundOrError(err, "prepare archive")
 		return
 	}
 
-	routerepo.ServeArchive(c.ResponseWriter(), c.Request().Request, archivePath, name)
+	repox.ServeArchive(c.ResponseWriter(), c.Request().Request, archivePath, name)
 }
 
 func getEditorconfig(c *apiContext) {

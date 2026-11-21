@@ -1,4 +1,4 @@
-package repo
+package repox
 
 import (
 	stdctx "context"

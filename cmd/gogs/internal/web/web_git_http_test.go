@@ -1,7 +1,7 @@
-package repo
+package web
 
 import (
-	"context"
+	stdctx "context"
 	"io"
 	"net"
 	"net/http"
@@ -66,10 +66,10 @@ func TestGitHTTPActionFromPath(t *testing.T) {
 }
 
 type reverseProxyStore struct {
-	Store
+	gitHTTPStore
 }
 
-func (reverseProxyStore) GetUserByUsername(_ context.Context, username string) (*database.User, error) {
+func (reverseProxyStore) GetUserByUsername(_ stdctx.Context, username string) (*database.User, error) {
 	switch username {
 	case "alice":
 		return &database.User{ID: 1, Name: "alice"}, nil
@@ -79,19 +79,19 @@ func (reverseProxyStore) GetUserByUsername(_ context.Context, username string) (
 	return nil, database.ErrUserNotExist{}
 }
 
-func (reverseProxyStore) GetRepositoryByName(context.Context, int64, string) (*database.Repository, error) {
+func (reverseProxyStore) GetRepositoryByName(stdctx.Context, int64, string) (*database.Repository, error) {
 	return &database.Repository{ID: 1, OwnerID: 1, Name: "p", IsPrivate: true}, nil
 }
 
-func (reverseProxyStore) CreateUser(context.Context, string, string, database.CreateUserOptions) (*database.User, error) {
+func (reverseProxyStore) CreateUser(stdctx.Context, string, string, database.CreateUserOptions) (*database.User, error) {
 	return nil, database.ErrNameNotAllowed{}
 }
 
-func (reverseProxyStore) AuthenticateUser(context.Context, string, string, int64) (*database.User, error) {
+func (reverseProxyStore) AuthenticateUser(stdctx.Context, string, string, int64) (*database.User, error) {
 	return nil, auth.ErrBadCredentials{}
 }
 
-func (reverseProxyStore) GetAccessTokenBySHA1(context.Context, string) (*database.AccessToken, error) {
+func (reverseProxyStore) GetAccessTokenBySHA1(stdctx.Context, string) (*database.AccessToken, error) {
 	return nil, database.ErrAccessTokenNotExist{}
 }
 
@@ -148,7 +148,7 @@ func TestHTTPContexter_reverseProxy(t *testing.T) {
 			})
 
 			m := flamego.New()
-			m.Get("/{owner}/{repo}/info/refs", HTTPContexter(logx.NewNoopLogger(), reverseProxyStore{}), func(w http.ResponseWriter) {
+			m.Get("/{owner}/{repo}/info/refs", gitHTTPContexter(logx.NewNoopLogger(), reverseProxyStore{}), func(w http.ResponseWriter) {
 				w.WriteHeader(http.StatusOK)
 			})
 
