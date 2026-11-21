@@ -11,7 +11,9 @@ dir=$(mktemp -d -t gogs-e2e-XXXXXX)
 server=
 
 cleanup() {
-  [ -n "$server" ] && kill "$server" 2>/dev/null || true
+  if [ -n "$server" ]; then
+    kill "$server" 2>/dev/null || true
+  fi
   rm -rf "$dir"
 }
 trap cleanup EXIT
