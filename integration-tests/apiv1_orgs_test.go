@@ -76,7 +76,7 @@ func TestAPIV1Organizations(t *testing.T) {
 		orgs = nil
 		newClient(t).doJSON(http.MethodGet, "/api/v1/users/"+owner.Name+"/orgs", nil, http.StatusOK, &orgs)
 		assert.Empty(t, orgs)
-		require.NoError(t, database.ChangeOrgUserStatus(created.ID, owner.ID, true))
+		require.NoError(t, database.Handle.Organizations().SetMemberVisibility(t.Context(), created.ID, owner.ID, true))
 		orgs = nil
 		newClient(t).doJSON(http.MethodGet, "/api/v1/users/"+owner.Name+"/orgs", nil, http.StatusOK, &orgs)
 		assert.Equal(t, []string{name}, apiV1OrgNames(orgs))
@@ -109,6 +109,10 @@ func TestAPIV1Organizations(t *testing.T) {
 	})
 
 	t.Run("teams", func(t *testing.T) {
+		// The organization of this subtest has no teams but the ones it adds.
+		var teamsOrg apiV1Org
+		api.doJSON(http.MethodPost, "/api/v1/user/orgs", map[string]any{"username": UniqueName("org-")}, http.StatusCreated, &teamsOrg)
+		name := teamsOrg.UserName
 		admin := apiV1Client(t, seedUser(t, CreateUserOptions{Admin: true}))
 		var reviewers apiV1Team
 		admin.doJSON(http.MethodPost, "/api/v1/admin/orgs/"+name+"/teams", map[string]any{"name": "reviewers", "permission": "read"}, http.StatusCreated, &reviewers)
@@ -117,7 +121,7 @@ func TestAPIV1Organizations(t *testing.T) {
 		status, body := admin.do(http.MethodPut, path, nil)
 		require.Equal(t, http.StatusNoContent, status, "PUT %s, response: %s", path, body)
 		member := seedUser(t, CreateUserOptions{})
-		require.NoError(t, database.AddOrgUser(created.ID, member.ID))
+		require.NoError(t, database.Handle.Organizations().AddMember(t.Context(), teamsOrg.ID, member.ID))
 
 		// listTeams returns the names of the teams that the client can list.
 		listTeams := func(c *client) []string {
@@ -221,8 +225,8 @@ func TestAPIV1Organizations(t *testing.T) {
 	})
 }
 
-// TestOrganizationCannotSignIn covers credentials that an organization holds,
-// e.g., from before organizations were refused them.
+// TestOrganizationCannotSignIn covers credentials that an organization holds in
+// the database, which no endpoint gives it.
 func TestOrganizationCannotSignIn(t *testing.T) {
 	t.Parallel()
 

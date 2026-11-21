@@ -9,8 +9,9 @@ import (
 // admins, and only their own teams to other members.
 func listTeams(c *apiContext) {
 	org := c.Org.Organization
-	isOwner := c.User.IsAdmin || org.IsOwnedBy(c.User.ID)
-	if !isOwner && !org.IsOrgMember(c.User.ID) {
+	ctx := c.Request().Context()
+	isOwner := c.User.IsAdmin || database.Handle.Organizations().IsOwner(ctx, org.ID, c.User.ID)
+	if !isOwner && !database.Handle.Organizations().IsMember(ctx, org.ID, c.User.ID) {
 		c.NotFound()
 		return
 	}
@@ -18,10 +19,9 @@ func listTeams(c *apiContext) {
 	var teams []*database.Team
 	var err error
 	if isOwner {
-		err = org.GetTeams()
-		teams = org.Teams
+		teams, err = database.Handle.Teams().ListByOrg(ctx, org.ID)
 	} else {
-		teams, err = org.GetUserTeams(c.User.ID)
+		teams, err = database.Handle.Teams().ListByMember(ctx, org.ID, c.User.ID)
 	}
 	if err != nil {
 		c.Error(err, "get teams")

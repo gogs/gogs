@@ -24,7 +24,6 @@ require (
 	github.com/go-playground/validator/v10 v10.30.6
 	github.com/go-sql-driver/mysql v1.10.1
 	github.com/go-webauthn/webauthn v0.18.2
-	github.com/gogs/chardet v0.0.0-20150115103509-2404f7772561
 	github.com/gogs/cron v0.0.0-20171120032916-9f6c956d3e14
 	github.com/gogs/minwinsvc v0.0.0-20170301035411-95be6356811a
 	github.com/google/uuid v1.6.0
@@ -64,7 +63,6 @@ require (
 	gorm.io/gorm v1.25.12
 	unknwon.dev/ini/v2 v2.0.0-beta.4
 	unknwon.dev/x v0.0.0-20261116185950-bb25d45e810c
-	xorm.io/builder v0.3.6
 	xorm.io/core v0.7.2
 	xorm.io/xorm v0.8.0
 )
@@ -141,7 +139,6 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
-	github.com/saintfish/chardet v0.0.0-20120816061221-3af4cd4741ca // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
 	github.com/sethvargo/go-retry v0.3.0 // indirect
 	github.com/smartystreets/goconvey v1.8.1 // indirect
@@ -168,4 +165,5 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 	modernc.org/sqlite v1.51.0 // indirect
+	xorm.io/builder v0.3.6 // indirect
 )

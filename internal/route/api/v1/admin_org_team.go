@@ -20,7 +20,7 @@ func adminCreateTeam(c *apiContext, form adminCreateTeamRequest) {
 		Description: form.Description,
 		Authorize:   database.ParseAccessMode(form.Permission),
 	}
-	if err := database.NewTeam(team); err != nil {
+	if err := database.Handle.Teams().Create(c.Request().Context(), team); err != nil {
 		if database.IsErrTeamAlreadyExist(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
 		} else {
@@ -41,7 +41,7 @@ func adminAddTeamMember(c *apiContext) {
 		c.NotFound()
 		return
 	}
-	if err := c.Org.Team.AddMember(u.ID); err != nil {
+	if err := database.Handle.Teams().AddMember(c.Request().Context(), c.Org.Team.OrgID, c.Org.Team.ID, u.ID); err != nil {
 		c.Error(err, "add member")
 		return
 	}
@@ -55,7 +55,7 @@ func adminRemoveTeamMember(c *apiContext) {
 		return
 	}
 
-	if err := c.Org.Team.RemoveMember(u.ID); err != nil {
+	if err := database.Handle.Teams().RemoveMember(c.Request().Context(), c.Org.Team.OrgID, c.Org.Team.ID, u.ID); err != nil {
 		c.Error(err, "remove member")
 		return
 	}
@@ -64,15 +64,15 @@ func adminRemoveTeamMember(c *apiContext) {
 }
 
 func adminListTeamMembers(c *apiContext) {
-	team := c.Org.Team
-	if err := team.GetMembers(); err != nil {
+	members, err := database.Handle.Teams().ListMembers(c.Request().Context(), c.Org.Team.ID)
+	if err != nil {
 		c.Error(err, "get team members")
 		return
 	}
 
-	apiMembers := make([]*types.User, len(team.Members))
-	for i := range team.Members {
-		apiMembers[i] = toUser(team.Members[i])
+	apiMembers := make([]*types.User, len(members))
+	for i := range members {
+		apiMembers[i] = toUser(members[i])
 	}
 	c.JSONSuccess(apiMembers)
 }

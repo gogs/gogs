@@ -1190,29 +1190,29 @@ const (
 // User represents the object of an individual or an organization.
 type User struct {
 	ID        int64  `gorm:"primaryKey"`
-	LowerName string `xorm:"UNIQUE NOT NULL" gorm:"unique;not null"`
-	Name      string `xorm:"UNIQUE NOT NULL" gorm:"not null"`
-	FullName  string
+	LowerName string `gorm:"size:255;not null;uniqueIndex:UQE_user_lower_name"`
+	Name      string `gorm:"size:255;not null;uniqueIndex:UQE_user_name"`
+	FullName  string `gorm:"size:255"`
 	// Email is the primary email address (to be used for communication).
-	Email       string `xorm:"NOT NULL" gorm:"not null"`
-	Password    string `xorm:"passwd NOT NULL" gorm:"column:passwd;not null"`
-	LoginSource int64  `xorm:"NOT NULL DEFAULT 0" gorm:"not null;default:0"`
-	LoginName   string
-	Type        UserType
-	Location    string
-	Website     string
-	Rands       string `xorm:"VARCHAR(10)" gorm:"type:VARCHAR(10)"`
-	Salt        string `xorm:"VARCHAR(10)" gorm:"type:VARCHAR(10)"`
+	Email       string   `gorm:"size:255;not null"`
+	Password    string   `gorm:"column:passwd;size:255;not null"`
+	LoginSource int64    `gorm:"not null;default:0"`
+	LoginName   string   `gorm:"size:255"`
+	Type        UserType `gorm:"size:32"`
+	Location    string   `gorm:"size:255"`
+	Website     string   `gorm:"size:255"`
+	Rands       string   `gorm:"size:10"`
+	Salt        string   `gorm:"size:10"`
 
-	Created     time.Time `xorm:"-" gorm:"-" json:"-"`
+	Created     time.Time `gorm:"-" json:"-"`
 	CreatedUnix int64
-	Updated     time.Time `xorm:"-" gorm:"-" json:"-"`
+	Updated     time.Time `gorm:"-" json:"-"`
 	UpdatedUnix int64
 
 	// Remember visibility choice for convenience, true for private.
 	LastRepoVisibility bool
 	// Maximum repository creation limit, -1 means use global default.
-	MaxRepoCreation int `xorm:"NOT NULL DEFAULT -1" gorm:"not null;default:-1"`
+	MaxRepoCreation int `gorm:"size:32;not null;default:-1"`
 
 	// Permissions
 	IsActive         bool // Whether the primary email is activated.
@@ -1225,17 +1225,15 @@ type User struct {
 	UseCustomAvatar bool
 
 	// Counters
-	NumFollowers int
-	NumFollowing int `xorm:"NOT NULL DEFAULT 0" gorm:"not null;default:0"`
-	NumStars     int
-	NumRepos     int
+	NumFollowers int `gorm:"size:32"`
+	NumFollowing int `gorm:"size:32;not null;default:0"`
+	NumStars     int `gorm:"size:32"`
+	NumRepos     int `gorm:"size:32"`
 
 	// For organization
-	Description string
-	NumTeams    int
-	NumMembers  int
-	Teams       []*Team `xorm:"-" gorm:"-" json:"-"`
-	Members     []*User `xorm:"-" gorm:"-" json:"-"`
+	Description string `gorm:"size:255"`
+	NumTeams    int    `gorm:"size:32"`
+	NumMembers  int    `gorm:"size:32"`
 }
 
 // BeforeCreate implements the GORM create hook.
@@ -1373,33 +1371,6 @@ func (u *User) AvatarURL() string {
 // having a dedicated type `template.User`.
 func (u *User) IsFollowing(followID int64) bool {
 	return Handle.Users().IsFollowing(context.TODO(), u.ID, followID)
-}
-
-// IsUserOrgOwner returns true if the user is in the owner team of the given
-// organization.
-//
-// TODO(unknwon): This is also used in templates, which should be fixed by
-// having a dedicated type `template.User`.
-func (u *User) IsUserOrgOwner(orgID int64) bool {
-	return IsOrganizationOwner(orgID, u.ID)
-}
-
-// IsPublicMember returns true if the user has public membership of the given
-// organization.
-//
-// TODO(unknwon): This is also used in templates, which should be fixed by
-// having a dedicated type `template.User`.
-func (u *User) IsPublicMember(orgID int64) bool {
-	return IsPublicMembership(orgID, u.ID)
-}
-
-// GetOrganizationCount returns the count of organization membership that the
-// user has.
-//
-// TODO(unknwon): This is also used in templates, which should be fixed by
-// having a dedicated type `template.User`.
-func (u *User) GetOrganizationCount() (int64, error) {
-	return Handle.Organizations().CountByUser(context.TODO(), u.ID)
 }
 
 // ShortName truncates and returns the username at most in given length.
