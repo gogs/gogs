@@ -235,14 +235,15 @@ export function StatCard({
 // 14:32". The icon and the text carry it, not a color.
 export function TrendChip({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-flex max-w-full items-center gap-1 rounded-full border border-(--color-border) px-2 text-xs/5">
+    <span className="reloads inline-flex max-w-full items-center gap-1 rounded-full border border-(--color-border) px-2 text-xs/5">
       <TrendingUp className="size-3 shrink-0" aria-hidden />
       <span className="truncate">{children}</span>
     </span>
   );
 }
 
-export const STAT_VALUE = "text-2xl/8 font-semibold tabular-nums";
+// `reloads` shows the value as a skeleton while the page loads again (see `useReloading`).
+export const STAT_VALUE = "reloads text-2xl/8 font-semibold tabular-nums";
 
 // Rows lists labeled values in a card, with each value at the end of the line
 // of its label, or below it when they do not fit one line.

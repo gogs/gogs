@@ -24,7 +24,7 @@ import {
 } from "@/components/AdminPage";
 import { type ChartConfig, ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import { METRICS, SECTIONS, flag, flagText } from "@/lib/admin-health";
-import { useRefreshed } from "@/lib/admin-refresh";
+import { reloadingProps, useRefreshed, useReloading } from "@/lib/admin-refresh";
 import { type AdminHealth, type AdminHealthRange, type AdminHealthSeries, adminHealthQuery } from "@/lib/queries/admin";
 import { formatAbsoluteTime, formatClockTime } from "@/lib/relative-time";
 import { cn } from "@/lib/utils";
@@ -216,6 +216,7 @@ const MetricChart = memo(function MetricChart({
 export function AdminServerHealth({ health: loaded, range }: { health: AdminHealth; range: AdminHealthRange }) {
   const { t } = useTranslation();
   const { data: health, refresh, failedSince } = useRefreshed(adminHealthQuery(range), loaded);
+  const reloading = useReloading();
   const [hover, setHover] = useState<number | null>(null);
   const [pinned, setPinned] = useState<number | null>(null);
   const cursor = pinned ?? hover;
@@ -277,7 +278,7 @@ export function AdminServerHealth({ health: loaded, range }: { health: AdminHeal
   const around = Math.max(60_000, stepMs);
 
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-4" {...reloadingProps(reloading)}>
       <AdminPageHeader title={t("admin.health")} note={<RefreshNote failedSince={failedSince} />}>
         <SegmentedLinks
           label={t("admin.traces.range")}
@@ -373,7 +374,7 @@ export function AdminServerHealth({ health: loaded, range }: { health: AdminHeal
                       onKeyDown={onKeyDown}
                       className="min-w-0 rounded-sm outline-none focus-visible:ring-1 focus-visible:ring-(--color-ring)"
                     >
-                      <NearViewport className="h-32">
+                      <NearViewport className="reloads h-32">
                         <MetricChart
                           series={row.series}
                           start={start}

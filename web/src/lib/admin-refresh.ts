@@ -1,4 +1,5 @@
 import { type QueryKey, type UseQueryOptions, useQuery } from "@tanstack/react-query";
+import { useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
 
 // REFRESH_SECONDS are the intervals a page of the admin console can refresh
@@ -46,6 +47,28 @@ export function refreshOptions(seconds: number) {
     // without a word. This way the refresh fails, and the page tells.
     networkMode: "always" as const,
   };
+}
+
+// useReloading reports whether the loader of the page is at work on what the
+// page shows: on a view the router held from an earlier visit, which shows at
+// once with the numbers from then, or on another view of the same page, e.g.,
+// another range, while the last one is still up. The page then shows skeletons
+// in place of those numbers (see `reloadingProps`). A refresh is not a reload:
+// its numbers are current enough to stay until the new ones replace them.
+export function useReloading() {
+  return useRouterState({
+    select: (state) =>
+      state.matches.some((match) => match.isFetching === "loader") ||
+      (state.status === "pending" && state.location.pathname === state.resolvedLocation?.pathname),
+  });
+}
+
+// reloadingProps marks a page whose loader is at work (see `useReloading`).
+// Under the mark, the parts with the class `reloads` and the cells of tables
+// show as skeletons of their own size (see index.css), so the page keeps its
+// height, and with it the scroll position it returns to.
+export function reloadingProps(reloading: boolean) {
+  return reloading ? { "aria-busy": true, "data-reloading": "" } : {};
 }
 
 // useRefreshed keeps what the loader of a page loaded fresh. The loader fills

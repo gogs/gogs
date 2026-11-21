@@ -18,7 +18,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableSortHead } from "@/components/ui/table";
-import { useRefreshed } from "@/lib/admin-refresh";
+import { reloadingProps, useRefreshed, useReloading } from "@/lib/admin-refresh";
 import { formatMinutes, formatMs, formatNumber } from "@/lib/format";
 import type { TraceSearch } from "@/lib/page-search";
 import {
@@ -109,8 +109,9 @@ function TracesLayout({
   children: ReactNode;
 }) {
   const { t } = useTranslation();
+  const reloading = useReloading();
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-4" {...reloadingProps(reloading)}>
       <AdminPageHeader
         title={t("admin.traces")}
         description={t("admin.traces.desc", { duration: formatMinutes(maxAgeMinutes) })}
@@ -380,7 +381,9 @@ export function AdminTraceOverview({ overview: loaded }: { overview: AdminTraceO
         </CardHeader>
         <CardContent className={CARD_BODY}>
           {overview.requests > 0 ? (
-            <TraceTrafficChart overview={overview} />
+            <div className="reloads">
+              <TraceTrafficChart overview={overview} />
+            </div>
           ) : (
             <p className={cn("py-10 text-center text-sm", MUTED)}>{t("admin.traces.no_requests")}</p>
           )}
@@ -590,7 +593,7 @@ export function AdminTraceSearch({ result: loaded, search }: { result: AdminTrac
     return (
       <TracesLayout view="search" q={search.q} maxAgeMinutes={result.maxAgeMinutes}>
         <Card className="min-w-0">
-          <CardContent className="text-sm">
+          <CardContent className="reloads text-sm">
             <p>
               <Trans
                 i18nKey="admin.traces.not_found"
@@ -706,13 +709,15 @@ export function AdminTraceSearch({ result: loaded, search }: { result: AdminTrac
       <Card className="min-w-0">
         <CardHeader>
           <CardTitle className={CARD_TITLE}>{t("admin.traces.kept_traces")}</CardTitle>
-          <CardDescription>
+          <CardDescription className="reloads w-fit">
             {t("admin.traces.count", { total: formatNumber(result.total), shown: result.traces.length })}
           </CardDescription>
         </CardHeader>
         <CardContent className={CARD_BODY}>
           {result.points.length > 0 ? (
-            <TraceScatterChart result={result} search={search} />
+            <div className="reloads">
+              <TraceScatterChart result={result} search={search} />
+            </div>
           ) : (
             <p className={cn("py-10 text-center text-sm", MUTED)}>{t("admin.traces.no_match")}</p>
           )}
