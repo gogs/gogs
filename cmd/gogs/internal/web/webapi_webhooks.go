@@ -14,13 +14,13 @@ import (
 	"github.com/flamego/flamego"
 	"unknwon.dev/x/logx"
 
+	"gogs.io/gogs/internal/api/v1types"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/i18n"
 	"gogs.io/gogs/internal/netx"
 	"gogs.io/gogs/internal/repox"
-	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 
 // webhookScope is the repository or the organization whose webhooks are
@@ -383,7 +383,7 @@ func usernameByEmail(ctx context.Context, email string) (string, error) {
 // testPushPayload returns a push event for the latest commit on the default
 // branch of the repository, or for a fake commit when the repository is
 // empty.
-func testPushPayload(ctx context.Context, logger *logx.Logger, viewer *database.User, rc *repoAdminContext) (*apiv1types.WebhookPushPayload, error) {
+func testPushPayload(ctx context.Context, logger *logx.Logger, viewer *database.User, rc *repoAdminContext) (*v1types.WebhookPushPayload, error) {
 	repo := rc.Repo
 	ghost := database.NewGhostUser()
 	commit := &git.Commit{
@@ -423,21 +423,21 @@ func testPushPayload(ctx context.Context, logger *logx.Logger, viewer *database.
 	}
 
 	apiUser := viewer.APIFormat()
-	return &apiv1types.WebhookPushPayload{
+	return &v1types.WebhookPushPayload{
 		Ref:    git.RefsHeads + repo.DefaultBranch,
 		Before: commitID,
 		After:  commitID,
-		Commits: []*apiv1types.WebhookPayloadCommit{
+		Commits: []*v1types.WebhookPayloadCommit{
 			{
 				ID:      commitID,
 				Message: commit.Message,
 				URL:     repo.HTMLURL() + "/commit/" + commitID,
-				Author: &apiv1types.WebhookPayloadUser{
+				Author: &v1types.WebhookPayloadUser{
 					Name:     commit.Author.Name,
 					Email:    commit.Author.Email,
 					UserName: authorUsername,
 				},
-				Committer: &apiv1types.WebhookPayloadUser{
+				Committer: &v1types.WebhookPayloadUser{
 					Name:     commit.Committer.Name,
 					Email:    commit.Committer.Email,
 					UserName: committerUsername,

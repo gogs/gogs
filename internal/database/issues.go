@@ -13,10 +13,10 @@ import (
 	"gorm.io/gorm"
 	"unknwon.dev/x/logx"
 
+	"gogs.io/gogs/internal/api/v1types"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/markup"
-	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 
 var ErrMissingIssueNumber = errors.New("no issue number specified")
@@ -90,24 +90,24 @@ func (issue *Issue) HTMLURL() string {
 }
 
 // State returns string representation of issue status.
-func (issue *Issue) State() apiv1types.IssueStateType {
+func (issue *Issue) State() v1types.IssueStateType {
 	if issue.IsClosed {
-		return apiv1types.IssueStateClosed
+		return v1types.IssueStateClosed
 	}
-	return apiv1types.IssueStateOpen
+	return v1types.IssueStateOpen
 }
 
 // APIFormat returns the API format of the issue. It assumes some fields have
 // been assigned with values:
 // Required - Poster, Labels
 // Optional - Milestone, Assignee, PullRequest
-func (issue *Issue) APIFormat() *apiv1types.Issue {
-	apiLabels := make([]*apiv1types.IssueLabel, len(issue.Labels))
+func (issue *Issue) APIFormat() *v1types.Issue {
+	apiLabels := make([]*v1types.IssueLabel, len(issue.Labels))
 	for i := range issue.Labels {
 		apiLabels[i] = issue.Labels[i].APIFormat()
 	}
 
-	apiIssue := &apiv1types.Issue{
+	apiIssue := &v1types.Issue{
 		ID:       issue.ID,
 		Index:    issue.Index,
 		Poster:   issue.Poster.APIFormat(),
@@ -127,7 +127,7 @@ func (issue *Issue) APIFormat() *apiv1types.Issue {
 		apiIssue.Assignee = issue.Assignee.APIFormat()
 	}
 	if issue.IsPull {
-		apiIssue.PullRequest = &apiv1types.PullRequestMeta{
+		apiIssue.PullRequest = &v1types.PullRequestMeta{
 			HasMerged: issue.PullRequest.HasMerged,
 		}
 		if issue.PullRequest.HasMerged {
@@ -315,8 +315,8 @@ func (s *IssuesStore) Create(ctx context.Context, logger *logx.Logger, repo *Rep
 		logger.Error("Failed to mail participants", "error", err)
 	}
 
-	err = newWebhooksStore(s.db).Prepare(ctx, logger, repo, HookEventTypeIssues, &apiv1types.WebhookIssuesPayload{
-		Action:     apiv1types.WebhookIssueOpened,
+	err = newWebhooksStore(s.db).Prepare(ctx, logger, repo, HookEventTypeIssues, &v1types.WebhookIssuesPayload{
+		Action:     v1types.WebhookIssueOpened,
 		Index:      issue.Index,
 		Issue:      issue.APIFormat(),
 		Repository: repo.APIFormatLegacy(logger, nil),
@@ -921,12 +921,12 @@ func (s *IssuesStore) UpdateAssignee(ctx context.Context, issue *Issue) error {
 // prepareWebhooks prepares the deliveries of given action on the issue, or on
 // its pull request, of given repository as the doer. Failing to prepare them
 // is logged.
-func (s *IssuesStore) prepareWebhooks(ctx context.Context, logger *logx.Logger, doer *User, repo *Repository, issue *Issue, action apiv1types.WebhookIssueAction, changes *apiv1types.WebhookChangesPayload) {
+func (s *IssuesStore) prepareWebhooks(ctx context.Context, logger *logx.Logger, doer *User, repo *Repository, issue *Issue, action v1types.WebhookIssueAction, changes *v1types.WebhookChangesPayload) {
 	webhooks := newWebhooksStore(s.db)
 	var err error
 	if issue.IsPull {
 		issue.PullRequest.Issue = issue
-		err = webhooks.Prepare(ctx, logger, repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
+		err = webhooks.Prepare(ctx, logger, repo, HookEventTypePullRequest, &v1types.WebhookPullRequestPayload{
 			Action:      action,
 			Index:       issue.Index,
 			PullRequest: issue.PullRequest.APIFormat(logger),
@@ -935,7 +935,7 @@ func (s *IssuesStore) prepareWebhooks(ctx context.Context, logger *logx.Logger, 
 			Sender:      doer.APIFormat(),
 		})
 	} else {
-		err = webhooks.Prepare(ctx, logger, repo, HookEventTypeIssues, &apiv1types.WebhookIssuesPayload{
+		err = webhooks.Prepare(ctx, logger, repo, HookEventTypeIssues, &v1types.WebhookIssuesPayload{
 			Action:     action,
 			Index:      issue.Index,
 			Issue:      issue.APIFormat(),
@@ -969,9 +969,9 @@ func (s *IssuesStore) ChangeStatus(ctx context.Context, logger *logx.Logger, doe
 		return err
 	}
 
-	action := apiv1types.WebhookIssueReopened
+	action := v1types.WebhookIssueReopened
 	if isClosed {
-		action = apiv1types.WebhookIssueClosed
+		action = v1types.WebhookIssueClosed
 	}
 	s.prepareWebhooks(ctx, logger, doer, repo, issue, action, nil)
 	return nil
@@ -1048,8 +1048,8 @@ func (s *IssuesStore) ChangeTitle(ctx context.Context, logger *logx.Logger, doer
 		return errors.Wrap(err, "update issue")
 	}
 
-	s.prepareWebhooks(ctx, logger, doer, issue.Repo, issue, apiv1types.WebhookIssueEdited, &apiv1types.WebhookChangesPayload{
-		Title: &apiv1types.WebhookChangesFromPayload{From: oldTitle},
+	s.prepareWebhooks(ctx, logger, doer, issue.Repo, issue, v1types.WebhookIssueEdited, &v1types.WebhookChangesPayload{
+		Title: &v1types.WebhookChangesFromPayload{From: oldTitle},
 	})
 	return nil
 }
@@ -1065,8 +1065,8 @@ func (s *IssuesStore) ChangeContent(ctx context.Context, logger *logx.Logger, do
 		return errors.Wrap(err, "update issue")
 	}
 
-	s.prepareWebhooks(ctx, logger, doer, issue.Repo, issue, apiv1types.WebhookIssueEdited, &apiv1types.WebhookChangesPayload{
-		Body: &apiv1types.WebhookChangesFromPayload{From: oldContent},
+	s.prepareWebhooks(ctx, logger, doer, issue.Repo, issue, v1types.WebhookIssueEdited, &v1types.WebhookChangesPayload{
+		Body: &v1types.WebhookChangesFromPayload{From: oldContent},
 	})
 	return nil
 }
@@ -1089,9 +1089,9 @@ func (s *IssuesStore) ChangeAssignee(ctx context.Context, logger *logx.Logger, d
 	}
 	issue.Assignee = assignee
 
-	action := apiv1types.WebhookIssueAssigned
+	action := v1types.WebhookIssueAssigned
 	if assignee == nil {
-		action = apiv1types.WebhookIssueUnassigned
+		action = v1types.WebhookIssueUnassigned
 	}
 	s.prepareWebhooks(ctx, logger, doer, issue.Repo, issue, action, nil)
 	return nil
@@ -1108,7 +1108,7 @@ func (s *IssuesStore) AddLabels(ctx context.Context, logger *logx.Logger, doer *
 		return err
 	}
 
-	s.prepareWebhooks(ctx, logger, doer, issue.Repo, issue, apiv1types.WebhookIssueLabelUpdated, nil)
+	s.prepareWebhooks(ctx, logger, doer, issue.Repo, issue, v1types.WebhookIssueLabelUpdated, nil)
 	return nil
 }
 
@@ -1122,7 +1122,7 @@ func (s *IssuesStore) RemoveLabel(ctx context.Context, logger *logx.Logger, doer
 		return err
 	}
 
-	s.prepareWebhooks(ctx, logger, doer, issue.Repo, issue, apiv1types.WebhookIssueLabelUpdated, nil)
+	s.prepareWebhooks(ctx, logger, doer, issue.Repo, issue, v1types.WebhookIssueLabelUpdated, nil)
 	return nil
 }
 
@@ -1154,7 +1154,7 @@ func (s *IssuesStore) ClearLabels(ctx context.Context, logger *logx.Logger, doer
 		return err
 	}
 
-	s.prepareWebhooks(ctx, logger, doer, issue.Repo, issue, apiv1types.WebhookIssueLabelCleared, nil)
+	s.prepareWebhooks(ctx, logger, doer, issue.Repo, issue, v1types.WebhookIssueLabelCleared, nil)
 	return nil
 }
 

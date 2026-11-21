@@ -11,9 +11,9 @@ import (
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
 
+	"gogs.io/gogs/internal/api/v1types"
 	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/lazyregexp"
-	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 
 var labelColorPattern = lazyregexp.New("#([a-fA-F0-9]{6})")
@@ -62,8 +62,8 @@ type Label struct {
 	IsChecked       bool `json:"-" gorm:"-"`
 }
 
-func (l *Label) APIFormat() *apiv1types.IssueLabel {
-	return &apiv1types.IssueLabel{
+func (l *Label) APIFormat() *v1types.IssueLabel {
+	return &v1types.IssueLabel{
 		ID:    l.ID,
 		Name:  l.Name,
 		Color: strings.TrimLeft(l.Color, "#"),

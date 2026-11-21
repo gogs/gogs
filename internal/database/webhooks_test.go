@@ -11,9 +11,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"unknwon.dev/x/logx"
 
+	"gogs.io/gogs/internal/api/v1types"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/dbx"
-	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 
 func TestWebhooks(t *testing.T) {
@@ -234,7 +234,7 @@ func webhooksPrepare(t *testing.T, ctx context.Context, s *WebhooksStore) {
 	orgHook := newTestWebhook(t, ctx, s, 0, org.ID, HookEvents{Push: true})
 	newTestWebhook(t, ctx, s, 0, 9999, HookEvents{})
 
-	payload := &apiv1types.WebhookPushPayload{Ref: "refs/heads/main"}
+	payload := &v1types.WebhookPushPayload{Ref: "refs/heads/main"}
 	err := s.Prepare(ctx, logger, repo, HookEventTypePush, payload)
 	require.NoError(t, err)
 
@@ -281,7 +281,7 @@ func webhooksTest(t *testing.T, ctx context.Context, s *WebhooksStore) {
 	require.NoError(t, s.Update(ctx, inactive))
 	issuesHook := newTestWebhook(t, ctx, s, repo.ID, 0, HookEvents{Issues: true})
 	otherHook := newTestWebhook(t, ctx, s, 9999, 0, HookEvents{})
-	payload := &apiv1types.WebhookPushPayload{Ref: "refs/heads/main"}
+	payload := &v1types.WebhookPushPayload{Ref: "refs/heads/main"}
 
 	// Inactive webhooks can be tested.
 	err := s.Test(ctx, logger, repo, HookEventTypePush, payload, inactive.ID)
@@ -312,10 +312,10 @@ func webhooksPrepareDiscordWithoutSettings(t *testing.T, ctx context.Context, s 
 	require.NoError(t, s.Update(ctx, discord))
 	after := newTestWebhook(t, ctx, s, repo.ID, 0, HookEvents{})
 
-	payload := &apiv1types.WebhookPushPayload{
+	payload := &v1types.WebhookPushPayload{
 		Ref:    "refs/heads/main",
-		Repo:   &apiv1types.Repository{Name: "repo", HTMLURL: "https://example.com/org/repo"},
-		Sender: &apiv1types.User{UserName: "alice", AvatarURL: "https://example.com/alice.png"},
+		Repo:   &v1types.Repository{Name: "repo", HTMLURL: "https://example.com/org/repo"},
+		Sender: &v1types.User{UserName: "alice", AvatarURL: "https://example.com/alice.png"},
 	}
 	err := s.Prepare(ctx, logx.NewNoopLogger(), repo, HookEventTypePush, payload)
 	require.NoError(t, err)

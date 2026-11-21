@@ -13,12 +13,12 @@ import (
 	"gorm.io/gorm"
 	"unknwon.dev/x/logx"
 
+	"gogs.io/gogs/internal/api/v1types"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/osx"
-	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 	"gogs.io/gogs/internal/sync"
 )
 
@@ -86,11 +86,11 @@ func (pr *PullRequest) AfterFind(_ *gorm.DB) error {
 // following fields have been assigned with valid values:
 // Required - Issue, BaseRepo
 // Optional - HeadRepo, Merger
-func (pr *PullRequest) APIFormat(logger *logx.Logger) *apiv1types.PullRequest {
+func (pr *PullRequest) APIFormat(logger *logx.Logger) *v1types.PullRequest {
 	// In case the head repo has been deleted.
-	var apiHeadRepo *apiv1types.Repository
+	var apiHeadRepo *v1types.Repository
 	if pr.HeadRepo == nil {
-		apiHeadRepo = &apiv1types.Repository{
+		apiHeadRepo = &v1types.Repository{
 			Name: "deleted",
 		}
 	} else {
@@ -98,7 +98,7 @@ func (pr *PullRequest) APIFormat(logger *logx.Logger) *apiv1types.PullRequest {
 	}
 
 	apiIssue := pr.Issue.APIFormat()
-	apiPullRequest := &apiv1types.PullRequest{
+	apiPullRequest := &v1types.PullRequest{
 		ID:         pr.ID,
 		Index:      pr.Index,
 		Poster:     apiIssue.Poster,
@@ -504,8 +504,8 @@ func (s *PullRequestsStore) Merge(ctx context.Context, logger *logx.Logger, doer
 		logger.Error("Failed to load pull request attributes", "pullRequestID", pr.ID, "error", err)
 		return nil
 	}
-	if err = newWebhooksStore(s.db).Prepare(ctx, logger, pr.Issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
-		Action:      apiv1types.WebhookIssueClosed,
+	if err = newWebhooksStore(s.db).Prepare(ctx, logger, pr.Issue.Repo, HookEventTypePullRequest, &v1types.WebhookPullRequestPayload{
+		Action:      v1types.WebhookIssueClosed,
 		Index:       pr.Index,
 		PullRequest: pr.APIFormat(logger),
 		Repository:  pr.Issue.Repo.APIFormatLegacy(logger, nil),
@@ -544,7 +544,7 @@ func (s *PullRequestsStore) Merge(ctx context.Context, logger *logx.Logger, doer
 		return nil
 	}
 
-	p := &apiv1types.WebhookPushPayload{
+	p := &v1types.WebhookPushPayload{
 		Ref:        git.RefsHeads + pr.BaseBranch,
 		Before:     pr.MergeBase,
 		After:      mergeCommit.ID.String(),
@@ -703,8 +703,8 @@ func AddTestPullRequestTask(logger *logx.Logger, doer *User, repoID int64, branc
 				logger.Error("Failed to load issue", "pullRequestID", pr.ID, "error", err)
 				continue
 			}
-			err = Handle.Webhooks().Prepare(ctx, logger, pr.Issue.Repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
-				Action:      apiv1types.WebhookIssueSynchronized,
+			err = Handle.Webhooks().Prepare(ctx, logger, pr.Issue.Repo, HookEventTypePullRequest, &v1types.WebhookPullRequestPayload{
+				Action:      v1types.WebhookIssueSynchronized,
 				Index:       pr.Issue.Index,
 				PullRequest: pr.APIFormat(logger),
 				Repository:  pr.Issue.Repo.APIFormatLegacy(logger, nil),
@@ -851,8 +851,8 @@ func (s *PullRequestsStore) Create(ctx context.Context, logger *logx.Logger, rep
 
 	pr.Issue = pull
 	pull.PullRequest = pr
-	err = newWebhooksStore(s.db).Prepare(ctx, logger, repo, HookEventTypePullRequest, &apiv1types.WebhookPullRequestPayload{
-		Action:      apiv1types.WebhookIssueOpened,
+	err = newWebhooksStore(s.db).Prepare(ctx, logger, repo, HookEventTypePullRequest, &v1types.WebhookPullRequestPayload{
+		Action:      v1types.WebhookIssueOpened,
 		Index:       pull.Index,
 		PullRequest: pr.APIFormat(logger),
 		Repository:  repo.APIFormatLegacy(logger, nil),

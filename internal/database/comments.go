@@ -11,8 +11,8 @@ import (
 	"gorm.io/gorm"
 	"unknwon.dev/x/logx"
 
+	"gogs.io/gogs/internal/api/v1types"
 	"gogs.io/gogs/internal/errx"
-	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 
 // CommentType defines whether a comment is just a simple comment, an action (like close) or a reference.
@@ -99,8 +99,8 @@ func (c *Comment) HTMLURL() string {
 // APIFormat returns the API format of the comment. It assumes the following
 // fields have been assigned with valid values:
 // Required - Poster, Issue
-func (c *Comment) APIFormat() *apiv1types.IssueComment {
-	return &apiv1types.IssueComment{
+func (c *Comment) APIFormat() *v1types.IssueComment {
+	return &v1types.IssueComment{
 		ID:      c.ID,
 		HTMLURL: c.HTMLURL(),
 		Poster:  c.Poster.APIFormat(),
@@ -312,8 +312,8 @@ func (s *CommentsStore) Create(ctx context.Context, logger *logx.Logger, doer *U
 	}
 
 	comment.Issue = issue
-	err = newWebhooksStore(s.db).Prepare(ctx, logger, repo, HookEventTypeIssueComment, &apiv1types.WebhookIssueCommentPayload{
-		Action:     apiv1types.WebhookIssueCommentCreated,
+	err = newWebhooksStore(s.db).Prepare(ctx, logger, repo, HookEventTypeIssueComment, &v1types.WebhookIssueCommentPayload{
+		Action:     v1types.WebhookIssueCommentCreated,
 		Issue:      issue.APIFormat(),
 		Comment:    comment.APIFormat(),
 		Repository: repo.APIFormatLegacy(logger, nil),
@@ -456,12 +456,12 @@ func (s *CommentsStore) Update(ctx context.Context, logger *logx.Logger, doer *U
 		logger.Error("Failed to load issue attributes", "issueID", c.IssueID, "error", err)
 		return nil
 	}
-	err = newWebhooksStore(s.db).Prepare(ctx, logger, c.Issue.Repo, HookEventTypeIssueComment, &apiv1types.WebhookIssueCommentPayload{
-		Action:  apiv1types.WebhookIssueCommentEdited,
+	err = newWebhooksStore(s.db).Prepare(ctx, logger, c.Issue.Repo, HookEventTypeIssueComment, &v1types.WebhookIssueCommentPayload{
+		Action:  v1types.WebhookIssueCommentEdited,
 		Issue:   c.Issue.APIFormat(),
 		Comment: c.APIFormat(),
-		Changes: &apiv1types.WebhookChangesPayload{
-			Body: &apiv1types.WebhookChangesFromPayload{From: oldContent},
+		Changes: &v1types.WebhookChangesPayload{
+			Body: &v1types.WebhookChangesFromPayload{From: oldContent},
 		},
 		Repository: c.Issue.Repo.APIFormatLegacy(logger, nil),
 		Sender:     doer.APIFormat(),
@@ -510,8 +510,8 @@ func (s *CommentsStore) DeleteByID(ctx context.Context, logger *logx.Logger, doe
 		logger.Error("Failed to load issue attributes", "issueID", comment.IssueID, "error", err)
 		return nil
 	}
-	err = newWebhooksStore(s.db).Prepare(ctx, logger, comment.Issue.Repo, HookEventTypeIssueComment, &apiv1types.WebhookIssueCommentPayload{
-		Action:     apiv1types.WebhookIssueCommentDeleted,
+	err = newWebhooksStore(s.db).Prepare(ctx, logger, comment.Issue.Repo, HookEventTypeIssueComment, &v1types.WebhookIssueCommentPayload{
+		Action:     v1types.WebhookIssueCommentDeleted,
 		Issue:      comment.Issue.APIFormat(),
 		Comment:    comment.APIFormat(),
 		Repository: comment.Issue.Repo.APIFormatLegacy(logger, nil),

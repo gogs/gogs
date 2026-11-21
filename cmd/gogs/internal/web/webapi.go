@@ -16,12 +16,12 @@ import (
 	"github.com/go-playground/validator/v10"
 	"unknwon.dev/x/logx"
 
+	apiv1 "gogs.io/gogs/cmd/gogs/internal/api/v1"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/i18n"
 	"gogs.io/gogs/internal/lazyregexp"
-	apiv1 "gogs.io/gogs/internal/route/api/v1"
 	"gogs.io/gogs/internal/telemetry"
 )
 
