@@ -35,6 +35,12 @@ package gebra
 // list goes without the token, since a user opening a repo from it gets a
 // check, which has the token. Then it waits up to 2s and removes the change. Both writes count as writes. A
 // change that is not visible to a check with its token is a violation.
+//
+// GEBRA_BENCH_WRITES=single or bulk makes every arrival a write instead, to
+// measure write throughput: a new change of 1 collaborator, or of 100 at once,
+// or the removal of an earlier change, each half of the time once earlier
+// changes have committed, so that the dataset keeps its size. The ladder
+// stops on the writes' p99 instead of the checks'.
 
 import (
 	"context"
@@ -257,6 +263,29 @@ func (g *realGen) pickChange() realChange {
 	}
 }
 
+// collaborators returns a change that adds n collaborators that the dataset
+// does not have, with its keys reserved.
+func (g *realGen) collaborators(n int) realChange {
+	for {
+		c := realChange{op: realWrite}
+		if n > 1 {
+			c.op = realWriteBulk
+		}
+		seen := map[TupleKey]bool{}
+		for len(c.keys) < n {
+			u, r, rel := g.collaborator()
+			k := benchKey(benchUser(u), rel, benchRepo(r))
+			if !seen[k] {
+				seen[k] = true
+				c.keys = append(c.keys, k)
+			}
+		}
+		if g.reserve(c.keys) {
+			return c
+		}
+	}
+}
+
 // realStats collects the samples of one rate.
 type realStats struct {
 	start      time.Time
@@ -416,6 +445,27 @@ func (b *applierBench) realRun(d time.Duration, target realTarget, await func() 
 		_, _ = write(s, c.op, time.Now(), &WriteRequest{Deletes: c.keys})
 	}
 
+	writesOnly := benchEnv("GEBRA_BENCH_WRITES", "")
+	bulkSize := 1
+	switch writesOnly {
+	case "", "single":
+	case "bulk":
+		bulkSize = 100
+	default:
+		t.Fatalf("GEBRA_BENCH_WRITES is %q, want single or bulk", writesOnly)
+	}
+	mainOp := realCheck
+	if writesOnly != "" {
+		mainOp = realWrite
+		if bulkSize > 1 {
+			mainOp = realWriteBulk
+		}
+	}
+	// added holds the committed changes of the write-only workload that are
+	// not removed yet.
+	var addedMu sync.Mutex
+	var added []realChange
+
 	var out []benchResult
 	for _, rate := range rates {
 		r := b.base
@@ -443,6 +493,37 @@ func (b *applierBench) realRun(d time.Duration, target realTarget, await func() 
 				}
 				at := due
 				switch p := g.rng.Float64(); {
+				case writesOnly != "":
+					addedMu.Lock()
+					var c realChange
+					remove := len(added) > 0 && p < 0.5
+					if remove {
+						i := g.rng.IntN(len(added))
+						c = added[i]
+						added[i] = added[len(added)-1]
+						added = added[:len(added)-1]
+					}
+					addedMu.Unlock()
+					if !remove {
+						c = g.collaborators(bulkSize)
+					}
+					inflight <- struct{}{}
+					reads.Add(1)
+					go func() {
+						defer func() { <-inflight; reads.Done() }()
+						if remove {
+							_, _ = write(s, c.op, at, &WriteRequest{Deletes: c.keys})
+							g.release(c.keys)
+							return
+						}
+						if _, err := write(s, c.op, at, &WriteRequest{Writes: c.keys}); err != nil {
+							g.release(c.keys)
+							return
+						}
+						addedMu.Lock()
+						added = append(added, c)
+						addedMu.Unlock()
+					}()
 				case p < writeShare/2:
 					c := g.change()
 					rng := rand.New(rand.NewPCG(g.rng.Uint64(), 0))
@@ -498,14 +579,14 @@ func (b *applierBench) realRun(d time.Duration, target realTarget, await func() 
 		// the arrivals it dispatched give the rate the engine sustained.
 		r.Achieved = float64(scheduled) / d.Seconds()
 		r.Ops = r.Achieved
-		r.P50, r.P99, r.Max = r.PerOp[realCheck].P50, r.PerOp[realCheck].P99, r.PerOp[realCheck].Max
+		r.P50, r.P99, r.Max = r.PerOp[mainOp].P50, r.PerOp[mainOp].P99, r.PerOp[mainOp].Max
 		r.Violations = s.violations
 		if s.violation != "" {
 			r.Err = "violation: " + s.violation
 		} else if s.lastErr != nil {
 			r.Err = s.lastErr.Error()
 		}
-		t.Logf("%s real %.0f/s: achieved %.0f/s of %d due, check p99 %.1f ms, %d violations", r.Variant, rate, r.Achieved, scheduled, r.P99, r.Violations)
+		t.Logf("%s real %.0f/s: achieved %.0f/s of %d due, %s p99 %.1f ms, %d violations", r.Variant, rate, r.Achieved, scheduled, mainOp, r.P99, r.Violations)
 		out = append(out, r)
 		if r.P99 > stopMs || r.Achieved < 0.9*rate {
 			break
