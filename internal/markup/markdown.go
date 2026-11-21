@@ -232,14 +232,27 @@ func RawMarkdown(body []byte, urlPrefix string) []byte {
 
 // renderMarkdown renders content in Markdown syntax to HTML with special
 // links, see dariomark.Render. file renders YAML front matter as a table, for
-// Markdown files.
-func renderMarkdown(body []byte, urlPrefix string, metas map[string]string, hardWraps, file bool) dariomark.Result {
+// Markdown files. commits, when not nil, are the commits that the hex strings
+// in body name, see ResolveCommits.
+func renderMarkdown(body []byte, urlPrefix string, metas, commits map[string]string, hardWraps, file bool) dariomark.Result {
+	opts := markdownRenderOptions(body, urlPrefix, hardWraps, file)
+	if commits == nil {
+		commits = resolveLinkableCommits(metas, func(specialText func(text []byte)) {
+			renderLinkableText(body, opts, specialText)
+		})
+	}
+	opts.SpecialLinks = func(text []byte) []dariomark.SpecialLink {
+		return findSpecialLinks(text, urlPrefix, metas, commits)
+	}
+	return dariomark.Render(body, opts)
+}
+
+// markdownRenderOptions returns the options of renderMarkdown, without special
+// links.
+func markdownRenderOptions(body []byte, urlPrefix string, hardWraps, file bool) *dariomark.Options {
 	opts := markdownOptions(urlPrefix, hardWraps)
 	opts.FootnoteIDPrefix = footnoteIDPrefix(body)
 	opts.PostProcess = true
-	opts.SpecialLinks = func(text []byte) []dariomark.SpecialLink {
-		return findSpecialLinks(text, urlPrefix, metas)
-	}
 	opts.Emoji = emoji
 	if file {
 		opts.FrontMatter = true
@@ -247,7 +260,42 @@ func renderMarkdown(body []byte, urlPrefix string, metas map[string]string, hard
 	if sanitizer.ready.Load() {
 		opts.Sanitizer = sanitizer.markdown
 	}
-	return dariomark.Render(body, opts)
+	return opts
+}
+
+// renderLinkableText renders body with opts, passing the text where special
+// links render to specialText, when body has commit ID candidates.
+func renderLinkableText(body []byte, opts *dariomark.Options, specialText func(text []byte)) {
+	if !Sha1CurrentPattern.Match(body) {
+		return
+	}
+	collect := *opts
+	collect.SpecialLinks = func(text []byte) []dariomark.SpecialLink {
+		specialText(text)
+		return nil
+	}
+	dariomark.Render(body, &collect)
+}
+
+// ResolveCommits returns the commits that the hex strings in the documents,
+// e.g., the comments of an issue, name in the repository of metas, with one
+// Git command for all of them. Rendering each document with
+// MarkdownWithCommits and the result then runs no Git command.
+func ResolveCommits(metas map[string]string, docs ...string) map[string]string {
+	commits := resolveLinkableCommits(metas, func(specialText func(text []byte)) {
+		for _, doc := range docs {
+			body := bytes.TrimPrefix([]byte(doc), utf8BOM)
+			guardRender(body, func() []byte {
+				renderLinkableText(body, markdownRenderOptions(body, "", true, false), specialText)
+				return nil
+			})
+		}
+	})
+	if commits == nil {
+		// Not nil, so that rendering does not resolve the commits again.
+		return map[string]string{}
+	}
+	return commits
 }
 
 // Kinds of special links, see specialLinkKinds.
@@ -329,7 +377,13 @@ func isMentionChar(c byte) bool {
 // issue, a comment or a release note, and renders it to HTML with special
 // links. It renders every line break as written.
 func Markdown(input any, urlPrefix string, metas map[string]string) []byte {
-	return renderInput(TypeMarkdown, input, urlPrefix, metas, true, false)
+	return renderInput(TypeMarkdown, input, urlPrefix, metas, nil, true, false)
+}
+
+// MarkdownWithCommits is Markdown with the commits that ResolveCommits
+// returned for input, among other documents.
+func MarkdownWithCommits(input any, urlPrefix string, metas, commits map[string]string) []byte {
+	return renderInput(TypeMarkdown, input, urlPrefix, metas, commits, true, false)
 }
 
 // MarkdownFile is Markdown for Markdown files, e.g., READMEs and wiki pages.

@@ -464,15 +464,7 @@ func (r *Repository) ComposeMetas() map[string]string {
 
 	r.ExternalMetas = map[string]string{
 		"repoLink": r.Link(),
-	}
-
-	// Markup links hex strings of 64 characters to commits only in SHA-256
-	// repositories, because elsewhere they are checksums and the like.
-	objectFormat, err := git.RepoObjectFormat(context.Background(), r.RepoPath())
-	if err != nil {
-		handleLogger().Error("Failed to get object format of repository", "repo", r.FullName(), "error", err)
-	} else if objectFormat == git.ObjectFormatSHA256 {
-		r.ExternalMetas["objectFormat"] = string(objectFormat)
+		"repoPath": r.RepoPath(),
 	}
 
 	if r.EnableExternalTracker {
