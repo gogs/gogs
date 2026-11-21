@@ -1176,6 +1176,11 @@ func (s *RepositoriesStore) update(ctx context.Context, logger *logx.Logger, rep
 // with everything in it, and its Git repository, wiki, and attachments. It
 // returns ErrRepoNotExist when not found.
 func (s *RepositoriesStore) Delete(ctx context.Context, logger *logx.Logger, ownerID, repoID int64) error {
+	// Stopping midway, e.g., when the client disconnects, would leave a
+	// partial change behind, and cleanups after a failed creation run after
+	// the client may have left.
+	ctx = context.WithoutCancel(ctx)
+
 	repo := new(Repository)
 	err := s.db.WithContext(ctx).Where("id = ? AND owner_id = ?", repoID, ownerID).First(repo).Error
 	if err != nil {
