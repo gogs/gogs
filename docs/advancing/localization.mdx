@@ -31,7 +31,9 @@ Translations live in the [`conf/locale`](https://github.com/gogs/gogs/tree/main/
 
 <Steps>
   <Step title="Find the key">
-    Search `conf/locale/locale_en-US.ini` for the English text to find its **key name**, then search for that key in your language's file. For example, the text "Home" has the key `home`, and keys under a section appear below its header, such as `my_repos` under `[home]`.
+    Add `?i18n_debug=1` to the address of any page, e.g., `https://gogs.example.com/explore/repos?i18n_debug=1`, to show the **key name** of every string in front of it, such as `「home.my_repos」My repositories`. It stays on while you navigate, until you reload the page without it. Messages the server sends already translated, such as form errors and activity feed headlines, do not show their key; search `conf/locale/locale_en-US.ini` for their English text instead.
+
+    Then search for the key in your language's file. Keys with a dot are under a section, e.g., `home.my_repos` is `my_repos` below the `[home]` header.
   </Step>
   <Step title="Edit the message">
     Change the text after the `=` sign. Keep every placeholder in curly braces, such as `{name}` or `{count}`, and every HTML tag of the English message. You may move them to fit the word order of your language.
