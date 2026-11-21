@@ -109,25 +109,42 @@ func TestAPIV1Organizations(t *testing.T) {
 	})
 
 	t.Run("teams", func(t *testing.T) {
+		admin := apiV1Client(t, seedUser(t, CreateUserOptions{Admin: true}))
+		var reviewers apiV1Team
+		admin.doJSON(http.MethodPost, "/api/v1/admin/orgs/"+name+"/teams", map[string]any{"name": "reviewers", "permission": "read"}, http.StatusCreated, &reviewers)
+		teamMember := seedUser(t, CreateUserOptions{})
+		path := "/api/v1/admin/teams/" + apiV1Itoa(reviewers.ID) + "/members/" + teamMember.Name
+		status, body := admin.do(http.MethodPut, path, nil)
+		require.Equal(t, http.StatusNoContent, status, "PUT %s, response: %s", path, body)
+		member := seedUser(t, CreateUserOptions{})
+		require.NoError(t, database.AddOrgUser(created.ID, member.ID))
+
+		// listTeams returns the names of the teams that the client can list.
+		listTeams := func(c *client) []string {
+			t.Helper()
+
+			var teams []apiV1Team
+			c.doJSON(http.MethodGet, "/api/v1/orgs/"+name+"/teams", nil, http.StatusOK, &teams)
+			names := []string{}
+			for _, team := range teams {
+				names = append(names, team.Name)
+			}
+			return names
+		}
+
 		var teams []apiV1Team
 		api.doJSON(http.MethodGet, "/api/v1/orgs/"+name+"/teams", nil, http.StatusOK, &teams)
-		require.Len(t, teams, 1)
+		require.Len(t, teams, 2)
 		assert.Equal(t, "Owners", teams[0].Name)
 		assert.Equal(t, "owner", teams[0].Permission)
 
-		status, body := other.do(http.MethodGet, "/api/v1/orgs/"+name+"/teams", nil)
+		assert.ElementsMatch(t, []string{"Owners", "reviewers"}, listTeams(admin), "site admin")
+		// Members other than owners only see their own teams.
+		assert.Equal(t, []string{"reviewers"}, listTeams(apiV1Client(t, teamMember)), "team member")
+		assert.Empty(t, listTeams(apiV1Client(t, member)), "member in no team")
+
+		status, body = other.do(http.MethodGet, "/api/v1/orgs/"+name+"/teams", nil)
 		assert.Equal(t, http.StatusNotFound, status, "listed by a non-member, response: %s", body)
-
-		member := seedUser(t, CreateUserOptions{})
-		require.NoError(t, database.AddOrgUser(created.ID, member.ID))
-		teams = nil
-		apiV1Client(t, member).doJSON(http.MethodGet, "/api/v1/orgs/"+name+"/teams", nil, http.StatusOK, &teams)
-		assert.Len(t, teams, 1)
-
-		admin := apiV1Client(t, seedUser(t, CreateUserOptions{Admin: true}))
-		teams = nil
-		admin.doJSON(http.MethodGet, "/api/v1/orgs/"+name+"/teams", nil, http.StatusOK, &teams)
-		assert.Len(t, teams, 1)
 	})
 
 	t.Run("not an organization", func(t *testing.T) {
