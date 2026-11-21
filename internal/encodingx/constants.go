@@ -1,4 +1,4 @@
-package chardet
+package encodingx
 
 const latinAdjacencyPenalty int64 = -50
 

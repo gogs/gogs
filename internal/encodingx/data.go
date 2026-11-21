@@ -3,7 +3,7 @@
 // The data in this file is dedicated to the Public Domain (CC0 1.0) by its authors:
 // https://creativecommons.org/publicdomain/zero/1.0/
 
-package chardet
+package encodingx
 
 const (
 	plausibleNextToAlphabeticOnEitherSide         = 0

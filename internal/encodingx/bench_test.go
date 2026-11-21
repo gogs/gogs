@@ -1,4 +1,4 @@
-package chardet
+package encodingx
 
 import (
 	"strings"

@@ -1,4 +1,4 @@
-package chardet
+package encodingx
 
 type byteDecoder interface {
 	decodeByte(b byte) decodeStep

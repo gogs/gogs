@@ -1,4 +1,4 @@
-package chardet
+package encodingx
 
 // singleByteData is the port of chardetng's SingleByteData.
 type singleByteData struct {

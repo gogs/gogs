@@ -1,4 +1,4 @@
-// Package chardet guesses the character encoding of text that is not UTF-8.
+// Package encodingx detects the character encoding of text.
 //
 // It implements the detection algorithm of chardetng
 // (https://github.com/hsivonen/chardetng by Henri Sivonen, Copyright Mozilla
@@ -11,11 +11,16 @@
 //
 // It implements the detection path without a top-level domain hint and with
 // ISO-2022-JP detection allowed.
-package chardet
+package encodingx
 
 import (
 	"runtime"
 	"sync"
+	"unicode/utf8"
+
+	"unknwon.dev/x/logx"
+
+	"gogs.io/gogs/internal/conf"
 )
 
 const (
@@ -330,4 +335,46 @@ func (d *Detector) Guess(allowUTF8 bool) string {
 		}
 	}
 	return encoding
+}
+
+// Detect returns the best guess of the encoding of the content, as a WHATWG
+// encoding name.
+func Detect(logger *logx.Logger, content []byte) string {
+	if utf8.Valid(content) {
+		logger.Debug("Detected encoding via fast path", "charset", "UTF-8")
+		return "UTF-8"
+	} else if isMostlyUTF8(content) {
+		// A few invalid bytes in otherwise UTF-8 content, e.g., a truncated
+		// character, should not turn the whole file into mojibake.
+		logger.Debug("Detected encoding as mostly UTF-8", "charset", "UTF-8")
+		return "UTF-8"
+	}
+
+	if len(conf.Repository.ANSICharset) > 0 {
+		logger.Debug("Using default ANSI charset", "charset", conf.Repository.ANSICharset)
+		return conf.Repository.ANSICharset
+	}
+
+	d := New()
+	d.Feed(content, true)
+	guess := d.Guess(false)
+	logger.Debug("Detected encoding", "charset", guess)
+	return guess
+}
+
+// isMostlyUTF8 reports whether the content has more than ten times as many
+// valid multibyte UTF-8 characters as invalid bytes. Legacy encodings rarely
+// form valid multibyte UTF-8 sequences by chance.
+func isMostlyUTF8(content []byte) bool {
+	var multibyte, invalid int
+	for len(content) > 0 {
+		r, size := utf8.DecodeRune(content)
+		if r == utf8.RuneError && size == 1 {
+			invalid++
+		} else if size > 1 {
+			multibyte++
+		}
+		content = content[size:]
+	}
+	return multibyte > 10*invalid
 }

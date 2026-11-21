@@ -3,7 +3,7 @@
 // Source: https://encoding.spec.whatwg.org/ (index data is licensed under CC BY 4.0).
 // A zero entry means that the pointer has no code point.
 
-package chardet
+package encodingx
 
 // index-gb18030.txt, identifier ff1c9a923b5d24f9761b3a2de2c0f07b395f9f6f36519508944de4f0415be81c, date 2024-09-18.
 var indexGB18030 = [23940]uint16{
