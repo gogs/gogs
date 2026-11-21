@@ -36,6 +36,10 @@ func addCollaborator(c *apiContext, form addCollaboratorRequest) {
 		}
 		return
 	}
+	if collaborator.IsOrganization() {
+		c.Status(http.StatusUnprocessableEntity)
+		return
+	}
 
 	// Keep going if the client disconnects, so the collaborator does not end
 	// up added without the requested mode.

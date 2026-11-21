@@ -59,7 +59,7 @@ All notable changes to Gogs are documented in this file.
 
 - Listing the teams of an organization through the API returns 404 to users who are not members. Members who are not owners only see their own teams, as in the web interface. [#8697](https://github.com/gogs/gogs/pull/8697)
 - Getting or editing an organization, and listing or creating its teams through the API, return 404 for the name of a user instead of treating the user as an organization, e.g., site admins can no longer create a team in a user account. [#8697](https://github.com/gogs/gogs/pull/8697)
-- Site admins can no longer add an organization to a team or create an organization owned by another organization through the API, which now returns 404. [#8697](https://github.com/gogs/gogs/pull/8697)
+- The API no longer treats an organization as a user where only users make sense, as the web interface already did. Adding an organization as a collaborator returns 422. Adding it to a team, creating an organization owned by it, and editing, deleting, or adding SSH keys to it through the admin user endpoints return 404. [#8697](https://github.com/gogs/gogs/pull/8697)
 - Listing the repositories of another user or an organization through the API no longer reports admin, push and pull permissions on every repository. [#8667](https://github.com/gogs/gogs/pull/8667)
 - Commenting on, closing, or reopening an issue, including with `fixes #N` in a pushed commit, no longer hangs the server when using SQLite with email notifications enabled. [#8395](https://github.com/gogs/gogs/pull/8395)
 - Markdown files starting with a byte order mark now render their first line correctly, e.g., a leading heading is no longer shown as plain text. [#8519](https://github.com/gogs/gogs/pull/8519)

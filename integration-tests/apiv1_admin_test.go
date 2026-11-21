@@ -102,6 +102,26 @@ func TestAPIV1AdminUsers(t *testing.T) {
 		status, body = admin.do(http.MethodDelete, "/api/v1/admin/users/"+withRepo.Name, nil)
 		assert.Equal(t, http.StatusUnprocessableEntity, status, "user who owns a repository, response: %s", body)
 	})
+
+	t.Run("organization", func(t *testing.T) {
+		orgName := UniqueName("org-")
+		var org apiV1Org
+		apiV1Client(t, seedUser(t, CreateUserOptions{})).doJSON(http.MethodPost, "/api/v1/user/orgs", map[string]any{"username": orgName}, http.StatusCreated, &org)
+
+		status, body := admin.do(http.MethodPatch, "/api/v1/admin/users/"+orgName, map[string]any{"email": orgName + "@example.com", "password": "password", "admin": true})
+		assert.Equal(t, http.StatusNotFound, status, "edited, response: %s", body)
+		status, body = admin.do(http.MethodPost, "/api/v1/admin/users/"+orgName+"/keys", map[string]any{"title": UniqueName("key-"), "key": apiV1PublicKey(t)})
+		assert.Equal(t, http.StatusNotFound, status, "public key added, response: %s", body)
+		status, body = admin.do(http.MethodDelete, "/api/v1/admin/users/"+orgName, nil)
+		assert.Equal(t, http.StatusNotFound, status, "deleted, response: %s", body)
+
+		got, err := database.Handle.Users().GetByID(t.Context(), org.ID)
+		require.NoError(t, err)
+		assert.False(t, got.IsAdmin)
+		keys, err := database.Handle.PublicKeys().List(t.Context(), org.ID)
+		require.NoError(t, err)
+		assert.Empty(t, keys)
+	})
 }
 
 func TestAPIV1AdminUserOfAuthSource(t *testing.T) {
