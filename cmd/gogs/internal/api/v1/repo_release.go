@@ -135,7 +135,13 @@ func getRelease(c *apiContext) {
 	if rel == nil {
 		return
 	}
-	c.JSONSuccess(toRelease(rel))
+	apiRelease := toRelease(rel)
+	// Hide the email of the publisher from unauthenticated callers, as
+	// elsewhere for users.
+	if !c.IsLogged {
+		apiRelease.Author.Email = ""
+	}
+	c.JSONSuccess(apiRelease)
 }
 
 type editReleaseRequest struct {
@@ -170,10 +176,22 @@ func editRelease(c *apiContext, r editReleaseRequest) {
 
 	ctx := c.Request().Context()
 	isPublish := r.Draft != nil && !*r.Draft && rel.IsDraft
-	// Publishing tags the target branch when the tag does not exist yet.
-	if isPublish && !gitRepo.HasTag(ctx, rel.TagName) && !gitRepo.HasBranch(ctx, rel.Target) {
-		c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("The target branch %q does not exist.", rel.Target))
-		return
+	if isPublish {
+		// Mirror syncs would remove or move the tag.
+		if c.Repo.Repository.IsMirror {
+			c.ErrorStatus(http.StatusForbidden, errors.New("Mirror repository is read-only."))
+			return
+		}
+		// Drafts made before tag names were checked may have an invalid one.
+		if !gitRepo.IsValidTagName(ctx, rel.TagName) {
+			c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("Invalid tag name %q.", rel.TagName))
+			return
+		}
+		// Publishing tags the target branch when the tag does not exist yet.
+		if !gitRepo.HasTag(ctx, rel.TagName) && !gitRepo.HasBranch(ctx, rel.Target) {
+			c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("The target branch %q does not exist.", rel.Target))
+			return
+		}
 	}
 	if r.Name != nil {
 		rel.Title = *r.Name

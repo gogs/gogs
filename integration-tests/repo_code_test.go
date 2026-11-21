@@ -1022,6 +1022,11 @@ func TestRepoCodeReleases(t *testing.T) {
 		"tagName": "v1.0", "target": "main", "title": "Again",
 	})
 	assert.Equal(t, http.StatusUnprocessableEntity, status, "response: %s", body)
+	// Drafts make no tag, so their name is checked before Git would.
+	status, body = ownerClient.do(http.MethodPost, api+"/releases", map[string]any{
+		"tagName": "-v9", "target": "main", "title": "Invalid", "isDraft": true,
+	})
+	assert.Equal(t, http.StatusBadRequest, status, "response: %s", body)
 	status, body = otherClient.do(http.MethodPost, api+"/releases", map[string]any{
 		"tagName": "v9.9", "target": "main", "title": "Intruder",
 	})

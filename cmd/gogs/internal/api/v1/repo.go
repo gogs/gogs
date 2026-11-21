@@ -580,7 +580,11 @@ func releases(c *apiContext) {
 		r.Publisher = publisher
 	}
 	for _, r := range releases {
-		apiReleases = append(apiReleases, toRelease(r))
+		apiRelease := toRelease(r)
+		if !c.IsLogged {
+			apiRelease.Author.Email = ""
+		}
+		apiReleases = append(apiReleases, apiRelease)
 	}
 
 	c.JSONSuccess(&apiReleases)

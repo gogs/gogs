@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/git"
 )
 
 type apiV1Release struct {
@@ -242,9 +243,36 @@ func TestAPIV1Releases(t *testing.T) {
 	t.Run("mirror", func(t *testing.T) {
 		u := seedUser(t, CreateUserOptions{})
 		mirror, _ := repoSettingsMigrate(t, authenticatedClient(t, u), u, repo, true)
-		status, body := apiV1Client(t, u).do(http.MethodPost, apiV1RepoPath(mirror, "/releases"), map[string]any{"tag_name": "mirrored"})
+		mirrorAPI := apiV1Client(t, u)
+		status, body := mirrorAPI.do(http.MethodPost, apiV1RepoPath(mirror, "/releases"), map[string]any{"tag_name": "mirrored"})
 		assert.Equal(t, http.StatusForbidden, status, "response: %s", body)
+
+		// A draft that came with the repository cannot be published either.
+		d := apiV1SeedDraft(t, mirror, u.ID, "mirrored")
+		status, body = mirrorAPI.do(http.MethodPatch, apiV1RepoPath(mirror, "/releases/"+apiV1Itoa(d)), map[string]any{"draft": false})
+		assert.Equal(t, http.StatusForbidden, status, "response: %s", body)
+		assert.Empty(t, repoSettingsGit(t, database.RepoPath(mirror.Owner, mirror.Name), "tag", "--list", "mirrored"))
 	})
+
+	t.Run("publish draft with invalid tag name", func(t *testing.T) {
+		// The web interface used to store drafts without checking the tag name.
+		d := apiV1SeedDraft(t, repo, owner.ID, "-v6")
+		status, body := api.do(http.MethodPatch, releasePath(d), map[string]any{"draft": false})
+		assert.Equal(t, http.StatusUnprocessableEntity, status, "response: %s", body)
+		assert.Empty(t, repoSettingsGit(t, repoPath, "for-each-ref", "refs/tags/v6", "refs/tags/-v6"))
+	})
+}
+
+// apiV1SeedDraft stores a draft release of the tag in the repository without
+// going through any endpoint, and returns its ID.
+func apiV1SeedDraft(t *testing.T, repo *Repository, publisherID int64, tagName string) int64 {
+	t.Helper()
+
+	gitRepo, err := git.Open(database.RepoPath(repo.Owner, repo.Name))
+	require.NoError(t, err)
+	r := &database.Release{RepoID: repo.ID, PublisherID: publisherID, TagName: tagName, Target: "main", IsDraft: true}
+	require.NoError(t, database.Handle.Releases().Create(t.Context(), logger, gitRepo, r, nil))
+	return r.ID
 }
 
 // Drafts are only visible to users with write access, and writing needs write
@@ -304,6 +332,24 @@ func TestAPIV1ReleasesAccess(t *testing.T) {
 			assert.ElementsMatch(t, c.wantTags, listTags(c.client, public), name)
 			assert.Equal(t, c.wantDraft, getStatus(c.client, public, publicReleases.draft.ID), "%s gets the draft", name)
 			assert.Equal(t, http.StatusOK, getStatus(c.client, public, publicReleases.published.ID), "%s gets the published release", name)
+		}
+
+		// 🚨 SECURITY: Unauthenticated callers do not see the email of the
+		// publisher.
+		for name, c := range map[string]struct {
+			client    *client
+			wantEmail string
+		}{
+			"other":     {apiV1Client(t, seedUser(t, CreateUserOptions{})), owner.Email},
+			"anonymous": {newClient(t), ""},
+		} {
+			var got apiV1Release
+			c.client.doJSON(http.MethodGet, apiV1RepoPath(public, "/releases/"+apiV1Itoa(publicReleases.published.ID)), nil, http.StatusOK, &got)
+			assert.Equal(t, c.wantEmail, got.Author.Email, "%s gets", name)
+			var list []apiV1Release
+			c.client.doJSON(http.MethodGet, apiV1RepoPath(public, "/releases"), nil, http.StatusOK, &list)
+			require.Len(t, list, 1, name)
+			assert.Equal(t, c.wantEmail, list[0].Author.Email, "%s lists", name)
 		}
 	})
 

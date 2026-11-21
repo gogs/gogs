@@ -5893,7 +5893,7 @@
             }
           },
           "403": {
-            "description": "No write access to the repository."
+            "description": "No write access to the repository, or publishing a draft of a mirror."
           },
           "404": {
             "description": "Resource not found."

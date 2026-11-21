@@ -192,6 +192,8 @@ All notable changes to Gogs are documented in this file.
 - Listing releases through the API no longer shows drafts to users without write access. [#8571](https://github.com/gogs/gogs/pull/8571)
 - Listing releases through the API no longer fails when the user who published one of them was deleted. [#8571](https://github.com/gogs/gogs/pull/8571)
 - A release of a tag that already exists is now dated by the tag's commit instead of when the release was created, so it no longer always shows as the newest release. [#8571](https://github.com/gogs/gogs/pull/8571)
+- Listing releases through the API no longer shows the email address of the user who published a release to unauthenticated callers. [#8571](https://github.com/gogs/gogs/pull/8571)
+- Creating a release with an invalid tag name as a draft is now refused, instead of failing only when the draft is published. [#8571](https://github.com/gogs/gogs/pull/8571)
 
 ### Removed
 

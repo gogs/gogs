@@ -306,6 +306,12 @@ func postRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, view
 		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
 	}
+	// Drafts make no tag, so Git would not check their name until they are
+	// published.
+	if !gitRepo.IsValidTagName(ctx, req.TagName) {
+		msg := l.Tr("repo.release.tag_name_invalid")
+		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"tagName": &msg}}, nil
+	}
 	if !gitRepo.HasBranch(ctx, req.Target) {
 		msg := l.Tr("form::target_branch_not_exist")
 		return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"target": &msg}}, nil
