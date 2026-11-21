@@ -6,7 +6,6 @@ import (
 	"io"
 	"strconv"
 	"strings"
-
 	"unicode/utf8"
 
 	"github.com/cockroachdb/errors"
