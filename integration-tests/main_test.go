@@ -99,7 +99,7 @@ func run(m *testing.M, dir string) (int, error) {
 	secretKey := make([]byte, 16)
 	_, _ = rand.Read(secretKey)
 	configPath := filepath.Join(dir, "app.ini")
-	if err = writeConfig(dir, configPath, port, sshPort, dbName, hex.EncodeToString(secretKey), false, conf.CaptchaTypeAltcha); err != nil {
+	if err = writeConfig(dir, configPath, port, sshPort, dbName, hex.EncodeToString(secretKey), false, conf.AntiBotVerificationAltcha); err != nil {
 		return 0, errors.Wrap(err, "write configuration")
 	}
 
@@ -145,7 +145,7 @@ func run(m *testing.M, dir string) (int, error) {
 		return 0, errors.Wrap(err, "find free SSH port")
 	}
 	forcePrivateConfigPath := filepath.Join(dir, "app-force-private.ini")
-	if err = writeConfig(dir, forcePrivateConfigPath, forcePrivatePort, forcePrivateSSHPort, dbName, hex.EncodeToString(secretKey), true, conf.CaptchaTypeImage); err != nil {
+	if err = writeConfig(dir, forcePrivateConfigPath, forcePrivatePort, forcePrivateSSHPort, dbName, hex.EncodeToString(secretKey), true, conf.AntiBotVerificationImage); err != nil {
 		return 0, errors.Wrap(err, "write configuration")
 	}
 	forcePrivateServerURL = fmt.Sprintf("http://localhost:%d", forcePrivatePort)
@@ -286,7 +286,7 @@ HOST = 127.0.0.1:1
 [auth]
 DISABLE_REGISTRATION = false
 ENABLE_REGISTRATION_CAPTCHA = true
-REGISTRATION_CAPTCHA_TYPE = %[9]s
+ANTI_BOT_VERIFICATION = %[9]s
 ; Tests call from the loopback interface, which is a trusted proxy by default,
 ; so only requests with the header are authenticated by it.
 ENABLE_REVERSE_PROXY_AUTHENTICATION = true

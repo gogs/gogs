@@ -2,6 +2,7 @@ package web
 
 import (
 	gocontext "context"
+	"crypto/hkdf"
 	"crypto/sha256"
 	"crypto/tls"
 	"encoding/json"
@@ -357,8 +358,11 @@ func newRoutingHandler(logger *logx.Logger, localizer, sessioner, authenticate f
 	}
 
 	// The middleware requires a secret of at least 16 bytes, which the secret
-	// key may be shorter than.
-	altchaSecret := sha256.Sum256([]byte("altcha:" + conf.Security.SecretKey))
+	// key may be shorter than, so it gets a key derived from the secret key.
+	altchaSecret, err := hkdf.Key(sha256.New, []byte(conf.Security.SecretKey), nil, "gogs altcha secret", 32)
+	if err != nil {
+		return nil, errors.Wrap(err, "derive altcha secret")
+	}
 
 	f.Get("/healthcheck", healthCheck)
 	f.Get("/-/metrics", app.MetricsFilter, promhttp.Handler().ServeHTTP)
@@ -428,7 +432,7 @@ func newRoutingHandler(logger *logx.Logger, localizer, sessioner, authenticate f
 		captcha.Captchaer(captcha.Options{URLPrefix: "/captcha/"}),
 		altcha.Challenger(altcha.Options{
 			URLPrefix: altchaURLPrefix,
-			Secret:    altchaSecret[:],
+			Secret:    altchaSecret,
 		}),
 	)
 	if err != nil {

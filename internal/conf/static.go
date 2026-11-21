@@ -232,7 +232,7 @@ type AuthOpts struct {
 	RequireSigninView         bool
 	DisableRegistration       bool
 	EnableRegistrationCaptcha bool
-	RegistrationCaptchaType   string
+	AntiBotVerification       string
 
 	EnableReverseProxyAuthentication   bool
 	EnableReverseProxyAutoRegistration bool
@@ -247,12 +247,12 @@ type AuthOpts struct {
 // Authentication settings
 var Auth AuthOpts
 
-// Values of [auth] REGISTRATION_CAPTCHA_TYPE.
+// Values of [auth] ANTI_BOT_VERIFICATION.
 const (
-	// CaptchaTypeAltcha asks the browser to solve a proof-of-work challenge.
-	CaptchaTypeAltcha = "altcha"
-	// CaptchaTypeImage asks the user to type the characters shown in an image.
-	CaptchaTypeImage = "image"
+	// AntiBotVerificationAltcha asks the browser to solve a proof-of-work challenge.
+	AntiBotVerificationAltcha = "altcha"
+	// AntiBotVerificationImage asks the user to type the characters shown in an image.
+	AntiBotVerificationImage = "image"
 )
 
 type ServerOpts struct {

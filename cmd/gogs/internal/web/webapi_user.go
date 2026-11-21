@@ -76,7 +76,7 @@ func getUserSignUp() (statusCode int, resp *getUserSignUpResponse, err error) {
 	return http.StatusOK, &getUserSignUpResponse{
 		RegistrationDisabled: conf.Auth.DisableRegistration,
 		CaptchaEnabled:       conf.Auth.EnableRegistrationCaptcha,
-		CaptchaType:          conf.Auth.RegistrationCaptchaType,
+		CaptchaType:          conf.Auth.AntiBotVerification,
 	}, nil
 }
 
@@ -85,7 +85,7 @@ type userSignUpRequest struct {
 	Email    string `json:"email" validate:"required,email,max=254"`
 	Password string `json:"password" validate:"required,max=255"`
 	// Captcha is the text of the captcha image, or the solution of the altcha
-	// challenge, depending on [auth] REGISTRATION_CAPTCHA_TYPE.
+	// challenge, depending on [auth] ANTI_BOT_VERIFICATION.
 	Captcha string `json:"captcha"`
 }
 
@@ -101,8 +101,8 @@ func postUserSignUp(logger *logx.Logger, r *http.Request, ca cache.Cache, l i18n
 	}
 	if conf.Auth.EnableRegistrationCaptcha {
 		var msg string
-		switch conf.Auth.RegistrationCaptchaType {
-		case conf.CaptchaTypeAltcha:
+		switch conf.Auth.AntiBotVerification {
+		case conf.AntiBotVerificationAltcha:
 			if err = challenge.Verify(req.Captcha); err != nil {
 				msg = l.Tr("form::captcha_verification_failed")
 			}
