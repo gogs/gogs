@@ -118,6 +118,12 @@ func TestAPIV1Organizations(t *testing.T) {
 		status, body := other.do(http.MethodGet, "/api/v1/orgs/"+name+"/teams", nil)
 		assert.Equal(t, http.StatusNotFound, status, "listed by a non-member, response: %s", body)
 
+		member := seedUser(t, CreateUserOptions{})
+		require.NoError(t, database.AddOrgUser(created.ID, member.ID))
+		teams = nil
+		apiV1Client(t, member).doJSON(http.MethodGet, "/api/v1/orgs/"+name+"/teams", nil, http.StatusOK, &teams)
+		assert.Len(t, teams, 1)
+
 		admin := apiV1Client(t, seedUser(t, CreateUserOptions{Admin: true}))
 		teams = nil
 		admin.doJSON(http.MethodGet, "/api/v1/orgs/"+name+"/teams", nil, http.StatusOK, &teams)
