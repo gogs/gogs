@@ -1231,17 +1231,6 @@ func (s *RepositoriesStore) Delete(ctx context.Context, logger *logx.Logger, own
 			return errors.Wrap(err, "list releases")
 		}
 
-		if org.IsOrganization() {
-			teamsStore := newTeamsStore(tx)
-			for _, t := range teams {
-				if !teamsStore.HasRepo(ctx, org.ID, t.ID, repoID) {
-					continue
-				} else if err := teamsStore.removeRepo(ctx, t, repo, false); err != nil {
-					return err
-				}
-			}
-		}
-
 		// Delete labels and milestones before the repository, the order issue
 		// creation locks them in, so the two cannot deadlock.
 		if err := deleteByColumn(tx, "repo_id", repoID, "label", "milestone"); err != nil {
@@ -1271,6 +1260,20 @@ func (s *RepositoriesStore) Delete(ctx context.Context, logger *logx.Logger, own
 				return errors.Wrap(err, "reset forks")
 			}
 		}
+
+		// Teams are locked after repositories, the order forking and transferring
+		// into the organization lock them in, so the two cannot deadlock.
+		if org.IsOrganization() {
+			teamsStore := newTeamsStore(tx)
+			for _, t := range teams {
+				if !teamsStore.HasRepo(ctx, org.ID, t.ID, repoID) {
+					continue
+				} else if err := teamsStore.removeRepo(ctx, t, repo, false); err != nil {
+					return err
+				}
+			}
+		}
+
 		if err := deleteByColumn(tx, "base_repo_id", repoID, "pull_request"); err != nil {
 			return err
 		}

@@ -1241,49 +1241,86 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 	alice := newTestIssueUser(t, ctx, s.db, "cf-alice")
 	bob := newTestIssueUser(t, ctx, s.db, "cf-bob")
 	carol := newTestIssueUser(t, ctx, s.db, "cf-carol")
+	org, _ := newTestOrg(t, ctx, s.db, "cf-org")
 
-	for i, tc := range []struct {
-		name string
-		// held is locked until both first and second wait on it, first ahead.
-		held          func(base, fork *Repository) *Repository
+	var n int
+	name := func(prefix string) string {
+		n++
+		return fmt.Sprintf("%s%d", prefix, n)
+	}
+	fork := func(owner *User, base *Repository) (*Repository, error) {
+		return s.Fork(ctx, logger, owner, owner, base, name("fork"), "")
+	}
+	update := func(repo *Repository) error {
+		repo.IsPrivate = true
+		return s.Update(ctx, logger, repo, true)
+	}
+	deleteRepo := func(repo *Repository) error { return s.Delete(ctx, logger, repo.OwnerID, repo.ID) }
+	transfer := func(repo *Repository, to *User) error { return s.Transfer(ctx, repo.Owner, to.Name, repo) }
+
+	for _, tc := range []struct {
+		name      string
+		baseOwner *User
+		forkOwner *User // Defaults to bob.
+		// first starts ahead of second, while the base repository is held.
 		first, second func(base, fork *Repository) error
 	}{
 		{
-			name:   "delete base while updating it",
-			held:   func(base, _ *Repository) *Repository { return base },
-			first:  func(base, _ *Repository) error { base.IsPrivate = true; return s.Update(ctx, logger, base, true) },
-			second: func(base, _ *Repository) error { return s.Delete(ctx, logger, base.OwnerID, base.ID) },
+			name:      "delete base while updating it",
+			baseOwner: alice,
+			first:     func(base, _ *Repository) error { return update(base) },
+			second:    func(base, _ *Repository) error { return deleteRepo(base) },
 		},
 		{
-			name:   "delete fork while updating base",
-			held:   func(base, _ *Repository) *Repository { return base },
-			first:  func(base, _ *Repository) error { base.IsPrivate = true; return s.Update(ctx, logger, base, true) },
-			second: func(_, fork *Repository) error { return s.Delete(ctx, logger, fork.OwnerID, fork.ID) },
+			name:      "delete fork while updating base",
+			baseOwner: alice,
+			first:     func(base, _ *Repository) error { return update(base) },
+			second:    func(_, fork *Repository) error { return deleteRepo(fork) },
 		},
 		{
-			name:  "fork base while deleting another fork",
-			held:  func(_, fork *Repository) *Repository { return fork },
-			first: func(_, fork *Repository) error { return s.Delete(ctx, logger, fork.OwnerID, fork.ID) },
-			second: func(base, _ *Repository) error {
-				_, err := s.Fork(ctx, logger, carol, carol, base, base.Name+"-fork", "")
-				return err
-			},
+			name:      "fork base while deleting another fork",
+			baseOwner: alice,
+			first:     func(_, fork *Repository) error { return deleteRepo(fork) },
+			second:    func(base, _ *Repository) error { _, err := fork(carol, base); return err },
+		},
+		{
+			name:      "fork base into an organization while deleting its other fork",
+			baseOwner: alice,
+			forkOwner: org,
+			first:     func(base, _ *Repository) error { _, err := fork(org, base); return err },
+			second:    func(_, fork *Repository) error { return deleteRepo(fork) },
+		},
+		{
+			name:      "transfer fork into the organization while deleting its base",
+			baseOwner: org,
+			first:     func(base, _ *Repository) error { return deleteRepo(base) },
+			second:    func(_, fork *Repository) error { return transfer(fork, org) },
+		},
+		{
+			name:      "fork a fork into the organization while deleting its base",
+			baseOwner: org,
+			first:     func(base, _ *Repository) error { return deleteRepo(base) },
+			second:    func(_, f *Repository) error { _, err := fork(org, f); return err },
 		},
 	} {
-		base := newTestGitRepo(t, ctx, s, alice, CreateRepoOptionsLegacy{Name: fmt.Sprintf("base%d", i)})
-		fork, err := s.Fork(ctx, logger, bob, bob, base, base.Name+"-fork", "")
+		base := newTestGitRepo(t, ctx, s, tc.baseOwner, CreateRepoOptionsLegacy{Name: name("base")})
+		forkOwner := tc.forkOwner
+		if forkOwner == nil {
+			forkOwner = bob
+		}
+		baseFork, err := fork(forkOwner, base)
 		require.NoError(t, err)
 
 		hold := s.db.Begin()
 		require.NoError(t, hold.Error)
 		defer hold.Rollback()
-		require.NoError(t, hold.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", tc.held(base, fork).ID).Find(new(Repository)).Error)
+		require.NoError(t, hold.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", base.ID).Find(new(Repository)).Error)
 
 		var wg sync.WaitGroup
 		var firstErr, secondErr error
-		wg.Go(func() { firstErr = tc.first(base, fork) })
+		wg.Go(func() { firstErr = tc.first(base, baseFork) })
 		time.Sleep(500 * time.Millisecond)
-		wg.Go(func() { secondErr = tc.second(base, fork) })
+		wg.Go(func() { secondErr = tc.second(base, baseFork) })
 		time.Sleep(500 * time.Millisecond)
 		require.NoError(t, hold.Rollback().Error)
 		wg.Wait()
