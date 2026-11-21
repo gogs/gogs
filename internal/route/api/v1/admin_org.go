@@ -1,5 +1,13 @@
 package v1
 
 func adminCreateOrg(c *apiContext, form createOrgRequest) {
-	createOrgForUser(c, form, getUserByParams(c))
+	u := getUserByParams(c)
+	if c.Written() {
+		return
+	}
+	if u.IsOrganization() {
+		c.NotFound()
+		return
+	}
+	createOrgForUser(c, form, u)
 }

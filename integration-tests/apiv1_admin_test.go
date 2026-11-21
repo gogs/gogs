@@ -157,6 +157,9 @@ func TestAPIV1AdminCreateForUser(t *testing.T) {
 		got, err := database.GetOrgByName(name)
 		require.NoError(t, err)
 		assert.True(t, got.IsOwnedBy(u.ID), "user does not own the organization")
+
+		status, body = admin.do(http.MethodPost, "/api/v1/admin/users/"+name+"/orgs", map[string]any{"username": UniqueName("org-")})
+		assert.Equal(t, http.StatusNotFound, status, "created for an organization, response: %s", body)
 	})
 
 	t.Run("repository", func(t *testing.T) {
@@ -220,6 +223,10 @@ func TestAPIV1AdminTeams(t *testing.T) {
 
 		status, body = admin.do(http.MethodDelete, teamPath+"/members/"+member.Name, nil)
 		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+		assert.Empty(t, listMembers())
+
+		status, body = admin.do(http.MethodPut, teamPath+"/members/"+orgName, nil)
+		assert.Equal(t, http.StatusNotFound, status, "added an organization, response: %s", body)
 		assert.Empty(t, listMembers())
 
 		status, body = nonAdmin.do(http.MethodGet, teamPath+"/members", nil)

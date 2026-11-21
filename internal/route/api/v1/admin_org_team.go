@@ -37,6 +37,10 @@ func adminAddTeamMember(c *apiContext) {
 	if c.Written() {
 		return
 	}
+	if u.IsOrganization() {
+		c.NotFound()
+		return
+	}
 	if err := c.Org.Team.AddMember(u.ID); err != nil {
 		c.Error(err, "add member")
 		return
