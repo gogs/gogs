@@ -1274,6 +1274,13 @@ func (s *RepositoriesStore) Delete(ctx context.Context, logger *logx.Logger, own
 			}
 		}
 
+		// Users are locked before the rows of the repository in other tables, the
+		// order creating and transferring repositories lock them in, so they
+		// cannot deadlock.
+		if err := tx.Exec(dbx.Quote("UPDATE %s SET num_repos = num_repos - 1 WHERE id = ?", "user"), ownerID).Error; err != nil {
+			return errors.Wrap(err, "decrease repository count of owner")
+		}
+
 		// The columns of pull requests, accesses and watches deleted by are
 		// indexed, so that MySQL locks only the rows of this repository, after
 		// the repository and its base were locked.
@@ -1348,7 +1355,7 @@ func (s *RepositoriesStore) Delete(ctx context.Context, logger *logx.Logger, own
 			return err
 		}
 
-		return tx.Exec(dbx.Quote("UPDATE %s SET num_repos = num_repos - 1 WHERE id = ?", "user"), ownerID).Error
+		return nil
 	})
 	if err != nil {
 		return err

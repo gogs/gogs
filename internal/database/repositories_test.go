@@ -1278,6 +1278,7 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 		})
 	}
 	newcomer := newTestIssueUser(t, ctx, s.db, "cf-newcomer")
+	var older *Repository
 
 	for _, tc := range []struct {
 		name      string
@@ -1285,7 +1286,9 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 		forkOwner *User // Defaults to bob.
 		private   bool
 		setup     func(base, fork *Repository)
-		holdTeam  bool // Hold the team instead of the base repository.
+		holdTeam  bool   // Hold the team instead of the base repository.
+		holdUser  *User  // Hold the user instead of the base repository.
+		before    func() // Runs before the base repository is created.
 		check     func(base, fork *Repository)
 		// first starts ahead of second, while the base repository is held.
 		first, second func(base, fork *Repository) error
@@ -1374,7 +1377,22 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 				assert.Zero(t, count, "accesses of the deleted repository")
 			},
 		},
+		{
+			name:      "transfer older repository to its collaborator while deleting the newer one",
+			baseOwner: alice,
+			before: func() {
+				older = newTestGitRepo(t, ctx, s, alice, CreateRepoOptionsLegacy{Name: name("older")})
+				older.Owner = alice
+				require.NoError(t, newCollaborationsStore(s.db).Add(ctx, older, carol.ID))
+			},
+			holdUser: alice,
+			first:    func(*Repository, *Repository) error { return transfer(older, carol) },
+			second:   func(base, _ *Repository) error { return deleteRepo(base) },
+		},
 	} {
+		if tc.before != nil {
+			tc.before()
+		}
 		base := newTestGitRepo(t, ctx, s, tc.baseOwner, CreateRepoOptionsLegacy{Name: name("base"), IsPrivate: tc.private})
 		forkOwner := tc.forkOwner
 		if forkOwner == nil {
@@ -1389,7 +1407,9 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 		hold := s.db.Begin()
 		require.NoError(t, hold.Error)
 		defer hold.Rollback()
-		if tc.holdTeam {
+		if tc.holdUser != nil {
+			require.NoError(t, hold.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", tc.holdUser.ID).Find(new(User)).Error)
+		} else if tc.holdTeam {
 			require.NoError(t, hold.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", readers.ID).Find(new(Team)).Error)
 		} else {
 			require.NoError(t, hold.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", base.ID).Find(new(Repository)).Error)
