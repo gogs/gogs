@@ -114,6 +114,23 @@ func TestAPIV1Organizations(t *testing.T) {
 		require.Len(t, teams, 1)
 		assert.Equal(t, "Owners", teams[0].Name)
 		assert.Equal(t, "owner", teams[0].Permission)
+
+		status, body := other.do(http.MethodGet, "/api/v1/orgs/"+name+"/teams", nil)
+		assert.Equal(t, http.StatusForbidden, status, "listed by a non-member, response: %s", body)
+
+		admin := apiV1Client(t, seedUser(t, CreateUserOptions{Admin: true}))
+		teams = nil
+		admin.doJSON(http.MethodGet, "/api/v1/orgs/"+name+"/teams", nil, http.StatusOK, &teams)
+		assert.Len(t, teams, 1)
+	})
+
+	t.Run("not an organization", func(t *testing.T) {
+		status, body := api.do(http.MethodGet, "/api/v1/orgs/"+owner.Name, nil)
+		assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
+
+		admin := apiV1Client(t, seedUser(t, CreateUserOptions{Admin: true}))
+		status, body = admin.do(http.MethodPost, "/api/v1/admin/orgs/"+owner.Name+"/teams", map[string]any{"name": "developers", "permission": "write"})
+		assert.Equal(t, http.StatusNotFound, status, "team created in a user, response: %s", body)
 	})
 
 	t.Run("repositories", func(t *testing.T) {

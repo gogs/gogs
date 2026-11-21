@@ -84,6 +84,10 @@ func orgAssignment(args ...bool) flamego.Handler {
 				c.NotFoundOrError(err, "get organization by name")
 				return
 			}
+			if !c.Org.Organization.IsOrganization() {
+				c.NotFound()
+				return
+			}
 		}
 
 		if assignTeam {
