@@ -76,11 +76,6 @@ type createIssueRequest struct {
 // isAssignable returns true if issues of the repository can be assigned to the
 // user, the same users as in the web interface.
 func isAssignable(repo *database.Repository, u *database.User) (bool, error) {
-	// An organization added as a collaborator before that was refused still has
-	// access to the repository.
-	if u.IsOrganization() {
-		return false, nil
-	}
 	assignees, err := repo.GetAssignees()
 	if err != nil {
 		return false, errors.Wrap(err, "list assignees")

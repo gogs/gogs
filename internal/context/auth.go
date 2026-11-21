@@ -154,8 +154,8 @@ func AuthenticatedUser(logger *logx.Logger, store AuthStore, r *http.Request, se
 		logger.Error("Failed to get user by ID", "userID", uid, "error", err)
 		return nil, false, 0
 	}
-	// Organizations cannot sign in, even with a session or an access token
-	// created before that was enforced.
+	// Organizations cannot sign in, even with a session or an access token that
+	// belongs to one.
 	if u.IsOrganization() || (tokenID > 0 && u.IsDisabled()) {
 		return nil, false, 0
 	}

@@ -152,7 +152,7 @@ func TestProfileOrganization(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, status, "following an organization, response: %s", body)
 	assert.False(t, database.Handle.Users().IsFollowing(t.Context(), owner.ID, org.ID))
 
-	// Follows from before organizations were refused can be removed.
+	// Existing follows of an organization can be removed.
 	require.NoError(t, database.Handle.Users().Follow(t.Context(), owner.ID, org.ID))
 	status, body = ownerClient.do(http.MethodDelete, "/api/web/users/"+org.Name+"/follow", orgNoBody)
 	assert.Equal(t, http.StatusOK, status, "unfollowing an organization, response: %s", body)

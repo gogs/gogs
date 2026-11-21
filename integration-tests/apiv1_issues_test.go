@@ -91,11 +91,15 @@ func TestAPIV1Issues(t *testing.T) {
 	status, body := otherAPI.do(http.MethodPatch, apiV1RepoPath(repo, "/issues/"+apiV1Itoa(open)), map[string]any{"title": "Hijacked"})
 	assert.Equal(t, http.StatusForbidden, status, "edited by another user, response: %s", body)
 
-	orgName := UniqueName("org-")
-	api.doJSON(http.MethodPost, "/api/v1/user/orgs", map[string]any{"username": orgName}, http.StatusCreated, &apiV1Org{})
-	// Issues are only assigned to users with access to the repository, as in the
-	// web interface.
-	for _, name := range []string{orgName, other.Name} {
+	// Issues are only assigned to the owner, collaborators and members of teams
+	// with access to the repository, as in the web interface, and never to
+	// organizations, even one with access.
+	var org apiV1Org
+	api.doJSON(http.MethodPost, "/api/v1/user/orgs", map[string]any{"username": UniqueName("org-")}, http.StatusCreated, &org)
+	dbRepo, err := getRepositoryByName(t, owner.ID, repo.Name)
+	require.NoError(t, err)
+	require.NoError(t, database.Handle.Collaborations().Add(t.Context(), dbRepo, org.ID))
+	for _, name := range []string{org.UserName, other.Name} {
 		status, body = api.do(http.MethodPost, apiV1RepoPath(repo, "/issues"), map[string]any{"title": "Assigned to " + name, "assignee": name})
 		assert.Equal(t, http.StatusUnprocessableEntity, status, "created with assignee %s, response: %s", name, body)
 		status, body = api.do(http.MethodPatch, apiV1RepoPath(repo, "/issues/"+apiV1Itoa(open)), map[string]any{"assignee": name})

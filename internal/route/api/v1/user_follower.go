@@ -88,8 +88,8 @@ func follow(c *apiContext) {
 	if c.Written() {
 		return
 	}
-	// Organizations cannot be followed, as in the web interface. Unfollowing one
-	// stays possible for follows from before that was enforced.
+	// Organizations cannot be followed, as in the web interface. Existing follows
+	// of an organization can still be removed.
 	if target.IsOrganization() {
 		c.NotFound()
 		return
