@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import {
   Activity,
-  ArrowLeft,
   Bell,
   BookMarked,
   Building2,
@@ -167,27 +166,6 @@ function Sidebar({ rail }: { rail: boolean }) {
           </div>
         ))}
       </nav>
-      <div className="flex shrink-0 flex-col gap-0.5 px-2">
-        {rail ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <a
-                href={subUrl("/")}
-                aria-label={t("admin.back_to_site")}
-                className={cn(NAV_LINK, "justify-center px-0")}
-              >
-                <ArrowLeft className="size-4 shrink-0" aria-hidden />
-              </a>
-            </TooltipTrigger>
-            <TooltipContent side="right">{t("admin.back_to_site")}</TooltipContent>
-          </Tooltip>
-        ) : (
-          <a href={subUrl("/")} className={NAV_LINK}>
-            <ArrowLeft className="size-4 shrink-0" aria-hidden />
-            {t("admin.back_to_site")}
-          </a>
-        )}
-      </div>
     </>
   );
 }
