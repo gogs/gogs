@@ -1227,6 +1227,18 @@ func (s *RepositoriesStore) Delete(ctx context.Context, logger *logx.Logger, own
 			}
 		}
 
+		// Forks are updated by primary key, because fork_id has no index and
+		// updating by it would lock every repository until commit on MySQL.
+		var forkIDs []int64
+		if err := tx.Model(new(Repository)).Where("fork_id = ?", repoID).Pluck("id", &forkIDs).Error; err != nil {
+			return errors.Wrap(err, "list forks")
+		}
+		for ids := range slices.Chunk(forkIDs, 500) {
+			if err := tx.Exec("UPDATE repository SET fork_id = 0, is_fork = ? WHERE id IN ?", false, ids).Error; err != nil {
+				return errors.Wrap(err, "reset forks")
+			}
+		}
+
 		// Delete labels and milestones before the repository, the order issue
 		// creation locks them in, so the two cannot deadlock.
 		if err := deleteByColumn(tx, "repo_id", repoID, "label", "milestone"); err != nil {
@@ -1327,12 +1339,6 @@ func (s *RepositoriesStore) Delete(ctx context.Context, logger *logx.Logger, own
 	// Remove attachment files.
 	for i := range attachmentPaths {
 		RemoveAllWithNotice(logger, "Delete attachment", attachmentPaths[i])
-	}
-
-	if repo.NumForks > 0 {
-		if err = s.db.WithContext(ctx).Exec("UPDATE repository SET fork_id = 0, is_fork = ? WHERE fork_id = ?", false, repo.ID).Error; err != nil {
-			logger.Error("Failed to reset fork status of forks", "repoID", repo.ID, "error", err)
-		}
 	}
 
 	if publicKeyDeleted {
