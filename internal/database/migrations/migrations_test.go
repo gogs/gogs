@@ -47,6 +47,9 @@ func TestMigrate(t *testing.T) {
 		assert.NotContains(t, tables, "protect_branch_whitelist")
 		assert.True(t, db.Migrator().HasIndex("attachment", "UQE_attachment_uuid"))
 		assert.True(t, db.Migrator().HasIndex("public_key", ownerFingerprintIndex))
+		for _, idx := range repoIDIndexes {
+			assert.True(t, db.Migrator().HasIndex(idx.table, idx.name), idx.name)
+		}
 		assert.Equal(t, latestVersion(db), gooseVersion(t, db))
 
 		// Running again changes nothing.

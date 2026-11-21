@@ -1274,25 +1274,16 @@ func (s *RepositoriesStore) Delete(ctx context.Context, logger *logx.Logger, own
 			}
 		}
 
+		// The columns of pull requests, accesses and watches deleted by are
+		// indexed, so that MySQL locks only the rows of this repository, after
+		// the repository and its base were locked.
 		if err := deleteByColumn(tx, "base_repo_id", repoID, "pull_request"); err != nil {
 			return err
 		}
-		// Accesses and watches are deleted by primary key, because repo_id is not
-		// the leading column of their indexes, and deleting by it would lock
-		// every row on MySQL, after the repository and its base were locked.
-		for _, table := range []any{new(Access), new(Watch)} {
-			var ids []int64
-			if err := tx.Model(table).Where("repo_id = ?", repoID).Pluck("id", &ids).Error; err != nil {
-				return errors.Wrapf(err, "list %T", table)
-			}
-			for ids := range slices.Chunk(ids, 500) {
-				if err := tx.Where("id IN ?", ids).Delete(table).Error; err != nil {
-					return errors.Wrapf(err, "delete %T", table)
-				}
-			}
-		}
 		if err := deleteByColumn(tx, "repo_id", repoID,
+			"access",
 			"action",
+			"watch",
 			"star",
 			"mirror",
 			"issue_user",

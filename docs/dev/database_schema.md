@@ -10,6 +10,7 @@
 
 Primary keys: id
 Indexes: 
+	"IDX_access_repo_id" (repo_id)
 	"access_user_repo_unique" UNIQUE (user_id, repo_id)
 ```
 
@@ -451,6 +452,7 @@ Indexes:
 
 Primary keys: id
 Indexes: 
+	"IDX_pull_request_base_repo_id" (base_repo_id)
 	"IDX_pull_request_issue_id" (issue_id)
 ```
 
@@ -636,6 +638,7 @@ Indexes:
 
 Primary keys: id
 Indexes: 
+	"IDX_watch_repo_id" (repo_id)
 	"UQE_watch_watch" UNIQUE (user_id, repo_id)
 ```
 

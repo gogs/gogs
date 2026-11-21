@@ -1261,6 +1261,23 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 	}
 	deleteRepo := func(repo *Repository) error { return s.Delete(ctx, logger, repo.OwnerID, repo.ID) }
 	transfer := func(repo *Repository, to *User) error { return s.Transfer(ctx, repo.Owner, to.Name, repo) }
+	// mergePull makes the changes to the database that merging the pull request
+	// makes before any Git work.
+	pulls := &PullRequestsStore{db: s.db}
+	var pull *PullRequest
+	mergePull := func(base *Repository) error {
+		return s.db.Transaction(func(tx *gorm.DB) error {
+			if err := tx.Model(pull).UpdateColumn("has_merged", true).Error; err != nil {
+				return err
+			}
+			issue := new(Issue)
+			if err := tx.Where("id = ?", pull.IssueID).First(issue).Error; err != nil {
+				return err
+			}
+			return newIssuesStore(tx).changeStatus(ctx, logger, alice, base, issue, true)
+		})
+	}
+	newcomer := newTestIssueUser(t, ctx, s.db, "cf-newcomer")
 
 	for _, tc := range []struct {
 		name      string
@@ -1268,6 +1285,8 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 		forkOwner *User // Defaults to bob.
 		private   bool
 		setup     func(base, fork *Repository)
+		holdTeam  bool // Hold the team instead of the base repository.
+		check     func(base, fork *Repository)
 		// first starts ahead of second, while the base repository is held.
 		first, second func(base, fork *Repository) error
 	}{
@@ -1332,6 +1351,29 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 			first:     func(_, fork *Repository) error { return deleteRepo(fork) },
 			second:    func(base, _ *Repository) error { return teams.AddRepo(ctx, readers, base) },
 		},
+		{
+			name:      "merge pull request into base while deleting its fork",
+			baseOwner: alice,
+			setup: func(base, fork *Repository) {
+				pull = newTestPullRequest(t, pulls, 1, fork.ID, "feature", base.ID, "main", false, false)
+			},
+			first:  func(_, fork *Repository) error { return deleteRepo(fork) },
+			second: func(base, _ *Repository) error { return mergePull(base) },
+		},
+		{
+			name:      "add team member while deleting a repository of the team",
+			baseOwner: org,
+			private:   true,
+			setup:     func(base, _ *Repository) { require.NoError(t, teams.AddRepo(ctx, readers, base)) },
+			holdTeam:  true,
+			first:     func(*Repository, *Repository) error { return teams.AddMember(ctx, org.ID, readers.ID, newcomer.ID) },
+			second:    func(base, _ *Repository) error { return deleteRepo(base) },
+			check: func(base, _ *Repository) {
+				var count int64
+				require.NoError(t, s.db.Model(new(Access)).Where("repo_id = ?", base.ID).Count(&count).Error)
+				assert.Zero(t, count, "accesses of the deleted repository")
+			},
+		},
 	} {
 		base := newTestGitRepo(t, ctx, s, tc.baseOwner, CreateRepoOptionsLegacy{Name: name("base"), IsPrivate: tc.private})
 		forkOwner := tc.forkOwner
@@ -1347,7 +1389,11 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 		hold := s.db.Begin()
 		require.NoError(t, hold.Error)
 		defer hold.Rollback()
-		require.NoError(t, hold.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", base.ID).Find(new(Repository)).Error)
+		if tc.holdTeam {
+			require.NoError(t, hold.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", readers.ID).Find(new(Team)).Error)
+		} else {
+			require.NoError(t, hold.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", base.ID).Find(new(Repository)).Error)
+		}
 
 		var wg sync.WaitGroup
 		var firstErr, secondErr error
@@ -1360,5 +1406,8 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 
 		assert.NoError(t, firstErr, tc.name)
 		assert.NoError(t, secondErr, tc.name)
+		if tc.check != nil {
+			tc.check(base, baseFork)
+		}
 	}
 }
