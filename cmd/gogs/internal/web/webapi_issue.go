@@ -314,14 +314,21 @@ func getRepoIssue(c flamego.Context, logger *logx.Logger, viewer *database.User,
 // and marks it read by the viewer.
 func toRepoIssueView(ctx context.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, issue *database.Issue) (resp *repoIssueView, err error) {
 	repo := repoCtx.Repo
-	metas := repo.ComposeMetas()
+	metas := repoCtx.metas()
+	docs := []string{issue.Content}
+	for _, comment := range issue.Comments {
+		if comment.Type == database.CommentTypeComment {
+			docs = append(docs, comment.Content)
+		}
+	}
+	commits := markup.ResolveCommits(metas, docs...)
 	resp = &repoIssueView{
 		Index:       issue.Index,
 		Title:       issue.Title,
 		IsClosed:    issue.IsClosed,
 		Poster:      toIssueUser(issue.Poster),
 		CreatedAt:   issue.Created.UTC(),
-		ContentHTML: string(markup.Markdown(issue.Content, repo.Link(), metas)),
+		ContentHTML: string(markup.MarkdownWithCommits(issue.Content, repo.Link(), metas, commits)),
 		Content:     issue.Content,
 		Attachments: toIssueAttachments(issue.Attachments, issue.Content),
 		Comments:    make([]issueComment, 0, len(issue.Comments)),
@@ -362,7 +369,7 @@ func toRepoIssueView(ctx context.Context, logger *logx.Logger, viewer *database.
 		case database.CommentTypeCommitRef:
 			item.ContentHTML = markup.Sanitize(comment.Content)
 		case database.CommentTypeComment:
-			item.ContentHTML = string(markup.Markdown(comment.Content, repo.Link(), metas))
+			item.ContentHTML = string(markup.MarkdownWithCommits(comment.Content, repo.Link(), metas, commits))
 			item.Attachments = toIssueAttachments(comment.Attachments, comment.Content)
 			// The poster and admins can change a comment.
 			if viewer != nil && (comment.PosterID == viewer.ID || repoCtx.Viewer.CanAdminister()) {
@@ -755,12 +762,12 @@ func postRepoMarkdown(repoCtx *repoContext, req markdownRequest) (statusCode int
 	var html []byte
 	switch {
 	case req.Wiki:
-		html = markup.MarkdownFile(req.Text, repo.Link()+"/wiki", repo.ComposeMetas())
+		html = markup.MarkdownFile(req.Text, repo.Link()+"/wiki", repoCtx.metas())
 	case req.Path != "":
 		fileLink := repo.Link() + "/src/" + escapePath(req.Branch) + "/" + escapePath(pathx.Clean(req.Path))
-		html = markup.MarkdownFile(req.Text, path.Dir(fileLink), repo.ComposeMetas())
+		html = markup.MarkdownFile(req.Text, path.Dir(fileLink), repoCtx.metas())
 	default:
-		html = markup.Markdown(req.Text, repo.Link(), repo.ComposeMetas())
+		html = markup.Markdown(req.Text, repo.Link(), repoCtx.metas())
 	}
 	return http.StatusOK, map[string]string{"html": string(html)}, nil
 }
@@ -931,12 +938,12 @@ func loadIssueTemplates(ctx context.Context, repoCtx *repoContext) (*issuetempla
 	return ts, nil
 }
 
-func toIssueTemplate(repo *database.Repository, t *issuetemplate.Template) *issueTemplate {
+func toIssueTemplate(repoCtx *repoContext, t *issuetemplate.Template) *issueTemplate {
 	markdown := func(text string) string {
 		if strings.TrimSpace(text) == "" {
 			return ""
 		}
-		return string(markup.Markdown(text, repo.Link(), repo.ComposeMetas()))
+		return string(markup.Markdown(text, repoCtx.Repo.Link(), repoCtx.metas()))
 	}
 	resp := &issueTemplate{
 		issueTemplateSummary: issueTemplateSummary{File: t.File, Name: t.Name, About: t.About},
@@ -999,7 +1006,7 @@ func getRepoNewIssue(c flamego.Context, logger *logx.Logger, repoCtx *repoContex
 		resp.ContactLinks = append(resp.ContactLinks, issueContactLink(link))
 	}
 	if t := ts.Find(c.Query("template")); t != nil {
-		resp.Template = toIssueTemplate(repo, t)
+		resp.Template = toIssueTemplate(repoCtx, t)
 	}
 	if resp.ViewerCanWrite {
 		if resp.issueMetaOptions, err = listIssueMetaOptions(ctx, repo); err != nil {

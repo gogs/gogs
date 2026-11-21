@@ -114,6 +114,35 @@ func RepoCatFileCommit(ctx context.Context, repoPath, rev string) (*Commit, erro
 	return r.CatFileCommit(ctx, rev)
 }
 
+// RepoCommitIDs returns the full IDs of the commits that the given full or
+// abbreviated commit IDs name in the repository in given path, keyed by the
+// given ID. IDs that do not name a commit, e.g., a missing object, a blob, or an
+// abbreviation shared by more than one object, are left out, and so are IDs
+// that Git resolves as the name of a branch or tag instead.
+func RepoCommitIDs(ctx context.Context, repoPath string, ids []string) (map[string]string, error) {
+	args := []string{"cat-file", "--batch-check=%(objectname) %(objecttype)"}
+	stdout, err := execInput(ctx, repoPath, args, nil, strings.NewReader(strings.Join(ids, "\n")+"\n"))
+	if err != nil {
+		return nil, err
+	}
+
+	// Each line answers the ID on the same line of the input, as "<full ID>
+	// <type>" when found or as "<given ID> missing" or "<given ID> ambiguous"
+	// otherwise.
+	lines := strings.Split(strings.TrimSuffix(string(stdout), "\n"), "\n")
+	if len(lines) != len(ids) {
+		return nil, errors.Newf("got %d lines for %d IDs", len(lines), len(ids))
+	}
+	commitIDs := make(map[string]string)
+	for i, line := range lines {
+		fullID, typ, _ := strings.Cut(line, " ")
+		if typ == string(ObjectCommit) && strings.HasPrefix(fullID, ids[i]) {
+			commitIDs[ids[i]] = fullID
+		}
+	}
+	return commitIDs, nil
+}
+
 // catFileType returns the object type of given revision of the repository.
 func (r *Repository) catFileType(ctx context.Context, rev string) (ObjectType, error) {
 	args := []string{"cat-file", "-t", rev}

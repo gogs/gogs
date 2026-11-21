@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -714,4 +715,80 @@ func TestIssueSuggestionsAndMarkdown(t *testing.T) {
 		status, body = otherClient.do(http.MethodPost, issueAPIPath(private, "markdown"), map[string]any{"text": "x"})
 		assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 	})
+}
+
+func TestIssueMarkdownCommitLinks(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	other := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	ownerClient := authenticatedClient(t, owner)
+
+	dir := database.RepoPath(repo.Owner, repo.Name)
+	commitID := repoSettingsGit(t, dir, "rev-parse", "HEAD")
+	short, abbrev9, abbrev10 := issueCommitAbbrev(commitID, 7), issueCommitAbbrev(commitID, 9), issueCommitAbbrev(commitID, 10)
+	otherCommitID := repoSettingsAddCommit(t, other, repoSettingsDefaultBranch(t, other), "Only in the other repository")
+	// Git resolves a hex string that is also the name of a branch or tag to the
+	// commit it points to, which is not the commit the hex string names.
+	const hexBranch = "cafe1234"
+	repoSettingsGit(t, dir, "update-ref", "refs/heads/"+hexBranch, commitID)
+
+	link := func(id, text string) string {
+		return `<a href="/` + repo.Owner + "/" + repo.Name + "/commit/" + id + `" rel="nofollow"><code>` + text + "</code></a>"
+	}
+
+	content := "Fixed in " + short + ", not in 123e4567-e89b-12d3-a456-426614174000 or deadbeef. " +
+		"Branch " + hexBranch + ". Other " + otherCommitID + "."
+	index := issueCreate(t, ownerClient, repo, "Commit links", content)
+	// Comments are rendered with the commits of the whole issue, which are
+	// resolved together.
+	var created struct {
+		ID int64 `json:"id"`
+	}
+	ownerClient.doJSON(http.MethodPost, issueAPIPath(repo, "issues", index, "comments"), map[string]any{"content": "Also " + abbrev9 + ", not `" + commitID[:8] + "`."}, http.StatusCreated, &created)
+	v := issueGet(t, ownerClient, repo, index)
+	require.Len(t, v.Comments, 1)
+	assert.Contains(t, v.Comments[0].ContentHTML, "Also "+link(commitID, abbrev9[:min(len(abbrev9), 10)])+", not <code>"+commitID[:8]+"</code>.")
+	got := v.ContentHTML
+	assert.Contains(t, got, "Fixed in "+link(commitID, short)+",", "a short hash links to the full commit ID")
+	assert.Contains(t, got, "not in 123e4567-e89b-12d3-a456-426614174000 or deadbeef.")
+	assert.Contains(t, got, "Branch "+hexBranch+".")
+	assert.Contains(t, got, "Other "+otherCommitID+".", "a commit of another repository stays text")
+	assert.Equal(t, 1, strings.Count(got, "<a "), "content HTML: %s", got)
+
+	var resp struct {
+		HTML string `json:"html"`
+	}
+	ownerClient.doJSON(http.MethodPost, issueAPIPath(repo, "markdown"), map[string]any{"text": "修复了" + abbrev10 + "的问题", "wiki": true}, http.StatusOK, &resp)
+	assert.Contains(t, resp.HTML, "修复了"+link(commitID, abbrev10[:10])+"的问题")
+
+	t.Run("guests who cannot read the code", func(t *testing.T) {
+		private := seedRepository(t, owner.ID, CreateRepositoryOptions{Private: true, AutoInit: true})
+		repoVisibilityPutPublicAccess(t, ownerClient, private, false, true)
+		privateID := repoSettingsGit(t, database.RepoPath(private.Owner, private.Name), "rev-parse", "HEAD")
+		privateShort := issueCommitAbbrev(privateID, 7)
+		privateLink := `<a href="/` + private.Owner + "/" + private.Name + "/commit/" + privateID + `" rel="nofollow"><code>` + privateShort[:min(len(privateShort), 10)] + "</code></a>"
+		guestClient := authenticatedClient(t, seedUser(t, CreateUserOptions{}))
+
+		// Links to the full ID would tell guests which commits the code has.
+		index := issueCreate(t, ownerClient, private, "Commit links", "Fixed in "+privateShort+".")
+		assert.Contains(t, issueGet(t, ownerClient, private, index).ContentHTML, "Fixed in "+privateLink+".")
+		assert.Contains(t, issueGet(t, guestClient, private, index).ContentHTML, "Fixed in "+privateShort+".")
+
+		var resp struct {
+			HTML string `json:"html"`
+		}
+		guestClient.doJSON(http.MethodPost, issueAPIPath(private, "markdown"), map[string]any{"text": "Probe " + privateShort}, http.StatusOK, &resp)
+		assert.Equal(t, "<p>Probe "+privateShort+"</p>\n", resp.HTML)
+	})
+}
+
+// issueCommitAbbrev returns the shortest abbreviation of the commit ID that is
+// at least n characters long and not a number, which never links.
+func issueCommitAbbrev(id string, n int) string {
+	for strings.Trim(id[:n], "0123456789") == "" {
+		n++
+	}
+	return id[:n]
 }

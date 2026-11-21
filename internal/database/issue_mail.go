@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"maps"
 
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
@@ -82,8 +83,17 @@ func (mr mailerRepo) HTMLURL() string {
 	return mr.repo.HTMLURL()
 }
 
+// ComposeMetas leaves out the repository to resolve commit IDs in when guests
+// who cannot read the code take part in its issues, and so receive its mails,
+// so that commit links do not reveal which commits it has.
 func (mr mailerRepo) ComposeMetas() map[string]string {
-	return mr.repo.ComposeMetas()
+	metas := mr.repo.ComposeMetas()
+	if !mr.repo.IsPrivate || !mr.repo.CanGuestViewIssues() {
+		return metas
+	}
+	metas = maps.Clone(metas)
+	delete(metas, "repoPath")
+	return metas
 }
 
 func NewMailerRepo(repo *Repository) email.Repository {
