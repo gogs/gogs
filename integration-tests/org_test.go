@@ -489,6 +489,115 @@ func TestOrgMembers(t *testing.T) {
 	assert.NotContains(t, listMembers(ownerClient), outsider.Name)
 }
 
+// A member removed from an organization loses the access their teams gave
+// them to its repositories, and stops watching them.
+func TestOrgMemberRemovedLosesAccess(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	member := seedUser(t, CreateUserOptions{})
+	org := orgSeed(t, owner.ID)
+	repo := seedRepository(t, org.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
+	ownerClient := authenticatedClient(t, owner)
+	memberClient := authenticatedClient(t, member)
+	orgPath := "/api/web/orgs/" + org.Name
+
+	orgAddMember(t, org, member.ID)
+	var team struct {
+		LowerName string `json:"lowerName"`
+	}
+	ownerClient.doJSON(http.MethodPost, orgPath+"/teams", map[string]any{"teamName": UniqueName("Team-"), "permission": "write"}, http.StatusCreated, &team)
+	teamPath := orgPath + "/teams/" + team.LowerName
+	status, body := ownerClient.do(http.MethodPut, teamPath+"/members/"+member.Name, orgNoBody)
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	status, body = ownerClient.do(http.MethodPut, teamPath+"/repos/"+repo.Name, orgNoBody)
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+
+	accessMode := func() database.AccessMode {
+		return database.Handle.Permissions().AccessMode(t.Context(), logger, member.ID, repo.ID, database.AccessModeOptions{OwnerID: org.ID, Private: true})
+	}
+	require.Equal(t, database.AccessModeWrite, accessMode())
+	status, body = memberClient.do(http.MethodPost, repoSettingsAPIPath(repo, "/watch"), repoSettingsNoBody)
+	require.Equal(t, http.StatusOK, status, "response: %s", body)
+	watches := repoSettingsGetRepo(t, repo.ID).NumWatches
+
+	status, body = ownerClient.do(http.MethodDelete, orgPath+"/members/"+member.Name, orgNoBody)
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	assert.Equal(t, database.AccessModeNone, accessMode())
+	assert.False(t, database.Handle.Repositories().IsWatching(t.Context(), member.ID, repo.ID))
+	assert.Equal(t, watches-1, repoSettingsGetRepo(t, repo.ID).NumWatches)
+	status, body = memberClient.do(http.MethodGet, issueAPIPath(repo, "issues"), nil)
+	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
+}
+
+// A collaborator of an organization's repository gets the highest of their
+// collaboration mode and the modes of their teams that have the repository,
+// and keeps their teams' access when they stop being a collaborator.
+func TestOrgCollaboratorAccess(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	member := seedUser(t, CreateUserOptions{})
+	outsider := seedUser(t, CreateUserOptions{})
+	org := orgSeed(t, owner.ID)
+	repo := seedRepository(t, org.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
+	otherRepo := seedRepository(t, org.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
+	ownerClient := authenticatedClient(t, owner)
+	orgPath := "/api/web/orgs/" + org.Name
+
+	orgAddMember(t, org, member.ID)
+	addTeam := func(permission string, repo *Repository) {
+		t.Helper()
+		var team struct {
+			LowerName string `json:"lowerName"`
+		}
+		ownerClient.doJSON(http.MethodPost, orgPath+"/teams", map[string]any{"teamName": UniqueName("Team-"), "permission": permission}, http.StatusCreated, &team)
+		teamPath := orgPath + "/teams/" + team.LowerName
+		status, body := ownerClient.do(http.MethodPut, teamPath+"/members/"+member.Name, orgNoBody)
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+		status, body = ownerClient.do(http.MethodPut, teamPath+"/repos/"+repo.Name, orgNoBody)
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	}
+	addTeam("write", repo)
+	// A team that has only another repository gives no access to this one.
+	addTeam("admin", otherRepo)
+
+	accessMode := func(userID int64) database.AccessMode {
+		return database.Handle.Permissions().AccessMode(t.Context(), logger, userID, repo.ID, database.AccessModeOptions{OwnerID: org.ID, Private: true})
+	}
+	path := repoSettingsAPIPath(repo, "/settings/collaborators")
+	setMode := func(u *User, mode string) {
+		t.Helper()
+		status, body := ownerClient.do(http.MethodPatch, path+"/"+u.Name, map[string]any{"mode": mode})
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	}
+	require.Equal(t, database.AccessModeWrite, accessMode(member.ID))
+
+	for _, u := range []*User{member, outsider} {
+		status, body := ownerClient.do(http.MethodPost, path, map[string]any{"username": u.Name})
+		require.Equal(t, http.StatusCreated, status, "response: %s", body)
+	}
+	assert.Equal(t, database.AccessModeWrite, accessMode(member.ID))
+	assert.Equal(t, database.AccessModeWrite, accessMode(outsider.ID))
+
+	setMode(member, "read")
+	setMode(outsider, "read")
+	assert.Equal(t, database.AccessModeWrite, accessMode(member.ID), "the team that has the repository still gives write")
+	assert.Equal(t, database.AccessModeRead, accessMode(outsider.ID))
+
+	setMode(member, "admin")
+	assert.Equal(t, database.AccessModeAdmin, accessMode(member.ID))
+
+	for _, u := range []*User{member, outsider} {
+		status, body := ownerClient.do(http.MethodDelete, path+"/"+u.Name, repoSettingsNoBody)
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	}
+	assert.Equal(t, database.AccessModeWrite, accessMode(member.ID), "the member keeps their team's access")
+	assert.Equal(t, database.AccessModeNone, accessMode(outsider.ID))
+	status, body := authenticatedClient(t, outsider).do(http.MethodGet, issueAPIPath(repo, "issues"), nil)
+	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
+}
+
 func TestOrgTeams(t *testing.T) {
 	t.Parallel()
 

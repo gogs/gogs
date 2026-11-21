@@ -115,6 +115,7 @@ func TestActions(t *testing.T) {
 		{"PushTag", actionsPushTag},
 		{"RenameRepo", actionsRenameRepo},
 		{"TransferRepo", actionsTransferRepo},
+		{"NotifyManyWatchers", actionsNotifyManyWatchers},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
@@ -935,4 +936,21 @@ func actionsTransferRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
 	}
 	want[0].Created = time.Unix(want[0].CreatedUnix, 0)
 	assert.Equal(t, want, got)
+}
+
+// More watchers than a statement can bind the parameters of all their actions
+// for still get one each.
+func actionsNotifyManyWatchers(t *testing.T, ctx context.Context, s *ActionsStore) {
+	const watchers = 7000
+	watches := make([]*Watch, watchers)
+	for i := range watches {
+		watches[i] = &Watch{UserID: int64(i + 2), RepoID: 1}
+	}
+	require.NoError(t, s.db.CreateInBatches(watches, 1000).Error)
+
+	err := s.notifyWatchers(ctx, &Action{ActUserID: 1, OpType: ActionCreateIssue, RepoID: 1})
+	require.NoError(t, err)
+	var count int64
+	require.NoError(t, s.db.Model(new(Action)).Where("repo_id = ?", 1).Count(&count).Error)
+	assert.Equal(t, int64(watchers+1), count)
 }

@@ -438,6 +438,46 @@ func TestIssueCreateConcurrently(t *testing.T) {
 	})
 }
 
+// Watchers of a repository see its issue activity in their feeds, and other
+// users do not.
+func TestIssueActivityReachesWatchers(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	watcher := seedUser(t, CreateUserOptions{})
+	other := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	ownerClient := authenticatedClient(t, owner)
+	watcherClient := authenticatedClient(t, watcher)
+	status, body := watcherClient.do(http.MethodPost, repoSettingsAPIPath(repo, "/watch"), repoSettingsNoBody)
+	require.Equal(t, http.StatusOK, status, "response: %s", body)
+
+	index := issueCreate(t, ownerClient, repo, "Watched", "")
+	status, body = ownerClient.do(http.MethodPost, issueAPIPath(repo, "issues", index, "comments"), map[string]any{"content": "A comment"})
+	require.Equal(t, http.StatusCreated, status, "response: %s", body)
+	status, body = ownerClient.do(http.MethodPut, issueAPIPath(repo, "issues", index, "closed"), map[string]any{})
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	status, body = ownerClient.do(http.MethodDelete, issueAPIPath(repo, "issues", index, "closed"), map[string]any{})
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+
+	issueOps := func(c *client) []database.ActionType {
+		t.Helper()
+		ops := []database.ActionType{}
+		for _, item := range orgActivity(t, c, "/api/web/dashboard/activity") {
+			op := database.ActionType(item.OpType)
+			if item.RepoURL == "/"+repo.Owner+"/"+repo.Name && op != database.ActionCreateRepo {
+				ops = append(ops, op)
+			}
+		}
+		slices.Sort(ops)
+		return ops
+	}
+	want := []database.ActionType{database.ActionCreateIssue, database.ActionCommentIssue, database.ActionCloseIssue, database.ActionReopenIssue}
+	assert.Equal(t, want, issueOps(watcherClient))
+	assert.Equal(t, want, issueOps(ownerClient))
+	assert.Empty(t, issueOps(authenticatedClient(t, other)))
+}
+
 // An edit whose client goes away after the content is saved still updates the
 // files the content links.
 func TestIssueEditAttachmentsClientGone(t *testing.T) {
