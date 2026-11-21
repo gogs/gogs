@@ -1,33 +1,7 @@
 import { type ReactNode, createElement } from "react";
-import { toast } from "sonner";
 
 import { SessionExpired } from "@/components/SessionExpired";
 import { LoaderResponseError, displayMessage, loaderResponseError } from "@/lib/loader-error";
-
-const SESSION_EXPIRED_TOAST = "session-expired";
-let sessionExpiredAt = -Infinity;
-
-// toastSessionExpired tells a viewer whose session expired to sign in again.
-// The toast holds a link, so it stays until it is closed or a change goes
-// through, once for however many changes fail. Its class hides it while a
-// dialog covers the place of the toasts (see index.css).
-export function toastSessionExpired() {
-  sessionExpiredAt = performance.now();
-  toast.error(createElement(SessionExpired), {
-    id: SESSION_EXPIRED_TOAST,
-    className: "toast-until-closed",
-    duration: Infinity,
-  });
-}
-
-// sessionWorks takes that toast away once a change went through, which tells
-// that the viewer signed in again, e.g., on the tab its link opens. `sentAt`
-// is when the change was sent, as of `performance.now()`: the answer to a
-// change sent before the toast showed says nothing about the session now.
-export function sessionWorks(sentAt: number) {
-  if (sentAt <= sessionExpiredAt) return;
-  if (toast.getToasts().some((shown) => shown.id === SESSION_EXPIRED_TOAST)) toast.dismiss(SESSION_EXPIRED_TOAST);
-}
 
 // A signal cancels the request, e.g., when the answer is no longer needed.
 export async function fetchJSON<T>(url: string, signal?: AbortSignal): Promise<T> {
@@ -38,10 +12,8 @@ export async function fetchJSON<T>(url: string, signal?: AbortSignal): Promise<T
 
 // send makes a change that answers with no content.
 export async function send(method: "POST" | "PUT" | "DELETE", url: string) {
-  const sentAt = performance.now();
   const res = await fetch(url, { method, credentials: "same-origin", headers: { "Content-Type": "application/json" } });
   if (!res.ok) throw await loaderResponseError(res);
-  sessionWorks(sentAt);
 }
 
 // FormError is a failed form submission, with the message for the whole form
@@ -71,7 +43,6 @@ export function isSessionExpired(err: unknown) {
 }
 
 export async function submit<T>(method: "POST" | "PUT" | "PATCH" | "DELETE", url: string, body: unknown): Promise<T> {
-  const sentAt = performance.now();
   const res = await fetch(url, {
     method,
     credentials: "same-origin",
@@ -87,7 +58,6 @@ export async function submit<T>(method: "POST" | "PUT" | "PATCH" | "DELETE", url
       data,
     );
   }
-  sessionWorks(sentAt);
   // Some changes answer without a body, e.g., 201 Created for a new SSH key.
   const text = await res.text();
   return (text ? JSON.parse(text) : undefined) as T;
@@ -97,10 +67,8 @@ export async function submit<T>(method: "POST" | "PUT" | "PATCH" | "DELETE", url
 export async function uploadAvatar(url: string, file: File) {
   const body = new FormData();
   body.append("avatar", file);
-  const sentAt = performance.now();
   const res = await fetch(url, { method: "PUT", credentials: "same-origin", body });
   if (!res.ok) throw await loaderResponseError(res);
-  sessionWorks(sentAt);
 }
 
 // formErrors returns the messages for the fields of a failed form, and the

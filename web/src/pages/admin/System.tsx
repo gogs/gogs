@@ -250,9 +250,8 @@ export function AdminOperations() {
     filters: { mutationKey: OPERATION_KEY },
     select: (mutation) => mutation.state as OperationRun,
   });
-  // A row keeps the outcome of its last run that had one, also while it runs again and after a run
-  // that ended without one, i.e., after the session expired. Taking it away and putting it back
-  // would announce the old outcome as news.
+  // A row keeps the outcome of its last run while it runs again. Taking it away and putting it
+  // back would announce the old outcome as news.
   const outcomes: Partial<Record<AdminOperation, { outcome: OperationOutcome; runAt: number }>> = {};
   for (const state of runs) {
     if (state.variables && state.data) outcomes[state.variables] = { outcome: state.data, runAt: state.submittedAt };

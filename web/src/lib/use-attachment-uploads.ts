@@ -3,8 +3,6 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { type IssueAttachmentSettings, uploadRepoAttachment } from "@/lib/queries/repo";
-import { isSessionExpired } from "@/lib/queries/request";
-import { toastError } from "@/lib/toast-error";
 
 export interface PendingFile {
   key: string;
@@ -59,8 +57,7 @@ export function useAttachmentUploads(
           link?.done(file, url);
         },
         (err: Error) => {
-          if (isSessionExpired(err)) toastError(err);
-          else toast.error(`${file.name}: ${err.message}`);
+          toast.error(`${file.name}: ${err.message}`);
           setFiles((prev) => prev.filter((f) => f.key !== key));
           link?.done(file);
         },

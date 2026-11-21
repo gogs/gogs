@@ -3,7 +3,6 @@ import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import type { RepoListItemData } from "@/components/RepoListItem";
 import type { UserListPage } from "@/components/UserListItem";
 import { loaderResponseError } from "@/lib/loader-error";
-import { sessionWorks } from "@/lib/queries/request";
 import { subUrl } from "@/lib/url";
 
 export interface UserProfileData {
@@ -44,11 +43,8 @@ export interface OrgProfileData {
 export type OwnerProfileData = UserProfileData | OrgProfileData;
 
 async function fetchJSON<T>(url: string, init?: RequestInit): Promise<T> {
-  const sentAt = performance.now();
   const res = await fetch(url, { credentials: "same-origin", ...init });
   if (!res.ok) throw await loaderResponseError(res);
-  // Only a change tells that the session works, since many pages load without one.
-  if (init?.method) sessionWorks(sentAt);
   return (await res.json()) as T;
 }
 

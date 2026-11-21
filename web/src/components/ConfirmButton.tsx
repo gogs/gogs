@@ -14,7 +14,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { isSessionExpired } from "@/lib/queries/request";
 import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 
@@ -63,12 +62,7 @@ export function ConfirmButton({
       setOpen(false);
       await onDone();
     },
-    onError: (err) => {
-      // The toast of an expired session stays up, and an open dialog keeps the pointer and the
-      // keyboard from it.
-      if (isSessionExpired(err)) setOpen(false);
-      toastError(err);
-    },
+    onError: (err) => toastError(err),
   });
   return (
     <Dialog open={open} onOpenChange={(next) => setOpen(next && !busy)}>
