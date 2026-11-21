@@ -71,7 +71,7 @@ export function RepoIssue({ owner, name, data }: { owner: string; name: string; 
               <>
                 <OpenedBy issue={data} />
                 {" · "}
-                {t("repo.issues.num_comments").replace(/%(?:\[1\])?d/, String(commentCount))}
+                {t("repo.issues.num_comments", { count: commentCount })}
               </>
             }
           />
@@ -467,7 +467,7 @@ function AttachmentList({ attachments, className }: { attachments: IssueAttachme
               href={a.url}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label={t("repo.issues.attachment.open_tab").replace("%s", a.name)}
+              aria-label={t("repo.issues.attachment.open_tab", { name: a.name })}
               className="block glass rounded-md border border-(--color-border) hover:!border-(--color-primary)"
             >
               <img src={a.url} alt={a.name} className="h-24 max-w-full rounded-md object-cover" />
@@ -477,7 +477,7 @@ function AttachmentList({ attachments, className }: { attachments: IssueAttachme
               href={a.url}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label={t("repo.issues.attachment.download").replace("%s", a.name)}
+              aria-label={t("repo.issues.attachment.download", { name: a.name })}
               className="glass-control inline-flex max-w-full items-center gap-1.5 rounded-md border border-(--color-border) px-2 py-1 text-sm hover:bg-(--color-surface)"
             >
               <Download className="size-4 shrink-0" aria-hidden />
@@ -769,9 +769,7 @@ function IssueSidebar({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueD
       onMilestone={milestone.mutateAsync}
       onAssignee={assignee.mutateAsync}
     >
-      <SidebarSection
-        title={t("repo.issues.num_participants").replace(/%(?:\[1\])?d/, String(data.participants.length))}
-      >
+      <SidebarSection title={t("repo.issues.num_participants", { count: data.participants.length })}>
         <ul className="flex flex-wrap gap-1">
           {data.participants.map((u) => (
             <li key={u.name}>

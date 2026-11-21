@@ -567,8 +567,8 @@ var ruleSuffixKeys = map[string]string{
 // renderBindingErrors maps binding.Errors to the response shape, looking up
 // localized messages via the request's locale. The per-field label comes from
 // "form.<StructField>" (e.g., "form.UserName"), and the rule suffix comes from
-// ruleSuffixKeys. Rule parameters (e.g., "254" for `max=254`) are passed
-// through to the suffix translation for %s expansion. The caller responds with
+// ruleSuffixKeys. Rule parameters (e.g., "254" for `max=254`) fill the "{size}"
+// placeholder of the suffix translation. The caller responds with
 // HTTP 400.
 func renderBindingErrors(l i18n.Locale, errs binding.Errors) *bindingErrorResponse {
 	for _, e := range errs {
@@ -598,7 +598,7 @@ func renderBindingErrors(l i18n.Locale, errs binding.Errors) *bindingErrorRespon
 			case !known:
 				msg = l.Tr("form.unknown_error") + " " + ve.Tag()
 			case ve.Param() != "":
-				msg = label + l.Tr(suffixKey, ve.Param())
+				msg = label + l.Tr(suffixKey, "size", ve.Param())
 			default:
 				msg = label + l.Tr(suffixKey)
 			}

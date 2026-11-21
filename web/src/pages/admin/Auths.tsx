@@ -114,7 +114,7 @@ function AuthSourceForm({ source }: { source?: AdminAuthSourceDetail }) {
     },
     onSuccess: async (created) => {
       if (created) {
-        toast.success(t("admin.auths.new_success").replace(/%(?:\[1\])?s/, created.name));
+        toast.success(t("admin.auths.new_success", { name: created.name }));
         await navigate({ to: "/admin/auths" });
         return;
       }

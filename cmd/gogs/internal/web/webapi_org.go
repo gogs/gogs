@@ -477,7 +477,7 @@ func teamNameError(l i18n.Locale, err error) (int, *bindingErrorResponse) {
 	case database.IsErrTeamAlreadyExist(err):
 		code, msg = http.StatusUnprocessableEntity, l.Tr("form.team_name_been_taken")
 	case database.IsErrNameNotAllowed(err):
-		code, msg = http.StatusBadRequest, l.Tr("org.form.team_name_not_allowed", err.(database.ErrNameNotAllowed).Value())
+		code, msg = http.StatusBadRequest, l.Tr("org.form.team_name_not_allowed", "name", err.(database.ErrNameNotAllowed).Value())
 	default:
 		return 0, nil
 	}

@@ -492,7 +492,7 @@ func setRepoIssueClosed(c flamego.Context, logger *logx.Logger, l i18n.Locale, v
 				logger.Error("Failed to get open pull request with the same branches", "pullID", pull.ID, "error", err)
 				return http.StatusInternalServerError, nil, errors.Wrap(err, "get open pull request")
 			} else if other != nil {
-				return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("repo.pulls.open_unmerged_pull_exists", other.Index)}, nil
+				return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("repo.pulls.open_unmerged_pull_exists", "index", other.Index)}, nil
 			}
 			if err = database.Handle.PullRequests().UpdatePatch(c.Request().Context(), logger, pull); err != nil {
 				logger.Error("Failed to update pull request patch", "pullID", pull.ID, "error", err)

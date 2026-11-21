@@ -1,12 +1,5 @@
 import { webContext } from "@/lib/context";
 
-// fill puts values into a translated message in the order its Go
-// placeholders, such as `%s`, `%d` or `%[1]s`, appear.
-export function fill(message: string, ...values: (string | number)[]) {
-  let i = 0;
-  return message.replace(/%(?:\[\d+\])?[sdv]/g, () => String(values[i++] ?? ""));
-}
-
 const NUMBER_FMT = new Intl.NumberFormat(webContext.lang);
 
 export function formatNumber(n: number) {

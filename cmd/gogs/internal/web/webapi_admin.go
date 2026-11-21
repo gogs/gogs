@@ -355,7 +355,7 @@ func postAdminUser(logger *logx.Logger, c flamego.Context, l i18n.Locale, admin 
 			msg = l.Tr("form.email_been_used")
 			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"email": &msg}}, nil
 		case database.IsErrNameNotAllowed(err):
-			msg = l.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value())
+			msg = l.Tr("user.form.name_not_allowed", "name", err.(database.ErrNameNotAllowed).Value())
 			return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"name": &msg}}, nil
 		}
 		logger.Error("Failed to create user", "userName", req.UserName, "error", err)

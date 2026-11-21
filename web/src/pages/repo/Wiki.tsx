@@ -50,12 +50,13 @@ function WikiLayout({
   );
 }
 
-// fill puts the values in the placeholders of a translated sentence, in order.
-function fill(text: string, values: ReactNode[]) {
-  let next = 0;
-  return text.split(/(%(?:\[\d\])?[sd])/).map((part, i) => {
-    if (!/^%(?:\[\d\])?[sd]$/.test(part)) return part;
-    return <span key={i}>{values[next++]}</span>;
+// fill puts the values in the named placeholders of a translated sentence,
+// e.g., "{time}".
+function fill(text: string, values: Record<string, ReactNode>) {
+  return text.split(/(\{\w+\})/).map((part, i) => {
+    const name = /^\{(\w+)\}$/.exec(part)?.[1];
+    if (name === undefined || !(name in values)) return part;
+    return <span key={i}>{values[name]}</span>;
   });
 }
 
@@ -162,7 +163,7 @@ export function RepoWiki({ owner, name, data }: { owner: string; name: string; d
                     title={t("repo.wiki.delete_page_button")}
                     description={t("repo.wiki.delete_page_notice_1")
                       .replace(/<\/?code>/g, "")
-                      .replace(/%(?:\[1\])?s/, page.name)}
+                      .replace("{name}", () => page.name)}
                     action={() => deleteRepoWikiPage(owner, name, page.name)}
                     onDone={async () => {
                       toast.success(t("repo.wiki.delete_page_success"));
@@ -173,12 +174,10 @@ export function RepoWiki({ owner, name, data }: { owner: string; name: string; d
               ) : null}
             </div>
             <p className="mt-2 text-sm text-(--color-muted-foreground)">
-              {fill(t("repo.wiki.last_commit_info"), [
-                <strong key="author" className="font-medium text-(--color-foreground)">
-                  {page.author.name}
-                </strong>,
-                <RelativeTime key="when" when={page.author.when} />,
-              ])}
+              {fill(t("repo.wiki.last_commit_info"), {
+                user: <strong className="font-medium text-(--color-foreground)">{page.author.name}</strong>,
+                time: <RelativeTime when={page.author.when} />,
+              })}
             </p>
           </header>
           <div className="glass glass-ui:mt-4 glass-ui:border glass-ui:p-4 sm:glass-ui:p-6">
@@ -279,7 +278,7 @@ export function RepoWikiPages({ owner, name, data }: { owner: string; name: stri
                 {p.name}
               </PageLink>
               <span className="text-(--color-muted-foreground) sm:ml-auto">
-                {fill(t("repo.wiki.last_updated"), [<RelativeTime key="when" when={p.updatedAt} />])}
+                {fill(t("repo.wiki.last_updated"), { time: <RelativeTime when={p.updatedAt} /> })}
               </span>
             </li>
           ))}

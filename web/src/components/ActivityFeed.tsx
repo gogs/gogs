@@ -139,7 +139,7 @@ function ActivityRow({ item }: { item: ActivityItem }) {
                   to={routePath(item.compareURL)}
                   className="text-(--color-primary) hover:underline"
                 >
-                  {t("action.compare_commits").replace(/%(?:\[1\])?d/, String(item.commitCount))}
+                  {t("action.compare_commits", { count: item.commitCount })}
                 </Link>
               </li>
             ) : null}

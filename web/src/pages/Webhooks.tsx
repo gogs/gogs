@@ -567,7 +567,7 @@ function DeliveryRow({
   const redeliver = useMutation({
     mutationFn: () => redeliverWebhook(scope, hookID, delivery.uuid),
     onSuccess: async () => {
-      toast.success(t("repo.settings.webhook.redelivery_success").replace(/%(?:\[1\])?s/, delivery.uuid));
+      toast.success(t("repo.settings.webhook.redelivery_success", { uuid: delivery.uuid }));
       await router.invalidate();
     },
     onError: (err) => toast.error(err.message),

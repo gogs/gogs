@@ -68,7 +68,7 @@ func patchUserSettings(c flamego.Context, logger *logx.Logger, l i18n.Locale, vi
 				msg = l.Tr("form.username_been_taken")
 				return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"name": &msg}}, nil
 			case database.IsErrNameNotAllowed(err):
-				msg = l.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value())
+				msg = l.Tr("user.form.name_not_allowed", "name", err.(database.ErrNameNotAllowed).Value())
 				return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"name": &msg}}, nil
 			}
 			logger.Error("Failed to rename user", "userID", viewer.ID, "newName", req.UserName, "error", err)

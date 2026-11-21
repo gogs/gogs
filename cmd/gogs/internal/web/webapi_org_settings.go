@@ -33,7 +33,7 @@ func orgNameError(l i18n.Locale, field string, err error) (int, *bindingErrorRes
 	case database.IsErrUserAlreadyExist(err):
 		code, msg = http.StatusUnprocessableEntity, l.Tr("form.org_name_been_taken")
 	case database.IsErrNameNotAllowed(err):
-		code, msg = http.StatusBadRequest, l.Tr("org.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value())
+		code, msg = http.StatusBadRequest, l.Tr("org.form.name_not_allowed", "name", err.(database.ErrNameNotAllowed).Value())
 	default:
 		return 0, nil
 	}
@@ -157,7 +157,7 @@ func readAvatarUpload(r *http.Request, l i18n.Locale) (data []byte, statusCode i
 	if err != nil {
 		var tooLarge *http.MaxBytesError
 		if errors.As(err, &tooLarge) {
-			return nil, http.StatusRequestEntityTooLarge, errors.New(l.Tr("settings.uploaded_avatar_too_large", avatarMaxSize>>20))
+			return nil, http.StatusRequestEntityTooLarge, errors.New(l.Tr("settings.uploaded_avatar_too_large", "size", avatarMaxSize>>20))
 		}
 		return nil, http.StatusBadRequest, errors.New(l.Tr("settings.uploaded_avatar_not_a_image"))
 	}
@@ -168,7 +168,7 @@ func readAvatarUpload(r *http.Request, l i18n.Locale) (data []byte, statusCode i
 		return nil, http.StatusInternalServerError, errors.Wrap(err, "read avatar")
 	}
 	if len(data) > avatarMaxSize {
-		return nil, http.StatusRequestEntityTooLarge, errors.New(l.Tr("settings.uploaded_avatar_too_large", avatarMaxSize>>20))
+		return nil, http.StatusRequestEntityTooLarge, errors.New(l.Tr("settings.uploaded_avatar_too_large", "size", avatarMaxSize>>20))
 	}
 	if !mimex.IsImage(data) {
 		return nil, http.StatusBadRequest, errors.New(l.Tr("settings.uploaded_avatar_not_a_image"))

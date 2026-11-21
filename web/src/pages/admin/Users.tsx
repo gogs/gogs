@@ -85,7 +85,7 @@ export function AdminUserNew({ options }: { options: AdminUserOptions }) {
     // Only the fields of the chosen kind of account are sent.
     mutationFn: () => createAdminUser(form.loginSource === 0 ? { ...form, loginName: "" } : { ...form, password: "" }),
     onSuccess: async (user) => {
-      toast.success(t("admin.users.new_success").replace(/%(?:\[1\])?s/, user.name));
+      toast.success(t("admin.users.new_success", { name: user.name }));
       await navigate({ to: "/admin/users/$id", params: { id: String(user.id) } });
     },
     onError: (err) => focusFirstError(err, CREATE_FIELDS),

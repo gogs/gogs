@@ -174,9 +174,11 @@ func getAdminDashboard(logger *logx.Logger, c flamego.Context, l i18n.Locale) (s
 		BuildTime:   conf.BuildTime,
 		BuildCommit: conf.BuildCommit,
 		Statistics: l.Tr("admin.dashboard.statistic_info",
-			s.User, s.Org, s.PublicKey, s.Repo, s.Watch, s.Star, s.Action, s.Access, s.Issue, s.Comment, s.Oauth,
-			s.Follow, s.Mirror, s.Release, s.LoginSource, s.Webhook, s.Milestone, s.Label, s.HookTask, s.Team,
-			s.UpdateTask, s.Attachment),
+			"users", s.User, "orgs", s.Org, "public_keys", s.PublicKey, "repos", s.Repo, "watches", s.Watch,
+			"stars", s.Star, "actions", s.Action, "accesses", s.Access, "issues", s.Issue, "comments", s.Comment,
+			"social_accounts", s.Oauth, "follows", s.Follow, "mirrors", s.Mirror, "releases", s.Release,
+			"login_sources", s.LoginSource, "webhooks", s.Webhook, "milestones", s.Milestone, "labels", s.Label,
+			"hook_tasks", s.HookTask, "teams", s.Team, "update_tasks", s.UpdateTask, "attachments", s.Attachment),
 		SystemStatus: status,
 	}, nil
 }
@@ -479,9 +481,9 @@ func postAdminTestMail(logger *logx.Logger, l i18n.Locale, req adminTestMailRequ
 		logger.Error("Failed to send test mail", "email", req.Email, "error", err)
 		// The mail server refused or could not be reached, and the reason helps
 		// the admin fix the settings.
-		return http.StatusBadGateway, &bindingErrorResponse{Error: l.Tr("admin.config.email.test_mail_failed", req.Email, err)}, nil
+		return http.StatusBadGateway, &bindingErrorResponse{Error: l.Tr("admin.config.email.test_mail_failed", "email", req.Email, "error", err)}, nil
 	}
-	return http.StatusOK, &adminMessage{Message: l.Tr("admin.config.email.test_mail_sent", req.Email)}, nil
+	return http.StatusOK, &adminMessage{Message: l.Tr("admin.config.email.test_mail_sent", "email", req.Email)}, nil
 }
 
 type adminCronTask struct {

@@ -166,7 +166,7 @@ func postUserSSHKey(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewe
 		msg := l.Tr("settings.ssh_disabled")
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
 	} else if err != nil {
-		msg := l.Tr("form.invalid_ssh_key", err.Error())
+		msg := l.Tr("form.invalid_ssh_key", "error", err)
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
 	}
 	if _, err = database.Handle.PublicKeys().Add(c.Request().Context(), logger, viewer.ID, req.SSHTitle, content); err != nil {

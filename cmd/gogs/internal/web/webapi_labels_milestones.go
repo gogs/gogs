@@ -50,7 +50,7 @@ func textFieldError(l i18n.Locale, field, label, value string, maxLen int) *bind
 	case strings.TrimSpace(value) == "":
 		msg = l.Tr(label) + l.Tr("form.require_error")
 	case utf8.RuneCountInString(value) > maxLen:
-		msg = l.Tr(label) + l.Tr("form.max_size_error", strconv.Itoa(maxLen))
+		msg = l.Tr(label) + l.Tr("form.max_size_error", "size", maxLen)
 	default:
 		return nil
 	}

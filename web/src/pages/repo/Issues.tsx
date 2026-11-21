@@ -40,8 +40,8 @@ export function RepoIssues({
   usePageTitle(`${title} - ${repo.owner}/${repo.name}`);
   const params = { owner: repo.owner, repo: repo.name };
   const states = [
-    { state: undefined, label: t("repo.issues.open_tab"), count: data.openCount, icon: CircleDot },
-    { state: "closed" as const, label: t("repo.issues.close_tab"), count: data.closedCount, icon: CircleCheck },
+    { state: undefined, label: t("repo.issues.open_tab", { count: data.openCount }), icon: CircleDot },
+    { state: "closed" as const, label: t("repo.issues.close_tab", { count: data.closedCount }), icon: CircleCheck },
   ];
   // Keep the other filters when following a label or a milestone in a row.
   const filterLink = (filter: Partial<RepoIssuesSearch>) => ({ ...search, ...filter, page: undefined });
@@ -95,7 +95,7 @@ export function RepoIssues({
         <div className="glass rounded-md border border-(--color-border)">
           <div className="flex flex-wrap items-center justify-between gap-2 bg-(--color-surface) px-2 py-1.5">
             <ul className="flex gap-1">
-              {states.map(({ state, label, count, icon: Icon }) => {
+              {states.map(({ state, label, icon: Icon }) => {
                 const active = state === search.state;
                 return (
                   <li key={state ?? "open"}>
@@ -109,7 +109,7 @@ export function RepoIssues({
                       )}
                     >
                       <Icon className="size-4" aria-hidden />
-                      {label.replace(/%(?:\[1\])?d/, String(count))}
+                      {label}
                     </Link>
                   </li>
                 );

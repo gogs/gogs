@@ -118,7 +118,7 @@ func postUserSignUp(logger *logx.Logger, r *http.Request, ca cache.Cache, l i18n
 			msg := l.Tr("form.email_been_used")
 			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"email": &msg}}, nil
 		case database.IsErrNameNotAllowed(err):
-			msg := l.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value())
+			msg := l.Tr("user.form.name_not_allowed", "name", err.(database.ErrNameNotAllowed).Value())
 			return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"userName": &msg}}, nil
 		default:
 			logger.Error("Failed to create user", "username", req.UserName, "error", err)
@@ -281,7 +281,7 @@ func postUserSignIn(logger *logx.Logger, r *http.Request, w http.ResponseWriter,
 		case database.IsErrNameNotAllowed(err):
 			// The authentication source gave a name that cannot be used for the new
 			// account.
-			return http.StatusUnprocessableEntity, nil, errors.New(l.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()))
+			return http.StatusUnprocessableEntity, nil, errors.New(l.Tr("user.form.name_not_allowed", "name", err.(database.ErrNameNotAllowed).Value()))
 		default:
 			logger.Error("Failed to authenticate user", "username", req.Username, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "authenticate user")

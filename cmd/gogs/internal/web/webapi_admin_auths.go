@@ -257,7 +257,7 @@ func adminAuthSourceNameTaken(c flamego.Context, l i18n.Locale, id int64, name s
 	}
 	for _, s := range sources {
 		if s.ID != id && s.Name == name {
-			msg := l.Tr("admin.auths.login_source_exist", name)
+			msg := l.Tr("admin.auths.login_source_exist", "name", name)
 			return fieldErrors{"name": &msg}, nil
 		}
 	}
@@ -298,7 +298,7 @@ func postAdminAuthSource(c flamego.Context, logger *logx.Logger, l i18n.Locale, 
 	})
 	if err != nil {
 		if database.IsErrLoginSourceAlreadyExist(err) {
-			msg := l.Tr("admin.auths.login_source_exist", req.AuthSourceName)
+			msg := l.Tr("admin.auths.login_source_exist", "name", req.AuthSourceName)
 			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"name": &msg}}, nil
 		}
 		logger.Error("Failed to create login source", "loginSourceName", req.AuthSourceName, "error", err)

@@ -143,7 +143,7 @@ export function OrgNav({ name, page }: { name: string; page: DashboardPage }) {
       />
       <Button asChild variant="outline" size="sm" className="mb-1.5 shrink-0">
         <Link to="/$username" params={{ username: name }}>
-          {t("home.view_home").replace(/%(?:\[1\])?s/, name)}
+          {t("home.view_home", { name })}
         </Link>
       </Button>
     </div>

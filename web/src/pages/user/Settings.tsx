@@ -278,7 +278,7 @@ export function UserRepoSettings({ repos }: { repos: SettingsRepo[] }) {
                   size="sm"
                   action={() => leaveRepo(repo.id)}
                   onDone={async () => {
-                    toast.success(t("settings.repos.leave_success").replace(/%(?:\[1\])?s/, fullName));
+                    toast.success(t("settings.repos.leave_success", { repo: fullName }));
                     await router.invalidate();
                   }}
                 />

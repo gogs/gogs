@@ -866,7 +866,7 @@ function DangerZone({ owner, name, settings }: { owner: string; name: string; se
               description={t("repo.settings.wiki_delete_desc")}
               notices={[
                 t("repo.settings.delete_notices_1"),
-                t("repo.settings.wiki_delete_notices_1").replace(/%(?:\[1\])?s/, settings.name),
+                t("repo.settings.wiki_delete_notices_1", { repo: settings.name }),
               ]}
               confirmLabel={t("repo.settings.confirm_delete")}
               action={(form) => deleteRepoWiki(owner, name, form.repoName)}
@@ -1327,7 +1327,7 @@ export function RepoDeployKeys({ owner, name, keys }: { owner: string; name: str
   const add = useMutation({
     mutationFn: () => addRepoDeployKey(owner, name, form),
     onSuccess: async () => {
-      toast.success(t("repo.settings.add_key_success").replace(/%(?:\[1\])?s/, form.title));
+      toast.success(t("repo.settings.add_key_success", { name: form.title }));
       setForm({ title: "", content: "" });
       await router.invalidate();
     },
@@ -1560,7 +1560,7 @@ export function RepoBranchProtection({
     },
   });
   const { formError } = formErrors(update.error);
-  const [before, after = ""] = t("repo.settings.branch_protection_desc").split(/<b>%s<\/b>|%s/);
+  const [before, after = ""] = t("repo.settings.branch_protection_desc").split(/<b>\{branch\}<\/b>|\{branch\}/);
   const isOrg = branch.userOptions !== undefined;
 
   const onSubmit = (e: FormEvent) => {

@@ -247,7 +247,7 @@ func patchRepoSettings(c flamego.Context, logger *logx.Logger, l i18n.Locale, vi
 				msg = l.Tr("form.repo_name_been_taken")
 				return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"name": &msg}}, nil
 			case database.IsErrNameNotAllowed(err):
-				msg = l.Tr("repo.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value())
+				msg = l.Tr("repo.form.name_not_allowed", "name", err.(database.ErrNameNotAllowed).Value())
 				return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"name": &msg}}, nil
 			}
 			logger.Error("Failed to rename repository", "repoID", repo.ID, "newName", req.RepoName, "error", err)
@@ -657,7 +657,7 @@ func postRepoDeployKey(c flamego.Context, logger *logx.Logger, l i18n.Locale, rc
 		msg := l.Tr("settings.ssh_disabled")
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
 	} else if err != nil {
-		msg := l.Tr("form.invalid_ssh_key", err.Error())
+		msg := l.Tr("form.invalid_ssh_key", "error", err)
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
 	}
 	if _, err = database.Handle.DeployKeys().Add(c.Request().Context(), logger, rc.Repo.ID, req.SSHTitle, content); err != nil {

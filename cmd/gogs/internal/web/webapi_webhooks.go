@@ -245,7 +245,7 @@ func validateWebhookURL(l i18n.Locale, rawURL string) (statusCode int, msg strin
 	// see https://github.com/gogs/gogs/issues/5366 for details.
 	payloadURL, err := url.Parse(rawURL)
 	if err != nil {
-		return http.StatusBadRequest, l.Tr("repo.settings.webhook.err_cannot_parse_payload_url", err)
+		return http.StatusBadRequest, l.Tr("repo.settings.webhook.err_cannot_parse_payload_url", "error", err)
 	}
 	if netx.IsBlockedLocalHostname(payloadURL.Hostname(), conf.Security.LocalNetworkAllowlist) {
 		return http.StatusForbidden, l.Tr("repo.settings.webhook.url_resolved_to_blocked_local_address")

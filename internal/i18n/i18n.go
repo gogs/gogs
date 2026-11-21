@@ -28,6 +28,21 @@ func (l Locale) Language() string {
 	return l.Lang
 }
 
+// Tr returns the message of the key, with each "{name}" placeholder replaced by
+// the value that follows the name in args, e.g., l.Tr("repo.editor.add", "path",
+// "README.md").
+func (l Locale) Tr(key string, args ...any) string {
+	msg := l.Locale.Tr(key)
+	if len(args) == 0 {
+		return msg
+	}
+	oldnew := make([]string, 0, len(args))
+	for i := 0; i+1 < len(args); i += 2 {
+		oldnew = append(oldnew, "{"+fmt.Sprint(args[i])+"}", fmt.Sprint(args[i+1]))
+	}
+	return strings.NewReplacer(oldnew...).Replace(msg)
+}
+
 // Options configures the languages Localizer chooses from.
 type Options struct {
 	// SubURL is the path prefix of the site, e.g., "/gogs".

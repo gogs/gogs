@@ -188,7 +188,9 @@ function CommitForm({
   const { t } = useTranslation();
   const user = useUserInfo();
   const set = (patch: Partial<CommitFields>) => onChange({ ...value, ...patch });
-  const [before, after = ""] = t("repo.editor.commit_directly_to_this_branch").split(/<strong[^>]*>%s<\/strong>|%s/);
+  const [before, after = ""] = t("repo.editor.commit_directly_to_this_branch").split(
+    /<strong[^>]*>\{branch\}<\/strong>|\{branch\}/,
+  );
   const directRefused = errors.branch ?? target.directCommitRefused;
 
   return (
@@ -460,10 +462,9 @@ export function RepoFileEditor({
   if (!isCode && target.previewMarkdown) tabs.push({ key: "preview", label: t("repo.release.preview") });
   if (!isNew) tabs.push({ key: "changes", label: t("repo.editor.preview_changes") });
   const currentTab = tabs.some((x) => x.key === tab) ? tab : "write";
-  const defaultSummary = (isNew ? t("repo.editor.add") : t("repo.editor.update")).replace(
-    "%s",
-    path || t("repo.editor.name_your_file"),
-  );
+  const defaultSummary = t(isNew ? "repo.editor.add" : "repo.editor.update", {
+    path: path || t("repo.editor.name_your_file"),
+  });
 
   return (
     <EditorLayout owner={owner} name={name} title={path ? `${heading}: ${path}` : heading}>
@@ -593,7 +594,7 @@ export function RepoFileDelete({ owner, name, target }: { owner: string; name: s
             target={target}
             value={commit}
             onChange={setCommit}
-            defaultSummary={t("repo.editor.delete").replace("%s", target.path)}
+            defaultSummary={t("repo.editor.delete", { path: target.path })}
             errors={fields}
             refusedBranch={protectedBranchOf(remove.error)}
             cancelURL={srcURL(owner, name, target.branch, target.path)}
@@ -720,7 +721,7 @@ export function RepoFileUpload({ owner, name, target }: { owner: string; name: s
             target={target}
             value={commit}
             onChange={setCommit}
-            defaultSummary={t("repo.editor.upload_files_to_dir").replace("%s", path || "/")}
+            defaultSummary={t("repo.editor.upload_files_to_dir", { path: path || "/" })}
             errors={fields}
             refusedBranch={protectedBranchOf(upload.error)}
             cancelURL={srcURL(owner, name, target.branch, target.path)}

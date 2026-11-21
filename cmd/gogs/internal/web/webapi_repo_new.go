@@ -120,11 +120,11 @@ type repoCreated struct {
 func repoCreateError(l i18n.Locale, err error) (int, *bindingErrorResponse) {
 	switch {
 	case database.IsErrReachLimitOfRepo(err):
-		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("repo.form.reach_limit_of_creation", err.(database.ErrReachLimitOfRepo).Limit)}
+		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("repo.form.reach_limit_of_creation", "limit", err.(database.ErrReachLimitOfRepo).Limit)}
 	case database.IsErrRepoAlreadyExist(err):
 		return repoNameTakenError(l)
 	case database.IsErrNameNotAllowed(err):
-		msg := l.Tr("repo.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value())
+		msg := l.Tr("repo.form.name_not_allowed", "name", err.(database.ErrNameNotAllowed).Value())
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"name": &msg}}
 	}
 	return 0, nil
@@ -320,11 +320,11 @@ func postRepoMigrate(c flamego.Context, logger *logx.Logger, l i18n.Locale, view
 	switch {
 	case strings.Contains(err.Error(), "Authentication failed") ||
 		strings.Contains(err.Error(), "could not read Username"):
-		msg := l.Tr("form.auth_failed", reason)
+		msg := l.Tr("form.auth_failed", "error", reason)
 		return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"authUsername": &msg, "authPassword": nil}}, nil
 	case strings.Contains(err.Error(), "fatal:"):
 		logger.Error("Failed to migrate repository", "ownerName", owner.Name, "repoName", req.RepoName, "error", reason)
-		msg := l.Tr("repo.migrate.failed", reason)
+		msg := l.Tr("repo.migrate.failed", "error", reason)
 		return http.StatusBadGateway, &bindingErrorResponse{Fields: fieldErrors{"cloneAddr": &msg}}, nil
 	}
 	logger.Error("Failed to migrate repository", "ownerName", owner.Name, "repoName", req.RepoName, "error", reason)
