@@ -1,0 +1,14 @@
+{
+  "name": "seed-77-393",
+  "model": "{\"schema_version\":\"1.1\",\"type_definitions\":[{\"type\":\"user\"},{\"type\":\"t0\",\"relations\":{\"r0\":{\"this\":{}},\"r1\":{\"this\":{}},\"r2\":{\"this\":{}},\"r3\":{\"this\":{}}},\"metadata\":{\"relations\":{\"r0\":{\"directly_related_user_types\":[{\"type\":\"user\"}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"user\",\"condition\":\"cnum\"}]},\"r2\":{\"directly_related_user_types\":[{\"type\":\"t0\",\"relation\":\"r0\"}]},\"r3\":{\"directly_related_user_types\":[{\"type\":\"t2\",\"relation\":\"r3\",\"condition\":\"cflag\"}]}}}},{\"type\":\"t1\",\"relations\":{\"p\":{\"this\":{}},\"r0\":{\"this\":{}},\"r1\":{\"this\":{}},\"r2\":{\"this\":{}}},\"metadata\":{\"relations\":{\"p\":{\"directly_related_user_types\":[{\"type\":\"t1\",\"condition\":\"cflag\"}]},\"r0\":{\"directly_related_user_types\":[{\"type\":\"user\",\"condition\":\"cnum\"}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"user\",\"wildcard\":{}}]},\"r2\":{\"directly_related_user_types\":[{\"type\":\"user\"}]}}}},{\"type\":\"t2\",\"relations\":{\"p\":{\"this\":{}},\"r0\":{\"this\":{}},\"r1\":{\"computedUserset\":{\"relation\":\"r0\"}},\"r2\":{\"this\":{}},\"r3\":{\"this\":{}}},\"metadata\":{\"relations\":{\"p\":{\"directly_related_user_types\":[{\"type\":\"t2\"}]},\"r0\":{\"directly_related_user_types\":[{\"type\":\"user\",\"wildcard\":{}}]},\"r2\":{\"directly_related_user_types\":[{\"type\":\"user\"},{\"type\":\"t1\",\"relation\":\"r2\"},{\"type\":\"user\",\"wildcard\":{}}]},\"r3\":{\"directly_related_user_types\":[{\"type\":\"user\"}]}}}}],\"conditions\":{\"cflag\":{\"name\":\"cflag\",\"expression\":\"on\",\"parameters\":{\"on\":{\"type_name\":\"TYPE_NAME_BOOL\"}}},\"cnum\":{\"name\":\"cnum\",\"expression\":\"x \\u003c limit\",\"parameters\":{\"limit\":{\"type_name\":\"TYPE_NAME_INT\"},\"x\":{\"type_name\":\"TYPE_NAME_INT\"}}}}}",
+  "tuples": [],
+  "queries": [
+    {
+      "kind": "list_objects",
+      "user": "t2:c#r0",
+      "relation": "r1",
+      "type": "t2"
+    }
+  ],
+  "note": "Gebra bug fixed: ListObjects for a userset subject missed the subject's own object when the listed relation computes from the userset relation (t2:c#r0 has r1 on t2:c because r1 is r0)."
+}

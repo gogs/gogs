@@ -1,0 +1,36 @@
+{
+  "name": "seed-9001-1",
+  "model": "{\"schema_version\":\"1.1\",\"type_definitions\":[{\"type\":\"user\"},{\"type\":\"t0\",\"relations\":{\"p\":{\"this\":{}},\"r0\":{\"difference\":{\"base\":{\"this\":{}},\"subtract\":{\"union\":{\"child\":[{\"tupleToUserset\":{\"tupleset\":{\"relation\":\"p\"},\"computedUserset\":{\"relation\":\"r0\"}}},{\"tupleToUserset\":{\"tupleset\":{\"relation\":\"p\"},\"computedUserset\":{\"relation\":\"r1\"}}}]}}}},\"r1\":{\"this\":{}}},\"metadata\":{\"relations\":{\"p\":{\"directly_related_user_types\":[{\"type\":\"t0\",\"condition\":\"cflag\"},{\"type\":\"t1\"}]},\"r0\":{\"directly_related_user_types\":[{\"type\":\"user\"}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"t1\",\"relation\":\"r1\"}]}}}},{\"type\":\"t1\",\"relations\":{\"p\":{\"this\":{}},\"r0\":{\"this\":{}},\"r1\":{\"union\":{\"child\":[{\"this\":{}},{\"tupleToUserset\":{\"tupleset\":{\"relation\":\"p\"},\"computedUserset\":{\"relation\":\"r1\"}}}]}}},\"metadata\":{\"relations\":{\"p\":{\"directly_related_user_types\":[{\"type\":\"t0\"}]},\"r0\":{\"directly_related_user_types\":[{\"type\":\"t1\",\"relation\":\"r1\",\"condition\":\"cflag\"}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"user\"}]}}}}],\"conditions\":{\"cflag\":{\"name\":\"cflag\",\"expression\":\"on\",\"parameters\":{\"on\":{\"type_name\":\"TYPE_NAME_BOOL\"}}},\"cnum\":{\"name\":\"cnum\",\"expression\":\"x \\u003c limit\",\"parameters\":{\"limit\":{\"type_name\":\"TYPE_NAME_INT\"},\"x\":{\"type_name\":\"TYPE_NAME_INT\"}}}}}",
+  "tuples": [
+    {
+      "user": "user:u3",
+      "relation": "r0",
+      "object": "t0:c"
+    },
+    {
+      "user": "t0:a",
+      "relation": "p",
+      "object": "t1:b"
+    },
+    {
+      "user": "t1:b",
+      "relation": "p",
+      "object": "t0:c"
+    },
+    {
+      "user": "t1:b#r1",
+      "relation": "r1",
+      "object": "t0:a"
+    }
+  ],
+  "queries": [
+    {
+      "kind": "check",
+      "user": "user:u3",
+      "relation": "r0",
+      "object": "t0:c",
+      "known": "OpenFGA denies when a cycle lies under an exclusion"
+    }
+  ],
+  "note": "OpenFGA bug: r1 from p on t1:b is a cycle (t1:b#r1, t0:a#r1, t1:b#r1) with no base, so the subtracted side is false and u3 keeps r0. OpenFGA denies."
+}

@@ -1,0 +1,14 @@
+{
+  "name": "seed-77-81",
+  "model": "{\"schema_version\":\"1.1\",\"type_definitions\":[{\"type\":\"user\"},{\"type\":\"t0\",\"relations\":{\"r0\":{\"this\":{}},\"r1\":{\"computedUserset\":{\"relation\":\"r0\"}}},\"metadata\":{\"relations\":{\"r0\":{\"directly_related_user_types\":[{\"type\":\"user\",\"wildcard\":{}}]}}}},{\"type\":\"t1\",\"relations\":{\"p\":{\"this\":{}},\"r0\":{\"difference\":{\"base\":{\"tupleToUserset\":{\"tupleset\":{\"relation\":\"p\"},\"computedUserset\":{\"relation\":\"r0\"}}},\"subtract\":{\"this\":{}}}},\"r1\":{\"this\":{}},\"r2\":{\"union\":{\"child\":[{\"computedUserset\":{\"relation\":\"r1\"}},{\"computedUserset\":{\"relation\":\"r0\"}}]}}},\"metadata\":{\"relations\":{\"p\":{\"directly_related_user_types\":[{\"type\":\"t0\"}]},\"r0\":{\"directly_related_user_types\":[{\"type\":\"t1\",\"relation\":\"r2\"}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"user\",\"condition\":\"cflag\"}]}}}}],\"conditions\":{\"cflag\":{\"name\":\"cflag\",\"expression\":\"on\",\"parameters\":{\"on\":{\"type_name\":\"TYPE_NAME_BOOL\"}}},\"cnum\":{\"name\":\"cnum\",\"expression\":\"x \\u003c limit\",\"parameters\":{\"limit\":{\"type_name\":\"TYPE_NAME_INT\"},\"x\":{\"type_name\":\"TYPE_NAME_INT\"}}}}}",
+  "tuples": [],
+  "queries": [
+    {
+      "kind": "streamed_list_objects",
+      "user": "t0:a#r0",
+      "relation": "r1",
+      "type": "t0"
+    }
+  ],
+  "note": "Gebra bug fixed: same as list_objects-missing-3d623a80, for a streamed list in a model with a cycle through an exclusion."
+}

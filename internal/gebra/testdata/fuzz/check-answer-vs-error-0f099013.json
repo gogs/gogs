@@ -1,0 +1,24 @@
+{
+  "name": "seed-1-1",
+  "model": "{\"schema_version\":\"1.1\",\"type_definitions\":[{\"type\":\"user\"},{\"type\":\"t0\",\"relations\":{\"r0\":{\"this\":{}},\"r1\":{\"this\":{}}},\"metadata\":{\"relations\":{\"r0\":{\"directly_related_user_types\":[{\"type\":\"t1\",\"wildcard\":{}}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"t2\",\"relation\":\"r0\",\"condition\":\"cflag\"}]}}}},{\"type\":\"t1\",\"relations\":{\"r0\":{\"this\":{}},\"r1\":{\"this\":{}},\"r2\":{\"this\":{}},\"r3\":{\"this\":{}}},\"metadata\":{\"relations\":{\"r0\":{\"directly_related_user_types\":[{\"type\":\"user\"}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"user\"}]},\"r2\":{\"directly_related_user_types\":[{\"type\":\"t3\",\"wildcard\":{}}]},\"r3\":{\"directly_related_user_types\":[{\"type\":\"user\"}]}}}},{\"type\":\"t2\",\"relations\":{\"p\":{\"this\":{}},\"r0\":{\"this\":{}},\"r1\":{\"difference\":{\"base\":{\"tupleToUserset\":{\"tupleset\":{\"relation\":\"p\"},\"computedUserset\":{\"relation\":\"r0\"}}},\"subtract\":{\"this\":{}}}},\"r2\":{\"this\":{}},\"r3\":{\"this\":{}}},\"metadata\":{\"relations\":{\"p\":{\"directly_related_user_types\":[{\"type\":\"t2\"}]},\"r0\":{\"directly_related_user_types\":[{\"type\":\"user\"}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"user\"},{\"type\":\"user\",\"wildcard\":{}},{\"type\":\"t3\",\"relation\":\"r1\"}]},\"r2\":{\"directly_related_user_types\":[{\"type\":\"user\"}]},\"r3\":{\"directly_related_user_types\":[{\"type\":\"t2\",\"wildcard\":{}},{\"type\":\"t0\",\"wildcard\":{}},{\"type\":\"t3\"}]}}}},{\"type\":\"t3\",\"relations\":{\"r0\":{\"this\":{}},\"r1\":{\"this\":{}}},\"metadata\":{\"relations\":{\"r0\":{\"directly_related_user_types\":[{\"type\":\"user\"},{\"type\":\"t3\",\"relation\":\"r1\"}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"user\"}]}}}}],\"conditions\":{\"cflag\":{\"name\":\"cflag\",\"expression\":\"on\",\"parameters\":{\"on\":{\"type_name\":\"TYPE_NAME_BOOL\"}}},\"cnum\":{\"name\":\"cnum\",\"expression\":\"x \\u003c limit\",\"parameters\":{\"limit\":{\"type_name\":\"TYPE_NAME_INT\"},\"x\":{\"type_name\":\"TYPE_NAME_INT\"}}}}}",
+  "tuples": [
+    {
+      "user": "t2:c#r0",
+      "relation": "r1",
+      "object": "t0:a",
+      "condition": {
+        "name": "cflag"
+      }
+    }
+  ],
+  "queries": [
+    {
+      "kind": "check",
+      "user": "user:u0",
+      "relation": "r1",
+      "object": "t0:a",
+      "known": "Gebra decides false because the conditional tuple leads nowhere"
+    }
+  ],
+  "note": "Intentional: Gebra answers false when a conditional tuple with a missing parameter leads to no grant, OpenFGA reports the missing parameter."
+}

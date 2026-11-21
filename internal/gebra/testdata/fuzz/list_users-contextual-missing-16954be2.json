@@ -1,0 +1,31 @@
+{
+  "name": "seed-9001-69",
+  "model": "{\"schema_version\":\"1.1\",\"type_definitions\":[{\"type\":\"user\"},{\"type\":\"t0\",\"relations\":{\"r0\":{\"this\":{}},\"r1\":{\"this\":{}},\"r2\":{\"this\":{}},\"r3\":{\"this\":{}}},\"metadata\":{\"relations\":{\"r0\":{\"directly_related_user_types\":[{\"type\":\"t1\"}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"t0\",\"wildcard\":{}}]},\"r2\":{\"directly_related_user_types\":[{\"type\":\"t1\"}]},\"r3\":{\"directly_related_user_types\":[{\"type\":\"user\",\"condition\":\"cflag\"}]}}}},{\"type\":\"t1\",\"relations\":{\"p\":{\"this\":{}},\"r0\":{\"this\":{}},\"r1\":{\"this\":{}}},\"metadata\":{\"relations\":{\"p\":{\"directly_related_user_types\":[{\"type\":\"t3\"}]},\"r0\":{\"directly_related_user_types\":[{\"type\":\"user\"}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"t2\"}]}}}},{\"type\":\"t2\",\"relations\":{\"p\":{\"this\":{}},\"r0\":{\"this\":{}},\"r1\":{\"this\":{}},\"r2\":{\"union\":{\"child\":[{\"this\":{}},{\"computedUserset\":{\"relation\":\"r1\"}}]}}},\"metadata\":{\"relations\":{\"p\":{\"directly_related_user_types\":[{\"type\":\"t3\",\"condition\":\"cflag\"}]},\"r0\":{\"directly_related_user_types\":[{\"type\":\"t1\"}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"user\"}]},\"r2\":{\"directly_related_user_types\":[{\"type\":\"user\"},{\"type\":\"user\",\"condition\":\"cnum\"},{\"type\":\"t0\"}]}}}},{\"type\":\"t3\",\"relations\":{\"p\":{\"this\":{}},\"r0\":{\"tupleToUserset\":{\"tupleset\":{\"relation\":\"p\"},\"computedUserset\":{\"relation\":\"r0\"}}},\"r1\":{\"tupleToUserset\":{\"tupleset\":{\"relation\":\"p\"},\"computedUserset\":{\"relation\":\"r1\"}}}},\"metadata\":{\"relations\":{\"p\":{\"directly_related_user_types\":[{\"type\":\"t1\"},{\"type\":\"t2\",\"condition\":\"cflag\"}]}}}}],\"conditions\":{\"cflag\":{\"name\":\"cflag\",\"expression\":\"on\",\"parameters\":{\"on\":{\"type_name\":\"TYPE_NAME_BOOL\"}}},\"cnum\":{\"name\":\"cnum\",\"expression\":\"x \\u003c limit\",\"parameters\":{\"limit\":{\"type_name\":\"TYPE_NAME_INT\"},\"x\":{\"type_name\":\"TYPE_NAME_INT\"}}}}}",
+  "tuples": [
+    {
+      "user": "t1:b",
+      "relation": "p",
+      "object": "t3:a"
+    }
+  ],
+  "queries": [
+    {
+      "kind": "list_users",
+      "relation": "r1",
+      "object": "t3:a",
+      "filter": {
+        "type": "t2",
+        "relation": "r1"
+      },
+      "contextual_tuples": [
+        {
+          "user": "t2:b",
+          "relation": "r1",
+          "object": "t1:b"
+        }
+      ],
+      "known": "OpenFGA returns t2:b for a t2#r1 filter"
+    }
+  ],
+  "note": "OpenFGA bug: ListUsers with the userset filter t2#r1 returns the plain object t2:b."
+}

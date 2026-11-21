@@ -1,0 +1,24 @@
+{
+  "name": "seed-1-28",
+  "model": "{\"schema_version\":\"1.1\",\"type_definitions\":[{\"type\":\"user\"},{\"type\":\"t0\",\"relations\":{\"p\":{\"this\":{}},\"r0\":{\"this\":{}},\"r1\":{\"this\":{}},\"r2\":{\"this\":{}}},\"metadata\":{\"relations\":{\"p\":{\"directly_related_user_types\":[{\"type\":\"t0\"}]},\"r0\":{\"directly_related_user_types\":[{\"type\":\"t1\",\"wildcard\":{}}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"t1\",\"wildcard\":{}}]},\"r2\":{\"directly_related_user_types\":[{\"type\":\"user\"}]}}}},{\"type\":\"t1\",\"relations\":{\"p\":{\"this\":{}},\"r0\":{\"this\":{}},\"r1\":{\"this\":{}}},\"metadata\":{\"relations\":{\"p\":{\"directly_related_user_types\":[{\"type\":\"t0\"}]},\"r0\":{\"directly_related_user_types\":[{\"type\":\"t1\",\"wildcard\":{}}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"t2\",\"relation\":\"r2\"}]}}}},{\"type\":\"t2\",\"relations\":{\"r0\":{\"this\":{}},\"r1\":{\"this\":{}},\"r2\":{\"union\":{\"child\":[{\"computedUserset\":{\"relation\":\"r0\"}},{\"union\":{\"child\":[{\"this\":{}},{\"computedUserset\":{\"relation\":\"r0\"}}]}}]}},\"r3\":{\"this\":{}}},\"metadata\":{\"relations\":{\"r0\":{\"directly_related_user_types\":[{\"type\":\"t3\"}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"user\",\"wildcard\":{}}]},\"r2\":{\"directly_related_user_types\":[{\"type\":\"user\"},{\"type\":\"t1\"},{\"type\":\"user\",\"condition\":\"cflag\"},{\"type\":\"t2\"}]},\"r3\":{\"directly_related_user_types\":[{\"type\":\"user\"},{\"type\":\"t2\",\"relation\":\"r3\"},{\"type\":\"user\",\"condition\":\"cnum\"}]}}}},{\"type\":\"t3\",\"relations\":{\"p\":{\"this\":{}},\"r0\":{\"union\":{\"child\":[{\"this\":{}},{\"tupleToUserset\":{\"tupleset\":{\"relation\":\"p\"},\"computedUserset\":{\"relation\":\"r1\"}}}]}},\"r1\":{\"union\":{\"child\":[{\"difference\":{\"base\":{\"computedUserset\":{\"relation\":\"r0\"}},\"subtract\":{\"computedUserset\":{\"relation\":\"r0\"}}}},{\"union\":{\"child\":[{\"this\":{}},{\"union\":{\"child\":[{\"tupleToUserset\":{\"tupleset\":{\"relation\":\"p\"},\"computedUserset\":{\"relation\":\"r0\"}}},{\"tupleToUserset\":{\"tupleset\":{\"relation\":\"p\"},\"computedUserset\":{\"relation\":\"r1\"}}}]}}]}}]}}},\"metadata\":{\"relations\":{\"p\":{\"directly_related_user_types\":[{\"type\":\"t3\"}]},\"r0\":{\"directly_related_user_types\":[{\"type\":\"user\"},{\"type\":\"t0\",\"relation\":\"r1\",\"condition\":\"cflag\"},{\"type\":\"user\",\"condition\":\"cflag\"},{\"type\":\"user\",\"wildcard\":{}}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"user\"},{\"type\":\"user\",\"wildcard\":{}},{\"type\":\"t3\",\"relation\":\"r1\"}]}}}}],\"conditions\":{\"cflag\":{\"name\":\"cflag\",\"expression\":\"on\",\"parameters\":{\"on\":{\"type_name\":\"TYPE_NAME_BOOL\"}}},\"cnum\":{\"name\":\"cnum\",\"expression\":\"x \\u003c limit\",\"parameters\":{\"limit\":{\"type_name\":\"TYPE_NAME_INT\"},\"x\":{\"type_name\":\"TYPE_NAME_INT\"}}}}}",
+  "tuples": [
+    {
+      "user": "t1:*",
+      "relation": "r1",
+      "object": "t0:c"
+    }
+  ],
+  "queries": [
+    {
+      "kind": "list_users",
+      "relation": "r1",
+      "object": "t0:c",
+      "filter": {
+        "type": "t1",
+        "relation": "r1"
+      },
+      "known": "OpenFGA lists t1:* for a userset filter, its Check of t1:x#r1 says false"
+    }
+  ],
+  "note": "OpenFGA bug: ListUsers returns a wildcard for a userset filter that its Check denies."
+}

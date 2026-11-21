@@ -1,0 +1,25 @@
+{
+  "name": "seed-1-4",
+  "model": "{\"schema_version\":\"1.1\",\"type_definitions\":[{\"type\":\"user\"},{\"type\":\"t0\",\"relations\":{\"p\":{\"this\":{}},\"r0\":{\"this\":{}},\"r1\":{\"this\":{}}},\"metadata\":{\"relations\":{\"p\":{\"directly_related_user_types\":[{\"type\":\"t0\"}]},\"r0\":{\"directly_related_user_types\":[{\"type\":\"t1\"}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"t1\"}]}}}},{\"type\":\"t1\",\"relations\":{\"p\":{\"this\":{}},\"r0\":{\"difference\":{\"base\":{\"this\":{}},\"subtract\":{\"tupleToUserset\":{\"tupleset\":{\"relation\":\"p\"},\"computedUserset\":{\"relation\":\"r0\"}}}}},\"r1\":{\"this\":{}}},\"metadata\":{\"relations\":{\"p\":{\"directly_related_user_types\":[{\"type\":\"t0\"},{\"type\":\"t1\"}]},\"r0\":{\"directly_related_user_types\":[{\"type\":\"t1\",\"relation\":\"r1\"}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"user\"}]}}}}],\"conditions\":{\"cflag\":{\"name\":\"cflag\",\"expression\":\"on\",\"parameters\":{\"on\":{\"type_name\":\"TYPE_NAME_BOOL\"}}},\"cnum\":{\"name\":\"cnum\",\"expression\":\"x \\u003c limit\",\"parameters\":{\"limit\":{\"type_name\":\"TYPE_NAME_INT\"},\"x\":{\"type_name\":\"TYPE_NAME_INT\"}}}}}",
+  "tuples": [
+    {
+      "user": "t1:b",
+      "relation": "p",
+      "object": "t1:b"
+    },
+    {
+      "user": "t1:c#r1",
+      "relation": "r0",
+      "object": "t1:b"
+    }
+  ],
+  "queries": [
+    {
+      "kind": "check",
+      "user": "t1:c#r1",
+      "relation": "r0",
+      "object": "t1:b"
+    }
+  ],
+  "note": "Gebra bug fixed: a relation that excludes itself through a cycle granted access. Cycle cuts under an odd number of exclusions now deny."
+}

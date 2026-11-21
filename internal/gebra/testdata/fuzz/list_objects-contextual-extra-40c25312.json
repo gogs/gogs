@@ -1,0 +1,48 @@
+{
+  "name": "seed-2026-325",
+  "model": "{\"schema_version\":\"1.1\",\"type_definitions\":[{\"type\":\"user\"},{\"type\":\"t0\",\"relations\":{\"r0\":{\"this\":{}},\"r1\":{\"this\":{}},\"r2\":{\"this\":{}}},\"metadata\":{\"relations\":{\"r0\":{\"directly_related_user_types\":[{\"type\":\"user\"}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"user\"}]},\"r2\":{\"directly_related_user_types\":[{\"type\":\"user\",\"condition\":\"cflag\"}]}}}},{\"type\":\"t1\",\"relations\":{\"p\":{\"this\":{}},\"r0\":{\"intersection\":{\"child\":[{\"this\":{}},{\"tupleToUserset\":{\"tupleset\":{\"relation\":\"p\"},\"computedUserset\":{\"relation\":\"r0\"}}}]}},\"r1\":{\"this\":{}},\"r2\":{\"this\":{}},\"r3\":{\"difference\":{\"base\":{\"tupleToUserset\":{\"tupleset\":{\"relation\":\"p\"},\"computedUserset\":{\"relation\":\"r1\"}}},\"subtract\":{\"tupleToUserset\":{\"tupleset\":{\"relation\":\"p\"},\"computedUserset\":{\"relation\":\"r0\"}}}}}},\"metadata\":{\"relations\":{\"p\":{\"directly_related_user_types\":[{\"type\":\"t0\"},{\"type\":\"t1\"}]},\"r0\":{\"directly_related_user_types\":[{\"type\":\"user\"}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"user\"}]},\"r2\":{\"directly_related_user_types\":[{\"type\":\"user\"}]}}}}],\"conditions\":{\"cflag\":{\"name\":\"cflag\",\"expression\":\"on\",\"parameters\":{\"on\":{\"type_name\":\"TYPE_NAME_BOOL\"}}},\"cnum\":{\"name\":\"cnum\",\"expression\":\"x \\u003c limit\",\"parameters\":{\"limit\":{\"type_name\":\"TYPE_NAME_INT\"},\"x\":{\"type_name\":\"TYPE_NAME_INT\"}}}}}",
+  "tuples": [
+    {
+      "user": "user:u3",
+      "relation": "r0",
+      "object": "t1:a"
+    },
+    {
+      "user": "t1:a",
+      "relation": "p",
+      "object": "t1:a"
+    },
+    {
+      "user": "t0:b",
+      "relation": "p",
+      "object": "t1:c"
+    },
+    {
+      "user": "t1:a",
+      "relation": "p",
+      "object": "t1:c"
+    },
+    {
+      "user": "user:u3",
+      "relation": "r1",
+      "object": "t0:b"
+    }
+  ],
+  "queries": [
+    {
+      "kind": "streamed_list_objects",
+      "user": "user:u3",
+      "relation": "r3",
+      "type": "t1",
+      "contextual_tuples": [
+        {
+          "user": "user:u1",
+          "relation": "r2",
+          "object": "t1:a"
+        }
+      ],
+      "known": "OpenFGA denies when a cycle lies under an exclusion"
+    }
+  ],
+  "note": "OpenFGA bug: same cycle under an exclusion, here in ListObjects with a contextual tuple."
+}

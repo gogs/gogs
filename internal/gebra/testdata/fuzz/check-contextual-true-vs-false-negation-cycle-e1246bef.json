@@ -1,0 +1,48 @@
+{
+  "name": "seed-77-208",
+  "model": "{\"schema_version\":\"1.1\",\"type_definitions\":[{\"type\":\"user\"},{\"type\":\"t0\",\"relations\":{\"p\":{\"this\":{}},\"r0\":{\"this\":{}},\"r1\":{\"this\":{}},\"r2\":{\"this\":{}},\"r3\":{\"this\":{}}},\"metadata\":{\"relations\":{\"p\":{\"directly_related_user_types\":[{\"type\":\"t1\"}]},\"r0\":{\"directly_related_user_types\":[{\"type\":\"user\"}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"user\"}]},\"r2\":{\"directly_related_user_types\":[{\"type\":\"user\",\"condition\":\"cflag\"}]},\"r3\":{\"directly_related_user_types\":[{\"type\":\"user\"}]}}}},{\"type\":\"t1\",\"relations\":{\"p\":{\"this\":{}},\"r0\":{\"this\":{}},\"r1\":{\"this\":{}},\"r2\":{\"this\":{}},\"r3\":{\"union\":{\"child\":[{\"this\":{}},{\"computedUserset\":{\"relation\":\"r0\"}}]}}},\"metadata\":{\"relations\":{\"p\":{\"directly_related_user_types\":[{\"type\":\"t2\"}]},\"r0\":{\"directly_related_user_types\":[{\"type\":\"user\"}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"user\",\"wildcard\":{}}]},\"r2\":{\"directly_related_user_types\":[{\"type\":\"t2\",\"relation\":\"r0\"}]},\"r3\":{\"directly_related_user_types\":[{\"type\":\"user\"},{\"type\":\"t3\",\"relation\":\"r0\"}]}}}},{\"type\":\"t2\",\"relations\":{\"p\":{\"this\":{}},\"r0\":{\"this\":{}},\"r1\":{\"union\":{\"child\":[{\"this\":{}},{\"tupleToUserset\":{\"tupleset\":{\"relation\":\"p\"},\"computedUserset\":{\"relation\":\"r1\"}}}]}},\"r2\":{\"difference\":{\"base\":{\"union\":{\"child\":[{\"computedUserset\":{\"relation\":\"r0\"}},{\"this\":{}}]}},\"subtract\":{\"difference\":{\"base\":{\"difference\":{\"base\":{\"computedUserset\":{\"relation\":\"r1\"}},\"subtract\":{\"computedUserset\":{\"relation\":\"r1\"}}}},\"subtract\":{\"computedUserset\":{\"relation\":\"p\"}}}}}},\"r3\":{\"union\":{\"child\":[{\"difference\":{\"base\":{\"union\":{\"child\":[{\"tupleToUserset\":{\"tupleset\":{\"relation\":\"p\"},\"computedUserset\":{\"relation\":\"r2\"}}},{\"this\":{}}]}},\"subtract\":{\"tupleToUserset\":{\"tupleset\":{\"relation\":\"p\"},\"computedUserset\":{\"relation\":\"r0\"}}}}},{\"tupleToUserset\":{\"tupleset\":{\"relation\":\"p\"},\"computedUserset\":{\"relation\":\"r1\"}}}]}}},\"metadata\":{\"relations\":{\"p\":{\"directly_related_user_types\":[{\"type\":\"t1\"},{\"type\":\"t2\"},{\"type\":\"t3\"}]},\"r0\":{\"directly_related_user_types\":[{\"type\":\"user\"},{\"type\":\"t3\",\"relation\":\"r1\"}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"user\"}]},\"r2\":{\"directly_related_user_types\":[{\"type\":\"user\"}]},\"r3\":{\"directly_related_user_types\":[{\"type\":\"user\"}]}}}},{\"type\":\"t3\",\"relations\":{\"p\":{\"this\":{}},\"r0\":{\"union\":{\"child\":[{\"this\":{}},{\"tupleToUserset\":{\"tupleset\":{\"relation\":\"p\"},\"computedUserset\":{\"relation\":\"r2\"}}}]}},\"r1\":{\"difference\":{\"base\":{\"this\":{}},\"subtract\":{\"tupleToUserset\":{\"tupleset\":{\"relation\":\"p\"},\"computedUserset\":{\"relation\":\"r3\"}}}}},\"r2\":{\"this\":{}}},\"metadata\":{\"relations\":{\"p\":{\"directly_related_user_types\":[{\"type\":\"t0\"},{\"type\":\"t1\",\"condition\":\"cflag\"},{\"type\":\"t3\"}]},\"r0\":{\"directly_related_user_types\":[{\"type\":\"user\"},{\"type\":\"t1\",\"wildcard\":{}}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"user\"},{\"type\":\"t2\",\"relation\":\"r0\"}]},\"r2\":{\"directly_related_user_types\":[{\"type\":\"user\"},{\"type\":\"user\",\"wildcard\":{}},{\"type\":\"t2\",\"relation\":\"r1\"},{\"type\":\"t1\"}]}}}}],\"conditions\":{\"cflag\":{\"name\":\"cflag\",\"expression\":\"on\",\"parameters\":{\"on\":{\"type_name\":\"TYPE_NAME_BOOL\"}}},\"cnum\":{\"name\":\"cnum\",\"expression\":\"x \\u003c limit\",\"parameters\":{\"limit\":{\"type_name\":\"TYPE_NAME_INT\"},\"x\":{\"type_name\":\"TYPE_NAME_INT\"}}}}}",
+  "tuples": [
+    {
+      "user": "t2:a",
+      "relation": "p",
+      "object": "t2:a"
+    },
+    {
+      "user": "user:u0",
+      "relation": "r1",
+      "object": "t3:c"
+    },
+    {
+      "user": "t3:b#r1",
+      "relation": "r0",
+      "object": "t2:a"
+    },
+    {
+      "user": "t2:c#r0",
+      "relation": "r1",
+      "object": "t3:b"
+    },
+    {
+      "user": "t3:c#r1",
+      "relation": "r0",
+      "object": "t2:c"
+    }
+  ],
+  "queries": [
+    {
+      "kind": "check",
+      "user": "user:u0",
+      "relation": "r2",
+      "object": "t2:a",
+      "contextual_tuples": [
+        {
+          "user": "t1:*",
+          "relation": "r0",
+          "object": "t3:a"
+        }
+      ],
+      "known": "OpenFGA denies when a cycle lies under an exclusion"
+    }
+  ],
+  "note": "OpenFGA bug: the subtracted side (r1 but not r1) is always false, yet OpenFGA denies because of the t2:a self-parent cycle under it."
+}

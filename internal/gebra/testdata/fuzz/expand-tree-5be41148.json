@@ -1,0 +1,19 @@
+{
+  "name": "seed-1-5",
+  "model": "{\"schema_version\":\"1.1\",\"type_definitions\":[{\"type\":\"user\"},{\"type\":\"t0\",\"relations\":{\"p\":{\"this\":{}},\"r0\":{\"this\":{}},\"r1\":{\"this\":{}},\"r2\":{\"this\":{}},\"r3\":{\"this\":{}}},\"metadata\":{\"relations\":{\"p\":{\"directly_related_user_types\":[{\"type\":\"t0\",\"condition\":\"cflag\"}]},\"r0\":{\"directly_related_user_types\":[{\"type\":\"t0\",\"wildcard\":{}}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"user\"}]},\"r2\":{\"directly_related_user_types\":[{\"type\":\"t1\"}]},\"r3\":{\"directly_related_user_types\":[{\"type\":\"user\",\"condition\":\"cflag\"}]}}}},{\"type\":\"t1\",\"relations\":{\"p\":{\"this\":{}},\"r0\":{\"this\":{}},\"r1\":{\"this\":{}},\"r2\":{\"this\":{}},\"r3\":{\"union\":{\"child\":[{\"computedUserset\":{\"relation\":\"r1\"}},{\"difference\":{\"base\":{\"computedUserset\":{\"relation\":\"r2\"}},\"subtract\":{\"this\":{}}}}]}}},\"metadata\":{\"relations\":{\"p\":{\"directly_related_user_types\":[{\"type\":\"t2\"}]},\"r0\":{\"directly_related_user_types\":[{\"type\":\"user\",\"wildcard\":{}}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"user\"}]},\"r2\":{\"directly_related_user_types\":[{\"type\":\"t2\",\"relation\":\"r1\"}]},\"r3\":{\"directly_related_user_types\":[{\"type\":\"user\"},{\"type\":\"t0\",\"relation\":\"r0\"},{\"type\":\"user\",\"wildcard\":{}}]}}}},{\"type\":\"t2\",\"relations\":{\"p\":{\"this\":{}},\"r0\":{\"union\":{\"child\":[{\"difference\":{\"base\":{\"tupleToUserset\":{\"tupleset\":{\"relation\":\"p\"},\"computedUserset\":{\"relation\":\"r0\"}}},\"subtract\":{\"difference\":{\"base\":{\"tupleToUserset\":{\"tupleset\":{\"relation\":\"p\"},\"computedUserset\":{\"relation\":\"r0\"}}},\"subtract\":{\"tupleToUserset\":{\"tupleset\":{\"relation\":\"p\"},\"computedUserset\":{\"relation\":\"r3\"}}}}}}},{\"this\":{}}]}},\"r1\":{\"difference\":{\"base\":{\"union\":{\"child\":[{\"computedUserset\":{\"relation\":\"r0\"}},{\"this\":{}}]}},\"subtract\":{\"intersection\":{\"child\":[{\"tupleToUserset\":{\"tupleset\":{\"relation\":\"p\"},\"computedUserset\":{\"relation\":\"r0\"}}},{\"tupleToUserset\":{\"tupleset\":{\"relation\":\"p\"},\"computedUserset\":{\"relation\":\"r2\"}}}]}}}}},\"metadata\":{\"relations\":{\"p\":{\"directly_related_user_types\":[{\"type\":\"t0\"},{\"type\":\"t2\"}]},\"r0\":{\"directly_related_user_types\":[{\"type\":\"user\"}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"user\"},{\"type\":\"t2\",\"wildcard\":{}},{\"type\":\"user\",\"wildcard\":{}}]}}}}],\"conditions\":{\"cflag\":{\"name\":\"cflag\",\"expression\":\"on\",\"parameters\":{\"on\":{\"type_name\":\"TYPE_NAME_BOOL\"}}},\"cnum\":{\"name\":\"cnum\",\"expression\":\"x \\u003c limit\",\"parameters\":{\"limit\":{\"type_name\":\"TYPE_NAME_INT\"},\"x\":{\"type_name\":\"TYPE_NAME_INT\"}}}}}",
+  "tuples": [
+    {
+      "user": "t2:c",
+      "relation": "p",
+      "object": "t2:b"
+    }
+  ],
+  "queries": [
+    {
+      "kind": "expand",
+      "relation": "r0",
+      "object": "t2:b"
+    }
+  ],
+  "note": "OpenFGA lists computed usersets for tupleset objects whose type lacks the relation. The test normalizes them away."
+}

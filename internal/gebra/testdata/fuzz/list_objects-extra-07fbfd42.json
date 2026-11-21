@@ -1,0 +1,34 @@
+{
+  "name": "seed-2026-270",
+  "model": "{\"schema_version\":\"1.1\",\"type_definitions\":[{\"type\":\"user\"},{\"type\":\"t0\",\"relations\":{\"p\":{\"this\":{}},\"r0\":{\"union\":{\"child\":[{\"this\":{}},{\"tupleToUserset\":{\"tupleset\":{\"relation\":\"p\"},\"computedUserset\":{\"relation\":\"r0\"}}}]}},\"r1\":{\"this\":{}}},\"metadata\":{\"relations\":{\"p\":{\"directly_related_user_types\":[{\"type\":\"t0\",\"condition\":\"cflag\"}]},\"r0\":{\"directly_related_user_types\":[{\"type\":\"user\"},{\"type\":\"user\",\"wildcard\":{}}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"user\"}]}}}},{\"type\":\"t1\",\"relations\":{\"p\":{\"this\":{}},\"r0\":{\"this\":{}},\"r1\":{\"difference\":{\"base\":{\"computedUserset\":{\"relation\":\"r0\"}},\"subtract\":{\"computedUserset\":{\"relation\":\"p\"}}}}},\"metadata\":{\"relations\":{\"p\":{\"directly_related_user_types\":[{\"type\":\"t1\"}]},\"r0\":{\"directly_related_user_types\":[{\"type\":\"user\",\"condition\":\"cflag\"},{\"type\":\"t1\",\"relation\":\"r1\"}]}}}}],\"conditions\":{\"cflag\":{\"name\":\"cflag\",\"expression\":\"on\",\"parameters\":{\"on\":{\"type_name\":\"TYPE_NAME_BOOL\"}}},\"cnum\":{\"name\":\"cnum\",\"expression\":\"x \\u003c limit\",\"parameters\":{\"limit\":{\"type_name\":\"TYPE_NAME_INT\"},\"x\":{\"type_name\":\"TYPE_NAME_INT\"}}}}}",
+  "tuples": [
+    {
+      "user": "t0:a",
+      "relation": "p",
+      "object": "t0:b",
+      "condition": {
+        "name": "cflag"
+      }
+    },
+    {
+      "user": "user:*",
+      "relation": "r0",
+      "object": "t0:a"
+    },
+    {
+      "user": "user:u2",
+      "relation": "r0",
+      "object": "t0:b"
+    }
+  ],
+  "queries": [
+    {
+      "kind": "list_objects",
+      "user": "user:u2",
+      "relation": "r0",
+      "type": "t0",
+      "known": "OpenFGA ListObjects is nondeterministic here"
+    }
+  ],
+  "note": "OpenFGA bug: ListObjects answers differently on repeated calls (t0:b in some calls), its Check allows t0:b."
+}

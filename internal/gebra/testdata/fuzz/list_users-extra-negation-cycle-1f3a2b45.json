@@ -1,0 +1,48 @@
+{
+  "name": "seed-9001-71",
+  "model": "{\"schema_version\":\"1.1\",\"type_definitions\":[{\"type\":\"user\"},{\"type\":\"t0\",\"relations\":{\"p\":{\"this\":{}},\"r0\":{\"tupleToUserset\":{\"tupleset\":{\"relation\":\"p\"},\"computedUserset\":{\"relation\":\"r0\"}}},\"r1\":{\"this\":{}}},\"metadata\":{\"relations\":{\"p\":{\"directly_related_user_types\":[{\"type\":\"t1\"}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"user\"}]}}}},{\"type\":\"t1\",\"relations\":{\"r0\":{\"this\":{}},\"r1\":{\"computedUserset\":{\"relation\":\"r0\"}},\"r2\":{\"computedUserset\":{\"relation\":\"r1\"}}},\"metadata\":{\"relations\":{\"r0\":{\"directly_related_user_types\":[{\"type\":\"user\"}]}}}},{\"type\":\"t2\",\"relations\":{\"p\":{\"this\":{}},\"r0\":{\"difference\":{\"base\":{\"this\":{}},\"subtract\":{\"tupleToUserset\":{\"tupleset\":{\"relation\":\"p\"},\"computedUserset\":{\"relation\":\"r1\"}}}}},\"r1\":{\"computedUserset\":{\"relation\":\"r0\"}}},\"metadata\":{\"relations\":{\"p\":{\"directly_related_user_types\":[{\"type\":\"t1\"},{\"type\":\"t2\"}]},\"r0\":{\"directly_related_user_types\":[{\"type\":\"t1\",\"relation\":\"r2\"},{\"type\":\"t0\",\"relation\":\"r0\"}]}}}}],\"conditions\":{\"cflag\":{\"name\":\"cflag\",\"expression\":\"on\",\"parameters\":{\"on\":{\"type_name\":\"TYPE_NAME_BOOL\"}}},\"cnum\":{\"name\":\"cnum\",\"expression\":\"x \\u003c limit\",\"parameters\":{\"limit\":{\"type_name\":\"TYPE_NAME_INT\"},\"x\":{\"type_name\":\"TYPE_NAME_INT\"}}}}}",
+  "tuples": [
+    {
+      "user": "t1:a",
+      "relation": "p",
+      "object": "t0:c"
+    },
+    {
+      "user": "t2:b",
+      "relation": "p",
+      "object": "t2:a"
+    },
+    {
+      "user": "t0:c#r0",
+      "relation": "r0",
+      "object": "t2:b"
+    },
+    {
+      "user": "user:u0",
+      "relation": "r0",
+      "object": "t1:a"
+    },
+    {
+      "user": "t1:a#r2",
+      "relation": "r0",
+      "object": "t2:a"
+    },
+    {
+      "user": "t2:b",
+      "relation": "p",
+      "object": "t2:b"
+    }
+  ],
+  "queries": [
+    {
+      "kind": "list_users",
+      "relation": "r0",
+      "object": "t2:a",
+      "filter": {
+        "type": "user"
+      },
+      "known": "self-contradicting cycle without a fixpoint, Gebra denies the paradox node"
+    }
+  ],
+  "note": "Intentional: r0 on t2:b is defined as its base but not itself, a paradox with no fixpoint. Gebra denies the paradox, so t2:a, which subtracts it, grants. OpenFGA makes the opposite choice."
+}

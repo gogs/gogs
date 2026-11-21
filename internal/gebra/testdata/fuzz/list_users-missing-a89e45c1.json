@@ -1,0 +1,29 @@
+{
+  "name": "seed-2026-61",
+  "model": "{\"schema_version\":\"1.1\",\"type_definitions\":[{\"type\":\"user\"},{\"type\":\"t0\",\"relations\":{\"p\":{\"this\":{}},\"r0\":{\"this\":{}},\"r1\":{\"this\":{}},\"r2\":{\"union\":{\"child\":[{\"this\":{}},{\"tupleToUserset\":{\"tupleset\":{\"relation\":\"p\"},\"computedUserset\":{\"relation\":\"r2\"}}}]}}},\"metadata\":{\"relations\":{\"p\":{\"directly_related_user_types\":[{\"type\":\"t0\"}]},\"r0\":{\"directly_related_user_types\":[{\"type\":\"user\"}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"user\",\"wildcard\":{}}]},\"r2\":{\"directly_related_user_types\":[{\"type\":\"t0\"}]}}}},{\"type\":\"t1\",\"relations\":{\"p\":{\"this\":{}},\"r0\":{\"this\":{}},\"r1\":{\"this\":{}},\"r2\":{\"this\":{}},\"r3\":{\"this\":{}}},\"metadata\":{\"relations\":{\"p\":{\"directly_related_user_types\":[{\"type\":\"t0\"}]},\"r0\":{\"directly_related_user_types\":[{\"type\":\"user\",\"condition\":\"cnum\"}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"t0\",\"relation\":\"r1\"}]},\"r2\":{\"directly_related_user_types\":[{\"type\":\"user\"}]},\"r3\":{\"directly_related_user_types\":[{\"type\":\"t0\",\"wildcard\":{}}]}}}}],\"conditions\":{\"cflag\":{\"name\":\"cflag\",\"expression\":\"on\",\"parameters\":{\"on\":{\"type_name\":\"TYPE_NAME_BOOL\"}}},\"cnum\":{\"name\":\"cnum\",\"expression\":\"x \\u003c limit\",\"parameters\":{\"limit\":{\"type_name\":\"TYPE_NAME_INT\"},\"x\":{\"type_name\":\"TYPE_NAME_INT\"}}}}}",
+  "tuples": [
+    {
+      "user": "t0:c",
+      "relation": "r2",
+      "object": "t0:c"
+    },
+    {
+      "user": "t0:c",
+      "relation": "p",
+      "object": "t0:a"
+    }
+  ],
+  "queries": [
+    {
+      "kind": "list_users",
+      "relation": "r2",
+      "object": "t0:a",
+      "filter": {
+        "type": "t0",
+        "relation": "r2"
+      },
+      "known": "OpenFGA returns t0:c for a t0#r2 filter"
+    }
+  ],
+  "note": "OpenFGA bug: ListUsers with a userset filter returns a plain object, which is not of the filtered shape."
+}

@@ -1,0 +1,45 @@
+{
+  "name": "seed-2026-162",
+  "model": "{\"schema_version\":\"1.1\",\"type_definitions\":[{\"type\":\"user\"},{\"type\":\"t0\",\"relations\":{\"p\":{\"this\":{}},\"r0\":{\"this\":{}},\"r1\":{\"this\":{}}},\"metadata\":{\"relations\":{\"p\":{\"directly_related_user_types\":[{\"type\":\"t3\"}]},\"r0\":{\"directly_related_user_types\":[{\"type\":\"user\",\"condition\":\"cflag\"}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"user\"}]}}}},{\"type\":\"t1\",\"relations\":{\"r0\":{\"this\":{}},\"r1\":{\"this\":{}}},\"metadata\":{\"relations\":{\"r0\":{\"directly_related_user_types\":[{\"type\":\"user\"}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"t0\"}]}}}},{\"type\":\"t2\",\"relations\":{\"p\":{\"this\":{}},\"r0\":{\"tupleToUserset\":{\"tupleset\":{\"relation\":\"p\"},\"computedUserset\":{\"relation\":\"r0\"}}},\"r1\":{\"this\":{}},\"r2\":{\"this\":{}}},\"metadata\":{\"relations\":{\"p\":{\"directly_related_user_types\":[{\"type\":\"t3\",\"condition\":\"cflag\"}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"user\"}]},\"r2\":{\"directly_related_user_types\":[{\"type\":\"user\",\"wildcard\":{}}]}}}},{\"type\":\"t3\",\"relations\":{\"p\":{\"this\":{}},\"r0\":{\"this\":{}},\"r1\":{\"this\":{}}},\"metadata\":{\"relations\":{\"p\":{\"directly_related_user_types\":[{\"type\":\"t2\"}]},\"r0\":{\"directly_related_user_types\":[{\"type\":\"t2\",\"relation\":\"r1\"}]},\"r1\":{\"directly_related_user_types\":[{\"type\":\"user\"}]}}}}],\"conditions\":{\"cflag\":{\"name\":\"cflag\",\"expression\":\"on\",\"parameters\":{\"on\":{\"type_name\":\"TYPE_NAME_BOOL\"}}},\"cnum\":{\"name\":\"cnum\",\"expression\":\"x \\u003c limit\",\"parameters\":{\"limit\":{\"type_name\":\"TYPE_NAME_INT\"},\"x\":{\"type_name\":\"TYPE_NAME_INT\"}}}}}",
+  "tuples": [
+    {
+      "user": "t2:b#r1",
+      "relation": "r0",
+      "object": "t3:a"
+    },
+    {
+      "user": "t3:a",
+      "relation": "p",
+      "object": "t2:a",
+      "condition": {
+        "name": "cflag"
+      }
+    },
+    {
+      "user": "t3:b",
+      "relation": "p",
+      "object": "t2:a",
+      "condition": {
+        "name": "cflag",
+        "context": {
+          "on": true
+        }
+      }
+    },
+    {
+      "user": "user:u1",
+      "relation": "r1",
+      "object": "t2:b"
+    }
+  ],
+  "queries": [
+    {
+      "kind": "check",
+      "user": "user:u1",
+      "relation": "r0",
+      "object": "t2:a",
+      "known": "OpenFGA Check silently returns false"
+    }
+  ],
+  "note": "OpenFGA bug: Check returns false without an error although the missing parameter decides the answer (on=true allows), and its ListObjects reports the missing parameter."
+}
