@@ -616,7 +616,7 @@ func DetectEncoding(logger *logx.Logger, content []byte) string {
 	return guess
 }
 
-// isMostlyUTF8 returns true if the content has more than ten times as many
+// isMostlyUTF8 reports whether the content has more than ten times as many
 // valid multibyte UTF-8 characters as invalid bytes. Legacy encodings rarely
 // form valid multibyte UTF-8 sequences by chance.
 func isMostlyUTF8(content []byte) bool {
