@@ -1242,6 +1242,10 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 	bob := newTestIssueUser(t, ctx, s.db, "cf-bob")
 	carol := newTestIssueUser(t, ctx, s.db, "cf-carol")
 	org, _ := newTestOrg(t, ctx, s.db, "cf-org")
+	teams := newTeamsStore(s.db)
+	readers := createTestTeam(t, ctx, teams, org.ID, "readers", AccessModeRead)
+	member := newTestIssueUser(t, ctx, s.db, "cf-member")
+	require.NoError(t, teams.AddMember(ctx, org.ID, readers.ID, member.ID))
 
 	var n int
 	name := func(prefix string) string {
@@ -1262,6 +1266,8 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 		name      string
 		baseOwner *User
 		forkOwner *User // Defaults to bob.
+		private   bool
+		setup     func(base, fork *Repository)
 		// first starts ahead of second, while the base repository is held.
 		first, second func(base, fork *Repository) error
 	}{
@@ -1302,14 +1308,41 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 			first:     func(base, _ *Repository) error { return deleteRepo(base) },
 			second:    func(_, f *Repository) error { _, err := fork(org, f); return err },
 		},
+		{
+			name:      "remove repository from a team while deleting it",
+			baseOwner: org,
+			private:   true,
+			setup:     func(base, _ *Repository) { require.NoError(t, teams.AddRepo(ctx, readers, base)) },
+			first:     func(base, _ *Repository) error { return deleteRepo(base) },
+			second:    func(base, _ *Repository) error { return teams.RemoveRepo(ctx, readers, base.ID) },
+		},
+		{
+			name:      "add repository to a team while deleting its fork in the team",
+			baseOwner: org,
+			forkOwner: org,
+			private:   true,
+			setup:     func(_, fork *Repository) { require.NoError(t, teams.AddRepo(ctx, readers, fork)) },
+			first:     func(_, fork *Repository) error { return deleteRepo(fork) },
+			second:    func(base, _ *Repository) error { return teams.AddRepo(ctx, readers, base) },
+		},
+		{
+			name:      "add repository to a team while deleting a fork of a user",
+			baseOwner: org,
+			private:   true,
+			first:     func(_, fork *Repository) error { return deleteRepo(fork) },
+			second:    func(base, _ *Repository) error { return teams.AddRepo(ctx, readers, base) },
+		},
 	} {
-		base := newTestGitRepo(t, ctx, s, tc.baseOwner, CreateRepoOptionsLegacy{Name: name("base")})
+		base := newTestGitRepo(t, ctx, s, tc.baseOwner, CreateRepoOptionsLegacy{Name: name("base"), IsPrivate: tc.private})
 		forkOwner := tc.forkOwner
 		if forkOwner == nil {
 			forkOwner = bob
 		}
 		baseFork, err := fork(forkOwner, base)
 		require.NoError(t, err)
+		if tc.setup != nil {
+			tc.setup(base, baseFork)
+		}
 
 		hold := s.db.Begin()
 		require.NoError(t, hold.Error)

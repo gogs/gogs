@@ -354,6 +354,11 @@ func (s *TeamsStore) AddRepo(ctx context.Context, t *Team, repo *Repository) err
 	}
 
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if exists, err := lockRepository(tx, repo.ID); err != nil {
+			return err
+		} else if !exists {
+			return ErrRepoNotExist{args: errx.Args{"repoID": repo.ID}}
+		}
 		return newTeamsStore(tx).addRepo(ctx, t, repo)
 	})
 }
@@ -397,6 +402,13 @@ func (s *TeamsStore) RemoveRepo(ctx context.Context, t *Team, repoID int64) erro
 	}
 
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// The repository may have been deleted or left the team while waiting
+		// for it, which removes it from the team too.
+		if exists, err := lockRepository(tx, repoID); err != nil {
+			return err
+		} else if !exists || !newTeamsStore(tx).HasRepo(ctx, t.OrgID, t.ID, repoID) {
+			return nil
+		}
 		repo, err := getRepositoryByID(tx, repoID)
 		if err != nil {
 			return errors.Wrap(err, "get repository")
