@@ -119,33 +119,40 @@ Gebra is benchmarked against OpenFGA through each server's HTTP API, with the sa
 
 ### Results
 
-p50 / p99 in milliseconds, requests completed per second, and the CPU cores Postgres used. Bold marks the lower p99 at each rate.
+One row per offered rate, with Gebra and OpenFGA side by side: p50 / p99 in milliseconds for each kind of request, and the CPU cores Postgres used. Bold marks the lower p99. Both servers completed the offered rate in every row, except where the summary below says otherwise. Neither server had a violation at any rate, and the only error was one of OpenFGA's at 2,500/s, `400 cancelled: Request Cancelled`.
 
-| Server | Rate/s | Completed/s | Check | Token check | List | Write | Violations | Errors | Postgres cores |
-|---|---|---|---|---|---|---|---|---|---|
-| Gebra | 500 | 501 | **1.2 / 2.2** | 0.9 / 10.7 | **2.5 / 4.1** | **2.2 / 5.8** | 0 | 0 | 0.2 |
-| OpenFGA | 500 | 501 | 2.6 / 10.9 | **1.7 / 3.4** | 3.1 / 15.6 | 3.4 / 12.2 | 0 | 0 | 0.6 |
-| Gebra | 1,000 | 1,009 | **1.1 / 2.1** | **0.9 / 10.3** | **2.4 / 4.2** | **2.1 / 3.8** | 0 | 0 | 0.4 |
-| OpenFGA | 1,000 | 1,009 | 2.4 / 61.8 | 1.6 / 33.4 | 3.0 / 69.7 | 3.0 / 42.3 | 0 | 0 | 1.0 |
-| Gebra | 1,500 | 1,500 | **1.0 / 2.1** | **0.9 / 11.2** | **2.3 / 4.3** | **2.1 / 4.5** | 0 | 0 | 0.5 |
-| OpenFGA | 1,500 | 1,500 | 3.0 / 355 | 2.1 / 234 | 5.4 / 256 | 3.4 / 215 | 0 | 0 | 1.3 |
-| Gebra | 2,000 | 2,000 | **1.0 / 2.1** | **0.9 / 11.0** | **2.3 / 4.3** | **2.1 / 4.5** | 0 | 0 | 0.7 |
-| OpenFGA | 2,000 | 2,000 | 28.7 / 655 | 9.5 / 492 | 19.9 / 515 | 16.6 / 451 | 0 | 0 | 1.4 |
-| Gebra | 2,500 | 2,503 | **0.9 / 2.1** | **0.8 / 8.9** | **2.2 / 4.3** | **2.0 / 7.7** | 0 | 0 | 0.8 |
-| OpenFGA | 2,500 | 2,503 | 70.5 / 634 | 36.8 / 523 | 49.6 / 493 | 43.2 / 481 | 0 | 1 | 1.6 |
-| Gebra | 5,000 | 5,008 | **0.8 / 2.2** | **0.9 / 12.5** | **2.2 / 4.7** | **2.0 / 4.5** | 0 | 0 | 1.8 |
-| OpenFGA | 5,000 | 4,586 | saturated | saturated | saturated | saturated | 0 | 0 | 2.0 |
-| Gebra | 7,500 | 7,500 | 0.7 / 2.5 | 0.9 / 11.7 | 2.0 / 5.0 | 1.9 / 5.6 | 0 | 0 | 2.6 |
-| Gebra | 10,000 | 10,003 | 0.8 / 7.8 | 1.1 / 14.1 | 2.3 / 10.4 | 2.3 / 15.0 | 0 | 0 | 3.9 |
-| Gebra | 15,000 | 14,996 | 0.9 / 79.1 | 1.1 / 66.1 | 2.3 / 83.9 | 2.6 / 84.2 | 0 | 0 | 5.3 |
-| Gebra | 20,000 | 19,806 | 105.7 / 1,300 | 23.5 / 215 | 98.6 / 1,300 | 42.9 / 1,300 | 0 | 0 | 6.9 |
+| Rate/s | Check, Gebra | Check, OpenFGA | Token check, Gebra | Token check, OpenFGA |
+|---|---|---|---|---|
+| 500 | **1.2 / 2.2** | 2.6 / 10.9 | 0.9 / 10.7 | **1.7 / 3.4** |
+| 1,000 | **1.1 / 2.1** | 2.4 / 61.8 | **0.9 / 10.3** | 1.6 / 33.4 |
+| 1,500 | **1.0 / 2.1** | 3.0 / 355 | **0.9 / 11.2** | 2.1 / 234 |
+| 2,000 | **1.0 / 2.1** | 28.7 / 655 | **0.9 / 11.0** | 9.5 / 492 |
+| 2,500 | **0.9 / 2.1** | 70.5 / 634 | **0.8 / 8.9** | 36.8 / 523 |
+| 5,000 | **0.8 / 2.2** | saturated | **0.9 / 12.5** | saturated |
+| 7,500 | 0.7 / 2.5 | not run | 0.9 / 11.7 | not run |
+| 10,000 | 0.8 / 7.8 | not run | 1.1 / 14.1 | not run |
+| 15,000 | 0.9 / 79.1 | not run | 1.1 / 66.1 | not run |
+| 20,000 | 105.7 / 1,300 | not run | 23.5 / 215 | not run |
+
+| Rate/s | List, Gebra | List, OpenFGA | Write, Gebra | Write, OpenFGA | Postgres cores, Gebra / OpenFGA |
+|---|---|---|---|---|---|
+| 500 | **2.5 / 4.1** | 3.1 / 15.6 | **2.2 / 5.8** | 3.4 / 12.2 | 0.2 / 0.6 |
+| 1,000 | **2.4 / 4.2** | 3.0 / 69.7 | **2.1 / 3.8** | 3.0 / 42.3 | 0.4 / 1.0 |
+| 1,500 | **2.3 / 4.3** | 5.4 / 256 | **2.1 / 4.5** | 3.4 / 215 | 0.5 / 1.3 |
+| 2,000 | **2.3 / 4.3** | 19.9 / 515 | **2.1 / 4.5** | 16.6 / 451 | 0.7 / 1.4 |
+| 2,500 | **2.2 / 4.3** | 49.6 / 493 | **2.0 / 7.7** | 43.2 / 481 | 0.8 / 1.6 |
+| 5,000 | **2.2 / 4.7** | saturated | **2.0 / 4.5** | saturated | 1.8 / 2.0 |
+| 7,500 | 2.0 / 5.0 | not run | 1.9 / 5.6 | not run | 2.6 |
+| 10,000 | 2.3 / 10.4 | not run | 2.3 / 15.0 | not run | 3.9 |
+| 15,000 | 2.3 / 83.9 | not run | 2.6 / 84.2 | not run | 5.3 |
+| 20,000 | 98.6 / 1,300 | not run | 42.9 / 1,300 | not run | 6.9 |
 
 | Server | Sustained: highest rate held | Fast: check, token check and list within 20 ms p99 | Overloaded: completed at the first rate not held | Bottleneck |
 |---|---|---|---|---|
 | Gebra | **15,000/s** | **up to 10,000/s** | **19,806/s of 20,000/s**, p99 1.3 s | The machine: at 20,000/s it used 14.1 of 16 vCPUs, 6.9 of them Postgres, 4.8 `cmd/gebra` and 2.4 the load generator |
 | OpenFGA | 2,500/s | up to 500/s | 4,586/s of 5,000/s, p99 30 s | OpenFGA's own CPU: the machine used 10.8 vCPUs at 2,500/s, Postgres only 1.6 |
 
-A rate is held when the server completes at least 90% of it with every p99 under 1 s. At Gebra's 20,000/s, the server completes 99% of the rate, but requests queue for over 1 s at p99. That rate is what Gebra can push through in a burst, not a rate to run at. Since Gebra held 15,000/s, its 20,000/s step ran as a second ladder from a restarted Postgres. OpenFGA's one error at 2,500/s was `400 cancelled: Request Cancelled`.
+A rate is held when the server completes at least 90% of it with every p99 under 1 s. At Gebra's 20,000/s, the server completes 99% of the rate, but requests queue for over 1 s at p99. That rate is what Gebra can push through in a burst, not a rate to run at. Since Gebra held 15,000/s, its 20,000/s step ran as a second ladder from a restarted Postgres. OpenFGA's ladder stopped after 5,000/s.
 
 Each server runs at its better `GOMAXPROCS`: Gebra at 8 and OpenFGA at its default of 16. With 8, OpenFGA holds only 1,500/s, its check p99 at 1,000/s is 167 ms instead of 62 ms, and no rate keeps its lists within 20 ms p99, since at 2,000/s it uses 6.9 of its 8 threads while the machine has 7 vCPUs free. Its cross-check passes in both runs.
 
@@ -153,17 +160,15 @@ Each server runs at its better `GOMAXPROCS`: Gebra at 8 and OpenFGA at its defau
 
 Writes are 1% of requests, at most about 760 tuples/s, so these numbers measure write latency under read load. Write capacity is measured below. Every kind of write had 0 errors at every rate on both servers. Single writes add or remove 1 tuple, bulk writes 100 collaborators at once, and fan-out writes add a team to an org, which reaches all of the org's repos. Catch-up is how long Gebra's view took to include every write once a step ended; until then, default reads may not see a write, and reads with its token always do. p50 / p99 in milliseconds.
 
-| Server | Rate/s | Single | Bulk | Fan-out | Catch-up |
-|---|---|---|---|---|---|
-| Gebra | 500 | **2.2 / 5.8** | **24.0 / 45.2** | none in the step | 8 |
-| OpenFGA | 500 | 3.4 / 12.2 | 27.6 / 50.8 | none in the step | no view |
-| Gebra | 2,500 | **2.0 / 7.7** | **26.4 / 57.3** | **1.8 / 3.0** | 8 |
-| OpenFGA | 2,500 | 43.2 / 481 | 66.4 / 550 | 6.9 / 447 | no view |
-| Gebra | 5,000 | 2.0 / 4.5 | 29.7 / 49.6 | 2.1 / 3.9 | 9 |
-| Gebra | 7,500 | 1.9 / 5.6 | 27.2 / 85.6 | 1.9 / 7.2 | 7 |
-| Gebra | 10,000 | 2.3 / 15.0 | 36.6 / 63.6 | 2.3 / 9.5 | 8 |
-| Gebra | 15,000 | 2.6 / 84.2 | 32.9 / 127 | 2.4 / 70.1 | 7 |
-| Gebra | 20,000 | 42.9 / 1,288 | 81.0 / 1,318 | 42.1 / 1,259 | 8 |
+| Rate/s | Single, Gebra | Single, OpenFGA | Bulk, Gebra | Bulk, OpenFGA | Fan-out, Gebra | Fan-out, OpenFGA |
+|---|---|---|---|---|---|---|
+| 500 | **2.2 / 5.8** | 3.4 / 12.2 | **24.0 / 45.2** | 27.6 / 50.8 | none | none |
+| 2,500 | **2.0 / 7.7** | 43.2 / 481 | **26.4 / 57.3** | 66.4 / 550 | **1.8 / 3.0** | 6.9 / 447 |
+| 5,000 | 2.0 / 4.5 | saturated | 29.7 / 49.6 | saturated | 2.1 / 3.9 | saturated |
+| 7,500 | 1.9 / 5.6 | not run | 27.2 / 85.6 | not run | 1.9 / 7.2 | not run |
+| 10,000 | 2.3 / 15.0 | not run | 36.6 / 63.6 | not run | 2.3 / 9.5 | not run |
+| 15,000 | 2.6 / 84.2 | not run | 32.9 / 127 | not run | 2.4 / 70.1 | not run |
+| 20,000 | 42.9 / 1,288 | not run | 81.0 / 1,318 | not run | 42.1 / 1,259 | not run |
 
 Bulk and fan-out writes are few, 22 to 334 and 6 to 134 per step, so their p99 is close to their maximum. Gebra's catch-up stays at 7 to 9 ms at every rate, and its view was never more than 0.14 s behind during a step. At 20,000/s, the second of latency is requests queued in front of `cmd/gebra`, not the applier falling behind.
 
@@ -171,33 +176,23 @@ Adding a user to a team adds one view row, however many repos the team reaches. 
 
 #### Write capacity
 
-A write-only run measures how many writes each server accepts, with the same steps, stop rule and clean state as above, and every request a write. Single writes add or remove 1 collaborator, and bulk writes add or remove 100. Both servers count a write as accepted when they return, which for Gebra is once its tuples are committed and it has a revision token, before its view includes them. View lag is how far Gebra's view was behind its writes at most during a step. While it is more than 1 s behind, default reads evaluate the graph instead. p50 / p99 in milliseconds unless marked s.
+A write-only run measures how many writes each server accepts, with the same steps, stop rule and clean state as above, and every request a write. Neither server had a write error. Single writes add or remove 1 collaborator, and bulk writes add or remove 100. Both servers count a write as accepted when they return, which for Gebra is once its tuples are committed and it has a revision token, before its view includes them. View lag is how far Gebra's view was behind its writes at most during a step. While it is more than 1 s behind, default reads evaluate the graph instead. p50 / p99 in milliseconds unless marked s.
 
-| Server | Single writes, rate/s | Completed/s | p50 / p99 | View lag |
+| Single writes, rate/s | Completed/s, Gebra / OpenFGA | p50 / p99, Gebra | p50 / p99, OpenFGA | Gebra's view lag |
 |---|---|---|---|---|
-| Gebra | 500 | 499 | **2.0 / 3.5** | 0.00 s |
-| OpenFGA | 500 | 499 | 2.4 / 4.1 | no view |
-| Gebra | 2,000 | 2,007 | **1.9 / 3.4** | 0.00 s |
-| OpenFGA | 2,000 | 2,007 | 2.2 / 4.6 | no view |
-| Gebra | 5,000 | 4,990 | **1.9 / 5.8** | 0.09 s |
-| OpenFGA | 5,000 | 4,991 | 2.5 / 7.2 | no view |
-| Gebra | 7,500 | 7,503 | 2.0 / 9.5 | 0.02 s |
-| OpenFGA | 7,500 | 7,503 | **2.5 / 8.9** | no view |
-| Gebra | 10,000 | 9,986 | **2.4 / 25.5** | 0.21 s |
-| OpenFGA | 10,000 | 9,989 | 5.1 / 301 | no view |
-| Gebra | 15,000 | 11,326 | 9.4 s / 15.4 s | 31.2 s |
-| OpenFGA | 15,000 | 14,268 | **6.8 s / 11.0 s** | no view |
+| 500 | 499 / 499 | **2.0 / 3.5** | 2.4 / 4.1 | 0.00 s |
+| 2,000 | 2,007 / 2,007 | **1.9 / 3.4** | 2.2 / 4.6 | 0.00 s |
+| 5,000 | 4,990 / 4,991 | **1.9 / 5.8** | 2.5 / 7.2 | 0.09 s |
+| 7,500 | 7,503 / 7,503 | 2.0 / 9.5 | **2.5 / 8.9** | 0.02 s |
+| 10,000 | 9,986 / 9,989 | **2.4 / 25.5** | 5.1 / 301 | 0.21 s |
+| 15,000 | 11,326 / 14,268 | 9.4 s / 15.4 s | **6.8 s / 11.0 s** | 31.2 s |
 
-| Server | Bulk writes, rate/s | Tuples/s | p50 / p99 | View lag |
+| Bulk writes, rate/s | Tuples/s, Gebra / OpenFGA | p50 / p99, Gebra | p50 / p99, OpenFGA | Gebra's view lag |
 |---|---|---|---|---|
-| Gebra | 20 | 2,047 | **14.9 / 25.8** | 0.01 s |
-| OpenFGA | 20 | 1,962 | 16.8 / 39.9 | no view |
-| Gebra | 50 | 4,928 | **15.7 / 29.6** | 0.38 s |
-| OpenFGA | 50 | 4,917 | 17.6 / 40.8 | no view |
-| Gebra | 100 | 9,927 | 22.9 / 13.5 s | 6.6 s |
-| OpenFGA | 100 | 9,887 | **15.6 / 28.6** | no view |
-| Gebra, on its own | 200 | 19,932 | 16.7 / 29.0 | 4.6 s |
-| OpenFGA | 200 | 16,987 | 35.7 s / 106 s | no view |
+| 20 | 2,047 / 1,962 | **14.9 / 25.8** | 16.8 / 39.9 | 0.01 s |
+| 50 | 4,928 / 4,917 | **15.7 / 29.6** | 17.6 / 40.8 | 0.38 s |
+| 100 | 9,927 / 9,887 | 22.9 / 13.5 s | **15.6 / 28.6** | 6.6 s |
+| 200, Gebra on its own | 19,932 / 16,987 | **16.7 / 29.0** | 35.7 s / 106 s | 4.6 s |
 
 | Server | Single: highest rate held | Single: within 20 ms p99 | Bulk: highest rate held | Gebra's view within 1 s |
 |---|---|---|---|---|
@@ -215,9 +210,9 @@ At 20,000 requests/s the benchmark machine runs out of CPU: Postgres, `cmd/gebra
 
 | Rate/s | Completed/s | Check | Token check | List | Write |
 |---|---|---|---|---|---|
-| 15,000 | 15,018 | 0.5 / 3.2 | 0.5 / 6.5 | 1.1 / 4.2 | 1.6 / 10.2 |
-| 20,000 | 20,027 | 0.6 / 50.3 | 0.8 / 31.0 | 1.3 / 49.1 | 2.0 / 55.4 |
-| 25,000 | 25,028 | 0.8 / 73.5 | 1.1 / 43.4 | 1.6 / 75.6 | 2.5 / 74.4 |
+| 15,000 | 15,018 | 0.5 / 3.2 | 0.5 / 6.5 | 1.1 / 4.2 | 1.6 / 10.2 |
+| 20,000 | 20,027 | 0.6 / 50.3 | 0.8 / 31.0 | 1.3 / 49.1 | 2.0 / 55.4 |
+| 25,000 | 25,028 | 0.8 / 73.5 | 1.1 / 43.4 | 1.6 / 75.6 | 2.5 / 74.4 |
 
 These runs use `GOMAXPROCS=8` as above, and differ in:
 
