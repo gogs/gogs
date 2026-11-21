@@ -972,3 +972,23 @@ func TestStreamParseDiff_QuotedNames(t *testing.T) {
 		assert.ErrorContains(t, result.Err, "malformed diff header")
 	})
 }
+
+func TestDetectEncoding(t *testing.T) {
+	tests := []struct {
+		name    string
+		content []byte
+		want    string
+	}{
+		{name: "empty", content: nil, want: "UTF-8"},
+		{name: "UTF-8", content: []byte("修复错误"), want: "UTF-8"},
+		// A short commit message in GBK, which the previous detector took for
+		// Shift_JIS.
+		{name: "short GBK", content: []byte("\xd0\xde\xb8\xb4\xb4\xed\xce\xf3"), want: "GBK"},
+		{name: "windows-1252", content: []byte("caf\xe9"), want: "windows-1252"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.want, DetectEncoding(logx.NewNoopLogger(), test.content))
+		})
+	}
+}
