@@ -12,6 +12,7 @@ Gogs is written in [Go](https://golang.org/), please take [A Tour of Go](https:/
 - [Step 5: Start the server](#step-5-start-the-server)
 - [Build a production binary](#build-a-production-binary)
 - [Run integration tests](#run-integration-tests)
+- [Run browser tests](#run-browser-tests)
 - [Other nice things](#other-nice-things)
 
 ## Environment
@@ -177,6 +178,19 @@ moon run gogs:test-integration
 A full run fails when a route of the server gets no request from any test, except the routes that render pages of the web frontend. The tests find every route in the source and compare them with the requests the server records, so a new route needs a test in the same change. A run of some tests, e.g., with `-run`, lists the routes left without failing.
 
 The tests need PostgreSQL. Each run creates a new database on the server that the `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD` and `PGSSLMODE` environment variables point to, and drops it when the run passes.
+
+## Run browser tests
+
+The browser tests in `web/e2e` run the admin panel in Chromium, Firefox and WebKit (the engine of Safari), on a phone with touch input, and in German. They build a production binary, start it with a configuration and a SQLite database of their own, and remove both when they are done. Install the browsers once, then run the tests:
+
+```bash
+pnpm --dir web exec playwright install --with-deps chromium firefox webkit
+moon run web:e2e
+```
+
+To run one browser, pass its name, e.g., `moon run web:e2e -- --project=firefox`. The projects are `chromium`, `firefox`, `webkit`, `phone` and `german`.
+
+The tests also run the automated accessibility checks of WCAG 2.2 AA on every page. Those checks do not replace trying a page with a screen reader, and a phone profile is not a real phone.
 
 ## Other nice things
 

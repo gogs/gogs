@@ -65,3 +65,15 @@ tasks:
       runFromWorkspaceRoot: false
     deps:
       - "install"
+
+  # Runs the admin console in Chromium, Firefox and WebKit against a throwaway
+  # Gogs (see playwright.config.ts). The browsers come from
+  # `pnpm exec playwright install --with-deps chromium firefox webkit`.
+  e2e:
+    command: "pnpm run e2e"
+    options:
+      runFromWorkspaceRoot: false
+      cache: false
+    deps:
+      - "install"
+      - "gogs:build-prod"
