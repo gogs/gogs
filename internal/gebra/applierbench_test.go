@@ -199,10 +199,15 @@ func TestApplierBench(t *testing.T) {
 
 	d, err := time.ParseDuration(benchEnv("GEBRA_BENCH_DURATION", "8s"))
 	require.NoError(t, err)
-	users, teams, _, repos, _, _ := benchLadderDataset(scale)
+	users, teams, _, repos, gen, _ := benchLadderDataset(scale)
+	// Writes toggle tuples that the dataset does not have: a write of an
+	// existing tuple changes nothing, and deleting it afterwards would remove
+	// it from the dataset.
+	dataset := map[TupleKey]bool{}
+	gen(func(k TupleKey) { dataset[k] = true })
 	single := func(seed uint64, w, i int) *WriteRequest {
 		rng := rand.New(rand.NewPCG(seed*1000+uint64(w), uint64(i/2)))
-		k := benchWriteKey(rng, users, teams, repos)
+		k := benchWriteKey(rng, dataset, users, teams, repos)
 		req := &WriteRequest{OnDuplicate: "ignore", OnMissing: "ignore"}
 		if i%2 == 0 {
 			req.Writes = []TupleKey{k}
@@ -216,7 +221,7 @@ func TestApplierBench(t *testing.T) {
 		seen := map[TupleKey]bool{}
 		var keys []TupleKey
 		for len(keys) < 100 {
-			if k := benchWriteKey(rng, users, teams, repos); !seen[k] {
+			if k := benchWriteKey(rng, dataset, users, teams, repos); !seen[k] {
 				seen[k] = true
 				keys = append(keys, k)
 			}
@@ -1020,15 +1025,23 @@ func benchKey(user, relation, object string) TupleKey {
 	return TupleKey{User: user, Relation: relation, Object: object}
 }
 
-// benchWriteKey returns a random tuple of the kinds that the benchmark writes.
-func benchWriteKey(rng *rand.Rand, users, teams, repos int) TupleKey {
-	switch rng.IntN(4) {
-	case 0:
-		return benchKey(fmt.Sprintf("user:u%07d", rng.IntN(users)), "member", fmt.Sprintf("team:t%06d", rng.IntN(teams)))
-	case 1:
-		return benchKey(fmt.Sprintf("team:t%06d#member", rng.IntN(teams)), "reader", fmt.Sprintf("repo:r%08d", rng.IntN(repos)))
+// benchWriteKey returns a random tuple of the kinds that the benchmark
+// writes, which is not in the dataset.
+func benchWriteKey(rng *rand.Rand, dataset map[TupleKey]bool, users, teams, repos int) TupleKey {
+	for {
+		var k TupleKey
+		switch rng.IntN(4) {
+		case 0:
+			k = benchKey(fmt.Sprintf("user:u%07d", rng.IntN(users)), "member", fmt.Sprintf("team:t%06d", rng.IntN(teams)))
+		case 1:
+			k = benchKey(fmt.Sprintf("team:t%06d#member", rng.IntN(teams)), "reader", fmt.Sprintf("repo:r%08d", rng.IntN(repos)))
+		default:
+			k = benchKey(fmt.Sprintf("user:u%07d", rng.IntN(users)), "reader", fmt.Sprintf("repo:r%08d", rng.IntN(repos)))
+		}
+		if !dataset[k] {
+			return k
+		}
 	}
-	return benchKey(fmt.Sprintf("user:u%07d", rng.IntN(users)), "reader", fmt.Sprintf("repo:r%08d", rng.IntN(repos)))
 }
 
 // benchChecks returns the benchmark's check queries.
