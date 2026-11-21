@@ -226,13 +226,12 @@ type AppOpts struct {
 var App AppOpts
 
 type AuthOpts struct {
-	ActivateCodeLives         int
-	ResetPasswordCodeLives    int
-	RequireEmailConfirmation  bool
-	RequireSigninView         bool
-	DisableRegistration       bool
-	EnableRegistrationCaptcha bool
-	AntiBotVerification       string
+	ActivateCodeLives        int
+	ResetPasswordCodeLives   int
+	RequireEmailConfirmation bool
+	RequireSigninView        bool
+	DisableRegistration      bool
+	AntiBotVerification      string
 
 	EnableReverseProxyAuthentication   bool
 	EnableReverseProxyAutoRegistration bool
@@ -251,8 +250,9 @@ var Auth AuthOpts
 const (
 	// AntiBotVerificationAltcha asks the browser to solve a proof-of-work challenge.
 	AntiBotVerificationAltcha = "altcha"
-	// AntiBotVerificationImage asks the user to type the characters shown in an image.
-	AntiBotVerificationImage = "image"
+	// AntiBotVerificationCaptcha asks the user to type the characters shown in
+	// an image.
+	AntiBotVerificationCaptcha = "captcha"
 )
 
 type ServerOpts struct {
@@ -431,8 +431,7 @@ func checkInvalidOptions(config *ini.File) (warnings []string) {
 		option  string
 	}
 	renamedOptionPaths := map[optionPath]optionPath{
-		// Example:
-		// {"security", "REVERSE_PROXY_AUTHENTICATION_USER"}: {"auth", "REVERSE_PROXY_AUTHENTICATION_HEADER"},
+		{"auth", "ENABLE_REGISTRATION_CAPTCHA"}: {"auth", "ANTI_BOT_VERIFICATION"},
 	}
 	for oldPath, newPath := range renamedOptionPaths {
 		if config.Section(oldPath.section).HasKey(oldPath.option) {

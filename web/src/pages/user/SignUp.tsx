@@ -15,8 +15,8 @@ import { cn } from "@/lib/utils";
 
 export interface SignUpPage {
   registrationDisabled: boolean;
-  antiBotVerificationEnabled: boolean;
-  antiBotVerification: "altcha" | "image";
+  // antiBotVerification is empty when sign-ups are not verified.
+  antiBotVerification: "" | "altcha" | "captcha";
 }
 
 type AltchaState = "idle" | "verifying" | "verified" | "error";
@@ -40,9 +40,9 @@ export function SignUp() {
   const { t } = useTranslation();
   usePageTitle(t("register"));
   const navigate = useNavigate();
-  const { registrationDisabled, antiBotVerificationEnabled, antiBotVerification } = route.useLoaderData();
-  const altchaEnabled = antiBotVerificationEnabled && antiBotVerification === "altcha";
-  const imageCaptchaEnabled = antiBotVerificationEnabled && antiBotVerification === "image";
+  const { registrationDisabled, antiBotVerification } = route.useLoaderData();
+  const altchaEnabled = antiBotVerification === "altcha";
+  const captchaEnabled = antiBotVerification === "captcha";
 
   const [userName, setUserName] = useState("");
   const [email, setEmail] = useState("");
@@ -67,7 +67,7 @@ export function SignUp() {
     email.trim() !== "" &&
     password !== "" &&
     confirmPassword !== "" &&
-    (!imageCaptchaEnabled || captcha.trim() !== "") &&
+    (!captchaEnabled || captcha.trim() !== "") &&
     (!altchaEnabled || altchaState === "verified");
   const altchaSolution = useRef<AltchaSolution | null>(null);
   const altchaRef = useRef<HTMLButtonElement>(null);
@@ -153,7 +153,7 @@ export function SignUp() {
             setFormError(t("auth.sign_up_failed"));
           }
           setSubmitting(false);
-          if (antiBotVerificationEnabled) resetAntiBotVerification();
+          if (antiBotVerification) resetAntiBotVerification();
           requestAnimationFrame(() => {
             if (focusField === "userName") userNameRef.current?.focus();
             else if (focusField === "email") emailRef.current?.focus();
@@ -174,7 +174,7 @@ export function SignUp() {
       } catch {
         setFormError(t("auth.sign_up_failed"));
         setSubmitting(false);
-        if (antiBotVerificationEnabled) resetAntiBotVerification();
+        if (antiBotVerification) resetAntiBotVerification();
       }
     })();
   }
@@ -323,7 +323,7 @@ export function SignUp() {
 
             {altchaEnabled && renderAltcha()}
 
-            {imageCaptchaEnabled && (
+            {captchaEnabled && (
               <div className="flex flex-col gap-2">
                 <Label htmlFor="captcha">{t("captcha")}</Label>
                 <div className="group relative">
@@ -336,7 +336,7 @@ export function SignUp() {
                     className="block w-full cursor-pointer overflow-hidden rounded-md border border-(--color-border) bg-(--color-surface) outline-none focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <img
-                      src={subUrl("/captcha/image.png") + "?refresh=true&v=" + captchaRefresh}
+                      src={subUrl("/-/captcha/image.png") + "?refresh=true&v=" + captchaRefresh}
                       alt={t("captcha_image_alt")}
                       className="block h-20 w-full object-fill"
                     />

@@ -73,14 +73,14 @@ func TestSignUp(t *testing.T) {
 		assertNotCreated(t, other)
 	})
 
-	t.Run("image", func(t *testing.T) {
+	t.Run("captcha", func(t *testing.T) {
 		t.Parallel()
 
 		// The server with FORCE_PRIVATE uses the image captcha.
 		c := newClient(t)
 		c.baseURL = forcePrivateServerURL
 		newCaptcha := func() string {
-			status, _ := c.do(http.MethodGet, "/captcha/image.png", nil)
+			status, _ := c.do(http.MethodGet, "/-/captcha/image.png", nil)
 			require.Equal(t, http.StatusOK, status)
 			text, ok := c.sessionValue(captchaSessionKey).(string)
 			require.True(t, ok, "no captcha text in session")

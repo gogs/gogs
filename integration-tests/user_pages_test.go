@@ -168,7 +168,7 @@ func TestUserSiteCaptchaImage(t *testing.T) {
 	// The server with FORCE_PRIVATE uses the image captcha.
 	c := newClient(t)
 	c.baseURL = forcePrivateServerURL
-	status, header, body := c.doRaw(http.MethodGet, "/captcha/image.png", "", nil)
+	status, header, body := c.doRaw(http.MethodGet, "/-/captcha/image.png", "", nil)
 	require.Equal(t, http.StatusOK, status)
 	assert.Equal(t, "image/png", header.Get("Content-Type"))
 	assert.True(t, bytes.HasPrefix(body, []byte("\x89PNG\r\n\x1a\n")), "not a PNG")
@@ -177,7 +177,7 @@ func TestUserSiteCaptchaImage(t *testing.T) {
 	assert.NotEmpty(t, text)
 
 	// The server with altcha does not serve captcha images.
-	_, header, _ = newClient(t).doRaw(http.MethodGet, "/captcha/image.png", "", nil)
+	_, header, _ = newClient(t).doRaw(http.MethodGet, "/-/captcha/image.png", "", nil)
 	assert.NotEqual(t, "image/png", header.Get("Content-Type"))
 }
 

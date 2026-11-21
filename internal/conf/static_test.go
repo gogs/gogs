@@ -16,6 +16,7 @@ func TestCheckInvalidOptions(t *testing.T) {
 	_, _ = cfg.Section("auth").NewKey("ACTIVE_CODE_LIVE_MINUTES", "10")
 	_, _ = cfg.Section("auth").NewKey("RESET_PASSWD_CODE_LIVE_MINUTES", "10")
 	_, _ = cfg.Section("auth").NewKey("ENABLE_CAPTCHA", "true")
+	_, _ = cfg.Section("auth").NewKey("ENABLE_REGISTRATION_CAPTCHA", "true")
 	_, _ = cfg.Section("auth").NewKey("ENABLE_NOTIFY_MAIL", "true")
 	_, _ = cfg.Section("auth").NewKey("REGISTER_EMAIL_CONFIRM", "true")
 	_, _ = cfg.Section("session").NewKey("GC_INTERVAL_TIME", "10")
@@ -31,6 +32,7 @@ func TestCheckInvalidOptions(t *testing.T) {
 	wantWarnings := []string{
 		"option [auth] ACTIVE_CODE_LIVE_MINUTES is invalid",
 		"option [auth] ENABLE_CAPTCHA is invalid",
+		"option [auth] ENABLE_REGISTRATION_CAPTCHA is invalid, use [auth] ANTI_BOT_VERIFICATION instead",
 		"option [auth] ENABLE_NOTIFY_MAIL is invalid",
 		"option [auth] REGISTER_EMAIL_CONFIRM is invalid",
 		"option [auth] RESET_PASSWD_CODE_LIVE_MINUTES is invalid",

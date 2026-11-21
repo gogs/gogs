@@ -65,16 +65,15 @@ type getUserSignInResponse struct {
 }
 
 type getUserSignUpResponse struct {
-	RegistrationDisabled       bool   `json:"registrationDisabled"`
-	AntiBotVerificationEnabled bool   `json:"antiBotVerificationEnabled"`
-	AntiBotVerification        string `json:"antiBotVerification"`
+	RegistrationDisabled bool `json:"registrationDisabled"`
+	// AntiBotVerification is empty when sign-ups are not verified.
+	AntiBotVerification string `json:"antiBotVerification"`
 }
 
 func getUserSignUp() (statusCode int, resp *getUserSignUpResponse, err error) {
 	return http.StatusOK, &getUserSignUpResponse{
-		RegistrationDisabled:       conf.Auth.DisableRegistration,
-		AntiBotVerificationEnabled: conf.Auth.EnableRegistrationCaptcha,
-		AntiBotVerification:        conf.Auth.AntiBotVerification,
+		RegistrationDisabled: conf.Auth.DisableRegistration,
+		AntiBotVerification:  conf.Auth.AntiBotVerification,
 	}, nil
 }
 
