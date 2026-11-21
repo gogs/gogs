@@ -10,9 +10,7 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"github.com/flamego/altcha"
 	"github.com/flamego/cache"
-	"github.com/flamego/captcha"
 	"github.com/flamego/session"
 	"unknwon.dev/x/logx"
 
@@ -95,27 +93,18 @@ type userSignUpResponse struct {
 	Hours                     int    `json:"hours,omitempty"`
 }
 
-func postUserSignUp(logger *logx.Logger, r *http.Request, ca cache.Cache, l i18n.Locale, cpt captcha.Captcha, challenge altcha.Challenge, req userSignUpRequest) (statusCode int, resp any, err error) {
+func postUserSignUp(logger *logx.Logger, r *http.Request, ca cache.Cache, l i18n.Locale, verifyAntiBot antiBotVerifier, req userSignUpRequest) (statusCode int, resp any, err error) {
 	if conf.Auth.DisableRegistration {
 		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("auth::disable_register_prompt")}, nil
 	}
-	if conf.Auth.EnableRegistrationCaptcha {
-		var msg string
-		switch conf.Auth.AntiBotVerification {
-		case conf.AntiBotVerificationAltcha:
-			if err = challenge.Verify(req.Captcha); err != nil {
-				msg = l.Tr("form::captcha_verification_failed")
-			}
-		default:
-			if !cpt.ValidText(req.Captcha) {
-				msg = l.Tr("form::captcha_incorrect")
-			}
+	if !verifyAntiBot(req.Captcha) {
+		msg := l.Tr("form::captcha_incorrect")
+		if conf.Auth.AntiBotVerification == conf.AntiBotVerificationAltcha {
+			msg = l.Tr("form::captcha_verification_failed")
 		}
-		if msg != "" {
-			return http.StatusUnauthorized, &bindingErrorResponse{
-				Fields: fieldErrors{"captcha": &msg},
-			}, nil
-		}
+		return http.StatusUnauthorized, &bindingErrorResponse{
+			Fields: fieldErrors{"captcha": &msg},
+		}, nil
 	}
 	u, err := database.Handle.Users().Create(
 		r.Context(),

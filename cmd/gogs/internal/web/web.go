@@ -357,11 +357,9 @@ func newRoutingHandler(logger *logx.Logger, localizer, sessioner, authenticate f
 		return nil, errors.Wrap(err, "initialize cross-origin protection")
 	}
 
-	// The middleware requires a secret of at least 16 bytes, which the secret
-	// key may be shorter than, so it gets a key derived from the secret key.
-	altchaSecret, err := hkdf.Key(sha256.New, []byte(conf.Security.SecretKey), nil, "gogs altcha secret", 32)
+	antiBot, err := antiBotMiddlewares()
 	if err != nil {
-		return nil, errors.Wrap(err, "derive altcha secret")
+		return nil, errors.Wrap(err, "initialize anti-bot verification")
 	}
 
 	f.Get("/healthcheck", healthCheck)
@@ -373,10 +371,17 @@ func newRoutingHandler(logger *logx.Logger, localizer, sessioner, authenticate f
 		f.Get("/redirect", getRedirect)
 		f.Get("/robots.txt", getRobotsTxt)
 
-		// The captcha middlewares write the responses. These routes exist so the requests reach them.
-		f.Get("/captcha/image.png", func() {})
-		f.Get(altchaURLPrefix+"challenge.json", func() {})
-		f.Get(altchaURLPrefix+"worker.js", func() {})
+		// The anti-bot middlewares write the responses. These routes exist so the
+		// requests reach them.
+		if conf.Auth.EnableRegistrationCaptcha {
+			switch conf.Auth.AntiBotVerification {
+			case conf.AntiBotVerificationAltcha:
+				f.Get(altchaURLPrefix+"challenge.json", func() {})
+				f.Get(altchaURLPrefix+"worker.js", func() {})
+			case conf.AntiBotVerificationImage:
+				f.Get("/captcha/image.png", func() {})
+			}
+		}
 
 		f.Group("/{owner}/{repo}", func() {
 			f.Get("/commit/{sha: /[0-9a-f]{7,64}/}.{format: /(diff|patch)/}", getRepoCommitRaw)
@@ -423,18 +428,7 @@ func newRoutingHandler(logger *logx.Logger, localizer, sessioner, authenticate f
 			f.Get("/wiki/{page}/_edit", maybeRedirectToExternalWiki, webApp.ServeHTTP)
 		})
 		f.Any("/api/v1/{**}", apiV1Access, apiV1Bridger(newAPIV1Handler(logger)))
-	},
-		crossOrigin,
-		sessioner,
-		authenticate,
-		corsHeaders,
-		withWebContext,
-		captcha.Captchaer(captcha.Options{URLPrefix: "/captcha/"}),
-		altcha.Challenger(altcha.Options{
-			URLPrefix: altchaURLPrefix,
-			Secret:    altchaSecret,
-		}),
-	)
+	}, append([]flamego.Handler{crossOrigin, sessioner, authenticate, corsHeaders, withWebContext}, antiBot...)...)
 	if err != nil {
 		return nil, errors.Wrap(err, "mount web app routes")
 	}
@@ -444,6 +438,46 @@ func newRoutingHandler(logger *logx.Logger, localizer, sessioner, authenticate f
 // altchaURLPrefix is where the altcha middleware serves challenges and the
 // script that solves them.
 const altchaURLPrefix = "/-/altcha/"
+
+// antiBotVerifier reports whether the payload of a sign-up, i.e., the captcha
+// text or the altcha solution, passes anti-bot verification.
+type antiBotVerifier func(payload string) bool
+
+// antiBotMiddlewares returns the middlewares of [auth] ANTI_BOT_VERIFICATION
+// that serve what the sign-up page needs and map an antiBotVerifier. Only the
+// configured one is mounted, and none when the registration captcha is off.
+func antiBotMiddlewares() ([]flamego.Handler, error) {
+	if !conf.Auth.EnableRegistrationCaptcha {
+		return []flamego.Handler{func(c flamego.Context) {
+			c.Map(antiBotVerifier(func(string) bool { return true }))
+		}}, nil
+	}
+
+	switch conf.Auth.AntiBotVerification {
+	case conf.AntiBotVerificationAltcha:
+		// The middleware requires a secret of at least 16 bytes, which the secret
+		// key may be shorter than, so it gets a key derived from the secret key.
+		secret, err := hkdf.Key(sha256.New, []byte(conf.Security.SecretKey), nil, "gogs altcha secret", 32)
+		if err != nil {
+			return nil, errors.Wrap(err, "derive altcha secret")
+		}
+		return []flamego.Handler{
+			altcha.Challenger(altcha.Options{URLPrefix: altchaURLPrefix, Secret: secret}),
+			func(c flamego.Context, challenge altcha.Challenge) {
+				c.Map(antiBotVerifier(func(payload string) bool { return challenge.Verify(payload) == nil }))
+			},
+		}, nil
+	case conf.AntiBotVerificationImage:
+		return []flamego.Handler{
+			captcha.Captchaer(captcha.Options{URLPrefix: "/captcha/"}),
+			func(c flamego.Context, cpt captcha.Captcha) {
+				c.Map(antiBotVerifier(cpt.ValidText))
+			},
+		}, nil
+	default:
+		return nil, errors.Newf("unknown anti-bot verification %q", conf.Auth.AntiBotVerification)
+	}
+}
 
 // mountGitHTTPRoutes mounts the routes of Git over HTTP, Git LFS, and the task
 // trigger of Git hooks.

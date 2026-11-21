@@ -165,7 +165,9 @@ func TestUserSiteLocale(t *testing.T) {
 func TestUserSiteCaptchaImage(t *testing.T) {
 	t.Parallel()
 
+	// The server with FORCE_PRIVATE uses the image captcha.
 	c := newClient(t)
+	c.baseURL = forcePrivateServerURL
 	status, header, body := c.doRaw(http.MethodGet, "/captcha/image.png", "", nil)
 	require.Equal(t, http.StatusOK, status)
 	assert.Equal(t, "image/png", header.Get("Content-Type"))
@@ -173,6 +175,10 @@ func TestUserSiteCaptchaImage(t *testing.T) {
 	text, ok := c.sessionValue(captchaSessionKey).(string)
 	require.True(t, ok, "no captcha text in session")
 	assert.NotEmpty(t, text)
+
+	// The server with altcha does not serve captcha images.
+	_, header, _ = newClient(t).doRaw(http.MethodGet, "/captcha/image.png", "", nil)
+	assert.NotEqual(t, "image/png", header.Get("Content-Type"))
 }
 
 func TestUserSiteAltchaWorker(t *testing.T) {
@@ -182,6 +188,12 @@ func TestUserSiteAltchaWorker(t *testing.T) {
 	require.Equal(t, http.StatusOK, status)
 	assert.Equal(t, "text/javascript; charset=utf-8", header.Get("Content-Type"))
 	assert.Contains(t, string(body), "self.onmessage")
+
+	// The server with the image captcha does not serve altcha.
+	c := newClient(t)
+	c.baseURL = forcePrivateServerURL
+	_, header, _ = c.doRaw(http.MethodGet, "/-/altcha/challenge.json", "", nil)
+	assert.NotEqual(t, "application/json", header.Get("Content-Type"))
 }
 
 func TestUserSiteRedirect(t *testing.T) {
