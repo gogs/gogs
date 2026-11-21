@@ -144,8 +144,8 @@ func Serve(ctx context.Context, logger *logx.Logger, opts ServeOptions) error {
 				return serveError("Internal error", "Failed to get user by key ID '%d': %v", key.ID, err)
 			}
 			telemetry.SetUser(ctx, user.ID)
-			if user.IsDisabled() {
-				return serveError(accessDeniedMessage, "User '%s' is disabled", user.Name)
+			if user.IsDisabled() || user.IsOrganization() {
+				return serveError(accessDeniedMessage, "User '%s' is disabled or an organization", user.Name)
 			}
 
 			mode := database.Handle.Permissions().AccessMode(ctx, logger, user.ID, repo.ID,
@@ -180,8 +180,8 @@ func Serve(ctx context.Context, logger *logx.Logger, opts ServeOptions) error {
 				if err != nil {
 					return serveError("Internal error", "Failed to get user by key ID '%d': %v", key.ID, err)
 				}
-				if keyOwner.IsDisabled() {
-					return serveError(accessDeniedMessage, "User '%s' is disabled", keyOwner.Name)
+				if keyOwner.IsDisabled() || keyOwner.IsOrganization() {
+					return serveError(accessDeniedMessage, "User '%s' is disabled or an organization", keyOwner.Name)
 				}
 			}
 		}

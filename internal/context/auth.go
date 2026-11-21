@@ -154,7 +154,9 @@ func AuthenticatedUser(logger *logx.Logger, store AuthStore, r *http.Request, se
 		logger.Error("Failed to get user by ID", "userID", uid, "error", err)
 		return nil, false, 0
 	}
-	if tokenID > 0 && u.IsDisabled() {
+	// Organizations cannot sign in, even with a session or an access token
+	// created before that was enforced.
+	if u.IsOrganization() || (tokenID > 0 && u.IsDisabled()) {
 		return nil, false, 0
 	}
 	return u, false, tokenID
@@ -250,7 +252,7 @@ func isRequestFromTrustedProxy(req *http.Request) bool {
 
 // AuthenticateByToken attempts to authenticate a user by the given access
 // token. It returns database.ErrAccessTokenNotExist when the access token does not
-// exist.
+// exist or belongs to an organization, which cannot sign in.
 func AuthenticateByToken(ctx context.Context, logger *logx.Logger, store AuthStore, token string) (*database.User, error) {
 	t, err := store.GetAccessTokenBySHA1(ctx, token)
 	if err != nil {
@@ -264,6 +266,8 @@ func AuthenticateByToken(ctx context.Context, logger *logx.Logger, store AuthSto
 	user, err := store.GetUserByID(ctx, t.UserID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "get user by ID [user_id: %d]", t.UserID)
+	} else if user.IsOrganization() {
+		return nil, database.ErrAccessTokenNotExist{}
 	}
 	return user, nil
 }

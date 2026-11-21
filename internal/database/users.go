@@ -82,6 +82,11 @@ func (s *UsersStore) Authenticate(ctx context.Context, logger *logx.Logger, logi
 
 	// User found in the database.
 	if err == nil {
+		// Organizations cannot sign in.
+		if user.IsOrganization() {
+			return nil, auth.ErrBadCredentials{Args: map[string]any{"login": login, "userID": user.ID}}
+		}
+
 		// Note: This check is unnecessary but reduces user confusion at login page
 		// and makes it more consistent from user's perspective.
 		if loginSourceID >= 0 && user.LoginSource != loginSourceID {

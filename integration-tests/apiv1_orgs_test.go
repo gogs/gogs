@@ -220,3 +220,31 @@ func TestAPIV1Organizations(t *testing.T) {
 		assert.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
 	})
 }
+
+// TestOrganizationCannotSignIn covers credentials that an organization holds,
+// e.g., from before organizations were refused them.
+func TestOrganizationCannotSignIn(t *testing.T) {
+	t.Parallel()
+
+	var org apiV1Org
+	apiV1Client(t, seedUser(t, CreateUserOptions{})).doJSON(http.MethodPost, "/api/v1/user/orgs", map[string]any{"username": UniqueName("org-")}, http.StatusCreated, &org)
+	repo := seedRepository(t, org.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
+	password := "password"
+	require.NoError(t, database.Handle.Users().Update(t.Context(), org.ID, database.UpdateUserOptions{Password: &password}))
+	token, err := CreateAccessToken(t.Context(), org.ID)
+	require.NoError(t, err)
+
+	tokenClient := newClient(t)
+	tokenClient.header.Set("Authorization", "token "+token)
+	status, body := tokenClient.do(http.MethodGet, "/api/v1/user", nil)
+	assert.Equal(t, http.StatusUnauthorized, status, "access token, response: %s", body)
+	status, body = apiV1BasicClient(t, org.UserName, password).do(http.MethodGet, "/api/v1/users/"+org.UserName+"/tokens", nil)
+	assert.Equal(t, http.StatusUnauthorized, status, "password, response: %s", body)
+
+	for name, password := range map[string]string{"password": password, "access token": token} {
+		out, err := gitCommand(t.TempDir(), "ls-remote", gitRemoteURL(t, repo, org.UserName, password)).CombinedOutput()
+		assert.Error(t, err, "Git over HTTP with %s: %s", name, out)
+	}
+
+	sshUserKey(t, org.ID).cloneFails(t, repo)
+}
