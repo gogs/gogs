@@ -175,6 +175,13 @@ func (s *OrganizationsStore) ListByPage(ctx context.Context, page, pageSize int)
 // Delete deletes the organization, which must have no repositories, with its
 // teams and memberships.
 func (s *OrganizationsStore) Delete(ctx context.Context, org *Organization) error {
+	// A column with 0 means "none" in some tables, e.g., webhooks of
+	// repositories have org_id 0, so deleting by a non-positive ID would hit
+	// rows of no organization.
+	if org.ID <= 0 {
+		return errors.Newf("invalid organization ID %d", org.ID)
+	}
+
 	err := newUsersStore(s.db).DeleteByID(ctx, org.ID, false)
 	if err != nil {
 		return err

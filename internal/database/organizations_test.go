@@ -273,6 +273,15 @@ func organizationsDelete(t *testing.T, ctx context.Context, s *OrganizationsStor
 		assert.NotZero(t, countOf(table, kept.ID), "%T", table)
 	}
 	assert.False(t, s.IsMember(ctx, org.ID, owner.ID))
+
+	// Webhooks of repositories have org_id 0, so an organization without an ID
+	// must not delete them.
+	repoHook := &Webhook{RepoID: 1, URL: "https://example.com/hook"}
+	require.NoError(t, s.db.Create(repoHook).Error)
+	assert.Error(t, s.Delete(ctx, &Organization{}))
+	var count int64
+	require.NoError(t, s.db.Model(new(Webhook)).Where("id = ?", repoHook.ID).Count(&count).Error)
+	assert.Equal(t, int64(1), count, "webhook of repository")
 }
 
 func organizationsMembers(t *testing.T, ctx context.Context, s *OrganizationsStore) {
