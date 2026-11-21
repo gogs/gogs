@@ -134,9 +134,11 @@ func TestAPIV1Organizations(t *testing.T) {
 
 		var teams []apiV1Team
 		api.doJSON(http.MethodGet, "/api/v1/orgs/"+name+"/teams", nil, http.StatusOK, &teams)
-		require.Len(t, teams, 2)
-		assert.Equal(t, "Owners", teams[0].Name)
-		assert.Equal(t, "owner", teams[0].Permission)
+		permissions := map[string]string{}
+		for _, team := range teams {
+			permissions[team.Name] = team.Permission
+		}
+		assert.Equal(t, map[string]string{"Owners": "owner", "reviewers": "read"}, permissions, "owner")
 
 		assert.ElementsMatch(t, []string{"Owners", "reviewers"}, listTeams(admin), "site admin")
 		// Members other than owners only see their own teams.
