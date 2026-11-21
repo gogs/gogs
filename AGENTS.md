@@ -29,7 +29,9 @@ This applies to all texts, including but not limited to UI, documentation, code 
 
 ## Localization
 
-- Only edit `conf/locale/locale_en-US.ini`. The other `locale_*.ini` files are community-maintained translations. Do not add, remove, or rewrite keys in them, even when removing keys that are dead on the Go/template side.
+- `conf/locale/locale_en-US.ini` is the source of truth. Every other `locale_*.ini` file has exactly its keys, in the same order and layout.
+- When adding, changing, or removing a key in en-US, make the same change in every other locale file in the same change. Use an LLM to translate new and changed messages, reusing the terminology and form of address each file already has.
+- Placeholders are named, e.g., `{name}` filled by `l.Tr("key", "name", value)` in Go and `t("key", { name })` in the web app. Never use `%s`-style verbs. Every translation keeps the same placeholders and HTML tags as its en-US message, which `conf/locale_test.go` checks.
 
 ## UI guidelines
 

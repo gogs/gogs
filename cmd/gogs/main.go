@@ -45,7 +45,6 @@ func main() {
 			&servCommand,
 			&hookCommand,
 			&adminCommand,
-			&importCommand,
 			&backupCommand,
 			&restoreCommand,
 		},
