@@ -828,9 +828,11 @@ func (s *RepositoriesStore) Fork(ctx context.Context, logger *logx.Logger, doer,
 	}
 
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := newReposStore(tx).insert(ctx, doer, owner, repo); err != nil {
+		// A base repository is locked before anything else, the order deleting
+		// its forks locks it in, so the two cannot deadlock.
+		if err := tx.Exec("UPDATE repository SET num_forks = num_forks + 1 WHERE id = ?", baseRepo.ID).Error; err != nil {
 			return err
-		} else if err = tx.Exec("UPDATE repository SET num_forks = num_forks + 1 WHERE id = ?", baseRepo.ID).Error; err != nil {
+		} else if err = newReposStore(tx).insert(ctx, doer, owner, repo); err != nil {
 			return err
 		}
 

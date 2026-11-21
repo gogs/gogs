@@ -889,7 +889,7 @@ func TestReposLifecycle(t *testing.T) {
 		{"Rename", reposLifecycleRename},
 		{"Update", reposLifecycleUpdate},
 		{"Delete", reposLifecycleDelete},
-		{"DeleteWhileUpdating", reposLifecycleDeleteWhileUpdating},
+		{"ConcurrentForks", reposLifecycleConcurrentForks},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
@@ -1232,44 +1232,63 @@ func reposLifecycleDelete(t *testing.T, ctx context.Context, s *RepositoriesStor
 	assert.Zero(t, kept.NumForks)
 }
 
-func reposLifecycleDeleteWhileUpdating(t *testing.T, ctx context.Context, s *RepositoriesStore) {
+func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *RepositoriesStore) {
 	// SQLite lets only one transaction write, so the two cannot interleave.
 	if conf.UseSQLite3 {
 		t.Skip()
 	}
 	logger := logx.NewNoopLogger()
-	alice := newTestIssueUser(t, ctx, s.db, "dwu-alice")
-	bob := newTestIssueUser(t, ctx, s.db, "dwu-bob")
+	alice := newTestIssueUser(t, ctx, s.db, "cf-alice")
+	bob := newTestIssueUser(t, ctx, s.db, "cf-bob")
+	carol := newTestIssueUser(t, ctx, s.db, "cf-carol")
 
-	for _, deleteFork := range []bool{false, true} {
-		repo := newTestGitRepo(t, ctx, s, alice, CreateRepoOptionsLegacy{Name: fmt.Sprintf("base-%t", deleteFork)})
-		fork, err := s.Fork(ctx, logger, bob, bob, repo, repo.Name+"-fork", "")
+	for i, tc := range []struct {
+		name string
+		// held is locked until both first and second wait on it, first ahead.
+		held          func(base, fork *Repository) *Repository
+		first, second func(base, fork *Repository) error
+	}{
+		{
+			name:   "delete base while updating it",
+			held:   func(base, _ *Repository) *Repository { return base },
+			first:  func(base, _ *Repository) error { base.IsPrivate = true; return s.Update(ctx, logger, base, true) },
+			second: func(base, _ *Repository) error { return s.Delete(ctx, logger, base.OwnerID, base.ID) },
+		},
+		{
+			name:   "delete fork while updating base",
+			held:   func(base, _ *Repository) *Repository { return base },
+			first:  func(base, _ *Repository) error { base.IsPrivate = true; return s.Update(ctx, logger, base, true) },
+			second: func(_, fork *Repository) error { return s.Delete(ctx, logger, fork.OwnerID, fork.ID) },
+		},
+		{
+			name:  "fork base while deleting another fork",
+			held:  func(_, fork *Repository) *Repository { return fork },
+			first: func(_, fork *Repository) error { return s.Delete(ctx, logger, fork.OwnerID, fork.ID) },
+			second: func(base, _ *Repository) error {
+				_, err := s.Fork(ctx, logger, carol, carol, base, base.Name+"-fork", "")
+				return err
+			},
+		},
+	} {
+		base := newTestGitRepo(t, ctx, s, alice, CreateRepoOptionsLegacy{Name: fmt.Sprintf("base%d", i)})
+		fork, err := s.Fork(ctx, logger, bob, bob, base, base.Name+"-fork", "")
 		require.NoError(t, err)
-		deleted := repo
-		if deleteFork {
-			deleted = fork
-		}
 
-		// Hold the base repository row so that updating its visibility and
-		// deleting either repository both wait on it, the update first.
 		hold := s.db.Begin()
 		require.NoError(t, hold.Error)
 		defer hold.Rollback()
-		require.NoError(t, hold.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", repo.ID).Find(new(Repository)).Error)
+		require.NoError(t, hold.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", tc.held(base, fork).ID).Find(new(Repository)).Error)
 
 		var wg sync.WaitGroup
-		var updateErr, deleteErr error
-		wg.Go(func() {
-			repo.IsPrivate = true
-			updateErr = s.Update(ctx, logger, repo, true)
-		})
+		var firstErr, secondErr error
+		wg.Go(func() { firstErr = tc.first(base, fork) })
 		time.Sleep(500 * time.Millisecond)
-		wg.Go(func() { deleteErr = s.Delete(ctx, logger, deleted.OwnerID, deleted.ID) })
+		wg.Go(func() { secondErr = tc.second(base, fork) })
 		time.Sleep(500 * time.Millisecond)
 		require.NoError(t, hold.Rollback().Error)
 		wg.Wait()
 
-		assert.NoError(t, updateErr, "delete fork: %t", deleteFork)
-		assert.NoError(t, deleteErr, "delete fork: %t", deleteFork)
+		assert.NoError(t, firstErr, tc.name)
+		assert.NoError(t, secondErr, tc.name)
 	}
 }
