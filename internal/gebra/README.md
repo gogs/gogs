@@ -98,34 +98,47 @@ Until the flip, queries that name no model use the old model from its view, and 
 
 ## Performance
 
-Gebra is benchmarked against OpenFGA through each server's HTTP API, with the same dataset, the same request stream at the same arrival rates, and the same correctness check. On a store of 100,000 repos, Gebra holds 5,000 requests/s with 0 violations, at least twice OpenFGA's rate, and at 2,500 requests/s its check p99 is 2.4 ms against 3.6 s for OpenFGA.
+Gebra is benchmarked against OpenFGA through each server's HTTP API, with the same dataset, the same request stream at the same arrival rates, and the same correctness check. On a store of 100,000 repos, Gebra holds 5,000 requests/s with 0 violations, twice OpenFGA's rate. At 2,500 requests/s its check p99 is 2.5 ms against 634 ms for OpenFGA.
 
 ### Dataset and traffic
 
-- **Dataset**: one store with 100,000 repos, 3,000 users, 1,000 teams and 500 orgs, which is 389,897 tuples. The model is GitHub-like: org owners and members, nested teams, repo admins, writers and readers, public repos (`user:*`) and blocked users (`can_read: reader but not blocked`). Gebra's view holds 309,508 member, 280,901 edge and 801,002 reach rows.
+- **Dataset**: one store with 100,000 repos, 3,000 users, 1,000 teams and 500 orgs, which is 389,897 tuples. The model is GitHub-like: org owners and members, nested teams, repo admins, writers and readers, public repos (`user:*`) and blocked users (`can_read: reader but not blocked`). Gebra's view holds 308,997 member, 280,900 edge and 801,001 reach rows.
 - **Traffic**: requests arrive at random (Poisson) times at a fixed rate, and latency counts from when a request was due, so time spent queued counts too. Users, repos and orgs are picked with a Zipf distribution.
   - 92% are checks.
   - 7% list a page of 50 repos a user reads. Lists may be stale, since opening a repo from a list issues a check.
   - 1% start a change session: a permission change (a collaborator, a team member, a team grant, a block, 100 collaborators at once, or a team added to an org), then, after a think time, a check with the write's token that must see the change, two more checks with the token, and sometimes a list. A check that misses its own write counts as a violation.
-- **Rates**: 2,500, 5,000, 7,500, 10,000, 15,000, 20,000 and 30,000 requests/s, for 20 s each after a 5 s warmup, stopping after the first rate at which a p99 exceeds 1 s or the server falls behind the offered rate.
+- **Rates**: 500, 1,000, 1,500, 2,000, 2,500, 5,000, 7,500, 10,000, 15,000, 20,000 and 30,000 requests/s, for 60 s each after a 10 s warmup, stopping after the first rate at which a p99 exceeds 1 s or the server falls behind the offered rate.
+- **Clean state**: each server starts from a fresh database with exactly the dataset's tuples, and Postgres is restarted before each server's run.
+- **Cross-check**: before its run, OpenFGA's answers are compared with a freshly loaded Gebra's on 300 checks and 300 lists, both in full and capped at 50. All 600 agree.
 
 ### Results
 
-p50 / p99 in milliseconds, and requests completed per second.
+p50 / p99 in milliseconds, requests completed per second, and the CPU cores Postgres used.
 
-| Server | Rate/s | Completed/s | Check | Token check | List | Write | Violations | Errors |
-|---|---|---|---|---|---|---|---|---|
-| Gebra | 2,500 | 2,503 | **1.1 / 2.4** | **1.1 / 16.3** | 21.2 / 32.1 | **2.1 / 5.3** | 0 | 0 |
-| OpenFGA | 2,500 | 2,502 | 2,082 / 3,638 | 275 / 973 | 1,982 / 3,463 | 363 / 3,419 | 0 | 0 |
-| Gebra | 5,000 | 5,010 | 1.1 / 29.1 | 1.2 / 38.2 | 24.5 / 108.6 | 2.7 / 49.4 | 0 | 0 |
-| Gebra | 7,500 | 4,162 | saturated | saturated | saturated | saturated | 0 | 1,387 timeouts |
+| Server | Rate/s | Completed/s | Check | Token check | List | Write | Violations | Errors | Postgres cores |
+|---|---|---|---|---|---|---|---|---|---|
+| Gebra | 500 | 501 | **1.5 / 2.6** | 1.1 / 16.5 | 22.4 / 33.7 | **2.6 / 5.4** | 0 | 0 | 0.9 |
+| OpenFGA | 500 | 501 | 2.6 / 10.9 | **1.7 / 3.4** | **3.1 / 15.6** | 3.4 / 12.2 | 0 | 0 | 0.6 |
+| Gebra | 1,000 | 1,009 | **1.3 / 2.5** | **1.1 / 15.8** | **20.6 / 33.5** | **2.4 / 4.9** | 0 | 0 | 1.8 |
+| OpenFGA | 1,000 | 1,009 | 2.4 / 61.8 | 1.6 / 33.4 | 3.0 / 69.7 | 3.0 / 42.3 | 0 | 0 | 1.0 |
+| Gebra | 1,500 | 1,500 | **1.2 / 2.4** | **1.0 / 13.8** | **19.9 / 33.3** | **2.2 / 4.4** | 0 | 0 | 2.6 |
+| OpenFGA | 1,500 | 1,500 | 3.0 / 355 | 2.1 / 234 | 5.4 / 256 | 3.4 / 215 | 0 | 0 | 1.3 |
+| Gebra | 2,000 | 2,000 | **1.1 / 2.6** | **1.0 / 14.9** | **21.6 / 34.2** | **2.3 / 4.8** | 0 | 0 | 3.5 |
+| OpenFGA | 2,000 | 2,000 | 28.7 / 655 | 9.5 / 492 | 19.9 / 515 | 16.6 / 451 | 0 | 0 | 1.4 |
+| Gebra | 2,500 | 2,503 | **1.0 / 2.5** | **1.0 / 14.7** | **23.0 / 32.8** | **2.3 / 4.9** | 0 | 0 | 4.5 |
+| OpenFGA | 2,500 | 2,503 | 70.5 / 634 | 36.8 / 523 | 49.6 / 493 | 43.2 / 481 | 0 | 1 | 1.6 |
+| Gebra | 5,000 | 5,008 | **1.0 / 15.1** | **1.4 / 21.0** | **24.7 / 66.6** | **2.6 / 29.0** | 0 | 0 | 8.7 |
+| OpenFGA | 5,000 | 4,586 | saturated | saturated | saturated | saturated | 0 | 0 | 2.0 |
+| Gebra | 7,500 | 3,150 | saturated | saturated | saturated | saturated | 0 | 1,310 timeouts | 11.0 |
 
-| Server | Highest rate held | Checks and token checks within 20 ms p99 | Bottleneck |
-|---|---|---|---|
-| Gebra | **5,000/s** | **2,500/s** | Postgres CPU: 3.9 cores at 2,500/s, 7.7 at 5,000/s |
-| OpenFGA | below 2,500/s | below 2,500/s | OpenFGA's own CPU: Postgres used 1.6 cores while the machine used 13.1 of 16 |
+| Server | Highest rate held | Checks within 20 ms p99 | Token checks within 20 ms p99 | Bottleneck |
+|---|---|---|---|---|
+| Gebra | **5,000/s** | **up to 5,000/s** | **up to 2,500/s** | Postgres CPU: 4.5 cores of the machine's 6.4 at 2,500/s, 11 at 7,500/s |
+| OpenFGA | 2,500/s | up to 500/s | up to 500/s | OpenFGA's own CPU: the machine used 10.8 cores at 2,500/s, Postgres only 1.6 |
 
-Loading took 2 min 22 s for Gebra, with `COPY` and its view build, and 1 min 3 s for OpenFGA through its Write API.
+OpenFGA's one error at 2,500/s was `400 cancelled: Request Cancelled`. At 5,000/s it queued for up to 30 s, and Gebra at 7,500/s for over a minute, until requests hit the 10 s client timeout.
+
+Loading took 2 min 19 s for Gebra, with `COPY` and its view build, and 11 s for OpenFGA through its Write API, including the vacuum.
 
 ### Configuration
 
@@ -157,7 +170,7 @@ What differs between the two:
 - **Token checks**: Gebra passes the write's revision as `min_revision`. OpenFGA has no revision tokens, so it gets `HIGHER_CONSISTENCY`.
 - **Lists**: Gebra returns a page of 50 sorted results. OpenFGA returns the first 50 it finds, unsorted, which favors OpenFGA.
 - **Loading**: Gebra loads with `COPY` and builds its view. OpenFGA loads through its Write API. Neither is measured.
-- **Rounds**: one round of each, with 20 s steps, so the tails at the edge rates are noisy.
+- **Rounds**: one round of each.
 
 ## Correctness
 
