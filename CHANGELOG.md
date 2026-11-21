@@ -57,7 +57,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Fixed
 
-- Listing the teams of an organization through the API requires being a member of the organization or a site admin. [#8697](https://github.com/gogs/gogs/pull/8697)
+- Listing the teams of an organization through the API requires being a member of the organization or a site admin, and returns 404 to others. [#8697](https://github.com/gogs/gogs/pull/8697)
 - Organization endpoints of the API return 404 for the name of a user instead of treating the user as an organization, e.g., site admins can no longer create a team in a user account. [#8697](https://github.com/gogs/gogs/pull/8697)
 - Listing the repositories of another user or an organization through the API no longer reports admin, push and pull permissions on every repository. [#8667](https://github.com/gogs/gogs/pull/8667)
 - Commenting on, closing, or reopening an issue, including with `fixes #N` in a pushed commit, no longer hangs the server when using SQLite with email notifications enabled. [#8395](https://github.com/gogs/gogs/pull/8395)

@@ -116,7 +116,7 @@ func TestAPIV1Organizations(t *testing.T) {
 		assert.Equal(t, "owner", teams[0].Permission)
 
 		status, body := other.do(http.MethodGet, "/api/v1/orgs/"+name+"/teams", nil)
-		assert.Equal(t, http.StatusForbidden, status, "listed by a non-member, response: %s", body)
+		assert.Equal(t, http.StatusNotFound, status, "listed by a non-member, response: %s", body)
 
 		admin := apiV1Client(t, seedUser(t, CreateUserOptions{Admin: true}))
 		teams = nil
