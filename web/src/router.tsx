@@ -25,6 +25,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { leaveAdmin } from "@/lib/admin-exit";
 import { webContext } from "@/lib/context";
 import { LoaderResponseError, authenticationRedirect } from "@/lib/loader-error";
+import { useTheme } from "@/lib/theme-context";
 import { useUserInfo } from "@/lib/use-user-info";
 import type { UserInfo } from "@/lib/user-info";
 import { NotFound } from "@/pages/NotFound";
@@ -207,6 +208,14 @@ const diffHighlighterOptions = (() => {
   return { preferredHighlighter: "shiki-js" as const };
 })();
 
+// Toasts follow the theme of the page. They read it in a component of their
+// own, since AppRouter makes the router, and would make another one, and mount
+// the page again, whenever the theme changed.
+function Toasts() {
+  const { theme } = useTheme();
+  return <Toaster position="bottom-right" theme={theme} closeButton richColors />;
+}
+
 export function AppRouter({ user }: { user: UserInfo | null }) {
   const router = makeRouter({ user, queryClient });
   return (
@@ -214,7 +223,7 @@ export function AppRouter({ user }: { user: UserInfo | null }) {
       <WorkerPoolContextProvider poolOptions={diffWorkerPoolOptions} highlighterOptions={diffHighlighterOptions}>
         <TooltipProvider delayDuration={300}>
           <RouterProvider router={router} />
-          <Toaster position="bottom-right" closeButton richColors />
+          <Toasts />
         </TooltipProvider>
       </WorkerPoolContextProvider>
     </QueryClientProvider>
