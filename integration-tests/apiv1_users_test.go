@@ -246,6 +246,13 @@ func TestAPIV1Following(t *testing.T) {
 
 	assertStatus(newClient(t), http.MethodGet, "/api/v1/users/"+followee.Name+"/followers", http.StatusUnauthorized)
 	assertStatus(followerAPI, http.MethodPut, "/api/v1/user/following/"+UniqueName("nobody-"), http.StatusNotFound)
+
+	// Organizations cannot be followed.
+	orgName := UniqueName("org-")
+	followerAPI.doJSON(http.MethodPost, "/api/v1/user/orgs", map[string]any{"username": orgName}, http.StatusCreated, &apiV1Org{})
+	assertStatus(followerAPI, http.MethodPut, "/api/v1/user/following/"+orgName, http.StatusNotFound)
+	assert.Empty(t, listNames(followerAPI, "/api/v1/user/following"))
+	assertStatus(followerAPI, http.MethodDelete, "/api/v1/user/following/"+orgName, http.StatusNotFound)
 }
 
 type apiV1PublicKeyResp struct {
