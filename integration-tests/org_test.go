@@ -598,6 +598,68 @@ func TestOrgCollaboratorAccess(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 }
 
+// A member's access through a team follows the team's permission, and is
+// revoked when the repository leaves the team or the organization, or when the
+// team is deleted.
+func TestOrgTeamAccess(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	member := seedUser(t, CreateUserOptions{})
+	org := orgSeed(t, owner.ID)
+	repo := seedRepository(t, org.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
+	ownerClient := authenticatedClient(t, owner)
+	memberClient := authenticatedClient(t, member)
+	orgPath := "/api/web/orgs/" + org.Name
+	orgAddMember(t, org, member.ID)
+
+	accessMode := func(ownerID int64) database.AccessMode {
+		return database.Handle.Permissions().AccessMode(t.Context(), logger, member.ID, repo.ID, database.AccessModeOptions{OwnerID: ownerID, Private: true})
+	}
+	addTeam := func(permission string) string {
+		t.Helper()
+		var team struct {
+			LowerName string `json:"lowerName"`
+		}
+		ownerClient.doJSON(http.MethodPost, orgPath+"/teams", map[string]any{"teamName": UniqueName("Team-"), "permission": permission}, http.StatusCreated, &team)
+		teamPath := orgPath + "/teams/" + team.LowerName
+		for _, path := range []string{"/members/" + member.Name, "/repos/" + repo.Name} {
+			status, body := ownerClient.do(http.MethodPut, teamPath+path, orgNoBody)
+			require.Equal(t, http.StatusNoContent, status, "PUT %s, response: %s", path, body)
+		}
+		return teamPath
+	}
+
+	teamPath := addTeam("write")
+	require.Equal(t, database.AccessModeWrite, accessMode(org.ID))
+
+	var updated struct {
+		LowerName string `json:"lowerName"`
+	}
+	ownerClient.doJSON(http.MethodPatch, teamPath, map[string]any{"teamName": UniqueName("Team-"), "permission": "read"}, http.StatusOK, &updated)
+	teamPath = orgPath + "/teams/" + updated.LowerName
+	assert.Equal(t, database.AccessModeRead, accessMode(org.ID), "downgraded team")
+
+	status, body := ownerClient.do(http.MethodDelete, teamPath+"/repos/"+repo.Name, orgNoBody)
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	assert.Equal(t, database.AccessModeNone, accessMode(org.ID), "repository removed from the team")
+
+	status, body = ownerClient.do(http.MethodPut, teamPath+"/repos/"+repo.Name, orgNoBody)
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	require.Equal(t, database.AccessModeRead, accessMode(org.ID))
+	status, body = ownerClient.do(http.MethodDelete, teamPath, orgNoBody)
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	assert.Equal(t, database.AccessModeNone, accessMode(org.ID), "team deleted")
+
+	addTeam("admin")
+	require.Equal(t, database.AccessModeAdmin, accessMode(org.ID))
+	status, body = ownerClient.do(http.MethodPost, repoSettingsAPIPath(repo, "/settings/transfer"), map[string]any{"repoName": repo.Name, "newOwner": owner.Name})
+	require.Equal(t, http.StatusOK, status, "response: %s", body)
+	assert.Equal(t, database.AccessModeNone, accessMode(owner.ID), "repository transferred out of the organization")
+	status, body = memberClient.do(http.MethodGet, issueAPIPath(&Repository{ID: repo.ID, Owner: owner.Name, Name: repo.Name}, "issues"), nil)
+	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
+}
+
 func TestOrgTeams(t *testing.T) {
 	t.Parallel()
 
