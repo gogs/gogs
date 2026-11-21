@@ -68,9 +68,9 @@ flowchart TD
   tok -->|yes| met{Can a pending write change the answer?}
   met -->|no| view[Answer from the view]
   met -->|yes, list| partial[Re-check only the affected objects]
-  met -->|yes, check| graph[Evaluate the graph]
+  met -->|yes, check| evaluate[Evaluate the graph]
   stale -->|no| view
-  stale -->|yes| graph
+  stale -->|yes| evaluate
 ```
 
 - A default check is one statement: the compiled condition on the view, which also verifies the serving generation and that the store exists.
