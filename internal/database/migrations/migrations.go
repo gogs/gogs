@@ -52,10 +52,10 @@ func newMigrations(logger *logx.Logger, db *gorm.DB) []*goose.Migration {
 		newMigration(logger, db, 20261117073704, "drop protect_branch_whitelist table", dropProtectBranchWhitelistTable),
 		newMigration(logger, db, 20261118160000, "disable push allowlists of protected branches of user repositories", DisableProtectBranchAllowlistOfUserRepositories),
 		newMigration(logger, db, 20261118175404, "add unique index on public_key.owner_id and public_key.fingerprint", addPublicKeyOwnerIDFingerprintUniqueIndex),
-		newMigration(logger, db, 20261118192620, "add missing index on access_token.uid", addMissingAccessTokenUIDIndex),
 		newMigration(logger, db, 20261120033000, "drop user.avatar and user.avatar_email", dropUserAvatarAndAvatarEmail),
 		newMigration(logger, db, 20261121213349, "add index on issue_user.issue_id", addIssueUserIssueIDIndex),
 		newMigration(logger, db, 20261121220000, "add indexes on access.repo_id, watch.repo_id and pull_request.base_repo_id", addRepoIDIndexes),
+		newMigration(logger, db, 20261122192042, "add missing index on access_token.uid", addMissingAccessTokenUIDIndex),
 	}
 }
 

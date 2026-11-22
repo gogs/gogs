@@ -87,6 +87,12 @@ func TestMigrateScenarios(t *testing.T) {
 				assert.NotContains(t, tables, "protect_branch_whitelist")
 				assert.True(t, db.Migrator().HasIndex("attachment", "UQE_attachment_uuid"))
 				assert.True(t, db.Migrator().HasIndex("public_key", ownerFingerprintIndex))
+				assert.True(t, db.Migrator().HasIndex("issue_user", issueUserIssueIDIndex))
+				for _, idx := range repoIDIndexes {
+					assert.True(t, db.Migrator().HasIndex(idx.table, idx.name), idx.name)
+				}
+				assert.False(t, db.Migrator().HasColumn("user", "avatar"))
+				assert.False(t, db.Migrator().HasColumn("user", "avatar_email"))
 			},
 		},
 		{
@@ -278,7 +284,7 @@ func TestMigrateScenarios(t *testing.T) {
 			// that the edge image has upgraded since.
 			name:   "main tracked by goose, upgraded from Gogs 0.12",
 			legacy: 19,
-			from:   20261117073704,
+			from:   20261121220000,
 		},
 	}
 	for i, s := range scenarios {
