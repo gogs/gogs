@@ -650,6 +650,16 @@ func TestRepoCodeRawEntryKinds(t *testing.T) {
 			}
 		})
 	}
+
+	// The code browser and the API contents look up paths the same way, and
+	// a path through a submodule must not reach a file of the commit it
+	// points to.
+	for _, path := range []string{"linked/a.txt", "docs/a.txt/b", "sub/README.md"} {
+		status, _, body := anonymous.doRaw(http.MethodGet, repoCodeAPI(repo)+"/src/main/"+path, "", nil)
+		assert.Equal(t, http.StatusNotFound, status, "code browser, path %q, response: %s", path, body)
+		status, _, body = api.doRaw(http.MethodGet, apiV1RepoPath(repo, "/contents/"+path+"?ref=main"), "", nil)
+		assert.Equal(t, http.StatusNotFound, status, "API contents, path %q, response: %s", path, body)
+	}
 }
 
 func TestRepoCodeEditor(t *testing.T) {
