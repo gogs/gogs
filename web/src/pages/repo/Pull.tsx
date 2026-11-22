@@ -280,9 +280,13 @@ function MergeBox({ issueRef, data }: { issueRef: IssueRef; data: RepoPullData }
   }
 
   return (
-    <section aria-label={t("repo.pulls.merge_pull_request")} className="flex gap-3">
-      <span className={cn("hidden size-10 shrink-0 items-center justify-center rounded-full sm:flex", tint)}>
-        <Icon className={cn("size-5", iconClassName)} aria-hidden />
+    <section aria-label={t("repo.pulls.merge_pull_request")} className="flex gap-2">
+      {/* Sized and placed like the icons of the timeline events above it, while
+          the box lines up with the comments. */}
+      <span className={cn("ml-3 hidden size-8 shrink-0 items-center justify-center rounded-full sm:flex", tint)}>
+        {/* The merge glyph fills its tinted circle more than the circle icons
+            do, so it is smaller to look the same size. */}
+        <Icon className={cn(pull.state === "merged" ? "size-4.5" : "size-5.5", iconClassName)} aria-hidden />
       </span>
       <div className="min-w-0 flex-1 glass rounded-md border border-(--color-border)">
         <div className="flex items-start gap-2 px-4 py-3 text-sm">

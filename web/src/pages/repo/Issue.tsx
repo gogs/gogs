@@ -581,7 +581,9 @@ function TimelineEvent({ comment }: { comment: IssueComment }) {
       )}
     >
       <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-(--color-surface)">
-        <Icon className={cn("size-4", event.className)} aria-hidden />
+        {/* Lucide draws its circle 2px inside the box, so this renders the
+            circle at the avatar's size. */}
+        <Icon className={cn("size-5.5", event.className)} aria-hidden />
       </span>
       <div className="min-w-0 flex-1 py-1.5">
         <p className="text-(--color-muted-foreground) wrap-anywhere">
