@@ -1,3 +1,7 @@
+import { queryOptions } from "@tanstack/react-query";
+import { t } from "i18next";
+
+import { LoaderResponseError } from "@/lib/loader-error";
 import { fetchJSON, send, submit } from "@/lib/queries/request";
 import { subUrl } from "@/lib/url";
 
@@ -7,6 +11,53 @@ function adminURL(path: string, search: { q?: string; page?: number } = {}) {
   if (search.page) query.set("page", String(search.page));
   const qs = query.toString();
   return subUrl(`/api/web/admin${path}`) + (qs ? `?${qs}` : "");
+}
+
+// QUERY_TIMEOUT_MS is how long a query waits for its answer. The Refresh button
+// of a page takes no click until the answer is there, so a server that never
+// answers would hold it for good.
+const QUERY_TIMEOUT_MS = 60_000;
+
+// QueryTimeoutError is the error of a query the server did not answer in time.
+export class QueryTimeoutError extends Error {
+  constructor() {
+    super(t("admin.timed_out", { seconds: QUERY_TIMEOUT_MS / 1000 }));
+    this.name = "QueryTimeoutError";
+  }
+}
+
+// inTime gives a request QUERY_TIMEOUT_MS to answer and fails it with a
+// QueryTimeoutError after that. `cancelled` is the signal of a caller that may
+// give the request up before.
+async function inTime<T>(load: (signal: AbortSignal) => Promise<T>, cancelled?: AbortSignal): Promise<T> {
+  const request = new AbortController();
+  const cancel = () => request.abort(cancelled?.reason);
+  cancelled?.addEventListener("abort", cancel, { once: true });
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    request.abort();
+  }, QUERY_TIMEOUT_MS);
+  try {
+    return await load(request.signal);
+  } catch (err) {
+    // What a request that was given up fails with differs between browsers.
+    if (timedOut) throw new QueryTimeoutError();
+    throw err;
+  } finally {
+    clearTimeout(timer);
+    cancelled?.removeEventListener("abort", cancel);
+  }
+}
+
+// Cards of the admin console fetch what they show with these queries, so a
+// slow or failed request holds back only the cards that read it. A failed
+// query is tried once more, unless the server turned the request away, which
+// trying again does not change, or did not answer in time, which would double
+// the wait.
+function retryOnce(failures: number, err: Error) {
+  if (err instanceof QueryTimeoutError) return false;
+  return failures < 1 && !(err instanceof LoaderResponseError && err.status < 500);
 }
 
 // AdminList is one page of a list in the admin panel.
@@ -76,8 +127,16 @@ export interface AdminNotice {
   createdAt: string;
 }
 
-export function fetchAdminNotices(search: { page?: number }) {
-  return fetchJSON<AdminList<AdminNotice>>(adminURL("/notices", search));
+export function fetchAdminNotices(search: { page?: number }, signal?: AbortSignal) {
+  return fetchJSON<AdminList<AdminNotice>>(adminURL("/notices", search), signal);
+}
+
+export function adminNoticesQuery(search: { page?: number }) {
+  return queryOptions({
+    queryKey: ["admin", "notices", search.page ?? 1] as const,
+    queryFn: () => inTime((signal) => fetchAdminNotices(search, signal)),
+    retry: retryOnce,
+  });
 }
 
 export function deleteAdminNotices(ids: number[]) {
@@ -156,7 +215,7 @@ export function deleteAdminUser(id: number) {
 export interface AdminReportRow {
   label: string;
   // "block" is multi-line code, and "unset" a setting with no value.
-  kind: "text" | "code" | "block" | "bool" | "unset";
+  kind: "code" | "block" | "bool" | "unset";
   value?: string;
   on?: boolean;
   // Text that follows a "code" value, e.g., seconds.
@@ -172,19 +231,58 @@ export interface AdminReportSection {
   groups: AdminReportRow[][];
 }
 
+export type AdminStatisticKey =
+  | "users"
+  | "organizations"
+  | "social_accounts"
+  | "follows"
+  | "teams"
+  | "repositories"
+  | "watches"
+  | "stars"
+  | "accesses"
+  | "mirrors"
+  | "releases"
+  | "actions"
+  | "issues"
+  | "comments"
+  | "milestones"
+  | "labels"
+  | "attachments"
+  | "public_keys"
+  | "login_sources"
+  | "webhooks"
+  | "hook_tasks"
+  | "update_tasks";
+
+export interface AdminStatistic {
+  key: AdminStatisticKey;
+  label: string;
+  count: number;
+}
+
 export interface AdminDashboard {
   appVersion: string;
   gitVersion: string;
   goVersion: string;
   buildTime: string;
   buildCommit: string;
-  // A translated sentence that marks each count with <b>.
-  statistics: string;
+  // When the server started.
+  startedAt: string;
+  // How long the server has run, by its own clock.
+  uptimeSeconds: number;
+  // How many records of each kind the database holds, in groups of related
+  // kinds, with translated titles and labels.
+  statistics: { title: string; items: AdminStatistic[] }[];
   systemStatus: AdminReportSection;
 }
 
-export function fetchAdminDashboard() {
-  return fetchJSON<AdminDashboard>(adminURL("/dashboard"));
+export function adminDashboardQuery() {
+  return queryOptions({
+    queryKey: ["admin", "dashboard"] as const,
+    queryFn: ({ signal }) => inTime((limited) => fetchJSON<AdminDashboard>(adminURL("/dashboard"), limited), signal),
+    retry: retryOnce,
+  });
 }
 
 export const ADMIN_OPERATIONS = [
@@ -397,8 +495,16 @@ export interface AdminTraceOverview {
   operations: AdminTraceOperationStat[];
 }
 
-export function fetchAdminTraceOverview(range: AdminTraceRange) {
-  return fetchJSON<AdminTraceOverview>(subUrl(`/api/web/admin/traces/overview?range=${range}`));
+export function fetchAdminTraceOverview(range: AdminTraceRange, signal?: AbortSignal) {
+  return fetchJSON<AdminTraceOverview>(subUrl(`/api/web/admin/traces/overview?range=${range}`), signal);
+}
+
+export function adminTraceOverviewQuery(range: AdminTraceRange) {
+  return queryOptions({
+    queryKey: ["admin", "traces", "overview", range] as const,
+    queryFn: () => inTime((signal) => fetchAdminTraceOverview(range, signal)),
+    retry: retryOnce,
+  });
 }
 
 // AdminTraceKept tells why a trace was kept: it failed, it was slow, or it was
@@ -456,7 +562,7 @@ export interface AdminTraceSearch {
   slowThresholdMs: number;
 }
 
-export function fetchAdminTraceSearch(params: AdminTraceSearchParams) {
+export function fetchAdminTraceSearch(params: AdminTraceSearchParams, signal?: AbortSignal) {
   const query = new URLSearchParams();
   if (params.q) query.set("q", params.q);
   if (params.route) query.set("route", params.route);
@@ -466,7 +572,15 @@ export function fetchAdminTraceSearch(params: AdminTraceSearchParams) {
   if (params.from) query.set("from", String(params.from));
   if (params.to) query.set("to", String(params.to));
   const qs = query.toString();
-  return fetchJSON<AdminTraceSearch>(subUrl("/api/web/admin/traces") + (qs ? `?${qs}` : ""));
+  return fetchJSON<AdminTraceSearch>(subUrl("/api/web/admin/traces") + (qs ? `?${qs}` : ""), signal);
+}
+
+export function adminTraceSearchQuery(params: AdminTraceSearchParams) {
+  return queryOptions({
+    queryKey: ["admin", "traces", "search", params] as const,
+    queryFn: () => inTime((signal) => fetchAdminTraceSearch(params, signal)),
+    retry: retryOnce,
+  });
 }
 
 export interface AdminSpan {
@@ -501,19 +615,50 @@ export function fetchAdminTrace(id: string) {
 
 export type AdminHealthRange = "1h" | "24h";
 
-// AdminHealthKey names a measurement of the server. Units: requests per second,
-// milliseconds for p95 and GC pauses, bytes for the heap, and counts for the
-// rest.
+// AdminHealthKey names a measurement of the server. Units: milliseconds for
+// latencies, pauses, waits and the time per request, bytes for memory and
+// disks, bytes per second for the allocation rate, percent for CPU, requests
+// per second, the other rates per minute, and counts for the rest.
 export type AdminHealthKey =
   | "requests"
+  | "failedRequests"
+  | "p50"
   | "p95"
+  | "p99"
+  | "dbTime"
+  | "gitTime"
+  | "otherTime"
+  | "cpu"
+  | "residentMemory"
+  | "threads"
+  | "openFiles"
   | "heap"
+  | "goMemory"
+  | "allocRate"
   | "goroutines"
   | "gcPause"
+  | "gcCycles"
+  | "gcCPU"
+  | "schedLatency"
   | "dbConnections"
+  | "dbIdleConnections"
+  | "dbWaits"
+  | "dbWaitTime"
   | "gitProcesses"
-  | "openFiles"
-  | "mirrorQueue";
+  | "codeSearches"
+  | "sshConnections"
+  | "mirrorQueue"
+  | "hookQueue"
+  | "failedHookDeliveries"
+  | "pullRequestQueue"
+  | "mailQueue"
+  | "notices"
+  | "diskRepositories"
+  | "diskData"
+  | "diskLFS"
+  | "traceMemory"
+  | "traceMemorySampled"
+  | "droppedSpans";
 
 export interface AdminHealthSeries {
   key: AdminHealthKey;
@@ -531,11 +676,20 @@ export interface AdminHealth {
   stepSeconds: number;
   start: string;
   end: string;
-  // Measurements the server cannot take, e.g., open files outside Linux, or
-  // requests while tracing is off, are left out.
+  // Measurements the server cannot take, e.g., of the process outside Linux,
+  // requests while tracing is off, or the mail queue while email is off, are
+  // left out.
   series: AdminHealthSeries[];
 }
 
-export function fetchAdminHealth(range: AdminHealthRange) {
-  return fetchJSON<AdminHealth>(subUrl(`/api/web/admin/health?range=${range}`));
+export function fetchAdminHealth(range: AdminHealthRange, signal?: AbortSignal) {
+  return fetchJSON<AdminHealth>(subUrl(`/api/web/admin/health?range=${range}`), signal);
+}
+
+export function adminHealthQuery(range: AdminHealthRange) {
+  return queryOptions({
+    queryKey: ["admin", "health", range] as const,
+    queryFn: () => inTime((signal) => fetchAdminHealth(range, signal)),
+    retry: retryOnce,
+  });
 }

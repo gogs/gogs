@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
-import { toast } from "sonner";
 
 import { userProfileQuery } from "@/lib/queries/user";
+import { toastError } from "@/lib/toast-error";
 
 // useOrgChange runs a change to the members or teams of an organization, then
 // reloads the page and the organization's counts, unless onSuccess takes the
@@ -21,6 +21,6 @@ export function useOrgChange(org: string, change: () => Promise<void>, onSuccess
       await queryClient.invalidateQueries({ queryKey: userProfileQuery(org).queryKey });
       await router.invalidate();
     },
-    onError: (err) => toast.error(err.message),
+    onError: (err) => toastError(err),
   });
 }

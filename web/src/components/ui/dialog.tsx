@@ -11,7 +11,12 @@ const DialogClose = DialogPrimitive.Close;
 // DialogContent is a bottom sheet below sm, where the actions stay within
 // reach of a thumb, and a centered dialog from sm up. Its body scrolls and its
 // header and footer stay in view, however tall the content grows.
-function DialogContent({ className, children, ...props }: React.ComponentProps<typeof DialogPrimitive.Content>) {
+function DialogContent({
+  className,
+  children,
+  onInteractOutside,
+  ...props
+}: React.ComponentProps<typeof DialogPrimitive.Content>) {
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/40 glass-ui:backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
@@ -23,6 +28,12 @@ function DialogContent({ className, children, ...props }: React.ComponentProps<t
           "sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95",
           className,
         )}
+        // A toast shows above the dialog and takes the pointer there (see index.css). Using it,
+        // e.g., to close it, is not a way to leave the dialog.
+        onInteractOutside={(e) => {
+          if ((e.target as Element | null)?.closest("[data-sonner-toaster]")) e.preventDefault();
+          onInteractOutside?.(e);
+        }}
         {...props}
       >
         {children}

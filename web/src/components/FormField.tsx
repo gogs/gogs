@@ -43,7 +43,7 @@ export function FormField({
 }
 
 // FormAlert shows the message for a whole form above its fields.
-export function FormAlert({ message }: { message: string | null }) {
+export function FormAlert({ message }: { message: ReactNode }) {
   if (!message) return null;
   return (
     <div

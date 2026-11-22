@@ -71,8 +71,8 @@ func Init(ctx context.Context, logger *logx.Logger, processors ...sdktrace.SpanP
 	}
 	provider := sdktrace.NewTracerProvider(opts...)
 	otel.SetTracerProvider(provider)
-	// Requests that Git hooks make to Gogs carry the trace they belong to, and the
-	// web server continues the trace of any request that carries one.
+	// The web server reads the trace that a request carries to link the trace of
+	// the request to it.
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 
 	return func(timeout time.Duration) {

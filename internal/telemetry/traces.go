@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -25,6 +26,7 @@ const (
 	maxSpansPerTrace     = 1000
 	maxAttributes        = 32
 	maxValueBytes        = 1024
+	maxNameBytes         = 256
 	maxRoutes            = 500
 	maxOperations        = 1000
 	// slowForRouteWindow and slowForRouteMinRequests decide when a request is
@@ -185,8 +187,17 @@ type Store struct {
 	operations     map[string]*operationSeries
 	samples        map[string]sampleCount
 	// interval collects the requests since the last call to TakeInterval.
-	interval      histogram
+	interval      intervalStats
 	intervalStart time.Time
+}
+
+type intervalStats struct {
+	hist   histogram
+	errors int
+	// db, git and other are the time the requests spent in spans of each kind,
+	// without the spans those started.
+	db, git, other time.Duration
+	droppedSpans   int
 }
 
 var _ sdktrace.SpanProcessor = (*Store)(nil)
@@ -204,7 +215,7 @@ func NewStore(opts Options) *Store {
 		routes:        make(map[string]*routeSeries),
 		operations:    make(map[string]*operationSeries),
 		samples:       make(map[string]sampleCount),
-		interval:      histogram{},
+		interval:      intervalStats{hist: histogram{}},
 		intervalStart: now,
 	}
 }
@@ -254,7 +265,7 @@ func (s *Store) dropExpiredPending(now time.Time) {
 func copySpan(sp sdktrace.ReadOnlySpan) span {
 	out := span{
 		id:       sp.SpanContext().SpanID().String(),
-		name:     sp.Name(),
+		name:     truncate(sp.Name(), maxNameBytes),
 		start:    sp.StartTime(),
 		duration: sp.EndTime().Sub(sp.StartTime()),
 	}
@@ -297,12 +308,20 @@ func copySpan(sp sdktrace.ReadOnlySpan) span {
 	out.attrs = make([]Attribute, 0, len(attrs))
 	for _, kv := range attrs {
 		value := attributeValue(kv.Value)
-		if len(value) > maxValueBytes {
-			value = value[:maxValueBytes] + "…"
-		}
-		out.attrs = append(out.attrs, Attribute{Key: string(kv.Key), Value: value})
+		out.attrs = append(out.attrs, Attribute{Key: string(kv.Key), Value: truncate(value, maxValueBytes)})
 	}
 	return out
+}
+
+func truncate(s string, maxBytes int) string {
+	if len(s) <= maxBytes {
+		return s
+	}
+	// A cut in the middle of a character would leave bytes that are not text.
+	for maxBytes > 0 && !utf8.RuneStart(s[maxBytes]) {
+		maxBytes--
+	}
+	return s[:maxBytes] + "…"
 }
 
 // attributeValue returns the value of an attribute as text. Unlike Emit, it
@@ -373,6 +392,28 @@ func routeOf(root *span) Route {
 	return Route{Name: method, Kind: RouteKindOther, Method: method}
 }
 
+// seriesOf returns the series of the route. Once the store holds as many
+// routes as it keeps, a route it has not seen is counted with the others of its
+// kind, i.e., under its method or as other background work.
+func (s *Store) seriesOf(route Route) *routeSeries {
+	if rs := s.routes[route.Name]; rs != nil {
+		return rs
+	}
+	if len(s.routes) >= maxRoutes {
+		if route.Kind == RouteKindBackground {
+			route = Route{Name: "other", Kind: RouteKindBackground}
+		} else {
+			route = Route{Name: route.Method, Kind: RouteKindOther, Method: route.Method}
+		}
+		if rs := s.routes[route.Name]; rs != nil {
+			return rs
+		}
+	}
+	rs := &routeSeries{route: route}
+	s.routes[route.Name] = rs
+	return rs
+}
+
 func spanSize(sp *span) int64 {
 	size := int64(200 + len(sp.name) + len(sp.err))
 	for _, a := range sp.attrs {
@@ -423,31 +464,58 @@ func (s *Store) finish(id string, p *pendingTrace) {
 	}
 	end := t.end()
 
-	rs := s.routes[t.route.Name]
-	if rs == nil {
-		if len(s.routes) >= maxRoutes {
-			if t.route.Kind == RouteKindBackground {
-				t.route = Route{Name: "other", Kind: RouteKindBackground}
-			} else {
-				t.route = Route{Name: t.route.Method, Kind: RouteKindOther, Method: t.route.Method}
-			}
-			rs = s.routes[t.route.Name]
-		}
-		if rs == nil {
-			rs = &routeSeries{route: t.route}
-			s.routes[t.route.Name] = rs
-		}
-	}
+	rs := s.seriesOf(t.route)
+	t.route = rs.route
 
 	t.kept = s.keepReason(t, rs)
 
 	rs.add(end, t.duration, selfTime(root), t.failed)
+	s.interval.droppedSpans += p.dropped
 	if t.route.Kind != RouteKindBackground {
 		s.requests.add(end, t.duration, selfTime(root), t.failed)
-		s.interval.add(t.duration)
+		s.interval.hist.add(t.duration)
+		if t.failed {
+			s.interval.errors++
+		}
+		for i := range spans {
+			self := selfTime(&spans[i])
+			switch spans[i].kind {
+			case SpanKindDB:
+				s.interval.db += self
+			case SpanKindGit:
+				s.interval.git += self
+			default:
+				s.interval.other += self
+			}
+		}
 	}
 	for i := 1; i < len(spans); i++ {
 		sp := &spans[i]
+		// A request that joined the trace of another one, e.g., two calls a
+		// client made at once, is not an operation of it, and the client writes
+		// its name when no route matches. It is a request of its own route.
+		if sp.kind == SpanKindRequest {
+			status, _ := strconv.Atoi(sp.attr("http.response.status_code"))
+			failed := sp.err != "" || status >= 500
+			s.seriesOf(routeOf(sp)).add(end, sp.duration, selfTime(sp), failed)
+			s.requests.add(end, sp.duration, selfTime(sp), failed)
+			// The time of background work is not in the interval, so neither is
+			// that of a request that joined it.
+			if t.route.Kind != RouteKindBackground {
+				s.interval.hist.add(sp.duration)
+				if failed {
+					s.interval.errors++
+				}
+			}
+			// The trace is the only place to look such a request up.
+			switch {
+			case failed:
+				t.kept = KeptFailed
+			case t.kept != KeptFailed && s.opts.SlowThreshold > 0 && sp.duration >= s.opts.SlowThreshold:
+				t.kept = KeptSlow
+			}
+			continue
+		}
 		os := s.operations[sp.name]
 		if os == nil {
 			if len(s.operations) >= maxOperations {
@@ -512,9 +580,13 @@ func (r *ring) push(t *storedTrace) {
 	r.size += t.size
 }
 
-func (r *ring) evict(cutoff time.Time, byID map[string]*storedTrace) {
+// evict drops the traces that ended before the cutoff, in Unix nanoseconds,
+// and the oldest ones while the ring is over its budget. Unix times tell how
+// old a trace is, since the monotonic clock that `Before` reads stops while
+// the machine is suspended.
+func (r *ring) evict(cutoff int64, byID map[string]*storedTrace) {
 	n := 0
-	for n < len(r.traces) && (r.size > r.budget || r.traces[n].end().Before(cutoff)) {
+	for n < len(r.traces) && (r.size > r.budget || r.traces[n].end().UnixNano() < cutoff) {
 		t := r.traces[n]
 		r.size -= t.size
 		// A later trace with the same ID may have replaced this one.
@@ -528,22 +600,65 @@ func (r *ring) evict(cutoff time.Time, byID map[string]*storedTrace) {
 }
 
 func (s *Store) evict() {
-	cutoff := s.now().Add(-s.opts.MaxAge)
+	cutoff := s.now().Add(-s.opts.MaxAge).UnixNano()
 	s.kept.evict(cutoff, s.byID)
 	s.sampled.evict(cutoff, s.byID)
 }
 
-// TakeInterval returns how many requests finished since the last call, how
-// long ago that was, and their p95.
-func (s *Store) TakeInterval() (requests int, elapsed, p95 time.Duration) {
+// Interval sums up the requests that finished between two calls to
+// TakeInterval.
+type Interval struct {
+	// Elapsed is how long the interval took.
+	Elapsed       time.Duration
+	Requests      int
+	Errors        int
+	P50, P95, P99 time.Duration
+	// DB, Git and Other are the time the requests spent in database queries,
+	// in Git commands and in everything else.
+	DB, Git, Other time.Duration
+	// DroppedSpans counts the spans left out of traces that had too many.
+	DroppedSpans int
+}
+
+// TakeInterval returns the requests that finished since the last call.
+func (s *Store) TakeInterval() Interval {
 	if s == nil {
-		return 0, 0, 0
+		return Interval{}
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	now := s.now()
-	requests, elapsed, p95 = s.interval.count(), now.Sub(s.intervalStart), s.interval.quantile(0.95)
-	s.interval = histogram{}
+	in := s.interval
+	out := Interval{
+		Elapsed:      now.Sub(s.intervalStart),
+		Requests:     in.hist.count(),
+		Errors:       in.errors,
+		P50:          in.hist.quantile(0.5),
+		P95:          in.hist.quantile(0.95),
+		P99:          in.hist.quantile(0.99),
+		DB:           in.db,
+		Git:          in.git,
+		Other:        in.other,
+		DroppedSpans: in.droppedSpans,
+	}
+	s.interval = intervalStats{hist: histogram{}}
 	s.intervalStart = now
-	return requests, elapsed, p95
+	return out
+}
+
+// MemoryUse is about how many bytes a set of traces takes, and the most it may
+// take before the oldest of them make room.
+type MemoryUse struct {
+	Used, Limit int64
+}
+
+// MemoryUse returns the memory of the traces kept for failing or being slow,
+// and of the sampled traces. Each set has its own limit.
+func (s *Store) MemoryUse() (kept, sampled MemoryUse) {
+	if s == nil {
+		return MemoryUse{}, MemoryUse{}
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return MemoryUse{Used: s.kept.size, Limit: s.kept.budget}, MemoryUse{Used: s.sampled.size, Limit: s.sampled.budget}
 }

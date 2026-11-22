@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 
 import { ActivityFeed } from "@/components/ActivityFeed";
 import { PageTabs } from "@/components/PageTabs";
@@ -33,6 +32,7 @@ import {
   userActivityQuery,
   userProfileQuery,
 } from "@/lib/queries/user";
+import { toastError } from "@/lib/toast-error";
 import { useUserInfo } from "@/lib/use-user-info";
 import { OrgHome } from "@/pages/org/Home";
 
@@ -270,7 +270,7 @@ function FollowButton({ profile }: { profile: UserProfileData }) {
       // Reload the follower list when it is on the page.
       void router.invalidate();
     },
-    onError: (err) => toast.error(t("status.internal_server_error"), { description: err.message }),
+    onError: (err) => toastError(err, t("status.internal_server_error")),
   });
 
   const Icon = profile.viewerIsFollowing ? UserMinus : UserPlus;

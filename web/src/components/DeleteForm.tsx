@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { FormField } from "@/components/FormField";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FormError } from "@/lib/queries/request";
+import { formErrors } from "@/lib/queries/request";
 
 // DeleteForm deletes an account once the viewer confirms their password.
 export function DeleteForm({
@@ -27,8 +27,7 @@ export function DeleteForm({
     onSuccess: onDeleted,
     onError: () => requestAnimationFrame(() => inputRef.current?.focus()),
   });
-  const fields = mutation.error instanceof FormError ? mutation.error.fields : {};
-  const formError = mutation.error && Object.keys(fields).length === 0 ? mutation.error.message : null;
+  const { fields, formError } = formErrors(mutation.error);
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();

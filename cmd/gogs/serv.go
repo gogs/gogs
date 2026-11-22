@@ -15,9 +15,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/urfave/cli/v3"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/propagation"
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
@@ -154,7 +152,6 @@ func triggerPushTasks(logger *logx.Logger, pusher *database.User, repo *database
 		return
 	}
 	req.Header.Set("User-Agent", "GogsServer")
-	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(req.Header))
 
 	client := &http.Client{
 		Timeout: 60 * time.Second,

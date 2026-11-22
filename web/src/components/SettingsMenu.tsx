@@ -10,6 +10,7 @@ import { readGlass, setGlass } from "@/lib/glass";
 import { LANGUAGES, switchLanguage } from "@/lib/languages";
 import { type Theme, useTheme } from "@/lib/theme-context";
 import { reloadWithParams } from "@/lib/url";
+import { useMenuFocus } from "@/lib/use-menu-focus";
 import { cn } from "@/lib/utils";
 
 // Dev-only feature flag: toggles a `?i18n_debug=1` query param that makes
@@ -24,9 +25,16 @@ function toggleI18nDebug() {
   reloadWithParams(params);
 }
 
+// The themes share one row, and a longer label, e.g., in another language,
+// takes more of it than a shorter one. Labels that do not fit the row together
+// wrap onto a second one. The theme in use is bold, so it does not rely on its
+// fill alone.
+const THEME_ITEM = "min-w-0 flex-auto gap-1.5 data-[state=on]:font-semibold glass-ui:gap-1 glass-ui:px-1.5";
+
 export function SettingsMenu() {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const menu = useMenuFocus();
   const [currentLang] = useState(() => webContext.lang);
   const { theme, setTheme } = useTheme();
   const [glass, setGlassState] = useState(readGlass);
@@ -43,6 +51,7 @@ export function SettingsMenu() {
       }}
     >
       <PopoverTrigger
+        {...menu.trigger}
         aria-label={t("settings")}
         className="inline-flex size-9 cursor-pointer items-center justify-center rounded-md text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
       >
@@ -52,15 +61,7 @@ export function SettingsMenu() {
         align="end"
         collisionPadding={16}
         className="flex max-h-(--radix-popover-content-available-height) flex-col w-64 p-0 focus:outline-none"
-        // Focus the popover container itself rather than the first focusable
-        // child (the Light theme toggle) so an Enter/Space press right after
-        // opening the menu does not accidentally change the theme. Keyboard
-        // users can Tab forward to reach the controls.
-        onOpenAutoFocus={(e) => {
-          e.preventDefault();
-          (e.currentTarget as HTMLElement | null)?.focus();
-        }}
-        tabIndex={-1}
+        {...menu.content}
       >
         <div className="px-2 pt-2 pb-1 text-xs font-medium text-(--color-muted-foreground)">{t("theme")}</div>
         <div className="p-1">
@@ -68,20 +69,32 @@ export function SettingsMenu() {
             type="single"
             value={theme}
             onValueChange={(v) => v && setTheme(v as Theme)}
-            size="tile"
-            className="grid grid-cols-3 gap-1"
+            size="sm"
+            // With glass the themes are the segments of one control, which cannot wrap, so a label
+            // that is too long for its share of the row is cut short, and the others keep their room.
+            className="glass-control glass-tabs flex-wrap glass-ui:grid glass-ui:!w-full glass-ui:grid-cols-[repeat(3,minmax(0,auto))] glass-ui:justify-stretch"
           >
-            <ToggleGroupItem value="light" aria-label={t("theme_light")}>
-              <Sun className="size-4" aria-hidden />
-              {t("theme_light")}
+            <ToggleGroupItem
+              value="light"
+              aria-label={t("theme_light")}
+              title={t("theme_light")}
+              className={THEME_ITEM}
+            >
+              <Sun className="size-4 shrink-0" aria-hidden />
+              <span className="truncate">{t("theme_light")}</span>
             </ToggleGroupItem>
-            <ToggleGroupItem value="dark" aria-label={t("theme_dark")}>
-              <Moon className="size-4" aria-hidden />
-              {t("theme_dark")}
+            <ToggleGroupItem value="dark" aria-label={t("theme_dark")} title={t("theme_dark")} className={THEME_ITEM}>
+              <Moon className="size-4 shrink-0" aria-hidden />
+              <span className="truncate">{t("theme_dark")}</span>
             </ToggleGroupItem>
-            <ToggleGroupItem value="system" aria-label={t("theme_system")}>
-              <Monitor className="size-4" aria-hidden />
-              {t("theme_system")}
+            <ToggleGroupItem
+              value="system"
+              aria-label={t("theme_system")}
+              title={t("theme_system")}
+              className={THEME_ITEM}
+            >
+              <Monitor className="size-4 shrink-0" aria-hidden />
+              <span className="truncate">{t("theme_system")}</span>
             </ToggleGroupItem>
           </ToggleGroup>
         </div>

@@ -43,6 +43,7 @@ import (
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/i18n"
+	"gogs.io/gogs/internal/lfsx"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/ssh"
@@ -241,24 +242,65 @@ func newCrossOriginProtection() (flamego.Handler, error) {
 // newHealth returns the measurements of the server that the admin panel shows,
 // including the requests the store records when it is not nil.
 func newHealth(traceStore *telemetry.Store) *telemetry.Health {
-	_, dbLimit := database.ConnectionsInUse()
-	return telemetry.NewHealth(traceStore,
-		telemetry.Gauge{Key: "dbConnections", Limit: float64(dbLimit), Read: func() (float64, bool) {
-			inUse, _ := database.ConnectionsInUse()
-			return float64(inUse), true
+	count := func(key string, read func() int64) telemetry.Gauge {
+		return telemetry.Gauge{Key: key, Read: func() (float64, bool) { return float64(read()), true }}
+	}
+	perMinute := func(key string, read func() int64) telemetry.Gauge {
+		return telemetry.CounterGauge(key, time.Minute, func() float64 { return float64(read()) })
+	}
+
+	var lastWaits database.ConnectionStats
+	gauges := []telemetry.Gauge{
+		{Key: "dbConnections", Limit: float64(database.GetConnectionStats().Limit), Read: func() (float64, bool) {
+			return float64(database.GetConnectionStats().InUse), true
 		}},
-		telemetry.Gauge{Key: "gitProcesses", Read: func() (float64, bool) {
-			return float64(git.RunningCommands()), true
+		count("dbIdleConnections", func() int64 { return int64(database.GetConnectionStats().Idle) }),
+		perMinute("dbWaits", func() int64 { return database.GetConnectionStats().WaitCount }),
+		// How long a query that waited for a connection since the last sample
+		// waited on average, in milliseconds.
+		{Key: "dbWaitTime", Read: func() (float64, bool) {
+			stats := database.GetConnectionStats()
+			waits, waited := stats.WaitCount-lastWaits.WaitCount, stats.WaitDuration-lastWaits.WaitDuration
+			lastWaits = stats
+			if waits <= 0 {
+				return 0, true
+			}
+			return float64(waited) / float64(waits) / float64(time.Millisecond), true
 		}},
-		telemetry.Gauge{Key: "mirrorQueue", Read: func() (float64, bool) {
-			return float64(database.MirrorQueue.Len()), true
+		count("gitProcesses", git.RunningCommands),
+		{Key: "codeSearches", Limit: float64(cap(codeSearchSlots)), Read: func() (float64, bool) {
+			return float64(len(codeSearchSlots)), true
 		}},
-	)
+		count("mirrorQueue", func() int64 { return int64(database.MirrorQueue.Len()) }),
+		count("hookQueue", func() int64 { return int64(database.HookQueue.Len()) }),
+		count("pullRequestQueue", func() int64 { return int64(database.PullRequestQueue.Len()) }),
+		perMinute("failedHookDeliveries", database.FailedHookDeliveries),
+		perMinute("notices", database.NoticesCreated),
+	}
+	if conf.SSH.StartBuiltinServer {
+		gauges = append(gauges, count("sshConnections", ssh.Connections))
+	}
+	if conf.Email.Enabled {
+		gauges = append(gauges, count("mailQueue", email.QueueLen))
+	}
+	disks := []telemetry.Disk{
+		{Key: "diskRepositories", Path: conf.Repository.Root},
+		{Key: "diskData", Path: conf.Server.AppDataPath},
+	}
+	if lfsx.Storage(conf.LFS.Storage) == lfsx.StorageLocal {
+		disks = append(disks, telemetry.Disk{Key: "diskLFS", Path: conf.LFS.ObjectsPath})
+	}
+	gauges = append(gauges, telemetry.DiskGauges(disks...)...)
+	return telemetry.NewHealth(traceStore, gauges...)
 }
 
 // newTracingHandler returns a handler that records a span for every request, so
 // that the spans of what the request runs, e.g., Git operations, are grouped
 // under it.
+//
+// Every request starts a trace of its own, with a link to the trace it carries,
+// if any. A client that got to pick the trace of its requests would put any
+// number of them into one trace, or into the trace of someone else.
 func newTracingHandler(h http.Handler) http.Handler {
 	// The route is only known once the request was routed, after the span
 	// started, so it is added to the span then.
@@ -268,12 +310,15 @@ func newTracingHandler(h http.Handler) http.Handler {
 			trace.SpanFromContext(r.Context()).SetAttributes(attribute.String("http.route", route))
 		}
 	})
-	return otelhttp.NewHandler(routed, "", otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
-		if r.Pattern != "" {
-			return r.Pattern
-		}
-		return r.Method + " " + r.URL.Path
-	}))
+	return otelhttp.NewHandler(routed, "",
+		otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
+			if r.Pattern != "" {
+				return r.Pattern
+			}
+			return r.Method + " " + r.URL.Path
+		}),
+		otelhttp.WithPublicEndpointFn(func(*http.Request) bool { return true }),
+	)
 }
 
 // newRoutingHandler returns the handler of all routes. The localizer maps the

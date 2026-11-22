@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"sync/atomic"
 	"time"
 
 	"gorm.io/gorm"
@@ -20,14 +21,26 @@ func newNoticesStore(db *gorm.DB) *NoticesStore {
 	return &NoticesStore{db: db}
 }
 
+var noticesCreated atomic.Int64
+
+// NoticesCreated returns how many system notices were created since the server
+// started.
+func NoticesCreated() int64 {
+	return noticesCreated.Load()
+}
+
 // Create creates a system notice with the given type and description.
 func (s *NoticesStore) Create(ctx context.Context, typ NoticeType, desc string) error {
-	return s.db.WithContext(ctx).Create(
+	err := s.db.WithContext(ctx).Create(
 		&Notice{
 			Type:        typ,
 			Description: desc,
 		},
 	).Error
+	if err == nil {
+		noticesCreated.Add(1)
+	}
+	return err
 }
 
 // DeleteByIDs deletes system notices by given IDs.

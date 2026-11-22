@@ -1,13 +1,13 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 
 import { RepoHeader } from "@/components/RepoHeader";
 import { UserList, type UserListItemData, type UserListPage } from "@/components/UserListItem";
 import { Button } from "@/components/ui/button";
 import { usePageTitle } from "@/lib/page-title";
 import { removeRepoWatcher, repoHeaderQuery } from "@/lib/queries/repo";
+import { toastError } from "@/lib/toast-error";
 import { useUserInfo } from "@/lib/use-user-info";
 
 // RepoPeople lists the stargazers or the watchers of a repository.
@@ -64,7 +64,7 @@ function UnwatchButton({ owner, name, watcher }: { owner: string; name: string; 
       );
       await router.invalidate();
     },
-    onError: (err) => toast.error(t("status.internal_server_error"), { description: err.message }),
+    onError: (err) => toastError(err, t("status.internal_server_error")),
   });
   return (
     <Button

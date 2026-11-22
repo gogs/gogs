@@ -2,7 +2,7 @@ import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
 import { Check, Minus } from "lucide-react";
 import * as React from "react";
 
-import { cn } from "@/lib/utils";
+import { FILLED_FOCUS, cn } from "@/lib/utils";
 
 const Checkbox = React.forwardRef<
   React.ElementRef<typeof CheckboxPrimitive.Root>,
@@ -12,7 +12,8 @@ const Checkbox = React.forwardRef<
     ref={ref}
     className={cn(
       "peer flex size-4 shrink-0 items-center justify-center rounded-sm border border-(--color-input) bg-(--color-field) outline-none transition-colors",
-      "focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring)",
+      "focus-visible:border-(--color-ring)",
+      FILLED_FOCUS,
       "disabled:cursor-not-allowed disabled:opacity-60",
       "data-[state=checked]:border-(--color-primary) data-[state=checked]:bg-(--color-primary) data-[state=checked]:text-(--color-primary-foreground)",
       "data-[state=indeterminate]:border-(--color-primary) data-[state=indeterminate]:bg-(--color-primary) data-[state=indeterminate]:text-(--color-primary-foreground)",

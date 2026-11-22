@@ -1,9 +1,8 @@
 import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
-import { Link, useRouter, useRouterState } from "@tanstack/react-router";
+import { Link, useRouter } from "@tanstack/react-router";
 import { CircleCheck, CircleDot, Download, GitCommitHorizontal, GitMerge, Pencil, Plus, Trash2 } from "lucide-react";
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { AttachFilesButton, IssueMeta, MarkdownEditor, SidebarSection } from "@/components/IssueForm";
@@ -33,7 +32,9 @@ import {
 } from "@/lib/queries/repo";
 import { formErrors } from "@/lib/queries/request";
 import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
+import { toastError } from "@/lib/toast-error";
 import { linkedUploads, useAttachmentUploads } from "@/lib/use-attachment-uploads";
+import { useIsLinked } from "@/lib/use-is-linked";
 import { useUserInfo } from "@/lib/use-user-info";
 import { cn } from "@/lib/utils";
 
@@ -45,7 +46,7 @@ function useIssueChange<T>(change: (input: T) => Promise<unknown>) {
   return useMutation({
     mutationFn: change,
     onSuccess: () => router.invalidate(),
-    onError: (err) => toast.error(err.message),
+    onError: (err) => toastError(err),
   });
 }
 
@@ -304,12 +305,6 @@ export function UserLink({ user, className, children }: { user: IssueUser; class
       {children}
     </Link>
   );
-}
-
-// useIsLinked reports whether the URL links to the anchor, e.g., to a comment,
-// which is then highlighted like on GitHub.
-function useIsLinked(anchor: string) {
-  return useRouterState({ select: (state) => state.location.hash === anchor });
 }
 
 // EventSentence renders a translated sentence about something that happened,

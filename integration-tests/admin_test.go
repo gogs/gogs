@@ -7,11 +7,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -96,9 +96,18 @@ func TestAdminDashboard(t *testing.T) {
 	adminAssertTurnedAway(t, nonAdmin, anonymous, http.MethodGet, "/api/web/admin/dashboard", nil)
 
 	var resp struct {
-		AppVersion   string             `json:"appVersion"`
-		GoVersion    string             `json:"goVersion"`
-		Statistics   string             `json:"statistics"`
+		AppVersion    string    `json:"appVersion"`
+		GoVersion     string    `json:"goVersion"`
+		StartedAt     time.Time `json:"startedAt"`
+		UptimeSeconds int64     `json:"uptimeSeconds"`
+		Statistics    []struct {
+			Title string `json:"title"`
+			Items []struct {
+				Key   string `json:"key"`
+				Label string `json:"label"`
+				Count int64  `json:"count"`
+			} `json:"items"`
+		} `json:"statistics"`
 		SystemStatus adminReportSection `json:"systemStatus"`
 	}
 	admin.doJSON(http.MethodGet, "/api/web/admin/dashboard", nil, http.StatusOK, &resp)
@@ -108,17 +117,33 @@ func TestAdminDashboard(t *testing.T) {
 	assert.Equal(t, "Gogs version "+resp.AppVersion, strings.TrimSpace(string(version)))
 	// The server is built by the same toolchain as the tests.
 	assert.Equal(t, runtime.Version(), resp.GoVersion)
+	assert.False(t, resp.StartedAt.IsZero())
+	assert.True(t, resp.StartedAt.Before(time.Now()), "the server started at %s", resp.StartedAt)
+	assert.InDelta(t, time.Since(resp.StartedAt).Seconds(), resp.UptimeSeconds, 5)
 	assert.Equal(t, "system-status", resp.SystemStatus.ID)
 	assert.NotEmpty(t, resp.SystemStatus.Groups)
 
 	// Other tests add and delete data at the same time, so the counts are only
 	// checked to be there, with at least the users of this test.
-	counts := regexp.MustCompile(`<b>(\d+)</b> (users|organizations|repositories|login sources)`).FindAllStringSubmatch(resp.Statistics, -1)
-	require.Len(t, counts, 4, "statistics: %s", resp.Statistics)
-	assert.Equal(t, "users", counts[0][2])
-	users, err := strconv.Atoi(counts[0][1])
-	require.NoError(t, err)
-	assert.GreaterOrEqual(t, users, 2)
+	require.NotEmpty(t, resp.Statistics)
+	people := resp.Statistics[0]
+	assert.Equal(t, "People", people.Title)
+	require.NotEmpty(t, people.Items)
+	assert.Equal(t, "users", people.Items[0].Key)
+	assert.Equal(t, "Users", people.Items[0].Label)
+	assert.GreaterOrEqual(t, people.Items[0].Count, int64(2))
+	labels := make(map[string]string)
+	for _, group := range resp.Statistics {
+		for _, statistic := range group.Items {
+			// A label without a translation would come back as its locale key.
+			assert.NotContains(t, statistic.Label, "statistic_")
+			labels[statistic.Key] = statistic.Label
+		}
+	}
+	assert.Len(t, labels, 22)
+	assert.Equal(t, "Organizations", labels["organizations"])
+	assert.Equal(t, "Repositories", labels["repositories"])
+	assert.Equal(t, "Login sources", labels["login_sources"])
 }
 
 // adminRunOperation runs the site-wide operation as the admin, after checking
@@ -157,7 +182,7 @@ func TestAdminOperations(t *testing.T) {
 		require.Empty(t, before, "repository already packed")
 
 		msg := adminRunOperation(t, admin, nonAdmin, anonymous, "git-gc-repos")
-		assert.Equal(t, "All repositories have done garbage collection successfully.", msg)
+		assert.Equal(t, "Collected garbage in all repositories.", msg)
 		after, err := filepath.Glob(packs)
 		require.NoError(t, err)
 		assert.NotEmpty(t, after, "repository not packed")
@@ -177,7 +202,7 @@ func TestAdminOperations(t *testing.T) {
 		}
 
 		msg := adminRunOperation(t, admin, nonAdmin, anonymous, "resync-repo-hooks")
-		assert.Equal(t, "All repositories' pre-receive, update and post-receive hooks have been resynced successfully.", msg)
+		assert.Equal(t, "Resynced the hooks of all repositories.", msg)
 		assert.NoFileExists(t, hook(unprotected))
 		content, err := os.ReadFile(hook(protected))
 		require.NoError(t, err)
@@ -194,7 +219,7 @@ func TestAdminOperations(t *testing.T) {
 		require.NoError(t, os.WriteFile(archive, []byte("archive"), 0o644))
 
 		msg := adminRunOperation(t, admin, nonAdmin, anonymous, "delete-repo-archives")
-		assert.Equal(t, "All repositories archives have been deleted successfully.", msg)
+		assert.Equal(t, "Deleted the archives of all repositories.", msg)
 		_, err := os.Stat(filepath.Join(repoPath, "archives"))
 		assert.True(t, os.IsNotExist(err), "archives not deleted: %v", err)
 		_, err = os.Stat(filepath.Join(repoPath, "HEAD"))
@@ -207,7 +232,7 @@ func TestAdminOperations(t *testing.T) {
 		require.NoError(t, os.RemoveAll(repoPath))
 
 		msg := adminRunOperation(t, admin, nonAdmin, anonymous, "reinit-missing-repos")
-		assert.Equal(t, "All repository records that lost Git files have been reinitialized successfully.", msg)
+		assert.Equal(t, "Reinitialized the repositories that lost their Git files.", msg)
 		_, err := os.Stat(filepath.Join(repoPath, "HEAD"))
 		assert.NoError(t, err, "repository not reinitialized")
 		_, err = getRepository(t, repo.ID)
@@ -220,7 +245,7 @@ func TestAdminOperations(t *testing.T) {
 		require.NoError(t, os.RemoveAll(repox.RepositoryPath(missing.Owner, missing.Name)))
 
 		msg := adminRunOperation(t, admin, nonAdmin, anonymous, "delete-missing-repos")
-		assert.Equal(t, "All repository records that lost Git files have been deleted successfully.", msg)
+		assert.Equal(t, "Deleted the records of repositories that lost their Git files.", msg)
 		_, err := getRepository(t, missing.ID)
 		assert.True(t, database.IsErrRepoNotExist(err), "repository not deleted: %v", err)
 		_, err = getRepository(t, kept.ID)

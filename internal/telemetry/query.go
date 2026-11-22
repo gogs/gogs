@@ -11,7 +11,6 @@ import (
 const (
 	maxSearchResults = 50
 	maxSearchPoints  = 2000
-	maxOverviewItems = 50
 	// MinTraceIDPrefix is the fewest characters of a trace ID a search matches
 	// by prefix.
 	MinTraceIDPrefix = 8
@@ -131,7 +130,6 @@ func (s *Store) Overview(minutes int, rangeName string) Overview {
 	slices.SortFunc(out.Routes, func(a, b RouteStat) int {
 		return cmp.Or(cmp.Compare(b.TotalMs, a.TotalMs), strings.Compare(a.Name, b.Name))
 	})
-	out.Routes = out.Routes[:min(len(out.Routes), maxOverviewItems)]
 
 	for name, os := range s.operations {
 		st := os.sum(from, to)
@@ -152,7 +150,6 @@ func (s *Store) Overview(minutes int, rangeName string) Overview {
 	slices.SortFunc(out.Operations, func(a, b OperationStat) int {
 		return cmp.Or(cmp.Compare(b.SelfMs, a.SelfMs), strings.Compare(a.Name, b.Name))
 	})
-	out.Operations = out.Operations[:min(len(out.Operations), maxOverviewItems)]
 	return out
 }
 
@@ -179,9 +176,15 @@ func (t *storedTrace) summary() TraceSummary {
 		Start:      t.start,
 		DurationMs: ms(t.duration),
 		SpanCount:  len(t.spans),
-		Error:      t.failed,
+		Error:      t.anyFailed(),
 		Kept:       t.kept,
 	}
+}
+
+// anyFailed reports whether a request of the trace failed, be it the one that
+// ended last, whose status the trace shows, or one that joined it.
+func (t *storedTrace) anyFailed() bool {
+	return t.failed || t.kept == KeptFailed
 }
 
 type SearchPoint struct {
@@ -232,7 +235,7 @@ func (q *SearchQuery) match(t *storedTrace) bool {
 	}
 	switch q.Status {
 	case "5xx":
-		if !t.failed {
+		if !t.anyFailed() {
 			return false
 		}
 	case "4xx":
@@ -329,7 +332,7 @@ func (s *Store) Search(q SearchQuery) SearchResult {
 			Start:      t.start,
 			DurationMs: ms(t.duration),
 			Status:     t.status,
-			Error:      t.failed,
+			Error:      t.anyFailed(),
 		})
 	}
 	return out

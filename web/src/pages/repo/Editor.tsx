@@ -11,6 +11,7 @@ import { PendingFiles } from "@/components/IssueForm";
 import { Markdown } from "@/components/Markdown";
 import { RepoHeader } from "@/components/RepoHeader";
 import { RichText } from "@/components/RichText";
+import { SessionExpired } from "@/components/SessionExpired";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { codeLanguageOf } from "@/lib/code-language";
@@ -28,7 +29,7 @@ import {
   repoHeaderQuery,
   uploadRepoFiles,
 } from "@/lib/queries/repo";
-import { FormError, formErrors } from "@/lib/queries/request";
+import { FormError, formErrors, isSessionExpired } from "@/lib/queries/request";
 import { resolveTheme, useTheme } from "@/lib/theme-context";
 import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { useUserInfo } from "@/lib/use-user-info";
@@ -294,7 +295,7 @@ function CommitForm({
   );
 }
 
-const TAB_CLASS = "cursor-pointer rounded-md px-3 py-1.5 text-sm whitespace-nowrap";
+const TAB_CLASS = "cursor-pointer rounded-md px-3 py-1.5 text-sm whitespace-nowrap glass-ui:px-2.5";
 
 function EditorTabs<K extends string>({
   id,
@@ -310,7 +311,7 @@ function EditorTabs<K extends string>({
   onChange: (key: K) => void;
 }) {
   return (
-    <div role="tablist" aria-label={label} className="mb-3 flex gap-1 overflow-x-auto">
+    <div role="tablist" aria-label={label} className="glass-control glass-tabs mb-3 flex gap-1 overflow-x-auto">
       {tabs.map((tab) => (
         <button
           key={tab.key}
@@ -532,7 +533,9 @@ export function RepoFileEditor({
                   ) : preview.data !== undefined ? (
                     <Markdown html={preview.data} />
                   ) : preview.isError ? (
-                    <p className="text-sm text-(--color-destructive)">{preview.error.message}</p>
+                    <p className="text-sm text-(--color-destructive)">
+                      {isSessionExpired(preview.error) ? <SessionExpired /> : preview.error.message}
+                    </p>
                   ) : (
                     <p className="text-sm text-(--color-muted-foreground)">{t("repo.release.loading")}</p>
                   )}

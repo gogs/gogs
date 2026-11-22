@@ -1,6 +1,6 @@
 import { canUseWASM } from "@pierre/diffs";
 import { WorkerPoolContextProvider } from "@pierre/diffs/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   type AnyRoute,
   type ErrorComponentProps,
@@ -22,8 +22,11 @@ import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { NoticeBanner } from "@/components/NoticeBanner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { leaveAdmin } from "@/lib/admin-exit";
 import { webContext } from "@/lib/context";
 import { LoaderResponseError, authenticationRedirect } from "@/lib/loader-error";
+import { useTheme } from "@/lib/theme-context";
+import { useUserInfo } from "@/lib/use-user-info";
 import type { UserInfo } from "@/lib/user-info";
 import { NotFound } from "@/pages/NotFound";
 import { ServerError } from "@/pages/ServerError";
@@ -43,6 +46,17 @@ interface RouterContext {
 }
 
 function RootLayout() {
+  const user = useUserInfo();
+  const inAdmin = useRouterState({ select: (state) => state.matches.some((match) => match.routeId === "/admin") });
+  // The admin console has its own navigation in place of the navbar and
+  // footer, and shows the notice banner below its own bar.
+  if (inAdmin && user?.isAdmin) {
+    return (
+      <div className="flex min-h-dvh flex-col">
+        <Outlet />
+      </div>
+    );
+  }
   return (
     <div className="flex min-h-dvh flex-col">
       <Navbar />
@@ -137,7 +151,7 @@ function makeRouter(context: RouterContext) {
       if (err.status === 401) {
         // The location being loaded, which is not the current one yet.
         // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
-        throw authenticationRedirect(router.latestLocation.href);
+        throw authenticationRedirect(router.latestLocation.href, context.user !== null);
       }
       if (err.status === 403 && err.errorField === "account not activated") {
         // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack's redirect() returns a sentinel that must be thrown.
@@ -162,7 +176,16 @@ declare module "@tanstack/react-router" {
   }
 }
 
-const queryClient = new QueryClient();
+// Cards of the admin console fetch outside the route loaders, so nothing sends
+// a viewer the web API turns away, e.g., after their session expired, to where
+// a loader would.
+const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (err, query) => {
+      if (query.queryKey[0] === "admin") leaveAdmin(err, window.location.href);
+    },
+  }),
+});
 
 // Pierre's worker pool is a process-wide singleton (refcounted by mount). Hold
 // it at the app root so it stays warm across navigations: the diff renderer
@@ -185,6 +208,14 @@ const diffHighlighterOptions = (() => {
   return { preferredHighlighter: "shiki-js" as const };
 })();
 
+// Toasts follow the theme of the page. They read it in a component of their
+// own, since AppRouter makes the router, and would make another one, and mount
+// the page again, whenever the theme changed.
+function Toasts() {
+  const { theme } = useTheme();
+  return <Toaster position="bottom-right" theme={theme} closeButton richColors />;
+}
+
 export function AppRouter({ user }: { user: UserInfo | null }) {
   const router = makeRouter({ user, queryClient });
   return (
@@ -192,7 +223,7 @@ export function AppRouter({ user }: { user: UserInfo | null }) {
       <WorkerPoolContextProvider poolOptions={diffWorkerPoolOptions} highlighterOptions={diffHighlighterOptions}>
         <TooltipProvider delayDuration={300}>
           <RouterProvider router={router} />
-          <Toaster position="bottom-right" closeButton richColors />
+          <Toasts />
         </TooltipProvider>
       </WorkerPoolContextProvider>
     </QueryClientProvider>

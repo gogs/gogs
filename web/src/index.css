@@ -93,7 +93,9 @@
   --color-diff-removed: #dc2626;
   --color-border: #d4d4d4;
   --color-input: #8f8f8f;
-  --color-ring: #009fff;
+  /* The primary color. The blue of the dark theme falls short of 3:1 against
+     light surfaces. */
+  --color-ring: #0b6bcb;
 
   /* Token colors of CodeEditor, Pierre Light hues darkened where needed to
      reach 4.5:1 against the background. */
@@ -686,6 +688,9 @@ diffs-container {
    - glass-bar: full-width chrome that content scrolls under, e.g., the navbar.
    - glass-control: outline buttons and segmented button groups.
    - glass-solid: filled buttons, with --glass-solid set to their fill color.
+   - glass-tabs: beside glass-control, on a row of tabs or toggles that are
+     loose pills otherwise, e.g., Write and Preview above an editor, which
+     turn into the flush segments of one control.
    A state that recolors a panel's edge, e.g., a linked comment, needs
    `!border-...`. */
 :root.glass-ui :is(.glass, .glass-list, .glass-section) {
@@ -693,7 +698,8 @@ diffs-container {
   border-color: var(--glass-line);
   border-radius: var(--glass-radius, 0.75rem);
   background-color: var(--glass-fill);
-  box-shadow: var(--glass-edge), var(--glass-shadow);
+  box-shadow:
+    var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--glass-edge), var(--glass-shadow);
   -webkit-backdrop-filter: blur(20px) saturate(1.6);
   backdrop-filter: blur(20px) saturate(1.6);
 }
@@ -791,6 +797,45 @@ diffs-container {
   }
 }
 
+/* The row shrinks to its tabs and draws the edge, and the tabs divide by a
+   line instead of a gap, so they stay on one row. The tab shown keeps the fill
+   and weight it has without glass. */
+:root.glass-ui .glass-tabs {
+  flex-wrap: nowrap;
+  gap: 0;
+  width: fit-content;
+  max-width: 100%;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 0.375rem;
+  padding: 0;
+}
+:root.glass-ui .glass-tabs > * {
+  border-width: 0;
+  border-radius: 0;
+}
+:root.glass-ui .glass-tabs > :not(:first-child) {
+  border-left: 1px solid var(--glass-line);
+}
+:root.glass-ui .glass-tabs > :first-child {
+  border-top-left-radius: calc(0.375rem - 1px);
+  border-bottom-left-radius: calc(0.375rem - 1px);
+}
+:root.glass-ui .glass-tabs > :last-child {
+  border-top-right-radius: calc(0.375rem - 1px);
+  border-bottom-right-radius: calc(0.375rem - 1px);
+}
+/* The focus outline stays inside the tab, where a neighbor or the scrolling
+   row cannot cover it. */
+:root.glass-ui .glass-tabs > :focus-visible {
+  outline-offset: -2px;
+}
+@media (hover: hover) {
+  :root.glass-ui .glass-tabs > :hover:not(:disabled) {
+    background-color: var(--color-surface);
+  }
+}
+
 /* Code sits inset in the glass panels it is shown in, and file trees take the
    panel they sit in as their background. */
 :root.glass-ui {
@@ -807,4 +852,57 @@ diffs-container {
    change. */
 html[data-fullwidth] :is(.max-w-6xl, .max-w-7xl) {
   max-width: none;
+}
+
+/* Toasts are sonner's, which sets its colors on these selectors. The red of an
+   error on its tint is below 4.5:1, and the button that closes a toast is
+   smaller than a 24px target. */
+:root [data-sonner-toaster][data-sonner-theme="light"] {
+  --error-text: #b3242d;
+}
+:root [data-sonner-toast][data-styled="true"] [data-close-button] {
+  width: 24px;
+  height: 24px;
+}
+/* An open dialog turns the pointer off for everything outside it. A toast
+   shows above the dialog, so a click on it would land on what is under it,
+   e.g., the button that confirms. */
+:root [data-sonner-toast][data-visible="true"] {
+  pointer-events: auto;
+}
+
+/* While the loader of an admin page is at work on what the page shows (see
+   `useReloading`), the parts marked `reloads` and the cells of its tables show
+   as skeletons of their own size in place of the numbers of the last visit.
+   Nothing moves, so the page keeps its height and its scroll position. */
+[data-reloading] :is(.reloads, tbody td) {
+  color: transparent;
+}
+[data-reloading] :is(.reloads, tbody td) > * {
+  visibility: hidden;
+}
+[data-reloading] .reloads {
+  position: relative;
+}
+[data-reloading] .reloads::after {
+  position: absolute;
+  inset: 0;
+  border-radius: 0.375rem;
+  background-color: color-mix(in srgb, var(--color-foreground) 10%, transparent);
+  content: "";
+}
+/* A line of text shows as a bar of its own width, not of its card's. */
+[data-reloading] p.reloads {
+  width: fit-content;
+}
+/* A cell shows as a bar where its text was, whatever its padding. */
+[data-reloading] tbody td {
+  background-color: color-mix(in srgb, var(--color-foreground) 10%, transparent);
+  background-clip: content-box;
+}
+@media (prefers-reduced-motion: no-preference) {
+  [data-reloading] .reloads::after,
+  [data-reloading] tbody td {
+    animation: var(--animate-pulse);
+  }
 }

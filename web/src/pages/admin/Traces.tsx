@@ -1,99 +1,57 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { AlertCircle, ArrowLeft, ChevronDown, ChevronRight, Search as SearchIcon, X } from "lucide-react";
-import { type FormEvent, type ReactNode, useMemo, useState } from "react";
+import { AlertCircle, ChevronDown, ChevronRight, Search as SearchIcon, X } from "lucide-react";
+import { type FormEvent, type ReactNode, type RefObject, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { Trans, useTranslation } from "react-i18next";
 
-import { AdminLayout } from "@/components/AdminLayout";
+import {
+  AdminPageHeader,
+  RefreshControl,
+  RefreshNote,
+  STAT_VALUE,
+  SegmentedLinks,
+  StatCard,
+} from "@/components/AdminPage";
 import { InlineCode } from "@/components/InlineCode";
-import { PageTabs } from "@/components/PageTabs";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableSortHead } from "@/components/ui/table";
+import { reloadingProps, useRefreshed, useReloading } from "@/lib/admin-refresh";
 import { formatMinutes, formatMs, formatNumber } from "@/lib/format";
 import type { TraceSearch } from "@/lib/page-search";
-import type {
-  AdminSpan,
-  AdminSpanKind,
-  AdminTrace,
-  AdminTraceKept,
-  AdminTraceOverview as AdminTraceOverviewData,
-  AdminTraceRoute,
-  AdminTraceSearch as AdminTraceSearchData,
+import {
+  type AdminSpan,
+  type AdminTrace,
+  type AdminTraceOverview as AdminTraceOverviewData,
+  type AdminTraceSearch as AdminTraceSearchData,
+  adminTraceOverviewQuery,
+  adminTraceSearchQuery,
 } from "@/lib/queries/admin";
 import { formatAbsoluteTime, formatRelativeTime } from "@/lib/relative-time";
 import { cn } from "@/lib/utils";
-import { RangeLinks } from "@/pages/admin/Health";
+import { TraceScatterChart, TraceTrafficChart } from "@/pages/admin/TraceCharts";
+import { KIND_FILLS, formatShare, formatTraceStart } from "@/pages/admin/TraceFormat";
+import { KeptLabel, KindChip, RouteName } from "@/pages/admin/TraceParts";
 
-const KIND_CHIPS: Record<AdminSpanKind, string> = { request: "http", git: "git", db: "db", other: "go" };
+const CARD_TITLE = "text-base";
+const CARD_BODY = "pt-4 sm:pt-4";
 
-// The fill of a span or operation in charts. Git gets the accent, since it is
-// where Gogs spends most of its time.
-const KIND_FILLS: Record<AdminSpanKind, string> = {
-  request: "bg-(--color-muted-foreground)/50",
-  git: "bg-(--color-primary)",
-  db: "bg-(--color-merged)",
-  other: "bg-(--color-muted-foreground)/50",
-};
+const LINK = "text-(--color-primary) hover:underline";
 
-function KindChip({ kind }: { kind: AdminSpanKind }) {
-  return (
-    <span className="shrink-0 rounded border border-(--color-border) px-1 font-mono text-[0.6875rem]/4 text-(--color-muted-foreground)">
-      {KIND_CHIPS[kind]}
-    </span>
-  );
-}
+const NUMBER_HEAD = "text-right";
+const NUMBER_CELL = "w-px text-right whitespace-nowrap tabular-nums";
+const MUTED = "text-(--color-muted-foreground)";
 
-function RouteName({ route }: { route: AdminTraceRoute }) {
-  const { t } = useTranslation();
-  switch (route.kind) {
-    case "other":
-      return <span>{t("admin.traces.other_pages", { method: route.name })}</span>;
-    case "background":
-      return (
-        <span className="inline-flex flex-wrap items-baseline gap-x-1.5">
-          <span className="font-mono wrap-anywhere">{route.name}</span>
-          <span className="text-xs text-(--color-muted-foreground)">{t("admin.traces.background")}</span>
-        </span>
-      );
-    default:
-      return <span className="font-mono wrap-anywhere">{route.name}</span>;
-  }
-}
+// The last column a narrow card shows takes the padding of the last column of
+// the table, which is hidden then.
+const LAST_SHOWN = "pr-5";
 
-function Section({
-  id,
-  title,
-  action,
-  children,
-}: {
-  id: string;
-  title: string;
-  action?: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <section aria-labelledby={`${id}-title`} className="mt-8">
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <h2 id={`${id}-title`} className="text-lg font-semibold">
-          {title}
-        </h2>
-        {action}
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function Note({ children }: { children: ReactNode }) {
-  return <p className="mt-2 text-xs text-(--color-muted-foreground)">{children}</p>;
-}
-
-function Panel({ children, className }: { children: ReactNode; className?: string }) {
-  return (
-    <div className={cn("rounded-md border border-(--color-border) bg-(--color-surface) p-4 text-sm", className)}>
-      {children}
-    </div>
-  );
+// Facts holds what the hidden columns of a table would tell, below the name
+// of a row, until the card is wide enough for the columns.
+function Facts({ className, children }: { className: string; children: ReactNode }) {
+  return <span className={cn("mt-1 flex flex-wrap gap-x-3 text-xs tabular-nums", MUTED, className)}>{children}</span>;
 }
 
 // TraceIDForm finds a trace by its ID, or the first 8 or more characters of
@@ -137,39 +95,57 @@ function TracesLayout({
   view,
   q,
   maxAgeMinutes,
+  toolbar,
+  note,
   children,
 }: {
   view: "overview" | "search";
   q?: string;
   maxAgeMinutes: number;
+  // Controls of the view shown, at the end of the row that switches views.
+  toolbar?: ReactNode;
+  // A line below that row, e.g., a RefreshNote.
+  note?: ReactNode;
   children: ReactNode;
 }) {
   const { t } = useTranslation();
+  const reloading = useReloading();
   return (
-    <AdminLayout active="traces">
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">{t("admin.traces")}</h1>
-          <p className="mt-1 text-sm text-(--color-muted-foreground)">
-            {t("admin.traces.desc", { duration: formatMinutes(maxAgeMinutes) })}
-          </p>
-        </div>
+    <div className="grid gap-4" {...reloadingProps(reloading)}>
+      <AdminPageHeader
+        title={t("admin.traces")}
+        description={t("admin.traces.desc", { duration: formatMinutes(maxAgeMinutes) })}
+      >
         <TraceIDForm q={q} />
+      </AdminPageHeader>
+      <div className="min-w-0">
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+          <SegmentedLinks
+            to="/admin/traces"
+            label={t("admin.traces")}
+            active={view}
+            options={[
+              { value: "overview", label: t("admin.traces.overview"), search: {} },
+              { value: "search", label: t("admin.traces.search"), search: { view: "search" } },
+            ]}
+          />
+          {toolbar ? <div className="flex min-w-0 flex-wrap items-center gap-2">{toolbar}</div> : null}
+        </div>
+        {note}
       </div>
-      <PageTabs
-        label={t("admin.traces")}
-        className="mb-4 border-b border-(--color-border)"
-        active={view}
-        tabs={[
-          { key: "overview", label: t("admin.traces.overview") },
-          { key: "search", label: t("admin.traces.search") },
-        ]}
-        renderLink={(tab, props) => (
-          <Link to="/admin/traces" search={tab.key === "search" ? { view: "search" } : {}} {...props} />
-        )}
-      />
       {children}
-    </AdminLayout>
+    </div>
+  );
+}
+
+// TracingDisabledNote tells how to turn tracing on.
+export function TracingDisabledNote() {
+  return (
+    <Trans
+      i18nKey="admin.traces.disabled"
+      values={{ setting: "ENABLED = true", section: "[tracing]" }}
+      components={{ code: <InlineCode /> }}
+    />
   );
 }
 
@@ -177,123 +153,8 @@ function TracesLayout({
 // nothing to find or look at.
 function Disabled() {
   const { t } = useTranslation();
-  return (
-    <AdminLayout active="traces">
-      <h1 className="text-xl font-semibold">{t("admin.traces")}</h1>
-      <p className="mt-1 text-sm text-(--color-muted-foreground)">
-        <Trans
-          i18nKey="admin.traces.disabled"
-          values={{ setting: "ENABLED = true", section: "[tracing]" }}
-          components={{ code: <InlineCode /> }}
-        />
-      </p>
-    </AdminLayout>
-  );
+  return <AdminPageHeader title={t("admin.traces")} description={<TracingDisabledNote />} />;
 }
-
-function OverviewChart({ overview }: { overview: AdminTraceOverviewData }) {
-  const { t } = useTranslation();
-  const W = 600;
-  const H = 120;
-  const buckets = overview.buckets;
-  const maxRequests = Math.max(1, ...buckets.map((b) => b.requests));
-  const maxP95 = Math.max(0, ...buckets.map((b) => b.p95Ms));
-  const slot = W / buckets.length;
-  const x = (i: number) => i * slot + slot / 2;
-  const y = (p95: number) => H - 6 - (p95 / (maxP95 || 1)) * (H - 24);
-  const line = buckets
-    .map((b, i) => (b.requests > 0 ? `${x(i).toFixed(1)},${y(b.p95Ms).toFixed(1)}` : null))
-    .filter((p) => p !== null)
-    .join(" ");
-  const peak = buckets.findIndex((b) => b.p95Ms === maxP95 && maxP95 > 0);
-  const minutes = overview.range === "15m" ? 15 : 60;
-  const first = buckets[0]?.start;
-  const last = buckets.at(-1)?.start;
-  return (
-    <figure className="mt-4">
-      <div
-        role="img"
-        aria-label={
-          first && last
-            ? t("admin.traces.chart_overview", { from: formatAbsoluteTime(first), to: formatAbsoluteTime(last) })
-            : undefined
-        }
-        className="relative h-32"
-      >
-        <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="size-full" aria-hidden>
-          {buckets.map((b, i) => {
-            const h = (b.requests / maxRequests) * (H - 24);
-            return (
-              <rect
-                key={b.start}
-                x={i * slot + 2}
-                width={slot - 4}
-                y={H - h}
-                height={h}
-                className="fill-(--color-surface) stroke-(--color-border)"
-                vectorEffect="non-scaling-stroke"
-              />
-            );
-          })}
-          <polyline
-            points={line}
-            fill="none"
-            className="stroke-(--color-primary)"
-            strokeWidth={2}
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-          />
-          {/* Zero-length lines with round caps draw dots that keep their shape
-              while the chart stretches, and show a bucket without neighbors. */}
-          {buckets.map((b, i) =>
-            b.requests > 0 ? (
-              <line
-                key={b.start}
-                x1={x(i)}
-                x2={x(i)}
-                y1={y(b.p95Ms)}
-                y2={y(b.p95Ms)}
-                strokeWidth={6}
-                strokeLinecap="round"
-                className="stroke-(--color-primary)"
-                vectorEffect="non-scaling-stroke"
-              />
-            ) : null,
-          )}
-        </svg>
-        {peak >= 0 ? (
-          <span
-            // Labels near an edge stay inside the chart.
-            className={cn(
-              "absolute -translate-y-full text-xs whitespace-nowrap tabular-nums",
-              x(peak) / W > 0.8 ? "-translate-x-full" : x(peak) / W < 0.2 ? "" : "-translate-x-1/2",
-            )}
-            style={{ left: `${(x(peak) / W) * 100}%`, top: `${(y(maxP95) / H) * 100}%` }}
-          >
-            p95 {formatMs(maxP95)}
-          </span>
-        ) : null}
-      </div>
-      <div className="mt-1 flex justify-between text-xs text-(--color-muted-foreground)">
-        <span>{t("admin.traces.minutes_ago", { minutes })}</span>
-        <span>{t("admin.traces.now")}</span>
-      </div>
-      <figcaption className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-(--color-muted-foreground)">
-        <span className="inline-flex items-center gap-1.5">
-          <span aria-hidden className="size-2.5 border border-(--color-border) bg-(--color-surface)" />
-          {t("admin.traces.requests_per_5m")}
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span aria-hidden className="h-0.5 w-3 bg-(--color-primary)" />
-          {t("admin.traces.p95_latency")}
-        </span>
-      </figcaption>
-    </figure>
-  );
-}
-
-const TH = "py-2 pl-3 text-right font-normal text-(--color-muted-foreground) first:pl-0 first:text-left";
-const TD = "py-2 pl-3 text-right align-top tabular-nums first:pl-0 first:text-left";
 
 function ShareBar({ share, className }: { share: number; className?: string }) {
   return (
@@ -309,157 +170,399 @@ function ShareBar({ share, className }: { share: number; className?: string }) {
 // COLLAPSED_ROWS is how many routes and operations show before "Show all".
 const COLLAPSED_ROWS = 10;
 
-function ShowAll({ count, onClick }: { count: number; onClick: () => void }) {
+function ShowAll({
+  count,
+  rows,
+  onClick,
+}: {
+  count: number;
+  // The body of the table the button shows all rows of.
+  rows: RefObject<HTMLTableSectionElement | null>;
+  onClick: () => void;
+}) {
   const { t } = useTranslation();
   if (count <= COLLAPSED_ROWS) return null;
+  const showAll = () => {
+    flushSync(onClick);
+    // The button is gone by now, so the focus goes on to the first row it brought: to its link, or
+    // to the row itself when it has none.
+    const row = rows.current?.rows[COLLAPSED_ROWS];
+    (row?.querySelector("a") ?? row)?.focus();
+  };
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="mt-2 cursor-pointer text-sm text-(--color-primary) hover:underline"
+    <CardFooter className="border-t border-(--color-border) py-3 sm:py-3">
+      <button type="button" onClick={showAll} className={cn("min-h-6 cursor-pointer text-sm", LINK)}>
+        {t("admin.traces.show_all", { count })}
+      </button>
+    </CardFooter>
+  );
+}
+
+type RouteStat = AdminTraceOverviewData["routes"][number];
+type OperationStat = AdminTraceOverviewData["operations"][number];
+
+// What a column of the routes sorts by. Errors sort by their share of the
+// calls, which is what the column shows, then by how many there are.
+const ROUTE_ORDERS = {
+  calls: (a, b) => a.requests - b.requests,
+  errors: (a, b) => a.errors / a.requests - b.errors / b.requests || a.errors - b.errors,
+  p50: (a, b) => a.p50Ms - b.p50Ms,
+  p95: (a, b) => a.p95Ms - b.p95Ms,
+  p99: (a, b) => a.p99Ms - b.p99Ms,
+} satisfies Record<string, (a: RouteStat, b: RouteStat) => number>;
+
+const OPERATION_ORDERS = {
+  calls: (a, b) => a.calls - b.calls,
+  p50: (a, b) => a.p50Ms - b.p50Ms,
+  p95: (a, b) => a.p95Ms - b.p95Ms,
+  share: (a, b) => a.selfMs - b.selfMs,
+} satisfies Record<string, (a: OperationStat, b: OperationStat) => number>;
+
+interface Sort<Column> {
+  column: Column;
+  descending: boolean;
+}
+
+const OPERATIONS_BY_SHARE: Sort<keyof typeof OPERATION_ORDERS> = { column: "share", descending: true };
+
+// useSorted sorts the rows by the column whose header was clicked: the largest
+// first, the smallest first on a second click, and back to the first order of
+// the table on a third. Rows that compare equal keep the order they came in.
+function useSorted<Row, Column extends string>(
+  rows: Row[],
+  orders: Record<Column, (a: Row, b: Row) => number>,
+  initial: Sort<Column> | null = null,
+) {
+  const [sort, setSort] = useState(initial);
+  const sorted = useMemo(() => {
+    if (!sort) return rows;
+    const order = orders[sort.column];
+    return [...rows].sort(sort.descending ? (a, b) => order(b, a) : order);
+  }, [rows, orders, sort]);
+  // head returns the props of the header of a column.
+  const head = (column: Column) => ({
+    sorted: sort?.column !== column ? undefined : sort.descending ? ("descending" as const) : ("ascending" as const),
+    onSort: () =>
+      setSort(
+        sort?.column !== column
+          ? { column, descending: true }
+          : sort.descending
+            ? { column, descending: false }
+            : initial,
+      ),
+  });
+  // by sorts by a column, the largest first, or in the first order of the table.
+  const by = (column: Column | null) => setSort(column === null ? initial : { column, descending: true });
+  return { sorted, head, column: sort?.column ?? null, by };
+}
+
+const FIRST_ORDER = "first";
+
+// SortMenu sorts a table by any of its columns while the card is too narrow to
+// show them all, and so their headers.
+function SortMenu<Column extends string>({
+  column,
+  options,
+  onChange,
+}: {
+  column: Column | null;
+  // A null column is the first order of the table.
+  options: { column: Column | null; label: string }[];
+  onChange: (column: Column | null) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <Select
+      value={column ?? FIRST_ORDER}
+      onValueChange={(v) => onChange(options.find((option) => (option.column ?? FIRST_ORDER) === v)?.column ?? null)}
     >
-      {t("admin.traces.show_all", { count })}
-    </button>
+      <SelectTrigger aria-label={t("admin.traces.sort")} className="glass-control mt-2 h-9 w-auto gap-2 @lg:hidden">
+        {/* The muted color is too faint on the fill of a glass control. */}
+        <span className={cn(MUTED, "glass-ui:text-(--color-foreground)")}>{t("admin.traces.sort")}</span>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((option) => (
+          <SelectItem key={option.column ?? FIRST_ORDER} value={option.column ?? FIRST_ORDER}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+// TableCard heads a table with what it lists, how to read it and the menu
+// that sorts it. The table runs to the edges of the card.
+function TableCard({
+  title,
+  description,
+  sortMenu,
+  children,
+}: {
+  title: string;
+  description: string;
+  sortMenu: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <Card className="@container min-w-0 overflow-hidden">
+      <CardHeader className="items-start pb-4">
+        <CardTitle className={CARD_TITLE}>{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
+        {sortMenu}
+      </CardHeader>
+      {children}
+    </Card>
   );
 }
 
 // AdminTraceOverview aggregates every request of the last 15 minutes or hour:
-// how many, how fast, and where their time went.
-export function AdminTraceOverview({ overview }: { overview: AdminTraceOverviewData }) {
+// how many, how fast, and where their time went. The page refreshes itself
+// while its tab is in view.
+export function AdminTraceOverview({ overview: loaded }: { overview: AdminTraceOverviewData }) {
   const { t } = useTranslation();
+  const {
+    data: overview,
+    refresh,
+    failedSince,
+  } = useRefreshed({ ...adminTraceOverviewQuery(loaded.range), enabled: loaded.enabled }, loaded);
   const [allRoutes, setAllRoutes] = useState(false);
   const [allOperations, setAllOperations] = useState(false);
+  const routeRows = useRef<HTMLTableSectionElement>(null);
+  const operationRows = useRef<HTMLTableSectionElement>(null);
+  // The server lists routes by their total time, which no column shows.
+  const routes = useSorted(overview.routes, ROUTE_ORDERS);
+  // The server lists operations by their share of the time.
+  const operations = useSorted(overview.operations, OPERATION_ORDERS, OPERATIONS_BY_SHARE);
   if (!overview.enabled) {
     return <Disabled />;
   }
   const errorRate = overview.requests > 0 ? overview.errors / overview.requests : 0;
-  const percent = (share: number) =>
-    share > 0 && share < 0.001 ? "<0.1%" : `${(share * 100).toFixed(share > 0 && share < 0.1 ? 1 : 0)}%`;
   const stats: { label: string; value: string; alert?: boolean }[] = [
     { label: t("admin.traces.requests"), value: formatNumber(overview.requests) },
-    { label: t("admin.traces.errors"), value: percent(errorRate), alert: overview.errors > 0 },
+    { label: t("admin.traces.errors"), value: formatShare(errorRate), alert: overview.errors > 0 },
     { label: "p50", value: formatMs(overview.p50Ms) },
     { label: "p95", value: formatMs(overview.p95Ms) },
     { label: "p99", value: formatMs(overview.p99Ms) },
   ];
 
   return (
-    <TracesLayout view="overview" maxAgeMinutes={overview.maxAgeMinutes}>
-      <RangeLinks
-        label={t("admin.traces.range")}
-        active={overview.range}
-        to="/admin/traces"
-        options={[
-          { value: "15m", label: t("admin.traces.last_15m"), search: { range: "15m" } },
-          { value: "1h", label: t("admin.traces.last_hour"), search: {} },
-        ]}
-      />
-      <dl className="mt-4 grid grid-cols-2 overflow-hidden rounded-md border border-(--color-border) sm:grid-cols-5">
+    <TracesLayout
+      view="overview"
+      maxAgeMinutes={overview.maxAgeMinutes}
+      note={<RefreshNote failedSince={failedSince} />}
+      toolbar={
+        <>
+          <SegmentedLinks
+            to="/admin/traces"
+            label={t("admin.traces.range")}
+            active={overview.range}
+            options={[
+              { value: "15m", label: t("admin.traces.last_15m"), search: { range: "15m" } },
+              { value: "1h", label: t("admin.traces.last_hour"), search: {} },
+            ]}
+          />
+          <RefreshControl {...refresh} />
+        </>
+      }
+    >
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         {stats.map((stat) => (
-          <div
-            key={stat.label}
-            className="-mr-px -mb-px border-r border-b border-(--color-border) px-4 py-3 last:col-span-2 sm:last:col-span-1"
-          >
-            <dt className="text-xs text-(--color-muted-foreground)">{stat.label}</dt>
-            <dd className={cn("mt-1 text-lg tabular-nums", stat.alert && "text-(--color-destructive)")}>
-              {stat.value}
-            </dd>
-          </div>
+          <StatCard key={stat.label} label={stat.label} className="last:col-span-2 lg:last:col-span-1">
+            <p className={cn(STAT_VALUE, stat.alert && "text-(--color-destructive)")}>{stat.value}</p>
+          </StatCard>
         ))}
-      </dl>
-      {overview.requests > 0 ? <OverviewChart overview={overview} /> : <Note>{t("admin.traces.no_requests")}</Note>}
+      </div>
+      <Card className="min-w-0">
+        <CardHeader>
+          <CardTitle className={CARD_TITLE}>{t("admin.overview.traffic")}</CardTitle>
+          <CardDescription>{t("admin.traces.per_5m")}</CardDescription>
+        </CardHeader>
+        <CardContent className={CARD_BODY}>
+          {overview.requests > 0 ? (
+            <div className="reloads">
+              <TraceTrafficChart overview={overview} />
+            </div>
+          ) : (
+            <p className={cn("py-10 text-center text-sm", MUTED)}>{t("admin.traces.no_requests")}</p>
+          )}
+        </CardContent>
+      </Card>
 
-      {overview.routes.length > 0 ? (
-        <Section id="routes" title={t("admin.traces.routes")}>
-          <table className="w-full table-fixed text-sm">
-            <thead className="border-b border-(--color-border)">
-              <tr>
-                <th className={cn(TH, "w-auto")}>{t("admin.traces.route")}</th>
-                <th className={cn(TH, "w-16")}>{t("admin.traces.calls")}</th>
-                <th className={cn(TH, "hidden w-16 sm:table-cell")}>{t("admin.traces.errors")}</th>
-                <th className={cn(TH, "hidden w-18 sm:table-cell")}>p50</th>
-                <th className={cn(TH, "w-18")}>p95</th>
-                <th className={cn(TH, "hidden w-18 sm:table-cell")}>p99</th>
-              </tr>
-            </thead>
-            <tbody>
-              {overview.routes.slice(0, allRoutes ? undefined : COLLAPSED_ROWS).map((route) => (
-                <tr key={route.name} className="border-b border-(--color-border)">
-                  <td className={TD}>
-                    <Link to="/admin/traces" search={{ view: "search", route: route.name }} className="hover:underline">
-                      <RouteName route={route} />
-                    </Link>
-                    <ShareBar
-                      share={overview.totalMs > 0 ? route.totalMs / overview.totalMs : 0}
-                      className="bg-(--color-muted-foreground)/60"
-                    />
-                  </td>
-                  <td className={TD}>{formatNumber(route.requests)}</td>
-                  <td
-                    className={cn(
-                      TD,
-                      "hidden sm:table-cell",
-                      route.errors > 0 ? "text-(--color-destructive)" : "text-(--color-muted-foreground)",
-                    )}
-                  >
-                    {route.errors > 0 ? percent(route.errors / route.requests) : "0"}
-                  </td>
-                  <td className={cn(TD, "hidden text-(--color-muted-foreground) sm:table-cell")}>
-                    {formatMs(route.p50Ms)}
-                  </td>
-                  <td className={TD}>{formatMs(route.p95Ms)}</td>
-                  <td className={cn(TD, "hidden text-(--color-muted-foreground) sm:table-cell")}>
-                    {formatMs(route.p99Ms)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {allRoutes ? null : <ShowAll count={overview.routes.length} onClick={() => setAllRoutes(true)} />}
-          <Note>{t("admin.traces.routes_help")}</Note>
-        </Section>
-      ) : null}
+      {overview.routes.length > 0 || overview.operations.length > 0 ? (
+        <div className="grid items-start gap-4 xl:grid-cols-2">
+          {overview.routes.length > 0 ? (
+            <TableCard
+              title={t("admin.traces.routes")}
+              description={t("admin.traces.routes_help")}
+              sortMenu={
+                <SortMenu
+                  column={routes.column}
+                  onChange={routes.by}
+                  options={[
+                    { column: null, label: t("admin.traces.total_time") },
+                    { column: "calls", label: t("admin.traces.calls") },
+                    { column: "errors", label: t("admin.traces.errors") },
+                    { column: "p50", label: "p50" },
+                    { column: "p95", label: "p95" },
+                    { column: "p99", label: "p99" },
+                  ]}
+                />
+              }
+            >
+              <Table className="border-t border-(--color-border)">
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead>{t("admin.traces.route")}</TableHead>
+                    <TableSortHead align="right" {...routes.head("calls")}>
+                      {t("admin.traces.calls")}
+                    </TableSortHead>
+                    <TableSortHead align="right" className="hidden @lg:table-cell" {...routes.head("errors")}>
+                      {t("admin.traces.errors")}
+                    </TableSortHead>
+                    <TableSortHead align="right" className="hidden @lg:table-cell" {...routes.head("p50")}>
+                      p50
+                    </TableSortHead>
+                    <TableSortHead align="right" className={cn(LAST_SHOWN, "@lg:pr-3")} {...routes.head("p95")}>
+                      p95
+                    </TableSortHead>
+                    <TableSortHead align="right" className="hidden @lg:table-cell" {...routes.head("p99")}>
+                      p99
+                    </TableSortHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody ref={routeRows}>
+                  {routes.sorted.slice(0, allRoutes ? undefined : COLLAPSED_ROWS).map((route) => {
+                    const errors = route.errors > 0 ? formatShare(route.errors / route.requests) : "0";
+                    return (
+                      <TableRow key={route.name}>
+                        <TableCell>
+                          <Link
+                            to="/admin/traces"
+                            search={{ view: "search", route: route.name }}
+                            className={cn("inline-block py-0.5", LINK)}
+                          >
+                            <RouteName route={route} />
+                          </Link>
+                          <ShareBar
+                            share={overview.totalMs > 0 ? route.totalMs / overview.totalMs : 0}
+                            className="bg-(--color-muted-foreground)/60"
+                          />
+                          <Facts className="@lg:hidden">
+                            <span className={cn(route.errors > 0 && "text-(--color-destructive)")}>
+                              {t("admin.traces.errors")} {errors}
+                            </span>
+                            <span>p50 {formatMs(route.p50Ms)}</span>
+                            <span>p99 {formatMs(route.p99Ms)}</span>
+                          </Facts>
+                        </TableCell>
+                        <TableCell className={NUMBER_CELL}>{formatNumber(route.requests)}</TableCell>
+                        <TableCell
+                          className={cn(
+                            NUMBER_CELL,
+                            "hidden @lg:table-cell",
+                            route.errors > 0 ? "text-(--color-destructive)" : MUTED,
+                          )}
+                        >
+                          {errors}
+                        </TableCell>
+                        <TableCell className={cn(NUMBER_CELL, MUTED, "hidden @lg:table-cell")}>
+                          {formatMs(route.p50Ms)}
+                        </TableCell>
+                        <TableCell className={cn(NUMBER_CELL, LAST_SHOWN, "@lg:pr-3")}>
+                          {formatMs(route.p95Ms)}
+                        </TableCell>
+                        <TableCell className={cn(NUMBER_CELL, MUTED, "hidden @lg:table-cell")}>
+                          {formatMs(route.p99Ms)}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+              {allRoutes ? null : (
+                <ShowAll count={overview.routes.length} rows={routeRows} onClick={() => setAllRoutes(true)} />
+              )}
+            </TableCard>
+          ) : null}
 
-      {overview.operations.length > 0 ? (
-        <Section id="operations" title={t("admin.traces.where_time_goes")}>
-          <table className="w-full table-fixed text-sm">
-            <thead className="border-b border-(--color-border)">
-              <tr>
-                <th className={TH}>{t("admin.traces.operation")}</th>
-                <th className={cn(TH, "w-16")}>{t("admin.traces.calls")}</th>
-                <th className={cn(TH, "hidden w-18 sm:table-cell")}>p50</th>
-                <th className={cn(TH, "hidden w-18 sm:table-cell")}>p95</th>
-                <th className={cn(TH, "w-16")}>{t("admin.traces.share")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {overview.operations.slice(0, allOperations ? undefined : COLLAPSED_ROWS).map((op) => {
-                const share = overview.spanSelfMs > 0 ? op.selfMs / overview.spanSelfMs : 0;
-                return (
-                  <tr key={op.name} className="border-b border-(--color-border)">
-                    <td className={TD}>
-                      <span className="inline-flex max-w-full items-baseline gap-1.5">
-                        <KindChip kind={op.kind} />
-                        <span className="min-w-0 font-mono wrap-anywhere">{op.name}</span>
-                      </span>
-                    </td>
-                    <td className={TD}>{formatNumber(op.calls)}</td>
-                    <td className={cn(TD, "hidden text-(--color-muted-foreground) sm:table-cell")}>
-                      {formatMs(op.p50Ms)}
-                    </td>
-                    <td className={cn(TD, "hidden sm:table-cell")}>{formatMs(op.p95Ms)}</td>
-                    <td className={TD}>
-                      {percent(share)}
-                      <ShareBar share={share} className={KIND_FILLS[op.kind]} />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          {allOperations ? null : <ShowAll count={overview.operations.length} onClick={() => setAllOperations(true)} />}
-          <Note>{t("admin.traces.operations_help")}</Note>
-        </Section>
+          {overview.operations.length > 0 ? (
+            <TableCard
+              title={t("admin.traces.where_time_goes")}
+              description={t("admin.traces.operations_help")}
+              sortMenu={
+                <SortMenu
+                  column={operations.column}
+                  onChange={operations.by}
+                  options={[
+                    { column: "share", label: t("admin.traces.share") },
+                    { column: "calls", label: t("admin.traces.calls") },
+                    { column: "p50", label: "p50" },
+                    { column: "p95", label: "p95" },
+                  ]}
+                />
+              }
+            >
+              <Table className="border-t border-(--color-border)">
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead>{t("admin.traces.operation")}</TableHead>
+                    <TableSortHead align="right" {...operations.head("calls")}>
+                      {t("admin.traces.calls")}
+                    </TableSortHead>
+                    <TableSortHead align="right" className="hidden @lg:table-cell" {...operations.head("p50")}>
+                      p50
+                    </TableSortHead>
+                    <TableSortHead align="right" className="hidden @lg:table-cell" {...operations.head("p95")}>
+                      p95
+                    </TableSortHead>
+                    <TableSortHead align="right" {...operations.head("share")}>
+                      {t("admin.traces.share")}
+                    </TableSortHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody ref={operationRows}>
+                  {operations.sorted.slice(0, allOperations ? undefined : COLLAPSED_ROWS).map((op) => {
+                    const share = overview.spanSelfMs > 0 ? op.selfMs / overview.spanSelfMs : 0;
+                    return (
+                      // "Show all" hands the focus to the first row it brings, which has no link to take it.
+                      // Every row can hold it, since a refresh may put the operation on another row.
+                      <TableRow key={op.name} tabIndex={-1}>
+                        <TableCell>
+                          <span className="inline-flex max-w-full items-baseline gap-1.5">
+                            <KindChip kind={op.kind} />
+                            <span className="min-w-0 font-mono wrap-anywhere">{op.name}</span>
+                          </span>
+                          <Facts className="@lg:hidden">
+                            <span>p50 {formatMs(op.p50Ms)}</span>
+                            <span>p95 {formatMs(op.p95Ms)}</span>
+                          </Facts>
+                        </TableCell>
+                        <TableCell className={NUMBER_CELL}>{formatNumber(op.calls)}</TableCell>
+                        <TableCell className={cn(NUMBER_CELL, MUTED, "hidden @lg:table-cell")}>
+                          {formatMs(op.p50Ms)}
+                        </TableCell>
+                        <TableCell className={cn(NUMBER_CELL, "hidden @lg:table-cell")}>{formatMs(op.p95Ms)}</TableCell>
+                        <TableCell className={cn(NUMBER_CELL, "min-w-16")}>
+                          {formatShare(share)}
+                          <ShareBar share={share} className={KIND_FILLS[op.kind]} />
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+              {allOperations ? null : (
+                <ShowAll
+                  count={overview.operations.length}
+                  rows={operationRows}
+                  onClick={() => setAllOperations(true)}
+                />
+              )}
+            </TableCard>
+          ) : null}
+        </div>
       ) : null}
     </TracesLayout>
   );
@@ -467,145 +570,17 @@ export function AdminTraceOverview({ overview }: { overview: AdminTraceOverviewD
 
 const DURATION_FILTERS = [100, 500, 1000, 5000];
 
-function ScatterPlot({ result, search }: { result: AdminTraceSearchData; search: TraceSearch }) {
-  const { t } = useTranslation();
-  const W = 600;
-  const H = 160;
-  const now = Date.parse(result.now);
-  // Start at the oldest kept trace, so that a server that started recently
-  // spreads its traces over the plot, or at the window of the search.
-  const oldest = result.oldest ? Date.parse(result.oldest) : now;
-  const start = search.from ?? Math.max(now - result.maxAgeMinutes * 60_000, Math.min(oldest, now - 5 * 60_000));
-  const end = Math.max(Math.min(search.to ?? now, now), start + 60_000);
-  const windowed = search.from !== undefined || search.to !== undefined;
-  const slow = result.slowThresholdMs;
-  const maxMs = Math.max(10, slow, ...result.points.map((p) => p.durationMs));
-  // Powers of ten from 1 ms up to the slowest trace or the slow threshold,
-  // whichever is higher, so the threshold line stays inside the plot.
-  const top = Math.ceil(Math.log10(maxMs));
-  const ticks = Array.from({ length: top + 1 }, (_, i) => 10 ** i);
-  const x = (iso: string) => ((Date.parse(iso) - start) / (end - start)) * W;
-  const y = (ms: number) => H - 4 - (Math.log10(Math.max(ms, 1)) / top) * (H - 8);
-
-  // Zero-length lines with round caps draw dots that keep their shape while
-  // the plot stretches to its width.
-  const dot = (cx: number, cy: number, size: number, className: string, key: string) => (
-    <line
-      key={key}
-      x1={cx}
-      x2={cx}
-      y1={cy}
-      y2={cy}
-      strokeWidth={size}
-      strokeLinecap="round"
-      vectorEffect="non-scaling-stroke"
-      className={className}
-    />
-  );
-
-  return (
-    <figure className="mt-4">
-      <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2">
-        <div aria-hidden className="relative h-40 w-12 text-right text-xs text-(--color-muted-foreground)">
-          {ticks.map((tick) => (
-            <span key={tick} className="absolute right-0 -translate-y-1/2" style={{ top: `${(y(tick) / H) * 100}%` }}>
-              {formatMs(tick)}
-            </span>
-          ))}
-        </div>
-        <div
-          role="img"
-          aria-label={t("admin.traces.chart_search", { count: result.points.length })}
-          className="relative h-40 border-b border-l border-(--color-border)"
-        >
-          <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="size-full overflow-visible" aria-hidden>
-            {ticks.map((tick) => (
-              <line
-                key={tick}
-                x1={0}
-                x2={W}
-                y1={y(tick)}
-                y2={y(tick)}
-                className="stroke-(--color-border)"
-                vectorEffect="non-scaling-stroke"
-              />
-            ))}
-            {slow > 0 ? (
-              <line
-                x1={0}
-                x2={W}
-                y1={y(slow)}
-                y2={y(slow)}
-                strokeDasharray="4 3"
-                className="stroke-(--color-primary)"
-                vectorEffect="non-scaling-stroke"
-              />
-            ) : null}
-            {result.points.map((p) =>
-              p.error
-                ? [
-                    dot(x(p.start), y(p.durationMs), 9, "stroke-(--color-destructive)", `${p.id}-ring`),
-                    dot(x(p.start), y(p.durationMs), 4, "stroke-(--color-background)", p.id),
-                  ]
-                : dot(
-                    x(p.start),
-                    y(p.durationMs),
-                    6,
-                    slow > 0 && p.durationMs >= slow
-                      ? "stroke-(--color-primary)"
-                      : "stroke-(--color-muted-foreground)/70",
-                    p.id,
-                  ),
-            )}
-          </svg>
-        </div>
-        <div />
-        <div className="mt-1 flex justify-between gap-x-4 text-xs text-(--color-muted-foreground)">
-          <span>
-            {windowed ? formatAbsoluteTime(start) : formatRelativeTime(t, new Date(start).toISOString(), now)}
-          </span>
-          <span className="text-right">{end < now ? formatAbsoluteTime(end) : t("admin.traces.now")}</span>
-        </div>
-      </div>
-      <figcaption className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-(--color-muted-foreground)">
-        <span className="inline-flex items-center gap-1.5">
-          <span aria-hidden className="size-2 rounded-full bg-(--color-muted-foreground)/70" />
-          {t("admin.traces.request")}
-        </span>
-        {slow > 0 ? (
-          <span className="inline-flex items-center gap-1.5">
-            <span aria-hidden className="size-2 rounded-full bg-(--color-primary)" />
-            {t("admin.traces.slower_than", { duration: formatMs(slow) })}
-            <span aria-hidden className="w-3 border-t border-dashed border-(--color-primary)" />
-          </span>
-        ) : null}
-        <span className="inline-flex items-center gap-1.5">
-          <span aria-hidden className="size-2.5 rounded-full border-2 border-(--color-destructive)" />
-          {t("admin.traces.error_5xx")}
-        </span>
-      </figcaption>
-    </figure>
-  );
-}
-
-function KeptLabel({ kept }: { kept: AdminTraceKept }) {
-  const { t } = useTranslation();
-  if (kept === "failed") {
-    return (
-      <span className="inline-flex items-center gap-1 text-(--color-destructive)">
-        <AlertCircle className="size-3.5" aria-hidden />
-        {t("admin.traces.kept_failed")}
-      </span>
-    );
-  }
-  return <span>{t(kept === "slow" ? "admin.traces.kept_slow" : "admin.traces.kept_sampled")}</span>;
-}
-
 // AdminTraceSearch finds kept traces by ID, or filters them by route, duration
-// and status.
-export function AdminTraceSearch({ result, search }: { result: AdminTraceSearchData; search: TraceSearch }) {
+// and status. The matches of the filters refresh themselves while the tab of
+// the page is in view. The answer for a trace ID stays as it is.
+export function AdminTraceSearch({ result: loaded, search }: { result: AdminTraceSearchData; search: TraceSearch }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const {
+    data: result,
+    refresh,
+    failedSince,
+  } = useRefreshed({ ...adminTraceSearchQuery(search), enabled: loaded.enabled && !search.q }, loaded);
   const now = Date.parse(result.now);
   if (!result.enabled) {
     return <Disabled />;
@@ -617,38 +592,44 @@ export function AdminTraceSearch({ result, search }: { result: AdminTraceSearchD
   if (search.q && result.total === 0) {
     return (
       <TracesLayout view="search" q={search.q} maxAgeMinutes={result.maxAgeMinutes}>
-        <Panel>
-          <p>
-            <Trans
-              i18nKey="admin.traces.not_found"
-              values={{ id: search.q }}
-              components={{ id: <code className="font-mono wrap-anywhere" /> }}
-            />
-          </p>
-          <p className="mt-2 text-(--color-muted-foreground)">
-            {t("admin.traces.not_found_desc", { duration: formatMinutes(result.maxAgeMinutes) })}
-            {result.oldest ? ` ${t("admin.traces.oldest", { when: formatRelativeTime(t, result.oldest, now) })}` : null}
-          </p>
-          <Link
-            to="/admin/traces"
-            search={{ view: "search" }}
-            className="mt-3 inline-block text-(--color-primary) hover:underline"
-          >
-            {t("admin.traces.clear_search")}
-          </Link>
-        </Panel>
+        <Card className="min-w-0">
+          <CardContent className="reloads text-sm">
+            <p>
+              <Trans
+                i18nKey="admin.traces.not_found"
+                values={{ id: search.q }}
+                components={{ id: <code className="font-mono wrap-anywhere" /> }}
+              />
+            </p>
+            <p className={cn("mt-2", MUTED)}>
+              {t("admin.traces.not_found_desc", { duration: formatMinutes(result.maxAgeMinutes) })}
+              {result.oldest
+                ? ` ${t("admin.traces.oldest", { when: formatRelativeTime(t, result.oldest, now) })}`
+                : null}
+            </p>
+            <Link to="/admin/traces" search={{ view: "search" }} className={cn("mt-3 inline-block py-0.5", LINK)}>
+              {t("admin.traces.clear_search")}
+            </Link>
+          </CardContent>
+        </Card>
       </TracesLayout>
     );
   }
 
   return (
-    <TracesLayout view="search" q={search.q} maxAgeMinutes={result.maxAgeMinutes}>
+    <TracesLayout
+      view="search"
+      q={search.q}
+      maxAgeMinutes={result.maxAgeMinutes}
+      toolbar={search.q ? undefined : <RefreshControl {...refresh} />}
+      note={search.q ? undefined : <RefreshNote failedSince={failedSince} />}
+    >
       {search.q ? null : (
         <div role="group" aria-label={t("admin.traces.filters")} className="flex flex-wrap items-center gap-2">
           <Select value={search.route ?? ALL} onValueChange={(v) => refine({ route: v === ALL ? undefined : v })}>
             <SelectTrigger
               aria-label={t("admin.traces.route")}
-              className="h-9 w-full min-w-0 sm:w-auto sm:max-w-sm sm:min-w-48 sm:flex-1"
+              className="glass-control h-9 w-full min-w-0 sm:w-auto sm:max-w-sm sm:min-w-48"
             >
               <SelectValue />
             </SelectTrigger>
@@ -665,7 +646,7 @@ export function AdminTraceSearch({ result, search }: { result: AdminTraceSearchD
             value={search.minMs ? String(search.minMs) : ALL}
             onValueChange={(v) => refine({ minMs: v === ALL ? undefined : Number(v) })}
           >
-            <SelectTrigger aria-label={t("admin.traces.duration")} className="h-9 w-auto">
+            <SelectTrigger aria-label={t("admin.traces.duration")} className="glass-control h-9 w-auto gap-2">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -681,93 +662,144 @@ export function AdminTraceSearch({ result, search }: { result: AdminTraceSearchD
             </SelectContent>
           </Select>
           {search.from || search.to ? (
-            <span className="inline-flex min-h-8 max-w-full items-center gap-1 rounded-md border border-(--color-ring) bg-(--color-surface) py-1 pr-1 pl-3 text-sm">
-              {t("admin.traces.window", {
-                from: search.from ? formatAbsoluteTime(search.from) : "",
-                to: search.to ? formatAbsoluteTime(search.to) : "",
-              })}
+            <span className="glass-control inline-flex min-h-9 max-w-full items-center gap-1 rounded-md border !border-(--color-ring) bg-(--color-surface) py-1 pr-1 pl-3 text-sm">
+              {search.from && search.to
+                ? t("admin.traces.window", {
+                    from: formatAbsoluteTime(search.from),
+                    to: formatAbsoluteTime(search.to),
+                  })
+                : search.from
+                  ? t("admin.traces.window_from", { from: formatAbsoluteTime(search.from) })
+                  : t("admin.traces.window_until", { to: formatAbsoluteTime(search.to ?? 0) })}
               <Link
                 to="/admin/traces"
                 search={{ ...search, from: undefined, to: undefined }}
                 aria-label={t("admin.traces.clear_window")}
-                className="flex size-6 items-center justify-center rounded text-(--color-muted-foreground) hover:bg-(--color-background) hover:text-(--color-foreground)"
+                className="flex size-6 shrink-0 items-center justify-center rounded text-(--color-muted-foreground) hover:bg-(--color-background) hover:text-(--color-foreground) glass-ui:hover:bg-(--color-surface)"
               >
                 <X className="size-4" aria-hidden />
               </Link>
             </span>
           ) : null}
-          <RangeLinks
+          <SegmentedLinks
+            to="/admin/traces"
             label={t("admin.traces.status")}
             active={search.status ?? "all"}
-            to="/admin/traces"
             options={[
               { value: "all", label: t("admin.traces.all"), search: { ...search, view: "search", status: undefined } },
               { value: "5xx", label: "5xx", search: { ...search, view: "search", status: "5xx" } },
               { value: "4xx", label: "4xx", search: { ...search, view: "search", status: "4xx" } },
             ]}
           />
-        </div>
-      )}
-      {result.points.length > 0 ? <ScatterPlot result={result} search={search} /> : null}
-
-      <div className="mt-6 mb-2 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-(--color-muted-foreground)">
-          {t("admin.traces.count", { total: formatNumber(result.total), shown: result.traces.length })}
-        </p>
-        {search.q ? null : (
           <Select
             value={search.sort ?? "recent"}
             onValueChange={(v) => refine({ sort: v === "slowest" ? "slowest" : undefined })}
           >
-            <SelectTrigger aria-label={t("admin.traces.sort")} className="h-9 w-auto gap-2">
+            <SelectTrigger aria-label={t("admin.traces.sort")} className="glass-control h-9 w-auto gap-2">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent align="end">
+            <SelectContent>
               <SelectItem value="recent">{t("admin.traces.most_recent")}</SelectItem>
               <SelectItem value="slowest">{t("admin.traces.slowest")}</SelectItem>
             </SelectContent>
           </Select>
-        )}
-      </div>
-      {result.traces.length > 0 ? (
-        <ul className="border-t border-(--color-border)">
-          {result.traces.map((trace) => (
-            <li key={trace.id} className="border-b border-(--color-border)">
-              <Link
-                to="/admin/traces/$id"
-                params={{ id: trace.id }}
-                className="flex items-start gap-3 px-1 py-2 text-sm hover:bg-(--color-surface)"
-              >
-                <span className="min-w-0 flex-1">
-                  <span className="block wrap-anywhere">
-                    {trace.method ? <span className="text-(--color-muted-foreground)">{trace.method} </span> : null}
-                    <span className="font-mono">{trace.path || trace.route.name}</span>
-                  </span>
-                  <span className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-(--color-muted-foreground)">
-                    <span>{formatRelativeTime(t, trace.start, now)}</span>
-                    <KeptLabel kept={trace.kept} />
-                  </span>
-                </span>
-                {trace.status > 0 ? (
-                  <span
-                    className={cn(
-                      "shrink-0 tabular-nums",
-                      trace.status >= 500 ? "text-(--color-destructive)" : "text-(--color-muted-foreground)",
-                    )}
-                  >
-                    {trace.status}
-                  </span>
-                ) : null}
-                <span className="w-18 shrink-0 text-right tabular-nums">{formatMs(trace.durationMs)}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="border-t border-(--color-border) py-6 text-sm text-(--color-muted-foreground)">
-          {t("admin.traces.no_match")}
-        </p>
+        </div>
       )}
+
+      <Card className="min-w-0">
+        <CardHeader>
+          <CardTitle className={CARD_TITLE}>{t("admin.traces.kept_traces")}</CardTitle>
+          <CardDescription className="reloads w-fit">
+            {t("admin.traces.count", { total: formatNumber(result.total), shown: result.traces.length })}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className={CARD_BODY}>
+          {result.points.length > 0 ? (
+            <div className="reloads">
+              <TraceScatterChart result={result} search={search} />
+            </div>
+          ) : (
+            <p className={cn("py-10 text-center text-sm", MUTED)}>{t("admin.traces.no_match")}</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {result.traces.length > 0 ? (
+        <Card className="@container min-w-0 overflow-hidden">
+          <Table>
+            <TableHeader className="bg-(--color-surface)">
+              <TableRow className="hover:bg-transparent">
+                <TableHead>{t("admin.traces.trace_id")}</TableHead>
+                <TableHead className="hidden @xl:table-cell">{t("admin.traces.request")}</TableHead>
+                <TableHead className={cn(NUMBER_HEAD, LAST_SHOWN, "@3xl:pr-3")}>{t("admin.traces.status")}</TableHead>
+                <TableHead className="hidden @3xl:table-cell">{t("admin.traces.start")}</TableHead>
+                <TableHead className={cn(NUMBER_HEAD, "hidden @3xl:table-cell")}>
+                  {t("admin.traces.duration")}
+                </TableHead>
+                <TableHead className={cn(NUMBER_HEAD, "hidden @3xl:table-cell")}>
+                  {t("admin.traces.span_count")}
+                </TableHead>
+                <TableHead className="hidden @3xl:table-cell">{t("admin.traces.kept")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {result.traces.map((trace) => {
+                const request = (
+                  <>
+                    {trace.method ? <span className={MUTED}>{trace.method} </span> : null}
+                    <span className="font-mono">{trace.path || trace.route.name}</span>
+                  </>
+                );
+                const started = formatRelativeTime(t, trace.start, now);
+                return (
+                  <TableRow key={trace.id}>
+                    <TableCell className="@xl:w-px @xl:whitespace-nowrap">
+                      <Link
+                        to="/admin/traces/$id"
+                        params={{ id: trace.id }}
+                        className={cn("inline-flex min-h-6 items-center font-mono", LINK)}
+                      >
+                        {trace.id.slice(0, 16)}
+                      </Link>
+                      <span className="block wrap-anywhere @xl:hidden">{request}</span>
+                      <Facts className="@3xl:hidden">
+                        <span>{started}</span>
+                        <span>{formatMs(trace.durationMs)}</span>
+                        <span>{t("admin.traces.spans", { count: trace.spanCount })}</span>
+                        <KeptLabel kept={trace.kept} />
+                      </Facts>
+                    </TableCell>
+                    <TableCell className="hidden wrap-anywhere @xl:table-cell">{request}</TableCell>
+                    <TableCell
+                      className={cn(
+                        NUMBER_CELL,
+                        LAST_SHOWN,
+                        "@3xl:pr-3",
+                        trace.status >= 500 ? "text-(--color-destructive)" : trace.status > 0 ? "" : MUTED,
+                      )}
+                    >
+                      {trace.status > 0 ? trace.status : t("admin.traces.background")}
+                    </TableCell>
+                    <TableCell className="hidden w-px whitespace-nowrap tabular-nums @3xl:table-cell">
+                      {formatTraceStart(result.maxAgeMinutes)(trace.start)}
+                      <span className={cn("ml-2 hidden text-xs @5xl:inline", MUTED)}>{started}</span>
+                    </TableCell>
+                    <TableCell className={cn(NUMBER_CELL, "hidden @3xl:table-cell")}>
+                      {formatMs(trace.durationMs)}
+                    </TableCell>
+                    <TableCell className={cn(NUMBER_CELL, "hidden @3xl:table-cell")}>
+                      {formatNumber(trace.spanCount)}
+                    </TableCell>
+                    <TableCell className="hidden w-px whitespace-nowrap @3xl:table-cell">
+                      <KeptLabel kept={trace.kept} />
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </Card>
+      ) : null}
     </TracesLayout>
   );
 }
@@ -814,7 +846,7 @@ function SpanDetails({ node, trace }: { node: SpanNode; trace: AdminTrace }) {
   const typical = trace.operations[span.name];
   // Attributes are set in code, the other rows are labels of the panel.
   const rows: { key: string; value: ReactNode; code?: true }[] = [
-    { key: t("admin.traces.start"), value: `+${formatMs(span.startMs)}` },
+    { key: t("admin.traces.start"), value: `${span.startMs < 0 ? "-" : "+"}${formatMs(Math.abs(span.startMs))}` },
     { key: t("admin.traces.duration"), value: formatMs(span.durationMs) },
     ...(span.error ? [{ key: t("admin.traces.error"), value: span.error }] : []),
     ...span.attributes.map((a) => ({ key: a.key, value: a.value, code: true as const })),
@@ -823,7 +855,7 @@ function SpanDetails({ node, trace }: { node: SpanNode; trace: AdminTrace }) {
     <div className="my-1 rounded-md border border-(--color-border) bg-(--color-surface) p-3 text-sm">
       <dl>
         {rows.map((row) => (
-          <div key={row.key} className="grid gap-x-4 py-0.5 sm:grid-cols-[minmax(0,12rem)_minmax(0,1fr)]">
+          <div key={row.key} className="grid gap-x-4 py-0.5 @xl:grid-cols-[minmax(0,12rem)_minmax(0,1fr)]">
             <dt className={cn("text-xs/5 text-(--color-muted-foreground) wrap-anywhere", row.code && "font-mono")}>
               {row.key}
             </dt>
@@ -848,6 +880,9 @@ function SpanDetails({ node, trace }: { node: SpanNode; trace: AdminTrace }) {
   );
 }
 
+// Waterfall lists every span on the timeline of the trace, below the span
+// that started it. It needs a `@container` around it: a narrow one puts the
+// bar of a span below its name.
 function Waterfall({ trace }: { trace: AdminTrace }) {
   const { t } = useTranslation();
   const roots = useMemo(() => buildTree(trace.spans), [trace.spans]);
@@ -858,9 +893,18 @@ function Waterfall({ trace }: { trace: AdminTrace }) {
   const [selected, setSelected] = useState<string | null>(
     () => [...trace.spans].reverse().find((span) => span.error)?.id ?? null,
   );
-  const total = Math.max(trace.durationMs, ...trace.spans.map((s) => s.startMs + s.durationMs), 0.001);
-  const step = niceStep(total);
-  const ticks = Array.from({ length: Math.floor(total / step) + 1 }, (_, i) => i * step);
+  // Times count from the start of the root. A request that joined the trace of another one may
+  // have started before it, so the timeline starts at the earliest span.
+  const origin = Math.min(0, ...trace.spans.map((s) => s.startMs));
+  const end = Math.max(trace.durationMs, ...trace.spans.map((s) => s.startMs + s.durationMs), origin + 0.001);
+  const total = end - origin;
+  let step = niceStep(total);
+  // With an early span, both sides of 0 may be shorter than a step, which would leave 0 as the
+  // only gridline. Half a step always fits on the longer side.
+  if (Math.max(end, -origin) < step) step /= 2;
+  const firstTick = Math.ceil(origin / step) * step;
+  const ticks = Array.from({ length: Math.floor((end - firstTick) / step) + 1 }, (_, i) => firstTick + i * step);
+  const at = (ms: number) => (ms - origin) / total;
 
   const rows: SpanNode[] = [];
   const walk = (node: SpanNode) => {
@@ -876,15 +920,15 @@ function Waterfall({ trace }: { trace: AdminTrace }) {
       else next.add(id);
       return next;
     });
-  const grid = "grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 sm:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_4.5rem]";
+  const grid = "grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 px-2 @xl:grid-cols-[minmax(0,5fr)_minmax(0,6fr)_4.5rem]";
   const track = (children?: ReactNode) => (
-    <div className="relative col-span-2 h-5 sm:col-span-1">
+    <div className="relative col-span-2 h-5 @xl:col-span-1">
       {ticks.map((tick) => (
         <span
           key={tick}
           aria-hidden
           className="absolute inset-y-0 w-px bg-(--color-border)"
-          style={{ left: `${(tick / total) * 100}%` }}
+          style={{ left: `${at(tick) * 100}%` }}
         />
       ))}
       {children}
@@ -892,25 +936,25 @@ function Waterfall({ trace }: { trace: AdminTrace }) {
   );
 
   return (
-    <div className="mt-6 text-sm">
+    <div className="-mx-2 text-sm">
       <div className={cn(grid, "border-b border-(--color-border) pb-1 text-xs text-(--color-muted-foreground)")}>
-        <span className="hidden sm:block">{t("admin.traces.span")}</span>
-        <div className="relative col-span-2 h-4 sm:col-span-1">
+        <span className="hidden @xl:block">{t("admin.traces.span")}</span>
+        <div className="relative col-span-2 h-4 @xl:col-span-1">
           {ticks.map((tick) => (
             <span
               key={tick}
-              // Labels near the end stay inside the timeline.
+              // Labels near either end stay inside the timeline.
               className={cn(
                 "absolute whitespace-nowrap tabular-nums",
-                tick === 0 ? "" : tick / total > 0.85 ? "-translate-x-full" : "-translate-x-1/2",
+                at(tick) < 0.08 ? "" : at(tick) > 0.85 ? "-translate-x-full" : "-translate-x-1/2",
               )}
-              style={{ left: `${(tick / total) * 100}%` }}
+              style={{ left: `${at(tick) * 100}%` }}
             >
-              {tick === 0 ? "0" : formatMs(tick)}
+              {tick === 0 ? "0" : `${tick < 0 ? "-" : ""}${formatMs(Math.abs(tick))}`}
             </span>
           ))}
         </div>
-        <span className="hidden text-right sm:block">{t("admin.traces.time")}</span>
+        <span className="hidden text-right @xl:block">{t("admin.traces.time")}</span>
       </div>
       <ul>
         {rows.map((node) => {
@@ -920,7 +964,7 @@ function Waterfall({ trace }: { trace: AdminTrace }) {
           const isCollapsed = collapsed.has(span.id);
           return (
             <li key={span.id}>
-              <div className={cn(grid, "items-center py-1", isSelected && "bg-(--color-surface)")}>
+              <div className={cn(grid, "items-center rounded-md py-1", isSelected && "bg-(--color-foreground)/5")}>
                 <div className="flex min-w-0 items-center gap-1" style={{ paddingLeft: `${node.depth * 0.75}rem` }}>
                   {hasChildren ? (
                     <button
@@ -928,7 +972,7 @@ function Waterfall({ trace }: { trace: AdminTrace }) {
                       onClick={() => toggle(span.id)}
                       aria-expanded={!isCollapsed}
                       aria-label={t(isCollapsed ? "admin.traces.expand" : "admin.traces.collapse", { name: span.name })}
-                      className="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
+                      className="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded text-(--color-muted-foreground) hover:bg-(--color-foreground)/5 hover:text-(--color-foreground)"
                     >
                       {isCollapsed ? (
                         <ChevronRight className="size-4" aria-hidden />
@@ -944,7 +988,7 @@ function Waterfall({ trace }: { trace: AdminTrace }) {
                     onClick={() => setSelected(isSelected ? null : span.id)}
                     aria-expanded={isSelected}
                     className={cn(
-                      "flex min-h-6 min-w-0 cursor-pointer items-center gap-1.5 rounded text-left hover:underline",
+                      "flex min-h-6 min-w-6 cursor-pointer items-center gap-1.5 rounded text-left hover:underline",
                       span.error && "text-(--color-destructive)",
                     )}
                   >
@@ -955,7 +999,7 @@ function Waterfall({ trace }: { trace: AdminTrace }) {
                     <KindChip kind={span.kind} />
                   </button>
                 </div>
-                <span className="text-right tabular-nums sm:order-last">{formatMs(span.durationMs)}</span>
+                <span className="text-right tabular-nums @xl:order-last">{formatMs(span.durationMs)}</span>
                 {track(
                   <span
                     aria-hidden
@@ -964,19 +1008,38 @@ function Waterfall({ trace }: { trace: AdminTrace }) {
                       span.error ? "bg-(--color-destructive)" : KIND_FILLS[span.kind],
                     )}
                     style={{
-                      left: `${(span.startMs / total) * 100}%`,
+                      left: `${at(span.startMs) * 100}%`,
                       width: `${(span.durationMs / total) * 100}%`,
                     }}
                   />,
                 )}
               </div>
-              {isSelected ? <SpanDetails node={node} trace={trace} /> : null}
+              {isSelected ? (
+                <div className="px-2">
+                  <SpanDetails node={node} trace={trace} />
+                </div>
+              ) : null}
             </li>
           );
         })}
       </ul>
-      {trace.droppedSpans > 0 ? <Note>{t("admin.traces.dropped_spans", { count: trace.droppedSpans })}</Note> : null}
+      {trace.droppedSpans > 0 ? (
+        <p className={cn("mt-2 px-2 text-xs", MUTED)}>
+          {t("admin.traces.dropped_spans", { count: trace.droppedSpans })}
+        </p>
+      ) : null}
     </div>
+  );
+}
+
+function SideCard({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <Card className="min-w-0">
+      <CardHeader>
+        <CardTitle className={CARD_TITLE}>{title}</CardTitle>
+      </CardHeader>
+      <CardContent className={cn(CARD_BODY, "text-sm")}>{children}</CardContent>
+    </Card>
   );
 }
 
@@ -996,13 +1059,13 @@ function Breakdown({ trace }: { trace: AdminTrace }) {
     { key: "db", label: t("admin.traces.database"), ms: totals.db, fill: KIND_FILLS.db },
   ].filter((part) => part.ms > 0);
   return (
-    <div className="mt-4">
+    <SideCard title={t("admin.traces.where_time_went")}>
       <div aria-hidden className="flex h-2 gap-0.5 overflow-hidden rounded-full">
         {parts.map((part) => (
           <span key={part.key} className={part.fill} style={{ width: `${(part.ms / sum) * 100}%` }} />
         ))}
       </div>
-      <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+      <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
         {parts.map((part) => (
           <span key={part.key} className="inline-flex items-center gap-1.5">
             <span aria-hidden className={cn("size-2.5 rounded-sm", part.fill)} />
@@ -1011,7 +1074,7 @@ function Breakdown({ trace }: { trace: AdminTrace }) {
           </span>
         ))}
       </p>
-    </div>
+    </SideCard>
   );
 }
 
@@ -1020,6 +1083,7 @@ function Breakdown({ trace }: { trace: AdminTrace }) {
 const REPEATED_RUN = 5;
 
 function RepeatedSpans({ trace }: { trace: AdminTrace }) {
+  const { t } = useTranslation();
   const runs: { name: string; count: number; ms: number }[] = [];
   const visit = (node: SpanNode) => {
     let i = 0;
@@ -1040,7 +1104,7 @@ function RepeatedSpans({ trace }: { trace: AdminTrace }) {
   if (runs.length === 0) return null;
   runs.sort((a, b) => b.ms - a.ms);
   return (
-    <Panel className="mt-4">
+    <SideCard title={t("admin.traces.repeated_title")}>
       <ul className="space-y-1">
         {runs.slice(0, 3).map((run, i) => {
           return (
@@ -1055,7 +1119,7 @@ function RepeatedSpans({ trace }: { trace: AdminTrace }) {
           );
         })}
       </ul>
-    </Panel>
+    </SideCard>
   );
 }
 
@@ -1066,7 +1130,7 @@ function RouteComparison({ trace }: { trace: AdminTrace }) {
   const max = Math.max(stats.p95Ms * 1.25, trace.durationMs * 1.02) || 1;
   const at = (ms: number) => `${Math.min(100, (ms / max) * 100)}%`;
   return (
-    <Panel className="mt-4">
+    <SideCard title={t("admin.traces.compared_to_route")}>
       <p>
         <Trans
           i18nKey="admin.traces.compare"
@@ -1074,64 +1138,78 @@ function RouteComparison({ trace }: { trace: AdminTrace }) {
           components={{ route: <RouteName route={trace.route} /> }}
         />
       </p>
-      <div aria-hidden className="relative mt-2 h-4 rounded-sm bg-(--color-border)/60">
+      <div aria-hidden className="relative mt-3 h-4 rounded-sm bg-(--color-border)/60">
         <span
           className="absolute inset-y-0 bg-(--color-muted-foreground)/40"
           style={{ left: at(stats.p50Ms), width: `calc(${at(stats.p95Ms)} - ${at(stats.p50Ms)})` }}
         />
         <span className="absolute -inset-y-1 w-0.5 bg-(--color-foreground)" style={{ left: at(trace.durationMs) }} />
       </div>
-      <p className="mt-2 text-xs text-(--color-muted-foreground)">
+      <p className="mt-3 text-xs text-(--color-muted-foreground)">
         {t("admin.traces.compare_band", {
           p50: formatMs(stats.p50Ms),
           p95: formatMs(stats.p95Ms),
           requests: formatNumber(stats.requests),
         })}
       </p>
-    </Panel>
+    </SideCard>
   );
 }
 
-// AdminTraceView shows one trace: where its time went, how it compares to the
-// other requests of its route, and every span on a timeline.
+// AdminTraceView shows one trace: every span on a timeline, and beside it
+// where its time went and how it compares to the other requests of its route.
 export function AdminTraceView({ trace }: { trace: AdminTrace }) {
   const { t } = useTranslation();
   return (
-    <AdminLayout active="traces">
-      <Link
-        to="/admin/traces"
-        className="mb-3 inline-flex items-center gap-1 text-sm text-(--color-primary) hover:underline"
-      >
-        <ArrowLeft className="size-4" aria-hidden />
-        {t("admin.traces.back")}
-      </Link>
-      <h1 className="text-xl wrap-anywhere">
-        {trace.method ? <span className="text-(--color-muted-foreground)">{trace.method} </span> : null}
-        <span className="font-mono">{trace.path || trace.route.name}</span>
-      </h1>
-      <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-(--color-muted-foreground)">
-        {trace.status > 0 ? (
-          <span
-            className={cn(
-              "rounded border px-1.5 tabular-nums",
-              trace.status >= 500
-                ? "border-(--color-destructive) text-(--color-destructive)"
-                : "border-(--color-border) text-(--color-foreground)",
-            )}
-          >
-            {trace.status}
+    <div className="grid gap-4">
+      <AdminPageHeader
+        back={{ to: "/admin/traces", label: t("admin.traces.back") }}
+        crumb={trace.id.slice(0, 8)}
+        title={
+          <span className="font-normal">
+            {trace.method ? <span className={MUTED}>{trace.method} </span> : null}
+            <span className="font-mono">{trace.path || trace.route.name}</span>
           </span>
-        ) : null}
-        <span className="tabular-nums">{formatMs(trace.durationMs)}</span>
-        <span>{t("admin.traces.spans", { count: trace.spans.length + trace.droppedSpans })}</span>
-        <span>{formatAbsoluteTime(trace.start)}</span>
-        <KeptLabel kept={trace.kept} />
-        <code className="font-mono text-xs wrap-anywhere">{trace.id}</code>
-      </p>
-      <Breakdown trace={trace} />
-      <RouteComparison trace={trace} />
-      <RepeatedSpans trace={trace} />
-      <Waterfall trace={trace} />
-    </AdminLayout>
+        }
+        description={
+          <span className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
+            {trace.status > 0 ? (
+              <span
+                className={cn(
+                  "rounded border px-1.5 tabular-nums",
+                  trace.status >= 500
+                    ? "border-(--color-destructive) text-(--color-destructive)"
+                    : "border-(--color-border) text-(--color-foreground)",
+                )}
+              >
+                {trace.status}
+              </span>
+            ) : null}
+            <span className="tabular-nums">{formatMs(trace.durationMs)}</span>
+            <span>{t("admin.traces.spans", { count: trace.spans.length + trace.droppedSpans })}</span>
+            <span>{formatAbsoluteTime(trace.start)}</span>
+            <KeptLabel kept={trace.kept} />
+            <code className="font-mono text-xs wrap-anywhere">{trace.id}</code>
+          </span>
+        }
+      />
+      {/* The summary comes before the timeline, and sits beside it on a wide screen. */}
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="grid min-w-0 gap-4 xl:col-start-2 xl:row-start-1">
+          <Breakdown trace={trace} />
+          <RouteComparison trace={trace} />
+          <RepeatedSpans trace={trace} />
+        </div>
+        <Card className="@container min-w-0 xl:col-start-1 xl:row-start-1">
+          <CardHeader>
+            <CardTitle className={CARD_TITLE}>{t("admin.traces.timeline")}</CardTitle>
+            <CardDescription>{t("admin.traces.timeline_desc")}</CardDescription>
+          </CardHeader>
+          <CardContent className={CARD_BODY}>
+            <Waterfall trace={trace} />
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 }

@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import {
+  ArrowLeft,
   Building2,
   ChevronDown,
   HelpCircle,
@@ -21,13 +22,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { paletteShortcut } from "@/lib/palette";
 import { signOut } from "@/lib/sign-out";
 import { subUrl } from "@/lib/url";
+import { useMenuFocus } from "@/lib/use-menu-focus";
 import { useUserInfo } from "@/lib/use-user-info";
 import type { UserInfo } from "@/lib/user-info";
 
 export function Navbar() {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  const [paletteOpen, setPaletteOpen] = useState(false);
+  const menu = useMenuFocus();
   const user = useUserInfo();
 
   return (
@@ -56,28 +58,7 @@ export function Navbar() {
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={() => setPaletteOpen(true)}
-          aria-keyshortcuts={paletteShortcut.aria}
-          className="hidden h-8 w-48 shrink cursor-pointer items-center gap-2 rounded-md border border-(--color-input) bg-(--color-background) pr-1.5 pl-2.5 text-(--color-muted-foreground) hover:border-(--color-ring) md:flex lg:w-64"
-        >
-          <Search className="size-4 shrink-0" aria-hidden />
-          <span className="min-w-0 flex-1 truncate text-left">{t("command_palette.placeholder")}</span>
-          <kbd className="shrink-0 rounded border border-(--color-border) px-1.5 font-sans text-[11px] leading-5">
-            {paletteShortcut.label}
-          </kbd>
-        </button>
-        <button
-          type="button"
-          onClick={() => setPaletteOpen(true)}
-          aria-label={t("command_palette.title")}
-          aria-keyshortcuts={paletteShortcut.aria}
-          className="ml-auto inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md text-(--color-foreground) hover:bg-(--color-surface) sm:ml-0 md:hidden"
-        >
-          <Search className="size-[18px]" aria-hidden />
-        </button>
-        <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+        <PaletteButton />
 
         <div className="hidden shrink-0 items-center gap-1 sm:flex">
           <SettingsMenu />
@@ -98,12 +79,13 @@ export function Navbar() {
           <SettingsMenu />
           <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger
+              {...menu.trigger}
               aria-label="Open menu"
               className="inline-flex size-9 cursor-pointer items-center justify-center rounded-md text-(--color-foreground) hover:bg-(--color-surface)"
             >
               <Menu className="size-[18px]" aria-hidden />
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-56 p-1" onOpenAutoFocus={(e) => e.preventDefault()}>
+            <PopoverContent align="end" className="w-56 p-1 focus:outline-none" {...menu.content}>
               <ul className="flex flex-col text-sm">
                 {user ? (
                   <>
@@ -197,19 +179,54 @@ export function Navbar() {
   );
 }
 
+// PaletteButton opens the command palette: a search field from the `md`
+// breakpoint up, and an icon button below it.
+export function PaletteButton() {
+  const { t } = useTranslation();
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setPaletteOpen(true)}
+        aria-keyshortcuts={paletteShortcut.aria}
+        className="hidden h-8 w-48 min-w-32 shrink cursor-pointer items-center gap-2 rounded-md border border-(--color-input) bg-(--color-background) pr-1.5 pl-2.5 text-(--color-muted-foreground) hover:border-(--color-ring) md:flex lg:w-64"
+      >
+        <Search className="size-4 shrink-0" aria-hidden />
+        <span className="min-w-0 flex-1 truncate text-left">{t("command_palette.placeholder")}</span>
+        <kbd className="shrink-0 rounded border border-(--color-border) px-1.5 font-sans text-[11px] leading-5">
+          {paletteShortcut.label}
+        </kbd>
+      </button>
+      <button
+        type="button"
+        onClick={() => setPaletteOpen(true)}
+        aria-label={t("command_palette.title")}
+        aria-keyshortcuts={paletteShortcut.aria}
+        className="ml-auto inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md text-(--color-foreground) hover:bg-(--color-surface) sm:ml-0 md:hidden"
+      >
+        <Search className="size-[18px]" aria-hidden />
+      </button>
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+    </>
+  );
+}
+
 function CreateMenu({ canCreateOrganization }: { canCreateOrganization: boolean }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const menu = useMenuFocus();
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
+        {...menu.trigger}
         aria-label={t("create_new")}
         className="inline-flex h-9 cursor-pointer items-center gap-1 rounded-md px-2 text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
       >
         <Plus className="size-4" aria-hidden />
         <ChevronDown className="size-3" aria-hidden />
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-56 p-1" onOpenAutoFocus={(e) => e.preventDefault()}>
+      <PopoverContent align="end" className="w-56 p-1 focus:outline-none" {...menu.content}>
         <MenuLink href="/repo/create" icon={<Plus className="size-4" aria-hidden />} onSelect={() => setOpen(false)}>
           {t("new_repo")}
         </MenuLink>
@@ -230,12 +247,16 @@ function CreateMenu({ canCreateOrganization }: { canCreateOrganization: boolean 
   );
 }
 
-function UserMenu({ user }: { user: UserInfo }) {
+// UserMenu opens the links of the viewer's account from their avatar. In the
+// admin console, i.e., `inAdmin`, the link to it leads back to the site.
+export function UserMenu({ user, inAdmin = false }: { user: UserInfo; inAdmin?: boolean }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const menu = useMenuFocus();
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
+        {...menu.trigger}
         aria-label={t("user_profile_and_more")}
         className="inline-flex h-9 cursor-pointer items-center gap-1 rounded-md px-1 hover:bg-(--color-surface)"
       >
@@ -246,7 +267,7 @@ function UserMenu({ user }: { user: UserInfo }) {
         )}
         <ChevronDown className="size-3 text-(--color-muted-foreground)" aria-hidden />
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-60 p-1" onOpenAutoFocus={(e) => e.preventDefault()}>
+      <PopoverContent align="end" className="w-60 p-1 focus:outline-none" {...menu.content}>
         <div className="px-2 pt-2 pb-1 text-xs text-(--color-muted-foreground)">
           {t("signed_in_as")} <strong className="text-(--color-foreground)">{user.username}</strong>
         </div>
@@ -276,13 +297,19 @@ function UserMenu({ user }: { user: UserInfo }) {
         {user.isAdmin && (
           <>
             <div className="my-1 h-px bg-(--color-border)" />
-            <MenuLink
-              href="/admin"
-              icon={<LayoutDashboard className="size-4" aria-hidden />}
-              onSelect={() => setOpen(false)}
-            >
-              {t("admin_panel")}
-            </MenuLink>
+            {inAdmin ? (
+              <MenuLink href="/" icon={<ArrowLeft className="size-4" aria-hidden />} onSelect={() => setOpen(false)}>
+                {t("admin.back_to_site")}
+              </MenuLink>
+            ) : (
+              <MenuLink
+                href="/admin"
+                icon={<LayoutDashboard className="size-4" aria-hidden />}
+                onSelect={() => setOpen(false)}
+              >
+                {t("admin_panel")}
+              </MenuLink>
+            )}
           </>
         )}
         <div className="my-1 h-px bg-(--color-border)" />

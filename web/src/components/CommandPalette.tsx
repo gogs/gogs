@@ -51,7 +51,16 @@ import {
   Webhook,
   X,
 } from "lucide-react";
-import { type ComponentType, type KeyboardEvent, useEffect, useId, useMemo, useRef, useState } from "react";
+import {
+  type ComponentType,
+  type KeyboardEvent,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -76,6 +85,7 @@ import {
 import { fetchJSON } from "@/lib/queries/request";
 import { signOut } from "@/lib/sign-out";
 import { resolveTheme, useTheme } from "@/lib/theme-context";
+import { toastError } from "@/lib/toast-error";
 import { subUrl } from "@/lib/url";
 import { useDebounced } from "@/lib/use-debounced";
 import { useUserInfo } from "@/lib/use-user-info";
@@ -216,6 +226,20 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open, onOpenChange]);
 
+  // The dialog has no trigger to hand the focus back to when it closes, so it remembers what had
+  // the focus, which may be a chart, i.e., an SVG element. A layout effect runs before the box
+  // takes the focus.
+  const opener = useRef<HTMLElement | SVGElement | null>(null);
+  // A result that opens a page leaves the focus to that page, which starts at its top. The
+  // opener may be far down the page shown, e.g., when the result is that very page.
+  const leaving = useRef(false);
+  useLayoutEffect(() => {
+    if (!open) return;
+    leaving.current = false;
+    const focused = document.activeElement;
+    opener.current = focused instanceof HTMLElement || focused instanceof SVGElement ? focused : null;
+  }, [open]);
+
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
@@ -223,15 +247,31 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
         <DialogPrimitive.Content
           aria-describedby={undefined}
           // The box takes the focus, not the button before it that drops the
-          // repository scope.
-          onOpenAutoFocus={(e) => e.preventDefault()}
+          // repository scope. It does so here, once the dialog guards the focus: a sheet or a
+          // dialog the palette opens over would take back a focus that moved any earlier.
+          onOpenAutoFocus={(e) => {
+            e.preventDefault();
+            (e.currentTarget as HTMLElement | null)?.querySelector<HTMLElement>('input[role="combobox"]')?.focus();
+          }}
+          onCloseAutoFocus={(e) => {
+            e.preventDefault();
+            if (!leaving.current) opener.current?.focus({ preventScroll: true });
+          }}
           className={cn(
             "fixed inset-0 z-50 flex flex-col bg-(--color-popover) text-(--color-popover-foreground) shadow-lg glass-ui:backdrop-blur-2xl outline-none",
             "sm:inset-auto sm:top-[12vh] sm:left-1/2 sm:max-h-[min(32rem,76vh)] sm:w-[min(40rem,calc(100%-2rem))] sm:-translate-x-1/2 sm:rounded-lg sm:border sm:border-(--color-border)",
           )}
         >
           <DialogPrimitive.Title className="sr-only">{t("command_palette.title")}</DialogPrimitive.Title>
-          <PaletteBody user={user} scope={scope} repo={scopedRepo} close={() => onOpenChange(false)} />
+          <PaletteBody
+            user={user}
+            scope={scope}
+            repo={scopedRepo}
+            close={(toPage = false) => {
+              leaving.current = toPage;
+              onOpenChange(false);
+            }}
+          />
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
@@ -249,7 +289,8 @@ function PaletteBody({
   user: UserInfo | null;
   scope: { owner: string; name: string } | null;
   repo: RepoHeaderData | undefined;
-  close: () => void;
+  // close closes the palette, `toPage` when a result opens a page.
+  close: (toPage?: boolean) => void;
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -260,8 +301,6 @@ function PaletteBody({
   const [input, setInput] = useState("");
   const [scoped, setScoped] = useState(scope !== null);
   const [active, setActive] = useState(0);
-
-  useEffect(() => inputRef.current?.focus(), []);
 
   const { prefix, text } = parseInput(input);
   const inRepo = scoped && scope !== null ? scope : null;
@@ -707,7 +746,7 @@ function PaletteBody({
       );
       toast.success(t(next ? "command_palette.starred" : "command_palette.unstarred", { repo: full }));
     } catch (err) {
-      toast.error(t("status.internal_server_error"), { description: (err as Error).message });
+      toastError(err as Error, t("status.internal_server_error"));
     }
   }
 
@@ -720,7 +759,7 @@ function PaletteBody({
       );
       toast.success(t(next ? "command_palette.watching" : "command_palette.unwatched", { repo: full }));
     } catch (err) {
-      toast.error(t("status.internal_server_error"), { description: (err as Error).message });
+      toastError(err as Error, t("status.internal_server_error"));
     }
   }
 
@@ -847,7 +886,7 @@ function PaletteBody({
       inputRef.current?.focus();
       return;
     }
-    close();
+    close(item.to !== undefined);
     if (item.to !== undefined) void navigate({ href: subUrl(item.to) });
     else if (item.download !== undefined) window.location.assign(subUrl(item.download));
     else if (item.external !== undefined) window.open(item.external, "_blank", "noopener,noreferrer");

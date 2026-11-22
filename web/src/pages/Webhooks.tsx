@@ -31,6 +31,7 @@ import {
   updateWebhook,
   webhooksPath,
 } from "@/lib/queries/webhooks";
+import { toastError } from "@/lib/toast-error";
 import { subUrl } from "@/lib/url";
 import { OrgSettingsLayout } from "@/pages/org/Settings";
 import { RepoSettingsLayout } from "@/pages/repo/Settings";
@@ -477,7 +478,7 @@ export function WebhookEdit({ scope, hook }: { scope: WebhookScope; hook: Webhoo
       toast.success(t("repo.settings.webhook.test_delivery_success"));
       await router.invalidate();
     },
-    onError: (err) => toast.error(err.message),
+    onError: (err) => toastError(err),
   });
 
   return (
@@ -570,7 +571,7 @@ function DeliveryRow({
       toast.success(t("repo.settings.webhook.redelivery_success", { uuid: delivery.uuid }));
       await router.invalidate();
     },
-    onError: (err) => toast.error(err.message),
+    onError: (err) => toastError(err),
   });
   const queued = !delivery.deliveredAt;
   const status = queued ? "none" : delivery.succeeded ? "succeeded" : "failed";

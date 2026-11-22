@@ -6,11 +6,13 @@ import { useTranslation } from "react-i18next";
 
 import { CodeEditor, type CodeEditorHandle } from "@/components/CodeEditor";
 import { Markdown } from "@/components/Markdown";
+import { SessionExpired } from "@/components/SessionExpired";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { type IssueMetaOptions, type RepoIssueData, renderRepoMarkdown } from "@/lib/queries/repo";
+import { isSessionExpired } from "@/lib/queries/request";
 import type { RepoRef } from "@/lib/reference-completion";
 import type { AttachmentUploads, UploadLinker } from "@/lib/use-attachment-uploads";
 import { useUserInfo } from "@/lib/use-user-info";
@@ -50,7 +52,7 @@ export function MarkdownEditor({
   label: string;
   value: string;
   onChange: (value: string) => void;
-  error?: string | null;
+  error?: ReactNode;
   autoFocus?: boolean;
   disabled?: boolean;
   // uploads attaches the files pasted or dropped into the editor.
@@ -106,7 +108,7 @@ export function MarkdownEditor({
 
   return (
     <div>
-      <div role="tablist" aria-label={label} className="mb-2 flex gap-1">
+      <div role="tablist" aria-label={label} className="glass-control glass-tabs mb-2 flex gap-1">
         {tabs.map((item) => (
           <button
             key={item.key}
@@ -163,7 +165,9 @@ export function MarkdownEditor({
           ) : preview.data !== undefined ? (
             <Markdown html={preview.data} />
           ) : preview.isError ? (
-            <p className="text-sm text-(--color-destructive)">{preview.error.message}</p>
+            <p className="text-sm text-(--color-destructive)">
+              {isSessionExpired(preview.error) ? <SessionExpired /> : preview.error.message}
+            </p>
           ) : (
             <p className="text-sm text-(--color-muted-foreground)">{t("repo.release.loading")}</p>
           )}
