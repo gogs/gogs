@@ -108,24 +108,31 @@ function toggleTask(source: string, line: number, checked: boolean): string | nu
 const ORDERED_LIST_NUMBER = /^((?:[ \t]*>)*[ \t]*)(\d{1,9})(?=[.)])/;
 const ORDERED_LIST_MARKER = /^(?:[ \t]*>)*[ \t]*\d{1,9}[.)][ \t]*/;
 
-// contentColumn returns the column the content of the ordered list item that
-// starts on line starts at, with tabs stopping at multiples of 4.
-function contentColumn(line: string): number {
-  let column = 0;
-  for (const c of ORDERED_LIST_MARKER.exec(line)?.[0] ?? "")
-    column = c === "\t" ? column + 4 - (column % 4) : column + 1;
+// columnAfter returns the column after text that starts at column, with tabs
+// stopping at multiples of 4.
+function columnAfter(column: number, text: string): number {
+  for (const c of text) column = c === "\t" ? column + 4 - (column % 4) : column + 1;
   return column;
 }
 
+// contentColumn returns the column the content of the ordered list item that
+// starts on line starts at.
+function contentColumn(line: string): number {
+  return columnAfter(0, ORDERED_LIST_MARKER.exec(line)?.[0] ?? "");
+}
+
 // indent returns line with the indentation after the quotes block quote
-// markers of the list it is in, if any, changed by delta spaces. Blank lines
+// markers of the list it is in, if any, changed by delta spaces and written
+// with spaces only, since a tab would expand to the same tab stop. Blank lines
 // stay as they are.
 function indent(line: string, quotes: number, delta: number): string {
   const quotesPrefix = new RegExp(String.raw`^(?:[ \t]*> ?){0,${quotes}}`).exec(line)![0];
   const rest = line.slice(quotesPrefix.length);
   if (rest.trim() === "") return line;
-  if (delta > 0) return quotesPrefix + " ".repeat(delta) + rest;
-  return quotesPrefix + rest.slice(Math.min(/^ */.exec(rest)![0].length, -delta));
+  const whitespace = /^[ \t]*/.exec(rest)![0];
+  const start = columnAfter(0, quotesPrefix);
+  const width = columnAfter(start, whitespace) - start;
+  return quotesPrefix + " ".repeat(Math.max(0, width + delta)) + rest.slice(whitespace.length);
 }
 
 // moveTasks returns source with the items of a list, whose source spans the
@@ -311,9 +318,19 @@ export function Markdown({
       const inSource = [...before].sort((a, b) => taskLines(a)[0] - taskLines(b)[0]);
       const order = after.map((item) => inSource.indexOf(item));
       if (order.every((from, to) => from === to)) return;
+      // Moving the focused handle in the document takes the focus away.
+      const revert = () => {
+        list.append(...before);
+        if (focus) moved.querySelector<HTMLElement>(":scope > .task-drag-handle")?.focus();
+      };
       const result = moveTasks(tasksRef.current!.source, inSource.map(taskLines), order, list.tagName === "OL");
+      // Swapping items with the same source changes nothing to save.
+      if (result.source === tasksRef.current!.source) {
+        revert();
+        return;
+      }
       if (focus) focusLine.current = { line: result.firstLines[after.indexOf(moved)], source: result.source };
-      void save(result.source, () => list.append(...before));
+      void save(result.source, revert);
     };
 
     const onClick = (e: MouseEvent) => {
