@@ -573,8 +573,7 @@ func (r *Repository) CloneLink() (cl *repox.CloneLink) {
 
 // ForksMayAllowPublicWiki reports whether a private fork of the repository may
 // allow public access to its wiki without being more visible than the
-// repository. Explore lists private repositories that allow public access even
-// when they are unlisted, so forks of an unlisted public repository may not.
+// repository.
 func (r *Repository) ForksMayAllowPublicWiki() bool {
 	return (!r.IsPrivate && !r.IsUnlisted) || (r.IsPrivate && r.AllowPublicWiki)
 }
@@ -2100,6 +2099,11 @@ type SearchRepoOptions struct {
 	PageSize int // Can be smaller than or equal to conf.UI.ExplorePagingNum.
 }
 
+// listedRepositoryCond matches repositories that anyone may see in listings:
+// those that are not unlisted, and are public or allow public access to their
+// wiki or issues. It takes the arguments false, false, true, true.
+const listedRepositoryCond = "(repo.is_unlisted = ? AND (repo.is_private = ? OR repo.allow_public_wiki = ? OR repo.allow_public_issues = ?))"
+
 // Search returns the repositories of given page whose name or description
 // contains the keyword, ignoring case, and the number of them.
 func (s *RepositoriesStore) Search(ctx context.Context, opts SearchRepoOptions) (repos []*Repository, count int64, err error) {
@@ -2109,11 +2113,11 @@ func (s *RepositoriesStore) Search(ctx context.Context, opts SearchRepoOptions) 
 	// this does not include other people's private repositories even if opts.UserID is an admin.
 	if !opts.Private && opts.UserID > 0 {
 		query = query.Joins("LEFT JOIN access ON access.repo_id = repo.id").
-			Where("(repo.owner_id = ? OR access.user_id = ? OR (repo.is_private = ? AND repo.is_unlisted = ?) OR (repo.is_private = ? AND (repo.allow_public_wiki = ? OR repo.allow_public_issues = ?)))", opts.UserID, opts.UserID, false, false, true, true, true)
+			Where("(repo.owner_id = ? OR access.user_id = ? OR "+listedRepositoryCond+")", opts.UserID, opts.UserID, false, false, true, true)
 	} else {
 		// Only return public repositories if opts.Private is not set.
 		if !opts.Private {
-			query = query.Where("((repo.is_private = ? AND repo.is_unlisted = ?) OR (repo.is_private = ? AND (repo.allow_public_wiki = ? OR repo.allow_public_issues = ?)))", false, false, true, true, true)
+			query = query.Where(listedRepositoryCond, false, false, true, true)
 		}
 	}
 	if len(opts.Keyword) > 0 {

@@ -804,6 +804,8 @@ func reposSearch(t *testing.T, ctx context.Context, s *RepositoriesStore) {
 	private := newTestRepoOf(t, ctx, s, alice, "gopher-private", map[string]any{"is_private": true})
 	unlisted := newTestRepoOf(t, ctx, s, alice, "gopher-unlisted", map[string]any{"is_unlisted": true})
 	publicWiki := newTestRepoOf(t, ctx, s, alice, "gopher-wiki", map[string]any{"is_private": true, "allow_public_wiki": true})
+	publicIssues := newTestRepoOf(t, ctx, s, alice, "gopher-issues", map[string]any{"is_private": true, "allow_public_issues": true})
+	unlistedIssues := newTestRepoOf(t, ctx, s, alice, "gopher-unlisted-issues", map[string]any{"is_private": true, "is_unlisted": true, "allow_public_issues": true})
 	bobRepo := newTestRepoOf(t, ctx, s, bob, "rust", map[string]any{"description": "Not a Gopher"})
 	bobPrivate := newTestRepoOf(t, ctx, s, bob, "gopher-bob", map[string]any{"is_private": true})
 	require.NoError(t, s.db.Create(&Access{RepoID: bobPrivate.ID, UserID: alice.ID, Mode: AccessModeRead}).Error)
@@ -819,27 +821,29 @@ func reposSearch(t *testing.T, ctx context.Context, s *RepositoriesStore) {
 		return repoIDs(repos), count
 	}
 
+	// Unlisted repositories stay out of listings even when they allow public
+	// access to their wiki or issues.
 	ids, count := search(SearchRepoOptions{Keyword: "gopher"})
-	assert.Equal(t, []int64{public.ID, publicWiki.ID, bobRepo.ID}, ids)
-	assert.Equal(t, int64(3), count)
+	assert.Equal(t, []int64{public.ID, publicWiki.ID, publicIssues.ID, bobRepo.ID}, ids)
+	assert.Equal(t, int64(4), count)
 
 	ids, count = search(SearchRepoOptions{Keyword: "GOPHER", Private: true})
-	assert.Equal(t, []int64{public.ID, private.ID, unlisted.ID, publicWiki.ID, bobRepo.ID, bobPrivate.ID}, ids)
-	assert.Equal(t, int64(6), count)
+	assert.Equal(t, []int64{public.ID, private.ID, unlisted.ID, publicWiki.ID, publicIssues.ID, unlistedIssues.ID, bobRepo.ID, bobPrivate.ID}, ids)
+	assert.Equal(t, int64(8), count)
 
 	// A user also finds the repositories of their own and those they can access.
 	ids, _ = search(SearchRepoOptions{Keyword: "gopher", UserID: alice.ID})
-	assert.Equal(t, []int64{public.ID, private.ID, unlisted.ID, publicWiki.ID, bobRepo.ID, bobPrivate.ID}, ids)
+	assert.Equal(t, []int64{public.ID, private.ID, unlisted.ID, publicWiki.ID, publicIssues.ID, unlistedIssues.ID, bobRepo.ID, bobPrivate.ID}, ids)
 	ids, _ = search(SearchRepoOptions{Keyword: "gopher", UserID: bob.ID})
-	assert.Equal(t, []int64{public.ID, publicWiki.ID, bobRepo.ID, bobPrivate.ID}, ids)
+	assert.Equal(t, []int64{public.ID, publicWiki.ID, publicIssues.ID, bobRepo.ID, bobPrivate.ID}, ids)
 
 	ids, count = search(SearchRepoOptions{Keyword: "gopher", OwnerID: bob.ID, Private: true})
 	assert.Equal(t, []int64{bobRepo.ID, bobPrivate.ID}, ids)
 	assert.Equal(t, int64(2), count)
 
 	ids, count = search(SearchRepoOptions{Keyword: "gopher", Private: true, Page: 2, PageSize: 4})
-	assert.Equal(t, []int64{bobRepo.ID, bobPrivate.ID}, ids)
-	assert.Equal(t, int64(6), count)
+	assert.Equal(t, []int64{publicIssues.ID, unlistedIssues.ID, bobRepo.ID, bobPrivate.ID}, ids)
+	assert.Equal(t, int64(8), count)
 }
 
 func reposListAssigneesAndWriters(t *testing.T, ctx context.Context, s *RepositoriesStore) {
