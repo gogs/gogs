@@ -12,6 +12,7 @@ import (
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/repox"
 )
@@ -49,8 +50,18 @@ func TestEmbedPermalinks(t *testing.T) {
 		return fmt.Sprintf(`<div data-permalink="%s#L%s" data-path="dir/a b.go" data-commit="%s" data-start="%d" data-end="%d"><pre><code>%s</code></pre></div>`+"\n",
 			link, map[bool]string{true: fmt.Sprint(first), false: fmt.Sprintf("%d-L%d", first, last)}[first == last], commitID, first, last, code)
 	}
+	repoCtx := func(access database.AccessMode) *repoContext {
+		return &repoContext{
+			Owner:  &database.User{Name: "alice"},
+			Repo:   &database.Repository{Name: "demo"},
+			Viewer: &Viewer{access: access},
+		}
+	}
+	renderAs := func(rc *repoContext, text string) string {
+		return embedPermalinks(context.Background(), logx.NewNoopLogger(), rc, string(markup.Markdown(text, "/alice/demo", nil)))
+	}
 	render := func(text string) string {
-		return embedPermalinks(context.Background(), logx.NewNoopLogger(), "alice", "demo", true, string(markup.Markdown(text, "/alice/demo", nil)))
+		return renderAs(repoCtx(database.AccessModeRead), text)
 	}
 
 	tests := []struct {
@@ -113,17 +124,18 @@ func TestEmbedPermalinks(t *testing.T) {
 	}
 
 	t.Run("viewer who cannot read the code", func(t *testing.T) {
-		got := embedPermalinks(context.Background(), logx.NewNoopLogger(), "alice", "demo", false, string(markup.Markdown(link+"#L5", "/alice/demo", nil)))
+		got := renderAs(repoCtx(database.AccessModeNone), link+"#L5")
 		assert.NotContains(t, got, "data-permalink")
 		assert.NotContains(t, got, "line 5")
 	})
 
-	t.Run("embeds per document are capped", func(t *testing.T) {
-		text := strings.Repeat(link+"#L5\n\n", permalinkMaxEmbeds+5)
-		assert.Equal(t, permalinkMaxEmbeds, strings.Count(render(text), "data-permalink"))
-
-		// Links to lines that do not exist are looked up too.
-		missing := strings.Repeat("https://gogs.example.com/alice/demo/src/"+commitID+"/nope.go#L1\n\n", permalinkMaxEmbeds)
-		assert.NotContains(t, render(missing+link+"#L5"), "data-permalink")
+	t.Run("lookups per request are capped", func(t *testing.T) {
+		// Links to lines that do not exist are looked up too, and the cap
+		// holds over all the documents of the request.
+		rc := repoCtx(database.AccessModeRead)
+		missing := "https://gogs.example.com/alice/demo/src/" + commitID + "/nope.go#L1"
+		renderAs(rc, strings.Repeat(missing+"\n\n", permalinkMaxLookups-2))
+		assert.Equal(t, 2, strings.Count(renderAs(rc, strings.Repeat(link+"#L5\n\n", 5)), "data-permalink"))
+		assert.NotContains(t, renderAs(rc, link+"#L5"), "data-permalink")
 	})
 }

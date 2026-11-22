@@ -235,6 +235,8 @@ func describeThreads(ctx context.Context, cv *commentViewer, gitRepo *git.Reposi
 	// Diffs are shared by the threads on the same file at the same commits.
 	type diffKey struct{ from, to, path string }
 	diffs := make(map[diffKey][]*git.DiffHunk)
+	// failed are the diffs that could not be made, whose threads are outdated.
+	failed := make(map[diffKey]bool)
 	mapLines := func(from, to, path string, start, end int64) (int64, int64, bool) {
 		if from == to {
 			return start, end, true
@@ -243,18 +245,28 @@ func describeThreads(ctx context.Context, cv *commentViewer, gitRepo *git.Reposi
 			return 0, 0, false
 		}
 		key := diffKey{from, to, path}
+		if failed[key] {
+			return 0, 0, false
+		}
 		hunks, ok := diffs[key]
 		if !ok {
-			hunks, err = gitRepo.DiffFileHunks(ctx, from, to, "", path, 0)
+			// The old side of a renamed file is at another path, which is not
+			// kept, so its lines cannot be followed.
+			var commit *git.Commit
+			commit, err = gitRepo.CatFileCommit(ctx, from)
+			if err == nil {
+				_, err = commit.TreeEntry(ctx, path)
+			}
+			if err == nil {
+				hunks, err = gitRepo.DiffFileHunks(ctx, from, to, "", path, 0)
+			}
 			if err != nil {
 				// The commit may be gone, e.g., after a force push.
 				cv.logger.Debug("Failed to diff thread lines", "from", from, "to", to, "path", path, "error", err)
-				hunks = nil
-			}
-			diffs[key] = hunks
-			if err != nil {
+				failed[key] = true
 				return 0, 0, false
 			}
+			diffs[key] = hunks
 		}
 		s, e, ok := git.MapLineRange(hunks, int(start), int(end))
 		return int64(s), int64(e), ok

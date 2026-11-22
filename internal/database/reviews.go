@@ -6,6 +6,8 @@ import (
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
 	"unknwon.dev/x/logx"
+
+	"gogs.io/gogs/internal/api/v1types"
 )
 
 // ReviewState is the outcome of a review of a pull request.
@@ -258,7 +260,26 @@ func (s *ReviewsStore) CreateReply(ctx context.Context, logger *logx.Logger, doe
 		comment, err = newCommentsStore(tx).create(ctx, logger, opts)
 		return errors.Wrap(err, "create reply")
 	})
-	return comment, err
+	if err != nil {
+		return nil, err
+	}
+
+	// A reply to a comment is a comment to integrations. Code comments send no
+	// webhooks, as when a thread starts.
+	if comment.Type == CommentTypeComment {
+		comment.Issue = issue
+		err = newWebhooksStore(s.db).Prepare(ctx, logger, repo, HookEventTypeIssueComment, &v1types.WebhookIssueCommentPayload{
+			Action:     v1types.WebhookIssueCommentCreated,
+			Issue:      issue.APIFormat(),
+			Comment:    comment.APIFormat(),
+			Repository: repo.APIFormatLegacy(logger, nil),
+			Sender:     doer.APIFormat(),
+		})
+		if err != nil {
+			logger.Error("Failed to prepare webhooks", "commentID", comment.ID, "error", err)
+		}
+	}
+	return comment, nil
 }
 
 // Submit submits the reviewer's pending review with its comments, or a new

@@ -18,25 +18,45 @@ type DiffHunk struct {
 
 // DiffFileHunks returns the hunks of the diff of the file at path between the
 // base and head revisions, with the given number of lines of context. When
-// oldPath names another file, the file was renamed from it, and the diff is
-// of the old file at base to the file at head. Otherwise renames are not
-// followed, so a renamed file shows as added at its new path.
+// the file was renamed from oldPath, the diff is of the old file at base to
+// the file at head. Otherwise renames are not followed, so a renamed file
+// shows as added at its new path.
 func (r *Repository) DiffFileHunks(ctx context.Context, base, head, oldPath, path string, contextLines int) ([]*DiffHunk, error) {
 	ctx, span := tracer.Start(ctx, "git.Repository.DiffFileHunks")
 	defer span.End()
 
-	args := []string{"diff", "--no-color", "--no-ext-diff", "-U" + strconv.Itoa(contextLines)}
 	// Paths are literal, so a path cannot select other files with the magic
 	// of pathspecs, e.g., ":(glob)**".
-	paths := []string{":(literal)" + path}
-	if oldPath != "" && oldPath != path {
-		args = append(args, "--find-renames")
-		paths = append(paths, ":(literal)"+oldPath)
-	} else {
-		args = append(args, "--no-renames")
+	diff := func(renames bool, paths ...string) ([]byte, error) {
+		args := []string{"-c", "core.quotePath=false", "diff", "--no-color", "--no-ext-diff", "-U" + strconv.Itoa(contextLines)}
+		if renames {
+			args = append(args, "--find-renames")
+		} else {
+			args = append(args, "--no-renames")
+		}
+		args = append(args, "--end-of-options", base, head, "--")
+		for _, p := range paths {
+			args = append(args, ":(literal)"+p)
+		}
+		return exec(ctx, r.path, args, nil)
 	}
-	args = append(args, "--end-of-options", base, head, "--")
-	stdout, err := exec(ctx, r.path, append(args, paths...), nil)
+
+	if oldPath != "" && oldPath != path {
+		stdout, err := diff(true, oldPath, path)
+		if err != nil {
+			return nil, err
+		}
+		// Only the diff of a rename from oldPath to path counts. Two files
+		// that changed on their own are diffed apart, and path alone is
+		// diffed below.
+		lines := append([]byte("\n"), stdout...)
+		if bytes.Count(lines, []byte("\ndiff --git ")) == 1 &&
+			bytes.Contains(lines, []byte("\nrename from "+oldPath+"\n")) &&
+			bytes.Contains(lines, []byte("\nrename to "+path+"\n")) {
+			return ParseDiffHunks(stdout), nil
+		}
+	}
+	stdout, err := diff(false, path)
 	if err != nil {
 		return nil, err
 	}

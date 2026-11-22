@@ -18,12 +18,15 @@ import (
 )
 
 const (
-	// permalinkMaxLines is how many lines an embedded permalink shows at most.
+	// permalinkMaxLines is how many lines an embedded permalink shows at most,
+	// and permalinkMaxBytes how many bytes of them.
 	permalinkMaxLines = 50
-	// permalinkMaxEmbeds is how many permalinks of one document are looked up
-	// at most, and permalinkMaxFileSize the largest file they embed lines of,
-	// so that rendering a document reads a bounded amount of Git data.
-	permalinkMaxEmbeds   = 10
+	permalinkMaxBytes = 16 * 1024
+	// permalinkMaxLookups is how many permalinks a request looks up at most,
+	// over all the documents it renders, and permalinkMaxFileSize the largest
+	// file they embed lines of, so that a page reads a bounded amount of Git
+	// data.
+	permalinkMaxLookups  = 20
 	permalinkMaxFileSize = 512 * 1024
 )
 
@@ -45,14 +48,14 @@ var (
 // from, which the sanitizer drops from user content, so content cannot forge
 // one. Viewers who cannot read the code of the repository, e.g., guests of the
 // issues of a private repository, see only the links.
-func embedPermalinks(ctx context.Context, logger *logx.Logger, ownerName, repoName string, canReadCode bool, rendered string) string {
+func embedPermalinks(ctx context.Context, logger *logx.Logger, repoCtx *repoContext, rendered string) string {
+	ownerName, repoName := repoCtx.Owner.Name, repoCtx.Repo.Name
 	prefix := conf.Server.ExternalURL + ownerName + "/" + repoName + "/src/"
-	if !canReadCode || !strings.Contains(strings.ToLower(rendered), strings.ToLower(prefix)) {
+	if !repoCtx.Viewer.CanRead() || !strings.Contains(strings.ToLower(rendered), strings.ToLower(prefix)) {
 		return rendered
 	}
 
 	var gitRepo *git.Repository
-	lookups := 0
 	var b strings.Builder
 	last := 0
 	// reopen is whether the paragraph of the last embed goes on after it.
@@ -82,10 +85,10 @@ func embedPermalinks(ctx context.Context, logger *logx.Logger, ownerName, repoNa
 		if len(href) <= len(prefix) || !strings.EqualFold(href[:len(prefix)], prefix) {
 			continue
 		}
-		if lookups == permalinkMaxEmbeds {
+		if repoCtx.permalinkLookups == permalinkMaxLookups {
 			break
 		}
-		lookups++
+		repoCtx.permalinkLookups++
 
 		if gitRepo == nil {
 			var err error
@@ -192,6 +195,10 @@ func permalinkEmbed(ctx context.Context, gitRepo *git.Repository, href, rest str
 		return ""
 	}
 	last = min(last, first+permalinkMaxLines-1)
+	code := strings.Join(lines[first-1:last], "\n")
+	if len(code) > permalinkMaxBytes {
+		code = strings.ToValidUTF8(code[:permalinkMaxBytes], "")
+	}
 
 	return fmt.Sprintf(
 		`<div data-permalink="%s" data-path="%s" data-commit="%s" data-start="%d" data-end="%d"><pre><code>%s</code></pre></div>`+"\n",
@@ -200,6 +207,6 @@ func permalinkEmbed(ctx context.Context, gitRepo *git.Repository, href, rest str
 		commitID,
 		first,
 		last,
-		html.EscapeString(strings.Join(lines[first-1:last], "\n")),
+		html.EscapeString(code),
 	)
 }

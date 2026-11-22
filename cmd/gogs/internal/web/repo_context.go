@@ -74,6 +74,10 @@ type repoContext struct {
 	Owner  *database.User
 	Repo   *database.Repository
 	Viewer *Viewer
+
+	// permalinkLookups is how many permalinks the request looked up to embed,
+	// see embedPermalinks.
+	permalinkLookups int
 }
 
 // metas returns the metas to render Markdown of the repository for the

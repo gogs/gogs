@@ -562,7 +562,7 @@ const REVIEWER_STATES: Record<RepoPullReviewer["state"], { icon: LucideIcon; cla
 };
 
 // ReviewersSection shows who reviewed the pull request or was asked to, and
-// lets writers and whoever opened it ask others.
+// lets writers ask others.
 export function ReviewersSection({ issueRef, data }: { issueRef: IssueRef; data: RepoPullData }) {
   const { t } = useTranslation();
   const router = useRouter();

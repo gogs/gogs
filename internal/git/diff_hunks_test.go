@@ -118,6 +118,21 @@ func TestRepository_DiffFileHunks(t *testing.T) {
 	require.Len(t, hunks, 1)
 	assert.Equal(t, []string{"-line 5", "+five"}, hunks[0].Lines)
 
+	// An old path that is not where the file was renamed from leaves the
+	// file all new, without the hunks of the other file.
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "c.txt"), []byte("c\n"), 0o600))
+	run("add", ".")
+	run("commit", "-q", "-m", "c")
+	other := run("rev-parse", "HEAD")
+	hunks, err = repo.DiffFileHunks(ctx, base, other, "c.txt", "b.txt", 0)
+	require.NoError(t, err)
+	require.Len(t, hunks, 1)
+	assert.Equal(t, 0, hunks[0].OldLines)
+	hunks, err = repo.DiffFileHunks(ctx, base, other, "b.txt", "c.txt", 0)
+	require.NoError(t, err)
+	require.Len(t, hunks, 1)
+	assert.Equal(t, []string{"+c"}, hunks[0].Lines)
+
 	// Without the old path, the file is all new.
 	hunks, err = repo.DiffFileHunks(ctx, base, head, "", "b.txt", 0)
 	require.NoError(t, err)

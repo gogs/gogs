@@ -1,6 +1,7 @@
 package integrationtests
 
 import (
+	"encoding/json"
 	"net/http"
 	"testing"
 
@@ -123,6 +124,46 @@ func TestPullReviews(t *testing.T) {
 			"headSHA": head, "content": "Not in the diff",
 		})
 		assert.Equal(t, http.StatusUnprocessableEntity, status, "response: %s", body)
+	})
+
+	t.Run("webhooks send replies but not pending comments", func(t *testing.T) {
+		url, deliveries := repoSettingsWebhookReceiver(t)
+		repoSettingsCreateWebhookFor(t, ownerClient, repo, url, true, map[string]bool{"issueComment": true})
+		type payload struct {
+			Action  string `json:"action"`
+			Comment struct {
+				Body string `json:"body"`
+			} `json:"comment"`
+		}
+		next := func() payload {
+			t.Helper()
+			var p payload
+			require.NoError(t, json.Unmarshal(repoSettingsNextDelivery(t, deliveries).Body, &p))
+			return p
+		}
+		var root, pending struct {
+			ID int64 `json:"id"`
+		}
+		authorClient.doJSON(http.MethodPost, path("comments"), map[string]any{"content": "Root"}, http.StatusCreated, &root)
+		got := next()
+		assert.Equal(t, "created", got.Action)
+		assert.Equal(t, "Root", got.Comment.Body)
+
+		status, body := codeComment(true)
+		require.Equal(t, http.StatusCreated, status, "response: %s", body)
+		require.NoError(t, json.Unmarshal(body, &pending))
+		status, body = reviewerClient.do(http.MethodPatch, path("comments", pending.ID), map[string]any{"content": "Secret draft"})
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+
+		var reply struct{}
+		authorClient.doJSON(http.MethodPost, path("comments"), map[string]any{"content": "Reply", "replyTo": root.ID}, http.StatusCreated, &reply)
+		// An edit of the pending comment would have been delivered first.
+		got = next()
+		assert.Equal(t, "created", got.Action)
+		assert.Equal(t, "Reply", got.Comment.Body)
+
+		status, body = reviewerClient.do(http.MethodDelete, path("reviews", "pending"), map[string]any{})
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 	})
 
 	review := func(c *client, state, headSHA string) (int, []byte) {
