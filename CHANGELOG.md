@@ -144,6 +144,7 @@ All notable changes to Gogs are documented in this file.
 - Webhook payloads and API responses for a newly created issue, comment, or repository, and webhook test deliveries, no longer show `0001-01-01T00:00:00Z` as their time. [#8528](https://github.com/gogs/gogs/pull/8528)
 - The issue list of a repository marks issues that mention you as unread until you read them, as it does for your other issues. [#8528](https://github.com/gogs/gogs/pull/8528)
 - Listing or creating comments of an issue that does not exist through the API returns 404 instead of 500. [#8528](https://github.com/gogs/gogs/pull/8528)
+- Unlisted repositories no longer appear in Explore and repository search when they allow public access to their wiki or issues. [#8560](https://github.com/gogs/gogs/pull/8560)
 - A webhook delivery to an invalid payload URL or to a blocked local network address now shows as failed with the reason, instead of staying pending and being retried on every delivery run. [#8501](https://github.com/gogs/gogs/pull/8501)
 - External wiki and issue tracker URLs with a query string or fragment, e.g., `doku.php?id=start`, now open the right page instead of a page named after the escaped URL. [#8638](https://github.com/gogs/gogs/pull/8638)
 - The API now lists no branches for an empty repository instead of failing, and creating a file through the contents API in an empty repository makes its first commit. [#8396](https://github.com/gogs/gogs/issues/8396)
