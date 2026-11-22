@@ -3,8 +3,8 @@ package integrationtests
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"net/http"
+	"net/url"
 	"testing"
 	"time"
 
@@ -16,15 +16,14 @@ func TestAdminTraces(t *testing.T) {
 	t.Parallel()
 
 	admin, nonAdmin, anonymous := adminClients(t)
-	// The server continues the trace a request carries, so the test knows the ID
-	// of the trace it looks for. No other request reaches the overview before
-	// this one, so it is the first of its route in the minute, which the server
-	// keeps.
+	// No other request reaches the overview before this one, so it is the first
+	// of its route in the minute, which the server keeps. The server gives the
+	// request a trace of its own, whatever trace the request carries.
 	raw := make([]byte, 16)
 	_, err := rand.Read(raw)
 	require.NoError(t, err)
-	traceID := hex.EncodeToString(raw)
-	admin.header.Set("Traceparent", "00-"+traceID+"-0123456789abcdef-01")
+	carriedTraceID := hex.EncodeToString(raw)
+	admin.header.Set("Traceparent", "00-"+carriedTraceID+"-0123456789abcdef-01")
 	var overview struct {
 		Enabled  bool `json:"enabled"`
 		Requests int  `json:"requests"`
@@ -44,12 +43,24 @@ func TestAdminTraces(t *testing.T) {
 			Kind string `json:"kind"`
 		} `json:"spans"`
 	}
+	var search struct {
+		Total  int `json:"total"`
+		Traces []struct {
+			ID string `json:"id"`
+		} `json:"traces"`
+	}
 	// The server records the trace once the request ended, which may be after
 	// the client got the response.
 	require.Eventually(t, func() bool {
-		status, body := admin.do(http.MethodGet, "/api/web/admin/traces/"+traceID, nil)
-		return status == http.StatusOK && json.Unmarshal(body, &trace) == nil
-	}, 5*time.Second, 50*time.Millisecond, "trace %s not kept", traceID)
+		admin.doJSON(http.MethodGet, "/api/web/admin/traces?route="+url.QueryEscape("GET /api/web/admin/traces/overview"), nil, http.StatusOK, &search)
+		return search.Total == 1
+	}, 5*time.Second, 50*time.Millisecond, "trace of the request not kept")
+	traceID := search.Traces[0].ID
+	assert.NotEqual(t, carriedTraceID, traceID)
+	status, body := admin.do(http.MethodGet, "/api/web/admin/traces/"+carriedTraceID, nil)
+	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
+
+	admin.doJSON(http.MethodGet, "/api/web/admin/traces/"+traceID, nil, http.StatusOK, &trace)
 	assert.Equal(t, traceID, trace.ID)
 	assert.Equal(t, "GET /api/web/admin/traces/overview", trace.Route.Name)
 	assert.Equal(t, http.StatusOK, trace.Status)
@@ -62,17 +73,11 @@ func TestAdminTraces(t *testing.T) {
 	}
 	assert.True(t, kinds["db"], "spans of the trace: %+v", trace.Spans)
 
-	var search struct {
-		Total  int `json:"total"`
-		Traces []struct {
-			ID string `json:"id"`
-		} `json:"traces"`
-	}
 	admin.doJSON(http.MethodGet, "/api/web/admin/traces?q="+traceID[:8], nil, http.StatusOK, &search)
 	require.Equal(t, 1, search.Total)
 	assert.Equal(t, traceID, search.Traces[0].ID)
 
-	status, body := admin.do(http.MethodGet, "/api/web/admin/traces/0123456789abcdef0123456789abcdef", nil)
+	status, body = admin.do(http.MethodGet, "/api/web/admin/traces/0123456789abcdef0123456789abcdef", nil)
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 	status, body = admin.do(http.MethodGet, "/api/web/admin/traces?status=3xx", nil)
 	assert.Equal(t, http.StatusBadRequest, status, "response: %s", body)

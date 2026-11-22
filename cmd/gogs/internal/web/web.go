@@ -297,6 +297,10 @@ func newHealth(traceStore *telemetry.Store) *telemetry.Health {
 // newTracingHandler returns a handler that records a span for every request, so
 // that the spans of what the request runs, e.g., Git operations, are grouped
 // under it.
+//
+// Every request starts a trace of its own, with a link to the trace it carries,
+// if any. A client that got to pick the trace of its requests would put any
+// number of them into one trace, or into the trace of someone else.
 func newTracingHandler(h http.Handler) http.Handler {
 	// The route is only known once the request was routed, after the span
 	// started, so it is added to the span then.
@@ -306,12 +310,15 @@ func newTracingHandler(h http.Handler) http.Handler {
 			trace.SpanFromContext(r.Context()).SetAttributes(attribute.String("http.route", route))
 		}
 	})
-	return otelhttp.NewHandler(routed, "", otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
-		if r.Pattern != "" {
-			return r.Pattern
-		}
-		return r.Method + " " + r.URL.Path
-	}))
+	return otelhttp.NewHandler(routed, "",
+		otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
+			if r.Pattern != "" {
+				return r.Pattern
+			}
+			return r.Method + " " + r.URL.Path
+		}),
+		otelhttp.WithPublicEndpointFn(func(*http.Request) bool { return true }),
+	)
 }
 
 // newRoutingHandler returns the handler of all routes. The localizer maps the
