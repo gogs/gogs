@@ -35,6 +35,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Changed
 
+- GIF images can be uploaded as attachments to issues, pull requests and comments by default. [#8713](https://github.com/gogs/gogs/pull/8713)
 - Files and diffs that are not UTF-8 are shown in their encoding more often, including short texts such as a one-line commit message in GBK. [#8696](https://github.com/gogs/gogs/pull/8696)
 - Translations are now contributed by pull request to `conf/locale` instead of through Crowdin.
 - Placeholders in locale messages are named in camelCase, e.g., `{repoLink}`, instead of `%s`. Custom locale files under `custom/conf/locale` that use `%s` placeholders need to be updated.
