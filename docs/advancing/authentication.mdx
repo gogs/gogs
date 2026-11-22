@@ -198,6 +198,15 @@ It is possible to use either Bind DN or Simple Auth with FreeIPA. The examples b
 
 To configure PAM authentication, set the **PAM Service Name** to a filename in `/etc/pam.d/`.
 
+<Note>
+  The official release binaries and Docker images do not include PAM support. To use PAM, build Gogs from source on the machine that runs it. Install a C compiler and the PAM development headers first (e.g., `build-essential` and `libpam0g-dev` on Debian and Ubuntu), then run from the repository root:
+
+  ```bash
+  moon run web:build
+  CGO_ENABLED=1 go build -trimpath -tags "pam prod" -o .bin/gogs ./cmd/gogs
+  ```
+</Note>
+
 <Warning>
   If you want PAM authentication to work with normal Linux passwords, the user running Gogs must have read access to `/etc/shadow`.
 </Warning>
