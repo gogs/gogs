@@ -3,8 +3,11 @@ package integrationtests
 import (
 	"bytes"
 	"encoding/json"
+	"html"
 	"net/http"
+	"net/url"
 	"os"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -874,7 +877,7 @@ func TestIssueMarkdownCommitLinks(t *testing.T) {
 	repoSettingsGit(t, dir, "update-ref", "refs/heads/"+hexBranch, commitID)
 
 	link := func(id, text string) string {
-		return `<a href="/` + repo.Owner + "/" + repo.Name + "/commit/" + id + `" rel="nofollow"><code>` + text + "</code></a>"
+		return `<a data-app-link href="/` + repo.Owner + "/" + repo.Name + "/commit/" + id + `" rel="nofollow"><code>` + text + "</code></a>"
 	}
 
 	content := "Fixed in " + short + ", not in 123e4567-e89b-12d3-a456-426614174000 or deadbeef. " +
@@ -907,7 +910,7 @@ func TestIssueMarkdownCommitLinks(t *testing.T) {
 		repoVisibilityPutPublicAccess(t, ownerClient, private, false, true)
 		privateID := repoSettingsGit(t, database.RepoPath(private.Owner, private.Name), "rev-parse", "HEAD")
 		privateShort := issueCommitAbbrev(privateID, 7)
-		privateLink := `<a href="/` + private.Owner + "/" + private.Name + "/commit/" + privateID + `" rel="nofollow"><code>` + privateShort[:min(len(privateShort), 10)] + "</code></a>"
+		privateLink := `<a data-app-link href="/` + private.Owner + "/" + private.Name + "/commit/" + privateID + `" rel="nofollow"><code>` + privateShort[:min(len(privateShort), 10)] + "</code></a>"
 		guestClient := authenticatedClient(t, seedUser(t, CreateUserOptions{}))
 
 		// Links to the full ID would tell guests which commits the code has.
@@ -921,6 +924,86 @@ func TestIssueMarkdownCommitLinks(t *testing.T) {
 		guestClient.doJSON(http.MethodPost, issueAPIPath(private, "markdown"), map[string]any{"text": "Probe " + privateShort}, http.StatusOK, &resp)
 		assert.Equal(t, "<p>Probe "+privateShort+"</p>\n", resp.HTML)
 	})
+}
+
+// TestIssueMarkdownAppLinks checks that rendered Markdown marks a link with
+// "data-app-link", which the web app follows without loading the document,
+// exactly when the server answers the link with the web app.
+func TestIssueMarkdownAppLinks(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	tracked := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	ownerClient := authenticatedClient(t, owner)
+
+	status, body := ownerClient.do(http.MethodPut, repoSettingsAPIPath(tracked, "/settings/advanced"), map[string]any{
+		"enableWiki":            true,
+		"enableExternalWiki":    true,
+		"externalWikiURL":       "https://wiki.example.com",
+		"enableIssues":          true,
+		"enableExternalTracker": true,
+		"externalTrackerURL":    "https://tracker.example.com",
+		"externalTrackerFormat": "https://tracker.example.com/{index}",
+		"externalTrackerStyle":  "numeric",
+		"enablePulls":           true,
+		"pullsAllowMerge":       true,
+	})
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+
+	status, body = issueUpload(t, ownerClient, issueAPIPath(repo, "issues", "attachments"), "screenshot.png", issuePNG(t))
+	require.Equal(t, http.StatusCreated, status, "response: %s", body)
+	var attachment struct {
+		UUID string `json:"uuid"`
+		URL  string `json:"url"`
+	}
+	require.NoError(t, json.Unmarshal(body, &attachment))
+
+	branch := repoSettingsDefaultBranch(t, repo)
+	commitID := repoSettingsGit(t, database.RepoPath(repo.Owner, repo.Name), "rev-parse", "HEAD")
+	repoPath := "/" + repo.Owner + "/" + repo.Name
+	trackedPath := "/" + tracked.Owner + "/" + tracked.Name
+	content := strings.Join([]string{
+		"[README](src/" + branch + "/README.md), " + commitID + ", @" + owner.Name + ", #1 and [issues](issues).",
+		"[raw](raw/" + branch + "/README.md), [zip](archive/" + branch + ".zip), [patch](commit/" + commitID + ".patch) and [screenshot](" + attachment.URL + ").",
+		`<a href="` + trackedPath + `/issues">tracker</a> <a href="` + trackedPath + `/wiki">wiki</a>`,
+		`<a href="/` + owner.Name + `.keys">keys</a> <a href="/api/v1/repos` + repoPath + `">API</a> <a href="/explore">explore</a>`,
+		`<a href="` + repoPath + `/src/` + branch + `/../../raw/` + branch + `/README.md">dot segments</a>`,
+		`<a data-app-link href="/attachments/` + attachment.UUID + `">forged</a> <a href="https://example.com/">external</a>`,
+	}, "\n")
+	var created struct {
+		Index int64 `json:"index"`
+	}
+	ownerClient.doJSON(http.MethodPost, issueAPIPath(repo, "issues"), map[string]any{
+		"title":       "App links",
+		"content":     content,
+		"attachments": []string{attachment.UUID},
+	}, http.StatusCreated, &created)
+	got := issueGet(t, ownerClient, repo, created.Index).ContentHTML
+
+	links := regexp.MustCompile(`<a (data-app-link )?href="([^"]*)"`).FindAllStringSubmatch(got, -1)
+	require.Len(t, links, 17, "content HTML: %s", got)
+	base, err := url.Parse(serverURL + "/")
+	require.NoError(t, err)
+	marked := 0
+	for _, link := range links {
+		ref, err := url.Parse(html.UnescapeString(link[2]))
+		require.NoError(t, err)
+		// Like a browser, resolve the link and its dot segments before
+		// following it.
+		u := base.ResolveReference(ref)
+		if u.Host != base.Host {
+			assert.Empty(t, link[1], "a link to another site is not marked: %s", u)
+			continue
+		}
+		status, _, body := newClient(t).doRaw(http.MethodGet, u.RequestURI(), "", nil)
+		webApp := bytes.Contains(body, []byte(`<div id="root">`))
+		assert.Equal(t, webApp, link[1] != "", "%s is marked %t, and the server answers %d with the web app %t", u.RequestURI(), link[1] != "", status, webApp)
+		if link[1] != "" {
+			marked++
+		}
+	}
+	assert.Equal(t, 5, marked, "content HTML: %s", got)
 }
 
 // issueCommitAbbrev returns the shortest abbreviation of the commit ID that is
