@@ -2,14 +2,13 @@ package database
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
 )
 
@@ -218,6 +217,10 @@ func (s *TeamsStore) ListMembers(ctx context.Context, teamID int64) ([]*User, er
 	return members, nil
 }
 
+// errTeamReposChanged is returned when a repository was added to the team
+// after the repositories of the team were locked.
+var errTeamReposChanged = errors.New("repositories of the team changed")
+
 // AddMember adds the user with given ID to the team with given ID of the
 // organization with given ID, and to the organization when the user is not a
 // member yet. Adding a member that the team has is a no-op.
@@ -226,63 +229,83 @@ func (s *TeamsStore) AddMember(ctx context.Context, orgID, teamID, userID int64)
 		return nil
 	}
 
-	// Reading at READ COMMITTED lets MySQL see the repositories added to the
-	// team before the team is locked, as PostgreSQL does by default.
-	var opts []*sql.TxOptions
-	if !conf.UseSQLite3 {
-		opts = append(opts, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
-	}
-	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// Lock the repositories of the team before the team and the
-		// organization, as other transactions do.
-		var repoIDs []int64
-		err := tx.Model(new(TeamRepo)).Where("team_id = ?", teamID).Order("repo_id ASC").Pluck("repo_id", &repoIDs).Error
-		if err != nil {
-			return errors.Wrap(err, "list team repositories")
-		}
-		for _, repoID := range repoIDs {
-			if _, _, err := lockRepository(tx, repoID); err != nil {
-				return err
-			}
-		}
-
-		t, err := newTeamsStore(tx).GetByID(ctx, teamID)
-		if err != nil {
+	// A repository added to the team meanwhile is locked by the next attempt.
+	for attempt := 1; ; attempt++ {
+		err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+			return newTeamsStore(tx).addMember(ctx, orgID, teamID, userID)
+		}, readCommitted()...)
+		if !errors.Is(err, errTeamReposChanged) || attempt == 3 {
 			return err
 		}
-		err = tx.Model(t).UpdateColumn("num_members", gorm.Expr("num_members + 1")).Error
-		if err != nil {
-			return errors.Wrap(err, "count members")
-		}
+	}
+}
 
-		if err := newOrganizationsStore(tx).addMember(ctx, orgID, userID); err != nil {
-			return errors.Wrap(err, "add organization member")
+// addMember is AddMember without a transaction of its own and checks.
+func (s *TeamsStore) addMember(ctx context.Context, orgID, teamID, userID int64) error {
+	db := s.db.WithContext(ctx)
+	// Lock the repositories of the team before rows of the organization and
+	// the team, as other transactions do, so the repositories cannot be
+	// deleted or transferred until the member has their accesses.
+	var lockedIDs []int64
+	err := db.Model(new(TeamRepo)).Where("team_id = ?", teamID).Order("repo_id ASC").Pluck("repo_id", &lockedIDs).Error
+	if err != nil {
+		return errors.Wrap(err, "list team repositories")
+	}
+	for _, repoID := range lockedIDs {
+		if _, _, err := lockRepository(s.db, repoID); err != nil {
+			return err
 		}
-		err = tx.Create(&TeamUser{UID: userID, OrgID: orgID, TeamID: teamID}).Error
-		if err != nil {
-			return errors.Wrap(err, "create team user")
-		}
+	}
 
-		// Adding, removing, deleting or transferring a repository of the team
-		// updates the team too, so with the team locked, the repositories of
-		// the team no longer change until the member is added. Ones added
-		// since they were locked have committed and are listed now.
-		repos, err := newTeamsStore(tx).ListRepos(ctx, t.ID)
-		if err != nil {
-			return errors.Wrap(err, "list repositories")
+	if err := newOrganizationsStore(s.db).addMember(ctx, orgID, userID); err != nil {
+		return errors.Wrap(err, "add organization member")
+	}
+
+	t, err := s.GetByID(ctx, teamID)
+	if err != nil {
+		return err
+	}
+	err = db.Create(&TeamUser{UID: userID, OrgID: orgID, TeamID: teamID}).Error
+	if err != nil {
+		return errors.Wrap(err, "create team user")
+	}
+	err = db.Model(t).UpdateColumn("num_members", gorm.Expr("num_members + 1")).Error
+	if err != nil {
+		return errors.Wrap(err, "count members")
+	}
+
+	// Adding, removing, deleting or transferring a repository of the team
+	// updates the team too, so with the team locked, the repositories of the
+	// team no longer change until the member is added. One added since the
+	// others were locked can only be locked before the team.
+	var repoIDs []int64
+	err = db.Model(new(TeamRepo)).Where("team_id = ?", teamID).Pluck("repo_id", &repoIDs).Error
+	if err != nil {
+		return errors.Wrap(err, "list team repositories")
+	}
+	for _, repoID := range repoIDs {
+		if !slices.Contains(lockedIDs, repoID) {
+			return errTeamReposChanged
 		}
-		for _, repo := range repos {
-			if err = newPermissionsStore(tx).recalculateTeamAccesses(ctx, repo, 0); err != nil {
-				return errors.Wrapf(err, "recalculate accesses of repository %d", repo.ID)
+	}
+	for _, repoID := range repoIDs {
+		repo, err := getRepositoryByID(s.db, repoID)
+		if err != nil {
+			if IsErrRepoNotExist(err) {
+				continue
 			}
+			return errors.Wrapf(err, "get repository %d", repoID)
 		}
+		if err = newPermissionsStore(s.db).recalculateTeamAccesses(ctx, repo, 0); err != nil {
+			return errors.Wrapf(err, "recalculate accesses of repository %d", repo.ID)
+		}
+	}
 
-		updates := map[string]any{"num_teams": gorm.Expr("num_teams + 1")}
-		if t.IsOwnerTeam() {
-			updates["is_owner"] = true
-		}
-		return tx.Model(new(OrgUser)).Where("uid = ? AND org_id = ?", userID, orgID).UpdateColumns(updates).Error
-	}, opts...)
+	updates := map[string]any{"num_teams": gorm.Expr("num_teams + 1")}
+	if t.IsOwnerTeam() {
+		updates["is_owner"] = true
+	}
+	return db.Model(new(OrgUser)).Where("uid = ? AND org_id = ?", userID, orgID).UpdateColumns(updates).Error
 }
 
 // RemoveMember removes the user with given ID from the team with given ID of

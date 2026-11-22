@@ -1287,6 +1287,10 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 	newcomer := newTestIssueUser(t, ctx, s.db, "cf-newcomer")
 	latecomer := newTestIssueUser(t, ctx, s.db, "cf-latecomer")
 	joiner := newTestIssueUser(t, ctx, s.db, "cf-joiner")
+	leaver := newTestIssueUser(t, ctx, s.db, "cf-leaver")
+	starter := newTestIssueUser(t, ctx, s.db, "cf-starter")
+	owner := newTestIssueUser(t, ctx, s.db, "cf-owner")
+	var orgFork *Repository
 	var older *Repository
 
 	for _, tc := range []struct {
@@ -1415,6 +1419,37 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 			second:    func(base, _ *Repository) error { return teams.AddRepo(ctx, readers, base) },
 			check: func(base, _ *Repository) {
 				assert.Equal(t, AccessModeRead, accessModes(t, ctx, newPermissionsStore(s.db), base.ID)[joiner.ID], "access of the new member")
+			},
+		},
+		{
+			name:      "add team member while removing another member of the team from the organization, holding the organization",
+			baseOwner: org,
+			setup: func(*Repository, *Repository) {
+				require.NoError(t, teams.AddMember(ctx, org.ID, readers.ID, leaver.ID))
+			},
+			holdUser: org,
+			first: func(*Repository, *Repository) error {
+				return newOrganizationsStore(s.db).RemoveMember(ctx, org.ID, leaver.ID)
+			},
+			second: func(*Repository, *Repository) error { return teams.AddMember(ctx, org.ID, readers.ID, starter.ID) },
+		},
+		{
+			name:      "add owner team member while forking into the organization, holding the organization",
+			baseOwner: alice,
+			holdUser:  org,
+			first: func(*Repository, *Repository) error {
+				owners, err := teams.GetOwnerTeam(ctx, org.ID)
+				if err != nil {
+					return err
+				}
+				return teams.AddMember(ctx, org.ID, owners.ID, owner.ID)
+			},
+			second: func(base, _ *Repository) (err error) {
+				orgFork, err = fork(org, base)
+				return err
+			},
+			check: func(*Repository, *Repository) {
+				assert.Equal(t, AccessModeOwner, accessModes(t, ctx, newPermissionsStore(s.db), orgFork.ID)[owner.ID], "access of the new owner")
 			},
 		},
 		{

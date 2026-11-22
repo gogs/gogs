@@ -3,6 +3,7 @@ package database
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"fmt"
 	"image"
 	_ "image/jpeg"
@@ -1165,7 +1166,7 @@ func (s *RepositoriesStore) Create(ctx context.Context, logger *logx.Logger, doe
 			return errors.Newf("initRepository: %v", err)
 		}
 		return nil
-	})
+	}, readCommitted()...)
 	if err != nil {
 		return nil, err
 	}
@@ -1426,7 +1427,7 @@ func (s *RepositoriesStore) Fork(ctx context.Context, logger *logx.Logger, doer,
 		}
 
 		return nil
-	})
+	}, readCommitted()...)
 	if err != nil {
 		return nil, err
 	}
@@ -1610,7 +1611,7 @@ func (s *RepositoriesStore) Transfer(ctx context.Context, doer *User, newOwnerNa
 			}
 		}
 		return nil
-	})
+	}, readCommitted()...)
 }
 
 // Rename renames the Git repository and wiki of the repository of the owner
@@ -2204,6 +2205,18 @@ func (s *RepositoriesStore) UpdateSize(ctx context.Context, repo *Repository) er
 		return errors.Newf("update size: %v", err)
 	}
 	return nil
+}
+
+// readCommitted returns the options of a transaction whose reads see the rows
+// committed before each statement, as PostgreSQL does by default. On MySQL,
+// reads would otherwise come from a snapshot taken before the transaction
+// waited for the locks, and miss what it waited for, e.g., a member added to
+// a team.
+func readCommitted() []*sql.TxOptions {
+	if conf.UseSQLite3 {
+		return nil
+	}
+	return []*sql.TxOptions{{Isolation: sql.LevelReadCommitted}}
 }
 
 // lockRepository locks the repository of given ID until the transaction ends,

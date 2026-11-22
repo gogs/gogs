@@ -580,7 +580,7 @@ func postRepoCollaborator(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 
 	if err = database.Handle.Collaborations().Add(c.Request().Context(), rc.Repo, u.ID); err != nil {
 		if database.IsErrRepoNotExist(err) {
-			return http.StatusNotFound, nil, err
+			return http.StatusNotFound, nil, errors.New("repository does not exist")
 		}
 		logger.Error("Failed to add collaborator", "collaboratorID", u.ID, "repoID", rc.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "add collaborator")
