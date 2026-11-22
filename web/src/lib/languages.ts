@@ -20,7 +20,7 @@ export const LANGUAGES: { code: string; name: string }[] = [
   { code: "fi-FI", name: "suomi" },
   { code: "tr-TR", name: "Türkçe" },
   { code: "cs-CZ", name: "čeština" },
-  { code: "sr-SP", name: "српски" },
+  { code: "sr-RS", name: "српски" },
   { code: "sv-SE", name: "svenska" },
   { code: "ko-KR", name: "한국어" },
   { code: "gl-ES", name: "galego" },
