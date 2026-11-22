@@ -2,6 +2,7 @@ package integrationtests
 
 import (
 	"net/http"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -185,4 +186,48 @@ func TestRepositoryExternalWikiAndTracker(t *testing.T) {
 		assert.NotContains(t, header, "externalWikiURL")
 		assert.NotContains(t, header, "externalTrackerURL")
 	})
+}
+
+// The header of a fork links to its base repository only for viewers who can
+// read the base.
+func TestRepositoryHeaderForkOf(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	forker := seedUser(t, CreateUserOptions{})
+	forkReader := seedUser(t, CreateUserOptions{})
+	public := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	private := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
+	repoSettingsAddCollaborator(t, private, forker, database.AccessModeRead)
+
+	forkerClient := authenticatedClient(t, forker)
+	fork := func(base *Repository) *Repository {
+		t.Helper()
+		var created repoSettingsCreated
+		forkerClient.doJSON(http.MethodPost, "/api/web/repo/fork/"+strconv.FormatInt(base.ID, 10), map[string]any{"name": UniqueName("fork-")}, http.StatusCreated, &created)
+		got, err := getRepositoryByName(t, forker.ID, created.Name)
+		require.NoError(t, err)
+		return &Repository{ID: got.ID, Owner: created.Owner, Name: created.Name}
+	}
+	type repoName struct {
+		Owner string `json:"owner"`
+		Name  string `json:"name"`
+	}
+	forkOf := func(c *client, repo *Repository) *repoName {
+		t.Helper()
+		var header struct {
+			ForkOf *repoName `json:"forkOf"`
+		}
+		c.doJSON(http.MethodGet, issueAPIPath(repo, "header"), nil, http.StatusOK, &header)
+		return header.ForkOf
+	}
+
+	publicFork := fork(public)
+	privateFork := fork(private)
+	repoSettingsAddCollaborator(t, privateFork, forkReader, database.AccessModeRead)
+
+	assert.Equal(t, &repoName{Owner: public.Owner, Name: public.Name}, forkOf(newClient(t), publicFork), "anonymous viewer of a public fork")
+	assert.Equal(t, &repoName{Owner: private.Owner, Name: private.Name}, forkOf(forkerClient, privateFork), "viewer of a private base")
+	assert.Nil(t, forkOf(authenticatedClient(t, forkReader), privateFork), "viewer who cannot read the base")
+	assert.Nil(t, forkOf(authenticatedClient(t, owner), private), "repository that is not a fork")
 }

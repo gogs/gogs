@@ -32,6 +32,8 @@ export interface RepoHeaderData {
   viewerIsWatching: boolean;
   viewerIsStarring: boolean;
   mirrorOf?: string;
+  // forkOf is the base repository of a fork, for viewers who can read both.
+  forkOf?: { owner: string; name: string };
   // defaultBranch and cloneLinks are set for viewers who can read the code.
   defaultBranch?: string;
   cloneLinks?: RepoCloneLinks;

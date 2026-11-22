@@ -146,6 +146,19 @@ export function RepoHeader({ repo, activeTab }: RepoHeaderProps) {
                 </a>
               </span>
             ) : null}
+            {repo.forkOf ? (
+              <span className="inline-flex min-w-0 items-center gap-1 text-xs text-(--color-muted-foreground)">
+                <GitFork className="size-3 shrink-0" aria-hidden />
+                <span className="shrink-0">{t("repo.forked_from")}</span>
+                <Link
+                  activeOptions={{ exact: true }}
+                  to={`/${repo.forkOf.owner}/${repo.forkOf.name}`}
+                  className="truncate hover:underline"
+                >
+                  {repo.forkOf.owner}/{repo.forkOf.name}
+                </Link>
+              </span>
+            ) : null}
           </h1>
 
           <div className="flex shrink-0 flex-wrap items-center gap-2">
