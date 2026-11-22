@@ -144,6 +144,10 @@ Directory layout inside Docker container:
     |-- log
 ```
 
+### Health check
+
+The image reports the container healthy while `GOGS_HEALTHCHECK_URL` responds without an error, which defaults to `http://localhost:3000/healthcheck`. When `[server]` sets another `HTTP_ADDR` or `HTTP_PORT`, set it to the address Gogs listens on, e.g., `docker run -e GOGS_HEALTHCHECK_URL=http://localhost:8080/healthcheck`. For HTTPS or a Unix socket, replace the whole command with `--health-cmd`, e.g., `--health-cmd 'curl -fsS -o /dev/null --unix-socket /data/gogs/gogs.sock http://localhost/healthcheck || exit 1'`.
+
 ## First start
 
 Open `https://gogs.example.com/` and sign up. Whoever signs up while there are no other users becomes the admin.
