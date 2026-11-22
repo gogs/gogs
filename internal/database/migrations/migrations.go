@@ -52,6 +52,7 @@ func newMigrations(logger *logx.Logger, db *gorm.DB) []*goose.Migration {
 		newMigration(logger, db, 20261118160000, "disable push allowlists of protected branches of user repositories", disableProtectBranchAllowlistOfUserRepositories),
 		newMigration(logger, db, 20261118175404, "add unique index on public_key.owner_id and public_key.fingerprint", addPublicKeyOwnerIDFingerprintUniqueIndex),
 		newMigration(logger, db, 20261120033000, "drop user.avatar and user.avatar_email", dropUserAvatarAndAvatarEmail),
+		newMigration(logger, db, 20261121213349, "add index on issue_user.issue_id", addIssueUserIssueIDIndex),
 	}
 }
 

@@ -243,12 +243,12 @@ func getRepoMilestones(c flamego.Context, logger *logx.Logger, repoCtx *repoCont
 	commits := markup.ResolveCommits(metas, descriptions...)
 	items := make([]repoMilestone, 0, len(miles))
 	for _, m := range miles {
-		openIssues, err := database.Handle.Milestones().CountIssues(ctx, m.ID, false, false)
+		openIssues, err := database.Handle.Milestones().CountIssues(ctx, m.RepoID, m.ID, false, false)
 		if err != nil {
 			logger.Error("Failed to count open issues", "milestoneID", m.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "count open issues")
 		}
-		closedIssues, err := database.Handle.Milestones().CountIssues(ctx, m.ID, true, false)
+		closedIssues, err := database.Handle.Milestones().CountIssues(ctx, m.RepoID, m.ID, true, false)
 		if err != nil {
 			logger.Error("Failed to count closed issues", "milestoneID", m.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "count closed issues")

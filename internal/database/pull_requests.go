@@ -365,7 +365,12 @@ func (s *PullRequestsStore) Merge(ctx context.Context, logger *logx.Logger, doer
 		return ErrPullRequestNotMergeable
 	}
 
-	err = newIssuesStore(tx).changeStatus(ctx, logger, doer, pr.Issue.Repo, pr.Issue, true)
+	// Closing the issue locks its row too, so that a concurrent close waits.
+	// Everything else that closing it locks, e.g., the repository and the
+	// users of the issue, is locked only once the merge result is built,
+	// which may take long.
+	issues := newIssuesStore(tx)
+	err = issues.setStatus(ctx, pr.Issue, true)
 	if errors.Is(err, errIssueStatusUnchanged) {
 		return ErrPullRequestNotMergeable
 	} else if err != nil {
@@ -472,6 +477,11 @@ func (s *PullRequestsStore) Merge(ctx context.Context, logger *logx.Logger, doer
 
 	default:
 		return errors.Newf("unknown merge style: %s", mergeStyle)
+	}
+
+	// Before the push, so that a failure leaves the base branch as it is.
+	if err = issues.recordStatus(ctx, logger, doer, pr.Issue.Repo, pr.Issue); err != nil {
+		return errors.Wrap(err, "close issue")
 	}
 
 	// Push changes on base branch to upstream.
@@ -816,20 +826,22 @@ func (s *PullRequestsStore) Create(ctx context.Context, logger *logx.Logger, rep
 			return errors.Wrap(err, "save patch")
 		}
 
-		pr.BaseRepo = repo
-		if err = newPullRequestsStore(tx).testPatch(ctx, logger, pr); err != nil {
-			return errors.Wrap(err, "test patch")
-		}
-		// No conflict appears after test means mergeable.
-		if pr.Status == PullRequestStatusChecking {
-			pr.Status = PullRequestStatusMergeable
-		}
-
 		pr.IssueID = pull.ID
+		pr.Status = PullRequestStatusChecking
 		return tx.Create(pr).Error
 	})
 	if err != nil {
 		return err
+	}
+
+	// Testing the patch runs git, which may take long, so it runs after the
+	// transaction rather than while it holds the repository. Pull requests
+	// still being checked are tested again when the server starts.
+	pr.BaseRepo = repo
+	if err = s.testPatch(ctx, logger, pr); err != nil {
+		logger.Error("Failed to test patch", "pullRequestID", pr.ID, "error", err)
+	} else {
+		s.checkAndUpdateStatus(ctx, logger, pr)
 	}
 
 	err = newActionsStore(s.db).notifyWatchers(ctx, &Action{
