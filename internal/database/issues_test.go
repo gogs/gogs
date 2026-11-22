@@ -692,14 +692,10 @@ func issuesLabels(t *testing.T, ctx context.Context, s *IssuesStore) {
 func issuesUpdateMentions(t *testing.T, ctx context.Context, s *IssuesStore) {
 	alice := newTestIssueUser(t, ctx, s.db, "is-mention-alice")
 	bob := newTestIssueUser(t, ctx, s.db, "is-mention-bob")
-	carol := newTestIssueUser(t, ctx, s.db, "is-mention-carol")
-	org := &User{Name: "is-mention-org", LowerName: "is-mention-org", Type: UserTypeOrganization, NumMembers: 2}
+	org := &User{Name: "is-mention-org", LowerName: "is-mention-org", Type: UserTypeOrganization, NumMembers: 1}
 	require.NoError(t, s.db.Create(org).Error)
-	emptyOrg := &User{Name: "is-mention-empty", LowerName: "is-mention-empty", Type: UserTypeOrganization}
-	require.NoError(t, s.db.Create(emptyOrg).Error)
-	for _, uid := range []int64{bob.ID, carol.ID} {
-		require.NoError(t, s.db.Create(&OrgUser{UID: uid, OrgID: org.ID}).Error)
-	}
+	require.NoError(t, s.db.Create(&OrgUser{UID: bob.ID, OrgID: org.ID}).Error)
+
 	// The issue was closed after the caller loaded it.
 	closed := &Issue{RepoID: 7, Index: 1, IsClosed: true}
 	require.NoError(t, s.db.Create(closed).Error)
@@ -707,10 +703,12 @@ func issuesUpdateMentions(t *testing.T, ctx context.Context, s *IssuesStore) {
 	// Alice already relates to the issue and keeps her other flags. Her row is
 	// from a mention before Gogs 0.15, which did not record the repository.
 	require.NoError(t, s.db.Create(&IssueUser{IssueID: issue.ID, UserID: alice.ID, IsPoster: true, IsClosed: true}).Error)
+	carol := newTestIssueUser(t, ctx, s.db, "is-mention-carol")
 
 	assert.Equal(t, []string{"is-mention-alice", "is-mention-org"}, findLowerMentions("Hi @Is-Mention-Alice and @IS-MENTION-ORG"))
 
-	err := s.updateMentions(ctx, issue, []string{"is-mention-alice", "is-mention-org", "is-mention-empty", "nobody"})
+	// Mentions of organizations mark neither them nor their members.
+	err := s.updateMentions(ctx, issue, []string{"is-mention-alice", "is-mention-carol", "is-mention-org", "nobody"})
 	require.NoError(t, err)
 
 	var ius []*IssueUser
@@ -724,16 +722,13 @@ func issuesUpdateMentions(t *testing.T, ctx context.Context, s *IssuesStore) {
 		got[iu.UserID] = [2]bool{iu.IsMentioned, iu.IsPoster}
 	}
 	assert.Equal(t, map[int64][2]bool{
-		alice.ID:    {true, true},
-		bob.ID:      {true, false},
-		carol.ID:    {true, false},
-		org.ID:      {true, false},
-		emptyOrg.ID: {true, false},
+		alice.ID: {true, true},
+		carol.ID: {true, false},
 	}, got)
 
 	err = s.updateMentions(ctx, issue, nil)
 	require.NoError(t, err)
 	var count int64
 	require.NoError(t, s.db.Model(new(IssueUser)).Count(&count).Error)
-	assert.Equal(t, int64(5), count)
+	assert.Equal(t, int64(2), count)
 }

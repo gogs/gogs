@@ -1229,7 +1229,7 @@ func findLowerMentions(content string) []string {
 }
 
 // updateMentions marks the issue as mentioning the users with given lowercase
-// names, and the members of the organizations with them.
+// names.
 func (s *IssuesStore) updateMentions(ctx context.Context, issue *Issue, lowerNames []string) error {
 	if len(lowerNames) == 0 {
 		return nil
@@ -1243,26 +1243,12 @@ func (s *IssuesStore) updateMentions(ctx context.Context, issue *Issue, lowerNam
 		return errors.Wrap(err, "get issue status")
 	}
 
-	users := make([]*User, 0, len(lowerNames))
-	err = db.Where("lower_name IN ?", lowerNames).Order("lower_name ASC").Find(&users).Error
+	// Mentions of organizations only link to them, so that anyone cannot list
+	// an issue among the mentions of every member.
+	var userIDs []int64
+	err = db.Model(new(User)).Where("lower_name IN ? AND type = ?", lowerNames, UserTypeIndividual).Pluck("id", &userIDs).Error
 	if err != nil {
 		return errors.Wrap(err, "list mentioned users")
-	}
-
-	userIDs := make([]int64, 0, len(users))
-	for _, user := range users {
-		userIDs = append(userIDs, user.ID)
-		if !user.IsOrganization() || user.NumMembers == 0 {
-			continue
-		}
-
-		members, err := newOrganizationsStore(s.db).listOrgUsers(ctx, user.ID, 0)
-		if err != nil {
-			return errors.Wrapf(err, "list members of organization %d", user.ID)
-		}
-		for _, member := range members {
-			userIDs = append(userIDs, member.UID)
-		}
 	}
 
 	for _, userID := range userIDs {

@@ -35,6 +35,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Changed
 
+- Mentioning an organization in an issue or comment only links to it. It no longer marks the organization or its members as mentioned, or sends email to the organization. [#8528](https://github.com/gogs/gogs/pull/8528)
 - GIF images can be uploaded as attachments to issues, pull requests and comments by default. [#8713](https://github.com/gogs/gogs/pull/8713)
 - Files and diffs that are not UTF-8 are shown in their encoding more often, including short texts such as a one-line commit message in GBK. [#8696](https://github.com/gogs/gogs/pull/8696)
 - Translations are now contributed by pull request to `conf/locale` instead of through Crowdin.
@@ -141,7 +142,6 @@ All notable changes to Gogs are documented in this file.
 - Discord webhooks without a username now deliver, instead of every delivery being rejected by Discord. [#8501](https://github.com/gogs/gogs/pull/8501)
 - Repository search on PostgreSQL matches descriptions regardless of case, as on other databases. [#8528](https://github.com/gogs/gogs/pull/8528)
 - Webhook payloads and API responses for a newly created issue, comment, or repository, and webhook test deliveries, no longer show `0001-01-01T00:00:00Z` as their time. [#8528](https://github.com/gogs/gogs/pull/8528)
-- Mentioning an organization marks its members as mentioned, instead of unrelated users. [#8505](https://github.com/gogs/gogs/pull/8505)
 - The issue list of a repository marks issues that mention you as unread until you read them, as it does for your other issues. [#8528](https://github.com/gogs/gogs/pull/8528)
 - Listing or creating comments of an issue that does not exist through the API returns 404 instead of 500. [#8528](https://github.com/gogs/gogs/pull/8528)
 - A webhook delivery to an invalid payload URL or to a blocked local network address now shows as failed with the reason, instead of staying pending and being retried on every delivery run. [#8501](https://github.com/gogs/gogs/pull/8501)
