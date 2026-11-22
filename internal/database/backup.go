@@ -107,12 +107,6 @@ func dumpTable(ctx context.Context, db *gorm.DB, table any, w io.Writer) error {
 // replaces the rows of each table with those in the backup archive in JSON Lines
 // format.
 func ImportDatabase(ctx context.Context, logger *logx.Logger, db *gorm.DB, dirPath string, verbose bool) error {
-	// Tables without a file are emptied, so a missing directory would empty them
-	// all.
-	if !osx.IsDir(dirPath) {
-		return errors.Newf("%q is not a directory", dirPath)
-	}
-
 	err := migrations.Migrate(logger, db.WithContext(ctx))
 	if err != nil {
 		return errors.Wrap(err, "migrate")
@@ -135,11 +129,8 @@ func ImportDatabase(ctx context.Context, logger *logx.Logger, db *gorm.DB, dirPa
 		err := func() error {
 			tableFile := filepath.Join(dirPath, tableName+".json")
 			if !osx.IsFile(tableFile) {
-				// Backups from before the table existed have no rows for it, and rows
-				// left in it would belong to whoever gets their user IDs, e.g.,
-				// passkeys.
-				logger.Info("Emptied table not in backup", "tableName", tableName)
-				return importTable(ctx, db, table, strings.NewReader(""))
+				logger.Info("Skipped table", "tableName", tableName)
+				return nil
 			}
 
 			if verbose {

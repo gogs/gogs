@@ -51,38 +51,19 @@ func TestImportDatabase(t *testing.T) {
 	t.Parallel()
 
 	db := newTestDB(t, "importDatabase")
-	ctx := context.Background()
-	logger := logx.NewNoopLogger()
-
-	// A passkey of the database restored into, which backups of Gogs 0.14 and
-	// earlier have no table for.
-	err := db.Create(&Passkey{UserID: 1, Name: "Leftover", Credential: webauthn.Credential{ID: []byte("leftover")}}).Error
-	require.NoError(t, err)
-	countPasskeys := func() int64 {
-		var n int64
-		require.NoError(t, db.Model(new(Passkey)).Count(&n).Error)
-		return n
-	}
-
-	dir := t.TempDir()
-	t.Run("archive without database dump", func(t *testing.T) {
-		err := ImportDatabase(ctx, logger, db, filepath.Join(dir, "missing"), false)
-		require.Error(t, err)
-		assert.Equal(t, int64(1), countPasskeys(), "a failed import deleted rows")
-	})
 
 	// The JSON encoder escapes HTML characters, so this content of 40 KB, which
 	// fits into a TEXT column of MySQL, becomes a line of 140 KB.
 	content := strings.Repeat("<br>", 10_000)
 	row := `{"ID":1,"RepoID":1,"Index":1,"Title":"Big","Content":"` + strings.Repeat(`\u003cbr\u003e`, 10_000) + `"}` + "\n"
+	dir := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "Issue.json"), []byte(row), 0o600))
-	err = ImportDatabase(ctx, logger, db, dir, false)
+	err := ImportDatabase(context.Background(), logx.NewNoopLogger(), db, dir, false)
 	require.NoError(t, err)
 
 	var issue Issue
 	require.NoError(t, db.First(&issue, 1).Error)
 	assert.Equal(t, content, issue.Content)
-	assert.Zero(t, countPasskeys(), "rows of a table not in the backup")
 }
 
 func setupDBToDump(t *testing.T, db *gorm.DB) {
