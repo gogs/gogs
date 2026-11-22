@@ -33,6 +33,7 @@ import {
   submitRepoPullReview,
 } from "@/lib/queries/repo";
 import { formErrors } from "@/lib/queries/request";
+import { toastError } from "@/lib/toast-error";
 import { linkedUploads, useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { useIsLinked } from "@/lib/use-is-linked";
 import { useUserInfo } from "@/lib/use-user-info";
@@ -218,7 +219,7 @@ export function ReviewThread({
       await router.invalidate();
       setOpen(!resolved);
     },
-    onError: (err) => toast.error(err.message),
+    onError: (err) => toastError(err),
   });
   const params = { owner: issueRef.owner, repo: issueRef.name, index: String(issueRef.index) };
 
@@ -454,7 +455,7 @@ export function ReviewChanges({ issueRef, data }: { issueRef: IssueRef; data: Re
       await router.invalidate();
       setOpen(false);
     },
-    onError: (err) => toast.error(err.message),
+    onError: (err) => toastError(err),
   });
   const { fields, formError } = formErrors(submit.error);
   const onSubmit = (e: FormEvent) => {
@@ -563,7 +564,7 @@ export function ReviewersSection({ issueRef, data }: { issueRef: IssueRef; data:
     mutationFn: ({ name, requested }: { name: string; requested: boolean }) =>
       setRepoPullReviewer(issueRef, name, requested),
     onSuccess: () => router.invalidate(),
-    onError: (err) => toast.error(err.message),
+    onError: (err) => toastError(err),
   });
   const requested = new Set(data.reviewers.filter((r) => r.state === "requested").map((r) => r.user.name));
   const options = data.reviewerOptions;

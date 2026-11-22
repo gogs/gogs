@@ -173,7 +173,7 @@ func describeReviews(ctx context.Context, logger *logx.Logger, viewer *database.
 			status.ViewerPendingReview = &pendingReviewInfo{CommentCount: n}
 		}
 		if viewerCanRequestReviews(repoCtx, issue) {
-			if status.ReviewerOptions, err = listReviewerOptions(repo, issue); err != nil {
+			if status.ReviewerOptions, err = listReviewerOptions(ctx, repo, issue); err != nil {
 				return nil, errors.Wrap(err, "list reviewer options")
 			}
 		}
@@ -194,8 +194,8 @@ func viewerCanRequestReviews(repoCtx *repoContext, issue *database.Issue) bool {
 
 // listReviewerOptions returns the users who can be asked to review the pull
 // request: those who can write to the repository, except who opened it.
-func listReviewerOptions(repo *database.Repository, issue *database.Issue) ([]issueUser, error) {
-	users, err := repo.GetWriters()
+func listReviewerOptions(ctx context.Context, repo *database.Repository, issue *database.Issue) ([]issueUser, error) {
+	users, err := database.Handle.Repositories().ListWriters(ctx, repo)
 	if err != nil {
 		return nil, err
 	}
@@ -525,7 +525,7 @@ func changeRepoPullReviewer(c flamego.Context, logger *logx.Logger, viewer *data
 	}
 	if requested {
 		var options []issueUser
-		options, err = listReviewerOptions(repoCtx.Repo, issue)
+		options, err = listReviewerOptions(c.Request().Context(), repoCtx.Repo, issue)
 		if err != nil {
 			logger.Error("Failed to list reviewer options", "repoID", repoCtx.Repo.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "list reviewer options")
