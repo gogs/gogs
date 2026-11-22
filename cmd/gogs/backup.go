@@ -76,6 +76,19 @@ func runBackup(ctx context.Context, cmd *cli.Command) error {
 	}
 	logger.Info("Created backup root directory", "rootDir", rootDir)
 
+	archiveName := filepath.Join(cmd.String("target"), cmd.String("archive-name"))
+	var f *os.File
+	// fatal exits without running deferred calls, so it removes the database
+	// dump and the partial archive itself.
+	fatal := func(msg string, args ...any) {
+		if f != nil {
+			_ = f.Close()
+			_ = os.Remove(archiveName)
+		}
+		_ = os.RemoveAll(rootDir)
+		logger.FatalContext(ctx, msg, args...)
+	}
+
 	// Metadata
 	metaFile := path.Join(rootDir, "metadata.ini")
 	metadata := ini.Empty()
@@ -83,38 +96,45 @@ func runBackup(ctx context.Context, cmd *cli.Command) error {
 	metadata.Section("").Key("DATE_TIME").SetValue(time.Now().String())
 	metadata.Section("").Key("GOGS_VERSION").SetValue(conf.App.Version)
 	if err = metadata.SaveTo(metaFile); err != nil {
-		logger.FatalContext(ctx, "Failed to save metadata", "metadataPath", metaFile, "error", err)
+		fatal("Failed to save metadata", "metadataPath", metaFile, "error", err)
 	}
 
-	archiveName := filepath.Join(cmd.String("target"), cmd.String("archive-name"))
 	logger.Info("Packing backup files", "archivePath", archiveName)
-
 	if err = os.MkdirAll(cmd.String("target"), os.ModePerm); err != nil {
-		logger.FatalContext(ctx, "Failed to create target directory", "targetDir", cmd.String("target"), "error", err)
+		fatal("Failed to create target directory", "targetDir", cmd.String("target"), "error", err)
 	}
-	f, err := os.Create(archiveName)
+	// The archive has the password hashes and tokens of every user, so it is
+	// a new file only its owner can read. An archive of an earlier backup with
+	// the same name may be readable by others, also through files they opened
+	// before, so it is removed rather than overwritten.
+	if fi, err := os.Lstat(archiveName); err == nil && !fi.IsDir() {
+		if err = os.Remove(archiveName); err != nil {
+			fatal("Failed to remove earlier backup archive", "archivePath", archiveName, "error", err)
+		}
+	}
+	f, err = os.OpenFile(archiveName, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
-		logger.FatalContext(ctx, "Failed to create backup archive", "archivePath", archiveName, "error", err)
+		fatal("Failed to create backup archive", "archivePath", archiveName, "error", err)
 	}
 	z := &archiveWriter{Writer: zip.NewWriter(f), logger: logger, verbose: cmd.Bool("verbose")}
 	if err = z.add(archiveRootDir+"/metadata.ini", metaFile); err != nil {
-		logger.FatalContext(ctx, "Failed to include 'metadata.ini'", "error", err)
+		fatal("Failed to include 'metadata.ini'", "error", err)
 	}
 
 	// Database
 	dbDir := filepath.Join(rootDir, "db")
 	if err = database.DumpDatabase(ctx, logger.Scoped("db"), conn, dbDir, cmd.Bool("verbose")); err != nil {
-		logger.FatalContext(ctx, "Failed to dump database", "error", err)
+		fatal("Failed to dump database", "error", err)
 	}
 	if err = z.add(archiveRootDir+"/db", dbDir); err != nil {
-		logger.FatalContext(ctx, "Failed to include 'db'", "error", err)
+		fatal("Failed to include 'db'", "error", err)
 	}
 
 	if !cmd.Bool("database-only") {
 		// Custom files
 		err = addCustomDirToBackup(logger, z)
 		if err != nil {
-			logger.FatalContext(ctx, "Failed to add custom directory to backup", "error", err)
+			fatal("Failed to add custom directory to backup", "error", err)
 		}
 
 		// Data files
@@ -125,7 +145,7 @@ func runBackup(ctx context.Context, cmd *cli.Command) error {
 			}
 
 			if err = z.add(path.Join(archiveRootDir+"/data", dir), dirPath); err != nil {
-				logger.FatalContext(ctx, "Failed to include 'data'", "error", err)
+				fatal("Failed to include 'data'", "error", err)
 			}
 		}
 	}
@@ -134,15 +154,15 @@ func runBackup(ctx context.Context, cmd *cli.Command) error {
 	if !cmd.Bool("exclude-repos") && !cmd.Bool("database-only") {
 		logger.Info("Dumping repositories", "repoRoot", conf.Repository.Root)
 		if err = addRepositoriesToBackup(ctx, z, cmd.Bool("exclude-mirror-repos")); err != nil {
-			logger.FatalContext(ctx, "Failed to dump repositories", "error", err)
+			fatal("Failed to dump repositories", "error", err)
 		}
 	}
 
 	if err = z.Close(); err != nil {
-		logger.FatalContext(ctx, "Failed to save backup archive", "archivePath", archiveName, "error", err)
+		fatal("Failed to save backup archive", "archivePath", archiveName, "error", err)
 	}
 	if err = f.Close(); err != nil {
-		logger.FatalContext(ctx, "Failed to save backup archive", "archivePath", archiveName, "error", err)
+		fatal("Failed to save backup archive", "archivePath", archiveName, "error", err)
 	}
 
 	_ = os.RemoveAll(rootDir)
@@ -202,7 +222,12 @@ func addRepositoriesToBackup(ctx context.Context, z *archiveWriter, excludeMirro
 		for _, r := range nonMirrors {
 			// Directories are named in lower case, unlike repositories and their
 			// owners.
-			owner := r.MustOwner().Name
+			// MustOwner falls back to a placeholder owner, which names another
+			// directory.
+			if err = r.GetOwner(); err != nil {
+				return errors.Wrapf(err, "get owner of repository %d", r.ID)
+			}
+			owner := r.Owner.Name
 			repoPaths := []string{repox.RepositoryPath(owner, r.Name)}
 			if wikiPath := database.WikiPath(owner, r.Name); osx.IsDir(wikiPath) {
 				repoPaths = append(repoPaths, wikiPath)
@@ -241,7 +266,10 @@ func (z *archiveWriter) add(name, absPath string) error {
 	if !fi.IsDir() {
 		return z.addEntry(name, absPath, fi)
 	}
-	return fs.WalkDir(os.DirFS(absPath), ".", func(rel string, d fs.DirEntry, err error) error {
+	// With a trailing separator, the walk follows a link at the root. Unlike
+	// os.DirFS, it also reads names that are not valid UTF-8, e.g., of Git refs.
+	root := absPath + string(filepath.Separator)
+	return filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -249,7 +277,11 @@ func (z *archiveWriter) add(name, absPath string) error {
 		if err != nil {
 			return errors.Wrap(err, "get file info")
 		}
-		return z.addEntry(path.Join(name, rel), filepath.Join(absPath, filepath.FromSlash(rel)), fi)
+		rel, err := filepath.Rel(root, p)
+		if err != nil {
+			return errors.Wrap(err, "get relative path")
+		}
+		return z.addEntry(path.Join(name, filepath.ToSlash(rel)), p, fi)
 	})
 }
 
@@ -261,11 +293,13 @@ func (z *archiveWriter) addEntry(name, p string, fi fs.FileInfo) error {
 		return errors.Wrap(err, "create header")
 	}
 	fh.Name = name
+	if fi.IsDir() {
+		fh.Name += "/"
+	}
 	if z.verbose {
 		z.logger.Debug("Adding to archive", "name", fh.Name)
 	}
 	if fi.IsDir() {
-		fh.Name += "/"
 		_, err = z.CreateHeader(fh)
 		return err
 	}
