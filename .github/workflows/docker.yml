@@ -66,8 +66,6 @@ jobs:
           file: Dockerfile.next
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
-          cache-from: type=gha,scope=next
-          cache-to: type=gha,scope=next,mode=max
           tags: |
             gogs/gogs:edge
             ghcr.io/gogs/gogs:edge
@@ -369,7 +367,6 @@ jobs:
           file: Dockerfile.next
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
-          cache-from: type=gha,scope=next
           tags: ${{ env.TAGS }}
       - name: Scan for container vulnerabilities
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
