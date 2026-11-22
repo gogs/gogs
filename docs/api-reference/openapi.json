@@ -5952,6 +5952,331 @@
           }
         }
       }
+    },
+    "/repos/{owner}/{repo}/releases/{id}/assets": {
+      "get": {
+        "operationId": "listReleaseAssets",
+        "summary": "List assets of a release",
+        "description": "Lists the files attached to a release. The assets of a draft are only visible to users with write access.",
+        "tags": [
+          "Releases"
+        ],
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "description": "Release ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReleaseAsset"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        }
+      },
+      "post": {
+        "operationId": "uploadReleaseAsset",
+        "summary": "Upload a release asset",
+        "description": "Attaches a file to a release. Send the content of the file as the request body. The `[release.attachment]` section of the configuration limits the size, the types and the number of files of a release.",
+        "tags": [
+          "Releases"
+        ],
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "description": "Release ID"
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            },
+            "description": "File name of the asset, without directories",
+            "example": "app-linux-amd64.tar.gz"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReleaseAsset"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No write access to the repository, or release attachments are disabled."
+          },
+          "404": {
+            "description": "Resource not found."
+          },
+          "413": {
+            "description": "The file is larger than the configured maximum size."
+          },
+          "422": {
+            "description": "The name is missing, longer than 255 characters, contains a slash, a backslash or a control character, or is taken by another asset of the release, the type of the file is not allowed, or the release already has the maximum number of files."
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/releases/assets/{asset_id}": {
+      "get": {
+        "operationId": "getReleaseAsset",
+        "summary": "Get a release asset",
+        "description": "Gets a file attached to a release. Download its content from `browser_download_url`. The assets of a draft are only visible to users with write access.",
+        "tags": [
+          "Releases"
+        ],
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "asset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "description": "Asset ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReleaseAsset"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        }
+      },
+      "patch": {
+        "operationId": "editReleaseAsset",
+        "summary": "Edit a release asset",
+        "description": "Renames a file attached to a release.",
+        "tags": [
+          "Releases"
+        ],
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "asset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "description": "Asset ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "description": "File name of the asset, without directories"
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReleaseAsset"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No write access to the repository."
+          },
+          "404": {
+            "description": "Resource not found."
+          },
+          "422": {
+            "description": "The name is missing, longer than 255 characters, contains a slash, a backslash or a control character, or is taken by another asset of the release."
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteReleaseAsset",
+        "summary": "Delete a release asset",
+        "description": "Deletes a file attached to a release.",
+        "tags": [
+          "Releases"
+        ],
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository owner"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Repository name"
+          },
+          {
+            "name": "asset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "description": "Asset ID"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "403": {
+            "description": "No write access to the repository."
+          },
+          "404": {
+            "description": "Resource not found."
+          }
+        }
+      }
     }
   },
   "components": {
@@ -6449,6 +6774,40 @@
           "created_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "assets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReleaseAsset"
+            },
+            "description": "Files attached to the release"
+          }
+        }
+      },
+      "ReleaseAsset": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "content_type": {
+            "type": "string",
+            "description": "Media type by the extension of the name"
+          },
+          "size": {
+            "type": "integer",
+            "description": "Size in bytes"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "browser_download_url": {
+            "type": "string",
+            "description": "URL to download the file"
           }
         }
       },

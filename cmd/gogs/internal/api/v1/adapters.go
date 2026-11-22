@@ -231,7 +231,7 @@ func toIssueMilestone(m *database.Milestone) *v1types.IssueMilestone {
 }
 
 // toRelease converts a database release to an API release.
-// It assumes the Publisher field has been assigned.
+// It assumes the Publisher and Attachments fields have been assigned.
 func toRelease(r *database.Release) *v1types.RepositoryRelease {
 	return &v1types.RepositoryRelease{
 		ID:              r.ID,
@@ -243,7 +243,16 @@ func toRelease(r *database.Release) *v1types.RepositoryRelease {
 		Prerelease:      r.IsPrerelease,
 		Author:          toUser(r.Publisher),
 		Created:         r.Created,
+		Assets:          toReleaseAssets(r.Attachments),
 	}
+}
+
+func toReleaseAssets(attachments []*database.Attachment) []*v1types.ReleaseAsset {
+	assets := make([]*v1types.ReleaseAsset, len(attachments))
+	for i, a := range attachments {
+		assets[i] = a.APIFormat()
+	}
+	return assets
 }
 
 func toRepositoryCollaborator(c *database.Collaborator) *v1types.RepositoryCollaborator {

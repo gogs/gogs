@@ -578,6 +578,10 @@ func releases(c *apiContext) {
 			return
 		}
 		r.Publisher = publisher
+		if r.Attachments, err = database.Handle.Attachments().ListByReleaseID(c.Request().Context(), r.ID); err != nil {
+			c.Error(err, "list release attachments")
+			return
+		}
 	}
 	for _, r := range releases {
 		apiRelease := toRelease(r)

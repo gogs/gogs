@@ -40,13 +40,24 @@ type RepositoryBranch struct {
 }
 
 type RepositoryRelease struct {
-	ID              int64     `json:"id"`
-	TagName         string    `json:"tag_name"`
-	TargetCommitish string    `json:"target_commitish"`
-	Name            string    `json:"name"`
-	Body            string    `json:"body"`
-	Draft           bool      `json:"draft"`
-	Prerelease      bool      `json:"prerelease"`
-	Author          *User     `json:"author"`
-	Created         time.Time `json:"created_at"`
+	ID              int64           `json:"id"`
+	TagName         string          `json:"tag_name"`
+	TargetCommitish string          `json:"target_commitish"`
+	Name            string          `json:"name"`
+	Body            string          `json:"body"`
+	Draft           bool            `json:"draft"`
+	Prerelease      bool            `json:"prerelease"`
+	Author          *User           `json:"author"`
+	Created         time.Time       `json:"created_at"`
+	Assets          []*ReleaseAsset `json:"assets"`
+}
+
+// ReleaseAsset is a file attached to a release.
+type ReleaseAsset struct {
+	ID                 int64     `json:"id"`
+	Name               string    `json:"name"`
+	ContentType        string    `json:"content_type"`
+	Size               int64     `json:"size"`
+	Created            time.Time `json:"created_at"`
+	BrowserDownloadURL string    `json:"browser_download_url"`
 }

@@ -69,7 +69,17 @@ func (r *Release) APIFormat() *v1types.RepositoryRelease {
 		Prerelease:      r.IsPrerelease,
 		Author:          r.Publisher.APIFormat(),
 		Created:         r.Created,
+		Assets:          releaseAssets(r.Attachments),
 	}
+}
+
+// releaseAssets returns the API format of the attachments of a release.
+func releaseAssets(attachments []*Attachment) []*v1types.ReleaseAsset {
+	assets := make([]*v1types.ReleaseAsset, len(attachments))
+	for i, a := range attachments {
+		assets[i] = a.APIFormat()
+	}
+	return assets
 }
 
 func createTag(ctx context.Context, gitRepo *git.Repository, r *Release) error {
@@ -374,8 +384,32 @@ func (s *ReleasesStore) Update(ctx context.Context, logger *logx.Logger, doer *U
 		return nil
 	}
 	r.Publisher = doer
+	// The attachments changed, so they are listed again.
+	r.Attachments = nil
 	s.preparePublishWebhooks(ctx, logger, r)
 	return nil
+}
+
+// Attach attaches the unattached attachment with given ID to the release with
+// given ID. It returns ErrReleaseNotExist when the release does not exist,
+// e.g., it was deleted since it was read.
+func (s *ReleasesStore) Attach(ctx context.Context, releaseID, attachmentID int64) error {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// The update waits for a deletion of the release in progress, and a
+		// deletion that starts later waits for this to finish and deletes the
+		// attachment with the release.
+		err := tx.Model(new(Release)).Where("id = ?", releaseID).Update("repo_id", gorm.Expr("repo_id")).Error
+		if err != nil {
+			return errors.Wrap(err, "lock release")
+		}
+		var count int64
+		if err = tx.Model(new(Release)).Where("id = ?", releaseID).Count(&count).Error; err != nil {
+			return errors.Wrap(err, "count release")
+		} else if count == 0 {
+			return ErrReleaseNotExist{args: map[string]any{"releaseID": releaseID}}
+		}
+		return tx.Model(new(Attachment)).Where(unboundAttachmentCond).Where("id = ?", attachmentID).Update("release_id", releaseID).Error
+	})
 }
 
 // DeleteByID deletes the release with given ID, its tag and its attachments

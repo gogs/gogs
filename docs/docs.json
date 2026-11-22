@@ -123,7 +123,12 @@
               "api-reference/releases/create-a-release",
               "api-reference/releases/get-a-release",
               "api-reference/releases/edit-a-release",
-              "api-reference/releases/delete-a-release"
+              "api-reference/releases/delete-a-release",
+              "api-reference/releases/list-release-assets",
+              "api-reference/releases/upload-a-release-asset",
+              "api-reference/releases/get-a-release-asset",
+              "api-reference/releases/edit-a-release-asset",
+              "api-reference/releases/delete-a-release-asset"
             ]
           },
           {
