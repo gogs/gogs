@@ -203,11 +203,11 @@ type userPasskeyRequest struct {
 func postUserPasskey(c flamego.Context, logger *logx.Logger, sess session.Session, l i18n.Locale, viewer *database.User, req userPasskeyRequest) (statusCode int, resp any, err error) {
 	data, ok := takePasskeySession(sess, passkeyRegistrationSessionKey)
 	if !ok {
-		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("settings.passkey_add_failed")}, nil
+		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("settings::passkey_add_failed")}, nil
 	}
 	parsed, err := protocol.ParseCredentialCreationResponseBytes(req.Credential)
 	if err != nil {
-		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("settings.passkey_add_failed")}, nil
+		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("settings::passkey_add_failed")}, nil
 	}
 
 	wa, err := newWebAuthn()
@@ -222,7 +222,7 @@ func postUserPasskey(c flamego.Context, logger *logx.Logger, sess session.Sessio
 	}
 	credential, err := wa.CreateCredential(pu, *data, parsed)
 	if err != nil {
-		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("settings.passkey_add_failed")}, nil
+		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("settings::passkey_add_failed")}, nil
 	}
 
 	if _, err = database.Handle.Passkeys().Create(c.Request().Context(), viewer.ID, req.PasskeyName, *credential); err != nil {
@@ -266,7 +266,7 @@ func postUserSignInPasskeyChallenge(logger *logx.Logger, sess session.Session) (
 // challenge in progress. The passkey verified the user, so neither a password
 // nor a second factor is asked for.
 func postUserSignInPasskey(c flamego.Context, logger *logx.Logger, store session.Store, sess session.Session, l i18n.Locale) (statusCode int, resp any, err error) {
-	failed := &bindingErrorResponse{Error: l.Tr("auth.passkey_sign_in_failed")}
+	failed := &bindingErrorResponse{Error: l.Tr("auth::passkey_sign_in_failed")}
 	data, ok := takePasskeySession(sess, passkeySignInSessionKey)
 	if !ok {
 		return http.StatusUnauthorized, failed, nil

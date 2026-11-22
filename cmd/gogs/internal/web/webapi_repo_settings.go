@@ -244,10 +244,10 @@ func patchRepoSettings(c flamego.Context, logger *logx.Logger, l i18n.Locale, vi
 			var msg string
 			switch {
 			case database.IsErrRepoAlreadyExist(err):
-				msg = l.Tr("form.repo_name_been_taken")
+				msg = l.Tr("form::repo_name_been_taken")
 				return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"name": &msg}}, nil
 			case database.IsErrNameNotAllowed(err):
-				msg = l.Tr("repo.form.name_not_allowed", "name", err.(database.ErrNameNotAllowed).Value())
+				msg = l.Tr("repo::form.name_not_allowed", "name", err.(database.ErrNameNotAllowed).Value())
 				return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"name": &msg}}, nil
 			}
 			logger.Error("Failed to rename repository", "repoID", repo.ID, "newName", req.RepoName, "error", err)
@@ -346,7 +346,7 @@ func putRepoMirror(r *http.Request, logger *logx.Logger, l i18n.Locale, viewer *
 		User:      viewer,
 	})
 	if err != nil {
-		code, msg, ok := cloneAddrError(l, l.Tr("repo.mirror_address"), err)
+		code, msg, ok := cloneAddrError(l, l.Tr("repo::mirror_address"), err)
 		if !ok {
 			logger.Error("Failed to parse remote address", "repoID", repo.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "parse remote address")
@@ -374,16 +374,16 @@ func postRepoMirrorSync(rc *repoAdminContext) (statusCode int, resp any, err err
 // repository on or off.
 func putRepoAdvanced(logger *logx.Logger, l i18n.Locale, rc *repoAdminContext, req repoAdvancedSettings) (statusCode int, resp any, err error) {
 	if req.EnablePulls && !req.PullsAllowMerge && !req.PullsAllowSquash && !req.PullsAllowRebase {
-		return http.StatusUnprocessableEntity, &bindingErrorResponse{Error: l.Tr("repo.settings.pulls.no_merge_method")}, nil
+		return http.StatusUnprocessableEntity, &bindingErrorResponse{Error: l.Tr("repo::settings.pulls.no_merge_method")}, nil
 	}
 	// Browsers are sent to these URLs, which must not run script, e.g., a
 	// "javascript:" URL.
 	if req.EnableWiki && req.EnableExternalWiki && !urlx.IsHTTP(req.ExternalWikiURL) {
-		msg := l.Tr("repo.settings.external_wiki_url") + l.Tr("form.url_error")
+		msg := l.Tr("repo::settings.external_wiki_url") + l.Tr("form::url_error")
 		return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"externalWikiURL": &msg}}, nil
 	}
 	if req.EnableIssues && req.EnableExternalTracker && !urlx.IsHTTP(req.ExternalTrackerURL) {
-		msg := l.Tr("repo.settings.external_tracker_url") + l.Tr("form.url_error")
+		msg := l.Tr("repo::settings.external_tracker_url") + l.Tr("form::url_error")
 		return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"externalTrackerURL": &msg}}, nil
 	}
 	repo := rc.Repo
@@ -424,7 +424,7 @@ func confirmRepoName(l i18n.Locale, repo *database.Repository, name string) *bin
 	if repo.Name == name {
 		return nil
 	}
-	msg := l.Tr("form.enterred_invalid_repo_name")
+	msg := l.Tr("form::enterred_invalid_repo_name")
 	return &bindingErrorResponse{Fields: fieldErrors{"repoName": &msg}}
 }
 
@@ -469,13 +469,13 @@ func postRepoTransfer(c flamego.Context, logger *logx.Logger, l i18n.Locale, vie
 		return http.StatusBadRequest, resp, nil
 	}
 	if !database.Handle.Users().IsUsernameUsed(c.Request().Context(), req.NewOwner, rc.Owner.ID) {
-		msg := l.Tr("form.enterred_invalid_owner_name")
+		msg := l.Tr("form::enterred_invalid_owner_name")
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"newOwner": &msg}}, nil
 	}
 
 	if err = database.TransferOwnership(viewer, req.NewOwner, repo); err != nil {
 		if database.IsErrRepoAlreadyExist(err) {
-			msg := l.Tr("repo.settings.new_owner_has_same_repo")
+			msg := l.Tr("repo::settings.new_owner_has_same_repo")
 			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"newOwner": &msg}}, nil
 		}
 		logger.Error("Failed to transfer repository", "repoID", repo.ID, "newOwnerName", req.NewOwner, "error", err)
@@ -563,14 +563,14 @@ func postRepoCollaborator(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 	u, err := database.Handle.Users().GetByUsername(c.Request().Context(), req.Username)
 	if err != nil {
 		if database.IsErrUserNotExist(err) {
-			msg := l.Tr("form.user_not_exist")
+			msg := l.Tr("form::user_not_exist")
 			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"username": &msg}}, nil
 		}
 		logger.Error("Failed to get user", "userName", req.Username, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user")
 	}
 	if u.IsOrganization() {
-		msg := l.Tr("repo.settings.org_not_allowed_to_be_collaborator")
+		msg := l.Tr("repo::settings.org_not_allowed_to_be_collaborator")
 		return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"username": &msg}}, nil
 	}
 
@@ -654,20 +654,20 @@ func postRepoDeployKey(c flamego.Context, logger *logx.Logger, l i18n.Locale, rc
 		logger.Error("Failed to check deploy key", "repoID", rc.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "check deploy key")
 	} else if errors.Is(err, database.ErrSSHDisabled) {
-		msg := l.Tr("settings.ssh_disabled")
+		msg := l.Tr("settings::ssh_disabled")
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
 	} else if err != nil {
-		msg := l.Tr("form.invalid_ssh_key", "error", err)
+		msg := l.Tr("form::invalid_ssh_key", "error", err)
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
 	}
 	if _, err = database.Handle.DeployKeys().Add(c.Request().Context(), logger, rc.Repo.ID, req.SSHTitle, content); err != nil {
 		var msg string
 		switch {
 		case database.IsErrKeyAlreadyExist(err), database.IsErrDeployKeyAlreadyExist(err):
-			msg = l.Tr("repo.settings.key_been_used")
+			msg = l.Tr("repo::settings.key_been_used")
 			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
 		case database.IsErrDeployKeyNameAlreadyUsed(err):
-			msg = l.Tr("repo.settings.key_name_used")
+			msg = l.Tr("repo::settings.key_name_used")
 			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"title": &msg}}, nil
 		}
 		logger.Error("Failed to add deploy key", "repoID", rc.Repo.ID, "error", err)

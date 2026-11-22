@@ -31,9 +31,9 @@ func orgNameError(l i18n.Locale, field string, err error) (int, *bindingErrorRes
 	var msg string
 	switch {
 	case database.IsErrUserAlreadyExist(err):
-		code, msg = http.StatusUnprocessableEntity, l.Tr("form.org_name_been_taken")
+		code, msg = http.StatusUnprocessableEntity, l.Tr("form::org_name_been_taken")
 	case database.IsErrNameNotAllowed(err):
-		code, msg = http.StatusBadRequest, l.Tr("org.form.name_not_allowed", "name", err.(database.ErrNameNotAllowed).Value())
+		code, msg = http.StatusBadRequest, l.Tr("org::form.name_not_allowed", "name", err.(database.ErrNameNotAllowed).Value())
 	default:
 		return 0, nil
 	}
@@ -157,9 +157,9 @@ func readAvatarUpload(r *http.Request, l i18n.Locale) (data []byte, statusCode i
 	if err != nil {
 		var tooLarge *http.MaxBytesError
 		if errors.As(err, &tooLarge) {
-			return nil, http.StatusRequestEntityTooLarge, errors.New(l.Tr("settings.uploaded_avatar_too_large", "size", avatarMaxSize>>20))
+			return nil, http.StatusRequestEntityTooLarge, errors.New(l.Tr("settings::uploaded_avatar_too_large", "size", avatarMaxSize>>20))
 		}
-		return nil, http.StatusBadRequest, errors.New(l.Tr("settings.uploaded_avatar_not_a_image"))
+		return nil, http.StatusBadRequest, errors.New(l.Tr("settings::uploaded_avatar_not_a_image"))
 	}
 	defer func() { _ = file.Close() }()
 
@@ -168,10 +168,10 @@ func readAvatarUpload(r *http.Request, l i18n.Locale) (data []byte, statusCode i
 		return nil, http.StatusInternalServerError, errors.Wrap(err, "read avatar")
 	}
 	if len(data) > avatarMaxSize {
-		return nil, http.StatusRequestEntityTooLarge, errors.New(l.Tr("settings.uploaded_avatar_too_large", "size", avatarMaxSize>>20))
+		return nil, http.StatusRequestEntityTooLarge, errors.New(l.Tr("settings::uploaded_avatar_too_large", "size", avatarMaxSize>>20))
 	}
 	if !mimex.IsImage(data) {
-		return nil, http.StatusBadRequest, errors.New(l.Tr("settings.uploaded_avatar_not_a_image"))
+		return nil, http.StatusBadRequest, errors.New(l.Tr("settings::uploaded_avatar_not_a_image"))
 	}
 	return data, http.StatusOK, nil
 }
@@ -220,7 +220,7 @@ func deleteOrg(logger *logx.Logger, c flamego.Context, l i18n.Locale, viewer *da
 	_, err = database.Handle.Users().Authenticate(c.Request().Context(), logger, viewer.Name, req.Password, viewer.LoginSource)
 	if err != nil {
 		if auth.IsErrBadCredentials(err) {
-			msg := l.Tr("form.enterred_invalid_password")
+			msg := l.Tr("form::enterred_invalid_password")
 			return http.StatusUnauthorized, &bindingErrorResponse{Fields: fieldErrors{"password": &msg}}, nil
 		}
 		logger.Error("Failed to authenticate user", "userID", viewer.ID, "error", err)
@@ -228,7 +228,7 @@ func deleteOrg(logger *logx.Logger, c flamego.Context, l i18n.Locale, viewer *da
 	}
 	if err = database.Handle.Organizations().Delete(ctx, m.Org); err != nil {
 		if database.IsErrUserOwnRepos(err) {
-			return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("form.org_still_own_repo")}, nil
+			return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("form::org_still_own_repo")}, nil
 		}
 		logger.Error("Failed to delete organization", "orgID", m.Org.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete organization")

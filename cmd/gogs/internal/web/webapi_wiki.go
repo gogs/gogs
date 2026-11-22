@@ -258,11 +258,11 @@ type repoWikiPageRequest struct {
 func wikiPageRequestError(l i18n.Locale, req *repoWikiPageRequest) *bindingErrorResponse {
 	req.Title = strings.TrimSpace(req.Title)
 	if database.CleanWikiPageName(req.Title) == "" {
-		msg := l.Tr("repo.wiki.page_title") + l.Tr("form.require_error")
+		msg := l.Tr("repo::wiki.page_title") + l.Tr("form::require_error")
 		return &bindingErrorResponse{Fields: fieldErrors{"title": &msg}}
 	}
 	if strings.TrimSpace(req.Content) == "" {
-		msg := l.Tr("repo.wiki.page_content") + l.Tr("form.require_error")
+		msg := l.Tr("repo::wiki.page_content") + l.Tr("form::require_error")
 		return &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}
 	}
 	return nil
@@ -280,7 +280,7 @@ func postRepoWikiPage(c flamego.Context, logger *logx.Logger, l i18n.Locale, vie
 	repo := repoCtx.Repo
 	if err = repo.AddWikiPage(c.Request().Context(), viewer, req.Title, req.Content, req.Message); err != nil {
 		if database.IsErrWikiAlreadyExist(err) {
-			msg := l.Tr("repo.wiki.page_already_exists")
+			msg := l.Tr("repo::wiki.page_already_exists")
 			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"title": &msg}}, nil
 		}
 		logger.Error("Failed to add wiki page", "repoID", repo.ID, "pageTitle", req.Title, "error", err)
@@ -312,7 +312,7 @@ func patchRepoWikiPage(c flamego.Context, logger *logx.Logger, l i18n.Locale, vi
 
 	if err = repo.EditWikiPage(c.Request().Context(), viewer, req.OldTitle, req.Title, req.Content, req.Message); err != nil {
 		if database.IsErrWikiAlreadyExist(err) {
-			msg := l.Tr("repo.wiki.page_already_exists")
+			msg := l.Tr("repo::wiki.page_already_exists")
 			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"title": &msg}}, nil
 		}
 		logger.Error("Failed to edit wiki page", "repoID", repo.ID, "oldPageTitle", req.OldTitle, "error", err)

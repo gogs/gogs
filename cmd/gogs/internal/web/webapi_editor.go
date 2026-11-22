@@ -278,7 +278,7 @@ func checkEditorCommit(c flamego.Context, l i18n.Locale, repoCtx *repoContext, g
 		return http.StatusNotFound, nil, errors.New("branch does not exist")
 	}
 	if utf8.RuneCountInString(req.Summary) > 100 {
-		msg := l.Tr("repo.editor.commit_summary") + l.Tr("form.max_size_error", "size", 100)
+		msg := l.Tr("repo::editor.commit_summary") + l.Tr("form::max_size_error", "size", 100)
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"summary": &msg}}, nil
 	}
 	req.NewBranch = strings.TrimSpace(req.NewBranch)
@@ -286,11 +286,11 @@ func checkEditorCommit(c flamego.Context, l i18n.Locale, repoCtx *repoContext, g
 		var msg string
 		switch {
 		case utf8.RuneCountInString(req.NewBranch) > 100:
-			msg = l.Tr("repo.editor.new_branch_name") + l.Tr("form.max_size_error", "size", 100)
+			msg = l.Tr("repo::editor.new_branch_name") + l.Tr("form::max_size_error", "size", 100)
 		case gitRepo.HasBranch(c.Request().Context(), req.NewBranch):
-			msg = l.Tr("repo.editor.branch_already_exists", "name", req.NewBranch)
+			msg = l.Tr("repo::editor.branch_already_exists", "name", req.NewBranch)
 		case !gitRepo.IsValidBranchName(c.Request().Context(), req.NewBranch):
-			msg = l.Tr("repo.editor.invalid_branch_name", "name", req.NewBranch)
+			msg = l.Tr("repo::editor.invalid_branch_name", "name", req.NewBranch)
 		}
 		if msg != "" {
 			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"newBranch": &msg}}, nil
@@ -322,9 +322,9 @@ func checkEditorCommit(c flamego.Context, l i18n.Locale, repoCtx *repoContext, g
 func protectedBranchMessage(l i18n.Locale, denial database.PushDenial) string {
 	switch denial {
 	case database.PushDeniedNotInAllowlist:
-		return l.Tr("repo.editor.protected_branch_not_in_allowlist")
+		return l.Tr("repo::editor.protected_branch_not_in_allowlist")
 	case database.PushDeniedRequiresPullRequest:
-		return l.Tr("repo.editor.protected_branch_requires_pull_request")
+		return l.Tr("repo::editor.protected_branch_requires_pull_request")
 	}
 	return ""
 }
@@ -389,7 +389,7 @@ type repoEditorConflict struct {
 }
 
 func badPathMessage(l i18n.Locale, err *git.BadPathError) string {
-	return strings.ReplaceAll(l.Tr("repo.editor.bad_path"), "{path}", err.Path)
+	return strings.ReplaceAll(l.Tr("repo::editor.bad_path"), "{path}", err.Path)
 }
 
 func pathError(msg string) *bindingErrorResponse {
@@ -406,9 +406,9 @@ func postRepoEditorFile(c flamego.Context, logger *logx.Logger, l i18n.Locale, v
 	req.OldPath = pathx.Clean(req.OldPath)
 	switch {
 	case req.Path == "":
-		return http.StatusBadRequest, pathError(l.Tr("repo.editor.filename_cannot_be_empty")), nil
+		return http.StatusBadRequest, pathError(l.Tr("repo::editor.filename_cannot_be_empty")), nil
 	case utf8.RuneCountInString(req.Path) > 500:
-		return http.StatusBadRequest, pathError(l.Tr("repo.editor.file_path") + l.Tr("form.max_size_error", "size", 500)), nil
+		return http.StatusBadRequest, pathError(l.Tr("repo::editor.file_path") + l.Tr("form::max_size_error", "size", 500)), nil
 	}
 
 	gitRepo, err := openRepoGit(repoCtx)
@@ -442,11 +442,11 @@ func postRepoEditorFile(c flamego.Context, logger *logx.Logger, l i18n.Locale, v
 		}
 		switch {
 		case i < len(parts)-1 && !entry.IsTree():
-			return http.StatusUnprocessableEntity, pathError(l.Tr("repo.editor.directory_is_a_file", "path", part)), nil
+			return http.StatusUnprocessableEntity, pathError(l.Tr("repo::editor.directory_is_a_file", "path", part)), nil
 		case i == len(parts)-1 && entry.IsSymlink():
-			return http.StatusUnprocessableEntity, pathError(l.Tr("repo.editor.file_is_a_symlink", "path", part)), nil
+			return http.StatusUnprocessableEntity, pathError(l.Tr("repo::editor.file_is_a_symlink", "path", part)), nil
 		case i == len(parts)-1 && entry.IsTree():
-			return http.StatusUnprocessableEntity, pathError(l.Tr("repo.editor.filename_is_a_directory", "path", part)), nil
+			return http.StatusUnprocessableEntity, pathError(l.Tr("repo::editor.filename_is_a_directory", "path", part)), nil
 		}
 	}
 
@@ -454,14 +454,14 @@ func postRepoEditorFile(c flamego.Context, logger *logx.Logger, l i18n.Locale, v
 		entry, err := commit.TreeEntry(ctx, req.OldPath)
 		if err != nil {
 			if git.IsErrRevisionNotExist(err) {
-				return http.StatusNotFound, nil, errors.New(l.Tr("repo.editor.file_editing_no_longer_exists", "path", req.OldPath))
+				return http.StatusNotFound, nil, errors.New(l.Tr("repo::editor.file_editing_no_longer_exists", "path", req.OldPath))
 			}
 			logger.Error("Failed to get tree entry", "oldTreePath", req.OldPath, "repoID", repo.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "get tree entry")
 		}
 		// 🚨 SECURITY: Do not allow editing if the old file is a symlink.
 		if entry.IsSymlink() {
-			return http.StatusUnprocessableEntity, pathError(l.Tr("repo.editor.file_is_a_symlink", "path", req.OldPath)), nil
+			return http.StatusUnprocessableEntity, pathError(l.Tr("repo::editor.file_is_a_symlink", "path", req.OldPath)), nil
 		}
 
 		if req.LastCommit != commit.ID.String() {
@@ -473,7 +473,7 @@ func postRepoEditorFile(c flamego.Context, logger *logx.Logger, l i18n.Locale, v
 			if slices.Contains(files, req.OldPath) || slices.Contains(files, req.Path) {
 				compareURL := repo.Link() + "/compare/" + req.LastCommit + "..." + commit.ID.String()
 				return http.StatusConflict, &repoEditorConflict{
-					Error:      l.Tr("repo.editor.file_changed_while_editing", "link", html.EscapeString(compareURL)),
+					Error:      l.Tr("repo::editor.file_changed_while_editing", "link", html.EscapeString(compareURL)),
 					LastCommit: commit.ID.String(),
 				}, nil
 			}
@@ -483,16 +483,16 @@ func postRepoEditorFile(c flamego.Context, logger *logx.Logger, l i18n.Locale, v
 	if req.OldPath != req.Path {
 		// A new name must not take the place of another file.
 		if _, err := commit.TreeEntry(ctx, req.Path); err == nil {
-			return http.StatusUnprocessableEntity, pathError(l.Tr("repo.editor.file_already_exists", "path", req.Path)), nil
+			return http.StatusUnprocessableEntity, pathError(l.Tr("repo::editor.file_already_exists", "path", req.Path)), nil
 		} else if !git.IsErrRevisionNotExist(err) {
 			logger.Error("Failed to get tree entry", "treePath", req.Path, "repoID", repo.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "get tree entry")
 		}
 	}
 
-	fallback := l.Tr("repo.editor.update", "path", req.Path)
+	fallback := l.Tr("repo::editor.update", "path", req.Path)
 	if isNewFile {
-		fallback = l.Tr("repo.editor.add", "path", req.Path)
+		fallback = l.Tr("repo::editor.add", "path", req.Path)
 	}
 	err = repo.UpdateRepoFile(ctx, logger, viewer, database.UpdateRepoFileOptions{
 		OldBranch:   req.Branch,
@@ -505,7 +505,7 @@ func postRepoEditorFile(c flamego.Context, logger *logx.Logger, l i18n.Locale, v
 	})
 	if err != nil {
 		if database.IsErrRepoFileAlreadyExist(err) {
-			return http.StatusUnprocessableEntity, pathError(l.Tr("repo.editor.file_already_exists", "path", req.Path)), nil
+			return http.StatusUnprocessableEntity, pathError(l.Tr("repo::editor.file_already_exists", "path", req.Path)), nil
 		}
 		var badPath *git.BadPathError
 		if errors.As(err, &badPath) {
@@ -587,7 +587,7 @@ func postRepoEditorDelete(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 		OldBranch:    req.Branch,
 		NewBranch:    cmp.Or(req.NewBranch, req.Branch),
 		TreePath:     req.Path,
-		Message:      commitMessage(req.repoEditorCommitRequest, l.Tr("repo.editor.delete", "path", req.Path)),
+		Message:      commitMessage(req.repoEditorCommitRequest, l.Tr("repo::editor.delete", "path", req.Path)),
 	})
 	if err != nil {
 		logger.Error("Failed to delete file", "treePath", req.Path, "repoID", repo.ID, "error", err)
@@ -613,7 +613,7 @@ func postRepoEditorUpload(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 	case !lim.Enabled:
 		return http.StatusNotFound, nil, errors.New("uploads are disabled")
 	case len(req.Files) == 0:
-		msg := l.Tr("repo.editor.no_files_to_upload")
+		msg := l.Tr("repo::editor.no_files_to_upload")
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"files": &msg}}, nil
 	case len(req.Files) > lim.MaxFiles:
 		return http.StatusBadRequest, nil, errors.Newf("at most %d files can be uploaded at once", lim.MaxFiles)
@@ -649,7 +649,7 @@ func postRepoEditorUpload(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 				return http.StatusInternalServerError, nil, errors.Wrap(err, "get tree entry")
 			}
 			if !entry.IsTree() {
-				return http.StatusUnprocessableEntity, pathError(l.Tr("repo.editor.directory_is_a_file", "path", part)), nil
+				return http.StatusUnprocessableEntity, pathError(l.Tr("repo::editor.directory_is_a_file", "path", part)), nil
 			}
 		}
 	}
@@ -667,7 +667,7 @@ func postRepoEditorUpload(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 		OldBranch:    req.Branch,
 		NewBranch:    cmp.Or(req.NewBranch, req.Branch),
 		TreePath:     req.Path,
-		Message:      commitMessage(req.repoEditorCommitRequest, l.Tr("repo.editor.upload_files_to_dir", "path", cmp.Or(req.Path, "/"))),
+		Message:      commitMessage(req.repoEditorCommitRequest, l.Tr("repo::editor.upload_files_to_dir", "path", cmp.Or(req.Path, "/"))),
 		Files:        req.Files,
 	})
 	if err != nil {

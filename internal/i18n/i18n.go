@@ -35,17 +35,12 @@ func (l Locale) Language() string {
 }
 
 // Tr returns the message of the key, with each "{name}" placeholder replaced by
-// the value that follows the name in args, e.g., l.Tr("repo.editor.add", "path",
+// the value that follows the name in args, e.g., l.Tr("repo::editor.add", "path",
 // "README.md"). A message missing from the language is taken from the default
 // language.
 func (l Locale) Tr(key string, args ...any) string {
 	if l.messages == nil {
 		return key
-	}
-	// Keys are written as "section.key", which the library looks up as
-	// "section::key". Keys above any section have no dot.
-	if i := strings.IndexByte(key, '.'); i > 0 {
-		key = key[:i] + "::" + key[i+1:]
 	}
 	return l.messages.TranslateNamedWithFallback(l.fallback, key, args...)
 }
@@ -91,13 +86,7 @@ func Localizer(opts Options) (flamego.Handler, error) {
 		if customPath := filepath.Join(opts.CustomDirectory, name); osx.IsFile(customPath) {
 			custom = append(custom, customPath)
 		}
-		// The library picks plural rules by the tag, and does not know some
-		// region subtags, e.g., "SP" of "sr-SP", so those use the base language.
-		storeLang := lang
-		if _, err := language.Parse(lang); err != nil {
-			storeLang, _, _ = strings.Cut(lang, "-")
-		}
-		l, err := store.AddLocale(storeLang, opts.Names[i], data, custom...)
+		l, err := store.AddLocale(lang, opts.Names[i], data, custom...)
 		if err != nil {
 			return nil, errors.Wrapf(err, "load locale file %q", name)
 		}

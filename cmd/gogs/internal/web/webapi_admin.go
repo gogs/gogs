@@ -295,13 +295,13 @@ func checkAdminLoginSource(ctx context.Context, l i18n.Locale, sourceID int64, l
 	}
 	if _, err := database.Handle.LoginSources().GetByID(ctx, sourceID); err != nil {
 		if database.IsErrLoginSourceNotExist(err) {
-			msg := l.Tr("admin.users.auth_source_not_exist")
+			msg := l.Tr("admin::users.auth_source_not_exist")
 			return fieldErrors{"loginSource": &msg}, nil
 		}
 		return nil, errors.Wrap(err, "get login source")
 	}
 	if loginName == "" {
-		msg := l.Tr("form.LoginName") + l.Tr("form.require_error")
+		msg := l.Tr("form::LoginName") + l.Tr("form::require_error")
 		return fieldErrors{"loginName": &msg}, nil
 	}
 	return nil, nil
@@ -330,7 +330,7 @@ func postAdminUser(logger *logx.Logger, c flamego.Context, l i18n.Locale, admin 
 	}
 	if fields == nil && req.LoginSource == 0 && req.Password == "" {
 		// Local users sign in with a password, so they need one to start with.
-		msg := l.Tr("form.Password") + l.Tr("form.require_error")
+		msg := l.Tr("form::Password") + l.Tr("form::require_error")
 		fields = fieldErrors{"password": &msg}
 	}
 	if fields != nil {
@@ -349,13 +349,13 @@ func postAdminUser(logger *logx.Logger, c flamego.Context, l i18n.Locale, admin 
 		var msg string
 		switch {
 		case database.IsErrUserAlreadyExist(err):
-			msg = l.Tr("form.username_been_taken")
+			msg = l.Tr("form::username_been_taken")
 			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"name": &msg}}, nil
 		case database.IsErrEmailAlreadyUsed(err):
-			msg = l.Tr("form.email_been_used")
+			msg = l.Tr("form::email_been_used")
 			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"email": &msg}}, nil
 		case database.IsErrNameNotAllowed(err):
-			msg = l.Tr("user.form.name_not_allowed", "name", err.(database.ErrNameNotAllowed).Value())
+			msg = l.Tr("user::form.name_not_allowed", "name", err.(database.ErrNameNotAllowed).Value())
 			return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"name": &msg}}, nil
 		}
 		logger.Error("Failed to create user", "userName", req.UserName, "error", err)
@@ -491,7 +491,7 @@ func patchAdminUser(logger *logx.Logger, c flamego.Context, l i18n.Locale, admin
 	}
 	if err = database.Handle.Users().Update(ctx, u.ID, opts); err != nil {
 		if database.IsErrEmailAlreadyUsed(err) {
-			msg := l.Tr("form.email_been_used")
+			msg := l.Tr("form::email_been_used")
 			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"email": &msg}}, nil
 		}
 		logger.Error("Failed to update user", "userID", u.ID, "error", err)
@@ -506,9 +506,9 @@ func deleteAdminUser(logger *logx.Logger, c flamego.Context, l i18n.Locale, admi
 	if err = database.Handle.Users().DeleteByID(c.Request().Context(), u.ID, false); err != nil {
 		switch {
 		case database.IsErrUserOwnRepos(err):
-			return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("admin.users.still_own_repo")}, nil
+			return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("admin::users.still_own_repo")}, nil
 		case database.IsErrUserHasOrgs(err):
-			return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("admin.users.still_has_org")}, nil
+			return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("admin::users.still_has_org")}, nil
 		}
 		logger.Error("Failed to delete user", "userID", u.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete user")

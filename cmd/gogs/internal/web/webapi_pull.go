@@ -325,7 +325,7 @@ func postRepoPullMerge(c flamego.Context, logger *logx.Logger, l i18n.Locale, vi
 		logger.Error("Failed to check push allowlist", "pullID", pull.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "check push allowlist")
 	} else if !canPush {
-		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("repo.pulls.merge_not_in_allowlist")}, nil
+		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("repo::pulls.merge_not_in_allowlist")}, nil
 	}
 	gitRepo, err := openRepoGit(repoCtx)
 	if err != nil {
@@ -343,7 +343,7 @@ func postRepoPullMerge(c flamego.Context, logger *logx.Logger, l i18n.Locale, vi
 		style = database.MergeStyleRegular
 	}
 	if !repoCtx.Repo.AllowsMergeStyle(style) {
-		return http.StatusUnprocessableEntity, &bindingErrorResponse{Error: l.Tr("repo.pulls.merge_style_not_allowed")}, nil
+		return http.StatusUnprocessableEntity, &bindingErrorResponse{Error: l.Tr("repo::pulls.merge_style_not_allowed")}, nil
 	}
 	if err = database.Handle.PullRequests().Merge(c.Request().Context(), logger, viewer, pull, gitRepo, style, database.MergeMessage{Title: req.Title, Body: req.Body}); err != nil {
 		if errors.Is(err, database.ErrPullRequestNotMergeable) {
@@ -421,7 +421,7 @@ func deleteRepoPullBranch(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 		logger.Error("Failed to delete head branch", "pullID", pull.ID, "error", err)
 		return http.StatusInternalServerError, nil, err
 	} else if !deleted {
-		return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("repo.pulls.delete_branch_has_new_commits")}, nil
+		return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("repo::pulls.delete_branch_has_new_commits")}, nil
 	}
 	return http.StatusNoContent, nil, nil
 }

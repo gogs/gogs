@@ -551,29 +551,29 @@ type bindingErrorResponse struct {
 	Fields fieldErrors `json:"fields,omitempty"`
 }
 
-// ruleSuffixKeys maps a validator tag to the shared "form.*_error" suffix key
-// (e.g., "max" -> "form.max_size_error"). Messages are composed as
+// ruleSuffixKeys maps a validator tag to the shared "form::*_error" suffix key
+// (e.g., "max" -> "form::max_size_error"). Messages are composed as
 // <field label> + <suffix>.
 var ruleSuffixKeys = map[string]string{
-	"required":     "form.require_error",
-	"max":          "form.max_size_error",
-	"min":          "form.min_size_error",
-	"len":          "form.size_error",
-	"email":        "form.email_error",
-	"url":          "form.url_error",
-	"alphadashdot": "form.alpha_dash_dot_error",
+	"required":     "form::require_error",
+	"max":          "form::max_size_error",
+	"min":          "form::min_size_error",
+	"len":          "form::size_error",
+	"email":        "form::email_error",
+	"url":          "form::url_error",
+	"alphadashdot": "form::alpha_dash_dot_error",
 }
 
 // renderBindingErrors maps binding.Errors to the response shape, looking up
 // localized messages via the request's locale. The per-field label comes from
-// "form.<StructField>" (e.g., "form.UserName"), and the rule suffix comes from
+// "form.<StructField>" (e.g., "form::UserName"), and the rule suffix comes from
 // ruleSuffixKeys. Rule parameters (e.g., "254" for `max=254`) fill the "{size}"
 // placeholder of the suffix translation. The caller responds with
 // HTTP 400.
 func renderBindingErrors(l i18n.Locale, errs binding.Errors) *bindingErrorResponse {
 	for _, e := range errs {
 		if e.Category == binding.ErrorCategoryDeserialization {
-			return &bindingErrorResponse{Error: l.Tr("form.invalid_request") + ": " + e.Err.Error()}
+			return &bindingErrorResponse{Error: l.Tr("form::invalid_request") + ": " + e.Err.Error()}
 		}
 	}
 
@@ -591,12 +591,12 @@ func renderBindingErrors(l i18n.Locale, errs binding.Errors) *bindingErrorRespon
 				// message per input. Subsequent rules surface only after the first is fixed.
 				continue
 			}
-			label := l.Tr("form." + ve.StructField())
+			label := l.Tr("form::" + ve.StructField())
 			suffixKey, known := ruleSuffixKeys[ve.Tag()]
 			var msg string
 			switch {
 			case !known:
-				msg = l.Tr("form.unknown_error") + " " + ve.Tag()
+				msg = l.Tr("form::unknown_error") + " " + ve.Tag()
 			case ve.Param() != "":
 				msg = label + l.Tr(suffixKey, "size", ve.Param())
 			default:

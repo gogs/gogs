@@ -220,11 +220,11 @@ func SendUserMail(logger *logx.Logger, _ Translator, u User, tpl, code, subject,
 }
 
 func SendActivateAccountMail(logger *logx.Logger, t Translator, u User) error {
-	return SendUserMail(logger, t, u, tmplAuthActivate, u.GenerateEmailActivateCode(u.Email()), t.Tr("mail.activate_account"), "activate account")
+	return SendUserMail(logger, t, u, tmplAuthActivate, u.GenerateEmailActivateCode(u.Email()), t.Tr("mail::activate_account"), "activate account")
 }
 
 func SendResetPasswordMail(logger *logx.Logger, t Translator, u User) error {
-	return SendUserMail(logger, t, u, tmplAuthResetPassword, u.GenerateEmailResetPasswordCode(u.Email()), t.Tr("mail.reset_password"), "reset password")
+	return SendUserMail(logger, t, u, tmplAuthResetPassword, u.GenerateEmailResetPasswordCode(u.Email()), t.Tr("mail::reset_password"), "reset password")
 }
 
 func SendActivateEmailMail(logger *logx.Logger, t Translator, u User, email string) error {
@@ -239,7 +239,7 @@ func SendActivateEmailMail(logger *logx.Logger, t Translator, u User, email stri
 		return errors.Wrap(err, "render")
 	}
 
-	msg, err := newMessage(logger, []string{email}, t.Tr("mail.activate_email"), body)
+	msg, err := newMessage(logger, []string{email}, t.Tr("mail::activate_email"), body)
 	if err != nil {
 		return errors.Wrap(err, "new message")
 	}
@@ -258,7 +258,7 @@ func SendRegisterNotifyMail(logger *logx.Logger, t Translator, u User) error {
 		return errors.Wrap(err, "render")
 	}
 
-	msg, err := newMessage(logger, []string{u.Email()}, t.Tr("mail.register_notify"), body)
+	msg, err := newMessage(logger, []string{u.Email()}, t.Tr("mail::register_notify"), body)
 	if err != nil {
 		return errors.Wrap(err, "new message")
 	}
