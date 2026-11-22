@@ -1228,10 +1228,9 @@ func findLowerMentions(content string) []string {
 	return mentions
 }
 
-// updateMentions marks the issue with given ID in the repository as mentioning
-// the users with given lowercase names, and the members of the organizations
-// with them.
-func (s *IssuesStore) updateMentions(ctx context.Context, repoID, issueID int64, lowerNames []string) error {
+// updateMentions marks the issue as mentioning the users with given lowercase
+// names, and the members of the organizations with them.
+func (s *IssuesStore) updateMentions(ctx context.Context, issue *Issue, lowerNames []string) error {
 	if len(lowerNames) == 0 {
 		return nil
 	}
@@ -1261,15 +1260,16 @@ func (s *IssuesStore) updateMentions(ctx context.Context, repoID, issueID int64,
 
 	for _, userID := range userIDs {
 		iu := new(IssueUser)
-		err := db.Where("uid = ? AND issue_id = ?", userID, issueID).First(iu).Error
+		err := db.Where("uid = ? AND issue_id = ?", userID, issue.ID).First(iu).Error
 		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.Wrapf(err, "get issue user %d", userID)
 		}
 
 		if err == nil {
-			err = db.Model(iu).Update("is_mentioned", true).Error
+			// Mentions before Gogs 0.15 created rows without the repository.
+			err = db.Model(iu).Updates(map[string]any{"is_mentioned": true, "repo_id": issue.RepoID}).Error
 		} else {
-			err = db.Create(&IssueUser{UserID: userID, RepoID: repoID, IssueID: issueID, IsMentioned: true}).Error
+			err = db.Create(&IssueUser{UserID: userID, RepoID: issue.RepoID, IssueID: issue.ID, IsMentioned: true, IsClosed: issue.IsClosed}).Error
 		}
 		if err != nil {
 			return errors.Wrapf(err, "mention user %d", userID)
@@ -1282,7 +1282,7 @@ func (s *IssuesStore) updateMentions(ctx context.Context, repoID, issueID int64,
 // emails about the issue to them and to the participants of the issue.
 func (s *IssuesStore) mailParticipants(ctx context.Context, logger *logx.Logger, issue *Issue) error {
 	mentions := findLowerMentions(issue.Content)
-	err := s.updateMentions(ctx, issue.RepoID, issue.ID, mentions)
+	err := s.updateMentions(ctx, issue, mentions)
 	if err != nil {
 		return errors.Wrap(err, "update mentions")
 	}
