@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"gogs.io/gogs/internal/cryptox"
 	"gogs.io/gogs/internal/database"
 )
 
@@ -27,6 +28,7 @@ type issueView struct {
 	Title       string `json:"title"`
 	IsClosed    bool   `json:"isClosed"`
 	Content     string `json:"content"`
+	ContentHash string `json:"contentHash"`
 	ContentHTML string `json:"contentHTML"`
 	Poster      struct {
 		Name string `json:"name"`
@@ -35,6 +37,7 @@ type issueView struct {
 		ID            int64  `json:"id"`
 		Type          string `json:"type"`
 		Content       string `json:"content"`
+		ContentHash   string `json:"contentHash"`
 		ContentHTML   string `json:"contentHTML"`
 		ViewerCanEdit bool   `json:"viewerCanEdit"`
 	} `json:"comments"`
@@ -219,6 +222,15 @@ func TestIssueEditAndState(t *testing.T) {
 	assert.Equal(t, "Fixed title", got.Title)
 	assert.Equal(t, "New _content_", got.Content)
 
+	// A change made from content that changed since is refused.
+	status, body = posterClient.do(http.MethodPatch, path, map[string]any{"content": "- [x] Stale", "previousContentHash": cryptox.SHA256("Old content")})
+	assert.Equal(t, http.StatusConflict, status, "response: %s", body)
+	assert.Equal(t, "New _content_", issueFromDatabase(t, repo, index).Content)
+	assert.Equal(t, cryptox.SHA256("New _content_"), issueGet(t, posterClient, repo, index).ContentHash)
+	status, body = posterClient.do(http.MethodPatch, path, map[string]any{"content": "Newer", "previousContentHash": cryptox.SHA256("New _content_")})
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	assert.Equal(t, "Newer", issueFromDatabase(t, repo, index).Content)
+
 	status, body = posterClient.do(http.MethodPatch, path, map[string]any{"title": ""})
 	assert.Equal(t, http.StatusBadRequest, status, "response: %s", body)
 	status, body = otherClient.do(http.MethodPatch, path, map[string]any{"title": "Hijacked"})
@@ -275,7 +287,11 @@ func TestIssueComments(t *testing.T) {
 	assert.Equal(t, "comment", v.Comments[0].Type)
 	assert.Contains(t, v.Comments[0].ContentHTML, "<strong>agree</strong>")
 	assert.True(t, v.Comments[0].ViewerCanEdit)
-	assert.False(t, issueGet(t, otherClient, repo, index).Comments[0].ViewerCanEdit)
+	assert.Equal(t, cryptox.SHA256("I **agree**."), v.Comments[0].ContentHash)
+	otherComment := issueGet(t, otherClient, repo, index).Comments[0]
+	assert.False(t, otherComment.ViewerCanEdit)
+	assert.Empty(t, otherComment.Content)
+	assert.Empty(t, otherComment.ContentHash)
 
 	status, body := commenterClient.do(http.MethodPost, path, map[string]any{"content": " "})
 	assert.Equal(t, http.StatusBadRequest, status, "response: %s", body)
@@ -291,6 +307,12 @@ func TestIssueComments(t *testing.T) {
 
 	status, body = commenterClient.do(http.MethodPatch, commentPath, map[string]any{"content": "I disagree."})
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	comment, err = database.Handle.Comments().GetByID(t.Context(), created.ID)
+	require.NoError(t, err)
+	assert.Equal(t, "I disagree.", comment.Content)
+
+	status, body = commenterClient.do(http.MethodPatch, commentPath, map[string]any{"content": "Stale", "previousContentHash": cryptox.SHA256("I **agree**.")})
+	assert.Equal(t, http.StatusConflict, status, "response: %s", body)
 	comment, err = database.Handle.Comments().GetByID(t.Context(), created.ID)
 	require.NoError(t, err)
 	assert.Equal(t, "I disagree.", comment.Content)

@@ -165,7 +165,9 @@ export function IssueConversation({
             data.viewerCanEdit
               ? {
                   content: data.content,
-                  save: (content, attachments) => updateRepoIssue(ref, { content, attachments }),
+                  contentHash: data.contentHash,
+                  save: (content, attachments, previousContentHash) =>
+                    updateRepoIssue(ref, { content, attachments, previousContentHash }),
                 }
               : undefined
           }
@@ -186,7 +188,9 @@ export function IssueConversation({
                 comment.viewerCanEdit
                   ? {
                       content: comment.content ?? "",
-                      save: (content, attachments) => updateRepoIssueComment(ref, comment.id, content, attachments),
+                      contentHash: comment.contentHash ?? "",
+                      save: (content, attachments, previousContentHash) =>
+                        updateRepoIssueComment(ref, comment.id, content, attachments, previousContentHash),
                       remove: () => deleteRepoIssueComment(ref, comment.id),
                     }
                   : undefined
@@ -355,11 +359,15 @@ function CommentCard({
   attachments: IssueAttachment[];
   // attachment is how files are added while editing.
   attachment?: IssueAttachmentSettings;
-  // edit saves the content with the files uploaded while editing, and remove
-  // deletes the comment, for viewers who can change it.
+  // edit saves the content with the files uploaded while editing, failing
+  // when given the content it was made from and the content changed since,
+  // and remove deletes the comment, for viewers who can change it.
   edit?: {
     content: string;
-    save: (content: string, attachments: string[]) => Promise<void>;
+    // contentHash is the hash of content, which a change made from it sends
+    // back to fail when the content changed since.
+    contentHash: string;
+    save: (content: string, attachments: string[], previousContentHash?: string) => Promise<void>;
     remove?: () => Promise<void>;
   };
 }) {
@@ -436,7 +444,25 @@ function CommentCard({
           />
         ) : html ? (
           <div className="px-4 py-3">
-            <Markdown html={html} />
+            <Markdown
+              html={html}
+              tasks={
+                edit
+                  ? {
+                      source: edit.content,
+                      // Loading the page again also shows the content that
+                      // a change failed on for having changed since.
+                      save: async (content) => {
+                        try {
+                          await edit.save(content, [], edit.contentHash);
+                        } finally {
+                          await router.invalidate();
+                        }
+                      },
+                    }
+                  : undefined
+              }
+            />
           </div>
         ) : attachments.length === 0 ? (
           <p className="px-4 py-3 text-sm text-(--color-muted-foreground) italic">{t("repo.issues.no_content")}</p>

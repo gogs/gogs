@@ -19,6 +19,7 @@ import (
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/cryptox"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/i18n"
 	"gogs.io/gogs/internal/issuetemplate"
@@ -173,6 +174,9 @@ type issueComment struct {
 	// Content is the Markdown of a comment, only sent to viewers who can edit
 	// it.
 	Content string `json:"content,omitempty"`
+	// ContentHash is the SHA-256 of Content, which a change made from it sends
+	// back as PreviousContentHash.
+	ContentHash string `json:"contentHash,omitempty"`
 	// Tag is how the poster of a comment relates to the repository: "owner",
 	// "writer", "poster" or empty.
 	Tag           string            `json:"tag,omitempty"`
@@ -275,13 +279,16 @@ func attachmentSettings(lim attachmentLimits) *issueAttachmentSettings {
 }
 
 type repoIssueView struct {
-	Index       int64             `json:"index"`
-	Title       string            `json:"title"`
-	IsClosed    bool              `json:"isClosed"`
-	Poster      issueUser         `json:"poster"`
-	CreatedAt   time.Time         `json:"createdAt"`
-	ContentHTML string            `json:"contentHTML"`
-	Content     string            `json:"content"`
+	Index       int64     `json:"index"`
+	Title       string    `json:"title"`
+	IsClosed    bool      `json:"isClosed"`
+	Poster      issueUser `json:"poster"`
+	CreatedAt   time.Time `json:"createdAt"`
+	ContentHTML string    `json:"contentHTML"`
+	Content     string    `json:"content"`
+	// ContentHash is the SHA-256 of Content, which a change made from it sends
+	// back as PreviousContentHash.
+	ContentHash string            `json:"contentHash"`
 	Attachments []issueAttachment `json:"attachments"`
 	Comments    []issueComment    `json:"comments"`
 
@@ -330,6 +337,7 @@ func toRepoIssueView(ctx context.Context, logger *logx.Logger, viewer *database.
 		CreatedAt:   issue.Created.UTC(),
 		ContentHTML: string(markup.MarkdownWithCommits(issue.Content, repo.Link(), metas, commits)),
 		Content:     issue.Content,
+		ContentHash: cryptox.SHA256(issue.Content),
 		Attachments: toIssueAttachments(issue.Attachments, issue.Content),
 		Comments:    make([]issueComment, 0, len(issue.Comments)),
 		Labels:      make([]dashboardIssueLabel, 0, len(issue.Labels)),
@@ -375,6 +383,7 @@ func toRepoIssueView(ctx context.Context, logger *logx.Logger, viewer *database.
 			if viewer != nil && (comment.PosterID == viewer.ID || repoCtx.Viewer.CanAdminister()) {
 				item.ViewerCanEdit = true
 				item.Content = comment.Content
+				item.ContentHash = cryptox.SHA256(comment.Content)
 			}
 
 			tag, ok := tags[comment.PosterID]
@@ -439,10 +448,17 @@ type repoIssueRequest struct {
 	// Attachments are the UUIDs of the files uploaded while editing the
 	// content.
 	Attachments []string `json:"attachments"`
+	// PreviousContentHash, when set, is the hash of the content the new
+	// content was made from, see ContentHash. The content is not saved when it
+	// changed since, e.g., by someone else.
+	PreviousContentHash *string `json:"previousContentHash"`
 }
 
 func patchRepoIssue(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, issue *database.Issue, req repoIssueRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
+	if req.Content != nil && req.PreviousContentHash != nil && *req.PreviousContentHash != cryptox.SHA256(issue.Content) {
+		return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("repo::issues.content_changed")}, nil
+	}
 	if req.Title != nil {
 		title := strings.TrimSpace(*req.Title)
 		if resp := textFieldError(l, "title", "repo::milestones.title", title, 255); resp != nil {
@@ -637,6 +653,10 @@ type repoIssueCommentRequest struct {
 	Content string `json:"content"`
 	// Attachments are the UUIDs of the uploaded files to attach.
 	Attachments []string `json:"attachments"`
+	// PreviousContentHash, when set on a change, is the hash of the content
+	// the new content was made from, see ContentHash. The content is not saved
+	// when it changed since, e.g., by an admin.
+	PreviousContentHash *string `json:"previousContentHash"`
 }
 
 // checkNewAttachments returns the status code and the error to answer with
@@ -716,6 +736,9 @@ func patchRepoIssueComment(c flamego.Context, logger *logx.Logger, l i18n.Locale
 	if strings.TrimSpace(req.Content) == "" {
 		msg := l.Tr("form::Content") + l.Tr("form::require_error")
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
+	}
+	if req.PreviousContentHash != nil && *req.PreviousContentHash != cryptox.SHA256(comment.Content) {
+		return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("repo::issues.content_changed")}, nil
 	}
 	if statusCode, err = checkNewAttachments(ctx, issueAttachmentLimits(), req.Attachments); err != nil {
 		if statusCode == http.StatusInternalServerError {
