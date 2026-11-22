@@ -63,6 +63,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Fixed
 
+- Profile fields, repository descriptions and website addresses, and team descriptions that are longer than their limit are now cut between characters. A full name, description or website with non-ASCII characters, e.g., an emoji or a Chinese name, was cut in the middle of a character, which saved an invalid value or failed the save.
 - Listing the teams of an organization through the API returns 404 to users who are not members. Members who are not owners only see their own teams, as in the web interface. [#8697](https://github.com/gogs/gogs/pull/8697)
 - Getting or editing an organization, and listing or creating its teams through the API, return 404 for the name of a user instead of treating the user as an organization, e.g., site admins can no longer create a team in a user account. [#8697](https://github.com/gogs/gogs/pull/8697)
 - Organizations can no longer sign in. A reverse proxy authentication header that names an organization leaves the request unauthenticated, even with auto-registration enabled, and passwords, access tokens, SSH keys, passkeys and sessions that belong to an organization are refused. [#8697](https://github.com/gogs/gogs/pull/8697)

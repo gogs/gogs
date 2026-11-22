@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 // ToUpperFirst returns s with only the first Unicode letter mapped to its upper case.
@@ -43,22 +44,27 @@ func RandomChars(n int) (string, error) {
 }
 
 // Ellipsis returns a truncated string and appends "..." to the end of the
-// string if the string length is larger than the threshold. Otherwise, the
+// string if the string has more characters than the threshold. Otherwise, the
 // original string is returned.
 func Ellipsis(str string, threshold int) string {
-	if len(str) <= threshold || threshold < 0 {
+	if threshold < 0 || utf8.RuneCountInString(str) <= threshold {
 		return str
 	}
-	return str[:threshold] + "..."
+	return Truncate(str, threshold) + "..."
 }
 
-// Truncate returns a truncated string if its length is over the limit.
-// Otherwise, it returns the original string.
+// Truncate returns the string cut to at most limit characters, splitting it
+// only between characters so the result stays valid UTF-8, which database
+// columns and HTML output require. Otherwise, the original string is returned.
 func Truncate(str string, limit int) string {
-	if len(str) < limit {
-		return str
+	char := 0
+	for i := range str {
+		if char == limit {
+			return str[:i]
+		}
+		char++
 	}
-	return str[:limit]
+	return str
 }
 
 // ContainsFold reports whether s is within the slice, ignoring case.

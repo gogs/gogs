@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/errx"
+	"gogs.io/gogs/internal/strx"
 )
 
 // TeamsStore is the storage layer for teams of organizations, their members
@@ -120,15 +121,13 @@ func (s *TeamsStore) ListByRepo(ctx context.Context, orgID, repoID int64, mode A
 
 // Update saves the team, whose name must not be used by another team of its
 // organization, and recalculates the accesses of its repositories when its
-// access mode changed. Descriptions longer than 255 bytes are cut.
+// access mode changed. Descriptions longer than 255 characters are cut.
 func (s *TeamsStore) Update(ctx context.Context, t *Team, authChanged bool) error {
 	if t.Name == "" {
 		return errors.New("empty team name")
 	}
 
-	if len(t.Description) > 255 {
-		t.Description = t.Description[:255]
-	}
+	t.Description = strx.Truncate(t.Description, 255)
 
 	db := s.db.WithContext(ctx)
 	t.LowerName = strings.ToLower(t.Name)
