@@ -9,6 +9,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
@@ -67,21 +68,21 @@ func isAppLink(href string, repo *database.Repository) bool {
 	if !ok || p != "" && p[0] != '/' {
 		return false
 	}
-	return isWebAppPage(path.Clean("/"+p), u.Query(), repo)
+	return isWebAppPage(path.Clean("/"+p), u.RawQuery, repo)
 }
 
 // isWebAppPage reports whether a GET request for p, a clean path without the
-// subpath, reaches the web app, i.e., none of the static files or the routes
-// mounted in newFlame before the web app serves it or redirects elsewhere. It
-// must be kept in sync with those routes. The issues and the wiki of
-// repositories other than repo, which the server may redirect to an external
-// tracker or wiki, are not counted, except for single issues, whose page
-// redirects itself.
-func isWebAppPage(p string, query url.Values, repo *database.Repository) bool {
-	if isStaticFile(p) {
+// subpath, with the query rawQuery reaches the web app, i.e., none of the
+// static files or the routes mounted in newFlame before the web app serves it
+// or redirects elsewhere. It must be kept in sync with those routes. The
+// issues and the wiki of repositories other than repo, which the server may
+// redirect to an external tracker or wiki, are not counted, except for single
+// issues, whose page redirects itself.
+func isWebAppPage(p, rawQuery string, repo *database.Repository) bool {
+	segs := strings.Split(strings.Trim(p, "/"), "/")
+	if staticNames()[segs[0]] {
 		return false
 	}
-	segs := strings.Split(strings.Trim(p, "/"), "/")
 	switch segs[0] {
 	case "-", "api", "assets", "attachments", "healthcheck", "redirect", "robots.txt":
 		return false
@@ -96,6 +97,7 @@ func isWebAppPage(p string, query url.Values, repo *database.Repository) bool {
 	// The rest are the paths of a repository, e.g., "/{owner}/{repo}/src/main".
 	sub := segs[2:]
 	if len(sub) == 0 {
+		query, _ := url.ParseQuery(rawQuery)
 		return query.Get("go-get") != "1"
 	}
 	last := sub[len(sub)-1]
@@ -127,21 +129,22 @@ func isDigits(s string) bool {
 	return s != "" && strings.Trim(s, "0123456789") == ""
 }
 
-// isStaticFile reports whether p names a file or directory that the static
-// file handlers of newFlame and the web app serve before any route. The
-// public directory on disk, used with [server] LOAD_ASSETS_FROM_DISK, has the
-// same files as the embedded one.
-func isStaticFile(p string) bool {
-	name := strings.TrimPrefix(p, "/")
-	if name == "" {
-		return false
+// staticNames returns the names of the files and directories at the top of
+// what the static file handlers of newFlame and the web app serve before any
+// route. A path under one of them is not counted as a page, even when no such
+// file exists, which only makes the link load the document. The public
+// directory on disk, used with [server] LOAD_ASSETS_FROM_DISK, has the same
+// files as the embedded one. Changes to the custom public directory are seen
+// after a restart.
+var staticNames = sync.OnceValue(func() map[string]bool {
+	names := make(map[string]bool)
+	add := func(entries []fs.DirEntry, _ error) {
+		for _, e := range entries {
+			names[e.Name()] = true
+		}
 	}
-	if _, err := fs.Stat(public.Files, name); err == nil {
-		return true
-	}
-	if _, err := fs.Stat(public.WebAssets, "dist/"+name); err == nil {
-		return true
-	}
-	_, err := os.Stat(filepath.Join(conf.CustomDir(), "public", filepath.FromSlash(name)))
-	return err == nil
-}
+	add(fs.ReadDir(public.Files, "."))
+	add(fs.ReadDir(public.WebAssets, "dist"))
+	add(os.ReadDir(filepath.Join(conf.CustomDir(), "public")))
+	return names
+})
