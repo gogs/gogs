@@ -19,6 +19,7 @@ import { ActivityFeed } from "@/components/ActivityFeed";
 import { PageTabs } from "@/components/PageTabs";
 import { Pagination } from "@/components/Pagination";
 import { RepoListItem } from "@/components/RepoListItem";
+import { UserList, type UserListPage } from "@/components/UserListItem";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { webContext } from "@/lib/context";
@@ -35,8 +36,12 @@ import {
 import { toastError } from "@/lib/toast-error";
 import { useUserInfo } from "@/lib/use-user-info";
 import { OrgHome } from "@/pages/org/Home";
+import type { ProfileListTab } from "@/pages/user/Profile.search";
 
-export type ProfilePage = { tab: "repos"; repos: OwnerReposPage } | { tab: "activity" };
+export type ProfilePage =
+  | { tab: "repos"; repos: OwnerReposPage }
+  | { tab: "activity" }
+  | { tab: ProfileListTab; people: UserListPage };
 
 const route = getRouteApi("/$username");
 
@@ -56,30 +61,11 @@ export function Profile() {
 }
 
 function UserProfile({ username, profile, data }: { username: string; profile: UserProfileData; data: ProfilePage }) {
-  const { t } = useTranslation();
-  const tabs = [
-    { key: "repos", label: t("user.repositories"), icon: BookMarked },
-    { key: "activity", label: t("user.activity"), icon: Activity },
-  ] as const;
-
   return (
     <main className="mx-auto grid w-full max-w-6xl flex-1 content-start gap-6 px-4 glass-ui:gap-x-4 py-6 sm:px-6 md:grid-cols-[256px_minmax(0,1fr)] lg:grid-cols-[296px_minmax(0,1fr)]">
       <ProfileSidebar profile={profile} />
       <section className="glass-section min-w-0 glass-ui:self-start">
-        <PageTabs
-          label={profile.fullName || profile.name}
-          tabs={tabs}
-          active={data.tab}
-          renderLink={(tab, props) => (
-            <Link
-              to="/$username"
-              params={{ username }}
-              search={tab.key === "activity" ? { tab: "activity" } : {}}
-              {...props}
-            />
-          )}
-          className="border-b border-(--color-border)"
-        />
+        <ProfileTabs profile={profile} active={data.tab} />
         {data.tab === "repos" ? (
           <>
             <ul className="glass-list">
@@ -93,11 +79,46 @@ function UserProfile({ username, profile, data }: { username: string; profile: U
               </div>
             ) : null}
           </>
-        ) : (
+        ) : data.tab === "activity" ? (
           <ProfileActivity username={username} />
+        ) : (
+          <div className="glass-ui:px-4 glass-ui:pb-4">
+            <UserList data={data.people} />
+          </div>
         )}
       </section>
     </main>
+  );
+}
+
+// The followers and following lists are tabs of the profile too, shown only
+// while they are open. The counts in the sidebar lead to them.
+function ProfileTabs({ profile, active }: { profile: UserProfileData; active: ProfilePage["tab"] }) {
+  const { t } = useTranslation();
+  const tabs = [
+    { key: "repos", label: t("user.repositories"), icon: BookMarked },
+    { key: "activity", label: t("user.activity"), icon: Activity },
+    ...(active === "followers" ? [{ key: "followers", label: t("user.followers"), icon: Users } as const] : []),
+    ...(active === "following" ? [{ key: "following", label: t("user.following"), icon: Users } as const] : []),
+  ];
+
+  return (
+    <PageTabs
+      label={profile.fullName || profile.name}
+      tabs={tabs}
+      active={active}
+      inline={2}
+      renderLink={(tab, props) => (
+        <Link
+          activeOptions={{ exact: true }}
+          to="/$username"
+          params={{ username: profile.name }}
+          search={tab.key === "repos" ? {} : { tab: tab.key }}
+          {...props}
+        />
+      )}
+      className="border-b border-(--color-border)"
+    />
   );
 }
 
@@ -115,7 +136,7 @@ function ProfileActivity({ username }: { username: string }) {
   );
 }
 
-export function ProfileSidebar({ profile }: { profile: UserProfileData }) {
+function ProfileSidebar({ profile }: { profile: UserProfileData }) {
   const { t } = useTranslation();
   const isWebsiteLink = profile.website ? /^https?:\/\//i.test(profile.website) : false;
   const authenticated = useUserInfo() !== null;
@@ -192,8 +213,9 @@ export function ProfileSidebar({ profile }: { profile: UserProfileData }) {
         ) : null}
         <Fact icon={Users}>
           <Link
-            to="/$username/followers"
+            to="/$username"
             params={{ username: profile.name }}
+            search={{ tab: "followers" }}
             className="group hover:text-(--color-primary)"
           >
             <span className="font-semibold tabular-nums">{profile.followerCount}</span>{" "}
@@ -205,8 +227,9 @@ export function ProfileSidebar({ profile }: { profile: UserProfileData }) {
             {" · "}
           </span>
           <Link
-            to="/$username/following"
+            to="/$username"
             params={{ username: profile.name }}
+            search={{ tab: "following" }}
             className="group hover:text-(--color-primary)"
           >
             <span className="font-semibold tabular-nums">{profile.followingCount}</span>{" "}
