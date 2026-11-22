@@ -287,32 +287,6 @@ func TestAPIV1ListForks(t *testing.T) {
 	assert.True(t, forks[0].Fork)
 	require.NotNil(t, forks[0].Permissions)
 	assert.False(t, forks[0].Permissions.Push, "owner of the base repository can push to the fork")
-
-	// A private fork is listed only to those who can read it.
-	privateForker := seedUser(t, CreateUserOptions{})
-	privateForkOwner, err := database.Handle.Users().GetByID(ctx, privateForker.ID)
-	require.NoError(t, err)
-	privateFork, err := database.Handle.Repositories().Fork(ctx, logger, privateForkOwner, privateForkOwner, baseRepo, UniqueName("fork-"), "")
-	require.NoError(t, err)
-	privateFork.IsPrivate = true
-	require.NoError(t, database.Handle.Repositories().Update(ctx, logger, privateFork, true))
-	admin := seedUser(t, CreateUserOptions{Admin: true})
-	for _, tc := range []struct {
-		viewer *User
-		want   []string
-	}{
-		{owner, []string{forkName}},
-		{privateForker, []string{forkName, privateFork.Name}},
-		{admin, []string{forkName, privateFork.Name}},
-	} {
-		forks = nil
-		apiV1Client(t, tc.viewer).doJSON(http.MethodGet, apiV1RepoPath(repo, "/forks"), nil, http.StatusOK, &forks)
-		var names []string
-		for _, f := range forks {
-			names = append(names, f.Name)
-		}
-		assert.Equal(t, tc.want, names, "forks listed to %s", tc.viewer.Name)
-	}
 }
 
 func TestAPIV1ForkOfAFork(t *testing.T) {

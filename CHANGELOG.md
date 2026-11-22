@@ -70,7 +70,6 @@ All notable changes to Gogs are documented in this file.
 ### Fixed
 
 - Saving mirror settings with an invalid address no longer saves the new sync interval and pruning setting. [#8718](https://github.com/gogs/gogs/pull/8718)
-- Listing the forks of a repository through the API no longer shows private forks that the user cannot read. [#8702](https://github.com/gogs/gogs/pull/8702)
 - Adding a member to a team no longer fails when a repository of the team is deleted at the same time. [#8702](https://github.com/gogs/gogs/pull/8702)
 - Listing the teams of an organization through the API returns 404 to users who are not members. Members who are not owners only see their own teams, as in the web interface. [#8697](https://github.com/gogs/gogs/pull/8697)
 - Getting or editing an organization, and listing or creating its teams through the API, return 404 for the name of a user instead of treating the user as an organization, e.g., site admins can no longer create a team in a user account. [#8697](https://github.com/gogs/gogs/pull/8697)
