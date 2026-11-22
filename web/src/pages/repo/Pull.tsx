@@ -281,15 +281,15 @@ function MergeBox({ issueRef, data }: { issueRef: IssueRef; data: RepoPullData }
   }
 
   return (
-    <section aria-label={t("repo.pulls.merge_pull_request")} className="flex gap-2">
-      {/* Sized and placed like the icons of the timeline events above it, while
-          the box lines up with the comments from sm up. */}
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-(--color-surface) sm:ml-3">
+    <section aria-label={t("repo.pulls.merge_pull_request")} className="flex gap-3">
+      {/* Sized and placed like the avatars of the comments and the icons of the
+          timeline events above it. */}
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-(--color-surface)">
         {/* The merge glyph has no enclosing circle and looks heavier than the
             circle icons at the same size. */}
         <Icon
           className={cn(
-            pull.state === "merged" ? "size-4.5" : "size-5.5",
+            pull.state === "merged" ? "size-5" : "size-6",
             color,
             pull.state === "checking" && "animate-spin",
           )}

@@ -576,16 +576,15 @@ function TimelineEvent({ comment }: { comment: IssueComment }) {
       className={cn(
         // The padding leaves room inside the highlight. The negative margins
         // keep the event where it is otherwise.
-        "-my-1 -ml-1 flex scroll-mt-4 gap-3 rounded-md py-1 pr-2 pl-1 text-sm sm:ml-0 sm:pl-3",
+        "-my-1 -ml-1 flex scroll-mt-4 gap-3 rounded-md py-1 pr-2 pl-1 text-sm",
         linked && "outline outline-(--color-primary) ring-2 ring-(--color-primary)/30",
       )}
     >
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-(--color-surface)">
-        {/* Lucide draws its circle 2px inside the box, so this renders the
-            circle at the avatar's size. */}
-        <Icon className={cn("size-5.5", event.className)} aria-hidden />
+      {/* Sized and placed like the avatars of the comments. */}
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-(--color-surface)">
+        <Icon className={cn("size-6", event.className)} aria-hidden />
       </span>
-      <div className="min-w-0 flex-1 py-1.5">
+      <div className="min-w-0 flex-1 py-2.5">
         <p className="text-(--color-muted-foreground) wrap-anywhere">
           <UserLink user={comment.poster} className="font-semibold text-(--color-foreground) hover:underline">
             <img
