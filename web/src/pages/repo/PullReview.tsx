@@ -162,14 +162,15 @@ function EventRow({
     <div
       id={anchor}
       className={cn(
-        "-my-1 -ml-1 flex scroll-mt-4 gap-3 rounded-md py-1 pr-2 pl-1 text-sm sm:ml-0 sm:pl-3",
+        "-my-1 -ml-1 flex scroll-mt-4 gap-3 rounded-md py-1 pr-2 pl-1 text-sm",
         linked && "outline outline-(--color-primary) ring-2 ring-(--color-primary)/30",
       )}
     >
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-(--color-surface)">
-        <Icon className={cn("size-4", iconClassName)} aria-hidden />
+      {/* Sized and placed like the avatars of the comments. */}
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-(--color-surface)">
+        <Icon className={cn("size-6", iconClassName)} aria-hidden />
       </span>
-      <p className="min-w-0 flex-1 py-1.5 text-(--color-muted-foreground) wrap-anywhere">
+      <p className="min-w-0 flex-1 py-2.5 text-(--color-muted-foreground) wrap-anywhere">
         <UserLink user={comment.poster} className="font-semibold text-(--color-foreground) hover:underline">
           <img
             src={comment.poster.avatarURL}

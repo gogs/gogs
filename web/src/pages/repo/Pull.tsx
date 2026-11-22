@@ -258,7 +258,11 @@ const MERGE_BOX_STATES: Record<RepoPullData["pull"]["state"], { icon: LucideIcon
   mergeable: { icon: CircleCheck, color: "text-(--color-success)", border: "!border-(--color-success)" },
   conflict: { icon: CircleAlert, color: "text-(--color-destructive)", border: "!border-(--color-destructive)" },
 };
-const MERGE_BOX_BLOCKED = { icon: CircleAlert, color: "text-(--color-muted-foreground)", border: "border-(--color-border)" };
+const MERGE_BOX_BLOCKED = {
+  icon: CircleAlert,
+  color: "text-(--color-muted-foreground)",
+  border: "border-(--color-border)",
+};
 
 // MergeBox says whether the pull request can be merged, lets writers merge it
 // when it can, and lets them delete or restore its branch once it is merged.
