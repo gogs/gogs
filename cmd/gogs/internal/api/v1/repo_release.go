@@ -396,6 +396,7 @@ func getReleaseAsset(c *apiContext) {
 	}
 	// Like GitHub, the content is downloaded by asking for it. Unlike the
 	// download URL of the web interface, this takes access tokens.
+	c.ResponseWriter().Header().Set("Vary", "Accept")
 	if strings.Contains(c.Request().Header.Get("Accept"), "application/octet-stream") {
 		downloadReleaseAsset(c, a)
 		return

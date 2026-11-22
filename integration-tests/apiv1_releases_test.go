@@ -59,6 +59,7 @@ func apiV1DownloadAsset(t *testing.T, c *client, repo *Repository, assetID int64
 	require.NoError(t, err)
 	if resp.StatusCode == http.StatusOK {
 		assert.Equal(t, "application/octet-stream", resp.Header.Get("Content-Type"))
+		assert.Equal(t, "Accept", resp.Header.Get("Vary"))
 	}
 	return resp.StatusCode, string(body)
 }
