@@ -5,14 +5,16 @@ import (
 	"math/big"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 // ToUpperFirst returns s with only the first Unicode letter mapped to its upper case.
 func ToUpperFirst(s string) string {
-	for i, v := range s {
-		return string(unicode.ToUpper(v)) + s[i+1:]
+	r, size := utf8.DecodeRuneInString(s)
+	if r == utf8.RuneError && size <= 1 {
+		return s
 	}
-	return ""
+	return string(unicode.ToUpper(r)) + s[size:]
 }
 
 // RandomChars returns a generated string in given number of random characters.
