@@ -121,6 +121,37 @@ func TestPullReviews(t *testing.T) {
 		assert.Equal(t, http.StatusUnprocessableEntity, status, "response: %s", body)
 	})
 
+	review := func(c *client, state, headSHA string) (int, []byte) {
+		return c.do(http.MethodPost, path("reviews"), map[string]any{"state": state, "headSHA": headSHA, "content": "Looked at it."})
+	}
+
+	t.Run("authors cannot approve or request changes on their own pull request", func(t *testing.T) {
+		for _, state := range []string{"approve", "request_changes"} {
+			status, body := review(authorClient, state, head)
+			assert.Equal(t, http.StatusBadRequest, status, "%s response: %s", state, body)
+		}
+		assert.Empty(t, view(ownerClient).Reviewers)
+	})
+
+	t.Run("reviews of an older head are refused", func(t *testing.T) {
+		older := gitRun(t, dir, "rev-parse", "HEAD~1")
+		status, body := review(reviewerClient, "approve", older)
+		assert.Equal(t, http.StatusConflict, status, "response: %s", body)
+		assert.Empty(t, view(ownerClient).Reviewers)
+	})
+
+	t.Run("only reviews from writers count toward merging", func(t *testing.T) {
+		status, body := review(authenticatedClient(t, reader), "approve", head)
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+		assert.Contains(t, view(ownerClient).MergeBlockers, "approvals")
+
+		status, body = review(reviewerClient, "request_changes", head)
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+		assert.Contains(t, view(ownerClient).MergeBlockers, "changes_requested")
+		status, body = protectedBranchMerge(t, ownerClient, repo, index)
+		assert.Equal(t, http.StatusConflict, status, "response: %s", body)
+	})
+
 	t.Run("unresolved conversations block the merge", func(t *testing.T) {
 		status, body := codeComment(false)
 		require.Equal(t, http.StatusCreated, status, "response: %s", body)
@@ -150,5 +181,19 @@ func TestPullReviews(t *testing.T) {
 		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 		status, body = protectedBranchMerge(t, ownerClient, repo, index)
 		assert.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	})
+
+	t.Run("deleting the repository deletes its reviews", func(t *testing.T) {
+		issue, err := database.Handle.Issues().GetByIndex(t.Context(), repo.ID, index)
+		require.NoError(t, err)
+		reviews, err := database.Handle.Reviews().ListSubmitted(t.Context(), issue.ID)
+		require.NoError(t, err)
+		require.NotEmpty(t, reviews)
+
+		status, body := ownerClient.do(http.MethodDelete, repoSettingsAPIPath(repo, ""), map[string]any{"repoName": repo.Name})
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+		reviews, err = database.Handle.Reviews().ListSubmitted(t.Context(), issue.ID)
+		require.NoError(t, err)
+		assert.Empty(t, reviews)
 	})
 }
