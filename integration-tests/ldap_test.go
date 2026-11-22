@@ -67,10 +67,11 @@ func newLDAPDirectory(t *testing.T) *ldapDirectory {
 			t.Logf("Failed to list LDAP entries under %q: %v", d.base, err)
 			return
 		}
-		for _, e := range children.Entries {
-			_ = conn.Del(goldap.NewDelRequest(e.DN, nil))
+		for _, e := range append(children.Entries, &goldap.Entry{DN: d.base}) {
+			if err = conn.Del(goldap.NewDelRequest(e.DN, nil)); err != nil {
+				t.Logf("Failed to delete LDAP entry %q: %v", e.DN, err)
+			}
 		}
-		_ = conn.Del(goldap.NewDelRequest(d.base, nil))
 	})
 	return d
 }
@@ -138,12 +139,14 @@ func (d *ldapDirectory) addGroup(name string, members ...*ldapUser) {
 	})
 }
 
-func (d *ldapDirectory) setPassword(u *ldapUser, password string) {
-	d.t.Helper()
+// setPassword fails t, which may be a subtest of the one the directory belongs
+// to.
+func (d *ldapDirectory) setPassword(t *testing.T, u *ldapUser, password string) {
+	t.Helper()
 
 	req := goldap.NewModifyRequest(u.dn, nil)
 	req.Replace("userPassword", []string{password})
-	require.NoError(d.t, d.conn.Modify(req))
+	require.NoError(t, d.conn.Modify(req))
 	u.password = password
 }
 
@@ -167,7 +170,25 @@ func (d *ldapDirectory) newSource(typ auth.Type, cfg ldap.Config) *database.Logi
 		Config:    &cfg,
 	})
 	require.NoError(d.t, err)
-	d.t.Cleanup(func() { _ = database.Handle.LoginSources().DeleteByID(context.Background(), source.ID) })
+	// A source cannot be deleted while accounts are bound to it, e.g., the ones
+	// created by signing in through it.
+	d.t.Cleanup(func() {
+		ctx := context.Background()
+		var userIDs []int64
+		err := gormDB.Model(new(database.User)).Where("login_source = ?", source.ID).Pluck("id", &userIDs).Error
+		if err != nil {
+			d.t.Logf("Failed to list accounts of authentication source %d: %v", source.ID, err)
+			return
+		}
+		for _, id := range userIDs {
+			if err = database.Handle.Users().DeleteByID(ctx, id, true); err != nil {
+				d.t.Logf("Failed to delete account %d: %v", id, err)
+			}
+		}
+		if err = database.Handle.LoginSources().DeleteByID(ctx, source.ID); err != nil {
+			d.t.Logf("Failed to delete authentication source %d: %v", source.ID, err)
+		}
+	})
 	return source
 }
 
@@ -247,7 +268,7 @@ func TestLDAPBindDN(t *testing.T) {
 
 	t.Run("password changed in the directory", func(t *testing.T) {
 		oldPassword := person.password
-		d.setPassword(person, UniqueName("password-"))
+		d.setPassword(t, person, UniqueName("password-"))
 
 		_, status, body := ldapSignIn(t, source, person.uid, oldPassword)
 		assert.Equal(t, http.StatusUnauthorized, status, "response: %s", body)

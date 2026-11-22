@@ -181,7 +181,7 @@ The tests need PostgreSQL. Each run creates a new database on the server that th
 The LDAP tests also need an LDAP server and are skipped unless `LDAP_HOST` is set. They sign in as an admin, the `LDAP_ADMIN_DN` with the `LDAP_ADMIN_PASSWORD`, on the server that `LDAP_HOST` and `LDAP_PORT` point to, and add the entries they need under `LDAP_BASE_DN`, which the server must have the `inetOrgPerson` and `posixGroup` object classes for. For example, with the server that CI uses:
 
 ```bash
-docker run -d --name gogs-openldap -p 389:389 --ulimit nofile=1024:1024 \
+docker run -d --name gogs-openldap -p 127.0.0.1:389:389 --ulimit nofile=1024:1024 \
   -e LDAP_DOMAIN=example.org -e LDAP_ADMIN_PASSWORD=admin osixia/openldap:1.5.0
 export LDAP_HOST=localhost LDAP_PORT=389 LDAP_BASE_DN=dc=example,dc=org \
   LDAP_ADMIN_DN=cn=admin,dc=example,dc=org LDAP_ADMIN_PASSWORD=admin
