@@ -57,6 +57,22 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
+      openldap:
+        image: osixia/openldap:1.5.0
+        env:
+          LDAP_ORGANISATION: Gogs
+          LDAP_DOMAIN: example.org
+          LDAP_ADMIN_PASSWORD: admin
+        # slapd of this image sizes its tables by the limit of open files, and
+        # hangs at startup under the much higher default of recent Docker.
+        options: >-
+          --ulimit nofile=1024:1024
+          --health-cmd "ldapsearch -x -H ldap://localhost -b dc=example,dc=org -D cn=admin,dc=example,dc=org -w admin"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 389:389
     steps:
       - name: Check out code
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
@@ -73,3 +89,8 @@ jobs:
           PGUSER: postgres
           PGPASSWORD: postgres
           PGSSLMODE: disable
+          LDAP_HOST: localhost
+          LDAP_PORT: 389
+          LDAP_BASE_DN: dc=example,dc=org
+          LDAP_ADMIN_DN: cn=admin,dc=example,dc=org
+          LDAP_ADMIN_PASSWORD: admin
