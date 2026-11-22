@@ -54,7 +54,7 @@ func TestLocalizer(t *testing.T) {
 			Files:       map[string][]byte{"locale_en-US.ini": []byte("[repo]\nfork = Fork\n")},
 			DefaultLang: "en-US",
 		})
-		require.EqualError(t, err, "no languages")
+		require.EqualError(t, err, "no languages in [i18n] LANGS")
 	})
 
 	t.Run("default language not listed", func(t *testing.T) {

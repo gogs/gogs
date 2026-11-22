@@ -70,10 +70,10 @@ type Options struct {
 // parameter, the viewer is redirected to the same path without the query.
 func Localizer(opts Options) (flamego.Handler, error) {
 	if len(opts.Langs) == 0 {
-		return nil, errors.New("no languages")
+		return nil, errors.New("no languages in [i18n] LANGS")
 	}
 	if len(opts.Langs) != len(opts.Names) {
-		return nil, errors.New("number of languages and names do not match")
+		return nil, errors.New("[i18n] LANGS and NAMES have different numbers of entries")
 	}
 	store := i18n.NewStore()
 	load := func(lang, desc string) (*i18n.Locale, error) {
