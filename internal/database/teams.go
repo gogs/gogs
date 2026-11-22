@@ -289,7 +289,7 @@ func (s *TeamsStore) addMember(ctx context.Context, orgID, teamID, userID int64)
 		}
 	}
 	for _, repoID := range repoIDs {
-		repo, err := getRepositoryByID(s.db, repoID)
+		repo, err := newReposStore(s.db).getWithAttributes(ctx, repoID)
 		if err != nil {
 			if IsErrRepoNotExist(err) {
 				continue

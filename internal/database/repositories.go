@@ -2211,9 +2211,9 @@ func (s *RepositoriesStore) UpdateSize(ctx context.Context, repo *Repository) er
 // committed before each statement, as PostgreSQL does by default. On MySQL,
 // reads would otherwise come from a snapshot taken before the transaction
 // waited for the locks, and miss what it waited for, e.g., a member added to
-// a team.
+// a team. MySQL logging statements to its binary log keeps the default.
 func readCommitted() []*sql.TxOptions {
-	if conf.UseSQLite3 {
+	if conf.UseSQLite3 || statementBinlog {
 		return nil
 	}
 	return []*sql.TxOptions{{Isolation: sql.LevelReadCommitted}}
