@@ -56,30 +56,11 @@ export function Profile() {
 }
 
 function UserProfile({ username, profile, data }: { username: string; profile: UserProfileData; data: ProfilePage }) {
-  const { t } = useTranslation();
-  const tabs = [
-    { key: "repos", label: t("user.repositories"), icon: BookMarked },
-    { key: "activity", label: t("user.activity"), icon: Activity },
-  ] as const;
-
   return (
     <main className="mx-auto grid w-full max-w-6xl flex-1 content-start gap-6 px-4 glass-ui:gap-x-4 py-6 sm:px-6 md:grid-cols-[256px_minmax(0,1fr)] lg:grid-cols-[296px_minmax(0,1fr)]">
       <ProfileSidebar profile={profile} />
       <section className="glass-section min-w-0 glass-ui:self-start">
-        <PageTabs
-          label={profile.fullName || profile.name}
-          tabs={tabs}
-          active={data.tab}
-          renderLink={(tab, props) => (
-            <Link
-              to="/$username"
-              params={{ username }}
-              search={tab.key === "activity" ? { tab: "activity" } : {}}
-              {...props}
-            />
-          )}
-          className="border-b border-(--color-border)"
-        />
+        <ProfileTabs profile={profile} active={data.tab} />
         {data.tab === "repos" ? (
           <>
             <ul className="glass-list">
@@ -98,6 +79,52 @@ function UserProfile({ username, profile, data }: { username: string; profile: U
         )}
       </section>
     </main>
+  );
+}
+
+// ProfileTabs leads every page of a user profile. The list of followers, or of
+// the users followed, gets a tab only while it is shown, and the counts in the
+// sidebar lead to it.
+export function ProfileTabs({
+  profile,
+  active,
+}: {
+  profile: UserProfileData;
+  active: ProfilePage["tab"] | "followers" | "following";
+}) {
+  const { t } = useTranslation();
+  const tabs = [
+    { key: "repos", label: t("user.repositories"), icon: BookMarked },
+    { key: "activity", label: t("user.activity"), icon: Activity },
+    ...(active === "followers" ? [{ key: "followers", label: t("user.followers"), icon: Users } as const] : []),
+    ...(active === "following" ? [{ key: "following", label: t("user.following"), icon: Users } as const] : []),
+  ];
+
+  return (
+    <PageTabs
+      label={profile.fullName || profile.name}
+      tabs={tabs}
+      active={active}
+      inline={2}
+      renderLink={(tab, props) =>
+        tab.key === "followers" || tab.key === "following" ? (
+          <Link
+            to={tab.key === "followers" ? "/$username/followers" : "/$username/following"}
+            params={{ username: profile.name }}
+            {...props}
+          />
+        ) : (
+          <Link
+            activeOptions={{ exact: true }}
+            to="/$username"
+            params={{ username: profile.name }}
+            search={tab.key === "activity" ? { tab: "activity" } : {}}
+            {...props}
+          />
+        )
+      }
+      className="border-b border-(--color-border)"
+    />
   );
 }
 
