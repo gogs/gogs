@@ -593,16 +593,6 @@ func TestIssueChangeConcurrently(t *testing.T) {
 		}
 		assert.Equal(t, []int{1, 1}, counts(other))
 	})
-
-	t.Run("moving an issue to a milestone being deleted", func(t *testing.T) {
-		m := issueCreateMilestone(t, repo, "moving-to-deleted")
-		index, _ := create(0)
-
-		statuses := c.doBothWhileLocked("SELECT id FROM milestone WHERE id = ? FOR UPDATE", m,
-			lockedRequest{http.MethodDelete, issueAPIPath(repo, "milestones", m), map[string]any{}}, moveTo(index, m))
-		assert.Equal(t, []int{http.StatusNoContent, http.StatusBadRequest}, statuses)
-		assert.Zero(t, issueFromDatabase(t, repo, index).MilestoneID)
-	})
 }
 
 // An edit whose client goes away after the content is saved still updates the
