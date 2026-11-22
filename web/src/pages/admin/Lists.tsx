@@ -14,7 +14,7 @@ import { Card, CardFooter } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { webContext } from "@/lib/context";
-import { fill, formatNumber } from "@/lib/format";
+import { formatNumber } from "@/lib/format";
 import type { ListSearch } from "@/lib/page-search";
 import {
   type AdminAuthSource,
@@ -118,7 +118,7 @@ function ListPage<T>({
   const { t } = useTranslation();
   return (
     <div className="grid gap-4">
-      <AdminPageHeader title={title} description={fill(t("admin.total"), formatNumber(list.total))}>
+      <AdminPageHeader title={title} description={t("admin.total", { count: formatNumber(list.total) })}>
         {actions}
       </AdminPageHeader>
       {search ? (

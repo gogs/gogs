@@ -133,7 +133,7 @@ func getAdminDashboard(logger *logx.Logger, c flamego.Context, l i18n.Locale) (s
 	r := adminReport{l: l}
 	// The key of a statistic also names its label in the locale files.
 	statistic := func(key string, count int64) adminStatistic {
-		return adminStatistic{Key: key, Label: l.Tr("admin.dashboard.statistic_" + key), Count: count}
+		return adminStatistic{Key: key, Label: l.Tr("admin::dashboard.statistic_" + key), Count: count}
 	}
 	// Measurements show the whole value, with its unit, as code.
 	size := func(key string, n uint64) adminReportRow {
@@ -147,13 +147,13 @@ func getAdminDashboard(logger *logx.Logger, c flamego.Context, l i18n.Locale) (s
 	runtime.ReadMemStats(m)
 	status := r.section("system-status", "admin::dashboard.system_status",
 		rows(
-			r.code("admin.dashboard.current_goroutine", runtime.NumGoroutine()),
-			size("admin.dashboard.current_memory_usage", m.Alloc),
-			size("admin.dashboard.total_memory_allocated", m.TotalAlloc),
-			size("admin.dashboard.memory_obtained", m.Sys),
-			r.code("admin.dashboard.pointer_lookup_times", m.Lookups),
-			r.code("admin.dashboard.memory_allocate_times", m.Mallocs),
-			r.code("admin.dashboard.memory_free_times", m.Frees),
+			r.code("admin::dashboard.current_goroutine", runtime.NumGoroutine()),
+			size("admin::dashboard.current_memory_usage", m.Alloc),
+			size("admin::dashboard.total_memory_allocated", m.TotalAlloc),
+			size("admin::dashboard.memory_obtained", m.Sys),
+			r.code("admin::dashboard.pointer_lookup_times", m.Lookups),
+			r.code("admin::dashboard.memory_allocate_times", m.Mallocs),
+			r.code("admin::dashboard.memory_free_times", m.Frees),
 		),
 		rows(
 			size("admin::dashboard.current_heap_usage", m.HeapAlloc),
@@ -192,14 +192,14 @@ func getAdminDashboard(logger *logx.Logger, c flamego.Context, l i18n.Locale) (s
 		StartedAt:     initTime,
 		UptimeSeconds: int64(time.Since(initTime).Seconds()),
 		Statistics: []adminStatisticGroup{
-			{l.Tr("admin.dashboard.statistic_group_people"), []adminStatistic{
+			{l.Tr("admin::dashboard.statistic_group_people"), []adminStatistic{
 				statistic("users", s.User),
 				statistic("organizations", s.Org),
 				statistic("social_accounts", s.Oauth),
 				statistic("follows", s.Follow),
 				statistic("teams", s.Team),
 			}},
-			{l.Tr("admin.dashboard.statistic_group_repositories"), []adminStatistic{
+			{l.Tr("admin::dashboard.statistic_group_repositories"), []adminStatistic{
 				statistic("repositories", s.Repo),
 				statistic("watches", s.Watch),
 				statistic("stars", s.Star),
@@ -207,7 +207,7 @@ func getAdminDashboard(logger *logx.Logger, c flamego.Context, l i18n.Locale) (s
 				statistic("mirrors", s.Mirror),
 				statistic("releases", s.Release),
 			}},
-			{l.Tr("admin.dashboard.statistic_group_issues"), []adminStatistic{
+			{l.Tr("admin::dashboard.statistic_group_issues"), []adminStatistic{
 				statistic("actions", s.Action),
 				statistic("issues", s.Issue),
 				statistic("comments", s.Comment),
@@ -215,7 +215,7 @@ func getAdminDashboard(logger *logx.Logger, c flamego.Context, l i18n.Locale) (s
 				statistic("labels", s.Label),
 				statistic("attachments", s.Attachment),
 			}},
-			{l.Tr("admin.dashboard.statistic_group_access"), []adminStatistic{
+			{l.Tr("admin::dashboard.statistic_group_access"), []adminStatistic{
 				statistic("public_keys", s.PublicKey),
 				statistic("login_sources", s.LoginSource),
 				statistic("webhooks", s.Webhook),
