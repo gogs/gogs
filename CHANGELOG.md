@@ -174,6 +174,7 @@ All notable changes to Gogs are documented in this file.
 - Starting Gogs with `gogs web --port` no longer replaces the port of `[server] EXTERNAL_URL` when it differs from `HTTP_PORT`, e.g., behind a reverse proxy, so clone URLs and links keep the configured port. [#8605](https://github.com/gogs/gogs/pull/8605)
 - The Docker image health check counted any response as healthy, e.g., when the database is unreachable, and could only check `http://localhost:3000`. It now fails on an error response, and the `GOGS_HEALTHCHECK_URL` environment variable sets the URL to check when `[server]` sets another `HTTP_ADDR` or `HTTP_PORT`. [#8603](https://github.com/gogs/gogs/pull/8603)
 - The raw view of a symbolic link shows its target instead of failing. [#8609](https://github.com/gogs/gogs/pull/8609)
+- Opening a path that goes through a file, symbolic link, or submodule, e.g., `README.md/x`, in the code browser or through the API now says that it does not exist, instead of failing with a server error or showing a file of the commit that the submodule points to. [#8609](https://github.com/gogs/gogs/pull/8609)
 
 ### Removed
 
