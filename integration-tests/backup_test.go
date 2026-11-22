@@ -33,16 +33,23 @@ func TestBackupRestore(t *testing.T) {
 	hook := filepath.Join(repoPath, "custom_hooks", "pre-receive")
 	require.NoError(t, os.MkdirAll(filepath.Dir(hook), 0o755))
 	require.NoError(t, os.WriteFile(hook, []byte("#!/bin/sh\n"), 0o755))
-	// Directories of repositories are named in lower case, unlike repositories.
+	// Git allows names that are not valid UTF-8 in refs, which are files and
+	// directories in the repository.
+	nonUTF8Ref := "refs/heads/caf\xe9/x"
+	gitRun(t, repoPath, "update-ref", nonUTF8Ref, "HEAD")
 	dbOwner, err := database.Handle.Users().GetByID(t.Context(), owner.ID)
 	require.NoError(t, err)
-	upper, err := database.Handle.Repositories().Create(t.Context(), logger, dbOwner, dbOwner, database.CreateRepoOptionsLegacy{
+	// Directories of repositories and their owners are named in lower case,
+	// unlike repositories and users.
+	upperOwner, err := database.Handle.Users().Create(t.Context(), UniqueName("User-"), UniqueName("backup-")+"@example.com", database.CreateUserOptions{Activated: true})
+	require.NoError(t, err)
+	upper, err := database.Handle.Repositories().Create(t.Context(), logger, upperOwner, upperOwner, database.CreateRepoOptionsLegacy{
 		Name:     UniqueName("Backup-"),
 		AutoInit: true,
 		Readme:   "Default",
 	})
 	require.NoError(t, err)
-	upperPath := database.RepoPath(owner.Name, upper.Name)
+	upperPath := database.RepoPath(upperOwner.Name, upper.Name)
 	mirror := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	require.NoError(t, gormDB.Model(&database.Repository{}).Where("id = ?", mirror.ID).Update("is_mirror", true).Error)
 	t.Cleanup(func() {
@@ -76,18 +83,28 @@ func TestBackupRestore(t *testing.T) {
 	// The backup creates the target directory when it does not exist.
 	target := filepath.Join(work, "backups")
 
-	backup := func(t *testing.T, name string, flags ...string) string {
-		t.Helper()
-
+	// runBackup runs `gogs backup` with the custom directory and returns its
+	// output.
+	runBackup := func(customDir, name string, flags ...string) ([]byte, error) {
 		// TestMain points the first argument to the binary of the server.
 		cmd := exec.Command(os.Args[0], append([]string{"backup", "--config", serverConfigPath, "--tempdir", tempDir, "--target", target, "--archive-name", name}, flags...)...)
 		cmd.Env = append(os.Environ(), "GOGS_CUSTOM="+customDir, "TMPDIR="+systemTempDir)
-		out, err := cmd.CombinedOutput()
+		return cmd.CombinedOutput()
+	}
+	backup := func(t *testing.T, name string, flags ...string) string {
+		t.Helper()
+
+		out, err := runBackup(customDir, name, flags...)
 		require.NoError(t, err, "backup: %s", out)
 		entries, err := os.ReadDir(tempDir)
 		require.NoError(t, err)
 		assert.Empty(t, entries, "backup left files in the temporary directory")
-		return filepath.Join(target, name)
+		archivePath := filepath.Join(target, name)
+		// The archive has the password hashes and tokens of every user.
+		fi, err := os.Stat(archivePath)
+		require.NoError(t, err)
+		assert.Equal(t, os.FileMode(0o600), fi.Mode().Perm())
+		return archivePath
 	}
 	// repoFile is the name in "repositories.zip" of the file at the path.
 	repoFile := func(path string) string {
@@ -109,6 +126,20 @@ func TestBackupRestore(t *testing.T) {
 		assert.Empty(t, names, "files other than the database")
 		_, err = archive.Open("gogs-backup/db/User.json")
 		assert.NoError(t, err)
+	})
+
+	t.Run("failure", func(t *testing.T) {
+		// A link to nothing fails the backup after it has dumped the database.
+		customDir := filepath.Join(t.TempDir(), "custom")
+		require.NoError(t, os.Mkdir(customDir, 0o755))
+		require.NoError(t, os.Symlink(filepath.Join(customDir, "missing"), filepath.Join(customDir, "broken")))
+		out, err := runBackup(customDir, "failure.zip")
+		require.Error(t, err, "backup: %s", out)
+
+		entries, err := os.ReadDir(tempDir)
+		require.NoError(t, err)
+		assert.Empty(t, entries, "backup left the database dump in the temporary directory")
+		assert.NoFileExists(t, filepath.Join(target, "failure.zip"), "backup left a partial archive with the database")
 	})
 
 	t.Run("exclude mirror repositories", func(t *testing.T) {
@@ -133,6 +164,10 @@ func TestBackupRestore(t *testing.T) {
 		assert.False(t, files[repoFile(filepath.Join(database.RepoPath(mirror.Owner, mirror.Name), "HEAD"))], "mirror")
 	})
 
+	// An archive of an earlier backup with the same name, e.g., of a version
+	// that made it readable by everyone, is overwritten.
+	require.NoError(t, os.MkdirAll(target, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(target, "full.zip"), []byte("earlier"), 0o644))
 	archivePath := backup(t, "full.zip")
 
 	// The new instance has its own database, work directory and repositories.
@@ -170,6 +205,7 @@ func TestBackupRestore(t *testing.T) {
 		assert.Equal(t, gitRun(t, path, "rev-parse", "HEAD"), gitRun(t, restored, "rev-parse", "HEAD"), "repository %q", restored)
 		gitRun(t, restored, "fsck", "--strict")
 	}
+	assert.Equal(t, gitRun(t, repoPath, "rev-parse", nonUTF8Ref), gitRun(t, restoredPath(repoPath), "rev-parse", nonUTF8Ref))
 	fi, err := os.Stat(restoredPath(hook))
 	require.NoError(t, err)
 	assert.Equal(t, os.FileMode(0o755), fi.Mode().Perm())
