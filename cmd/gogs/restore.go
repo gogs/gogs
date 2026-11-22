@@ -24,8 +24,8 @@ var restoreCommand = cli.Command{
 The backup version must lower or equal to current Gogs version. You can also import
 backup from other database engines, which is useful for database migrating.
 
-If corresponding files or database tables are not presented in the archive, they will
-be skipped and remain unchanged.`,
+If corresponding files are not present in the archive, they will be skipped and
+remain unchanged. Database tables that are not present in the archive are emptied.`,
 	Action: runRestore,
 	Flags: []cli.Flag{
 		stringFlag("config, c", "", "Custom configuration file path"),
@@ -68,6 +68,10 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 	metaFile := filepath.Join(archivePath, "metadata.ini")
 	if !osx.IsFile(metaFile) {
 		logger.FatalContext(ctx, "File 'metadata.ini' is missing")
+	}
+	// Checked before any file is replaced, as the import would fail without it.
+	if !osx.IsDir(filepath.Join(archivePath, "db")) {
+		logger.FatalContext(ctx, "Directory 'db' is missing")
 	}
 	metadata, err := ini.Load(metaFile)
 	if err != nil {

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -106,6 +107,12 @@ func dumpTable(ctx context.Context, db *gorm.DB, table any, w io.Writer) error {
 // replaces the rows of each table with those in the backup archive in JSON Lines
 // format.
 func ImportDatabase(ctx context.Context, logger *logx.Logger, db *gorm.DB, dirPath string, verbose bool) error {
+	// Tables without a file are emptied, so a missing directory would empty them
+	// all.
+	if !osx.IsDir(dirPath) {
+		return errors.Newf("%q is not a directory", dirPath)
+	}
+
 	err := migrations.Migrate(logger, db.WithContext(ctx))
 	if err != nil {
 		return errors.Wrap(err, "migrate")
@@ -128,8 +135,11 @@ func ImportDatabase(ctx context.Context, logger *logx.Logger, db *gorm.DB, dirPa
 		err := func() error {
 			tableFile := filepath.Join(dirPath, tableName+".json")
 			if !osx.IsFile(tableFile) {
-				logger.Info("Skipped table", "tableName", tableName)
-				return nil
+				// Backups from before the table existed have no rows for it, and rows
+				// left in it would belong to whoever gets their user IDs, e.g.,
+				// passkeys.
+				logger.Info("Emptied table not in backup", "tableName", tableName)
+				return importTable(ctx, db, table, strings.NewReader(""))
 			}
 
 			if verbose {
@@ -230,6 +240,9 @@ func importTable(ctx context.Context, db *gorm.DB, table any, r io.Reader) error
 	}
 
 	scanner := bufio.NewScanner(r)
+	// A row is a single line, which can exceed the default limit of 64 KiB, e.g.,
+	// a long issue description.
+	scanner.Buffer(nil, math.MaxInt)
 	for scanner.Scan() {
 		// PostgreSQL does not like the null characters (U+0000).
 		cleaned := bytes.ReplaceAll(scanner.Bytes(), []byte("\\u0000"), []byte(""))
@@ -261,6 +274,9 @@ func importTable(ctx context.Context, db *gorm.DB, table any, r io.Reader) error
 		if err != nil {
 			return errors.Wrap(err, "create row")
 		}
+	}
+	if err = scanner.Err(); err != nil {
+		return errors.Wrap(err, "read rows")
 	}
 
 	// PostgreSQL needs manually reset table sequence for auto increment keys.
