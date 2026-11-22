@@ -438,7 +438,7 @@ func Test_webhookHandler(t *testing.T) {
 
 		// The sink with LEVEL = Fatal gets only the fatal record, labelled fatal.
 		assert.NotContains(t, string(stdout), "Queued before fatal")
-		assert.Contains(t, string(stdout), "FATA [web] Fatal")
+		assert.Contains(t, string(stdout), "FATAL [web] Fatal")
 
 		mu.Lock()
 		defer mu.Unlock()

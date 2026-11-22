@@ -1,6 +1,7 @@
 package integrationtests
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -164,14 +165,35 @@ func TestUserSiteLocale(t *testing.T) {
 func TestUserSiteCaptchaImage(t *testing.T) {
 	t.Parallel()
 
+	// The server with FORCE_PRIVATE uses the image captcha.
 	c := newClient(t)
-	status, header, body := c.doRaw(http.MethodGet, "/captcha/image.jpeg", "", nil)
+	c.baseURL = forcePrivateServerURL
+	status, header, body := c.doRaw(http.MethodGet, "/-/captcha/image.png", "", nil)
 	require.Equal(t, http.StatusOK, status)
-	assert.Equal(t, "image/jpeg", header.Get("Content-Type"))
-	assert.True(t, len(body) > 2 && body[0] == 0xFF && body[1] == 0xD8, "not a JPEG")
+	assert.Equal(t, "image/png", header.Get("Content-Type"))
+	assert.True(t, bytes.HasPrefix(body, []byte("\x89PNG\r\n\x1a\n")), "not a PNG")
 	text, ok := c.sessionValue(captchaSessionKey).(string)
 	require.True(t, ok, "no captcha text in session")
 	assert.NotEmpty(t, text)
+
+	// The server with altcha does not serve captcha images.
+	_, header, _ = newClient(t).doRaw(http.MethodGet, "/-/captcha/image.png", "", nil)
+	assert.NotEqual(t, "image/png", header.Get("Content-Type"))
+}
+
+func TestUserSiteAltchaWorker(t *testing.T) {
+	t.Parallel()
+
+	status, header, body := newClient(t).doRaw(http.MethodGet, "/-/altcha/worker.js", "", nil)
+	require.Equal(t, http.StatusOK, status)
+	assert.Equal(t, "text/javascript; charset=utf-8", header.Get("Content-Type"))
+	assert.Contains(t, string(body), "self.onmessage")
+
+	// The server with the image captcha does not serve altcha.
+	c := newClient(t)
+	c.baseURL = forcePrivateServerURL
+	_, header, _ = c.doRaw(http.MethodGet, "/-/altcha/challenge.json", "", nil)
+	assert.NotEqual(t, "application/json", header.Get("Content-Type"))
 }
 
 func TestUserSiteRedirect(t *testing.T) {

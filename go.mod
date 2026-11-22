@@ -3,20 +3,21 @@ module gogs.io/gogs
 go 1.27.0
 
 require (
-	charm.land/lipgloss/v2 v2.0.1
-	charm.land/log/v2 v2.0.0
+	charm.land/lipgloss/v2 v2.0.5
+	charm.land/log/v2 v2.0.1
 	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/Masterminds/semver/v3 v3.4.0
-	github.com/charmbracelet/colorprofile v0.4.2
+	github.com/charmbracelet/colorprofile v0.4.3
 	github.com/cockroachdb/errors v1.13.0
 	github.com/derision-test/go-mockgen/v2 v2.1.1
 	github.com/dicebear/dicebear-go/v10 v10.7.0
 	github.com/dicebear/styles/v10 v10.6.0
 	github.com/editorconfig/editorconfig-core-go/v2 v2.6.4
+	github.com/flamego/altcha v1.0.1
 	github.com/flamego/binding v1.4.0
 	github.com/flamego/cache v1.5.1
-	github.com/flamego/captcha v1.3.0
-	github.com/flamego/flamego v1.14.0
+	github.com/flamego/captcha v1.4.0
+	github.com/flamego/flamego v1.14.1
 	github.com/flamego/session v1.7.0
 	github.com/glebarez/go-sqlite v1.21.2
 	github.com/glebarez/sqlite v1.11.0
@@ -77,7 +78,7 @@ require (
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/charmbracelet/ultraviolet v0.0.0-20251205161215-1948445e3318 // indirect
-	github.com/charmbracelet/x/ansi v0.11.6 // indirect
+	github.com/charmbracelet/x/ansi v0.11.7 // indirect
 	github.com/charmbracelet/x/term v0.2.2 // indirect
 	github.com/charmbracelet/x/termios v0.1.1 // indirect
 	github.com/charmbracelet/x/windows v0.2.2 // indirect
@@ -104,7 +105,6 @@ require (
 	github.com/go-webauthn/x v0.3.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
-	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/google/go-tpm v0.9.8 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.30.0 // indirect
 	github.com/itchyny/gojq v0.12.11 // indirect
@@ -118,10 +118,10 @@ require (
 	github.com/kr/text v0.2.0 // indirect
 	github.com/leodido/go-urn v1.5.0 // indirect
 	github.com/lib/pq v1.10.2 // indirect
-	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
+	github.com/lucasb-eyer/go-colorful v1.4.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/mattn/go-runewidth v0.0.19 // indirect
+	github.com/mattn/go-runewidth v0.0.23 // indirect
 	github.com/mattn/go-sqlite3 v1.14.24 // indirect
 	github.com/mfridman/interpolate v0.0.2 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect

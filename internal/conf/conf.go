@@ -221,6 +221,11 @@ func Init(logger *logx.Logger, customConf string) error {
 	if err = File.Section("auth").MapTo(&Auth); err != nil {
 		return errors.Wrap(err, "mapping [auth] section")
 	}
+	switch Auth.AntiBotVerification {
+	case "", AntiBotVerificationAltcha, AntiBotVerificationCaptcha:
+	default:
+		return errors.Newf("[auth] ANTI_BOT_VERIFICATION must be empty, %q or %q, but got %q", AntiBotVerificationAltcha, AntiBotVerificationCaptcha, Auth.AntiBotVerification)
+	}
 	// Reset before re-parsing so repeated Init calls (e.g., via the web installer)
 	// do not carry over CIDRs from a previous configuration.
 	Auth.TrustedProxyCIDRs = nil

@@ -226,12 +226,12 @@ type AppOpts struct {
 var App AppOpts
 
 type AuthOpts struct {
-	ActivateCodeLives         int
-	ResetPasswordCodeLives    int
-	RequireEmailConfirmation  bool
-	RequireSigninView         bool
-	DisableRegistration       bool
-	EnableRegistrationCaptcha bool
+	ActivateCodeLives        int
+	ResetPasswordCodeLives   int
+	RequireEmailConfirmation bool
+	RequireSigninView        bool
+	DisableRegistration      bool
+	AntiBotVerification      string
 
 	EnableReverseProxyAuthentication   bool
 	EnableReverseProxyAutoRegistration bool
@@ -245,6 +245,15 @@ type AuthOpts struct {
 
 // Authentication settings
 var Auth AuthOpts
+
+// Values of [auth] ANTI_BOT_VERIFICATION.
+const (
+	// AntiBotVerificationAltcha asks the browser to solve a proof-of-work challenge.
+	AntiBotVerificationAltcha = "altcha"
+	// AntiBotVerificationCaptcha asks the user to type the characters shown in
+	// an image.
+	AntiBotVerificationCaptcha = "captcha"
+)
 
 type ServerOpts struct {
 	ExternalURL          string `ini:"EXTERNAL_URL"`
@@ -397,11 +406,17 @@ var I18n *i18nConf
 
 // handleDeprecated transfers deprecated values to the new ones when set.
 func handleDeprecated() {
-	// Add fallback logic here, example:
-	// if App.AppName != "" {
-	// 	App.BrandName = App.AppName
-	// 	App.AppName = ""
-	// }
+	// [auth] ENABLE_REGISTRATION_CAPTCHA only switches between the default
+	// altcha and no verification, so an explicit "captcha" is kept.
+	if key, err := File.Section("auth").GetKey("ENABLE_REGISTRATION_CAPTCHA"); err == nil {
+		if key.MustBool() {
+			if Auth.AntiBotVerification == "" {
+				Auth.AntiBotVerification = AntiBotVerificationAltcha
+			}
+		} else if Auth.AntiBotVerification == AntiBotVerificationAltcha {
+			Auth.AntiBotVerification = ""
+		}
+	}
 }
 
 // checkInvalidOptions checks invalid (renamed/deleted) configuration sections
@@ -424,6 +439,21 @@ func checkInvalidOptions(config *ini.File) (warnings []string) {
 	renamedOptionPaths := map[optionPath]optionPath{
 		// Example:
 		// {"security", "REVERSE_PROXY_AUTHENTICATION_USER"}: {"auth", "REVERSE_PROXY_AUTHENTICATION_HEADER"},
+	}
+	// Deprecated options still work, see handleDeprecated.
+	deprecatedOptionPaths := map[optionPath]optionPath{
+		{"auth", "ENABLE_REGISTRATION_CAPTCHA"}: {"auth", "ANTI_BOT_VERIFICATION"},
+	}
+	for oldPath, newPath := range deprecatedOptionPaths {
+		if config.Section(oldPath.section).HasKey(oldPath.option) {
+			warnings = append(
+				warnings,
+				fmt.Sprintf("option [%s] %s is deprecated, use [%s] %s instead",
+					oldPath.section, oldPath.option,
+					newPath.section, newPath.option,
+				),
+			)
+		}
 	}
 	for oldPath, newPath := range renamedOptionPaths {
 		if config.Section(oldPath.section).HasKey(oldPath.option) {
@@ -455,6 +485,9 @@ func checkInvalidOptions(config *ini.File) (warnings []string) {
 		}
 		for _, option := range section.Keys() {
 			if _, ok := renamedOptionPaths[optionPath{section.Name(), option.Name()}]; ok {
+				continue
+			}
+			if _, ok := deprecatedOptionPaths[optionPath{section.Name(), option.Name()}]; ok {
 				continue
 			}
 			if !defaultConfig.Section(section.Name()).HasKey(option.Name()) {

@@ -29,7 +29,8 @@ var (
 	// serverURL is the URL of the server under test, without a trailing slash.
 	serverURL string
 	// forcePrivateServerURL is the URL of another server under test, which only
-	// differs by setting [repository] FORCE_PRIVATE.
+	// differs by setting [repository] FORCE_PRIVATE and using the image captcha
+	// for registration.
 	forcePrivateServerURL string
 	// sshPort is the port of the builtin SSH server of the server under test.
 	sshPort int
@@ -98,7 +99,7 @@ func run(m *testing.M, dir string) (int, error) {
 	secretKey := make([]byte, 16)
 	_, _ = rand.Read(secretKey)
 	configPath := filepath.Join(dir, "app.ini")
-	if err = writeConfig(dir, configPath, port, sshPort, dbName, hex.EncodeToString(secretKey), false); err != nil {
+	if err = writeConfig(dir, configPath, port, sshPort, dbName, hex.EncodeToString(secretKey), false, conf.AntiBotVerificationAltcha); err != nil {
 		return 0, errors.Wrap(err, "write configuration")
 	}
 
@@ -144,7 +145,7 @@ func run(m *testing.M, dir string) (int, error) {
 		return 0, errors.Wrap(err, "find free SSH port")
 	}
 	forcePrivateConfigPath := filepath.Join(dir, "app-force-private.ini")
-	if err = writeConfig(dir, forcePrivateConfigPath, forcePrivatePort, forcePrivateSSHPort, dbName, hex.EncodeToString(secretKey), true); err != nil {
+	if err = writeConfig(dir, forcePrivateConfigPath, forcePrivatePort, forcePrivateSSHPort, dbName, hex.EncodeToString(secretKey), true, conf.AntiBotVerificationCaptcha); err != nil {
 		return 0, errors.Wrap(err, "write configuration")
 	}
 	forcePrivateServerURL = fmt.Sprintf("http://localhost:%d", forcePrivatePort)
@@ -230,7 +231,7 @@ func freePort() (int, error) {
 // writeConfig writes the configuration of a server under test, which uses the
 // Postgres database of the name on the server the PG* environment variables
 // point to.
-func writeConfig(dir, path string, port, sshPort int, dbName, secretKey string, forcePrivate bool) error {
+func writeConfig(dir, path string, port, sshPort int, dbName, secretKey string, forcePrivate bool, antiBotVerification string) error {
 	u, err := user.Current()
 	if err != nil {
 		return errors.Wrap(err, "get current user")
@@ -284,7 +285,7 @@ HOST = 127.0.0.1:1
 
 [auth]
 DISABLE_REGISTRATION = false
-ENABLE_REGISTRATION_CAPTCHA = true
+ANTI_BOT_VERIFICATION = %[9]s
 ; Tests call from the loopback interface, which is a trusted proxy by default,
 ; so only requests with the header are authenticated by it.
 ENABLE_REVERSE_PROXY_AUTHENTICATION = true
@@ -293,7 +294,7 @@ ENABLE_REVERSE_PROXY_AUTO_REGISTRATION = true
 [log]
 MODE = console
 LEVEL = Info
-`, u.Username, port, filepath.Join(dir, "repositories"), database, secretKey, filepath.Join(dir, "ssh"), sshPort, forcePrivate)
+`, u.Username, port, filepath.Join(dir, "repositories"), database, secretKey, filepath.Join(dir, "ssh"), sshPort, forcePrivate, antiBotVerification)
 	return os.WriteFile(path, []byte(config), 0o600)
 }
 

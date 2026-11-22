@@ -11,7 +11,6 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/cache"
-	"github.com/flamego/captcha"
 	"github.com/flamego/session"
 	"unknwon.dev/x/logx"
 
@@ -67,13 +66,14 @@ type getUserSignInResponse struct {
 
 type getUserSignUpResponse struct {
 	RegistrationDisabled bool `json:"registrationDisabled"`
-	CaptchaEnabled       bool `json:"captchaEnabled"`
+	// AntiBotVerification is empty when sign-ups are not verified.
+	AntiBotVerification string `json:"antiBotVerification"`
 }
 
 func getUserSignUp() (statusCode int, resp *getUserSignUpResponse, err error) {
 	return http.StatusOK, &getUserSignUpResponse{
 		RegistrationDisabled: conf.Auth.DisableRegistration,
-		CaptchaEnabled:       conf.Auth.EnableRegistrationCaptcha,
+		AntiBotVerification:  conf.Auth.AntiBotVerification,
 	}, nil
 }
 
@@ -81,7 +81,9 @@ type userSignUpRequest struct {
 	UserName string `json:"userName" validate:"required,alphadashdot,max=35"`
 	Email    string `json:"email" validate:"required,email,max=254"`
 	Password string `json:"password" validate:"required,max=255"`
-	Captcha  string `json:"captcha"`
+	// AntiBotPayload is the text of the captcha image, or the solution of the altcha
+	// challenge, depending on [auth] ANTI_BOT_VERIFICATION.
+	AntiBotPayload string `json:"antiBotPayload"`
 }
 
 type userSignUpResponse struct {
@@ -90,14 +92,17 @@ type userSignUpResponse struct {
 	Hours                     int    `json:"hours,omitempty"`
 }
 
-func postUserSignUp(logger *logx.Logger, r *http.Request, ca cache.Cache, l i18n.Locale, cpt captcha.Captcha, req userSignUpRequest) (statusCode int, resp any, err error) {
+func postUserSignUp(logger *logx.Logger, r *http.Request, ca cache.Cache, l i18n.Locale, verifyAntiBot antiBotVerifier, req userSignUpRequest) (statusCode int, resp any, err error) {
 	if conf.Auth.DisableRegistration {
 		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("auth::disable_register_prompt")}, nil
 	}
-	if conf.Auth.EnableRegistrationCaptcha && !cpt.ValidText(req.Captcha) {
+	if !verifyAntiBot(req.AntiBotPayload) {
 		msg := l.Tr("form::captcha_incorrect")
+		if conf.Auth.AntiBotVerification == conf.AntiBotVerificationAltcha {
+			msg = l.Tr("form::anti_bot_verification_failed")
+		}
 		return http.StatusUnauthorized, &bindingErrorResponse{
-			Fields: fieldErrors{"captcha": &msg},
+			Fields: fieldErrors{"antiBotPayload": &msg},
 		}, nil
 	}
 	u, err := database.Handle.Users().Create(
