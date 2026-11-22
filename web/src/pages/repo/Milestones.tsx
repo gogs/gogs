@@ -24,6 +24,7 @@ import {
 import { formErrors } from "@/lib/queries/request";
 import { formatRelativeTime } from "@/lib/relative-time";
 import { toastError } from "@/lib/toast-error";
+import { useAppLinkClick } from "@/lib/use-app-link-click";
 import { cn } from "@/lib/utils";
 import { IssueTrackerLayout } from "@/pages/repo/Labels";
 
@@ -137,6 +138,7 @@ function MilestoneRow({
   previousPage?: number;
 }) {
   const { t } = useTranslation();
+  const onLinkClick = useAppLinkClick({ markedOnly: true });
   const router = useRouter();
   const navigate = useNavigate();
   const afterRemoval = async () => {
@@ -188,6 +190,7 @@ function MilestoneRow({
         {milestone.descriptionHTML ? (
           <div
             className="mt-2 text-sm wrap-anywhere [&_a]:text-(--color-primary) [&_a]:hover:underline [&_code]:rounded [&_code]:bg-(--color-surface) [&_code]:px-1 [&_code]:font-mono [&_li]:ml-5 [&_ol]:list-decimal [&_p]:my-1 [&_ul]:list-disc"
+            onClick={onLinkClick}
             // The server renders the Markdown description and sanitizes the result.
             dangerouslySetInnerHTML={{ __html: milestone.descriptionHTML }}
           />

@@ -266,7 +266,7 @@ func getRepoMilestones(c flamego.Context, logger *logx.Logger, repoCtx *repoCont
 			item.Completeness = item.ClosedIssueCount * 100 / all
 		}
 		if m.Content != "" {
-			item.DescriptionHTML = string(markup.MarkdownWithCommits(m.Content, repo.Link(), metas, commits))
+			item.DescriptionHTML = markAppLinks(markup.MarkdownWithCommits(m.Content, repo.Link(), metas, commits), repo)
 		}
 		if m.IsClosed {
 			item.ClosedAt = &m.ClosedDate

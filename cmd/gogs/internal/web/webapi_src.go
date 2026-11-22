@@ -351,7 +351,7 @@ func getRepoSrc(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (s
 		resp.Entries = append(resp.Entries, item)
 	}
 
-	if resp.Overview, err = readOverviewFiles(ctx, logger, ref.Commit, entries, treePath == "", treeLink, metas); err != nil {
+	if resp.Overview, err = readOverviewFiles(ctx, logger, ref.Commit, entries, treePath == "", treeLink, repo, metas); err != nil {
 		logger.Error("Failed to read overview files", "treePath", treePath, "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "read overview files")
 	}
@@ -415,7 +415,7 @@ func overviewKindOf(name string) string {
 // which are looked up in ".github", then in the root directory, then in
 // "docs", as on GitHub. Relative links in a file resolve against its
 // directory under treeLink.
-func readOverviewFiles(ctx context.Context, logger *logx.Logger, commit *git.Commit, entries git.Entries, isRoot bool, treeLink string, metas map[string]string) ([]repoOverviewFile, error) {
+func readOverviewFiles(ctx context.Context, logger *logx.Logger, commit *git.Commit, entries git.Entries, isRoot bool, treeLink string, repo *database.Repository, metas map[string]string) ([]repoOverviewFile, error) {
 	type found struct {
 		dir   string
 		entry *git.TreeEntry
@@ -481,9 +481,9 @@ func readOverviewFiles(ctx context.Context, logger *logx.Logger, commit *git.Com
 		dirLink := strings.TrimSuffix(treeLink+"/"+f.dir, "/")
 		switch markup.Detect(f.entry.Name()) {
 		case markup.TypeMarkdown:
-			file.HTML = string(markup.MarkdownFile(p, dirLink, metas))
+			file.HTML = markAppLinks(markup.MarkdownFile(p, dirLink, metas), repo)
 		case markup.TypeOrgMode:
-			file.HTML = string(markup.OrgMode(p, dirLink, metas))
+			file.HTML = markAppLinks(markup.OrgMode(p, dirLink, metas), repo)
 		default:
 			file.Text = toUTF8(logger, p)
 		}
@@ -521,12 +521,12 @@ func describeRepoFile(ctx context.Context, logger *logx.Logger, repo *database.R
 		switch markup.Detect(file.Name) {
 		case markup.TypeMarkdown:
 			file.Kind = "markup"
-			file.HTML = string(markup.MarkdownFile(p, dirLink, repo.ComposeMetas()))
+			file.HTML = markAppLinks(markup.MarkdownFile(p, dirLink, repo.ComposeMetas()), repo)
 		case markup.TypeOrgMode:
 			file.Kind = "markup"
-			file.HTML = string(markup.OrgMode(p, dirLink, repo.ComposeMetas()))
+			file.HTML = markAppLinks(markup.OrgMode(p, dirLink, repo.ComposeMetas()), repo)
 		case markup.TypeIPythonNotebook:
-			file.Notebook, err = parseNotebook(p, dirLink, repo.ComposeMetas())
+			file.Notebook, err = parseNotebook(p, dirLink, repo, repo.ComposeMetas())
 			if err == nil {
 				file.Kind = "notebook"
 				break

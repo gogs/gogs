@@ -7,12 +7,17 @@ import { routePath } from "./url";
 // the server, so the links in it that lead to pages of the app navigate like
 // router links instead of reloading the document. Links to other sites, and
 // clicks that open a link elsewhere, e.g., with Ctrl, are left to the browser.
-export function useAppLinkClick() {
+//
+// markedOnly follows only the links that the server marked with
+// "data-app-link", for HTML whose links may also lead to files the server
+// serves, e.g., attachments in rendered Markdown.
+export function useAppLinkClick({ markedOnly = false }: { markedOnly?: boolean } = {}) {
   const navigate = useNavigate();
   return (e: MouseEvent) => {
     if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     const link = e.target instanceof Element ? e.target.closest("a") : null;
     if (!link || link.origin !== window.location.origin) return;
+    if (markedOnly && !link.hasAttribute("data-app-link")) return;
     e.preventDefault();
     // The router reads a "$" in a path as a parameter, and the server leaves
     // it unescaped in branch names.

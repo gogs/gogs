@@ -30,7 +30,7 @@ func TestParseNotebook(t *testing.T) {
     ]},
     {"cell_type": "raw", "source": "raw text"}
   ]
-}`), "/alice/nb/src/master/docs", nil)
+}`), "/alice/nb/src/master/docs", nil, nil)
 		require.NoError(t, err)
 
 		assert.Equal(t, ".py", nb.FileExtension)
@@ -67,7 +67,7 @@ func TestParseNotebook(t *testing.T) {
       {"output_type": "pyerr", "ename": "NameError", "evalue": "y", "traceback": []}
     ]}
   ]}]
-}`), "/alice/nb/src/master", nil)
+}`), "/alice/nb/src/master", nil, nil)
 		require.NoError(t, err)
 
 		assert.Equal(t, ".py", nb.FileExtension)
@@ -87,7 +87,7 @@ func TestParseNotebook(t *testing.T) {
 	})
 
 	t.Run("not a notebook", func(t *testing.T) {
-		_, err := parseNotebook([]byte(`{"cells": "nope"}`), "", nil)
+		_, err := parseNotebook([]byte(`{"cells": "nope"}`), "", nil, nil)
 		assert.Error(t, err)
 	})
 }

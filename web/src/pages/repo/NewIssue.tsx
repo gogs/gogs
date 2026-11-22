@@ -24,6 +24,7 @@ import {
   repoHeaderQuery,
 } from "@/lib/queries/repo";
 import { formErrors } from "@/lib/queries/request";
+import { useAppLinkClick } from "@/lib/use-app-link-click";
 import { linkedUploads, useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { cn } from "@/lib/utils";
 import type { RepoNewIssueSearch } from "@/pages/repo/NewIssue.search";
@@ -384,6 +385,7 @@ function FormElement({
   onUploading: (uploading: boolean) => void;
 }) {
   const { t } = useTranslation();
+  const onLinkClick = useAppLinkClick({ markedOnly: true });
   if (field.type === "markdown") {
     return <Markdown html={field.html ?? ""} />;
   }
@@ -455,6 +457,7 @@ function FormElement({
                 {option.labelHTML ? (
                   <span
                     className="[&_a]:text-(--color-primary) [&_a]:underline [&_a]:underline-offset-2 [&_code]:rounded [&_code]:bg-(--color-surface) [&_code]:px-1 [&_code]:font-mono [&_code]:text-[0.9em]"
+                    onClick={onLinkClick}
                     // The server renders and sanitizes the Markdown.
                     dangerouslySetInnerHTML={{ __html: option.labelHTML }}
                   />

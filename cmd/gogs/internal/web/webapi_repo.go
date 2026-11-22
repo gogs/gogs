@@ -274,7 +274,7 @@ func getRepoMarkdownFile(c flamego.Context, logger *logx.Logger, repoCtx *repoCo
 
 	fileLink := repo.Link() + "/src/" + commit.ID.String() + "/" + escapePath(treePath)
 	return http.StatusOK, &repoMarkdownFile{
-		HTML: string(markup.MarkdownFile(p, path.Dir(fileLink), repo.ComposeMetas())),
+		HTML: markAppLinks(markup.MarkdownFile(p, path.Dir(fileLink), repo.ComposeMetas()), repo),
 	}, nil
 }
 
