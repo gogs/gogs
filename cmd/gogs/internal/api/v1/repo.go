@@ -233,11 +233,6 @@ func createUserRepo(c *apiContext, owner *database.User, opt createRepoRequest) 
 			database.IsErrNameNotAllowed(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
 		} else {
-			if repo != nil {
-				if err = database.Handle.Repositories().Delete(c.Request().Context(), c.Logger, c.User.ID, repo.ID); err != nil {
-					c.Logger.Error("Failed to delete repository", "error", err)
-				}
-			}
 			c.Error(err, "create repository")
 		}
 		return

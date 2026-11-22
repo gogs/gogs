@@ -47,7 +47,7 @@ func addCollaborator(c *apiContext, form addCollaboratorRequest) {
 	// up added without the requested mode.
 	ctx := context.WithoutCancel(c.Request().Context())
 	if err := database.Handle.Collaborations().Add(ctx, c.Repo.Repository, collaborator.ID); err != nil {
-		c.Error(err, "add collaborator")
+		c.NotFoundOrError(err, "add collaborator")
 		return
 	}
 

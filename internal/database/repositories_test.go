@@ -1286,6 +1286,7 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 	}
 	newcomer := newTestIssueUser(t, ctx, s.db, "cf-newcomer")
 	latecomer := newTestIssueUser(t, ctx, s.db, "cf-latecomer")
+	joiner := newTestIssueUser(t, ctx, s.db, "cf-joiner")
 	var older *Repository
 
 	for _, tc := range []struct {
@@ -1400,6 +1401,20 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 				var count int64
 				require.NoError(t, s.db.Model(new(Access)).Where("repo_id = ?", base.ID).Count(&count).Error)
 				assert.Zero(t, count, "accesses of the deleted repository")
+			},
+		},
+		{
+			// Adding the member reads the repositories of the team before
+			// waiting for the organization, and the repository is added to
+			// the team meanwhile.
+			name:      "add team member while adding a repository to the team, holding the organization",
+			baseOwner: org,
+			private:   true,
+			holdUser:  org,
+			first:     func(*Repository, *Repository) error { return teams.AddMember(ctx, org.ID, readers.ID, joiner.ID) },
+			second:    func(base, _ *Repository) error { return teams.AddRepo(ctx, readers, base) },
+			check: func(base, _ *Repository) {
+				assert.Equal(t, AccessModeRead, accessModes(t, ctx, newPermissionsStore(s.db), base.ID)[joiner.ID], "access of the new member")
 			},
 		},
 		{
