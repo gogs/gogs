@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"html"
 	"net/url"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -13,19 +12,27 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/git"
+	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/mimex"
 	"gogs.io/gogs/internal/repox"
 )
 
-// permalinkMaxLines is how many lines an embedded permalink shows at most.
-const permalinkMaxLines = 50
+const (
+	// permalinkMaxLines is how many lines an embedded permalink shows at most.
+	permalinkMaxLines = 50
+	// permalinkMaxEmbeds is how many permalinks of one document are looked up
+	// at most, and permalinkMaxFileSize the largest file they embed lines of,
+	// so that rendering a document reads a bounded amount of Git data.
+	permalinkMaxEmbeds   = 10
+	permalinkMaxFileSize = 512 * 1024
+)
 
 var (
 	// renderedLinkPattern matches a link as rendered Markdown has it.
-	renderedLinkPattern = regexp.MustCompile(`<a href="([^"]*)"[^>]*>([^<]*)</a>`)
+	renderedLinkPattern = lazyregexp.New(`<a href="([^"]*)"[^>]*>([^<]*)</a>`)
 	// permalinkPattern matches what follows "/src/" in the permalink of
 	// lines of a file: the full commit ID, the path and the lines.
-	permalinkPattern = regexp.MustCompile(`^([0-9a-f]{40}|[0-9a-f]{64})/([^#?]+)#L(\d+)(?:-L(\d+))?$`)
+	permalinkPattern = lazyregexp.New(`^([0-9a-f]{40}|[0-9a-f]{64})/([^#?]+)#L(\d+)(?:-L(\d+))?$`)
 )
 
 // embedPermalinks shows the lines of permalinks to files of the repository at
@@ -36,19 +43,21 @@ var (
 //
 // The embed is an element with the data attributes the client renders it
 // from, which the sanitizer drops from user content, so content cannot forge
-// one.
-func embedPermalinks(ctx context.Context, logger *logx.Logger, ownerName, repoName, rendered string) string {
+// one. Viewers who cannot read the code of the repository, e.g., guests of the
+// issues of a private repository, see only the links.
+func embedPermalinks(ctx context.Context, logger *logx.Logger, ownerName, repoName string, canReadCode bool, rendered string) string {
 	prefix := conf.Server.ExternalURL + ownerName + "/" + repoName + "/src/"
-	if !strings.Contains(strings.ToLower(rendered), strings.ToLower(prefix)) {
+	if !canReadCode || !strings.Contains(strings.ToLower(rendered), strings.ToLower(prefix)) {
 		return rendered
 	}
 
 	var gitRepo *git.Repository
+	lookups := 0
 	var b strings.Builder
 	last := 0
 	// reopen is whether the paragraph of the last embed goes on after it.
 	reopen := false
-	for _, m := range renderedLinkPattern.FindAllStringSubmatchIndex(rendered, -1) {
+	for _, m := range renderedLinkPattern.Regexp().FindAllStringSubmatchIndex(rendered, -1) {
 		start, end := m[0], m[1]
 		href := html.UnescapeString(rendered[m[2]:m[3]])
 		if href != html.UnescapeString(rendered[m[4]:m[5]]) {
@@ -73,6 +82,10 @@ func embedPermalinks(ctx context.Context, logger *logx.Logger, ownerName, repoNa
 		if len(href) <= len(prefix) || !strings.EqualFold(href[:len(prefix)], prefix) {
 			continue
 		}
+		if lookups == permalinkMaxEmbeds {
+			break
+		}
+		lookups++
 
 		if gitRepo == nil {
 			var err error
@@ -167,7 +180,7 @@ func permalinkEmbed(ctx context.Context, gitRepo *git.Repository, href, rest str
 		return ""
 	}
 	blob := entry.Blob()
-	if blob.Size(ctx) >= conf.UI.MaxDisplayFileSize {
+	if size := blob.Size(ctx); size >= conf.UI.MaxDisplayFileSize || size > permalinkMaxFileSize {
 		return ""
 	}
 	p, err := blob.Bytes(ctx)

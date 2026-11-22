@@ -512,6 +512,10 @@ func (s *UsersStore) DeleteByID(ctx context.Context, userID int64, skipRewriteAu
 			{&Access{}, "user_id = @userID"},
 			{&Action{}, "user_id = @userID"},
 			{&IssueUser{}, "uid = @userID"},
+			{&ReviewRequest{}, "reviewer_id = @userID"},
+			// Nobody else sees the reviews the user has not submitted.
+			{&Comment{}, "poster_id = @userID AND is_pending"},
+			{&Review{}, fmt.Sprintf("reviewer_id = @userID AND state = %d", ReviewStatePending)},
 			{&EmailAddress{}, "uid = @userID"},
 			{&User{}, "id = @userID"},
 		} {

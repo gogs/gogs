@@ -386,7 +386,7 @@ func toRepoIssueView(ctx context.Context, logger *logx.Logger, viewer *database.
 		IsClosed:    issue.IsClosed,
 		Poster:      toIssueUser(issue.Poster),
 		CreatedAt:   issue.Created.UTC(),
-		ContentHTML: markAppLinks([]byte(embedPermalinks(ctx, logger, repoCtx.Owner.Name, repo.Name, string(markup.MarkdownWithCommits(issue.Content, repo.Link(), metas, commits)))), repo),
+		ContentHTML: markAppLinks([]byte(embedPermalinks(ctx, logger, repoCtx.Owner.Name, repo.Name, repoCtx.Viewer.CanRead(), string(markup.MarkdownWithCommits(issue.Content, repo.Link(), metas, commits)))), repo),
 		Content:     issue.Content,
 		ContentHash: cryptox.SHA256(issue.Content),
 		Attachments: toIssueAttachments(issue.Attachments, issue.Content),
@@ -535,7 +535,7 @@ func (cv *commentViewer) toItem(comment *database.Comment) issueComment {
 	if comment.Content != "" {
 		// Permalinks are embedded before the links are marked, which keeps them
 		// as rendered.
-		item.ContentHTML = markAppLinks([]byte(embedPermalinks(cv.ctx, cv.logger, cv.repoCtx.Owner.Name, repo.Name, string(markup.MarkdownWithCommits(comment.Content, repo.Link(), cv.metas, cv.commits)))), repo)
+		item.ContentHTML = markAppLinks([]byte(embedPermalinks(cv.ctx, cv.logger, cv.repoCtx.Owner.Name, repo.Name, cv.repoCtx.Viewer.CanRead(), string(markup.MarkdownWithCommits(comment.Content, repo.Link(), cv.metas, cv.commits)))), repo)
 	}
 	item.Attachments = toIssueAttachments(comment.Attachments, comment.Content)
 	// The poster and admins can change a comment. The summary of a review is
@@ -966,7 +966,7 @@ func postRepoMarkdown(c flamego.Context, logger *logx.Logger, repoCtx *repoConte
 		fileLink := repo.Link() + "/src/" + escapePath(req.Branch) + "/" + escapePath(pathx.Clean(req.Path))
 		html = markup.MarkdownFile(req.Text, path.Dir(fileLink), repoCtx.metas())
 	default:
-		html = []byte(embedPermalinks(c.Request().Context(), logger, repoCtx.Owner.Name, repo.Name, string(markup.Markdown(req.Text, repo.Link(), repoCtx.metas()))))
+		html = []byte(embedPermalinks(c.Request().Context(), logger, repoCtx.Owner.Name, repo.Name, repoCtx.Viewer.CanRead(), string(markup.Markdown(req.Text, repo.Link(), repoCtx.metas()))))
 	}
 	return http.StatusOK, map[string]string{"html": markAppLinks(html, repo)}, nil
 }

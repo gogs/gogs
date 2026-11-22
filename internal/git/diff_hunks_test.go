@@ -1,6 +1,12 @@
 package git
 
 import (
+	"context"
+	"os"
+	osexec "os/exec"
+	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -74,4 +80,55 @@ func TestDiffHunk_LinesEndingAt(t *testing.T) {
 	assert.Same(t, h, HunkContaining(hunks, false, 6, 9))
 	assert.Nil(t, HunkContaining(hunks, false, 6, 10))
 	assert.Same(t, h, HunkContaining(hunks, true, 8, 8))
+}
+
+func TestRepository_DiffFileHunks(t *testing.T) {
+	dir := t.TempDir()
+	run := func(args ...string) string {
+		t.Helper()
+		cmd := osexec.Command("git", append([]string{"-c", "user.name=a", "-c", "user.email=a@example.com"}, args...)...)
+		cmd.Dir = dir
+		out, err := cmd.CombinedOutput()
+		require.NoError(t, err, string(out))
+		return strings.TrimSpace(string(out))
+	}
+	var lines []string
+	for i := 1; i <= 20; i++ {
+		lines = append(lines, "line "+strconv.Itoa(i))
+	}
+	run("init", "-q", "-b", "main")
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "a.txt"), []byte(strings.Join(lines, "\n")+"\n"), 0o600))
+	run("add", ".")
+	run("commit", "-q", "-m", "a")
+	base := run("rev-parse", "HEAD")
+	run("mv", "a.txt", "b.txt")
+	lines[4] = "five"
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "b.txt"), []byte(strings.Join(lines, "\n")+"\n"), 0o600))
+	run("add", ".")
+	run("commit", "-q", "-m", "b")
+	head := run("rev-parse", "HEAD")
+
+	repo, err := Open(dir)
+	require.NoError(t, err)
+	ctx := context.Background()
+
+	// A renamed file diffs against its old path, and shows only the change.
+	hunks, err := repo.DiffFileHunks(ctx, base, head, "a.txt", "b.txt", 0)
+	require.NoError(t, err)
+	require.Len(t, hunks, 1)
+	assert.Equal(t, []string{"-line 5", "+five"}, hunks[0].Lines)
+
+	// Without the old path, the file is all new.
+	hunks, err = repo.DiffFileHunks(ctx, base, head, "", "b.txt", 0)
+	require.NoError(t, err)
+	require.Len(t, hunks, 1)
+	assert.Equal(t, 0, hunks[0].OldLines)
+
+	// Paths are not pathspec patterns.
+	hunks, err = repo.DiffFileHunks(ctx, base, head, "", ":(glob)*.txt", 0)
+	require.NoError(t, err)
+	assert.Empty(t, hunks)
+	hunks, err = repo.DiffFileHunks(ctx, base, head, "", "*.txt", 0)
+	require.NoError(t, err)
+	assert.Empty(t, hunks)
 }

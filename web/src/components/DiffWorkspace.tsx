@@ -180,6 +180,8 @@ type DiffAnnotation = { kind: "rich" } | { kind: "image" } | { kind: "thread"; i
 // "old" or "new", and line is the last line of the range.
 export interface DiffLineTarget {
   path: string;
+  // oldPath is the path at the base of a renamed file.
+  oldPath?: string;
   side: "old" | "new";
   startSide: "old" | "new";
   startLine: number;
@@ -480,6 +482,7 @@ export function DiffWorkspace({
       itemId: context.item.id,
       target: {
         path: context.item.fileDiff.name,
+        oldPath: context.item.fileDiff.prevName,
         side: end.side,
         startSide: start.side,
         startLine: start.line,

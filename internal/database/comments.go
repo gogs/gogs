@@ -528,6 +528,10 @@ func (s *CommentsStore) Update(ctx context.Context, logger *logx.Logger, doer *U
 		return err
 	}
 
+	// Nobody else sees a pending comment of a review until it is submitted.
+	if c.IsPending {
+		return nil
+	}
 	if err = newIssuesStore(s.db).LoadAttributes(ctx, c.Issue); err != nil {
 		logger.Error("Failed to load issue attributes", "issueID", c.IssueID, "error", err)
 		return nil

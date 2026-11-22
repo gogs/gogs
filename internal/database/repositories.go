@@ -2873,8 +2873,8 @@ func CheckRepoStats(logger *logx.Logger) {
 		},
 		// Issue.NumComments
 		{
-			"SELECT issue.id FROM issue WHERE issue.num_comments != (SELECT COUNT(*) FROM comment WHERE issue_id = issue.id AND type = 0)",
-			"UPDATE issue SET num_comments = (SELECT COUNT(*) FROM comment WHERE issue_id = ? AND type = 0) WHERE id = ?",
+			fmt.Sprintf("SELECT issue.id FROM issue WHERE issue.num_comments != (SELECT COUNT(*) FROM comment WHERE issue_id = issue.id AND type IN (%d, %d) AND NOT is_pending)", CommentTypeComment, CommentTypeCode),
+			fmt.Sprintf("UPDATE issue SET num_comments = (SELECT COUNT(*) FROM comment WHERE issue_id = ? AND type IN (%d, %d) AND NOT is_pending) WHERE id = ?", CommentTypeComment, CommentTypeCode),
 			"issue count 'num_comments'",
 		},
 	}

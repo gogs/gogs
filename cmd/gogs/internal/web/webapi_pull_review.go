@@ -38,6 +38,8 @@ type pullReviewStatus struct {
 	// RequiredApprovals is how many approvals the protection of the base
 	// branch requires.
 	RequiredApprovals int `json:"requiredApprovals,omitempty"`
+	// Approvals is how many approvals count toward RequiredApprovals.
+	Approvals int `json:"approvals"`
 	// MergeBlockers are why the pull request cannot merge yet: "approvals",
 	// "changes_requested" and "unresolved_conversations".
 	MergeBlockers []string `json:"mergeBlockers"`
@@ -137,6 +139,7 @@ func describeReviews(ctx context.Context, logger *logx.Logger, viewer *database.
 		status.Reviewers = append(status.Reviewers, r)
 	}
 
+	status.Approvals = approvals
 	if protect != nil && protect.Protected && protect.RequiredApprovals > 0 {
 		status.RequiredApprovals = protect.RequiredApprovals
 		if approvals < protect.RequiredApprovals {
@@ -170,9 +173,13 @@ func describeReviews(ctx context.Context, logger *logx.Logger, viewer *database.
 			if err != nil {
 				return nil, errors.Wrap(err, "count pending comments")
 			}
-			status.ViewerPendingReview = &pendingReviewInfo{CommentCount: n}
+			// A pending review whose comments were all deleted is not one the
+			// viewer is still writing.
+			if n > 0 {
+				status.ViewerPendingReview = &pendingReviewInfo{CommentCount: n}
+			}
 		}
-		if viewerCanRequestReviews(repoCtx, issue) {
+		if viewerCanRequestReviews(repoCtx) {
 			if status.ReviewerOptions, err = listReviewerOptions(ctx, repo, issue); err != nil {
 				return nil, errors.Wrap(err, "list reviewer options")
 			}
@@ -187,9 +194,10 @@ func canWriteRepo(ctx context.Context, logger *logx.Logger, repo *database.Repos
 }
 
 // viewerCanRequestReviews returns whether the viewer can ask others to review
-// the pull request: writers and whoever opened it.
-func viewerCanRequestReviews(repoCtx *repoContext, issue *database.Issue) bool {
-	return viewerCanEditIssue(repoCtx, issue)
+// the pull request: writers, like for assigning, since the options list who
+// can write to the repository.
+func viewerCanRequestReviews(repoCtx *repoContext) bool {
+	return repoCtx.Viewer.CanWrite()
 }
 
 // listReviewerOptions returns the users who can be asked to review the pull
@@ -237,7 +245,7 @@ func describeThreads(ctx context.Context, cv *commentViewer, gitRepo *git.Reposi
 		key := diffKey{from, to, path}
 		hunks, ok := diffs[key]
 		if !ok {
-			hunks, err = gitRepo.DiffFileHunks(ctx, from, to, path, 0)
+			hunks, err = gitRepo.DiffFileHunks(ctx, from, to, "", path, 0)
 			if err != nil {
 				// The commit may be gone, e.g., after a force push.
 				cv.logger.Debug("Failed to diff thread lines", "from", from, "to", to, "path", path, "error", err)
@@ -329,7 +337,10 @@ func requireHeadSHA(l i18n.Locale, rng *pullRange, headSHA string) (statusCode i
 }
 
 type repoPullCodeCommentRequest struct {
-	Path      string `json:"path" validate:"required"`
+	Path string `json:"path" validate:"required"`
+	// OldPath is the path of the file at the base when the pull request
+	// renamed it.
+	OldPath   string `json:"oldPath"`
 	Side      string `json:"side" validate:"oneof=old new"`
 	StartSide string `json:"startSide" validate:"oneof=old new"`
 	StartLine int64  `json:"startLine" validate:"min=1"`
@@ -370,7 +381,7 @@ func postRepoPullCodeComment(c flamego.Context, logger *logx.Logger, l i18n.Loca
 	}
 
 	// Comments are only on the lines the diff shows, which are in its hunks.
-	hunks, err := rng.GitRepo.DiffFileHunks(ctx, rng.Base, rng.Head, req.Path, 3)
+	hunks, err := rng.GitRepo.DiffFileHunks(ctx, rng.Base, rng.Head, req.OldPath, req.Path, 3)
 	if err != nil {
 		logger.Error("Failed to diff file", "path", req.Path, "issueID", issue.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "diff file")
@@ -512,8 +523,8 @@ func deleteRepoPullThreadResolved(c flamego.Context, logger *logx.Logger, viewer
 // changeRepoPullReviewer requests a review from the user, or withdraws the
 // request.
 func changeRepoPullReviewer(c flamego.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, issue *database.Issue, requested bool) (statusCode int, resp any, err error) {
-	if !viewerCanRequestReviews(repoCtx, issue) {
-		return http.StatusForbidden, nil, errors.New("only writers and the poster can request reviews")
+	if !viewerCanRequestReviews(repoCtx) {
+		return http.StatusForbidden, nil, errors.New("only writers can request reviews")
 	}
 	reviewer, err := database.Handle.Users().GetByUsername(c.Request().Context(), c.Param("username"))
 	if err != nil {

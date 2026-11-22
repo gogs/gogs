@@ -648,7 +648,6 @@ export function ReviewersSection({ issueRef, data }: { issueRef: IssueRef; data:
 export function ReviewStatusRows({ data }: { data: RepoPullData }): ReactNode {
   const { t } = useTranslation();
   const rows: { icon: LucideIcon; className: string; title: string; desc?: string }[] = [];
-  const approvals = data.reviewers.filter((r) => r.counts && r.state === "approved" && !r.stale).length;
   if (data.reviewDecision === "changes_requested") {
     rows.push({
       icon: CircleAlert,
@@ -661,7 +660,10 @@ export function ReviewStatusRows({ data }: { data: RepoPullData }): ReactNode {
       icon: Clock,
       className: "text-(--color-warning)",
       title: t("repo.pulls.review.decision_review_required"),
-      desc: t("repo.pulls.review.blocker_approvals", { approvals, required: data.requiredApprovals ?? 0 }),
+      desc: t("repo.pulls.review.blocker_approvals", {
+        approvals: data.approvals,
+        required: data.requiredApprovals ?? 0,
+      }),
     });
   } else if (data.reviewDecision === "approved") {
     rows.push({

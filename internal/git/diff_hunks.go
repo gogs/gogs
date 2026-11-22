@@ -17,17 +17,26 @@ type DiffHunk struct {
 }
 
 // DiffFileHunks returns the hunks of the diff of the file at path between the
-// base and head revisions, with the given number of lines of context. Renames
-// are not followed, so a renamed file shows as deleted at its old path.
-func (r *Repository) DiffFileHunks(ctx context.Context, base, head, path string, contextLines int) ([]*DiffHunk, error) {
+// base and head revisions, with the given number of lines of context. When
+// oldPath names another file, the file was renamed from it, and the diff is
+// of the old file at base to the file at head. Otherwise renames are not
+// followed, so a renamed file shows as added at its new path.
+func (r *Repository) DiffFileHunks(ctx context.Context, base, head, oldPath, path string, contextLines int) ([]*DiffHunk, error) {
 	ctx, span := tracer.Start(ctx, "git.Repository.DiffFileHunks")
 	defer span.End()
 
-	args := []string{
-		"diff", "--no-color", "--no-ext-diff", "--no-renames", "-U" + strconv.Itoa(contextLines),
-		"--end-of-options", base, head, "--", path,
+	args := []string{"diff", "--no-color", "--no-ext-diff", "-U" + strconv.Itoa(contextLines)}
+	// Paths are literal, so a path cannot select other files with the magic
+	// of pathspecs, e.g., ":(glob)**".
+	paths := []string{":(literal)" + path}
+	if oldPath != "" && oldPath != path {
+		args = append(args, "--find-renames")
+		paths = append(paths, ":(literal)"+oldPath)
+	} else {
+		args = append(args, "--no-renames")
 	}
-	stdout, err := exec(ctx, r.path, args, nil)
+	args = append(args, "--end-of-options", base, head, "--")
+	stdout, err := exec(ctx, r.path, append(args, paths...), nil)
 	if err != nil {
 		return nil, err
 	}

@@ -326,11 +326,11 @@ func (s *ReviewsStore) DiscardPending(ctx context.Context, issueID, reviewerID i
 	}
 
 	var comments []*Comment
-	err = s.db.WithContext(ctx).Where("review_id = ? AND is_pending = ?", review.ID, true).Find(&comments).Error
-	if err != nil {
-		return errors.Wrap(err, "find pending comments")
-	}
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		err := tx.Where("review_id = ? AND is_pending = ?", review.ID, true).Find(&comments).Error
+		if err != nil {
+			return errors.Wrap(err, "find pending comments")
+		}
 		for _, c := range comments {
 			// Replies the reviewer has not submitted cannot have replies.
 			err := tx.Where("id = ? OR reply_to_id = ?", c.ID, c.ID).Delete(new(Comment)).Error

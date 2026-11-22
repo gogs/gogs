@@ -187,6 +187,16 @@ func TestPullReviews(t *testing.T) {
 		assert.Equal(t, http.StatusNoContent, status, "response: %s", body)
 	})
 
+	t.Run("checking repository stats keeps code comments counted", func(t *testing.T) {
+		issue, err := database.Handle.Issues().GetByIndex(t.Context(), repo.ID, index)
+		require.NoError(t, err)
+		require.Positive(t, issue.NumComments)
+		database.CheckRepoStats(logger)
+		checked, err := database.Handle.Issues().GetByIndex(t.Context(), repo.ID, index)
+		require.NoError(t, err)
+		assert.Equal(t, issue.NumComments, checked.NumComments)
+	})
+
 	t.Run("deleting the repository deletes its reviews", func(t *testing.T) {
 		issue, err := database.Handle.Issues().GetByIndex(t.Context(), repo.ID, index)
 		require.NoError(t, err)

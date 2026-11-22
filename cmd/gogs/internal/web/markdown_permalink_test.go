@@ -50,7 +50,7 @@ func TestEmbedPermalinks(t *testing.T) {
 			link, map[bool]string{true: fmt.Sprint(first), false: fmt.Sprintf("%d-L%d", first, last)}[first == last], commitID, first, last, code)
 	}
 	render := func(text string) string {
-		return embedPermalinks(context.Background(), logx.NewNoopLogger(), "alice", "demo", string(markup.Markdown(text, "/alice/demo", nil)))
+		return embedPermalinks(context.Background(), logx.NewNoopLogger(), "alice", "demo", true, string(markup.Markdown(text, "/alice/demo", nil)))
 	}
 
 	tests := []struct {
@@ -111,4 +111,19 @@ func TestEmbedPermalinks(t *testing.T) {
 			assert.NotContains(t, got, "data-permalink")
 		})
 	}
+
+	t.Run("viewer who cannot read the code", func(t *testing.T) {
+		got := embedPermalinks(context.Background(), logx.NewNoopLogger(), "alice", "demo", false, string(markup.Markdown(link+"#L5", "/alice/demo", nil)))
+		assert.NotContains(t, got, "data-permalink")
+		assert.NotContains(t, got, "line 5")
+	})
+
+	t.Run("embeds per document are capped", func(t *testing.T) {
+		text := strings.Repeat(link+"#L5\n\n", permalinkMaxEmbeds+5)
+		assert.Equal(t, permalinkMaxEmbeds, strings.Count(render(text), "data-permalink"))
+
+		// Links to lines that do not exist are looked up too.
+		missing := strings.Repeat("https://gogs.example.com/alice/demo/src/"+commitID+"/nope.go#L1\n\n", permalinkMaxEmbeds)
+		assert.NotContains(t, render(missing+link+"#L5"), "data-permalink")
+	})
 }
