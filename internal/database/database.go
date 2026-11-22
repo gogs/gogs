@@ -89,7 +89,7 @@ func NewConnection(logger *logx.Logger, logQueries bool) (*gorm.DB, error) {
 		conf.UseMySQL = true
 		db = db.Set("gorm:table_options", "ENGINE=InnoDB").Session(&gorm.Session{})
 		if statementBinlog = usesStatementBinlog(db); statementBinlog {
-			logger.Warn("MySQL logs statements to its binary log, so changes to repositories and teams stay at REPEATABLE READ and concurrent ones may race. Set binlog_format to ROW or MIXED to avoid it.")
+			logger.Warn("MySQL logs statements to its binary log, so changes to repositories and teams stay at REPEATABLE READ, and concurrent ones may miss accesses they should give. Set binlog_format to ROW or MIXED and restart to avoid it.")
 		}
 	case "sqlite3":
 		conf.UseSQLite3 = true

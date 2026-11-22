@@ -251,9 +251,15 @@ func (s *TeamsStore) addMember(ctx context.Context, orgID, teamID, userID int64)
 	if err != nil {
 		return errors.Wrap(err, "list team repositories")
 	}
+	// The lock reads the latest owner even when other reads come from an
+	// older snapshot, e.g., at REPEATABLE READ on MySQL.
+	ownedIDs := make([]int64, 0, len(lockedIDs))
 	for _, repoID := range lockedIDs {
-		if _, _, err := lockRepository(s.db, repoID); err != nil {
+		ownerID, exists, err := lockRepository(s.db, repoID)
+		if err != nil {
 			return err
+		} else if exists && ownerID == orgID {
+			ownedIDs = append(ownedIDs, repoID)
 		}
 	}
 
@@ -289,11 +295,11 @@ func (s *TeamsStore) addMember(ctx context.Context, orgID, teamID, userID int64)
 		}
 	}
 	for _, repoID := range repoIDs {
+		if !slices.Contains(ownedIDs, repoID) {
+			continue
+		}
 		repo, err := newReposStore(s.db).getWithAttributes(ctx, repoID)
 		if err != nil {
-			if IsErrRepoNotExist(err) {
-				continue
-			}
 			return errors.Wrapf(err, "get repository %d", repoID)
 		}
 		if err = newPermissionsStore(s.db).recalculateTeamAccesses(ctx, repo, 0); err != nil {
