@@ -1236,8 +1236,15 @@ func (s *IssuesStore) updateMentions(ctx context.Context, issue *Issue, lowerNam
 	}
 
 	db := s.db.WithContext(ctx)
+	// The issue may have been closed or reopened since the caller loaded it.
+	var isClosed bool
+	err := db.Model(new(Issue)).Where("id = ?", issue.ID).Select("is_closed").Scan(&isClosed).Error
+	if err != nil {
+		return errors.Wrap(err, "get issue status")
+	}
+
 	users := make([]*User, 0, len(lowerNames))
-	err := db.Where("lower_name IN ?", lowerNames).Order("lower_name ASC").Find(&users).Error
+	err = db.Where("lower_name IN ?", lowerNames).Order("lower_name ASC").Find(&users).Error
 	if err != nil {
 		return errors.Wrap(err, "list mentioned users")
 	}
@@ -1269,7 +1276,7 @@ func (s *IssuesStore) updateMentions(ctx context.Context, issue *Issue, lowerNam
 			// Mentions before Gogs 0.15 created rows without the repository.
 			err = db.Model(iu).Updates(map[string]any{"is_mentioned": true, "repo_id": issue.RepoID}).Error
 		} else {
-			err = db.Create(&IssueUser{UserID: userID, RepoID: issue.RepoID, IssueID: issue.ID, IsMentioned: true, IsClosed: issue.IsClosed}).Error
+			err = db.Create(&IssueUser{UserID: userID, RepoID: issue.RepoID, IssueID: issue.ID, IsMentioned: true, IsClosed: isClosed}).Error
 		}
 		if err != nil {
 			return errors.Wrapf(err, "mention user %d", userID)

@@ -700,10 +700,13 @@ func issuesUpdateMentions(t *testing.T, ctx context.Context, s *IssuesStore) {
 	for _, uid := range []int64{bob.ID, carol.ID} {
 		require.NoError(t, s.db.Create(&OrgUser{UID: uid, OrgID: org.ID}).Error)
 	}
+	// The issue was closed after the caller loaded it.
+	closed := &Issue{RepoID: 7, Index: 1, IsClosed: true}
+	require.NoError(t, s.db.Create(closed).Error)
+	issue := &Issue{ID: closed.ID, RepoID: 7}
 	// Alice already relates to the issue and keeps her other flags. Her row is
 	// from a mention before Gogs 0.15, which did not record the repository.
-	require.NoError(t, s.db.Create(&IssueUser{IssueID: 1, UserID: alice.ID, IsPoster: true, IsClosed: true}).Error)
-	issue := &Issue{ID: 1, RepoID: 7, IsClosed: true}
+	require.NoError(t, s.db.Create(&IssueUser{IssueID: issue.ID, UserID: alice.ID, IsPoster: true, IsClosed: true}).Error)
 
 	assert.Equal(t, []string{"is-mention-alice", "is-mention-org"}, findLowerMentions("Hi @Is-Mention-Alice and @IS-MENTION-ORG"))
 
@@ -711,7 +714,7 @@ func issuesUpdateMentions(t *testing.T, ctx context.Context, s *IssuesStore) {
 	require.NoError(t, err)
 
 	var ius []*IssueUser
-	err = s.db.Where("issue_id = ?", 1).Order("uid").Find(&ius).Error
+	err = s.db.Where("issue_id = ?", issue.ID).Order("uid").Find(&ius).Error
 	require.NoError(t, err)
 	got := map[int64][2]bool{}
 	for _, iu := range ius {
