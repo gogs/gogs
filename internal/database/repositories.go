@@ -1116,17 +1116,16 @@ func (s *RepositoriesStore) Create(ctx context.Context, logger *logx.Logger, doe
 	}
 
 	repo := &Repository{
-		OwnerID:      owner.ID,
-		Owner:        owner,
-		Name:         opts.Name,
-		LowerName:    strings.ToLower(opts.Name),
-		Description:  opts.Description,
-		IsPrivate:    opts.IsPrivate,
-		IsUnlisted:   opts.IsUnlisted,
-		EnableWiki:   true,
-		EnableIssues: true,
-		EnablePulls:  true,
-		// xorm inserts false for a zero bool instead of the column default.
+		OwnerID:         owner.ID,
+		Owner:           owner,
+		Name:            opts.Name,
+		LowerName:       strings.ToLower(opts.Name),
+		Description:     opts.Description,
+		IsPrivate:       opts.IsPrivate,
+		IsUnlisted:      opts.IsUnlisted,
+		EnableWiki:      true,
+		EnableIssues:    true,
+		EnablePulls:     true,
 		PullsAllowMerge: true,
 	}
 
@@ -1372,17 +1371,16 @@ func (s *RepositoriesStore) Fork(ctx context.Context, logger *logx.Logger, doer,
 	}
 
 	repo := &Repository{
-		OwnerID:       owner.ID,
-		Owner:         owner,
-		Name:          name,
-		LowerName:     strings.ToLower(name),
-		Description:   desc,
-		DefaultBranch: baseRepo.DefaultBranch,
-		IsPrivate:     baseRepo.IsPrivate || conf.Repository.ForcePrivate,
-		IsUnlisted:    baseRepo.IsUnlisted,
-		IsFork:        true,
-		ForkID:        baseRepo.ID,
-		// xorm inserts false for a zero bool instead of the column default.
+		OwnerID:         owner.ID,
+		Owner:           owner,
+		Name:            name,
+		LowerName:       strings.ToLower(name),
+		Description:     desc,
+		DefaultBranch:   baseRepo.DefaultBranch,
+		IsPrivate:       baseRepo.IsPrivate || conf.Repository.ForcePrivate,
+		IsUnlisted:      baseRepo.IsUnlisted,
+		IsFork:          true,
+		ForkID:          baseRepo.ID,
 		PullsAllowMerge: true,
 	}
 
@@ -2072,11 +2070,11 @@ func (s *RepositoriesStore) ListOwnedAndCollaborative(ctx context.Context, userI
 type SearchRepoOptions struct {
 	Keyword  string
 	OwnerID  int64
-	UserID   int64 // When set results will contain all public/private repositories user has access to
+	UserID   int64 // When set, results will contain all public/private repositories user has access to.
 	OrderBy  string
-	Private  bool // Include private repositories in results
+	Private  bool // Include private repositories in results.
 	Page     int
-	PageSize int // Can be smaller than or equal to setting.ExplorePagingNum
+	PageSize int // Can be smaller than or equal to conf.UI.ExplorePagingNum.
 }
 
 // Search returns the repositories of given page whose name or description
@@ -2090,7 +2088,7 @@ func (s *RepositoriesStore) Search(ctx context.Context, opts SearchRepoOptions) 
 		query = query.Joins("LEFT JOIN access ON access.repo_id = repo.id").
 			Where("(repo.owner_id = ? OR access.user_id = ? OR (repo.is_private = ? AND repo.is_unlisted = ?) OR (repo.is_private = ? AND (repo.allow_public_wiki = ? OR repo.allow_public_issues = ?)))", opts.UserID, opts.UserID, false, false, true, true, true)
 	} else {
-		// Only return public repositories if opts.Private is not set
+		// Only return public repositories if opts.Private is not set.
 		if !opts.Private {
 			query = query.Where("((repo.is_private = ? AND repo.is_unlisted = ?) OR (repo.is_private = ? AND (repo.allow_public_wiki = ? OR repo.allow_public_issues = ?)))", false, false, true, true, true)
 		}
@@ -2129,8 +2127,8 @@ func (s *RepositoriesStore) listUsersWithAccess(ctx context.Context, repo *Repos
 		return nil, err
 	}
 
-	// Leave a seat for owner itself to append later, but if owner is an organization
-	// and just waste 1 unit is cheaper than re-allocate memory once.
+	// Leave a seat for owner itself to append later. If owner is an organization,
+	// wasting 1 unit is cheaper than re-allocating memory once.
 	users := make([]*User, 0, len(accesses)+1)
 	if len(accesses) > 0 {
 		userIDs := make([]int64, len(accesses))
@@ -2651,12 +2649,11 @@ func DeleteOldRepositoryArchives(logger *logx.Logger) {
 
 				archivePath := filepath.Join(dirPath, fi.Name())
 				if err = os.Remove(archivePath); err != nil {
-					const fmtStr = "Failed to health delete archive %q: %v"
 					logger.Warn("Failed to delete old repository archive", "archivePath", archivePath, "error", err)
 					if err = Handle.Notices().Create(
 						context.TODO(),
 						NoticeTypeRepository,
-						fmt.Sprintf(fmtStr, archivePath, err),
+						fmt.Sprintf("Failed to health delete archive %q: %v", archivePath, err),
 					); err != nil {
 						logger.Error("Failed to create repository notice", "error", err)
 					}
@@ -2779,12 +2776,11 @@ func GitFsck(logger *logx.Logger) {
 		})
 		cancel()
 		if err != nil {
-			const fmtStr = "Failed to perform health check on repository %q: %v"
 			logger.Warn("Failed to perform health check on repository", "repoPath", repoPath, "error", err)
 			if err = Handle.Notices().Create(
 				context.TODO(),
 				NoticeTypeRepository,
-				fmt.Sprintf(fmtStr, repoPath, err),
+				fmt.Sprintf("Failed to perform health check on repository %q: %v", repoPath, err),
 			); err != nil {
 				logger.Error("Failed to create repository notice", "error", err)
 			}
