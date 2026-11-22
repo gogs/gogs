@@ -2,6 +2,8 @@ package integrationtests
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"os"
@@ -27,6 +29,7 @@ type issueView struct {
 	Title       string `json:"title"`
 	IsClosed    bool   `json:"isClosed"`
 	Content     string `json:"content"`
+	ContentHash string `json:"contentHash"`
 	ContentHTML string `json:"contentHTML"`
 	Poster      struct {
 		Name string `json:"name"`
@@ -50,6 +53,11 @@ type issueView struct {
 	LabelOptions   []issueLabel `json:"labelOptions"`
 	ViewerCanEdit  bool         `json:"viewerCanEdit"`
 	ViewerCanWrite bool         `json:"viewerCanWrite"`
+}
+
+func sha256Hex(s string) string {
+	sum := sha256.Sum256([]byte(s))
+	return hex.EncodeToString(sum[:])
 }
 
 func issueGet(t *testing.T, c *client, repo *Repository, index int64) *issueView {
@@ -220,10 +228,11 @@ func TestIssueEditAndState(t *testing.T) {
 	assert.Equal(t, "New _content_", got.Content)
 
 	// A change made from content that changed since is refused.
-	status, body = posterClient.do(http.MethodPatch, path, map[string]any{"content": "- [x] Stale", "previousContent": "Old content"})
+	status, body = posterClient.do(http.MethodPatch, path, map[string]any{"content": "- [x] Stale", "previousContentHash": sha256Hex("Old content")})
 	assert.Equal(t, http.StatusConflict, status, "response: %s", body)
 	assert.Equal(t, "New _content_", issueFromDatabase(t, repo, index).Content)
-	status, body = posterClient.do(http.MethodPatch, path, map[string]any{"content": "Newer", "previousContent": "New _content_"})
+	assert.Equal(t, sha256Hex("New _content_"), issueGet(t, posterClient, repo, index).ContentHash)
+	status, body = posterClient.do(http.MethodPatch, path, map[string]any{"content": "Newer", "previousContentHash": sha256Hex("New _content_")})
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 	assert.Equal(t, "Newer", issueFromDatabase(t, repo, index).Content)
 
@@ -303,7 +312,7 @@ func TestIssueComments(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "I disagree.", comment.Content)
 
-	status, body = commenterClient.do(http.MethodPatch, commentPath, map[string]any{"content": "Stale", "previousContent": "I **agree**."})
+	status, body = commenterClient.do(http.MethodPatch, commentPath, map[string]any{"content": "Stale", "previousContentHash": sha256Hex("I **agree**.")})
 	assert.Equal(t, http.StatusConflict, status, "response: %s", body)
 	comment, err = database.Handle.Comments().GetByID(t.Context(), created.ID)
 	require.NoError(t, err)

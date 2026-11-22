@@ -164,8 +164,9 @@ export function IssueConversation({
             data.viewerCanEdit
               ? {
                   content: data.content,
-                  save: (content, attachments, previousContent) =>
-                    updateRepoIssue(ref, { content, attachments, previousContent }),
+                  contentHash: data.contentHash,
+                  save: (content, attachments, previousContentHash) =>
+                    updateRepoIssue(ref, { content, attachments, previousContentHash }),
                 }
               : undefined
           }
@@ -186,8 +187,9 @@ export function IssueConversation({
                 comment.viewerCanEdit
                   ? {
                       content: comment.content ?? "",
-                      save: (content, attachments, previousContent) =>
-                        updateRepoIssueComment(ref, comment.id, content, attachments, previousContent),
+                      contentHash: comment.contentHash ?? "",
+                      save: (content, attachments, previousContentHash) =>
+                        updateRepoIssueComment(ref, comment.id, content, attachments, previousContentHash),
                       remove: () => deleteRepoIssueComment(ref, comment.id),
                     }
                   : undefined
@@ -367,7 +369,10 @@ function CommentCard({
   // and remove deletes the comment, for viewers who can change it.
   edit?: {
     content: string;
-    save: (content: string, attachments: string[], previousContent?: string) => Promise<void>;
+    // contentHash is the hash of content, which a change made from it sends
+    // back to fail when the content changed since.
+    contentHash: string;
+    save: (content: string, attachments: string[], previousContentHash?: string) => Promise<void>;
     remove?: () => Promise<void>;
   };
 }) {
@@ -454,7 +459,7 @@ function CommentCard({
                       // a change failed on for having changed since.
                       save: async (content) => {
                         try {
-                          await edit.save(content, [], edit.content);
+                          await edit.save(content, [], edit.contentHash);
                         } finally {
                           await router.invalidate();
                         }

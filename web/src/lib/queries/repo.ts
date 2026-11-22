@@ -642,8 +642,9 @@ export interface IssueComment {
   // commit of a commit reference.
   contentHTML?: string;
   // content is the Markdown of a comment, only sent to viewers who can edit
-  // it.
+  // it, with its hash, see updateRepoIssue.
   content?: string;
+  contentHash?: string;
   tag?: "owner" | "writer" | "poster";
   attachments?: IssueAttachment[];
   viewerCanEdit?: boolean;
@@ -672,6 +673,8 @@ export interface RepoIssueData extends IssueMetaOptions {
   createdAt: string;
   contentHTML: string;
   content: string;
+  // contentHash is the hash of content, see updateRepoIssue.
+  contentHash: string;
   attachments: IssueAttachment[];
   comments: IssueComment[];
   labels: IssueLabel[];
@@ -778,11 +781,12 @@ function issueURL(issue: IssueRef, path = "") {
 }
 
 // attachments are the UUIDs of the files uploaded while editing the content.
-// updateRepoIssue changes the issue. Given previousContent, the content the new
-// content was made from, the change fails when the content changed since.
+// updateRepoIssue changes the issue. Given previousContentHash, the
+// contentHash of the content the new content was made from, the change fails
+// when the content changed since.
 export function updateRepoIssue(
   issue: IssueRef,
-  form: { title?: string; content?: string; attachments?: string[]; previousContent?: string },
+  form: { title?: string; content?: string; attachments?: string[]; previousContentHash?: string },
 ) {
   return submit<void>("PATCH", issueURL(issue), form);
 }
@@ -796,15 +800,15 @@ export function createRepoIssueComment(issue: IssueRef, form: { content: string;
 }
 
 // updateRepoIssueComment changes the comment, see updateRepoIssue for
-// previousContent.
+// previousContentHash.
 export function updateRepoIssueComment(
   issue: IssueRef,
   id: number,
   content: string,
   attachments: string[] = [],
-  previousContent?: string,
+  previousContentHash?: string,
 ) {
-  return submit<void>("PATCH", issueURL(issue, `/comments/${id}`), { content, attachments, previousContent });
+  return submit<void>("PATCH", issueURL(issue, `/comments/${id}`), { content, attachments, previousContentHash });
 }
 
 export function deleteRepoIssueComment(issue: IssueRef, id: number) {

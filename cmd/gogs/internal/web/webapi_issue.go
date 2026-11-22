@@ -3,6 +3,8 @@ package web
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"io"
 	"mime"
 	"mime/multipart"
@@ -173,6 +175,8 @@ type issueComment struct {
 	// Content is the Markdown of a comment, only sent to viewers who can edit
 	// it.
 	Content string `json:"content,omitempty"`
+	// ContentHash is the hash of Content, see contentHash.
+	ContentHash string `json:"contentHash,omitempty"`
 	// Tag is how the poster of a comment relates to the repository: "owner",
 	// "writer", "poster" or empty.
 	Tag           string            `json:"tag,omitempty"`
@@ -275,13 +279,15 @@ func attachmentSettings(lim attachmentLimits) *issueAttachmentSettings {
 }
 
 type repoIssueView struct {
-	Index       int64             `json:"index"`
-	Title       string            `json:"title"`
-	IsClosed    bool              `json:"isClosed"`
-	Poster      issueUser         `json:"poster"`
-	CreatedAt   time.Time         `json:"createdAt"`
-	ContentHTML string            `json:"contentHTML"`
-	Content     string            `json:"content"`
+	Index       int64     `json:"index"`
+	Title       string    `json:"title"`
+	IsClosed    bool      `json:"isClosed"`
+	Poster      issueUser `json:"poster"`
+	CreatedAt   time.Time `json:"createdAt"`
+	ContentHTML string    `json:"contentHTML"`
+	Content     string    `json:"content"`
+	// ContentHash is the hash of Content, see contentHash.
+	ContentHash string            `json:"contentHash"`
 	Attachments []issueAttachment `json:"attachments"`
 	Comments    []issueComment    `json:"comments"`
 
@@ -330,6 +336,7 @@ func toRepoIssueView(ctx context.Context, logger *logx.Logger, viewer *database.
 		CreatedAt:   issue.Created.UTC(),
 		ContentHTML: string(markup.MarkdownWithCommits(issue.Content, repo.Link(), metas, commits)),
 		Content:     issue.Content,
+		ContentHash: contentHash(issue.Content),
 		Attachments: toIssueAttachments(issue.Attachments, issue.Content),
 		Comments:    make([]issueComment, 0, len(issue.Comments)),
 		Labels:      make([]dashboardIssueLabel, 0, len(issue.Labels)),
@@ -375,6 +382,7 @@ func toRepoIssueView(ctx context.Context, logger *logx.Logger, viewer *database.
 			if viewer != nil && (comment.PosterID == viewer.ID || repoCtx.Viewer.CanAdminister()) {
 				item.ViewerCanEdit = true
 				item.Content = comment.Content
+				item.ContentHash = contentHash(comment.Content)
 			}
 
 			tag, ok := tags[comment.PosterID]
@@ -439,15 +447,23 @@ type repoIssueRequest struct {
 	// Attachments are the UUIDs of the files uploaded while editing the
 	// content.
 	Attachments []string `json:"attachments"`
-	// PreviousContent, when set, is the content the new content was made
-	// from. The content is not saved when it changed since, e.g., by someone
-	// else.
-	PreviousContent *string `json:"previousContent"`
+	// PreviousContentHash, when set, is the hash of the content the new
+	// content was made from, see contentHash. The content is not saved when it
+	// changed since, e.g., by someone else.
+	PreviousContentHash *string `json:"previousContentHash"`
+}
+
+// contentHash returns the hex-encoded SHA-256 of the content of an issue or a
+// comment, which a change sends back to be refused when the content changed
+// since, without sending the whole content again.
+func contentHash(content string) string {
+	sum := sha256.Sum256([]byte(content))
+	return hex.EncodeToString(sum[:])
 }
 
 func patchRepoIssue(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, issue *database.Issue, req repoIssueRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
-	if req.Content != nil && req.PreviousContent != nil && *req.PreviousContent != issue.Content {
+	if req.Content != nil && req.PreviousContentHash != nil && *req.PreviousContentHash != contentHash(issue.Content) {
 		return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("repo::issues.content_changed")}, nil
 	}
 	if req.Title != nil {
@@ -643,10 +659,10 @@ type repoIssueCommentRequest struct {
 	Content string `json:"content"`
 	// Attachments are the UUIDs of the uploaded files to attach.
 	Attachments []string `json:"attachments"`
-	// PreviousContent, when set on a change, is the content the new content
-	// was made from. The content is not saved when it changed since, e.g., by
-	// an admin.
-	PreviousContent *string `json:"previousContent"`
+	// PreviousContentHash, when set on a change, is the hash of the content
+	// the new content was made from, see contentHash. The content is not saved
+	// when it changed since, e.g., by an admin.
+	PreviousContentHash *string `json:"previousContentHash"`
 }
 
 // checkNewAttachments returns the status code and the error to answer with
@@ -727,7 +743,7 @@ func patchRepoIssueComment(c flamego.Context, logger *logx.Logger, l i18n.Locale
 		msg := l.Tr("form::Content") + l.Tr("form::require_error")
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
 	}
-	if req.PreviousContent != nil && *req.PreviousContent != comment.Content {
+	if req.PreviousContentHash != nil && *req.PreviousContentHash != contentHash(comment.Content) {
 		return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("repo::issues.content_changed")}, nil
 	}
 	if statusCode, err = checkNewAttachments(ctx, issueAttachmentLimits(), req.Attachments); err != nil {
