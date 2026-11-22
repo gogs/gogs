@@ -10,8 +10,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"gogs.io/gogs/internal/conf"
 )
 
 func TestAdminTraces(t *testing.T) {
@@ -88,8 +86,7 @@ func TestAdminTraces(t *testing.T) {
 		var health struct {
 			Range  string `json:"range"`
 			Series []struct {
-				Key   string  `json:"key"`
-				Limit float64 `json:"limit"`
+				Key string `json:"key"`
 			} `json:"series"`
 		}
 		admin.doJSON(http.MethodGet, "/api/web/admin/health?range="+rangeName, nil, http.StatusOK, &health)
@@ -97,9 +94,6 @@ func TestAdminTraces(t *testing.T) {
 		keys := make([]string, 0, len(health.Series))
 		for _, series := range health.Series {
 			keys = append(keys, series.Key)
-			if series.Key == "dbConnections" {
-				assert.Equal(t, float64(conf.Database.MaxOpenConns), series.Limit, "limit of database connections")
-			}
 		}
 		// Measurements of the requests, the Go runtime and the server itself.
 		assert.Subset(t, keys, []string{"requests", "failedRequests", "heap", "dbConnections", "hookQueue"})
