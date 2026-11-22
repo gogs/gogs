@@ -1294,6 +1294,8 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 	watcher := newTestIssueUser(t, ctx, s.db, "cf-watcher")
 	newbie := newTestIssueUser(t, ctx, s.db, "cf-newbie")
 	veteran := newTestIssueUser(t, ctx, s.db, "cf-veteran")
+	keeper := newTestIssueUser(t, ctx, s.db, "cf-keeper")
+	var doomed *Team
 	mover := newTestIssueUser(t, ctx, s.db, "cf-mover")
 	var moved *Repository
 	var older *Repository
@@ -1304,10 +1306,12 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 		forkOwner *User // Defaults to bob.
 		private   bool
 		setup     func(base, fork *Repository)
-		holdTeam  bool   // Hold the team instead of the base repository.
-		holdUser  *User  // Hold the user instead of the base repository.
-		before    func() // Runs before the base repository is created.
-		check     func(base, fork *Repository)
+		holdTeam  bool  // Hold the team instead of the base repository.
+		holdUser  *User // Hold the user instead of the base repository.
+		// hold locks the rows to hold instead of the base repository.
+		hold   func(hold *gorm.DB) error
+		before func() // Runs before the base repository is created.
+		check  func(base, fork *Repository)
 		// first starts ahead of second, while the base repository is held.
 		first, second func(base, fork *Repository) error
 	}{
@@ -1521,6 +1525,30 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 			},
 		},
 		{
+			// Deleting the team waits for its members after listing its
+			// repositories, while the repository is added.
+			name:      "delete team while adding a repository to it",
+			baseOwner: org,
+			private:   true,
+			setup: func(base, _ *Repository) {
+				doomed = createTestTeam(t, ctx, teams, org.ID, "doomed", AccessModeWrite)
+				require.NoError(t, teams.AddMember(ctx, org.ID, doomed.ID, keeper.ID))
+			},
+			hold: func(hold *gorm.DB) error {
+				return hold.Clauses(clause.Locking{Strength: "UPDATE"}).Where("team_id = ?", doomed.ID).Find(new([]*TeamUser)).Error
+			},
+			first: func(*Repository, *Repository) error { return teams.Delete(ctx, doomed) },
+			second: func(base, _ *Repository) error {
+				if err := teams.AddRepo(ctx, doomed, base); !IsErrTeamNotExist(err) {
+					return err
+				}
+				return nil
+			},
+			check: func(base, _ *Repository) {
+				assert.NotContains(t, accessModes(t, ctx, newPermissionsStore(s.db), base.ID), keeper.ID, "access through the deleted team")
+			},
+		},
+		{
 			// Deletes the team, so it runs last.
 			name:      "delete team while adding a member who is in the organization",
 			baseOwner: org,
@@ -1555,7 +1583,9 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 		hold := s.db.Begin()
 		require.NoError(t, hold.Error)
 		defer hold.Rollback()
-		if tc.holdUser != nil {
+		if tc.hold != nil {
+			require.NoError(t, tc.hold(hold))
+		} else if tc.holdUser != nil {
 			require.NoError(t, hold.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", tc.holdUser.ID).Find(new(User)).Error)
 		} else if tc.holdTeam {
 			require.NoError(t, hold.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", readers.ID).Find(new(Team)).Error)
