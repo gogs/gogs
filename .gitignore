@@ -4,7 +4,6 @@ dist/
 .moon/cache/
 node_modules/
 .agents/skills/shadcn
-web/e2e/results/
 
 # Runtime data
 log/
