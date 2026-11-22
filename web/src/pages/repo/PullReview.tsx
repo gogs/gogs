@@ -294,7 +294,9 @@ export function ReviewThread({
               issueRef={issueRef}
               root={root}
               attachment={data.attachment}
-              pending={inDiff && !!data.viewerPendingReview}
+              pending={
+                inDiff && data.pull.state !== "merged" && data.pull.state !== "closed" && !!data.viewerPendingReview
+              }
               includeRoot
               actions={
                 thread.viewerCanResolve ? (

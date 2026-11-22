@@ -228,6 +228,21 @@ func TestPullReviews(t *testing.T) {
 		assert.Equal(t, http.StatusNoContent, status, "response: %s", body)
 	})
 
+	t.Run("replies to a merged pull request do not wait for a review", func(t *testing.T) {
+		v := view(ownerClient)
+		require.NotEmpty(t, v.Threads)
+		var reply struct {
+			ID int64 `json:"id"`
+		}
+		reviewerClient.doJSON(http.MethodPost, path("comments"), map[string]any{
+			"content": "After the merge", "replyTo": v.Threads[0].ID, "pending": true,
+		}, http.StatusCreated, &reply)
+		assert.Nil(t, view(reviewerClient).ViewerPendingReview)
+		comment, err := database.Handle.Comments().GetByID(t.Context(), reply.ID)
+		require.NoError(t, err)
+		assert.False(t, comment.IsPending)
+	})
+
 	t.Run("checking repository stats keeps code comments counted", func(t *testing.T) {
 		issue, err := database.Handle.Issues().GetByIndex(t.Context(), repo.ID, index)
 		require.NoError(t, err)

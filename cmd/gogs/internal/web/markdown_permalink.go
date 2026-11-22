@@ -197,7 +197,13 @@ func permalinkEmbed(ctx context.Context, gitRepo *git.Repository, href, rest str
 	last = min(last, first+permalinkMaxLines-1)
 	code := strings.Join(lines[first-1:last], "\n")
 	if len(code) > permalinkMaxBytes {
-		code = strings.ToValidUTF8(code[:permalinkMaxBytes], "")
+		// Whole lines show when any fit, so the range names what shows.
+		code = code[:permalinkMaxBytes]
+		if i := strings.LastIndexByte(code, '\n'); i > 0 {
+			code = code[:i]
+		}
+		code = strings.ToValidUTF8(code, "")
+		last = first + strings.Count(code, "\n")
 	}
 
 	return fmt.Sprintf(

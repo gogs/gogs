@@ -865,7 +865,16 @@ func postRepoIssueComment(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 			(root.IsPending && root.PosterID != viewer.ID) {
 			return http.StatusUnprocessableEntity, &bindingErrorResponse{Error: l.Tr("repo::issues.reply_not_allowed")}, nil
 		}
-		comment, err := database.Handle.Reviews().CreateReply(ctx, logger, viewer, repoCtx.Repo, issue, root, req.Content, req.Attachments, req.Pending || root.IsPending)
+		// A closed pull request takes no more reviews, so a reply cannot wait
+		// for one.
+		pending := req.Pending || root.IsPending
+		if pending && issue.IsPull && (issue.IsClosed || issue.PullRequest.HasMerged) {
+			if root.IsPending {
+				return http.StatusUnprocessableEntity, &bindingErrorResponse{Error: l.Tr("repo::pulls.review.closed")}, nil
+			}
+			pending = false
+		}
+		comment, err := database.Handle.Reviews().CreateReply(ctx, logger, viewer, repoCtx.Repo, issue, root, req.Content, req.Attachments, pending)
 		if err != nil {
 			logger.Error("Failed to create reply", "issueID", issue.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "create reply")

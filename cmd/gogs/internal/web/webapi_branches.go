@@ -449,10 +449,11 @@ func putRepoProtectedBranch(c flamego.Context, logger *logx.Logger, rc *repoAdmi
 	protectBranch.RequirePullRequest = req.RequirePullRequest
 	// Reviews only gate pull requests, so without requiring them, writers
 	// would push past the reviews.
+	// The options of approvals only apply when approvals are required.
 	if req.RequirePullRequest {
 		protectBranch.RequiredApprovals = req.RequiredApprovals
-		protectBranch.DismissStaleApprovals = req.DismissStaleApprovals
-		protectBranch.RequireResolvedConversations = req.RequireResolvedConversations
+		protectBranch.DismissStaleApprovals = req.DismissStaleApprovals && req.RequiredApprovals > 0
+		protectBranch.RequireResolvedConversations = req.RequireResolvedConversations && req.RequiredApprovals > 0
 	} else {
 		protectBranch.RequiredApprovals = 0
 		protectBranch.DismissStaleApprovals = false

@@ -439,8 +439,16 @@ func TestProtectedBranchReviews(t *testing.T) {
 		require.Equal(t, http.StatusNoContent, status, "response: %s", resp)
 	}
 	var settings struct {
-		RequiredApprovals int `json:"requiredApprovals"`
+		RequiredApprovals            int  `json:"requiredApprovals"`
+		RequireResolvedConversations bool `json:"requireResolvedConversations"`
+		DismissStaleApprovals        bool `json:"dismissStaleApprovals"`
 	}
+
+	// The options of approvals are not kept without approvals.
+	protect(map[string]any{"protected": true, "requirePullRequest": true, "requireResolvedConversations": true, "dismissStaleApprovals": true})
+	ownerClient.doJSON(http.MethodGet, issueAPIPath(repo, "settings", "branches", "main"), nil, http.StatusOK, &settings)
+	assert.False(t, settings.RequireResolvedConversations)
+	assert.False(t, settings.DismissStaleApprovals)
 
 	// Without requiring pull requests, writers would push past the reviews, so
 	// they are not kept.

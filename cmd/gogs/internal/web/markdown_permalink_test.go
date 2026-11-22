@@ -33,7 +33,8 @@ func TestEmbedPermalinks(t *testing.T) {
 	}
 	lines[2] = `if a < b && c > "d" {`
 	content := strings.Join(lines, "\n") + "\n"
-	stream := fmt.Sprintf("commit refs/heads/main\ncommitter T <t@example.com> 1700000000 +0000\ndata 1\nc\nM 100644 inline dir/a b.go\ndata %d\n%s\n", len(content), content)
+	long := strings.Repeat(strings.Repeat("x", 10*1024)+"\n", 3)
+	stream := fmt.Sprintf("commit refs/heads/main\ncommitter T <t@example.com> 1700000000 +0000\ndata 1\nc\nM 100644 inline dir/a b.go\ndata %d\n%s\nM 100644 inline long.txt\ndata %d\n%s\n", len(content), content, len(long), long)
 	repoPath := repox.RepositoryPath("alice", "demo")
 	for _, args := range [][]string{{"init", "--bare", "-q", repoPath}, {"-C", repoPath, "fast-import", "--quiet"}} {
 		cmd := exec.Command("git", args...)
@@ -127,6 +128,12 @@ func TestEmbedPermalinks(t *testing.T) {
 		got := renderAs(repoCtx(database.AccessModeNone), link+"#L5")
 		assert.NotContains(t, got, "data-permalink")
 		assert.NotContains(t, got, "line 5")
+	})
+
+	t.Run("long lines are cut at whole lines", func(t *testing.T) {
+		got := render("https://gogs.example.com/alice/demo/src/" + commitID + "/long.txt#L1-L3")
+		assert.Contains(t, got, `data-start="1" data-end="1"`)
+		assert.Contains(t, got, "<code>"+strings.Repeat("x", 10*1024)+"</code>")
 	})
 
 	t.Run("lookups per request are capped", func(t *testing.T) {
