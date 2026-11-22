@@ -2,6 +2,7 @@ package strx
 
 import (
 	"testing"
+	"unicode/utf8"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -83,6 +84,12 @@ func TestEllipsis(t *testing.T) {
 			threshold: 1,
 			want:      "a...",
 		},
+		{
+			name:      "multi-byte characters are counted as one",
+			str:       "你好",
+			threshold: 1,
+			want:      "你...",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -123,11 +130,36 @@ func TestTruncate(t *testing.T) {
 			limit: 1,
 			want:  "a",
 		},
+		{
+			name:  "limit falls inside a multi-byte character",
+			str:   "aé",
+			limit: 1,
+			want:  "a",
+		},
+		{
+			name:  "multi-byte characters are counted as one",
+			str:   "你好世界",
+			limit: 2,
+			want:  "你好",
+		},
+		{
+			name:  "four-byte characters are counted as one",
+			str:   "😀😀",
+			limit: 1,
+			want:  "😀",
+		},
+		{
+			name:  "limit falls after all characters",
+			str:   "😀",
+			limit: 4,
+			want:  "😀",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got := Truncate(test.str, test.limit)
 			assert.Equal(t, test.want, got)
+			assert.True(t, utf8.ValidString(got), "result must be valid UTF-8")
 		})
 	}
 }

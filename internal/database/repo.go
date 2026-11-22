@@ -1635,12 +1635,8 @@ func updateRepository(logger *logx.Logger, e Engine, repo *Repository, visibilit
 	visibilityChanged = visibilityChanged || repo.IsPrivate != saved.IsPrivate || repo.IsUnlisted != saved.IsUnlisted
 	publicAccessChanged := repo.AllowPublicWiki != saved.AllowPublicWiki || repo.AllowPublicIssues != saved.AllowPublicIssues
 
-	if len(repo.Description) > 512 {
-		repo.Description = repo.Description[:512]
-	}
-	if len(repo.Website) > 255 {
-		repo.Website = repo.Website[:255]
-	}
+	repo.Description = strx.Truncate(repo.Description, 512)
+	repo.Website = strx.Truncate(repo.Website, 255)
 
 	if _, err = e.ID(repo.ID).AllCols().Update(repo); err != nil {
 		return errors.Newf("update: %v", err)

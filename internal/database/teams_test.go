@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -230,6 +231,15 @@ func teamsUpdate(t *testing.T, ctx context.Context, s *TeamsStore) {
 	assert.Equal(t, strings.Repeat("a", 255), got.Description)
 	assert.Equal(t, AccessModeAdmin, got.Authorize)
 	assert.Equal(t, AccessModeRead, accessModes(t, ctx, perms, repo.ID)[alice.ID], "accesses are kept when the access mode is said to be unchanged")
+
+	// The column holds 255 characters, so a description of multi-byte characters
+	// is cut by characters instead of by bytes, which would end in the middle of
+	// a character and lose text the column accepts.
+	team.Description = strings.Repeat("你", 300)
+	require.NoError(t, s.Update(ctx, team, false))
+	got = reloadTeam(t, ctx, s, team.ID)
+	assert.Equal(t, strings.Repeat("你", 255), got.Description)
+	assert.True(t, utf8.ValidString(got.Description), "description must be valid UTF-8")
 
 	team.Authorize = AccessModeWrite
 	require.NoError(t, s.Update(ctx, team, true))
