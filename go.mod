@@ -13,7 +13,7 @@ require (
 	github.com/dicebear/dicebear-go/v10 v10.7.0
 	github.com/dicebear/styles/v10 v10.6.0
 	github.com/editorconfig/editorconfig-core-go/v2 v2.6.4
-	github.com/flamego/altcha v1.0.0
+	github.com/flamego/altcha v1.0.1
 	github.com/flamego/binding v1.4.0
 	github.com/flamego/cache v1.5.1
 	github.com/flamego/captcha v1.4.0
