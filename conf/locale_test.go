@@ -12,11 +12,12 @@ import (
 
 var (
 	localePlaceholder = regexp.MustCompile(`\{[A-Za-z0-9_]+\}`)
-	localeGoVerb      = regexp.MustCompile(`%(\[\d+\])?[a-z]`)
+	localeGoVerb      = regexp.MustCompile(`%(\[\d+\])?[a-z]|\[\d+\][a-z]`)
+	localeHTMLTag     = regexp.MustCompile(`</?[a-z]+\b`)
 )
 
 // TestLocales checks that every translation has only keys of en-US, and the
-// same "{name}" placeholders as the en-US message of its key.
+// same "{name}" placeholders and HTML tags as the en-US message of its key.
 func TestLocales(t *testing.T) {
 	load := func(t *testing.T, name string) map[string]string {
 		data, err := Files.ReadFile("locale/" + name)
@@ -31,6 +32,9 @@ func TestLocales(t *testing.T) {
 			}
 		}
 		return messages
+	}
+	tags := func(s string) []string {
+		return localeHTMLTag.FindAllString(s, -1)
 	}
 	placeholders := func(s string) []string {
 		found := localePlaceholder.FindAllString(s, -1)
@@ -66,6 +70,10 @@ func TestLocales(t *testing.T) {
 					continue
 				}
 				assert.ElementsMatch(t, placeholders(want), placeholders(message), key)
+				if key != "admin.auths.bind_dn_helper" {
+					assert.False(t, localeGoVerb.MatchString(message), "%s: use {name} placeholders instead of %%s", key)
+				}
+				assert.ElementsMatch(t, tags(want), tags(message), "%s: HTML tags", key)
 			}
 		})
 	}
