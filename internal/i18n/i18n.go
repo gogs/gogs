@@ -69,6 +69,9 @@ type Options struct {
 // from the cookie is remembered in it. When the language is chosen by the query
 // parameter, the viewer is redirected to the same path without the query.
 func Localizer(opts Options) (flamego.Handler, error) {
+	if len(opts.Langs) == 0 {
+		return nil, errors.New("no languages")
+	}
 	if len(opts.Langs) != len(opts.Names) {
 		return nil, errors.New("number of languages and names do not match")
 	}

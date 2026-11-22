@@ -49,6 +49,11 @@ func TestLocalizer(t *testing.T) {
 		})
 	}
 
+	t.Run("no languages", func(t *testing.T) {
+		_, err := Localizer(Options{DefaultLang: "en-US"})
+		require.Error(t, err)
+	})
+
 	t.Run("default language not listed", func(t *testing.T) {
 		h, err := Localizer(Options{
 			Files: map[string][]byte{
