@@ -8,7 +8,9 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
 )
 
@@ -251,14 +253,26 @@ func (s *TeamsStore) addMember(ctx context.Context, orgID, teamID, userID int64)
 	if err != nil {
 		return errors.Wrap(err, "list team repositories")
 	}
-	// The lock reads the latest owner even when other reads come from an
-	// older snapshot, e.g., at REPEATABLE READ on MySQL.
+	// Locking reads see the latest rows even when other reads come from an
+	// older snapshot, e.g., at REPEATABLE READ on MySQL, so only repositories
+	// that still belong to the organization and the team get accesses.
 	ownedIDs := make([]int64, 0, len(lockedIDs))
 	for _, repoID := range lockedIDs {
 		ownerID, exists, err := lockRepository(s.db, repoID)
 		if err != nil {
 			return err
-		} else if exists && ownerID == orgID {
+		} else if !exists || ownerID != orgID {
+			continue
+		}
+
+		query := db.Model(new(TeamRepo)).Where("team_id = ? AND repo_id = ?", teamID, repoID)
+		if !conf.UseSQLite3 {
+			query = query.Clauses(clause.Locking{Strength: "UPDATE"})
+		}
+		var ids []int64
+		if err = query.Pluck("id", &ids).Error; err != nil {
+			return errors.Wrap(err, "lock team repository")
+		} else if len(ids) > 0 {
 			ownedIDs = append(ownedIDs, repoID)
 		}
 	}
