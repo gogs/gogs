@@ -441,7 +441,20 @@ function CommentCard({
           />
         ) : html ? (
           <div className="px-4 py-3">
-            <Markdown html={html} />
+            <Markdown
+              html={html}
+              tasks={
+                edit
+                  ? {
+                      source: edit.content,
+                      save: async (content) => {
+                        await edit.save(content, []);
+                        await router.invalidate();
+                      },
+                    }
+                  : undefined
+              }
+            />
           </div>
         ) : attachments.length === 0 ? (
           <p className="px-4 py-3 text-sm text-(--color-muted-foreground) italic">{t("repo.issues.no_content")}</p>

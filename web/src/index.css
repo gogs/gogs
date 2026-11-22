@@ -485,9 +485,81 @@ diffs-container {
   .markdown :where(li:has(> input[type="checkbox"])) {
     list-style: none;
   }
+  .markdown :where(li.task-list-item + li.task-list-item) {
+    margin-top: 0;
+  }
+  /* Nested task lists put their checkboxes below the text of the item they
+     are in. */
+  .markdown :where(li > :is(ul, ol).contains-task-list) {
+    padding-left: 1.125rem;
+  }
   .markdown :where(input[type="checkbox"]) {
-    margin: 0 0.375rem 0 -1.25rem;
+    margin: 0 0.125rem 0 -1.125rem;
     vertical-align: middle;
+  }
+  .markdown :where(input[type="checkbox"]:not(:disabled)) {
+    cursor: pointer;
+  }
+  /* Lists whose task items can be moved leave room for the handles, which
+     reach a little into the padding around the content. The handles of a
+     nested list fit below the checkbox of the item it is in. */
+  .markdown :where(ul, ol):not(li *):has(> li > .task-drag-handle) {
+    padding-left: 2.25rem;
+  }
+  .markdown :where(li:has(> .task-drag-handle)) {
+    position: relative;
+  }
+  .markdown .task-drag-handle {
+    position: absolute;
+    top: 0;
+    left: -2.75rem;
+    display: flex;
+    width: 1.5rem;
+    height: 1.5rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.25rem;
+    color: var(--color-muted-foreground);
+    cursor: grab;
+    opacity: 0;
+    touch-action: none;
+  }
+  /* While an item of the list is dragged, the handles it passes stay plain,
+     not to cover the highlight of the dragged item. */
+  .markdown :is(ul, ol):not(:has(> .task-dragging)) > li > .task-drag-handle:hover {
+    background-color: var(--color-surface);
+    color: var(--color-foreground);
+  }
+  .markdown li:hover > .task-drag-handle,
+  .markdown .task-drag-handle:focus-visible,
+  .markdown .task-dragging > .task-drag-handle {
+    opacity: 1;
+  }
+  /* Without hover, e.g., on touch screens, the handles always show. */
+  @media (hover: none) {
+    .markdown .task-drag-handle {
+      opacity: 1;
+    }
+  }
+  /* The highlight takes in the handle and the checkbox left of the item, and
+     reaches past its top and bottom, which touch the items next to it. */
+  .markdown .task-dragging {
+    isolation: isolate;
+  }
+  .markdown .task-dragging::before {
+    position: absolute;
+    inset: -0.125rem -0.25rem -0.125rem -3rem;
+    z-index: -1;
+    border: 1px solid var(--color-border);
+    border-radius: 0.375rem;
+    background-color: var(--color-surface);
+    content: "";
+  }
+  .markdown .task-dragging > .task-drag-handle {
+    cursor: grabbing;
+  }
+  .markdown :where([aria-busy="true"] input[type="checkbox"], [aria-busy="true"] .task-drag-handle) {
+    cursor: progress;
   }
   .markdown :where(blockquote) {
     border-left: 3px solid var(--color-border);
