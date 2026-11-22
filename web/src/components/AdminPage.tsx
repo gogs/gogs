@@ -87,8 +87,9 @@ export function RefreshNote({
 }
 
 // RefreshControl refreshes what a page shows: right away with its button, and
-// by itself at the interval picked beside it. The two wrap together. A
-// RefreshNote below the controls tells when a refresh failed.
+// by itself at the interval picked beside it. The two wrap together. The
+// button takes no click while a refresh runs, its own or one of the interval.
+// A RefreshNote below the controls tells when a refresh failed.
 export function RefreshControl({
   seconds,
   onSecondsChange,
@@ -103,7 +104,15 @@ export function RefreshControl({
   const { t } = useTranslation();
   return (
     <div className="flex items-center gap-2">
-      <Button type="button" variant="outline" className="h-9 px-3" onClick={onRefresh}>
+      <Button
+        type="button"
+        variant="outline"
+        // Not `disabled` while it refreshes, which takes the focus off the button.
+        aria-disabled={refreshing || undefined}
+        // The text dims, not the button, which would dim its focus ring too.
+        className={cn("h-9 px-3", refreshing && "pointer-events-none text-(--color-foreground)/60")}
+        onClick={refreshing ? undefined : onRefresh}
+      >
         <RefreshCw className={cn("size-4", refreshing && "animate-spin")} aria-hidden />
         {t("admin.refresh")}
       </Button>
