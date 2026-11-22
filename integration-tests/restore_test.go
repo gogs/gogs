@@ -24,7 +24,8 @@ import (
 // authenticates as a restored user with the password and the access token that
 // they had.
 func TestRestoreBackupOfGogs012(t *testing.T) {
-	t.Parallel()
+	// Not parallel, because the server it starts shares the work directory of the
+	// servers under test and empties their temporary directories on startup.
 
 	// The backup has the rows of the fixtures that the restore scenarios of the
 	// database package check, with a real hash of the password instead of a
