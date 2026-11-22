@@ -147,8 +147,16 @@ func TestProfileOrganization(t *testing.T) {
 		status, body := newClient(t).do(http.MethodGet, "/api/web/users/"+org.Name+path, nil)
 		assert.Equal(t, http.StatusNotFound, status, "GET %s, response: %s", path, body)
 	}
-	status, body := authenticatedClient(t, owner).do(http.MethodPost, "/api/web/users/"+org.Name+"/follow", orgNoBody)
+	ownerClient := authenticatedClient(t, owner)
+	status, body := ownerClient.do(http.MethodPost, "/api/web/users/"+org.Name+"/follow", orgNoBody)
 	assert.Equal(t, http.StatusNotFound, status, "following an organization, response: %s", body)
+	assert.False(t, database.Handle.Users().IsFollowing(t.Context(), owner.ID, org.ID))
+
+	// Existing follows of an organization can be removed.
+	require.NoError(t, database.Handle.Users().Follow(t.Context(), owner.ID, org.ID))
+	status, body = ownerClient.do(http.MethodDelete, "/api/web/users/"+org.Name+"/follow", orgNoBody)
+	assert.Equal(t, http.StatusOK, status, "unfollowing an organization, response: %s", body)
+	assert.False(t, database.Handle.Users().IsFollowing(t.Context(), owner.ID, org.ID))
 }
 
 func TestProfileRepos(t *testing.T) {

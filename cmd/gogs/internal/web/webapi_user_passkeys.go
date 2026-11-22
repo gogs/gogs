@@ -312,7 +312,8 @@ func postUserSignInPasskey(c flamego.Context, logger *logx.Logger, store session
 	}
 
 	passkey := owner.passkeyBy(credential.ID)
-	if passkey == nil {
+	// Organizations cannot sign in.
+	if passkey == nil || owner.IsOrganization() {
 		return http.StatusUnauthorized, failed, nil
 	}
 	// Like signing in with a password, an account of an authentication source

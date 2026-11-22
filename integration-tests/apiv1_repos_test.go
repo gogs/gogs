@@ -415,6 +415,15 @@ func TestAPIV1Collaborators(t *testing.T) {
 	status, body = api.do(http.MethodPut, apiV1RepoPath(repo, "/collaborators/"+UniqueName("nobody-")), map[string]any{})
 	assert.Equal(t, http.StatusUnprocessableEntity, status, "response: %s", body)
 
+	orgName := UniqueName("org-")
+	api.doJSON(http.MethodPost, "/api/v1/user/orgs", map[string]any{"username": orgName}, http.StatusCreated, &apiV1Org{})
+	status, body = api.do(http.MethodPut, apiV1RepoPath(repo, "/collaborators/"+orgName), map[string]any{"permission": "admin"})
+	assert.Equal(t, http.StatusUnprocessableEntity, status, "organization, response: %s", body)
+	collaborators = nil
+	api.doJSON(http.MethodGet, apiV1RepoPath(repo, "/collaborators"), nil, http.StatusOK, &collaborators)
+	require.Len(t, collaborators, 1, "organization added as a collaborator")
+	assert.Equal(t, collaborator.Name, collaborators[0].UserName)
+
 	status, body = api.do(http.MethodDelete, path, nil)
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 	status, body = api.do(http.MethodGet, path, nil)

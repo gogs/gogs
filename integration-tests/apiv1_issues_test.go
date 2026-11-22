@@ -91,6 +91,21 @@ func TestAPIV1Issues(t *testing.T) {
 	status, body := otherAPI.do(http.MethodPatch, apiV1RepoPath(repo, "/issues/"+apiV1Itoa(open)), map[string]any{"title": "Hijacked"})
 	assert.Equal(t, http.StatusForbidden, status, "edited by another user, response: %s", body)
 
+	// Issues are only assigned to the owner, collaborators and members of teams
+	// with access to the repository, as in the web interface, and never to
+	// organizations, even one with access.
+	var org apiV1Org
+	api.doJSON(http.MethodPost, "/api/v1/user/orgs", map[string]any{"username": UniqueName("org-")}, http.StatusCreated, &org)
+	dbRepo, err := getRepositoryByName(t, owner.ID, repo.Name)
+	require.NoError(t, err)
+	require.NoError(t, database.Handle.Collaborations().Add(t.Context(), dbRepo, org.ID))
+	for _, name := range []string{org.UserName, other.Name} {
+		status, body = api.do(http.MethodPost, apiV1RepoPath(repo, "/issues"), map[string]any{"title": "Assigned to " + name, "assignee": name})
+		assert.Equal(t, http.StatusUnprocessableEntity, status, "created with assignee %s, response: %s", name, body)
+		status, body = api.do(http.MethodPatch, apiV1RepoPath(repo, "/issues/"+apiV1Itoa(open)), map[string]any{"assignee": name})
+		assert.Equal(t, http.StatusUnprocessableEntity, status, "edited with assignee %s, response: %s", name, body)
+	}
+
 	issue = apiV1Issue{}
 	api.doJSON(http.MethodPatch, apiV1RepoPath(repo, "/issues/"+apiV1Itoa(open)), map[string]any{
 		"title":     "Edited issue",
@@ -160,6 +175,8 @@ func TestAPIV1AssignedIssues(t *testing.T) {
 	assignee := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{})
 	api := apiV1Client(t, owner)
+	status, body := api.do(http.MethodPut, apiV1RepoPath(repo, "/collaborators/"+assignee.Name), map[string]any{})
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 	apiV1CreateIssue(t, api, repo, map[string]any{"title": "Assigned", "assignee": assignee.Name})
 	apiV1CreateIssue(t, api, repo, map[string]any{"title": "Assigned and closed", "assignee": assignee.Name, "closed": true})
 	apiV1CreateIssue(t, api, repo, map[string]any{"title": "Not assigned"})

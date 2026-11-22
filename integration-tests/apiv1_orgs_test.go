@@ -109,11 +109,57 @@ func TestAPIV1Organizations(t *testing.T) {
 	})
 
 	t.Run("teams", func(t *testing.T) {
+		// The organization of this subtest has no teams but the ones it adds.
+		var teamsOrg apiV1Org
+		api.doJSON(http.MethodPost, "/api/v1/user/orgs", map[string]any{"username": UniqueName("org-")}, http.StatusCreated, &teamsOrg)
+		name := teamsOrg.UserName
+		admin := apiV1Client(t, seedUser(t, CreateUserOptions{Admin: true}))
+		var reviewers apiV1Team
+		admin.doJSON(http.MethodPost, "/api/v1/admin/orgs/"+name+"/teams", map[string]any{"name": "reviewers", "permission": "read"}, http.StatusCreated, &reviewers)
+		teamMember := seedUser(t, CreateUserOptions{})
+		path := "/api/v1/admin/teams/" + apiV1Itoa(reviewers.ID) + "/members/" + teamMember.Name
+		status, body := admin.do(http.MethodPut, path, nil)
+		require.Equal(t, http.StatusNoContent, status, "PUT %s, response: %s", path, body)
+		member := seedUser(t, CreateUserOptions{})
+		require.NoError(t, database.Handle.Organizations().AddMember(t.Context(), teamsOrg.ID, member.ID))
+
+		// listTeams returns the names of the teams that the client can list.
+		listTeams := func(c *client) []string {
+			t.Helper()
+
+			var teams []apiV1Team
+			c.doJSON(http.MethodGet, "/api/v1/orgs/"+name+"/teams", nil, http.StatusOK, &teams)
+			names := []string{}
+			for _, team := range teams {
+				names = append(names, team.Name)
+			}
+			return names
+		}
+
 		var teams []apiV1Team
 		api.doJSON(http.MethodGet, "/api/v1/orgs/"+name+"/teams", nil, http.StatusOK, &teams)
-		require.Len(t, teams, 1)
-		assert.Equal(t, "Owners", teams[0].Name)
-		assert.Equal(t, "owner", teams[0].Permission)
+		permissions := map[string]string{}
+		for _, team := range teams {
+			permissions[team.Name] = team.Permission
+		}
+		assert.Equal(t, map[string]string{"Owners": "owner", "reviewers": "read"}, permissions, "owner")
+
+		assert.ElementsMatch(t, []string{"Owners", "reviewers"}, listTeams(admin), "site admin")
+		// Members other than owners only see their own teams.
+		assert.Equal(t, []string{"reviewers"}, listTeams(apiV1Client(t, teamMember)), "team member")
+		assert.Empty(t, listTeams(apiV1Client(t, member)), "member in no team")
+
+		status, body = other.do(http.MethodGet, "/api/v1/orgs/"+name+"/teams", nil)
+		assert.Equal(t, http.StatusNotFound, status, "listed by a non-member, response: %s", body)
+	})
+
+	t.Run("not an organization", func(t *testing.T) {
+		status, body := api.do(http.MethodGet, "/api/v1/orgs/"+owner.Name, nil)
+		assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
+
+		admin := apiV1Client(t, seedUser(t, CreateUserOptions{Admin: true}))
+		status, body = admin.do(http.MethodPost, "/api/v1/admin/orgs/"+owner.Name+"/teams", map[string]any{"name": "developers", "permission": "write"})
+		assert.Equal(t, http.StatusNotFound, status, "team created in a user, response: %s", body)
 	})
 
 	t.Run("repositories", func(t *testing.T) {
@@ -177,4 +223,32 @@ func TestAPIV1Organizations(t *testing.T) {
 		status, body = newClient(t).do(http.MethodGet, "/api/v1/orgs/"+name+"/repos", nil)
 		assert.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
 	})
+}
+
+// TestOrganizationCannotSignIn covers credentials that an organization holds in
+// the database, which no endpoint gives it.
+func TestOrganizationCannotSignIn(t *testing.T) {
+	t.Parallel()
+
+	var org apiV1Org
+	apiV1Client(t, seedUser(t, CreateUserOptions{})).doJSON(http.MethodPost, "/api/v1/user/orgs", map[string]any{"username": UniqueName("org-")}, http.StatusCreated, &org)
+	repo := seedRepository(t, org.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
+	password := "password"
+	require.NoError(t, database.Handle.Users().Update(t.Context(), org.ID, database.UpdateUserOptions{Password: &password}))
+	token, err := CreateAccessToken(t.Context(), org.ID)
+	require.NoError(t, err)
+
+	tokenClient := newClient(t)
+	tokenClient.header.Set("Authorization", "token "+token)
+	status, body := tokenClient.do(http.MethodGet, "/api/v1/user", nil)
+	assert.Equal(t, http.StatusUnauthorized, status, "access token, response: %s", body)
+	status, body = apiV1BasicClient(t, org.UserName, password).do(http.MethodGet, "/api/v1/users/"+org.UserName+"/tokens", nil)
+	assert.Equal(t, http.StatusUnauthorized, status, "password, response: %s", body)
+
+	for name, password := range map[string]string{"password": password, "access token": token} {
+		out, err := gitCommand(t.TempDir(), "ls-remote", gitRemoteURL(t, repo, org.UserName, password)).CombinedOutput()
+		assert.Error(t, err, "Git over HTTP with %s: %s", name, out)
+	}
+
+	sshUserKey(t, org.ID).cloneFails(t, repo)
 }

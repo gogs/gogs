@@ -325,8 +325,9 @@ type userFollowResponse struct {
 }
 
 func userFollowAction(ctx context.Context, logger *logx.Logger, viewer *database.User, puser *profileUser, following bool) (statusCode int, resp *userFollowResponse, err error) {
-	// Organizations cannot be followed.
-	if puser.IsOrganization() {
+	// Organizations cannot be followed. Existing follows of an organization can
+	// still be removed.
+	if following && puser.IsOrganization() {
 		return http.StatusNotFound, nil, errors.New("user does not exist")
 	}
 	if viewer == nil {

@@ -102,6 +102,10 @@ func adminEditUser(c *apiContext, form adminEditUserRequest) {
 	if c.Written() {
 		return
 	}
+	if u.IsOrganization() {
+		c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("%s is an organization, not a user", u.Name))
+		return
+	}
 
 	parseLoginSource(c, form.SourceID, form.LoginName)
 	if c.Written() {
@@ -154,6 +158,10 @@ func adminDeleteUser(c *apiContext) {
 	if c.Written() {
 		return
 	}
+	if u.IsOrganization() {
+		c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("%s is an organization, not a user", u.Name))
+		return
+	}
 
 	if err := database.Handle.Users().DeleteByID(c.Request().Context(), u.ID, false); err != nil {
 		if database.IsErrUserOwnRepos(err) ||
@@ -172,6 +180,10 @@ func adminDeleteUser(c *apiContext) {
 func adminCreatePublicKey(c *apiContext, form createPublicKeyRequest) {
 	u := getUserByParams(c)
 	if c.Written() {
+		return
+	}
+	if u.IsOrganization() {
+		c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("%s is an organization, not a user", u.Name))
 		return
 	}
 	createUserPublicKey(c, form, u.ID)

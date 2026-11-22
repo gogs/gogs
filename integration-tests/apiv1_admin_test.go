@@ -102,6 +102,26 @@ func TestAPIV1AdminUsers(t *testing.T) {
 		status, body = admin.do(http.MethodDelete, "/api/v1/admin/users/"+withRepo.Name, nil)
 		assert.Equal(t, http.StatusUnprocessableEntity, status, "user who owns a repository, response: %s", body)
 	})
+
+	t.Run("organization", func(t *testing.T) {
+		orgName := UniqueName("org-")
+		var org apiV1Org
+		apiV1Client(t, seedUser(t, CreateUserOptions{})).doJSON(http.MethodPost, "/api/v1/user/orgs", map[string]any{"username": orgName}, http.StatusCreated, &org)
+
+		status, body := admin.do(http.MethodPatch, "/api/v1/admin/users/"+orgName, map[string]any{"email": orgName + "@example.com", "password": "password", "admin": true})
+		assert.Equal(t, http.StatusUnprocessableEntity, status, "edited, response: %s", body)
+		status, body = admin.do(http.MethodPost, "/api/v1/admin/users/"+orgName+"/keys", map[string]any{"title": UniqueName("key-"), "key": apiV1PublicKey(t)})
+		assert.Equal(t, http.StatusUnprocessableEntity, status, "public key added, response: %s", body)
+		status, body = admin.do(http.MethodDelete, "/api/v1/admin/users/"+orgName, nil)
+		assert.Equal(t, http.StatusUnprocessableEntity, status, "deleted, response: %s", body)
+
+		got, err := database.Handle.Users().GetByID(t.Context(), org.ID)
+		require.NoError(t, err)
+		assert.False(t, got.IsAdmin)
+		keys, err := database.Handle.PublicKeys().List(t.Context(), org.ID)
+		require.NoError(t, err)
+		assert.Empty(t, keys)
+	})
 }
 
 func TestAPIV1AdminUserOfAuthSource(t *testing.T) {
@@ -157,6 +177,14 @@ func TestAPIV1AdminCreateForUser(t *testing.T) {
 		got, err := database.Handle.Organizations().GetByName(t.Context(), name)
 		require.NoError(t, err)
 		assert.True(t, database.Handle.Organizations().IsOwner(t.Context(), got.ID, u.ID), "user does not own the organization")
+
+		status, body = admin.do(http.MethodPost, "/api/v1/admin/users/"+name+"/orgs", map[string]any{"username": UniqueName("org-")})
+		assert.Equal(t, http.StatusUnprocessableEntity, status, "created for an organization, response: %s", body)
+
+		// Organizations still own repositories created for them.
+		var repo apiV1Repo
+		admin.doJSON(http.MethodPost, "/api/v1/admin/users/"+name+"/repos", map[string]any{"name": UniqueName("repo-")}, http.StatusCreated, &repo)
+		assert.Equal(t, name, repo.Owner.UserName)
 	})
 
 	t.Run("repository", func(t *testing.T) {
@@ -221,6 +249,13 @@ func TestAPIV1AdminTeams(t *testing.T) {
 		status, body = admin.do(http.MethodDelete, teamPath+"/members/"+member.Name, nil)
 		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 		assert.Empty(t, listMembers())
+
+		status, body = admin.do(http.MethodPut, teamPath+"/members/"+orgName, nil)
+		assert.Equal(t, http.StatusUnprocessableEntity, status, "added an organization, response: %s", body)
+		assert.Empty(t, listMembers())
+		// Removing an organization from a team stays possible, to clean up existing data.
+		status, body = admin.do(http.MethodDelete, teamPath+"/members/"+orgName, nil)
+		assert.Equal(t, http.StatusNoContent, status, "removed an organization, response: %s", body)
 
 		status, body = nonAdmin.do(http.MethodGet, teamPath+"/members", nil)
 		assert.Equal(t, http.StatusForbidden, status, "listed by non-admin, response: %s", body)

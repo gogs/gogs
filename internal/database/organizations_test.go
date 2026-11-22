@@ -195,6 +195,10 @@ func organizationsCreate(t *testing.T, ctx context.Context, s *OrganizationsStor
 	assert.True(t, IsErrUserAlreadyExist(err), "got %v", err)
 	err = s.Create(ctx, &User{Name: "new", Email: "oc-new@example.com"}, owner)
 	assert.True(t, IsErrNameNotAllowed(err), "got %v", err)
+	existing, _ := newTestOrg(t, ctx, s.db, "oc-existing")
+	err = s.Create(ctx, &User{Name: "oc-owned-by-org", Email: "oc-owned@example.com"}, existing)
+	assert.True(t, IsErrOrgOwnerIsOrganization(err), "got %v", err)
+	assert.False(t, newUsersStore(s.db).IsUsernameUsed(ctx, "oc-owned-by-org", 0))
 
 	org := &User{Name: "OC-Org", Email: "oc-org@example.com"}
 	require.NoError(t, s.Create(ctx, org, owner))

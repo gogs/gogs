@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/cockroachdb/errors"
+
 	"gogs.io/gogs/internal/api/v1types"
 	"gogs.io/gogs/internal/database"
 )
@@ -34,6 +36,10 @@ func addCollaborator(c *apiContext, form addCollaboratorRequest) {
 		} else {
 			c.Error(err, "get user by name")
 		}
+		return
+	}
+	if collaborator.IsOrganization() {
+		c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("%s is an organization, not a user", collaborator.Name))
 		return
 	}
 

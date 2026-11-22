@@ -488,7 +488,8 @@ func (r *Repository) DeleteWiki(logger *logx.Logger) {
 	RemoveAllWithNotice(logger, "Delete repository wiki", r.WikiPath())
 }
 
-// getUsersWithAccesMode returns users that have at least given access mode to the repository.
+// getUsersWithAccesMode returns users that have at least given access mode to the
+// repository. Organizations are left out, even when they have access.
 func (r *Repository) getUsersWithAccesMode(tx *gorm.DB, mode AccessMode) (_ []*User, err error) {
 	if err = r.getOwner(tx); err != nil {
 		return nil, err
@@ -508,7 +509,7 @@ func (r *Repository) getUsersWithAccesMode(tx *gorm.DB, mode AccessMode) (_ []*U
 			userIDs[i] = accesses[i].UserID
 		}
 
-		if err = tx.Where("id IN ?", userIDs).Find(&users).Error; err != nil {
+		if err = tx.Where("id IN ? AND type = ?", userIDs, UserTypeIndividual).Find(&users).Error; err != nil {
 			return nil, err
 		}
 

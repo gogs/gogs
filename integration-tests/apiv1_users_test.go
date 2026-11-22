@@ -246,6 +246,15 @@ func TestAPIV1Following(t *testing.T) {
 
 	assertStatus(newClient(t), http.MethodGet, "/api/v1/users/"+followee.Name+"/followers", http.StatusUnauthorized)
 	assertStatus(followerAPI, http.MethodPut, "/api/v1/user/following/"+UniqueName("nobody-"), http.StatusNotFound)
+
+	// Organizations cannot be followed, but existing follows can be removed.
+	var org apiV1Org
+	followerAPI.doJSON(http.MethodPost, "/api/v1/user/orgs", map[string]any{"username": UniqueName("org-")}, http.StatusCreated, &org)
+	assertStatus(followerAPI, http.MethodPut, "/api/v1/user/following/"+org.UserName, http.StatusUnprocessableEntity)
+	assert.False(t, database.Handle.Users().IsFollowing(t.Context(), follower.ID, org.ID))
+	require.NoError(t, database.Handle.Users().Follow(t.Context(), follower.ID, org.ID))
+	assertStatus(followerAPI, http.MethodDelete, "/api/v1/user/following/"+org.UserName, http.StatusNoContent)
+	assert.False(t, database.Handle.Users().IsFollowing(t.Context(), follower.ID, org.ID))
 }
 
 type apiV1PublicKeyResp struct {

@@ -31,7 +31,8 @@ func createOrgForUser(c *apiContext, apiForm createOrgRequest, user *database.Us
 	}
 	if err := database.Handle.Organizations().Create(c.Request().Context(), org, user); err != nil {
 		if database.IsErrUserAlreadyExist(err) ||
-			database.IsErrNameNotAllowed(err) {
+			database.IsErrNameNotAllowed(err) ||
+			database.IsErrOrgOwnerIsOrganization(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
 		} else {
 			c.Error(err, "create organization")

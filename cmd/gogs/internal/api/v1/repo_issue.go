@@ -3,6 +3,7 @@ package v1
 import (
 	"context"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/cockroachdb/errors"
@@ -72,6 +73,16 @@ type createIssueRequest struct {
 	Closed    bool    `json:"closed"`
 }
 
+// isAssignable returns true if issues of the repository can be assigned to the
+// user, the same users as in the web interface.
+func isAssignable(repo *database.Repository, u *database.User) (bool, error) {
+	assignees, err := repo.GetAssignees()
+	if err != nil {
+		return false, errors.Wrap(err, "list assignees")
+	}
+	return slices.ContainsFunc(assignees, func(a *database.User) bool { return a.ID == u.ID }), nil
+}
+
 func createIssue(c *apiContext, form createIssueRequest) {
 	issue := &database.Issue{
 		RepoID:   c.Repo.Repository.ID,
@@ -90,6 +101,14 @@ func createIssue(c *apiContext, form createIssueRequest) {
 				} else {
 					c.Error(err, "get user by name")
 				}
+				return
+			}
+			assignable, err := isAssignable(c.Repo.Repository, assignee)
+			if err != nil {
+				c.Error(err, "check assignee")
+				return
+			} else if !assignable {
+				c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("assignee cannot be assigned issues of the repository: [name: %s]", form.Assignee))
 				return
 			}
 			issue.AssigneeID = assignee.ID
@@ -163,6 +182,14 @@ func editIssue(c *apiContext, form editIssueRequest) {
 				} else {
 					c.Error(err, "get user by name")
 				}
+				return
+			}
+			assignable, err := isAssignable(c.Repo.Repository, assignee)
+			if err != nil {
+				c.Error(err, "check assignee")
+				return
+			} else if !assignable {
+				c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("assignee cannot be assigned issues of the repository: [name: %s]", *form.Assignee))
 				return
 			}
 			issue.AssigneeID = assignee.ID

@@ -4546,6 +4546,9 @@
           },
           "404": {
             "description": "Resource not found."
+          },
+          "422": {
+            "description": "Validation error."
           }
         },
         "parameters": [
