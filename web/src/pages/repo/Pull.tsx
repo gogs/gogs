@@ -258,10 +258,11 @@ const MERGE_BOX_STATES: Record<RepoPullData["pull"]["state"], { icon: LucideIcon
   mergeable: { icon: CircleCheck, color: "text-(--color-success)", border: "!border-(--color-success)" },
   conflict: { icon: CircleAlert, color: "text-(--color-destructive)", border: "!border-(--color-destructive)" },
 };
+// A request for changes must be addressed before merging, while missing
+// approvals and open conversations only ask for attention.
 const MERGE_BOX_BLOCKED = {
-  icon: CircleAlert,
-  color: "text-(--color-muted-foreground)",
-  border: "border-(--color-border)",
+  changesRequested: { icon: CircleAlert, color: "text-(--color-destructive)", border: "!border-(--color-destructive)" },
+  pending: { icon: CircleAlert, color: "text-(--color-warning)", border: "!border-(--color-warning)" },
 };
 
 // MergeBox says whether the pull request can be merged, lets writers merge it
@@ -270,7 +271,15 @@ function MergeBox({ issueRef, data }: { issueRef: IssueRef; data: RepoPullData }
   const { t } = useTranslation();
   const { pull } = data;
   const blocked = pull.state === "mergeable" && data.mergeBlockers.length > 0;
-  const { icon: Icon, color, border } = blocked ? MERGE_BOX_BLOCKED : MERGE_BOX_STATES[pull.state];
+  const {
+    icon: Icon,
+    color,
+    border,
+  } = !blocked
+    ? MERGE_BOX_STATES[pull.state]
+    : data.mergeBlockers.includes("changes_requested")
+      ? MERGE_BOX_BLOCKED.changesRequested
+      : MERGE_BOX_BLOCKED.pending;
   const message = {
     merged: t("repo.pulls.has_merged"),
     closed: t("repo.pulls.reopen_to_merge"),

@@ -143,6 +143,11 @@ export function PullTimelineItem({
   );
 }
 
+// CIRCLE_ICONS fill their box. Glyphs without a circle, e.g., the speech
+// bubble, look heavier at the same size, so they are a size smaller, as in the
+// merge box.
+const CIRCLE_ICONS = new Set<LucideIcon>([CircleCheck, CircleAlert]);
+
 // EventRow is one line in the timeline about something a user did.
 function EventRow({
   anchor,
@@ -168,7 +173,7 @@ function EventRow({
     >
       {/* Sized and placed like the avatars of the comments. */}
       <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-(--color-surface)">
-        <Icon className={cn("size-6", iconClassName)} aria-hidden />
+        <Icon className={cn(CIRCLE_ICONS.has(Icon) ? "size-6" : "size-5", iconClassName)} aria-hidden />
       </span>
       <p className="min-w-0 flex-1 py-2.5 text-(--color-muted-foreground) wrap-anywhere">
         <UserLink user={comment.poster} className="font-semibold text-(--color-foreground) hover:underline">
@@ -654,7 +659,7 @@ export function ReviewStatusRows({ data }: { data: RepoPullData }): ReactNode {
   } else if (data.reviewDecision === "review_required") {
     rows.push({
       icon: Clock,
-      className: "text-(--color-muted-foreground)",
+      className: "text-(--color-warning)",
       title: t("repo.pulls.review.decision_review_required"),
       desc: t("repo.pulls.review.blocker_approvals", { approvals, required: data.requiredApprovals ?? 0 }),
     });
@@ -668,7 +673,7 @@ export function ReviewStatusRows({ data }: { data: RepoPullData }): ReactNode {
   if (data.mergeBlockers.includes("unresolved_conversations")) {
     rows.push({
       icon: MessageSquare,
-      className: "text-(--color-muted-foreground)",
+      className: "text-(--color-warning)",
       title: t("repo.pulls.review.blocker_unresolved"),
     });
   }
