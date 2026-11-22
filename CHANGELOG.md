@@ -40,6 +40,7 @@ All notable changes to Gogs are documented in this file.
 - The language code of Serbian is `sr-RS` instead of `sr-SP`, which is not a valid region. Rename a custom `locale_sr-SP.ini` to `locale_sr-RS.ini`, and replace `sr-SP` with `sr-RS` in a custom `LANGS` of `[i18n]`.
 - Users and organizations without an uploaded avatar get a generated avatar in the style of [DiceBear Notionists](https://www.dicebear.com/styles/notionists/), which stays the same after a rename. Commit authors without an account get one generated from their email, in place of the default gopher. Avatars are never fetched from external services.
 - The registration captcha asks the browser to solve a small proof-of-work puzzle ([ALTCHA](https://altcha.org)) with one click instead of reading characters from an image. Set `[auth] ANTI_BOT_VERIFICATION = captcha` to keep the image captcha, or leave it empty to turn it off. [#8699](https://github.com/gogs/gogs/pull/8699)
+- Configuration option `[auth] ENABLE_REGISTRATION_CAPTCHA` is deprecated and will end support in 0.16.0, please start using `[auth] ANTI_BOT_VERIFICATION`. Until then, `true` keeps the default `altcha` and `false` turns anti-bot verification off. [#8699](https://github.com/gogs/gogs/pull/8699)
 - Docker builds from `main` are now published only as `gogs/gogs:edge`, using the next-generation `Dockerfile.next`. The legacy `Dockerfile` no longer produces `main` builds. The `gogs/gogs:latest` and `gogs/gogs:next-latest` tags now always point to the highest published stable release, never to a back-patch on an older line. [#8278](https://github.com/gogs/gogs/pull/8278)
 - The minimum required Git version on the server is now 2.43.1. Gogs refuses to start with an older Git. [#8437](https://github.com/gogs/gogs/pull/8437)
 - The minimum supported database versions are now PostgreSQL 12 and MariaDB 10.6. MySQL 5.7 is still supported. [#8546](https://github.com/gogs/gogs/pull/8546)
@@ -157,7 +158,6 @@ All notable changes to Gogs are documented in this file.
 ### Removed
 
 - The `gogs import locale` command, which imported locale files exported from Crowdin.
-- Configuration option `[auth] ENABLE_REGISTRATION_CAPTCHA` is no longer used, please leave `[auth] ANTI_BOT_VERIFICATION` empty to turn off anti-bot verification. [#8699](https://github.com/gogs/gogs/pull/8699)
 - Gravatar and Libravatar avatars, the avatar email setting, and the `[server] OFFLINE_MODE`, `[picture] GRAVATAR_SOURCE`, `[picture] DISABLE_GRAVATAR` and `[picture] ENABLE_FEDERATED_AVATAR` configuration options.
 - The "Processes" page of the admin panel. [#8667](https://github.com/gogs/gogs/pull/8667)
 - _Security:_ GitHub authentication sources, which let anyone with a GitHub account sign in as any user of the source with their own GitHub token. Existing GitHub sources and `custom/conf/auth.d` files with `type = github` are ignored. [#8466](https://github.com/gogs/gogs/pull/8466) - [GHSA-v5w5-6j48-6jv2](https://github.com/gogs/gogs/security/advisories/GHSA-v5w5-6j48-6jv2)

@@ -32,7 +32,7 @@ func TestCheckInvalidOptions(t *testing.T) {
 	wantWarnings := []string{
 		"option [auth] ACTIVE_CODE_LIVE_MINUTES is invalid",
 		"option [auth] ENABLE_CAPTCHA is invalid",
-		"option [auth] ENABLE_REGISTRATION_CAPTCHA is invalid, use [auth] ANTI_BOT_VERIFICATION instead",
+		"option [auth] ENABLE_REGISTRATION_CAPTCHA is deprecated, use [auth] ANTI_BOT_VERIFICATION instead",
 		"option [auth] ENABLE_NOTIFY_MAIL is invalid",
 		"option [auth] REGISTER_EMAIL_CONFIRM is invalid",
 		"option [auth] RESET_PASSWD_CODE_LIVE_MINUTES is invalid",
@@ -53,4 +53,35 @@ func TestCheckInvalidOptions(t *testing.T) {
 	sort.Strings(wantWarnings)
 	sort.Strings(gotWarnings)
 	assert.Equal(t, wantWarnings, gotWarnings)
+}
+
+func TestHandleDeprecatedRegistrationCaptcha(t *testing.T) {
+	oldFile, oldAuth := File, Auth
+	t.Cleanup(func() { File, Auth = oldFile, oldAuth })
+
+	tests := []struct {
+		name    string
+		enabled string // Value of ENABLE_REGISTRATION_CAPTCHA, empty when not set.
+		current string // ANTI_BOT_VERIFICATION after mapping the configuration.
+		want    string
+	}{
+		{name: "not set keeps altcha", current: "altcha", want: "altcha"},
+		{name: "not set keeps off", current: "", want: ""},
+		{name: "true is altcha", enabled: "true", current: "altcha", want: "altcha"},
+		{name: "true turns empty to altcha", enabled: "true", current: "", want: "altcha"},
+		{name: "true keeps captcha", enabled: "true", current: "captcha", want: "captcha"},
+		{name: "false turns altcha off", enabled: "false", current: "altcha", want: ""},
+		{name: "false keeps captcha", enabled: "false", current: "captcha", want: "captcha"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			File = ini.Empty()
+			if test.enabled != "" {
+				_, _ = File.Section("auth").NewKey("ENABLE_REGISTRATION_CAPTCHA", test.enabled)
+			}
+			Auth = AuthOpts{AntiBotVerification: test.current}
+			handleDeprecated()
+			assert.Equal(t, test.want, Auth.AntiBotVerification)
+		})
+	}
 }
