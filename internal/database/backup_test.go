@@ -5,14 +5,17 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/cockroachdb/errors"
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
+	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/auth/pam"
@@ -39,6 +42,28 @@ func TestDumpAndImport(t *testing.T) {
 
 	// Dump and assert golden again to make sure data aren't changed.
 	dumpTables(t, db)
+}
+
+func TestImportDatabase(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	t.Parallel()
+
+	db := newTestDB(t, "importDatabase")
+
+	// The JSON encoder escapes HTML characters, so this content of 40 KB, which
+	// fits into a TEXT column of MySQL, becomes a line of 140 KB.
+	content := strings.Repeat("<br>", 10_000)
+	row := `{"ID":1,"RepoID":1,"Index":1,"Title":"Big","Content":"` + strings.Repeat(`\u003cbr\u003e`, 10_000) + `"}` + "\n"
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "Issue.json"), []byte(row), 0o600))
+	err := ImportDatabase(context.Background(), logx.NewNoopLogger(), db, dir, false)
+	require.NoError(t, err)
+
+	var issue Issue
+	require.NoError(t, db.First(&issue, 1).Error)
+	assert.Equal(t, content, issue.Content)
 }
 
 func setupDBToDump(t *testing.T, db *gorm.DB) {

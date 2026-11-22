@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -230,6 +231,9 @@ func importTable(ctx context.Context, db *gorm.DB, table any, r io.Reader) error
 	}
 
 	scanner := bufio.NewScanner(r)
+	// A row is a single line, which can exceed the default limit of 64 KiB, e.g.,
+	// a long issue description.
+	scanner.Buffer(nil, math.MaxInt)
 	for scanner.Scan() {
 		// PostgreSQL does not like the null characters (U+0000).
 		cleaned := bytes.ReplaceAll(scanner.Bytes(), []byte("\\u0000"), []byte(""))
@@ -261,6 +265,9 @@ func importTable(ctx context.Context, db *gorm.DB, table any, r io.Reader) error
 		if err != nil {
 			return errors.Wrap(err, "create row")
 		}
+	}
+	if err = scanner.Err(); err != nil {
+		return errors.Wrap(err, "read rows")
 	}
 
 	// PostgreSQL needs manually reset table sequence for auto increment keys.
