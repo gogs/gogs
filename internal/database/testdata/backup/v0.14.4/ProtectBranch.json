@@ -1,0 +1,2 @@
+{"EnableWhitelist":true,"ID":1,"Name":"main","Protected":true,"RepoID":1,"RequirePullRequest":false,"WhitelistTeamIDs":"","WhitelistUserIDs":"1"}
+{"EnableWhitelist":true,"ID":2,"Name":"main","Protected":true,"RepoID":2,"RequirePullRequest":false,"WhitelistTeamIDs":"3","WhitelistUserIDs":"1"}
