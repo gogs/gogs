@@ -235,13 +235,13 @@ function PullTabs({
   );
 }
 
-const MERGE_BOX_STATES: Record<RepoPullData["pull"]["state"], { icon: LucideIcon; color: string; tint: string }> = {
-  merged: { icon: GitMerge, color: "text-(--color-merged)", tint: "bg-(--color-merged)/15" },
-  closed: { icon: CircleX, color: "text-(--color-muted-foreground)", tint: "bg-(--color-surface)" },
-  broken: { icon: CircleAlert, color: "text-(--color-destructive)", tint: "bg-(--color-destructive)/15" },
-  checking: { icon: LoaderCircle, color: "text-(--color-muted-foreground)", tint: "bg-(--color-surface)" },
-  mergeable: { icon: CircleCheck, color: "text-(--color-success)", tint: "bg-(--color-success)/15" },
-  conflict: { icon: CircleAlert, color: "text-(--color-destructive)", tint: "bg-(--color-destructive)/15" },
+const MERGE_BOX_STATES: Record<RepoPullData["pull"]["state"], { icon: LucideIcon; color: string; border: string }> = {
+  merged: { icon: GitMerge, color: "text-(--color-merged)", border: "border-(--color-merged)" },
+  closed: { icon: CircleX, color: "text-(--color-muted-foreground)", border: "border-(--color-border)" },
+  broken: { icon: CircleAlert, color: "text-(--color-destructive)", border: "border-(--color-destructive)" },
+  checking: { icon: LoaderCircle, color: "text-(--color-muted-foreground)", border: "border-(--color-border)" },
+  mergeable: { icon: CircleCheck, color: "text-(--color-success)", border: "border-(--color-success)" },
+  conflict: { icon: CircleAlert, color: "text-(--color-destructive)", border: "border-(--color-destructive)" },
 };
 
 // MergeBox says whether the pull request can be merged, lets writers merge it
@@ -249,8 +249,7 @@ const MERGE_BOX_STATES: Record<RepoPullData["pull"]["state"], { icon: LucideIcon
 function MergeBox({ issueRef, data }: { issueRef: IssueRef; data: RepoPullData }) {
   const { t } = useTranslation();
   const { pull } = data;
-  const { icon: Icon, color, tint } = MERGE_BOX_STATES[pull.state];
-  const iconClassName = cn(color, pull.state === "checking" && "animate-spin");
+  const { icon: Icon, color, border } = MERGE_BOX_STATES[pull.state];
   const message = {
     merged: t("repo.pulls.has_merged"),
     closed: t("repo.pulls.reopen_to_merge"),
@@ -283,23 +282,18 @@ function MergeBox({ issueRef, data }: { issueRef: IssueRef; data: RepoPullData }
     <section aria-label={t("repo.pulls.merge_pull_request")} className="flex gap-2">
       {/* Sized and placed like the icons of the timeline events above it, while
           the box lines up with the comments. */}
-      <span className={cn("ml-3 hidden size-8 shrink-0 items-center justify-center rounded-full sm:flex", tint)}>
-        {/* The merge glyph fills its tinted circle more than the circle icons
-            do, so it is smaller to look the same size. */}
-        <Icon className={cn(pull.state === "merged" ? "size-4.5" : "size-5.5", iconClassName)} aria-hidden />
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-(--color-surface) sm:ml-3">
+        <Icon className={cn("size-5.5", color, pull.state === "checking" && "animate-spin")} aria-hidden />
       </span>
-      <div className="min-w-0 flex-1 glass rounded-md border border-(--color-border)">
-        <div className="flex items-start gap-2 px-4 py-3 text-sm">
-          <Icon className={cn("mt-0.5 size-4 shrink-0 sm:hidden", iconClassName)} aria-hidden />
-          <div className="min-w-0">
-            <p className="font-medium">{message}</p>
-            {pull.state === "conflict" ? (
-              <p className="mt-1 text-(--color-muted-foreground)">{t("repo.pulls.cannot_auto_merge_helper")}</p>
-            ) : null}
-            {pull.state === "mergeable" && pull.viewerNotInAllowlist ? (
-              <p className="mt-1 text-(--color-muted-foreground)">{t("repo.pulls.merge_not_in_allowlist")}</p>
-            ) : null}
-          </div>
+      <div className={cn("min-w-0 flex-1 glass rounded-md border", border)}>
+        <div className="px-4 py-3 text-sm">
+          <p className="font-medium">{message}</p>
+          {pull.state === "conflict" ? (
+            <p className="mt-1 text-(--color-muted-foreground)">{t("repo.pulls.cannot_auto_merge_helper")}</p>
+          ) : null}
+          {pull.state === "mergeable" && pull.viewerNotInAllowlist ? (
+            <p className="mt-1 text-(--color-muted-foreground)">{t("repo.pulls.merge_not_in_allowlist")}</p>
+          ) : null}
         </div>
         {body}
       </div>
