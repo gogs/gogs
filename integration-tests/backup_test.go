@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -94,6 +95,21 @@ func TestBackupRestore(t *testing.T) {
 		require.NoError(t, err)
 		return filepath.ToSlash(rel)
 	}
+
+	t.Run("database only", func(t *testing.T) {
+		archive, err := zip.OpenReader(backup(t, "database-only.zip", "--database-only"))
+		require.NoError(t, err)
+		defer func() { _ = archive.Close() }()
+		var names []string
+		for _, f := range archive.File {
+			if f.Name != "gogs-backup/metadata.ini" && !strings.HasPrefix(f.Name, "gogs-backup/db/") {
+				names = append(names, f.Name)
+			}
+		}
+		assert.Empty(t, names, "files other than the database")
+		_, err = archive.Open("gogs-backup/db/User.json")
+		assert.NoError(t, err)
+	})
 
 	t.Run("exclude mirror repositories", func(t *testing.T) {
 		archive, err := zip.OpenReader(backup(t, "exclude-mirrors.zip", "--exclude-mirror-repos"))
