@@ -145,7 +145,7 @@ function PullSummary({ data }: { data: RepoPullData }) {
     count: pull.commitCount,
   });
   const [before, after = ""] = text.split("{time}");
-  const branches = [pull.headLabel, pull.baseLabel];
+  const branches = { head: pull.headLabel, base: pull.baseLabel };
   return (
     <>
       <UserLink user={user} className="font-semibold text-(--color-foreground) hover:underline">
