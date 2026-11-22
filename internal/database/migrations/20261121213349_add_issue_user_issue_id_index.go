@@ -5,7 +5,7 @@ import (
 )
 
 // issueUserIssueIDIndex is the name of the index on the issues of issue users.
-const issueUserIssueIDIndex = "IDX_issue_user_issue_id"
+const issueUserIssueIDIndex = "idx_issue_user_issue_id"
 
 // addIssueUserIssueIDIndex adds an index on issue_user.issue_id. Without it,
 // MySQL locks every row of the table to update the users of one issue, so that

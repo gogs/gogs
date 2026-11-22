@@ -217,7 +217,7 @@ type SearchIssuesOptions struct {
 type IssueUser struct {
 	ID          int64 `gorm:"primaryKey"`
 	UserID      int64 `gorm:"column:uid;index:IDX_issue_user_uid"`
-	IssueID     int64 `gorm:"index:IDX_issue_user_issue_id"`
+	IssueID     int64 `gorm:"index:idx_issue_user_issue_id"`
 	RepoID      int64 `gorm:"index:IDX_issue_user_repo_id"`
 	MilestoneID int64
 	IsRead      bool
