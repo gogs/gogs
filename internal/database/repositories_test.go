@@ -1296,6 +1296,8 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 	veteran := newTestIssueUser(t, ctx, s.db, "cf-veteran")
 	keeper := newTestIssueUser(t, ctx, s.db, "cf-keeper")
 	var doomed *Team
+	arrival := newTestIssueUser(t, ctx, s.db, "cf-arrival")
+	var emptied *Team
 	mover := newTestIssueUser(t, ctx, s.db, "cf-mover")
 	var moved *Repository
 	var older *Repository
@@ -1546,6 +1548,29 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 			},
 			check: func(base, _ *Repository) {
 				assert.NotContains(t, accessModes(t, ctx, newPermissionsStore(s.db), base.ID), keeper.ID, "access through the deleted team")
+			},
+		},
+		{
+			// Deleting the team listed no repositories and waits for the
+			// organization, while a repository is added to the team and a
+			// member being added to it locks the repository and its row of
+			// the team.
+			name:      "delete team while adding a repository and a member to it, holding the organization",
+			baseOwner: org,
+			private:   true,
+			setup: func(*Repository, *Repository) {
+				emptied = createTestTeam(t, ctx, teams, org.ID, "emptied", AccessModeWrite)
+			},
+			holdUser: org,
+			first:    func(*Repository, *Repository) error { return teams.Delete(ctx, emptied) },
+			second: func(base, _ *Repository) error {
+				if err := teams.AddRepo(ctx, emptied, base); err != nil {
+					return err
+				}
+				return teams.AddMember(ctx, org.ID, emptied.ID, arrival.ID)
+			},
+			check: func(base, _ *Repository) {
+				assert.NotContains(t, accessModes(t, ctx, newPermissionsStore(s.db), base.ID), arrival.ID, "access through the deleted team")
 			},
 		},
 		{

@@ -376,9 +376,10 @@ func (s *OrganizationsStore) RemoveMember(ctx context.Context, orgID, userID int
 			return errors.Wrap(err, "count members")
 		}
 
-		for _, repo := range repos {
-			if err = newReposStore(tx).unwatch(ctx, userID, repo.ID); err != nil {
-				return errors.Wrapf(err, "unwatch repository %d", repo.ID)
+		// Only the repositories locked above, a watch started meanwhile stays.
+		for _, repoID := range watchedIDs {
+			if err = newReposStore(tx).unwatch(ctx, userID, repoID); err != nil {
+				return errors.Wrapf(err, "unwatch repository %d", repoID)
 			}
 		}
 		if len(repoIDs) > 0 {
