@@ -29,5 +29,4 @@ func TestMigrationsCreateTables(t *testing.T) {
 			assert.True(t, columns[name], "column %q of table %q is not created by migrations", name, stmt.Schema.Table)
 		}
 	}
-
 }
