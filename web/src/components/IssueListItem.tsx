@@ -33,7 +33,7 @@ export function IssueListItem({
   const Icon = issue.isClosed ? ClosedIcon : OpenIcon;
   const [owner, repo] = issue.repo.split("/");
   const titleClass = "font-semibold text-(--color-foreground) hover:text-(--color-primary)";
-  const commentLabel = t("repo.issues.num_comments").replace(/%(?:\[1\])?d/, String(issue.commentCount));
+  const commentLabel = t("repo.issues.num_comments", { count: issue.commentCount });
 
   return (
     <li className="flex gap-3 border-b border-(--color-border) py-3">
@@ -133,15 +133,15 @@ export function IssueListItem({
 }
 
 // OpenedBy renders the localized "opened <time> by <poster>" sentence. The
-// translations place the time as `%[1]s` and the poster as a link around
-// `%[3]s`.
+// translations place the time as `{time}` and the poster as a link around
+// `{user}`.
 export function OpenedBy({ issue }: { issue: Pick<DashboardIssue, "poster" | "createdAt"> }) {
   const { t } = useTranslation();
-  const parts = t("repo.issues.opened_by").split(/(<a [^>]*>\s*%\[3\]s<\/a>|%\[3\]s|%\[1\]s?)/);
+  const parts = t("repo.issues.opened_by").split(/(<a [^>]*>\s*\{user\}<\/a>|\{user\}|\{time\})/);
   return (
     <>
       {parts.map((part, i) => {
-        if (part.startsWith("<a ") || part === "%[3]s") {
+        if (part.startsWith("<a ") || part === "{user}") {
           return (
             <Link
               key={i}
@@ -153,7 +153,7 @@ export function OpenedBy({ issue }: { issue: Pick<DashboardIssue, "poster" | "cr
             </Link>
           );
         }
-        if (part.startsWith("%[1]")) {
+        if (part === "{time}") {
           return <RelativeTime key={i} time={issue.createdAt} />;
         }
         return part;

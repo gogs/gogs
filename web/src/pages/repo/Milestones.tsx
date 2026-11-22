@@ -49,8 +49,8 @@ export function RepoMilestones({
 }) {
   const { t } = useTranslation();
   const states = [
-    { state: undefined, label: t("repo.milestones.open_tab"), count: data.openCount, icon: CircleDot },
-    { state: "closed" as const, label: t("repo.milestones.close_tab"), count: data.closedCount, icon: CircleCheck },
+    { state: undefined, label: t("repo.milestones.open_tab", { count: data.openCount }), icon: CircleDot },
+    { state: "closed" as const, label: t("repo.milestones.close_tab", { count: data.closedCount }), icon: CircleCheck },
   ];
 
   return (
@@ -72,7 +72,7 @@ export function RepoMilestones({
     >
       <div className="glass rounded-md border border-(--color-border)">
         <ul className="flex gap-1 bg-(--color-surface) px-2 py-1.5">
-          {states.map(({ state, label, count, icon: Icon }) => {
+          {states.map(({ state, label, icon: Icon }) => {
             const active = state === search.state;
             return (
               <li key={state ?? "open"}>
@@ -86,7 +86,7 @@ export function RepoMilestones({
                   )}
                 >
                   <Icon className="size-4" aria-hidden />
-                  {label.replace(/%(?:\[1\])?d/, String(count))}
+                  {label}
                 </Link>
               </li>
             );
@@ -168,7 +168,7 @@ function MilestoneRow({
           {milestone.isClosed && milestone.closedAt ? (
             <span className="inline-flex items-center gap-1.5">
               <Clock className="size-4" aria-hidden />
-              {t("repo.milestones.closed").replace(/%(?:\[1\])?s/, formatRelativeTime(t, milestone.closedAt))}
+              {t("repo.milestones.closed", { time: formatRelativeTime(t, milestone.closedAt) })}
             </span>
           ) : milestone.deadline && milestone.isOverdue ? (
             <span className="inline-flex items-center gap-1.5 text-(--color-destructive)">
@@ -205,8 +205,8 @@ function MilestoneRow({
         </div>
         <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-(--color-muted-foreground) tabular-nums">
           <span className="font-semibold text-(--color-foreground)">{milestone.completeness}%</span>
-          <span>{t("repo.issues.open_tab").replace(/%(?:\[1\])?d/, String(milestone.openIssueCount))}</span>
-          <span>{t("repo.issues.close_tab").replace(/%(?:\[1\])?d/, String(milestone.closedIssueCount))}</span>
+          <span>{t("repo.issues.open_tab", { count: milestone.openIssueCount })}</span>
+          <span>{t("repo.issues.close_tab", { count: milestone.closedIssueCount })}</span>
         </p>
         {canWrite ? (
           <div className="flex flex-wrap gap-2">
@@ -269,8 +269,7 @@ export function RepoMilestoneEditor({
   const save = useMutation({
     mutationFn: () => (id ? updateRepoMilestone(owner, name, id, form) : createRepoMilestone(owner, name, form)),
     onSuccess: async () => {
-      const message = id ? t("repo.milestones.edit_success") : t("repo.milestones.create_success");
-      toast.success(message.replace(/%(?:\[1\])?s/, form.title));
+      toast.success(t(id ? "repo.milestones.edit_success" : "repo.milestones.create_success", { name: form.title }));
       await router.invalidate();
       await navigate({ to: "/$owner/$repo/milestones", params: { owner, repo: name } });
     },

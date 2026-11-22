@@ -5,13 +5,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	unknwoni18n "github.com/unknwon/i18n"
 
 	"gogs.io/gogs/internal/i18n"
 )
 
 func TestValidateWebhookURL(t *testing.T) {
-	l := i18n.Locale{Locale: unknwoni18n.Locale{Lang: "en-US"}}
+	l := i18n.Locale{Lang: "en-US"}
 	tests := []struct {
 		name       string
 		url        string

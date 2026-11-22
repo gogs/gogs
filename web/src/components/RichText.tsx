@@ -7,9 +7,19 @@ const LINK_CLASS = "text-(--color-primary) underline underline-offset-2";
 // RichText renders a translated sentence that carries HTML markup: links,
 // inline code, and bold or highlighted text. Translations keep Go
 // placeholders in that markup, so links take their targets from
-// `links`, in order, and code takes its content from `code`, or from each of
-// `code` in order. App paths navigate within the app.
-export function RichText({ text, links = [], code }: { text: string; links?: string[]; code?: string | string[] }) {
+// `links`, in order, and code takes its content from `code`, from each of
+// `code` in order, or from the entry of `code` named by its placeholder, e.g.,
+// `head` for `<code>{head}</code>`, which keeps translations free to reorder
+// them. App paths navigate within the app.
+export function RichText({
+  text,
+  links = [],
+  code,
+}: {
+  text: string;
+  links?: string[];
+  code?: string | string[] | Record<string, string>;
+}) {
   let nextLink = 0;
   let nextCode = 0;
   const parts = text.split(MARKUP).map((part, i): ReactNode => {
@@ -29,7 +39,7 @@ export function RichText({ text, links = [], code }: { text: string; links?: str
     if (part.startsWith("<code>")) {
       return (
         <code key={i} className="rounded bg-(--color-surface) px-1 font-mono text-[0.9em] wrap-anywhere">
-          {(Array.isArray(code) ? code[nextCode++] : code) ?? inner}
+          {codeContent(code, inner, nextCode++) ?? inner}
         </code>
       );
     }
@@ -40,4 +50,10 @@ export function RichText({ text, links = [], code }: { text: string; links?: str
     return part;
   });
   return <>{parts}</>;
+}
+
+function codeContent(code: string | string[] | Record<string, string> | undefined, inner: string, index: number) {
+  if (code === undefined || typeof code === "string") return code;
+  if (Array.isArray(code)) return code[index];
+  return code[/^\{(\w+)\}$/.exec(inner)?.[1] ?? ""];
 }

@@ -115,7 +115,7 @@ export function ResetPassword() {
           if (body.error) setFormError(body.error);
           if (body.fields) setFieldErrors(body.fields);
           if (!body.error && !body.fields) {
-            setFormError(t(isResetForm ? "reset_password_failed" : "reset_password_email_failed"));
+            setFormError(t(isResetForm ? "auth.reset_password_failed" : "auth.reset_password_email_failed"));
           }
           setSubmitting(false);
           requestAnimationFrame(() => {
@@ -132,7 +132,7 @@ export function ResetPassword() {
         setSent((await res.json()) as ResetPasswordResponse);
         setSubmitting(false);
       } catch {
-        setFormError(t(isResetForm ? "reset_password_failed" : "reset_password_email_failed"));
+        setFormError(t(isResetForm ? "auth.reset_password_failed" : "auth.reset_password_email_failed"));
         setSubmitting(false);
       }
     })();

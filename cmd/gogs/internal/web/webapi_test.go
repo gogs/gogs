@@ -13,7 +13,6 @@ import (
 	"github.com/flamego/session"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	unknwoni18n "github.com/unknwon/i18n"
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
@@ -31,7 +30,7 @@ func newTestRoutingHandler(t *testing.T) (http.Handler, error) {
 	conf.Server.URL = &url.URL{Scheme: "http", Host: "localhost:3000"}
 
 	localizer := func(c flamego.Context) {
-		c.Map(i18n.Locale{Locale: unknwoni18n.Locale{Lang: "en-US"}})
+		c.Map(i18n.Locale{Lang: "en-US"})
 	}
 	return newRoutingHandler(logx.NewNoopLogger(), localizer, session.Sessioner(), func(c flamego.Context) {
 		user, _ := c.Request().Context().Value(testUserKey{}).(*database.User)

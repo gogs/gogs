@@ -93,7 +93,7 @@ type repoGitHookRequest struct {
 // because an empty executable fails to run and would reject every push.
 func putRepoGitHook(logger *logx.Logger, l i18n.Locale, repoCtx *repoContext, hook *git.Hook, req repoGitHookRequest) (statusCode int, resp any, err error) {
 	if strings.TrimSpace(req.Content) == "" {
-		msg := l.Tr("repo.settings.githook_content_required")
+		msg := l.Tr("repo::settings.githook_content_required")
 		return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
 	}
 	if err = hook.Update(req.Content); err != nil {

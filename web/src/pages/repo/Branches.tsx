@@ -126,7 +126,7 @@ export function RepoBranches({
         </div>
         {isEmpty ? (
           <p className="glass rounded-md border border-(--color-border) px-4 py-8 text-center text-sm text-(--color-muted-foreground)">
-            {query ? t("repo.branches.no_match").replace("%s", query) : t("repo.branches.none")}
+            {query ? t("repo.branches.no_match", { query }) : t("repo.branches.none")}
           </p>
         ) : view === "overview" ? (
           <div className="flex flex-col gap-8">
@@ -338,17 +338,17 @@ function BranchRow({
 }
 
 // UpdatedBy renders the localized "Updated <time> by <committer>" sentence,
-// whose translations place the time as `%[1]s` and the committer as `%[2]s`.
+// whose translations place the time as `{time}` and the committer as `{user}`.
 function UpdatedBy({ branch }: { branch: RepoBranch }) {
   const { t } = useTranslation();
-  const parts = t("repo.branches.updated_by").split(/(%\[[12]\]s)/);
+  const parts = t("repo.branches.updated_by").split(/(\{time\}|\{user\})/);
   return (
     <>
       {parts.map((part, i) => {
-        if (part === "%[1]s") {
+        if (part === "{time}") {
           return <RelativeTime key={i} time={branch.committedAt} />;
         }
-        if (part === "%[2]s") {
+        if (part === "{user}") {
           return (
             <span key={i} className="font-medium text-(--color-foreground)">
               {branch.committerName}

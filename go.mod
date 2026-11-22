@@ -40,7 +40,6 @@ require (
 	github.com/stretchr/testify v1.12.1
 	github.com/unknwon/cae v1.0.2
 	github.com/unknwon/com v1.0.1
-	github.com/unknwon/i18n v0.0.0-20190805065654-5c6446a380b6
 	github.com/unknwon/paginater v0.0.0-20170405233947-45e5d631308e
 	github.com/urfave/cli/v3 v3.9.0
 	github.com/wneessen/go-mail v0.7.2
@@ -61,7 +60,8 @@ require (
 	gorm.io/driver/mysql v1.5.2
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.25.12
-	unknwon.dev/ini/v2 v2.0.0-beta.4
+	unknwon.dev/i18n v1.1.0
+	unknwon.dev/ini/v2 v2.0.0-beta.7
 	unknwon.dev/x v0.0.0-20261116185950-bb25d45e810c
 	xorm.io/core v0.7.2
 	xorm.io/xorm v0.8.0

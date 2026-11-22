@@ -66,7 +66,7 @@ const (
 
 // TrStr returns a translation format string.
 func (t NoticeType) TrStr() string {
-	return "admin.notices.type_" + strconv.Itoa(int(t))
+	return "admin::notices.type_" + strconv.Itoa(int(t))
 }
 
 // Notice represents a system notice for admin.

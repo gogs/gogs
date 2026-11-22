@@ -320,9 +320,9 @@ func postRepoPull(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer 
 	}
 	switch {
 	case p.Meta == nil:
-		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("repo.pulls.nothing_merge_base")}, nil
+		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("repo::pulls.nothing_merge_base")}, nil
 	case p.HeadCommitID == p.Meta.MergeBase:
-		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("repo.pulls.nothing_to_compare")}, nil
+		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("repo::pulls.nothing_to_compare")}, nil
 	}
 	if index, err := p.openPullIndex(ctx, repo); err != nil {
 		logger.Error("Failed to find open pull request", "repoID", repo.ID, "error", err)

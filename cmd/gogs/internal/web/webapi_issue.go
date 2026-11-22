@@ -445,7 +445,7 @@ func patchRepoIssue(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewe
 	ctx := c.Request().Context()
 	if req.Title != nil {
 		title := strings.TrimSpace(*req.Title)
-		if resp := textFieldError(l, "title", "repo.milestones.title", title, 255); resp != nil {
+		if resp := textFieldError(l, "title", "repo::milestones.title", title, 255); resp != nil {
 			return http.StatusBadRequest, resp, nil
 		}
 		if title != issue.Title {
@@ -492,7 +492,7 @@ func setRepoIssueClosed(c flamego.Context, logger *logx.Logger, l i18n.Locale, v
 				logger.Error("Failed to get open pull request with the same branches", "pullID", pull.ID, "error", err)
 				return http.StatusInternalServerError, nil, errors.Wrap(err, "get open pull request")
 			} else if other != nil {
-				return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("repo.pulls.open_unmerged_pull_exists", other.Index)}, nil
+				return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("repo::pulls.open_unmerged_pull_exists", "index", other.Index)}, nil
 			}
 			if err = database.Handle.PullRequests().UpdatePatch(c.Request().Context(), logger, pull); err != nil {
 				logger.Error("Failed to update pull request patch", "pullID", pull.ID, "error", err)
@@ -668,7 +668,7 @@ func postRepoIssueComment(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 	ctx := c.Request().Context()
 	// A comment can be only attachments.
 	if strings.TrimSpace(req.Content) == "" && len(req.Attachments) == 0 {
-		msg := l.Tr("form.Content") + l.Tr("form.require_error")
+		msg := l.Tr("form::Content") + l.Tr("form::require_error")
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
 	}
 	if statusCode, err = checkNewAttachments(ctx, issueAttachmentLimits(), req.Attachments); err != nil {
@@ -711,7 +711,7 @@ func withIssueComment(c flamego.Context, logger *logx.Logger, repoCtx *repoConte
 func patchRepoIssueComment(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, comment *database.Comment, req repoIssueCommentRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	if strings.TrimSpace(req.Content) == "" {
-		msg := l.Tr("form.Content") + l.Tr("form.require_error")
+		msg := l.Tr("form::Content") + l.Tr("form::require_error")
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
 	}
 	if statusCode, err = checkNewAttachments(ctx, issueAttachmentLimits(), req.Attachments); err != nil {
@@ -820,7 +820,7 @@ func readUploadedFile(c flamego.Context, l i18n.Locale, lim attachmentLimits) (_
 		return t == "*/*" || t == fileType
 	}) {
 		_ = file.Close()
-		return nil, http.StatusBadRequest, errors.New(l.Tr("dropzone.invalid_input_type"))
+		return nil, http.StatusBadRequest, errors.New(l.Tr("dropzone::invalid_input_type"))
 	}
 	return &uploadedFile{File: file, Header: header, Head: buf}, http.StatusOK, nil
 }
@@ -1070,7 +1070,7 @@ func templateLabelsAndAssignee(ctx context.Context, repo *database.Repository, t
 func newIssueFromRequest(ctx context.Context, l i18n.Locale, viewer *database.User, repoCtx *repoContext, req repoNewIssueRequest) (issue *database.Issue, labelIDs []int64, statusCode int, resp any, err error) {
 	repo := repoCtx.Repo
 	title := strings.TrimSpace(req.Title)
-	if resp := textFieldError(l, "title", "repo.milestones.title", title, 255); resp != nil {
+	if resp := textFieldError(l, "title", "repo::milestones.title", title, 255); resp != nil {
 		return nil, nil, http.StatusBadRequest, resp, nil
 	}
 	if statusCode, err = checkNewAttachments(ctx, issueAttachmentLimits(), req.Attachments); err != nil {
@@ -1112,7 +1112,7 @@ func postRepoIssue(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer
 	repo := repoCtx.Repo
 	// The title is checked before the fields of an issue form, so its error
 	// shows first.
-	if resp := textFieldError(l, "title", "repo.milestones.title", strings.TrimSpace(req.Title), 255); resp != nil {
+	if resp := textFieldError(l, "title", "repo::milestones.title", strings.TrimSpace(req.Title), 255); resp != nil {
 		return http.StatusBadRequest, resp, nil
 	}
 
@@ -1144,7 +1144,7 @@ func postRepoIssue(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer
 				for _, fieldErr := range fieldErrs {
 					msg := fieldErr.Label + ": " + fieldErr.Message
 					if fieldErr.Missing {
-						msg = fieldErr.Label + l.Tr("form.require_error")
+						msg = fieldErr.Label + l.Tr("form::require_error")
 					}
 					fields["field-"+strconv.Itoa(fieldErr.Index)] = &msg
 				}

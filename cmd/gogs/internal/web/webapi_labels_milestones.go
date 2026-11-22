@@ -48,9 +48,9 @@ func textFieldError(l i18n.Locale, field, label, value string, maxLen int) *bind
 	var msg string
 	switch {
 	case strings.TrimSpace(value) == "":
-		msg = l.Tr(label) + l.Tr("form.require_error")
+		msg = l.Tr(label) + l.Tr("form::require_error")
 	case utf8.RuneCountInString(value) > maxLen:
-		msg = l.Tr(label) + l.Tr("form.max_size_error", strconv.Itoa(maxLen))
+		msg = l.Tr(label) + l.Tr("form::max_size_error", "size", maxLen)
 	default:
 		return nil
 	}
@@ -99,11 +99,11 @@ type repoLabelRequest struct {
 var labelColor = lazyregexp.New(`^#[0-9a-fA-F]{6}$`)
 
 func (req repoLabelRequest) validate(l i18n.Locale) *bindingErrorResponse {
-	if resp := textFieldError(l, "name", "repo.issues.label_title", req.Name, 50); resp != nil {
+	if resp := textFieldError(l, "name", "repo::issues.label_title", req.Name, 50); resp != nil {
 		return resp
 	}
 	if !labelColor.MatchString(req.Color) {
-		msg := l.Tr("repo.issues.label_color") + l.Tr("form.hex_color_error")
+		msg := l.Tr("repo::issues.label_color") + l.Tr("form::hex_color_error")
 		return &bindingErrorResponse{Fields: fieldErrors{"color": &msg}}
 	}
 	return nil
@@ -170,7 +170,7 @@ type repoLabelsInitializeRequest struct {
 func postRepoLabelsInitialize(c flamego.Context, logger *logx.Logger, l i18n.Locale, repoCtx *repoContext, req repoLabelsInitializeRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	if !slices.Contains(database.LabelTemplates, req.Template) {
-		msg := l.Tr("repo.issues.label_templates.helper")
+		msg := l.Tr("repo::issues.label_templates.helper")
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"template": &msg}}, nil
 	}
 	list, err := database.GetLabelTemplateFile(req.Template)
@@ -294,14 +294,14 @@ type repoMilestoneRequest struct {
 // apply copies the request to the milestone, or returns the response for
 // fields that cannot be used.
 func (req repoMilestoneRequest) apply(l i18n.Locale, m *database.Milestone) *bindingErrorResponse {
-	if resp := textFieldError(l, "title", "repo.milestones.title", req.Title, 50); resp != nil {
+	if resp := textFieldError(l, "title", "repo::milestones.title", req.Title, 50); resp != nil {
 		return resp
 	}
 	// Milestones without a due date are stored as due on the last day of 9999.
 	deadline := cmp.Or(req.Deadline, "9999-12-31")
 	t, err := time.ParseInLocation("2006-01-02", deadline, time.Local)
 	if err != nil {
-		msg := l.Tr("repo.milestones.invalid_due_date_format")
+		msg := l.Tr("repo::milestones.invalid_due_date_format")
 		return &bindingErrorResponse{Fields: fieldErrors{"deadline": &msg}}
 	}
 	m.Name = req.Title

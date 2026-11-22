@@ -27,17 +27,19 @@ NAMES = English,简体中文,繁體中文,Deutsch,Français,Nederlands,Latviešu
 
 ## Contributing translations
 
-Translations are managed through Crowdin. To contribute:
+Translations live in the [`conf/locale`](https://github.com/gogs/gogs/tree/main/conf/locale) directory of the repository, one `locale_<lang>.ini` file per language. To add a missing translation or correct a wrong one, edit the file of your language and send a pull request on [GitHub](https://github.com/gogs/gogs/pulls).
 
 <Steps>
-  <Step title="Sign up">
-    Create an account on the [Gogs Crowdin project](https://crowdin.gogs.io/).
+  <Step title="Find the key">
+    Add `?i18n_debug=1` to the address of any page, e.g., `https://gogs.example.com/explore/repos?i18n_debug=1`, to show the **key name** of every string in front of it, such as `「home.my_repos」My repositories`. It stays on while you navigate, until you reload the page without it. Messages the server sends already translated, such as form errors and activity feed headlines, do not show their key; search `conf/locale/locale_en-US.ini` for their English text instead.
+
+    Then search for the key in your language's file. Keys with a dot are under a section, e.g., `home.my_repos` is `my_repos` below the `[home]` header.
   </Step>
-  <Step title="Translate">
-    Browse the available strings and fill in untranslated entries for your language.
+  <Step title="Edit the message">
+    Change the text after the `=` sign. Keep every placeholder in curly braces, such as `{name}` or `{count}`, and every HTML tag of the English message. You may move them to fit the word order of your language.
   </Step>
-  <Step title="Review">
-    Review existing translations and suggest improvements where needed.
+  <Step title="Send a pull request">
+    Open a pull request with your changes. The tests check that every placeholder of the English message is kept.
   </Step>
 </Steps>
 
@@ -45,13 +47,9 @@ Translations are managed through Crowdin. To contribute:
   When translating, focus on conveying the meaning rather than producing a literal word-for-word translation. It is more important that the translation reads naturally in your language than that it matches the exact words of the English version.
 </Info>
 
-### Making corrections
-
-If you find an incorrectly translated string, you can search for it efficiently on [Crowdin](https://crowdin.gogs.io/) by using its **key name** rather than the translated text.
-
-For example:
-- To fix the translation for "Home", search for the key `home` instead of searching for the word "Home".
-- For keys under a section, search using the format `section:key_name`, such as `home:uname_holder`.
+<Note>
+  Every language file has the same keys as `locale_en-US.ini`. Changes that add or change English messages translate them into every language in the same pull request.
+</Note>
 
 ### Testing translations locally
 

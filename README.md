@@ -52,7 +52,7 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 - Interface
   - Dashboards, profiles and activity timelines.
   - A command palette for navigation, search and actions.
-  - Light and dark themes, and over [31 languages](https://crowdin.com/project/gogs).
+  - Light and dark themes, and over [31 languages](https://github.com/gogs/gogs/tree/main/conf/locale).
 - Integrations
   - Webhooks for Slack, Discord, DingTalk and more, plus server-side Git hooks.
   - A REST [API](https://gogs.io/api-reference), GitHub-compatible\*.

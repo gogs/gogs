@@ -79,7 +79,7 @@ func (r adminReport) codeUnit(key string, value any, unit string) adminReportRow
 // optional is a code row, or "unset" when the value is empty.
 func (r adminReport) optional(key, value string) adminReportRow {
 	if value == "" {
-		return adminReportRow{Label: r.l.Tr(key), Kind: "unset", Value: r.l.Tr("admin.config.not_set")}
+		return adminReportRow{Label: r.l.Tr(key), Kind: "unset", Value: r.l.Tr("admin::config.not_set")}
 	}
 	return r.code(key, value)
 }
@@ -89,9 +89,9 @@ func (r adminReport) list(key string, values []string) adminReportRow {
 }
 
 func (r adminReport) flag(key string, on bool) adminReportRow {
-	value := r.l.Tr("modal.no")
+	value := r.l.Tr("modal::no")
 	if on {
-		value = r.l.Tr("modal.yes")
+		value = r.l.Tr("modal::yes")
 	}
 	return adminReportRow{Label: r.l.Tr(key), Kind: "bool", Value: value, On: on}
 }
@@ -126,44 +126,44 @@ func getAdminDashboard(logger *logx.Logger, c flamego.Context, l i18n.Locale) (s
 
 	m := new(runtime.MemStats)
 	runtime.ReadMemStats(m)
-	status := r.section("system-status", "admin.dashboard.system_status",
+	status := r.section("system-status", "admin::dashboard.system_status",
 		rows(
-			r.text("admin.dashboard.server_uptime", timeSincePro(initTime)),
-			r.code("admin.dashboard.current_goroutine", runtime.NumGoroutine()),
+			r.text("admin::dashboard.server_uptime", timeSincePro(initTime)),
+			r.code("admin::dashboard.current_goroutine", runtime.NumGoroutine()),
 		),
 		rows(
-			size("admin.dashboard.current_memory_usage", m.Alloc),
-			size("admin.dashboard.total_memory_allocated", m.TotalAlloc),
-			size("admin.dashboard.memory_obtained", m.Sys),
-			r.code("admin.dashboard.pointer_lookup_times", m.Lookups),
-			r.code("admin.dashboard.memory_allocate_times", m.Mallocs),
-			r.code("admin.dashboard.memory_free_times", m.Frees),
+			size("admin::dashboard.current_memory_usage", m.Alloc),
+			size("admin::dashboard.total_memory_allocated", m.TotalAlloc),
+			size("admin::dashboard.memory_obtained", m.Sys),
+			r.code("admin::dashboard.pointer_lookup_times", m.Lookups),
+			r.code("admin::dashboard.memory_allocate_times", m.Mallocs),
+			r.code("admin::dashboard.memory_free_times", m.Frees),
 		),
 		rows(
-			size("admin.dashboard.current_heap_usage", m.HeapAlloc),
-			size("admin.dashboard.heap_memory_obtained", m.HeapSys),
-			size("admin.dashboard.heap_memory_idle", m.HeapIdle),
-			size("admin.dashboard.heap_memory_in_use", m.HeapInuse),
-			size("admin.dashboard.heap_memory_released", m.HeapReleased),
-			r.code("admin.dashboard.heap_objects", m.HeapObjects),
+			size("admin::dashboard.current_heap_usage", m.HeapAlloc),
+			size("admin::dashboard.heap_memory_obtained", m.HeapSys),
+			size("admin::dashboard.heap_memory_idle", m.HeapIdle),
+			size("admin::dashboard.heap_memory_in_use", m.HeapInuse),
+			size("admin::dashboard.heap_memory_released", m.HeapReleased),
+			r.code("admin::dashboard.heap_objects", m.HeapObjects),
 		),
 		rows(
-			size("admin.dashboard.bootstrap_stack_usage", m.StackInuse),
-			size("admin.dashboard.stack_memory_obtained", m.StackSys),
-			size("admin.dashboard.mspan_structures_usage", m.MSpanInuse),
-			size("admin.dashboard.mspan_structures_obtained", m.MSpanSys),
-			size("admin.dashboard.mcache_structures_usage", m.MCacheInuse),
-			size("admin.dashboard.mcache_structures_obtained", m.MCacheSys),
-			size("admin.dashboard.profiling_bucket_hash_table_obtained", m.BuckHashSys),
-			size("admin.dashboard.gc_metadata_obtained", m.GCSys),
-			size("admin.dashboard.other_system_allocation_obtained", m.OtherSys),
+			size("admin::dashboard.bootstrap_stack_usage", m.StackInuse),
+			size("admin::dashboard.stack_memory_obtained", m.StackSys),
+			size("admin::dashboard.mspan_structures_usage", m.MSpanInuse),
+			size("admin::dashboard.mspan_structures_obtained", m.MSpanSys),
+			size("admin::dashboard.mcache_structures_usage", m.MCacheInuse),
+			size("admin::dashboard.mcache_structures_obtained", m.MCacheSys),
+			size("admin::dashboard.profiling_bucket_hash_table_obtained", m.BuckHashSys),
+			size("admin::dashboard.gc_metadata_obtained", m.GCSys),
+			size("admin::dashboard.other_system_allocation_obtained", m.OtherSys),
 		),
 		rows(
-			size("admin.dashboard.next_gc_recycle", m.NextGC),
-			seconds("admin.dashboard.last_gc_time", uint64(time.Now().UnixNano())-m.LastGC, 1),
-			seconds("admin.dashboard.total_gc_pause", m.PauseTotalNs, 1),
-			seconds("admin.dashboard.last_gc_pause", m.PauseNs[(m.NumGC+255)%256], 3),
-			r.code("admin.dashboard.gc_times", m.NumGC),
+			size("admin::dashboard.next_gc_recycle", m.NextGC),
+			seconds("admin::dashboard.last_gc_time", uint64(time.Now().UnixNano())-m.LastGC, 1),
+			seconds("admin::dashboard.total_gc_pause", m.PauseTotalNs, 1),
+			seconds("admin::dashboard.last_gc_pause", m.PauseNs[(m.NumGC+255)%256], 3),
+			r.code("admin::dashboard.gc_times", m.NumGC),
 		),
 	)
 
@@ -173,10 +173,30 @@ func getAdminDashboard(logger *logx.Logger, c flamego.Context, l i18n.Locale) (s
 		GoVersion:   runtime.Version(),
 		BuildTime:   conf.BuildTime,
 		BuildCommit: conf.BuildCommit,
-		Statistics: l.Tr("admin.dashboard.statistic_info",
-			s.User, s.Org, s.PublicKey, s.Repo, s.Watch, s.Star, s.Action, s.Access, s.Issue, s.Comment, s.Oauth,
-			s.Follow, s.Mirror, s.Release, s.LoginSource, s.Webhook, s.Milestone, s.Label, s.HookTask, s.Team,
-			s.UpdateTask, s.Attachment),
+		Statistics: l.Tr("admin::dashboard.statistic_info",
+			"users", s.User,
+			"orgs", s.Org,
+			"publicKeys", s.PublicKey,
+			"repos", s.Repo,
+			"watches", s.Watch,
+			"stars", s.Star,
+			"actions", s.Action,
+			"accesses", s.Access,
+			"issues", s.Issue,
+			"comments", s.Comment,
+			"socialAccounts", s.Oauth,
+			"follows", s.Follow,
+			"mirrors", s.Mirror,
+			"releases", s.Release,
+			"loginSources", s.LoginSource,
+			"webhooks", s.Webhook,
+			"milestones", s.Milestone,
+			"labels", s.Label,
+			"hookTasks", s.HookTask,
+			"teams", s.Team,
+			"updateTasks", s.UpdateTask,
+			"attachments", s.Attachment,
+		),
 		SystemStatus: status,
 	}, nil
 }
@@ -187,13 +207,13 @@ var adminOperations = map[string]struct {
 	run        func(*logx.Logger) error
 	successKey string
 }{
-	"delete-inactive-users": {func(*logx.Logger) error { return database.Handle.Users().DeleteInactivated() }, "admin.dashboard.delete_inactivate_accounts_success"},
-	"delete-repo-archives":  {func(*logx.Logger) error { return database.DeleteRepositoryArchives() }, "admin.dashboard.delete_repo_archives_success"},
-	"delete-missing-repos":  {database.DeleteMissingRepositories, "admin.dashboard.delete_missing_repos_success"},
-	"git-gc-repos":          {func(*logx.Logger) error { return database.GitGcRepos() }, "admin.dashboard.git_gc_repos_success"},
-	"resync-ssh-keys":       {func(*logx.Logger) error { return database.Handle.PublicKeys().RewriteAuthorizedKeys() }, "admin.dashboard.resync_all_sshkeys_success"},
-	"resync-repo-hooks":     {func(*logx.Logger) error { return database.SyncRepositoryHooks() }, "admin.dashboard.resync_all_hooks_success"},
-	"reinit-missing-repos":  {database.ReinitMissingRepositories, "admin.dashboard.reinit_missing_repos_success"},
+	"delete-inactive-users": {func(*logx.Logger) error { return database.Handle.Users().DeleteInactivated() }, "admin::dashboard.delete_inactivate_accounts_success"},
+	"delete-repo-archives":  {func(*logx.Logger) error { return database.DeleteRepositoryArchives() }, "admin::dashboard.delete_repo_archives_success"},
+	"delete-missing-repos":  {database.DeleteMissingRepositories, "admin::dashboard.delete_missing_repos_success"},
+	"git-gc-repos":          {func(*logx.Logger) error { return database.GitGcRepos() }, "admin::dashboard.git_gc_repos_success"},
+	"resync-ssh-keys":       {func(*logx.Logger) error { return database.Handle.PublicKeys().RewriteAuthorizedKeys() }, "admin::dashboard.resync_all_sshkeys_success"},
+	"resync-repo-hooks":     {func(*logx.Logger) error { return database.SyncRepositoryHooks() }, "admin::dashboard.resync_all_hooks_success"},
+	"reinit-missing-repos":  {database.ReinitMissingRepositories, "admin::dashboard.reinit_missing_repos_success"},
 }
 
 type adminMessage struct {
@@ -226,36 +246,36 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 	r := adminReport{l: l}
 	var sections []adminReportSection
 
-	sections = append(sections, r.section("server", "admin.config.server_config",
+	sections = append(sections, r.section("server", "admin::config.server_config",
 		rows(
-			r.code("admin.config.brand_name", conf.App.BrandName),
-			r.code("admin.config.run_user", conf.App.RunUser),
-			r.code("admin.config.run_mode", conf.App.RunMode),
+			r.code("admin::config.brand_name", conf.App.BrandName),
+			r.code("admin::config.run_user", conf.App.RunUser),
+			r.code("admin::config.run_mode", conf.App.RunMode),
 		),
 		rows(
-			r.code("admin.config.server.external_url", conf.Server.ExternalURL),
-			r.code("admin.config.server.domain", conf.Server.Domain),
-			r.code("admin.config.server.protocol", conf.Server.Protocol),
-			r.code("admin.config.server.http_addr", conf.Server.HTTPAddr),
-			r.code("admin.config.server.http_port", conf.Server.HTTPPort),
-			r.code("admin.config.server.cert_file", conf.Server.CertFile),
-			r.code("admin.config.server.key_file", conf.Server.KeyFile),
-			r.code("admin.config.server.tls_min_version", conf.Server.TLSMinVersion),
-			r.code("admin.config.server.unix_socket_permission", conf.Server.UnixSocketPermission),
-			r.code("admin.config.server.local_root_url", conf.Server.LocalRootURL),
+			r.code("admin::config.server.external_url", conf.Server.ExternalURL),
+			r.code("admin::config.server.domain", conf.Server.Domain),
+			r.code("admin::config.server.protocol", conf.Server.Protocol),
+			r.code("admin::config.server.http_addr", conf.Server.HTTPAddr),
+			r.code("admin::config.server.http_port", conf.Server.HTTPPort),
+			r.code("admin::config.server.cert_file", conf.Server.CertFile),
+			r.code("admin::config.server.key_file", conf.Server.KeyFile),
+			r.code("admin::config.server.tls_min_version", conf.Server.TLSMinVersion),
+			r.code("admin::config.server.unix_socket_permission", conf.Server.UnixSocketPermission),
+			r.code("admin::config.server.local_root_url", conf.Server.LocalRootURL),
 		),
 		rows(
-			r.flag("admin.config.server.disable_router_log", conf.Server.DisableRouterLog),
-			r.flag("admin.config.server.enable_gzip", conf.Server.EnableGzip),
+			r.flag("admin::config.server.disable_router_log", conf.Server.DisableRouterLog),
+			r.flag("admin::config.server.enable_gzip", conf.Server.EnableGzip),
 		),
 		rows(
-			r.code("admin.config.server.app_data_path", conf.Server.AppDataPath),
-			r.flag("admin.config.server.load_assets_from_disk", conf.Server.LoadAssetsFromDisk),
+			r.code("admin::config.server.app_data_path", conf.Server.AppDataPath),
+			r.flag("admin::config.server.load_assets_from_disk", conf.Server.LoadAssetsFromDisk),
 		),
-		rows(r.code("admin.config.server.landing_url", conf.Server.LandingURL)),
+		rows(r.code("admin::config.server.landing_url", conf.Server.LandingURL)),
 	))
 
-	ssh := r.section("ssh", "admin.config.ssh_config", rows(r.flag("admin.config.ssh.enabled", !conf.SSH.Disabled)))
+	ssh := r.section("ssh", "admin::config.ssh_config", rows(r.flag("admin::config.ssh.enabled", !conf.SSH.Disabled)))
 	if !conf.SSH.Disabled {
 		keySizes := make([]string, 0, len(conf.SSH.MinimumKeySizes))
 		for typ, size := range conf.SSH.MinimumKeySizes {
@@ -263,203 +283,203 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 		}
 		slices.Sort(keySizes)
 		ssh.Groups[0] = append(ssh.Groups[0],
-			r.code("admin.config.ssh.domain", conf.SSH.Domain),
-			r.code("admin.config.ssh.port", conf.SSH.Port),
-			r.code("admin.config.ssh.root_path", conf.SSH.RootPath),
-			r.code("admin.config.ssh.keygen_path", conf.SSH.KeygenPath),
-			r.code("admin.config.ssh.key_test_path", conf.SSH.KeyTestPath),
-			r.flag("admin.config.ssh.minimum_key_size_check", conf.SSH.MinimumKeySizeCheck),
-			r.list("admin.config.ssh.minimum_key_sizes", keySizes),
-			r.flag("admin.config.ssh.rewrite_authorized_keys_at_start", conf.SSH.RewriteAuthorizedKeysAtStart),
+			r.code("admin::config.ssh.domain", conf.SSH.Domain),
+			r.code("admin::config.ssh.port", conf.SSH.Port),
+			r.code("admin::config.ssh.root_path", conf.SSH.RootPath),
+			r.code("admin::config.ssh.keygen_path", conf.SSH.KeygenPath),
+			r.code("admin::config.ssh.key_test_path", conf.SSH.KeyTestPath),
+			r.flag("admin::config.ssh.minimum_key_size_check", conf.SSH.MinimumKeySizeCheck),
+			r.list("admin::config.ssh.minimum_key_sizes", keySizes),
+			r.flag("admin::config.ssh.rewrite_authorized_keys_at_start", conf.SSH.RewriteAuthorizedKeysAtStart),
 		)
 		ssh.Groups = append(ssh.Groups, rows(
-			r.flag("admin.config.ssh.start_builtin_server", conf.SSH.StartBuiltinServer),
-			r.code("admin.config.ssh.listen_host", conf.SSH.ListenHost),
-			r.code("admin.config.ssh.listen_port", conf.SSH.ListenPort),
-			r.list("admin.config.ssh.server_ciphers", conf.SSH.ServerCiphers),
-			r.list("admin.config.ssh.server_macs", conf.SSH.ServerMACs),
-			r.list("admin.config.ssh.server_algorithms", conf.SSH.ServerAlgorithms),
+			r.flag("admin::config.ssh.start_builtin_server", conf.SSH.StartBuiltinServer),
+			r.code("admin::config.ssh.listen_host", conf.SSH.ListenHost),
+			r.code("admin::config.ssh.listen_port", conf.SSH.ListenPort),
+			r.list("admin::config.ssh.server_ciphers", conf.SSH.ServerCiphers),
+			r.list("admin::config.ssh.server_macs", conf.SSH.ServerMACs),
+			r.list("admin::config.ssh.server_algorithms", conf.SSH.ServerAlgorithms),
 		))
 	}
 	sections = append(sections, ssh)
 
 	repo := conf.Repository
-	sections = append(sections, r.section("repository", "admin.config.repo_config",
+	sections = append(sections, r.section("repository", "admin::config.repo_config",
 		rows(
-			r.code("admin.config.repo.root_path", repo.Root),
-			r.code("admin.config.repo.script_type", repo.ScriptType),
-			r.optional("admin.config.repo.ansi_chatset", repo.ANSICharset),
-			r.flag("admin.config.repo.force_private", repo.ForcePrivate),
-			r.code("admin.config.repo.max_creation_limit", repo.MaxCreationLimit),
-			r.list("admin.config.repo.preferred_licenses", repo.PreferredLicenses),
-			r.flag("admin.config.repo.disable_http_git", repo.DisableHTTPGit),
-			r.flag("admin.config.repo.enable_local_path_migration", repo.EnableLocalPathMigration),
-			r.flag("admin.config.repo.enable_raw_file_render_mode", repo.EnableRawFileRenderMode),
-			r.code("admin.config.repo.commits_fetch_concurrency", repo.CommitsFetchConcurrency),
+			r.code("admin::config.repo.root_path", repo.Root),
+			r.code("admin::config.repo.script_type", repo.ScriptType),
+			r.optional("admin::config.repo.ansi_chatset", repo.ANSICharset),
+			r.flag("admin::config.repo.force_private", repo.ForcePrivate),
+			r.code("admin::config.repo.max_creation_limit", repo.MaxCreationLimit),
+			r.list("admin::config.repo.preferred_licenses", repo.PreferredLicenses),
+			r.flag("admin::config.repo.disable_http_git", repo.DisableHTTPGit),
+			r.flag("admin::config.repo.enable_local_path_migration", repo.EnableLocalPathMigration),
+			r.flag("admin::config.repo.enable_raw_file_render_mode", repo.EnableRawFileRenderMode),
+			r.code("admin::config.repo.commits_fetch_concurrency", repo.CommitsFetchConcurrency),
 		),
 		rows(
-			r.list("admin.config.repo.editor.line_wrap_extensions", repo.Editor.LineWrapExtensions),
-			r.list("admin.config.repo.editor.previewable_file_modes", repo.Editor.PreviewableFileModes),
+			r.list("admin::config.repo.editor.line_wrap_extensions", repo.Editor.LineWrapExtensions),
+			r.list("admin::config.repo.editor.previewable_file_modes", repo.Editor.PreviewableFileModes),
 		),
 		rows(
-			r.flag("admin.config.repo.upload.enabled", repo.Upload.Enabled),
-			r.code("admin.config.repo.upload.temp_path", repo.Upload.TempPath),
-			r.list("admin.config.repo.upload.allowed_types", repo.Upload.AllowedTypes),
-			r.codeUnit("admin.config.repo.upload.file_max_size", repo.Upload.FileMaxSize, "MB"),
-			r.code("admin.config.repo.upload.max_files", repo.Upload.MaxFiles),
+			r.flag("admin::config.repo.upload.enabled", repo.Upload.Enabled),
+			r.code("admin::config.repo.upload.temp_path", repo.Upload.TempPath),
+			r.list("admin::config.repo.upload.allowed_types", repo.Upload.AllowedTypes),
+			r.codeUnit("admin::config.repo.upload.file_max_size", repo.Upload.FileMaxSize, "MB"),
+			r.code("admin::config.repo.upload.max_files", repo.Upload.MaxFiles),
 		),
 	))
 
 	db := conf.Database
-	sections = append(sections, r.section("database", "admin.config.db_config",
+	sections = append(sections, r.section("database", "admin::config.db_config",
 		rows(
-			r.code("admin.config.db.type", db.Type),
-			r.code("admin.config.db.host", db.Host),
-			r.code("admin.config.db.name", db.Name),
-			r.withHint(r.code("admin.config.db.schema", db.Schema), "admin.config.db.schema_helper"),
-			r.code("admin.config.db.user", db.User),
-			r.withHint(r.code("admin.config.db.ssl_mode", db.SSLMode), "admin.config.db.ssl_mode_helper"),
-			r.withHint(r.code("admin.config.db.path", db.Path), "admin.config.db.path_helper"),
+			r.code("admin::config.db.type", db.Type),
+			r.code("admin::config.db.host", db.Host),
+			r.code("admin::config.db.name", db.Name),
+			r.withHint(r.code("admin::config.db.schema", db.Schema), "admin::config.db.schema_helper"),
+			r.code("admin::config.db.user", db.User),
+			r.withHint(r.code("admin::config.db.ssl_mode", db.SSLMode), "admin::config.db.ssl_mode_helper"),
+			r.withHint(r.code("admin::config.db.path", db.Path), "admin::config.db.path_helper"),
 		),
 		rows(
-			r.code("admin.config.db.max_open_conns", db.MaxOpenConns),
-			r.code("admin.config.db.max_idle_conns", db.MaxIdleConns),
+			r.code("admin::config.db.max_open_conns", db.MaxOpenConns),
+			r.code("admin::config.db.max_idle_conns", db.MaxIdleConns),
 		),
 	))
 
 	sec := conf.Security
-	sections = append(sections, r.section("security", "admin.config.security_config", rows(
-		r.code("admin.config.security.login_remember_days", sec.LoginRememberDays),
-		r.flag("admin.config.security.enable_login_status_cookie", sec.EnableLoginStatusCookie),
-		r.code("admin.config.security.login_status_cookie_name", sec.LoginStatusCookieName),
-		r.list("admin.config.security.local_network_allowlist", sec.LocalNetworkAllowlist),
+	sections = append(sections, r.section("security", "admin::config.security_config", rows(
+		r.code("admin::config.security.login_remember_days", sec.LoginRememberDays),
+		r.flag("admin::config.security.enable_login_status_cookie", sec.EnableLoginStatusCookie),
+		r.code("admin::config.security.login_status_cookie_name", sec.LoginStatusCookieName),
+		r.list("admin::config.security.local_network_allowlist", sec.LocalNetworkAllowlist),
 	)))
 
-	mail := r.section("email", "admin.config.email_config", rows(r.flag("admin.config.email.enabled", conf.Email.Enabled)))
+	mail := r.section("email", "admin::config.email_config", rows(r.flag("admin::config.email.enabled", conf.Email.Enabled)))
 	if conf.Email.Enabled {
 		e := conf.Email
 		mail.Groups[0] = append(mail.Groups[0],
-			r.code("admin.config.email.subject_prefix", e.SubjectPrefix),
-			r.code("admin.config.email.host", e.Host),
-			r.code("admin.config.email.from", e.From),
-			r.code("admin.config.email.user", e.User),
+			r.code("admin::config.email.subject_prefix", e.SubjectPrefix),
+			r.code("admin::config.email.host", e.Host),
+			r.code("admin::config.email.from", e.From),
+			r.code("admin::config.email.user", e.User),
 		)
 		mail.Groups = append(mail.Groups,
-			rows(r.optional("admin.config.email.helo_hostname", e.HELOHostname)),
+			rows(r.optional("admin::config.email.helo_hostname", e.HELOHostname)),
 			rows(
-				r.flag("admin.config.email.skip_verify", e.SkipVerify),
-				r.flag("admin.config.email.use_certificate", e.UseCertificate),
-				r.code("admin.config.email.cert_file", e.CertFile),
-				r.code("admin.config.email.key_file", e.KeyFile),
+				r.flag("admin::config.email.skip_verify", e.SkipVerify),
+				r.flag("admin::config.email.use_certificate", e.UseCertificate),
+				r.code("admin::config.email.cert_file", e.CertFile),
+				r.code("admin::config.email.key_file", e.KeyFile),
 			),
 			rows(
-				r.flag("admin.config.email.use_plain_text", e.UsePlainText),
-				r.flag("admin.config.email.add_plain_text_alt", e.AddPlainTextAlt),
+				r.flag("admin::config.email.use_plain_text", e.UsePlainText),
+				r.flag("admin::config.email.add_plain_text_alt", e.AddPlainTextAlt),
 			),
 		)
 	}
 	sections = append(sections, mail)
 
 	auth := conf.Auth
-	sections = append(sections, r.section("auth", "admin.config.auth_config",
+	sections = append(sections, r.section("auth", "admin::config.auth_config",
 		rows(
-			r.codeUnit("admin.config.auth.activate_code_lives", auth.ActivateCodeLives, l.Tr("tool.raw_minutes")),
-			r.codeUnit("admin.config.auth.reset_password_code_lives", auth.ResetPasswordCodeLives, l.Tr("tool.raw_minutes")),
-			r.flag("admin.config.auth.require_email_confirm", auth.RequireEmailConfirmation),
-			r.flag("admin.config.auth.require_sign_in_view", auth.RequireSigninView),
-			r.flag("admin.config.auth.disable_registration", auth.DisableRegistration),
-			r.flag("admin.config.auth.enable_registration_captcha", auth.EnableRegistrationCaptcha),
+			r.codeUnit("admin::config.auth.activate_code_lives", auth.ActivateCodeLives, l.Tr("tool::raw_minutes")),
+			r.codeUnit("admin::config.auth.reset_password_code_lives", auth.ResetPasswordCodeLives, l.Tr("tool::raw_minutes")),
+			r.flag("admin::config.auth.require_email_confirm", auth.RequireEmailConfirmation),
+			r.flag("admin::config.auth.require_sign_in_view", auth.RequireSigninView),
+			r.flag("admin::config.auth.disable_registration", auth.DisableRegistration),
+			r.flag("admin::config.auth.enable_registration_captcha", auth.EnableRegistrationCaptcha),
 		),
 		rows(
-			r.flag("admin.config.auth.enable_reverse_proxy_authentication", auth.EnableReverseProxyAuthentication),
-			r.flag("admin.config.auth.enable_reverse_proxy_auto_registration", auth.EnableReverseProxyAutoRegistration),
-			r.code("admin.config.auth.reverse_proxy_authentication_header", auth.ReverseProxyAuthenticationHeader),
-			r.list("admin.config.auth.trusted_proxy_ips", auth.TrustedProxyIPs),
-			r.optional("admin.config.auth_custom_logout_url", auth.CustomLogoutURL),
+			r.flag("admin::config.auth.enable_reverse_proxy_authentication", auth.EnableReverseProxyAuthentication),
+			r.flag("admin::config.auth.enable_reverse_proxy_auto_registration", auth.EnableReverseProxyAutoRegistration),
+			r.code("admin::config.auth.reverse_proxy_authentication_header", auth.ReverseProxyAuthenticationHeader),
+			r.list("admin::config.auth.trusted_proxy_ips", auth.TrustedProxyIPs),
+			r.optional("admin::config.auth_custom_logout_url", auth.CustomLogoutURL),
 		),
 	))
 
-	sections = append(sections, r.section("user", "admin.config.user_config", rows(
-		r.flag("admin.config.user.enable_email_notify", conf.User.EnableEmailNotification),
+	sections = append(sections, r.section("user", "admin::config.user_config", rows(
+		r.flag("admin::config.user.enable_email_notify", conf.User.EnableEmailNotification),
 	)))
 
 	sess := conf.Session
-	sections = append(sections, r.section("session", "admin.config.session_config", rows(
-		r.code("admin.config.session.provider", sess.Provider),
-		r.code("admin.config.session.provider_config", sess.ProviderConfig),
-		r.code("admin.config.session.cookie_name", sess.CookieName),
-		r.flag("admin.config.session.https_only", sess.CookieSecure),
-		r.codeUnit("admin.config.session.gc_interval", sess.GCInterval, l.Tr("tool.raw_seconds")),
-		r.codeUnit("admin.config.session.max_life_time", sess.MaxLifeTime, l.Tr("tool.raw_seconds")),
+	sections = append(sections, r.section("session", "admin::config.session_config", rows(
+		r.code("admin::config.session.provider", sess.Provider),
+		r.code("admin::config.session.provider_config", sess.ProviderConfig),
+		r.code("admin::config.session.cookie_name", sess.CookieName),
+		r.flag("admin::config.session.https_only", sess.CookieSecure),
+		r.codeUnit("admin::config.session.gc_interval", sess.GCInterval, l.Tr("tool::raw_seconds")),
+		r.codeUnit("admin::config.session.max_life_time", sess.MaxLifeTime, l.Tr("tool::raw_seconds")),
 	)))
 
 	// The cache host is left out because it can hold credentials, e.g., a
 	// Redis password.
-	sections = append(sections, r.section("cache", "admin.config.cache_config", rows(
-		r.code("admin.config.cache.adapter", conf.Cache.Adapter),
-		r.codeUnit("admin.config.cache.interval", conf.Cache.Interval, l.Tr("tool.raw_seconds")),
+	sections = append(sections, r.section("cache", "admin::config.cache_config", rows(
+		r.code("admin::config.cache.adapter", conf.Cache.Adapter),
+		r.codeUnit("admin::config.cache.interval", conf.Cache.Interval, l.Tr("tool::raw_seconds")),
 	)))
 
 	att := conf.Attachment
-	sections = append(sections, r.section("attachment", "admin.config.attachment_config", rows(
-		r.flag("admin.config.attachment.enabled", att.Enabled),
-		r.code("admin.config.attachment.path", att.Path),
-		r.list("admin.config.attachment.allowed_types", att.AllowedTypes),
-		r.codeUnit("admin.config.attachment.max_size", att.MaxSize, "MB"),
-		r.code("admin.config.attachment.max_files", att.MaxFiles),
+	sections = append(sections, r.section("attachment", "admin::config.attachment_config", rows(
+		r.flag("admin::config.attachment.enabled", att.Enabled),
+		r.code("admin::config.attachment.path", att.Path),
+		r.list("admin::config.attachment.allowed_types", att.AllowedTypes),
+		r.codeUnit("admin::config.attachment.max_size", att.MaxSize, "MB"),
+		r.code("admin::config.attachment.max_files", att.MaxFiles),
 	)))
 
 	rel := conf.Release.Attachment
-	sections = append(sections, r.section("release", "admin.config.release_config", rows(
-		r.flag("admin.config.release.attachment.enabled", rel.Enabled),
-		r.list("admin.config.release.attachment.allowed_types", rel.AllowedTypes),
-		r.codeUnit("admin.config.release.attachment.max_size", rel.MaxSize, "MB"),
-		r.code("admin.config.release.attachment.max_files", rel.MaxFiles),
+	sections = append(sections, r.section("release", "admin::config.release_config", rows(
+		r.flag("admin::config.release.attachment.enabled", rel.Enabled),
+		r.list("admin::config.release.attachment.allowed_types", rel.AllowedTypes),
+		r.codeUnit("admin::config.release.attachment.max_size", rel.MaxSize, "MB"),
+		r.code("admin::config.release.attachment.max_files", rel.MaxFiles),
 	)))
 
 	pic := conf.Picture
-	sections = append(sections, r.section("picture", "admin.config.picture_config", rows(
-		r.code("admin.config.picture.avatar_upload_path", pic.AvatarUploadPath),
-		r.code("admin.config.picture.repo_avatar_upload_path", pic.RepositoryAvatarUploadPath),
+	sections = append(sections, r.section("picture", "admin::config.picture_config", rows(
+		r.code("admin::config.picture.avatar_upload_path", pic.AvatarUploadPath),
+		r.code("admin::config.picture.repo_avatar_upload_path", pic.RepositoryAvatarUploadPath),
 	)))
 
 	sections = append(sections,
-		r.section("http", "admin.config.http_config", rows(
-			r.optional("admin.config.http.access_control_allow_origin", conf.HTTP.AccessControlAllowOrigin),
+		r.section("http", "admin::config.http_config", rows(
+			r.optional("admin::config.http.access_control_allow_origin", conf.HTTP.AccessControlAllowOrigin),
 		)),
-		r.section("mirror", "admin.config.mirror_config", rows(
-			r.codeUnit("admin.config.mirror.default_interval", conf.Mirror.DefaultInterval, l.Tr("tool.raw_hours")),
+		r.section("mirror", "admin::config.mirror_config", rows(
+			r.codeUnit("admin::config.mirror.default_interval", conf.Mirror.DefaultInterval, l.Tr("tool::raw_hours")),
 		)),
-		r.section("webhook", "admin.config.webhook_config", rows(
-			r.list("admin.config.webhook.types", conf.Webhook.Types),
-			r.codeUnit("admin.config.webhook.deliver_timeout", conf.Webhook.DeliverTimeout, l.Tr("tool.raw_seconds")),
-			r.flag("admin.config.webhook.skip_tls_verify", conf.Webhook.SkipTLSVerify),
+		r.section("webhook", "admin::config.webhook_config", rows(
+			r.list("admin::config.webhook.types", conf.Webhook.Types),
+			r.codeUnit("admin::config.webhook.deliver_timeout", conf.Webhook.DeliverTimeout, l.Tr("tool::raw_seconds")),
+			r.flag("admin::config.webhook.skip_tls_verify", conf.Webhook.SkipTLSVerify),
 		)),
 	)
 
 	git := conf.Git
-	sections = append(sections, r.section("git", "admin.config.git_config",
+	sections = append(sections, r.section("git", "admin::config.git_config",
 		rows(
-			r.optional("admin.config.git.gc_args", strings.Join(git.GCArgs, " ")),
+			r.optional("admin::config.git.gc_args", strings.Join(git.GCArgs, " ")),
 		),
 		rows(
-			r.codeUnit("admin.config.git.migrate_timeout", git.Timeout.Migrate, l.Tr("tool.raw_seconds")),
-			r.codeUnit("admin.config.git.mirror_timeout", git.Timeout.Mirror, l.Tr("tool.raw_seconds")),
-			r.codeUnit("admin.config.git.gc_timeout", git.Timeout.GC, l.Tr("tool.raw_seconds")),
+			r.codeUnit("admin::config.git.migrate_timeout", git.Timeout.Migrate, l.Tr("tool::raw_seconds")),
+			r.codeUnit("admin::config.git.mirror_timeout", git.Timeout.Mirror, l.Tr("tool::raw_seconds")),
+			r.codeUnit("admin::config.git.gc_timeout", git.Timeout.GC, l.Tr("tool::raw_seconds")),
 		),
 	))
 
-	sections = append(sections, r.section("lfs", "admin.config.lfs_config", rows(
-		r.code("admin.config.lfs.storage", conf.LFS.Storage),
-		r.code("admin.config.lfs.objects_path", conf.LFS.ObjectsPath),
+	sections = append(sections, r.section("lfs", "admin::config.lfs_config", rows(
+		r.code("admin::config.lfs.storage", conf.LFS.Storage),
+		r.code("admin::config.lfs.objects_path", conf.LFS.ObjectsPath),
 	)))
 
-	logs := r.section("log", "admin.config.log_config", rows(r.code("admin.config.log_file_root_path", conf.Log.RootPath)))
+	logs := r.section("log", "admin::config.log_config", rows(r.code("admin::config.log_file_root_path", conf.Log.RootPath)))
 	for i, mode := range conf.Log.Modes {
 		options, _ := json.MarshalIndent(conf.Log.Configs[i], "", "  ")
 		logs.Groups = append(logs.Groups, rows(
-			r.code("admin.config.log_mode", mode),
-			adminReportRow{Label: l.Tr("admin.config.log_options"), Kind: "block", Value: string(options)},
+			r.code("admin::config.log_mode", mode),
+			adminReportRow{Label: l.Tr("admin::config.log_options"), Kind: "block", Value: string(options)},
 		))
 	}
 	sections = append(sections, logs)
@@ -479,9 +499,9 @@ func postAdminTestMail(logger *logx.Logger, l i18n.Locale, req adminTestMailRequ
 		logger.Error("Failed to send test mail", "email", req.Email, "error", err)
 		// The mail server refused or could not be reached, and the reason helps
 		// the admin fix the settings.
-		return http.StatusBadGateway, &bindingErrorResponse{Error: l.Tr("admin.config.email.test_mail_failed", req.Email, err)}, nil
+		return http.StatusBadGateway, &bindingErrorResponse{Error: l.Tr("admin::config.email.test_mail_failed", "email", req.Email, "error", err)}, nil
 	}
-	return http.StatusOK, &adminMessage{Message: l.Tr("admin.config.email.test_mail_sent", req.Email)}, nil
+	return http.StatusOK, &adminMessage{Message: l.Tr("admin::config.email.test_mail_sent", "email", req.Email)}, nil
 }
 
 type adminCronTask struct {

@@ -15,13 +15,13 @@ type Collaboration struct {
 func (c *Collaboration) ModeI18nKey() string {
 	switch c.Mode {
 	case AccessModeRead:
-		return "repo.settings.collaboration.read"
+		return "repo::settings.collaboration.read"
 	case AccessModeWrite:
-		return "repo.settings.collaboration.write"
+		return "repo::settings.collaboration.write"
 	case AccessModeAdmin:
-		return "repo.settings.collaboration.admin"
+		return "repo::settings.collaboration.admin"
 	default:
-		return "repo.settings.collaboration.undefined"
+		return "repo::settings.collaboration.undefined"
 	}
 }
 

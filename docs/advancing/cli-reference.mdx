@@ -43,14 +43,6 @@ The `admin` command lets you perform maintenance tasks without going through the
   `rewrite-authorized-keys` replaces the entire `authorized_keys` file. Any non-Gogs keys in that file will be lost.
 </Warning>
 
-## Importing data
-
-```bash
-gogs import locale --source <dir> --target <dir>
-```
-
-The `import` command helps you bring portable data from other Gogs installations into your local instance. Currently the only subcommand is `locale`, which merges locale files from a source directory into a target directory.
-
 ## Backup and restore
 
 ```bash

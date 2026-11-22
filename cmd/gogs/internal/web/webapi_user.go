@@ -92,10 +92,10 @@ type userSignUpResponse struct {
 
 func postUserSignUp(logger *logx.Logger, r *http.Request, ca cache.Cache, l i18n.Locale, cpt captcha.Captcha, req userSignUpRequest) (statusCode int, resp any, err error) {
 	if conf.Auth.DisableRegistration {
-		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("auth.disable_register_prompt")}, nil
+		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("auth::disable_register_prompt")}, nil
 	}
 	if conf.Auth.EnableRegistrationCaptcha && !cpt.ValidText(req.Captcha) {
-		msg := l.Tr("form.captcha_incorrect")
+		msg := l.Tr("form::captcha_incorrect")
 		return http.StatusUnauthorized, &bindingErrorResponse{
 			Fields: fieldErrors{"captcha": &msg},
 		}, nil
@@ -112,13 +112,13 @@ func postUserSignUp(logger *logx.Logger, r *http.Request, ca cache.Cache, l i18n
 	if err != nil {
 		switch {
 		case database.IsErrUserAlreadyExist(err):
-			msg := l.Tr("form.username_been_taken")
+			msg := l.Tr("form::username_been_taken")
 			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"userName": &msg}}, nil
 		case database.IsErrEmailAlreadyUsed(err):
-			msg := l.Tr("form.email_been_used")
+			msg := l.Tr("form::email_been_used")
 			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"email": &msg}}, nil
 		case database.IsErrNameNotAllowed(err):
-			msg := l.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value())
+			msg := l.Tr("user::form.name_not_allowed", "name", err.(database.ErrNameNotAllowed).Value())
 			return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"userName": &msg}}, nil
 		default:
 			logger.Error("Failed to create user", "username", req.UserName, "error", err)
@@ -208,7 +208,7 @@ type userResetPasswordResponse struct {
 
 func postUserResetPassword(logger *logx.Logger, r *http.Request, ca cache.Cache, l i18n.Locale, req userResetPasswordEmailRequest) (statusCode int, resp any, err error) {
 	if !conf.Email.Enabled {
-		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("auth.disable_register_mail")}, nil
+		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("auth::disable_register_mail")}, nil
 	}
 
 	ctx := r.Context()
@@ -222,7 +222,7 @@ func postUserResetPassword(logger *logx.Logger, r *http.Request, ca cache.Cache,
 	}
 
 	if !u.IsLocal() {
-		msg := l.Tr("auth.non_local_account")
+		msg := l.Tr("auth::non_local_account")
 		return http.StatusForbidden, &bindingErrorResponse{Fields: fieldErrors{"email": &msg}}, nil
 	}
 
@@ -248,7 +248,7 @@ func postUserResetPassword(logger *logx.Logger, r *http.Request, ca cache.Cache,
 func postUserResetPasswordComplete(logger *logx.Logger, r *http.Request, l i18n.Locale, req userResetPasswordCompleteRequest) (statusCode int, resp any, err error) {
 	u := verifyUserResetPasswordCode(r.Context(), logger, req.Code)
 	if u == nil {
-		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("auth.invalid_code")}, nil
+		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("auth::invalid_code")}, nil
 	}
 
 	if err := database.Handle.Users().Update(r.Context(), u.ID, database.UpdateUserOptions{Password: &req.Password}); err != nil {
@@ -273,15 +273,15 @@ func postUserSignIn(logger *logx.Logger, r *http.Request, w http.ResponseWriter,
 		switch {
 		case auth.IsErrBadCredentials(err):
 			return http.StatusUnauthorized, &bindingErrorResponse{
-				Error:  l.Tr("form.username_password_incorrect"),
+				Error:  l.Tr("form::username_password_incorrect"),
 				Fields: fieldErrors{"username": nil, "password": nil},
 			}, nil
 		case database.IsErrLoginSourceMismatch(err):
-			return http.StatusUnprocessableEntity, nil, errors.New(l.Tr("form.auth_source_mismatch"))
+			return http.StatusUnprocessableEntity, nil, errors.New(l.Tr("form::auth_source_mismatch"))
 		case database.IsErrNameNotAllowed(err):
 			// The authentication source gave a name that cannot be used for the new
 			// account.
-			return http.StatusUnprocessableEntity, nil, errors.New(l.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value()))
+			return http.StatusUnprocessableEntity, nil, errors.New(l.Tr("user::form.name_not_allowed", "name", err.(database.ErrNameNotAllowed).Value()))
 		default:
 			logger.Error("Failed to authenticate user", "username", req.Username, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "authenticate user")
@@ -353,7 +353,7 @@ type userMFAResponse struct{}
 func postUserMFA(logger *logx.Logger, r *http.Request, w http.ResponseWriter, store session.Store, sess session.Session, ca cache.Cache, l i18n.Locale, req userMFARequest) (statusCode int, resp any, err error) {
 	userID, ok := sess.Get("mfaUserID").(int64)
 	if !ok {
-		return http.StatusUnauthorized, &bindingErrorResponse{Error: l.Tr("auth.mfa_session_expired")}, nil
+		return http.StatusUnauthorized, &bindingErrorResponse{Error: l.Tr("auth::mfa_session_expired")}, nil
 	}
 
 	t, err := database.Handle.TwoFactors().GetByUserID(r.Context(), userID)
@@ -368,7 +368,7 @@ func postUserMFA(logger *logx.Logger, r *http.Request, w http.ResponseWriter, st
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "validate TOTP")
 	}
 	if !valid {
-		msg := l.Tr("auth.mfa_invalid_passcode")
+		msg := l.Tr("auth::mfa_invalid_passcode")
 		return http.StatusUnauthorized, &bindingErrorResponse{
 			Fields: fieldErrors{"passcode": &msg},
 		}, nil
@@ -376,7 +376,7 @@ func postUserMFA(logger *logx.Logger, r *http.Request, w http.ResponseWriter, st
 
 	cacheKey := userx.TwoFactorCacheKey(userID, req.Passcode)
 	if _, err := ca.Get(r.Context(), cacheKey); err == nil {
-		msg := l.Tr("auth.mfa_reused_passcode")
+		msg := l.Tr("auth::mfa_reused_passcode")
 		return http.StatusUnauthorized, &bindingErrorResponse{
 			Fields: fieldErrors{"passcode": &msg},
 		}, nil
@@ -407,12 +407,12 @@ type userMFARecoveryRequest struct {
 func postUserMFARecovery(logger *logx.Logger, r *http.Request, w http.ResponseWriter, store session.Store, sess session.Session, l i18n.Locale, req userMFARecoveryRequest) (statusCode int, resp any, err error) {
 	userID, ok := sess.Get("mfaUserID").(int64)
 	if !ok {
-		return http.StatusUnauthorized, &bindingErrorResponse{Error: l.Tr("auth.mfa_session_expired")}, nil
+		return http.StatusUnauthorized, &bindingErrorResponse{Error: l.Tr("auth::mfa_session_expired")}, nil
 	}
 
 	if err := database.Handle.TwoFactors().UseRecoveryCode(r.Context(), userID, req.RecoveryCode); err != nil {
 		if database.IsTwoFactorRecoveryCodeNotFound(err) {
-			msg := l.Tr("auth.mfa_invalid_recovery_code")
+			msg := l.Tr("auth::mfa_invalid_recovery_code")
 			return http.StatusUnauthorized, &bindingErrorResponse{
 				Fields: fieldErrors{"recoveryCode": &msg},
 			}, nil
@@ -487,7 +487,7 @@ func postUserActivate(logger *logx.Logger, r *http.Request, u *database.User, ca
 		return http.StatusNotFound, nil, nil
 	}
 	if !conf.Auth.RequireEmailConfirmation {
-		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("auth.disable_register_mail")}, nil
+		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("auth::disable_register_mail")}, nil
 	}
 
 	ctx := r.Context()
@@ -516,7 +516,7 @@ type userActivateCompleteRequest struct {
 func postUserActivateComplete(logger *logx.Logger, r *http.Request, w http.ResponseWriter, store session.Store, sess session.Session, l i18n.Locale, req userActivateCompleteRequest) (statusCode int, resp any, err error) {
 	target := verifyUserActivateCode(r.Context(), logger, req.Code)
 	if target == nil || target.IsActive {
-		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("auth.invalid_code")}, nil
+		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("auth::invalid_code")}, nil
 	}
 
 	v := true

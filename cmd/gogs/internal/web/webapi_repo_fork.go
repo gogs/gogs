@@ -123,14 +123,14 @@ func postRepoFork(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer 
 		return http.StatusOK, &repoCreated{Owner: owner.Name, Name: fork.Name}, nil
 	}
 	if owner.ID == base.OwnerID {
-		msg := l.Tr("repo.settings.cannot_fork_to_same_owner")
+		msg := l.Tr("repo::settings.cannot_fork_to_same_owner")
 		return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"ownerID": &msg}}, nil
 	}
 
 	fork, err = database.ForkRepository(c.Request().Context(), logger, viewer, owner, base.Repository, req.RepoName, req.Description)
 	if err != nil {
 		if database.IsErrRepoAlreadyExist(err) {
-			msg := l.Tr("repo.settings.new_owner_has_same_repo")
+			msg := l.Tr("repo::settings.new_owner_has_same_repo")
 			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"name": &msg}}, nil
 		}
 		if code, resp := repoCreateError(l, err); resp != nil {

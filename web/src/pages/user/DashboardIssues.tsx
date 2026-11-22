@@ -155,8 +155,8 @@ function Toolbar({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const states = [
-    { state: undefined, label: t("repo.issues.open_tab"), count: data.counts.open, icon: CircleDot },
-    { state: "closed" as const, label: t("repo.issues.close_tab"), count: data.counts.closed, icon: CircleCheck },
+    { state: undefined, label: t("repo.issues.open_tab", { count: data.counts.open }), icon: CircleDot },
+    { state: "closed" as const, label: t("repo.issues.close_tab", { count: data.counts.closed }), icon: CircleCheck },
   ];
   return (
     <div
@@ -166,7 +166,7 @@ function Toolbar({
       )}
     >
       <ul className="flex gap-1">
-        {states.map(({ state, label, count, icon: Icon }) => {
+        {states.map(({ state, label, icon: Icon }) => {
           const active = state === search.state;
           return (
             <li key={state ?? "open"}>
@@ -180,7 +180,7 @@ function Toolbar({
                 )}
               >
                 <Icon className="size-4" aria-hidden />
-                {label.replace(/%(?:\[1\])?d/, String(count))}
+                {label}
               </Link>
             </li>
           );

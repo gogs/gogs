@@ -120,18 +120,18 @@ type repoCreated struct {
 func repoCreateError(l i18n.Locale, err error) (int, *bindingErrorResponse) {
 	switch {
 	case database.IsErrReachLimitOfRepo(err):
-		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("repo.form.reach_limit_of_creation", err.(database.ErrReachLimitOfRepo).Limit)}
+		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("repo::form.reach_limit_of_creation", "limit", err.(database.ErrReachLimitOfRepo).Limit)}
 	case database.IsErrRepoAlreadyExist(err):
 		return repoNameTakenError(l)
 	case database.IsErrNameNotAllowed(err):
-		msg := l.Tr("repo.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value())
+		msg := l.Tr("repo::form.name_not_allowed", "name", err.(database.ErrNameNotAllowed).Value())
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"name": &msg}}
 	}
 	return 0, nil
 }
 
 func repoNameTakenError(l i18n.Locale) (int, *bindingErrorResponse) {
-	msg := l.Tr("form.repo_name_been_taken")
+	msg := l.Tr("form::repo_name_been_taken")
 	return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"name": &msg}}
 }
 
@@ -153,7 +153,7 @@ func checkRepoName(logger *logx.Logger, l i18n.Locale, owner *database.User, nam
 // repoOwnerError returns the response for an owner the viewer cannot create
 // repositories for, which the form never offers.
 func repoOwnerError(l i18n.Locale) *bindingErrorResponse {
-	msg := l.Tr("form.invalid_request")
+	msg := l.Tr("form::invalid_request")
 	return &bindingErrorResponse{Fields: fieldErrors{"ownerID": &msg}}
 }
 
@@ -198,7 +198,7 @@ func postRepoCreate(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewe
 		// created, so they are turned away first. The form only offers known
 		// ones.
 		fields := fieldErrors{}
-		msg := l.Tr("form.invalid_request")
+		msg := l.Tr("form::invalid_request")
 		for _, name := range req.Gitignores {
 			if !slices.Contains(database.Gitignores, name) {
 				fields["gitignores"] = &msg
@@ -256,13 +256,13 @@ func cloneAddrError(l i18n.Locale, label string, err error) (statusCode int, msg
 	}
 	switch {
 	case addrErr.IsURLError:
-		return http.StatusBadRequest, label + l.Tr("form.url_error"), true
+		return http.StatusBadRequest, label + l.Tr("form::url_error"), true
 	case addrErr.IsPermissionDenied:
-		return http.StatusForbidden, l.Tr("repo.migrate.permission_denied"), true
+		return http.StatusForbidden, l.Tr("repo::migrate.permission_denied"), true
 	case addrErr.IsInvalidPath:
-		return http.StatusBadRequest, l.Tr("repo.migrate.invalid_local_path"), true
+		return http.StatusBadRequest, l.Tr("repo::migrate.invalid_local_path"), true
 	case addrErr.IsBlockedLocalAddress:
-		return http.StatusForbidden, l.Tr("repo.migrate.clone_address_resolved_to_blocked_local_address"), true
+		return http.StatusForbidden, l.Tr("repo::migrate.clone_address_resolved_to_blocked_local_address"), true
 	}
 	return 0, "", false
 }
@@ -286,7 +286,7 @@ func postRepoMigrate(c flamego.Context, logger *logx.Logger, l i18n.Locale, view
 		AuthPassword: req.AuthPassword,
 	})
 	if err != nil {
-		code, msg, ok := cloneAddrError(l, l.Tr("form.CloneAddr"), err)
+		code, msg, ok := cloneAddrError(l, l.Tr("form::CloneAddr"), err)
 		if !ok {
 			logger.Error("Failed to parse remote address", "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "parse remote address")
@@ -320,11 +320,11 @@ func postRepoMigrate(c flamego.Context, logger *logx.Logger, l i18n.Locale, view
 	switch {
 	case strings.Contains(err.Error(), "Authentication failed") ||
 		strings.Contains(err.Error(), "could not read Username"):
-		msg := l.Tr("form.auth_failed", reason)
+		msg := l.Tr("form::auth_failed", "error", reason)
 		return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"authUsername": &msg, "authPassword": nil}}, nil
 	case strings.Contains(err.Error(), "fatal:"):
 		logger.Error("Failed to migrate repository", "ownerName", owner.Name, "repoName", req.RepoName, "error", reason)
-		msg := l.Tr("repo.migrate.failed", reason)
+		msg := l.Tr("repo::migrate.failed", "error", reason)
 		return http.StatusBadGateway, &bindingErrorResponse{Fields: fieldErrors{"cloneAddr": &msg}}, nil
 	}
 	logger.Error("Failed to migrate repository", "ownerName", owner.Name, "repoName", req.RepoName, "error", reason)

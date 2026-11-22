@@ -42,7 +42,7 @@ export function useAttachmentUploads(
         toast.error(
           t("dropzone.file_too_big", {
             filesize: (file.size / (1 << 20)).toFixed(1),
-            maxFilesize: settings.maxSize / (1 << 20),
+            maxFileSize: settings.maxSize / (1 << 20),
           }),
         );
         continue;

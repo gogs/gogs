@@ -1135,7 +1135,7 @@ function FileView({
   let editHint = t("repo.editor.edit_this_file");
   if (data.editor === "not_branch") editHint = t("repo.editor.must_be_on_a_branch");
   else if (data.editor === "no_write") editHint = t("repo.editor.fork_before_edit");
-  else if (file.isSymlink) editHint = t("repo.editor.file_is_a_symlink").replace(/%(?:\[1\])?s/, file.name);
+  else if (file.isSymlink) editHint = t("repo.editor.file_is_a_symlink", { path: file.name });
   else if (!isText) editHint = t("repo.editor.cannot_edit_non_text_files");
   const deleteHint =
     data.editor === "ok"

@@ -96,7 +96,7 @@ func getUserByParam(ctx context.Context, l i18n.Locale, name string) (*database.
 	u, err := database.Handle.Users().GetByUsername(ctx, name)
 	if err != nil {
 		if database.IsErrUserNotExist(err) {
-			return nil, http.StatusNotFound, errors.New(l.Tr("form.user_not_exist"))
+			return nil, http.StatusNotFound, errors.New(l.Tr("form::user_not_exist"))
 		}
 		return nil, http.StatusInternalServerError, errors.Wrap(err, "get user")
 	}
@@ -148,7 +148,7 @@ func deleteOrgMember(logger *logx.Logger, c flamego.Context, l i18n.Locale, view
 	}
 	if err = database.Handle.Organizations().RemoveMember(ctx, m.Org.ID, member.ID); err != nil {
 		if database.IsErrLastOrgOwner(err) {
-			return http.StatusConflict, nil, errors.New(l.Tr("form.last_org_owner"))
+			return http.StatusConflict, nil, errors.New(l.Tr("form::last_org_owner"))
 		}
 		logger.Error("Failed to remove member from organization", "userID", member.ID, "orgID", m.Org.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "remove member")
@@ -170,7 +170,7 @@ func putOrgMember(logger *logx.Logger, c flamego.Context, l i18n.Locale, m *orgM
 		return code, nil, err
 	}
 	if member.IsOrganization() {
-		return http.StatusNotFound, nil, errors.New(l.Tr("form.user_not_exist"))
+		return http.StatusNotFound, nil, errors.New(l.Tr("form::user_not_exist"))
 	}
 	if err = database.Handle.Organizations().AddMember(ctx, m.Org.ID, member.ID); err != nil {
 		logger.Error("Failed to add member to organization", "userID", member.ID, "orgID", m.Org.ID, "error", err)
@@ -282,13 +282,13 @@ func getOrgTeam(c flamego.Context, l i18n.Locale, viewer *database.User, team *o
 	var permission string
 	switch {
 	case team.IsOwnerTeam():
-		permission = l.Tr("org.teams.owners_permission_desc")
+		permission = l.Tr("org::teams.owners_permission_desc")
 	case team.Authorize == database.AccessModeRead:
-		permission = l.Tr("org.teams.read_permission_desc")
+		permission = l.Tr("org::teams.read_permission_desc")
 	case team.Authorize == database.AccessModeWrite:
-		permission = l.Tr("org.teams.write_permission_desc")
+		permission = l.Tr("org::teams.write_permission_desc")
 	case team.Authorize == database.AccessModeAdmin:
-		permission = l.Tr("org.teams.admin_permission_desc")
+		permission = l.Tr("org::teams.admin_permission_desc")
 	}
 	return http.StatusOK, &orgTeamDetail{
 		Name:        team.Name,
@@ -333,7 +333,7 @@ func putOrgTeamMember(logger *logx.Logger, c flamego.Context, l i18n.Locale, m *
 		return code, nil, err
 	}
 	if member.IsOrganization() {
-		return http.StatusNotFound, nil, errors.New(l.Tr("form.user_not_exist"))
+		return http.StatusNotFound, nil, errors.New(l.Tr("form::user_not_exist"))
 	}
 	if err = database.Handle.Teams().AddMember(ctx, team.OrgID, team.ID, member.ID); err != nil {
 		logger.Error("Failed to add member to team", "userID", member.ID, "teamID", team.ID, "error", err)
@@ -358,7 +358,7 @@ func deleteOrgTeamMember(logger *logx.Logger, c flamego.Context, l i18n.Locale, 
 	}
 	if err = database.Handle.Teams().RemoveMember(ctx, team.OrgID, team.ID, member.ID); err != nil {
 		if database.IsErrLastOrgOwner(err) {
-			return http.StatusConflict, nil, errors.New(l.Tr("form.last_org_owner"))
+			return http.StatusConflict, nil, errors.New(l.Tr("form::last_org_owner"))
 		}
 		logger.Error("Failed to remove member from team", "userID", member.ID, "teamID", team.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "remove team member")
@@ -417,7 +417,7 @@ func putOrgTeamRepo(logger *logx.Logger, c flamego.Context, l i18n.Locale, m *or
 	repo, err := database.Handle.Repositories().GetByName(c.Request().Context(), m.Org.ID, c.Param("repo"))
 	if err != nil {
 		if database.IsErrRepoNotExist(err) {
-			return http.StatusNotFound, nil, errors.New(l.Tr("org.teams.add_nonexistent_repo"))
+			return http.StatusNotFound, nil, errors.New(l.Tr("org::teams.add_nonexistent_repo"))
 		}
 		logger.Error("Failed to get repository of organization", "repoName", c.Param("repo"), "orgID", m.Org.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get repository")
@@ -475,9 +475,9 @@ func teamNameError(l i18n.Locale, err error) (int, *bindingErrorResponse) {
 	var code int
 	switch {
 	case database.IsErrTeamAlreadyExist(err):
-		code, msg = http.StatusUnprocessableEntity, l.Tr("form.team_name_been_taken")
+		code, msg = http.StatusUnprocessableEntity, l.Tr("form::team_name_been_taken")
 	case database.IsErrNameNotAllowed(err):
-		code, msg = http.StatusBadRequest, l.Tr("org.form.team_name_not_allowed", err.(database.ErrNameNotAllowed).Value())
+		code, msg = http.StatusBadRequest, l.Tr("org::form.team_name_not_allowed", "name", err.(database.ErrNameNotAllowed).Value())
 	default:
 		return 0, nil
 	}

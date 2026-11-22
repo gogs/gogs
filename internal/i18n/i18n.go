@@ -12,20 +12,37 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
-	"github.com/unknwon/i18n"
 	"golang.org/x/text/language"
+	"unknwon.dev/i18n"
 
 	"gogs.io/gogs/internal/osx"
 )
 
 // Locale is the language of a request.
 type Locale struct {
-	i18n.Locale
+	// Lang is the language tag, e.g., "en-US".
+	Lang string
+
+	// messages and fallback are nil when no locale files are loaded, e.g., in
+	// tests, then Tr returns the key itself.
+	messages *i18n.Locale
+	fallback *i18n.Locale
 }
 
 // Language returns the language tag, e.g., "en-US".
 func (l Locale) Language() string {
 	return l.Lang
+}
+
+// Tr returns the message of the key, with each "{name}" placeholder replaced by
+// the value that follows the name in args, e.g., l.Tr("repo::editor.add", "path",
+// "README.md"). A message missing from the language is taken from the default
+// language.
+func (l Locale) Tr(key string, args ...any) string {
+	if l.messages == nil {
+		return key
+	}
+	return l.messages.TranslateNamedWithFallback(l.fallback, key, args...)
 }
 
 // Options configures the languages Localizer chooses from.
@@ -41,7 +58,8 @@ type Options struct {
 	Langs []string
 	// Names are the display names of Langs, in the same order.
 	Names []string
-	// DefaultLang is the language of messages missing from other languages.
+	// DefaultLang is the language of messages missing from other languages. It
+	// need not be one of Langs.
 	DefaultLang string
 }
 
@@ -51,15 +69,14 @@ type Options struct {
 // from the cookie is remembered in it. When the language is chosen by the query
 // parameter, the viewer is redirected to the same path without the query.
 func Localizer(opts Options) (flamego.Handler, error) {
-	if len(opts.Langs) != len(opts.Names) {
-		return nil, errors.New("number of languages and names do not match")
+	if len(opts.Langs) == 0 {
+		return nil, errors.New("no languages in [i18n] LANGS")
 	}
-	i18n.SetDefaultLang(opts.DefaultLang)
-
-	tags := make([]language.Tag, len(opts.Langs))
-	for i, lang := range opts.Langs {
-		tags[i] = language.Raw.Make(lang)
-
+	if len(opts.Langs) != len(opts.Names) {
+		return nil, errors.New("[i18n] LANGS and NAMES have different numbers of entries")
+	}
+	store := i18n.NewStore()
+	load := func(lang, desc string) (*i18n.Locale, error) {
 		name := fmt.Sprintf("locale_%s.ini", lang)
 		data, ok := opts.Files[name]
 		if !ok {
@@ -69,9 +86,31 @@ func Localizer(opts Options) (flamego.Handler, error) {
 		if customPath := filepath.Join(opts.CustomDirectory, name); osx.IsFile(customPath) {
 			custom = append(custom, customPath)
 		}
-		err := i18n.SetMessageWithDesc(lang, opts.Names[i], data, custom...)
-		if err != nil && err != i18n.ErrLangAlreadyExist {
+		l, err := store.AddLocale(lang, desc, data, custom...)
+		if err != nil {
 			return nil, errors.Wrapf(err, "load locale file %q", name)
+		}
+		return l, nil
+	}
+
+	locales := make(map[string]*i18n.Locale, len(opts.Langs))
+	tags := make([]language.Tag, len(opts.Langs))
+	for i, lang := range opts.Langs {
+		tags[i] = language.Raw.Make(lang)
+		l, err := load(lang, opts.Names[i])
+		if err != nil {
+			return nil, err
+		}
+		locales[lang] = l
+	}
+	// The default language fills messages missing from the others, even when
+	// admins leave it out of the languages to choose from.
+	fallback, ok := locales[opts.DefaultLang]
+	if !ok {
+		var err error
+		fallback, err = load(opts.DefaultLang, opts.DefaultLang)
+		if err != nil {
+			return nil, errors.Wrap(err, "load default language")
 		}
 	}
 	matcher := language.NewMatcher(tags)
@@ -89,10 +128,14 @@ func Localizer(opts Options) (flamego.Handler, error) {
 			}
 		}
 
-		if !i18n.IsExist(lang) {
+		messages, ok := locales[lang]
+		if !ok {
 			tags, _, _ := language.ParseAcceptLanguage(r.Header.Get("Accept-Language"))
-			tag, _, _ := matcher.Match(tags...)
-			lang = tag.String()
+			// The index, unlike the matched tag, names one of the languages, e.g.,
+			// "en-GB" rather than "en-GB-u-rg-auzzzz" for "en-AU".
+			_, i, _ := matcher.Match(tags...)
+			lang = opts.Langs[i]
+			messages = locales[lang]
 			fromQuery, fromCookie = false, false
 		}
 
@@ -105,7 +148,7 @@ func Localizer(opts Options) (flamego.Handler, error) {
 			})
 		}
 
-		c.Map(Locale{Locale: i18n.Locale{Lang: lang}})
+		c.Map(Locale{Lang: lang, messages: messages, fallback: fallback})
 
 		if fromQuery {
 			c.Redirect(subURL+path.Clean(r.URL.EscapedPath()), http.StatusFound)

@@ -288,10 +288,10 @@ func postRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, view
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
 	if strings.TrimSpace(req.TagName) == "" {
-		msg := l.Tr("repo.release.tag_name") + l.Tr("form.require_error")
+		msg := l.Tr("repo::release.tag_name") + l.Tr("form::require_error")
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"tagName": &msg}}, nil
 	}
-	if resp := textFieldError(l, "title", "repo.release.title", req.Title, 255); resp != nil {
+	if resp := textFieldError(l, "title", "repo::release.title", req.Title, 255); resp != nil {
 		return http.StatusBadRequest, resp, nil
 	}
 	if statusCode, err = checkNewAttachments(ctx, releaseAttachmentLimits(), req.Attachments); err != nil {
@@ -307,7 +307,7 @@ func postRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, view
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
 	}
 	if !gitRepo.HasBranch(ctx, req.Target) {
-		msg := l.Tr("form.target_branch_not_exist")
+		msg := l.Tr("form::target_branch_not_exist")
 		return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"target": &msg}}, nil
 	}
 
@@ -346,9 +346,9 @@ func postRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, view
 		var msg string
 		switch {
 		case database.IsErrReleaseAlreadyExist(err):
-			statusCode, msg = http.StatusUnprocessableEntity, l.Tr("repo.release.tag_name_already_exist")
+			statusCode, msg = http.StatusUnprocessableEntity, l.Tr("repo::release.tag_name_already_exist")
 		case database.IsErrInvalidTagName(err):
-			statusCode, msg = http.StatusBadRequest, l.Tr("repo.release.tag_name_invalid")
+			statusCode, msg = http.StatusBadRequest, l.Tr("repo::release.tag_name_invalid")
 		default:
 			logger.Error("Failed to create release", "tagName", req.TagName, "repoID", repo.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "create release")
@@ -384,7 +384,7 @@ func getRepoRelease(rel *database.Release) (statusCode int, resp *repoReleaseEdi
 }
 
 func patchRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, rel *database.Release, req repoReleaseRequest) (statusCode int, resp any, err error) {
-	if resp := textFieldError(l, "title", "repo.release.title", req.Title, 255); resp != nil {
+	if resp := textFieldError(l, "title", "repo::release.title", req.Title, 255); resp != nil {
 		return http.StatusBadRequest, resp, nil
 	}
 	// The editor sends the downloads it keeps and the new files. The files the
@@ -440,7 +440,7 @@ func patchRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, vie
 		switch {
 		case database.IsErrInvalidTagName(err):
 			// The tag name cannot be edited, so it is not a field error.
-			return http.StatusBadRequest, nil, errors.New(l.Tr("repo.release.tag_name_invalid"))
+			return http.StatusBadRequest, nil, errors.New(l.Tr("repo::release.tag_name_invalid"))
 		case database.IsErrReleaseNotExist(err):
 			return http.StatusNotFound, nil, errors.New("release does not exist")
 		}

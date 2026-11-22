@@ -141,12 +141,11 @@ function PullSummary({ data }: { data: RepoPullData }) {
   const { t } = useTranslation();
   const { pull } = data;
   const user = pull.merger ?? data.poster;
-  const text = t(pull.mergedAt ? "repo.pulls.merged_title_desc" : "repo.pulls.title_desc").replace(
-    "%[1]d",
-    String(pull.commitCount),
-  );
-  const [before, after = ""] = text.split("%[4]s");
-  const branches = [pull.headLabel, pull.baseLabel];
+  const text = t(pull.mergedAt ? "repo.pulls.merged_title_desc" : "repo.pulls.title_desc", {
+    count: pull.commitCount,
+  });
+  const [before, after = ""] = text.split("{time}");
+  const branches = { head: pull.headLabel, base: pull.baseLabel };
   return (
     <>
       <UserLink user={user} className="font-semibold text-(--color-foreground) hover:underline">
@@ -163,7 +162,7 @@ function PullSummary({ data }: { data: RepoPullData }) {
             </TooltipTrigger>
             <TooltipContent>{formatAbsoluteTime(pull.mergedAt)}</TooltipContent>
           </Tooltip>
-          <RichText text={after} />
+          <RichText text={after} code={branches} />
         </>
       ) : null}
     </>

@@ -71,7 +71,7 @@ func postUserEmail(c flamego.Context, logger *logx.Logger, ca cache.Cache, l i18
 	err = database.Handle.Users().AddEmail(ctx, viewer.ID, req.Email, !conf.Auth.RequireEmailConfirmation)
 	if err != nil {
 		if database.IsErrEmailAlreadyUsed(err) {
-			msg := l.Tr("form.email_been_used")
+			msg := l.Tr("form::email_been_used")
 			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"email": &msg}}, nil
 		}
 		logger.Error("Failed to add email", "userID", viewer.ID, "error", err)
@@ -111,7 +111,7 @@ func putUserEmailPrimary(c flamego.Context, logger *logx.Logger, viewer *databas
 func deleteUserEmail(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User) (statusCode int, resp any, err error) {
 	address := c.Param("email")
 	if strings.EqualFold(address, viewer.Email) {
-		return http.StatusConflict, nil, errors.New(l.Tr("settings.email_deletion_primary"))
+		return http.StatusConflict, nil, errors.New(l.Tr("settings::email_deletion_primary"))
 	}
 	if err = database.Handle.Users().DeleteEmail(c.Request().Context(), viewer.ID, address); err != nil {
 		logger.Error("Failed to delete email", "email", address, "userID", viewer.ID, "error", err)
@@ -163,20 +163,20 @@ func postUserSSHKey(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewe
 		logger.Error("Failed to check public key", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "check public key")
 	} else if errors.Is(err, database.ErrSSHDisabled) {
-		msg := l.Tr("settings.ssh_disabled")
+		msg := l.Tr("settings::ssh_disabled")
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
 	} else if err != nil {
-		msg := l.Tr("form.invalid_ssh_key", err.Error())
+		msg := l.Tr("form::invalid_ssh_key", "error", err)
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
 	}
 	if _, err = database.Handle.PublicKeys().Add(c.Request().Context(), logger, viewer.ID, req.SSHTitle, content); err != nil {
 		var msg string
 		switch {
 		case database.IsErrKeyAlreadyExist(err):
-			msg = l.Tr("settings.ssh_key_been_used")
+			msg = l.Tr("settings::ssh_key_been_used")
 			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
 		case database.IsErrKeyNameAlreadyUsed(err):
-			msg = l.Tr("settings.ssh_key_name_used")
+			msg = l.Tr("settings::ssh_key_name_used")
 			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"title": &msg}}, nil
 		}
 		logger.Error("Failed to add public key", "userID", viewer.ID, "error", err)
@@ -282,7 +282,7 @@ func postUserTwoFactor(c flamego.Context, logger *logx.Logger, sess session.Sess
 		return http.StatusNotFound, nil, errors.New("no two-factor authentication secret to confirm")
 	}
 	if !totp.Validate(req.Passcode, secret) {
-		msg := l.Tr("settings.two_factor_invalid_passcode")
+		msg := l.Tr("settings::two_factor_invalid_passcode")
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"passcode": &msg}}, nil
 	}
 	if err = database.Handle.TwoFactors().Create(c.Request().Context(), viewer.ID, conf.Security.SecretKey, secret); err != nil {
@@ -391,7 +391,7 @@ func postUserAccessToken(c flamego.Context, logger *logx.Logger, l i18n.Locale, 
 	t, err := database.Handle.AccessTokens().Create(c.Request().Context(), viewer.ID, req.TokenName)
 	if err != nil {
 		if database.IsErrAccessTokenAlreadyExist(err) {
-			msg := l.Tr("settings.token_name_exists")
+			msg := l.Tr("settings::token_name_exists")
 			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"name": &msg}}, nil
 		}
 		logger.Error("Failed to create access token", "userID", viewer.ID, "error", err)

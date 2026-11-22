@@ -158,7 +158,7 @@ func TestUserSiteLocale(t *testing.T) {
 	var messages map[string]string
 	require.NoError(t, json.Unmarshal(body, &messages))
 	assert.Equal(t, "Sign in", messages["sign_in"])
-	assert.Equal(t, "Username or email", messages["home.uname_holder"])
+	assert.Equal(t, "My repositories", messages["home.my_repos"])
 }
 
 func TestUserSiteCaptchaImage(t *testing.T) {

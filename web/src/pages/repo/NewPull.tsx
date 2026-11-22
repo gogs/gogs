@@ -47,9 +47,7 @@ export function RepoNewPull({
   const message = {
     unrelated: t("repo.pulls.nothing_merge_base"),
     even: t("repo.pulls.nothing_to_compare"),
-    exists: t("repo.pulls.has_pull_request")
-      .replace("%[2]s", `${repo.owner}/${repo.name}`)
-      .replaceAll("%[3]d", String(data.pullIndex)),
+    exists: t("repo.pulls.has_pull_request", { repo: `${repo.owner}/${repo.name}`, index: data.pullIndex }),
     ready: "",
   }[data.state];
 

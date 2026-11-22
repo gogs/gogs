@@ -179,45 +179,45 @@ func activityHeadline(l i18n.Locale, act *database.Action) string {
 	var headline string
 	switch act.OpType {
 	case database.ActionCreateRepo:
-		headline = l.Tr("action.create_repo", repoLink, repoPath)
+		headline = l.Tr("action::create_repo", "repoLink", repoLink, "repo", repoPath)
 	case database.ActionRenameRepo:
-		headline = l.Tr("action.rename_repo", esc(act.GetContent()), repoLink, repoPath)
+		headline = l.Tr("action::rename_repo", "oldName", esc(act.GetContent()), "repoLink", repoLink, "repo", repoPath)
 	case database.ActionCommitRepo:
-		headline = l.Tr("action.commit_repo", repoLink, refLink, ref, repoPath)
+		headline = l.Tr("action::commit_repo", "repoLink", repoLink, "refLink", refLink, "ref", ref, "repo", repoPath)
 	case database.ActionCreateIssue:
-		headline = l.Tr("action.create_issue", repoLink, index, repoPath)
+		headline = l.Tr("action::create_issue", "repoLink", repoLink, "index", index, "repo", repoPath)
 	case database.ActionCreatePullRequest:
-		headline = l.Tr("action.create_pull_request", repoLink, index, repoPath)
+		headline = l.Tr("action::create_pull_request", "repoLink", repoLink, "index", index, "repo", repoPath)
 	case database.ActionTransferRepo:
-		headline = l.Tr("action.transfer_repo", esc(act.GetContent()), repoLink, repoPath)
+		headline = l.Tr("action::transfer_repo", "oldName", esc(act.GetContent()), "repoLink", repoLink, "repo", repoPath)
 	case database.ActionPushTag:
-		headline = l.Tr("action.push_tag", repoLink, ref, repoPath)
+		headline = l.Tr("action::push_tag", "repoLink", repoLink, "ref", ref, "repo", repoPath)
 	case database.ActionCommentIssue:
-		headline = l.Tr("action.comment_issue", repoLink, index, repoPath)
+		headline = l.Tr("action::comment_issue", "repoLink", repoLink, "index", index, "repo", repoPath)
 	case database.ActionMergePullRequest:
-		headline = l.Tr("action.merge_pull_request", repoLink, index, repoPath)
+		headline = l.Tr("action::merge_pull_request", "repoLink", repoLink, "index", index, "repo", repoPath)
 	case database.ActionCloseIssue:
-		headline = l.Tr("action.close_issue", repoLink, index, repoPath)
+		headline = l.Tr("action::close_issue", "repoLink", repoLink, "index", index, "repo", repoPath)
 	case database.ActionReopenIssue:
-		headline = l.Tr("action.reopen_issue", repoLink, index, repoPath)
+		headline = l.Tr("action::reopen_issue", "repoLink", repoLink, "index", index, "repo", repoPath)
 	case database.ActionClosePullRequest:
-		headline = l.Tr("action.close_pull_request", repoLink, index, repoPath)
+		headline = l.Tr("action::close_pull_request", "repoLink", repoLink, "index", index, "repo", repoPath)
 	case database.ActionReopenPullRequest:
-		headline = l.Tr("action.reopen_pull_request", repoLink, index, repoPath)
+		headline = l.Tr("action::reopen_pull_request", "repoLink", repoLink, "index", index, "repo", repoPath)
 	case database.ActionCreateBranch:
-		headline = l.Tr("action.create_branch", repoLink, refLink, ref, repoPath)
+		headline = l.Tr("action::create_branch", "repoLink", repoLink, "refLink", refLink, "ref", ref, "repo", repoPath)
 	case database.ActionDeleteBranch:
-		headline = l.Tr("action.delete_branch", repoLink, ref, repoPath)
+		headline = l.Tr("action::delete_branch", "repoLink", repoLink, "ref", ref, "repo", repoPath)
 	case database.ActionDeleteTag:
-		headline = l.Tr("action.delete_tag", repoLink, ref, repoPath)
+		headline = l.Tr("action::delete_tag", "repoLink", repoLink, "ref", ref, "repo", repoPath)
 	case database.ActionForkRepo:
-		headline = l.Tr("action.fork_repo", repoLink, repoPath)
+		headline = l.Tr("action::fork_repo", "repoLink", repoLink, "repo", repoPath)
 	case database.ActionMirrorSyncPush:
-		headline = l.Tr("action.mirror_sync_push", repoLink, refLink, ref, repoPath)
+		headline = l.Tr("action::mirror_sync_push", "repoLink", repoLink, "refLink", refLink, "ref", ref, "repo", repoPath)
 	case database.ActionMirrorSyncCreate:
-		headline = l.Tr("action.mirror_sync_create", repoLink, ref, repoPath)
+		headline = l.Tr("action::mirror_sync_create", "repoLink", repoLink, "ref", ref, "repo", repoPath)
 	case database.ActionMirrorSyncDelete:
-		headline = l.Tr("action.mirror_sync_delete", repoLink, ref, repoPath)
+		headline = l.Tr("action::mirror_sync_delete", "repoLink", repoLink, "ref", ref, "repo", repoPath)
 	}
 	// Translations are community-maintained, so they are sanitized.
 	return markup.Sanitize(headline)

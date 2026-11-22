@@ -168,37 +168,37 @@ func checkAdminAuthSource(l i18n.Locale, typ auth.Type, req *adminAuthSourceRequ
 	}
 	require := func(field, labelKey, value string) {
 		if strings.TrimSpace(value) == "" {
-			fail(field, labelKey, "form.require_error")
+			fail(field, labelKey, "form::require_error")
 		}
 	}
 	requirePort := func(field, labelKey string, port int) {
 		if port <= 0 || port > 65535 {
-			fail(field, labelKey, "form.require_error")
+			fail(field, labelKey, "form::require_error")
 		}
 	}
 
 	switch typ {
 	case auth.LDAP, auth.DLDAP:
 		if req.SecurityProtocol < int(ldap.SecurityProtocolUnencrypted) || req.SecurityProtocol > int(ldap.SecurityProtocolStartTLS) {
-			fail("securityProtocol", "admin.auths.security_protocol", "form.require_error")
+			fail("securityProtocol", "admin::auths.security_protocol", "form::require_error")
 		}
-		require("host", "admin.auths.host", req.Host)
-		requirePort("port", "admin.auths.port", req.Port)
+		require("host", "admin::auths.host", req.Host)
+		requirePort("port", "admin::auths.port", req.Port)
 		if typ == auth.LDAP {
-			require("userBase", "admin.auths.user_base", req.UserBase)
+			require("userBase", "admin::auths.user_base", req.UserBase)
 		} else {
-			require("userDN", "admin.auths.user_dn", req.UserDN)
+			require("userDN", "admin::auths.user_dn", req.UserDN)
 		}
-		require("filter", "admin.auths.filter", req.Filter)
-		require("attributeMail", "admin.auths.attribute_mail", req.AttributeMail)
+		require("filter", "admin::auths.filter", req.Filter)
+		require("attributeMail", "admin::auths.attribute_mail", req.AttributeMail)
 	case auth.SMTP:
 		if !slices.Contains(smtp.AuthTypes, req.SMTPAuth) {
-			fail("smtpAuth", "admin.auths.smtp_auth", "form.require_error")
+			fail("smtpAuth", "admin::auths.smtp_auth", "form::require_error")
 		}
-		require("smtpHost", "admin.auths.smtphost", req.SMTPHost)
-		requirePort("smtpPort", "admin.auths.smtpport", req.SMTPPort)
+		require("smtpHost", "admin::auths.smtphost", req.SMTPHost)
+		requirePort("smtpPort", "admin::auths.smtpport", req.SMTPPort)
 	case auth.PAM:
-		require("pamServiceName", "admin.auths.pam_service_name", req.PAMServiceName)
+		require("pamServiceName", "admin::auths.pam_service_name", req.PAMServiceName)
 	}
 	if len(fields) == 0 {
 		return nil
@@ -257,7 +257,7 @@ func adminAuthSourceNameTaken(c flamego.Context, l i18n.Locale, id int64, name s
 	}
 	for _, s := range sources {
 		if s.ID != id && s.Name == name {
-			msg := l.Tr("admin.auths.login_source_exist", name)
+			msg := l.Tr("admin::auths.login_source_exist", "name", name)
 			return fieldErrors{"name": &msg}, nil
 		}
 	}
@@ -272,7 +272,7 @@ type adminAuthSourceCreated struct {
 func postAdminAuthSource(c flamego.Context, logger *logx.Logger, l i18n.Locale, admin *database.User, req adminAuthSourceRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	if adminAuthSourceProvider(req.Type, &req, "") == nil {
-		msg := l.Tr("admin.auths.auth_type") + l.Tr("form.require_error")
+		msg := l.Tr("admin::auths.auth_type") + l.Tr("form::require_error")
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"type": &msg}}, nil
 	}
 	if fields := checkAdminAuthSource(l, req.Type, &req); fields != nil {
@@ -298,7 +298,7 @@ func postAdminAuthSource(c flamego.Context, logger *logx.Logger, l i18n.Locale, 
 	})
 	if err != nil {
 		if database.IsErrLoginSourceAlreadyExist(err) {
-			msg := l.Tr("admin.auths.login_source_exist", req.AuthSourceName)
+			msg := l.Tr("admin::auths.login_source_exist", "name", req.AuthSourceName)
 			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"name": &msg}}, nil
 		}
 		logger.Error("Failed to create login source", "loginSourceName", req.AuthSourceName, "error", err)
@@ -381,7 +381,7 @@ func deleteAdminAuthSource(c flamego.Context, logger *logx.Logger, l i18n.Locale
 	}
 	if err = database.Handle.LoginSources().DeleteByID(c.Request().Context(), source.ID); err != nil {
 		if database.IsErrLoginSourceInUse(err) {
-			return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("admin.auths.still_in_used")}, nil
+			return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("admin::auths.still_in_used")}, nil
 		}
 		logger.Error("Failed to delete login source", "loginSourceID", source.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete login source")

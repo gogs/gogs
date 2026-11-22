@@ -164,7 +164,7 @@ export function RepoLabels({ owner, name, data }: { owner: string; name: string;
       ) : null}
       <div className="glass rounded-md border border-(--color-border)">
         <h2 className="bg-(--color-surface) px-4 py-3 text-sm font-semibold">
-          {t("repo.issues.label_count").replace(/%(?:\[1\])?d/, String(data.items.length))}
+          {t("repo.issues.label_count", { count: data.items.length })}
         </h2>
         {data.items.length ? (
           <ul>
@@ -223,7 +223,7 @@ function LabelRow({
         className="inline-flex items-center gap-1.5 text-sm text-(--color-muted-foreground) hover:text-(--color-foreground) hover:underline"
       >
         <CircleDot className="size-4" aria-hidden />
-        {t("repo.issues.label_open_issues").replace(/%(?:\[1\])?d/, String(label.openIssueCount))}
+        {t("repo.issues.label_open_issues", { count: label.openIssueCount })}
       </Link>
       {canWrite ? (
         <div className="flex gap-2">

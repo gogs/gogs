@@ -233,7 +233,7 @@ function CommitRow({
 }) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
-  const [before, after = ""] = t("repo.commits.committed").split("%s");
+  const [before, after = ""] = t("repo.commits.committed").split("{time}");
   const { author } = commit;
   const onLinkClick = useAppLinkClick();
   const copySHA = () => {

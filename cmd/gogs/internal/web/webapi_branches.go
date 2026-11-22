@@ -300,7 +300,7 @@ func putRepoDefaultBranch(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
 	}
 	if repo.IsEmpty || !gitRepo.HasBranch(ctx, req.Branch) {
-		msg := l.Tr("form.target_branch_not_exist")
+		msg := l.Tr("form::target_branch_not_exist")
 		return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"branch": &msg}}, nil
 	}
 	if repo.DefaultBranch == req.Branch {
@@ -309,7 +309,7 @@ func putRepoDefaultBranch(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 
 	if _, err = gitRepo.SymbolicRef(ctx, git.SymbolicRefOptions{Ref: git.RefsHeads + req.Branch}); err != nil {
 		logger.Error("Failed to point HEAD to branch", "repoID", repo.ID, "branch", req.Branch, "error", err)
-		return http.StatusInternalServerError, nil, errors.New(l.Tr("repo.settings.update_default_branch_unsupported"))
+		return http.StatusInternalServerError, nil, errors.New(l.Tr("repo::settings.update_default_branch_unsupported"))
 	}
 	repo.DefaultBranch = req.Branch
 	if err = database.UpdateRepository(logger, repo, false); err != nil {

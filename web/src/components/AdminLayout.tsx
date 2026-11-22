@@ -106,9 +106,7 @@ export function AdminListHeading({ title, total, action }: { title: string; tota
     <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
       <div>
         <h1 className="text-xl font-semibold">{title}</h1>
-        <p className="mt-1 text-sm text-(--color-muted-foreground)">
-          {t("admin.total").replace(/%(?:\[1\])?d/, String(total))}
-        </p>
+        <p className="mt-1 text-sm text-(--color-muted-foreground)">{t("admin.total", { count: total })}</p>
       </div>
       {action}
     </div>

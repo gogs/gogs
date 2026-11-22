@@ -65,10 +65,10 @@ func patchUserSettings(c flamego.Context, logger *logx.Logger, l i18n.Locale, vi
 			var msg string
 			switch {
 			case database.IsErrUserAlreadyExist(err):
-				msg = l.Tr("form.username_been_taken")
+				msg = l.Tr("form::username_been_taken")
 				return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"name": &msg}}, nil
 			case database.IsErrNameNotAllowed(err):
-				msg = l.Tr("user.form.name_not_allowed", err.(database.ErrNameNotAllowed).Value())
+				msg = l.Tr("user::form.name_not_allowed", "name", err.(database.ErrNameNotAllowed).Value())
 				return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"name": &msg}}, nil
 			}
 			logger.Error("Failed to rename user", "userID", viewer.ID, "newName", req.UserName, "error", err)
@@ -121,14 +121,14 @@ type userPasswordRequest struct {
 
 func putUserPassword(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, req userPasswordRequest) (statusCode int, resp any, err error) {
 	if !viewer.IsLocal() {
-		return http.StatusForbidden, nil, errors.New(l.Tr("settings.password_change_disabled"))
+		return http.StatusForbidden, nil, errors.New(l.Tr("settings::password_change_disabled"))
 	}
 	if !userx.ValidatePassword(viewer.Password, viewer.Salt, req.OldPassword) {
-		msg := l.Tr("settings.password_incorrect")
+		msg := l.Tr("settings::password_incorrect")
 		return http.StatusUnauthorized, &bindingErrorResponse{Fields: fieldErrors{"oldPassword": &msg}}, nil
 	}
 	if req.Password != req.Retype {
-		msg := l.Tr("form.password_not_match")
+		msg := l.Tr("form::password_not_match")
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"retype": &msg}}, nil
 	}
 	err = database.Handle.Users().Update(c.Request().Context(), viewer.ID, database.UpdateUserOptions{Password: &req.Password})
@@ -249,7 +249,7 @@ func deleteUser(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *d
 	_, err = database.Handle.Users().Authenticate(ctx, logger, viewer.Name, req.Password, viewer.LoginSource)
 	if err != nil {
 		if auth.IsErrBadCredentials(err) {
-			msg := l.Tr("form.enterred_invalid_password")
+			msg := l.Tr("form::enterred_invalid_password")
 			return http.StatusUnauthorized, &bindingErrorResponse{Fields: fieldErrors{"password": &msg}}, nil
 		}
 		logger.Error("Failed to authenticate user", "userID", viewer.ID, "error", err)
@@ -258,9 +258,9 @@ func deleteUser(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *d
 	if err = database.Handle.Users().DeleteByID(ctx, viewer.ID, false); err != nil {
 		switch {
 		case database.IsErrUserOwnRepos(err):
-			return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("form.still_own_repo")}, nil
+			return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("form::still_own_repo")}, nil
 		case database.IsErrUserHasOrgs(err):
-			return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("form.still_has_org")}, nil
+			return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("form::still_has_org")}, nil
 		}
 		logger.Error("Failed to delete user", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete user")

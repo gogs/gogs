@@ -13,7 +13,6 @@ import { UserSettingsLayout } from "@/components/UserSettingsLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { webContext } from "@/lib/context";
-import { fill } from "@/lib/format";
 import { externalPageURL, passkeysSupported } from "@/lib/passkey";
 import { formErrors } from "@/lib/queries/request";
 import {
@@ -78,7 +77,7 @@ export function UserEmailSettings({ emails, activated }: { emails: UserEmail[]; 
     mutationFn: () => addUserEmail(email),
     onSuccess: async (added) => {
       if (added.confirmationSent) {
-        toast.info(fill(t("settings.add_email_confirmation_sent"), email, added.codeLifetimeHours ?? 0));
+        toast.info(t("settings.add_email_confirmation_sent", { email, hours: added.codeLifetimeHours ?? 0 }));
       } else {
         toast.success(t("settings.add_email_success"));
       }
@@ -186,7 +185,7 @@ export function UserSSHKeySettings({ keys }: { keys: SSHKey[] }) {
   const add = useMutation({
     mutationFn: () => addSSHKey(form),
     onSuccess: async () => {
-      toast.success(fill(t("settings.add_key_success"), form.title));
+      toast.success(t("settings.add_key_success", { name: form.title }));
       setForm({ title: "", content: "" });
       await router.invalidate();
     },
