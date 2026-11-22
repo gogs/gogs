@@ -114,8 +114,10 @@ func Localizer(opts Options) (flamego.Handler, error) {
 		messages, ok := locales[lang]
 		if !ok {
 			tags, _, _ := language.ParseAcceptLanguage(r.Header.Get("Accept-Language"))
-			tag, _, _ := matcher.Match(tags...)
-			lang = tag.String()
+			// The index, unlike the matched tag, names one of the languages, e.g.,
+			// "en-GB" rather than "en-GB-u-rg-auzzzz" for "en-AU".
+			_, i, _ := matcher.Match(tags...)
+			lang = opts.Langs[i]
 			messages = locales[lang]
 			fromQuery, fromCookie = false, false
 		}
