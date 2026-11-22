@@ -80,6 +80,10 @@ func TestPullReviews(t *testing.T) {
 		status, body = authorClient.do(http.MethodPut, path("reviewers", reader.Name), map[string]any{})
 		assert.Equal(t, http.StatusBadRequest, status, "response: %s", body)
 
+		// Only writers and the author ask for reviews.
+		status, body = authenticatedClient(t, reader).do(http.MethodPut, path("reviewers", reviewer.Name), map[string]any{})
+		assert.Equal(t, http.StatusForbidden, status, "response: %s", body)
+
 		status, body = authorClient.do(http.MethodDelete, path("reviewers", reviewer.Name), map[string]any{})
 		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 		assert.Empty(t, view(authorClient).Reviewers)

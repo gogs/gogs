@@ -430,7 +430,7 @@ func TestProtectedBranchReviews(t *testing.T) {
 	reviewer := seedUser(t, CreateUserOptions{})
 	org := orgSeed(t, owner.ID)
 	repo := seedRepository(t, org.ID, CreateRepositoryOptions{AutoInit: true})
-	protectedBranchTeam(t, org, repo, database.AccessModeWrite, author.ID, reviewer.ID)
+	writers := protectedBranchTeam(t, org, repo, database.AccessModeWrite, author.ID, reviewer.ID)
 
 	ownerClient := authenticatedClient(t, owner)
 	protect := func(body map[string]any) {
@@ -510,6 +510,25 @@ func TestProtectedBranchReviews(t *testing.T) {
 	assert.Equal(t, http.StatusConflict, status, "response: %s", body)
 
 	approve()
+	assert.Empty(t, view(ownerClient).MergeBlockers)
+
+	// Approvals count only while their reviewers can still write.
+	require.NoError(t, database.Handle.Teams().RemoveMember(t.Context(), org.ID, writers.ID, reviewer.ID))
+	assert.Equal(t, []string{"approvals"}, view(ownerClient).MergeBlockers)
+	status, body = protectedBranchMerge(t, ownerClient, repo, index)
+	assert.Equal(t, http.StatusConflict, status, "response: %s", body)
+	require.NoError(t, database.Handle.Teams().AddMember(t.Context(), org.ID, writers.ID, reviewer.ID))
+	assert.Empty(t, view(ownerClient).MergeBlockers)
+
+	// Without dismissing stale approvals, an approval of an older head counts.
+	protect(map[string]any{"protected": true, "requirePullRequest": true, "requiredApprovals": 1})
+	newHead := gitCommitFile(t, dir, UniqueName("more-")+".txt")
+	gitRun(t, dir, "push", "origin", branch)
+	require.Eventually(t, func() bool {
+		return view(ownerClient).Pull.Diff.Head == newHead
+	}, 30*time.Second, 200*time.Millisecond)
+	assert.Empty(t, view(ownerClient).MergeBlockers)
+
 	status, body = protectedBranchMerge(t, ownerClient, repo, index)
 	assert.Equal(t, http.StatusNoContent, status, "response: %s", body)
 }
