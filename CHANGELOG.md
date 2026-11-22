@@ -20,7 +20,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Removed
 
-- The `/debug`, `/debug/pprof/*`, `/debug/profile/*`, and `/urlmap.json` endpoints, which were served to anonymous users. [#8271](https://github.com/gogs/gogs/pull/8271)
+- The `/debug`, `/debug/pprof/*`, `/debug/profile/*`, and `/urlmap.json` endpoints, which were served to anonymous users. [#8711](https://github.com/gogs/gogs/pull/8711)
 
 ## 0.14.0
 
