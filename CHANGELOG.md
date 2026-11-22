@@ -15,7 +15,7 @@ All notable changes to Gogs are documented in this file.
 - Markdown files on commit and compare pages can show a rich diff, like GitHub, with the rendered blocks that were removed or added marked. [#8621](https://github.com/gogs/gogs/pull/8621)
 - The README box below the file list of a repository also shows the code of conduct, contributing guide, license and security policy in tabs, as on GitHub, and lists the headings of the shown document in an outline with a filter. [#8615](https://github.com/gogs/gogs/pull/8615)
 - Task list items in Markdown show their checkbox in place of the list bullet, as on GitHub. [#8519](https://github.com/gogs/gogs/pull/8519)
-- Task lists in issues, pull requests and comments are interactive for those who can edit them, as on GitHub: check and uncheck items in place, and reorder items by dragging their handle or with the arrow keys on it. [#8709](https://github.com/gogs/gogs/pull/8709)
+- Task lists in issues, pull requests and comments are interactive for those who can edit them: check and uncheck items in place, and reorder items by dragging their handle or with the arrow keys on it. [#8709](https://github.com/gogs/gogs/pull/8709)
 - Markdown files, e.g., READMEs and wiki pages, show their YAML front matter as a table above the content, instead of a horizontal rule and a heading made of the YAML. [#8658](https://github.com/gogs/gogs/pull/8658)
 - Git protocol v2 for clones and fetches over HTTP and SSH. With your own OpenSSH server, add `AcceptEnv GIT_PROTOCOL` to `sshd_config` to enable it over SSH. [#8485](https://github.com/gogs/gogs/pull/8485)
 - Tracing of HTTP requests and Git operations, exported over OTLP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. [#8487](https://github.com/gogs/gogs/pull/8487)
