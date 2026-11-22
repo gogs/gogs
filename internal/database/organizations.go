@@ -350,6 +350,16 @@ func (s *OrganizationsStore) RemoveMember(ctx context.Context, orgID, userID int
 	}
 
 	return db.Transaction(func(tx *gorm.DB) error {
+		// Repositories are locked before the organization, the order adding a
+		// team member locks them in, so the two cannot deadlock.
+		lockIDs := make([]int64, 0, len(repos))
+		for _, repo := range repos {
+			lockIDs = append(lockIDs, repo.ID)
+		}
+		if err := lockRepositories(tx, lockIDs); err != nil {
+			return err
+		}
+
 		if err := tx.Where("id = ?", ou.ID).Delete(new(OrgUser)).Error; err != nil {
 			return errors.Wrap(err, "delete organization user")
 		}

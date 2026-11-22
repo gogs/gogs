@@ -1291,6 +1291,9 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 	starter := newTestIssueUser(t, ctx, s.db, "cf-starter")
 	owner := newTestIssueUser(t, ctx, s.db, "cf-owner")
 	var orgFork *Repository
+	watcher := newTestIssueUser(t, ctx, s.db, "cf-watcher")
+	newbie := newTestIssueUser(t, ctx, s.db, "cf-newbie")
+	veteran := newTestIssueUser(t, ctx, s.db, "cf-veteran")
 	mover := newTestIssueUser(t, ctx, s.db, "cf-mover")
 	var moved *Repository
 	var older *Repository
@@ -1494,6 +1497,45 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 			holdUser: alice,
 			first:    func(*Repository, *Repository) error { return transfer(older, carol) },
 			second:   func(base, _ *Repository) error { return deleteRepo(base) },
+		},
+		{
+			// Adding the member locks the older repository and waits for the
+			// newer one, while removing the other member waits for the older
+			// one after locking the organization.
+			name:      "add team member while removing a member watching its repositories from the organization",
+			baseOwner: org,
+			private:   true,
+			before: func() {
+				older = newTestGitRepo(t, ctx, s, org, CreateRepoOptionsLegacy{Name: name("older"), IsPrivate: true})
+				older.Owner = org
+			},
+			setup: func(base, _ *Repository) {
+				// Members of the team watch the repositories added to it.
+				require.NoError(t, teams.AddMember(ctx, org.ID, readers.ID, watcher.ID))
+				require.NoError(t, teams.AddRepo(ctx, readers, older))
+				require.NoError(t, teams.AddRepo(ctx, readers, base))
+			},
+			first: func(*Repository, *Repository) error { return teams.AddMember(ctx, org.ID, readers.ID, newbie.ID) },
+			second: func(*Repository, *Repository) error {
+				return newOrganizationsStore(s.db).RemoveMember(ctx, org.ID, watcher.ID)
+			},
+		},
+		{
+			// Deletes the team, so it runs last.
+			name:      "delete team while adding a member who is in the organization",
+			baseOwner: org,
+			private:   true,
+			setup: func(base, _ *Repository) {
+				others := createTestTeam(t, ctx, teams, org.ID, "others", AccessModeRead)
+				require.NoError(t, teams.AddMember(ctx, org.ID, others.ID, veteran.ID))
+				require.NoError(t, teams.AddRepo(ctx, readers, base))
+			},
+			holdTeam: true,
+			first:    func(*Repository, *Repository) error { return teams.AddMember(ctx, org.ID, readers.ID, veteran.ID) },
+			second:   func(*Repository, *Repository) error { return teams.Delete(ctx, readers) },
+			check: func(base, _ *Repository) {
+				assert.NotContains(t, accessModes(t, ctx, newPermissionsStore(s.db), base.ID), veteran.ID, "access through the deleted team")
+			},
 		},
 	} {
 		if tc.before != nil {

@@ -2223,6 +2223,17 @@ func readCommitted() []*sql.TxOptions {
 	return []*sql.TxOptions{{Isolation: sql.LevelReadCommitted}}
 }
 
+// lockRepositories locks the repositories of given IDs in ascending order, so
+// transactions that lock several of them cannot deadlock with each other.
+func lockRepositories(tx *gorm.DB, ids []int64) error {
+	for _, id := range slices.Sorted(slices.Values(ids)) {
+		if _, _, err := lockRepository(tx, id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // lockRepository locks the repository of given ID until the transaction ends,
 // and returns its owner ID as of the lock, and whether it exists. Transactions
 // that change a repository and rows of its organization's teams or

@@ -168,9 +168,17 @@ func (s *TeamsStore) Update(ctx context.Context, t *Team, authChanged bool) erro
 // of its repositories.
 func (s *TeamsStore) Delete(ctx context.Context, t *Team) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// The organization is locked before the team, the order adding a
-		// member locks them in, so the two cannot deadlock.
-		err := tx.Model(new(User)).Where("id = ?", t.OrgID).UpdateColumn("num_teams", gorm.Expr("num_teams - 1")).Error
+		// Lock the repositories of the team, then the organization, as adding
+		// a member does, so a member being added has committed by the time
+		// the accesses are recalculated, and loses them with the team.
+		var repoIDs []int64
+		err := tx.Model(new(TeamRepo)).Where("team_id = ?", t.ID).Pluck("repo_id", &repoIDs).Error
+		if err != nil {
+			return errors.Wrap(err, "list team repositories")
+		} else if err = lockRepositories(tx, repoIDs); err != nil {
+			return err
+		}
+		err = tx.Model(new(User)).Where("id = ?", t.OrgID).UpdateColumn("num_teams", gorm.Expr("num_teams - 1")).Error
 		if err != nil {
 			return errors.Wrap(err, "count teams")
 		}
@@ -195,7 +203,7 @@ func (s *TeamsStore) Delete(ctx context.Context, t *Team) error {
 			return errors.Wrap(err, "delete")
 		}
 		return nil
-	})
+	}, readCommitted()...)
 }
 
 // IsMember returns true if the user with given ID is a member of the team with
