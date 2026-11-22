@@ -235,13 +235,15 @@ function PullTabs({
   );
 }
 
+// The colored borders need "!" to outrank the edge of the glass look, while
+// the gray ones fall back to it.
 const MERGE_BOX_STATES: Record<RepoPullData["pull"]["state"], { icon: LucideIcon; color: string; border: string }> = {
-  merged: { icon: GitMerge, color: "text-(--color-merged)", border: "border-(--color-merged)" },
+  merged: { icon: GitMerge, color: "text-(--color-merged)", border: "!border-(--color-merged)" },
   closed: { icon: CircleX, color: "text-(--color-muted-foreground)", border: "border-(--color-border)" },
-  broken: { icon: CircleAlert, color: "text-(--color-destructive)", border: "border-(--color-destructive)" },
+  broken: { icon: CircleAlert, color: "text-(--color-destructive)", border: "!border-(--color-destructive)" },
   checking: { icon: LoaderCircle, color: "text-(--color-muted-foreground)", border: "border-(--color-border)" },
-  mergeable: { icon: CircleCheck, color: "text-(--color-success)", border: "border-(--color-success)" },
-  conflict: { icon: CircleAlert, color: "text-(--color-destructive)", border: "border-(--color-destructive)" },
+  mergeable: { icon: CircleCheck, color: "text-(--color-success)", border: "!border-(--color-success)" },
+  conflict: { icon: CircleAlert, color: "text-(--color-destructive)", border: "!border-(--color-destructive)" },
 };
 
 // MergeBox says whether the pull request can be merged, lets writers merge it
@@ -281,7 +283,7 @@ function MergeBox({ issueRef, data }: { issueRef: IssueRef; data: RepoPullData }
   return (
     <section aria-label={t("repo.pulls.merge_pull_request")} className="flex gap-2">
       {/* Sized and placed like the icons of the timeline events above it, while
-          the box lines up with the comments. */}
+          the box lines up with the comments from sm up. */}
       <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-(--color-surface) sm:ml-3">
         {/* The merge glyph has no enclosing circle and looks heavier than the
             circle icons at the same size. */}

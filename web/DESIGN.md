@@ -38,7 +38,7 @@ Use these tokens. Don't introduce raw hex values in components.
 - `--color-secondary` / `--color-secondary-foreground`: neutral support fill. Available for chips, tags, low-emphasis fills.
 - `--color-destructive` / `--color-destructive-foreground`: error and danger. The 404 page uses `text-(--color-destructive)` on the `fatal:` token, always paired with the word itself (color is never the sole signal).
 - `--color-success`: affirmative state for signature verification badges and copy-confirm checkmarks. Lighter in dark mode (`#4ade80`) than light (`#15803d`) so it reads on both backgrounds. Always pair with a label or icon, never color alone.
-- `--color-merged`: merged pull requests, for the Merged pill and the merge box icon. Purple like other forges, darker in light mode (`#6f42c1`) than dark (`#b392f0`) so it keeps 4.5:1 on its own 15% tint. Always pair with a label or icon.
+- `--color-merged`: merged pull requests, for the Merged pill and the merge box icon and border. Purple like other forges, darker in light mode (`#6f42c1`) than dark (`#b392f0`) so it keeps 4.5:1 on the pill's 15% tint. Always pair with a label or icon.
 - `--color-diff-added` / `--color-diff-removed`: diff change markers (the +/- dots in the diff toolbar stats row, and any future per-line tints). Separate from `--color-success`/`--color-destructive` so the diff palette can drift toward the universal git green/red without dragging the success/error semantics along.
 - `--color-ring`: keyboard focus ring color. Don't override per-component. If a default ring looks wrong, fix it at the token level.
 
