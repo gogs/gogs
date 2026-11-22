@@ -86,8 +86,8 @@ func getRawFile(c *apiContext) {
 		c.NotFoundOrError(git.NewError(err), "get tree entry")
 		return
 	}
-	// The content of a symlink is its target path, which is served like GitHub
-	// does instead of following the link.
+	// The content of a symlink is its target path, which is served instead of
+	// following the link.
 	if !entry.IsBlob() && !entry.IsExec() && !entry.IsSymlink() {
 		c.NotFound()
 		return

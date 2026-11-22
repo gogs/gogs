@@ -199,8 +199,8 @@ func getRepoRawFile(logger *logx.Logger, c flamego.Context, repoCtx *repoContext
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "get tree entry"))
 		return
 	}
-	// The content of a symlink is its target path, which is served like GitHub
-	// does instead of following the link.
+	// The content of a symlink is its target path, which is served instead of
+	// following the link.
 	if !entry.IsBlob() && !entry.IsExec() && !entry.IsSymlink() {
 		writeErrorResponse(w, http.StatusNotFound, errors.New("file does not exist"))
 		return
