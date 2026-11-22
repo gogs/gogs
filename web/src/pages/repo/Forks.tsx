@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { RepoHeader } from "@/components/RepoHeader";
 import { usePageTitle } from "@/lib/page-title";
 import { type RepoFork, repoHeaderQuery } from "@/lib/queries/repo";
+import { cn } from "@/lib/utils";
 
 // RepoForks lists the forks of a repository that the viewer can see.
 export function RepoForks({ owner, name, forks }: { owner: string; name: string; forks: RepoFork[] }) {
@@ -33,7 +34,10 @@ export function RepoForks({ owner, name, forks }: { owner: string; name: string;
                 <img
                   src={fork.ownerAvatarURL}
                   alt=""
-                  className="size-8 shrink-0 rounded-full border border-(--color-border) object-cover"
+                  className={cn(
+                    "size-8 shrink-0 border border-(--color-border) object-cover",
+                    fork.ownerIsOrganization ? "rounded-md" : "rounded-full",
+                  )}
                 />
                 <p className="min-w-0 wrap-anywhere">
                   <Link

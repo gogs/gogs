@@ -33,6 +33,26 @@ func (m Matrix) Scale(sx, sy float64) Matrix {
 	return Matrix{m[0] * sx, m[1] * sx, m[2] * sy, m[3] * sy, m[4], m[5]}
 }
 
+// Rotate returns m applied after a rotation by deg degrees around the origin in
+// the user space of m, clockwise on screen as in SVG.
+func (m Matrix) Rotate(deg float64) Matrix {
+	sin, cos := math.Sincos(deg * math.Pi / 180)
+	return m.Mul(Matrix{cos, sin, -sin, cos, 0, 0})
+}
+
+// Mul returns m applied after n, as a parent transform m and a child transform
+// n combine in SVG.
+func (m Matrix) Mul(n Matrix) Matrix {
+	return Matrix{
+		m[0]*n[0] + m[2]*n[1],
+		m[1]*n[0] + m[3]*n[1],
+		m[0]*n[2] + m[2]*n[3],
+		m[1]*n[2] + m[3]*n[3],
+		m[0]*n[4] + m[2]*n[5] + m[4],
+		m[1]*n[4] + m[3]*n[5] + m[5],
+	}
+}
+
 // Path is a shape flattened into polylines in device pixels.
 type Path struct {
 	Subpaths [][]Point

@@ -41,9 +41,10 @@ func repoOwner(ctx context.Context, viewer *database.User, ownerID int64) (*data
 }
 
 type repoNewOwner struct {
-	ID        int64  `json:"id"`
-	Name      string `json:"name"`
-	AvatarURL string `json:"avatarURL"`
+	ID             int64  `json:"id"`
+	Name           string `json:"name"`
+	AvatarURL      string `json:"avatarURL"`
+	IsOrganization bool   `json:"isOrganization"`
 }
 
 type repoNewOptions struct {
@@ -72,11 +73,11 @@ func repoNewOwners(ctx context.Context, viewer, owner *database.User) ([]repoNew
 	owners := []repoNewOwner{{ID: viewer.ID, Name: viewer.Name, AvatarURL: viewer.AvatarURLPath()}}
 	listed := owner.ID == viewer.ID
 	for _, org := range orgs {
-		owners = append(owners, repoNewOwner{ID: org.ID, Name: org.Name, AvatarURL: org.AvatarURLPath()})
+		owners = append(owners, repoNewOwner{ID: org.ID, Name: org.Name, AvatarURL: org.AvatarURLPath(), IsOrganization: true})
 		listed = listed || org.ID == owner.ID
 	}
 	if !listed {
-		owners = append(owners, repoNewOwner{ID: owner.ID, Name: owner.Name, AvatarURL: owner.AvatarURLPath()})
+		owners = append(owners, repoNewOwner{ID: owner.ID, Name: owner.Name, AvatarURL: owner.AvatarURLPath(), IsOrganization: owner.IsOrganization()})
 	}
 	return owners, nil
 }

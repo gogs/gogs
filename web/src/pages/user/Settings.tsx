@@ -132,6 +132,7 @@ export function UserProfileSettings({ settings }: { settings: UserSettingsData }
         <h2 className="mb-4 text-base font-semibold">{t("settings.avatar")}</h2>
         <AvatarForm
           avatarURL={settings.avatarURL}
+          round
           hasCustomAvatar={settings.hasCustomAvatar}
           upload={uploadUserAvatar}
           remove={deleteUserAvatar}

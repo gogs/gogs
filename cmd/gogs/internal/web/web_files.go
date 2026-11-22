@@ -156,7 +156,7 @@ func getUserAvatar(c flamego.Context, logger *logx.Logger, viewer *database.User
 		avatarPath = userx.GeneratedAvatarPath(id)
 	}
 	if !osx.IsFile(avatarPath) {
-		_, err := database.Handle.Users().GetByID(c.Request().Context(), id)
+		u, err := database.Handle.Users().GetByID(c.Request().Context(), id)
 		if err != nil {
 			if errx.IsNotFound(err) {
 				pages.NotFound(c)
@@ -166,7 +166,11 @@ func getUserAvatar(c flamego.Context, logger *logx.Logger, viewer *database.User
 			writeErrorResponse(c.ResponseWriter(), http.StatusInternalServerError, errors.Wrap(err, "get user"))
 			return
 		}
-		if err = userx.SaveGeneratedAvatar(id); err != nil {
+		kind := avatar.Person
+		if u.IsOrganization() {
+			kind = avatar.Organization
+		}
+		if err = userx.SaveGeneratedAvatar(id, kind); err != nil {
 			logger.Error("Failed to save generated user avatar", "userID", id, "error", err)
 			writeErrorResponse(c.ResponseWriter(), http.StatusInternalServerError, err)
 			return
@@ -209,7 +213,7 @@ func serveGeneratedAvatar(c flamego.Context, seed string) error {
 		return nil
 	}
 
-	img, err := avatar.GeneratePNG(seed, avatar.DefaultSize)
+	img, err := avatar.GeneratePNG(avatar.Person, seed, avatar.DefaultSize)
 	if err != nil {
 		return errors.Wrap(err, "generate avatar")
 	}
