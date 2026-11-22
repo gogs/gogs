@@ -69,10 +69,6 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 	if !osx.IsFile(metaFile) {
 		logger.FatalContext(ctx, "File 'metadata.ini' is missing")
 	}
-	// Checked before any file is replaced, as the import would fail without it.
-	if !osx.IsDir(filepath.Join(archivePath, "db")) {
-		logger.FatalContext(ctx, "Directory 'db' is missing")
-	}
 	metadata, err := ini.Load(metaFile)
 	if err != nil {
 		logger.FatalContext(ctx, "Failed to load metadata", "metadataPath", metaFile, "error", err)
@@ -87,6 +83,10 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 	}
 	if formatVersion != currentBackupFormatVersion {
 		logger.FatalContext(ctx, "Unsupported backup format version", "backupFormatVersion", formatVersion, "supportedFormatVersion", currentBackupFormatVersion, "lastSupportedGogsVersion", lastSupportedVersionOfFormat[formatVersion])
+	}
+	// Checked before any file is replaced, as the import would fail without it.
+	if !osx.IsDir(filepath.Join(archivePath, "db")) {
+		logger.FatalContext(ctx, "Directory 'db' is missing")
 	}
 
 	// If config file is not present in backup, user must set this file via flag.

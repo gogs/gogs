@@ -54,8 +54,8 @@ func TestImportDatabase(t *testing.T) {
 	ctx := context.Background()
 	logger := logx.NewNoopLogger()
 
-	// A passkey of the database restored into, which backups of Gogs 0.12 have
-	// no table for.
+	// A passkey of the database restored into, which backups of Gogs 0.14 and
+	// earlier have no table for.
 	err := db.Create(&Passkey{UserID: 1, Name: "Leftover", Credential: webauthn.Credential{ID: []byte("leftover")}}).Error
 	require.NoError(t, err)
 	countPasskeys := func() int64 {
