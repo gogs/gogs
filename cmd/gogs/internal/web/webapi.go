@@ -566,7 +566,7 @@ var ruleSuffixKeys = map[string]string{
 
 // renderBindingErrors maps binding.Errors to the response shape, looking up
 // localized messages via the request's locale. The per-field label comes from
-// "form.<StructField>" (e.g., "form::UserName"), and the rule suffix comes from
+// "form::<StructField>" (e.g., "form::UserName"), and the rule suffix comes from
 // ruleSuffixKeys. Rule parameters (e.g., "254" for `max=254`) fill the "{size}"
 // placeholder of the suffix translation. The caller responds with
 // HTTP 400.
