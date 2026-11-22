@@ -65,22 +65,55 @@ function taskMarker(lines: string[], line: number): { index: number; pattern: Re
   return undefined;
 }
 
+const LIST_ITEM_START = /^((?:[ \t]*>)*)([ \t]*)(?:[-+*]|\d{1,9}[.)])[ \t]/;
+// ENDS_PARAGRAPH matches the start of a block that ends a paragraph before it,
+// rather than continuing it: a list item, a heading, a code fence or a block
+// quote.
+const ENDS_PARAGRAPH = /^(?:(?:[-+*]|\d{1,9}[.)])[ \t]+\S|#{1,6}(?:[ \t]|$)|```|~~~|>)/;
+
+// movableList reports whether the task list items of a list, which are
+// editable, can be reordered by moving their lines in source without changing
+// what the lines around them are part of. That needs every item to:
+//   - have its marker on its first line, since an empty first line moved first
+//     would underline the text before the list as a heading, e.g., "-\n  [ ] a";
+//   - start at the same indentation, since an item moved above one indented
+//     more would take it in as a nested item.
+// And the line after the list must be blank, or start a block that ends a
+// paragraph at most as indented as the items, since text after a code block
+// that ends the last item would continue an item that ends in a paragraph.
+function movableList(items: HTMLElement[], lines: string[]): boolean {
+  let start: RegExpExecArray | null = null;
+  for (const item of items) {
+    const first = taskLines(item)[0];
+    if (taskMarker(lines, first)!.index !== first - 1) return false;
+    const m = LIST_ITEM_START.exec(lines[first - 1]);
+    if (!m || (start && m[1] + m[2] !== start[1] + start[2])) return false;
+    start = m;
+  }
+  const next = lines[Math.max(...items.map((item) => taskLines(item)[1]))];
+  if (next === undefined || next.trim() === "") return true;
+  const quotes = new RegExp(String.raw`^(?:[ \t]*>){${start![1].split(">").length - 1}}`).exec(next)?.[0];
+  if (quotes === undefined) return false;
+  const rest = next.slice(quotes.length);
+  if (rest.trim() === "") return true;
+  const indent = /^[ \t]*/.exec(rest)![0];
+  return (
+    columnAfter(columnAfter(0, quotes), indent) <= columnAfter(columnAfter(0, start![1]), start![2]) &&
+    ENDS_PARAGRAPH.test(rest.slice(indent.length))
+  );
+}
+
 // enableTasks turns on the checkboxes of the task list items in body whose
 // marker is found in source, labeled with the text of their item, and gives
-// the items of lists that only hold movable items a handle to move them.
+// the items of lists that only hold such items a handle to move them, when the
+// list can be reordered, see movableList.
 function enableTasks(body: HTMLElement, source: string, moveLabel: (task: string) => string) {
   const lines = splitLines(source);
   const editable = (li: Element) =>
     li.matches("li.task-list-item[data-source-lines]") &&
     li.querySelector(TASK_CHECKBOX) !== null &&
     taskMarker(lines, taskLines(li as HTMLElement)[0]) !== undefined;
-  // An item whose marker is on its second line, e.g., "-\n  [ ] a", cannot be
-  // moved first: its empty first line would underline the text before the
-  // list as a heading.
-  const movable = (li: Element) => {
-    const first = taskLines(li as HTMLElement)[0];
-    return editable(li) && taskMarker(lines, first)!.index === first - 1;
-  };
+  const movable = new Map<Element, boolean>();
   for (const item of Array.from(body.querySelectorAll<HTMLElement>("li.task-list-item[data-source-lines]"))) {
     if (!editable(item)) continue;
     const checkbox = item.querySelector<HTMLInputElement>(TASK_CHECKBOX)!;
@@ -90,8 +123,12 @@ function enableTasks(body: HTMLElement, source: string, moveLabel: (task: string
     checkbox.disabled = false;
     checkbox.setAttribute("aria-label", label);
 
-    const siblings = Array.from(item.parentElement!.children);
-    if (siblings.length < 2 || !siblings.every(movable)) continue;
+    const list = item.parentElement!;
+    if (!movable.has(list)) {
+      const siblings = Array.from(list.children) as HTMLElement[];
+      movable.set(list, siblings.length > 1 && siblings.every(editable) && movableList(siblings, lines));
+    }
+    if (!movable.get(list)) continue;
     const handle = document.createElement("button");
     handle.type = "button";
     handle.className = "task-drag-handle";
