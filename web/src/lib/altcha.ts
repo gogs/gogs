@@ -21,11 +21,10 @@ export interface AltchaSolution {
 
 // solveAltcha fetches a proof-of-work challenge from the server and solves it
 // with one Web Worker per CPU core, up to 8, each trying every n-th counter.
-export async function solveAltcha(signal?: AbortSignal): Promise<AltchaSolution> {
+export async function solveAltcha(): Promise<AltchaSolution> {
   const res = await fetch(subUrl("/-/altcha/challenge.json"), {
     cache: "no-store",
     credentials: "same-origin",
-    signal,
   });
   if (!res.ok) throw new Error(`challenge: HTTP ${res.status}`);
   // Measure the lifetime against the server's clock, so a browser clock that is
@@ -39,7 +38,6 @@ export async function solveAltcha(signal?: AbortSignal): Promise<AltchaSolution>
   const stop = () => workers.forEach((w) => w.terminate());
   try {
     const solution = await new Promise<{ counter: number; derivedKey: string }>((resolve, reject) => {
-      signal?.addEventListener("abort", () => reject(signal.reason as Error));
       for (let i = 0; i < n; i++) {
         const w = new Worker(subUrl("/-/altcha/worker.js"));
         w.onmessage = (e: MessageEvent<WorkerMessage>) => {

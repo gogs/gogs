@@ -412,7 +412,6 @@ export function SignUp() {
       >
         <span
           id={current ? "altcha-label" : undefined}
-          aria-live={current ? "polite" : undefined}
           className={cn(
             "text-sm font-medium",
             state === "error" ? "text-(--color-destructive)" : "text-(--color-foreground)",
@@ -491,6 +490,15 @@ export function SignUp() {
           <div className="grid min-w-0">
             {(Object.keys(labels) as AltchaState[]).map((state) => message(state, state === altchaState))}
           </div>
+          {/* A live region only announces text that changes inside it, so it
+              stays mounted and its text follows the state. */}
+          <span className="sr-only" aria-live="polite">
+            {altchaState === "idle"
+              ? ""
+              : altchaState === "error"
+                ? `${labels.error}. ${t("altcha_retry")}`
+                : labels[altchaState]}
+          </span>
         </div>
         {fieldErrors.antiBotPayload && (
           <p id="antiBotPayload-error" className="text-sm text-(--color-destructive)">
