@@ -38,10 +38,11 @@ func (s *CollaborationsStore) IsCollaborator(ctx context.Context, logger *logx.L
 func (s *CollaborationsStore) Add(ctx context.Context, repo *Repository, userID int64) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Deleting the repository meanwhile would leave the collaboration and
-		// access behind.
-		if _, exists, err := lockRepository(tx, repo.ID); err != nil {
+		// access behind, and transferring it would give access as if the old
+		// owner still had it, e.g., owner access to its owner team.
+		if ownerID, exists, err := lockRepository(tx, repo.ID); err != nil {
 			return err
-		} else if !exists {
+		} else if !exists || ownerID != repo.OwnerID {
 			return ErrRepoNotExist{args: errx.Args{"repoID": repo.ID}}
 		}
 

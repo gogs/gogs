@@ -168,6 +168,13 @@ func (s *TeamsStore) Update(ctx context.Context, t *Team, authChanged bool) erro
 // of its repositories.
 func (s *TeamsStore) Delete(ctx context.Context, t *Team) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// The organization is locked before the team, the order adding a
+		// member locks them in, so the two cannot deadlock.
+		err := tx.Model(new(User)).Where("id = ?", t.OrgID).UpdateColumn("num_teams", gorm.Expr("num_teams - 1")).Error
+		if err != nil {
+			return errors.Wrap(err, "count teams")
+		}
+
 		repos, err := newTeamsStore(tx).ListRepos(ctx, t.ID)
 		if err != nil {
 			return errors.Wrap(err, "list repositories")
@@ -187,7 +194,7 @@ func (s *TeamsStore) Delete(ctx context.Context, t *Team) error {
 		if err = tx.Where("id = ?", t.ID).Delete(new(Team)).Error; err != nil {
 			return errors.Wrap(err, "delete")
 		}
-		return tx.Model(new(User)).Where("id = ?", t.OrgID).UpdateColumn("num_teams", gorm.Expr("num_teams - 1")).Error
+		return nil
 	})
 }
 

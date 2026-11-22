@@ -1474,6 +1474,16 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 			},
 		},
 		{
+			name:      "create a repository in the organization while deleting another one, holding the organization",
+			baseOwner: org,
+			holdUser:  org,
+			first: func(*Repository, *Repository) error {
+				_, err := s.Create(ctx, logger, org, org, CreateRepoOptionsLegacy{Name: name("created")})
+				return err
+			},
+			second: func(base, _ *Repository) error { return deleteRepo(base) },
+		},
+		{
 			name:      "transfer older repository to its collaborator while deleting the newer one",
 			baseOwner: alice,
 			before: func() {

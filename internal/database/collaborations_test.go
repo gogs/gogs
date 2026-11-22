@@ -125,6 +125,14 @@ func collaborationsAdd(t *testing.T, ctx context.Context, s *CollaborationsStore
 	assert.False(t, s.IsCollaborator(ctx, logger, deleted.ID, alice.ID))
 	assert.Empty(t, accessModes(t, ctx, perms, deleted.ID))
 
+	// A repository transferred after the caller loaded it gets no
+	// collaborators, whose access would be calculated for the old owner.
+	moved := newTestIssueRepo(t, ctx, s.db, "co-add-moved")
+	require.NoError(t, s.db.Model(new(Repository)).Where("id = ?", moved.ID).UpdateColumn("owner_id", alice.ID).Error)
+	err = s.Add(ctx, moved, alice.ID)
+	assert.True(t, IsErrRepoNotExist(err), "%+v", err)
+	assert.False(t, s.IsCollaborator(ctx, logger, moved.ID, alice.ID))
+
 	// Adding a collaborator that the repository has keeps their mode.
 	err = s.db.Model(new(Collaboration)).Where("user_id = ?", alice.ID).Update("mode", AccessModeRead).Error
 	require.NoError(t, err)
