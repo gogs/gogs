@@ -37,6 +37,7 @@ type issueView struct {
 		ID            int64  `json:"id"`
 		Type          string `json:"type"`
 		Content       string `json:"content"`
+		ContentHash   string `json:"contentHash"`
 		ContentHTML   string `json:"contentHTML"`
 		ViewerCanEdit bool   `json:"viewerCanEdit"`
 	} `json:"comments"`
@@ -286,7 +287,11 @@ func TestIssueComments(t *testing.T) {
 	assert.Equal(t, "comment", v.Comments[0].Type)
 	assert.Contains(t, v.Comments[0].ContentHTML, "<strong>agree</strong>")
 	assert.True(t, v.Comments[0].ViewerCanEdit)
-	assert.False(t, issueGet(t, otherClient, repo, index).Comments[0].ViewerCanEdit)
+	assert.Equal(t, cryptox.SHA256("I **agree**."), v.Comments[0].ContentHash)
+	otherComment := issueGet(t, otherClient, repo, index).Comments[0]
+	assert.False(t, otherComment.ViewerCanEdit)
+	assert.Empty(t, otherComment.Content)
+	assert.Empty(t, otherComment.ContentHash)
 
 	status, body := commenterClient.do(http.MethodPost, path, map[string]any{"content": " "})
 	assert.Equal(t, http.StatusBadRequest, status, "response: %s", body)
