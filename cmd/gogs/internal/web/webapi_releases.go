@@ -198,7 +198,7 @@ func getRepoReleases(c flamego.Context, logger *logx.Logger, repoCtx *repoContex
 			item.IsDraft = r.IsDraft
 			item.IsPrerelease = r.IsPrerelease
 			item.Publisher = &publisher
-			item.NoteHTML = string(markup.MarkdownWithCommits(r.Note, repo.Link(), metas, commits))
+			item.NoteHTML = markAppLinks(markup.MarkdownWithCommits(r.Note, repo.Link(), metas, commits), repo)
 			item.Attachments = toReleaseAttachments(r.Attachments, r.Note)
 			if r.CreatedUnix > 0 {
 				item.CreatedAt = &r.Created

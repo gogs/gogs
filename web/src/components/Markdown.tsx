@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import { CodeBlock } from "@/components/CodeBlock";
 import { MermaidDiagram } from "@/components/MermaidDiagram";
+import { useAppLinkClick } from "@/lib/use-app-link-click";
 import { cn } from "@/lib/utils";
 
 interface CodeBlockContent {
@@ -287,6 +288,7 @@ export function Markdown({
   const { t } = useTranslation();
   const taskSource = tasks?.source;
   const editableTasks = taskSource !== undefined;
+  const onLinkClick = useAppLinkClick({ markedOnly: true });
   const content = useMemo(
     () =>
       prepareHTML(
@@ -466,7 +468,7 @@ export function Markdown({
 
   return (
     <div className={cn("markdown", className)}>
-      <div ref={container} dangerouslySetInnerHTML={innerHTML} />
+      <div ref={container} onClick={onLinkClick} dangerouslySetInnerHTML={innerHTML} />
       {placeholders?.content === content
         ? placeholders.elements.map((element) => {
             const index = Number(element.dataset.codeBlock);

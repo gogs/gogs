@@ -167,7 +167,7 @@ func getRepoWiki(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (
 	resp.HasWiki = true
 	resp.Page = &wikiPage{
 		Name:   name,
-		HTML:   string(markup.MarkdownFile(content, repo.Link()+"/wiki", repoCtx.metas())),
+		HTML:   markAppLinks(markup.MarkdownFile(content, repo.Link()+"/wiki", repoCtx.metas()), repo),
 		Author: wikiPageAuthor{Name: commits[0].Author.Name, When: commits[0].Author.When},
 	}
 	resp.Pages = pages

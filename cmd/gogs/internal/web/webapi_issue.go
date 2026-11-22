@@ -335,7 +335,7 @@ func toRepoIssueView(ctx context.Context, logger *logx.Logger, viewer *database.
 		IsClosed:    issue.IsClosed,
 		Poster:      toIssueUser(issue.Poster),
 		CreatedAt:   issue.Created.UTC(),
-		ContentHTML: string(markup.MarkdownWithCommits(issue.Content, repo.Link(), metas, commits)),
+		ContentHTML: markAppLinks(markup.MarkdownWithCommits(issue.Content, repo.Link(), metas, commits), repo),
 		Content:     issue.Content,
 		ContentHash: cryptox.SHA256(issue.Content),
 		Attachments: toIssueAttachments(issue.Attachments, issue.Content),
@@ -377,7 +377,7 @@ func toRepoIssueView(ctx context.Context, logger *logx.Logger, viewer *database.
 		case database.CommentTypeCommitRef:
 			item.ContentHTML = markup.Sanitize(comment.Content)
 		case database.CommentTypeComment:
-			item.ContentHTML = string(markup.MarkdownWithCommits(comment.Content, repo.Link(), metas, commits))
+			item.ContentHTML = markAppLinks(markup.MarkdownWithCommits(comment.Content, repo.Link(), metas, commits), repo)
 			item.Attachments = toIssueAttachments(comment.Attachments, comment.Content)
 			// The poster and admins can change a comment.
 			if viewer != nil && (comment.PosterID == viewer.ID || repoCtx.Viewer.CanAdminister()) {
@@ -795,7 +795,7 @@ func postRepoMarkdown(repoCtx *repoContext, req markdownRequest) (statusCode int
 	default:
 		html = markup.Markdown(req.Text, repo.Link(), repoCtx.metas())
 	}
-	return http.StatusOK, map[string]string{"html": string(html)}, nil
+	return http.StatusOK, map[string]string{"html": markAppLinks(html, repo)}, nil
 }
 
 // limitAttachmentUpload caps the size of an uploaded attachment.
@@ -969,7 +969,7 @@ func toIssueTemplate(repoCtx *repoContext, t *issuetemplate.Template) *issueTemp
 		if strings.TrimSpace(text) == "" {
 			return ""
 		}
-		return string(markup.Markdown(text, repoCtx.Repo.Link(), repoCtx.metas()))
+		return markAppLinks(markup.Markdown(text, repoCtx.Repo.Link(), repoCtx.metas()), repoCtx.Repo)
 	}
 	resp := &issueTemplate{
 		issueTemplateSummary: issueTemplateSummary{File: t.File, Name: t.Name, About: t.About},

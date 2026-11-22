@@ -6,6 +6,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/markup"
 )
 
@@ -104,7 +105,7 @@ type ipynbNotebook struct {
 
 // parseNotebook reads a Jupyter notebook in nbformat 3 or 4. Relative links
 // in its Markdown resolve against dirLink.
-func parseNotebook(p []byte, dirLink string, metas map[string]string) (*repoNotebook, error) {
+func parseNotebook(p []byte, dirLink string, repo *database.Repository, metas map[string]string) (*repoNotebook, error) {
 	var raw ipynbNotebook
 	if err := json.Unmarshal(p, &raw); err != nil {
 		return nil, errors.Wrap(err, "decode notebook")
@@ -132,7 +133,7 @@ func parseNotebook(p []byte, dirLink string, metas map[string]string) (*repoNote
 			source = inlineAttachments(source, c.Attachments)
 			nb.Cells = append(nb.Cells, repoNotebookCell{
 				Type: "markdown",
-				HTML: string(markup.MarkdownFile(source, dirLink, metas)),
+				HTML: markAppLinks(markup.MarkdownFile(source, dirLink, metas), repo),
 			})
 		case "code":
 			source := c.Source
@@ -145,7 +146,7 @@ func parseNotebook(p []byte, dirLink string, metas map[string]string) (*repoNote
 				ExecutionCount: firstNonNil(c.ExecutionCount, c.PromptNumber),
 			}
 			for _, o := range c.Outputs {
-				if out, ok := convertNotebookOutput(o, dirLink, metas); ok {
+				if out, ok := convertNotebookOutput(o, dirLink, repo, metas); ok {
 					cell.Outputs = append(cell.Outputs, out)
 				}
 			}
@@ -185,7 +186,7 @@ func inlineAttachments(source string, attachments map[string]map[string]ipynbTex
 // convertNotebookOutput picks the richest kind of an output that a browser
 // shows safely, in the order of Jupyter. Outputs without such a kind, e.g.,
 // only JavaScript, are left out.
-func convertNotebookOutput(o ipynbOutput, dirLink string, metas map[string]string) (repoNotebookOutput, bool) {
+func convertNotebookOutput(o ipynbOutput, dirLink string, repo *database.Repository, metas map[string]string) (repoNotebookOutput, bool) {
 	switch o.OutputType {
 	case "stream":
 		return repoNotebookOutput{Type: "text", Text: string(o.Text)}, true
@@ -217,10 +218,10 @@ func convertNotebookOutput(o ipynbOutput, dirLink string, metas map[string]strin
 	switch {
 	case data["text/html"] != "":
 		out.Type = "html"
-		out.HTML = markup.Sanitize(data["text/html"])
+		out.HTML = markAppLinks([]byte(markup.Sanitize(data["text/html"])), repo)
 	case data["text/markdown"] != "":
 		out.Type = "html"
-		out.HTML = string(markup.MarkdownFile(data["text/markdown"], dirLink, metas))
+		out.HTML = markAppLinks(markup.MarkdownFile(data["text/markdown"], dirLink, metas), repo)
 	case data["image/png"] != "", data["image/jpeg"] != "", data["image/gif"] != "":
 		out.Type = "image"
 		for _, mime := range []string{"image/png", "image/jpeg", "image/gif"} {
