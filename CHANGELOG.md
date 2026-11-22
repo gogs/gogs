@@ -35,7 +35,7 @@ All notable changes to Gogs are documented in this file.
 ### Changed
 
 - Files and diffs that are not UTF-8 are shown in their encoding more often, including short texts such as a one-line commit message in GBK. [#8696](https://github.com/gogs/gogs/pull/8696)
-- Every language of the interface is fully translated, including the pages added since the last translation update. Translations are now contributed by pull request to `conf/locale` instead of through Crowdin.
+- Translations are now contributed by pull request to `conf/locale` instead of through Crowdin.
 - Placeholders in locale messages are named in camelCase, e.g., `{repoLink}`, instead of `%s`. Custom locale files under `custom/conf/locale` that use `%s` placeholders need to be updated.
 - The language code of Serbian is `sr-RS` instead of `sr-SP`, which is not a valid region. Rename a custom `locale_sr-SP.ini` to `locale_sr-RS.ini`, and replace `sr-SP` with `sr-RS` in a custom `LANGS` of `[i18n]`.
 - Users and organizations without an uploaded avatar get a generated avatar in the style of [DiceBear Notionists](https://www.dicebear.com/styles/notionists/), which stays the same after a rename. Commit authors without an account get one generated from their email, in place of the default gopher. Avatars are never fetched from external services.
