@@ -3,6 +3,7 @@ package web
 import (
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,6 +12,8 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+
+	"gogs.io/gogs/internal/conf"
 )
 
 func TestTracingHandler(t *testing.T) {
@@ -84,4 +87,33 @@ func TestTracingHandler_TraceOfRequest(t *testing.T) {
 		assert.Equal(t, carriedSpanID, span.Links()[0].SpanContext.SpanID().String())
 	}
 	assert.Empty(t, spans[2].Links())
+}
+
+func TestOverrideHTTPPort(t *testing.T) {
+	tests := []struct {
+		name        string
+		externalURL string
+		httpPort    int
+		port        int
+		want        string
+	}{
+		{name: "served directly", externalURL: "http://localhost:3000/", httpPort: 3000, port: 3001, want: "http://localhost:3001/"},
+		{name: "served directly under a subpath", externalURL: "http://[::1]:3000/gogs/", httpPort: 3000, port: 3001, want: "http://[::1]:3001/gogs/"},
+		{name: "served directly on the default port", externalURL: "http://localhost/", httpPort: 80, port: 3001, want: "http://localhost:3001/"},
+		{name: "served directly on the configured port", externalURL: "https://git.example.com/", httpPort: 443, port: 443, want: "https://git.example.com/"},
+		{name: "behind a proxy on another port", externalURL: "https://git.example.com:1443/", httpPort: 3000, port: 3001, want: "https://git.example.com:1443/"},
+		{name: "behind a proxy on the default port", externalURL: "https://git.example.com/", httpPort: 3000, port: 3001, want: "https://git.example.com/"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			u, err := url.Parse(test.externalURL)
+			require.NoError(t, err)
+			conf.SetMockServer(t, conf.ServerOpts{ExternalURL: test.externalURL, URL: u, HTTPPort: test.httpPort})
+
+			overrideHTTPPort(test.port)
+			assert.Equal(t, test.want, conf.Server.ExternalURL)
+			assert.Equal(t, test.want, conf.Server.URL.String())
+			assert.Equal(t, test.port, conf.Server.HTTPPort)
+		})
+	}
 }

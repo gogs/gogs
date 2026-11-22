@@ -97,10 +97,7 @@ func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOver
 	// The port override works around a port conflict on the first run. Apply it
 	// before anything reads the external URL.
 	if portOverride > 0 {
-		port := strconv.Itoa(portOverride)
-		conf.Server.URL.Host = strings.Replace(conf.Server.URL.Host, ":"+conf.Server.URL.Port(), ":"+port, 1)
-		conf.Server.ExternalURL = conf.Server.URL.String()
-		conf.Server.HTTPPort = portOverride
+		overrideHTTPPort(portOverride)
 	}
 
 	sessionOpts, err := parseSessionOptions(logger)
@@ -292,6 +289,28 @@ func newHealth(traceStore *telemetry.Store) *telemetry.Health {
 	}
 	gauges = append(gauges, telemetry.DiskGauges(disks...)...)
 	return telemetry.NewHealth(traceStore, gauges...)
+}
+
+// overrideHTTPPort makes the server listen on the given port instead of
+// HTTP_PORT, e.g., when HTTP_PORT is taken on the first run.
+//
+// When the external URL points to HTTP_PORT, users reach Gogs directly, so the
+// external URL moves to the given port too. When it points to another port,
+// users reach Gogs through a reverse proxy or a port mapping, so the external
+// URL stays as it is. A URL without a port points to the default port of its
+// scheme, i.e., 80 for HTTP and 443 for HTTPS.
+func overrideHTTPPort(port int) {
+	externalPort := conf.Server.URL.Port()
+	if externalPort == "" {
+		externalPort = map[string]string{"http": "80", "https": "443"}[conf.Server.URL.Scheme]
+	}
+	reachedDirectly := externalPort == strconv.Itoa(conf.Server.HTTPPort)
+	// Rewriting the URL for the same port would only add its default port to it.
+	if reachedDirectly && port != conf.Server.HTTPPort {
+		conf.Server.URL.Host = net.JoinHostPort(conf.Server.URL.Hostname(), strconv.Itoa(port))
+		conf.Server.ExternalURL = conf.Server.URL.String()
+	}
+	conf.Server.HTTPPort = port
 }
 
 // newTracingHandler returns a handler that records a span for every request, so
