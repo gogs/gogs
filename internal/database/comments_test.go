@@ -74,6 +74,9 @@ func commentsCreate(t *testing.T, ctx context.Context, s *CommentsStore) {
 	assert.Equal(t, repo.OwnerID, comment.Poster.ID)
 	assert.Equal(t, issue.ID, comment.Issue.ID)
 	assert.Equal(t, []string{unbound.UUID}, attachmentUUIDs(comment.Attachments))
+	assert.Positive(t, comment.CreatedUnix)
+	assert.Equal(t, comment.CreatedUnix, comment.Created.Unix())
+	assert.Equal(t, comment.CreatedUnix, comment.Updated.Unix())
 
 	got, err := attachments.GetByUUID(ctx, unbound.UUID)
 	require.NoError(t, err)
@@ -90,13 +93,14 @@ func commentsCreate(t *testing.T, ctx context.Context, s *CommentsStore) {
 	assert.Equal(t, 0, numComments(other.ID))
 
 	var mentions []int64
-	err = s.db.Model(new(IssueUser)).Where("issue_id = ? AND is_mentioned = ?", issue.ID, true).Pluck("uid", &mentions).Error
+	err = s.db.Model(new(IssueUser)).Where("repo_id = ? AND issue_id = ? AND is_mentioned = ?", repo.ID, issue.ID, true).Pluck("uid", &mentions).Error
 	require.NoError(t, err)
 	assert.Equal(t, []int64{mentioned.ID}, mentions)
 
 	payloads := hookPayloads(t, s.db)
 	require.Len(t, payloads, 1)
 	assert.Contains(t, payloads[0], `"action": "created"`)
+	assert.NotContains(t, payloads[0], `"created_at": "0001-01-01`, "the comment has its creation time")
 	assert.Contains(t, payloads[0], `"body": "Hi @cm-create-mentioned"`)
 }
 

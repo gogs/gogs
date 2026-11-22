@@ -156,6 +156,8 @@ func issuesCreate(t *testing.T, ctx context.Context, s *IssuesStore) {
 
 	got, err := s.GetByID(ctx, issue.ID)
 	require.NoError(t, err)
+	assert.Equal(t, got.CreatedUnix, issue.Created.Unix())
+	assert.Equal(t, got.CreatedUnix, issue.Updated.Unix())
 	assert.Equal(t, int64(1), got.Index)
 	assert.Equal(t, "Crash", got.Title)
 	assert.Equal(t, milestone.ID, got.MilestoneID)
@@ -188,6 +190,7 @@ func issuesCreate(t *testing.T, ctx context.Context, s *IssuesStore) {
 	var relations []relation
 	for _, iu := range ius {
 		assert.Equal(t, issue.ID, iu.IssueID)
+		assert.Equal(t, repo.ID, iu.RepoID)
 		if iu.UserID != mentioned.ID {
 			assert.Equal(t, milestone.ID, iu.MilestoneID, "user %d", iu.UserID)
 		}
@@ -202,6 +205,7 @@ func issuesCreate(t *testing.T, ctx context.Context, s *IssuesStore) {
 	payloads := hookPayloads(t, s.db)
 	require.Len(t, payloads, 1)
 	assert.Contains(t, payloads[0], `"action": "opened"`)
+	assert.NotContains(t, payloads[0], `"created_at": "0001-01-01`, "the issue has its creation time")
 
 	// A milestone and an assignee that do not exist are dropped, and a poster
 	// who cannot be assigned relates to the issue as its poster only.
@@ -326,7 +330,7 @@ func issuesList(t *testing.T, ctx context.Context, s *IssuesStore) {
 	assert.Zero(t, count(IssuesOptions{RepoIDs: []int64{}}))
 
 	// Mentions are listed for the user only.
-	err = s.updateMentions(ctx, i1.ID, []string{"is-list"})
+	err = s.updateMentions(ctx, i1, []string{"is-list"})
 	require.NoError(t, err)
 	assert.Equal(t, []int64{i1.ID}, list(IssuesOptions{RepoID: repo.ID, IsMention: true, UserID: repo.OwnerID}))
 	assert.Empty(t, list(IssuesOptions{RepoID: repo.ID, IsMention: true, UserID: other.OwnerID}))
@@ -688,40 +692,43 @@ func issuesLabels(t *testing.T, ctx context.Context, s *IssuesStore) {
 func issuesUpdateMentions(t *testing.T, ctx context.Context, s *IssuesStore) {
 	alice := newTestIssueUser(t, ctx, s.db, "is-mention-alice")
 	bob := newTestIssueUser(t, ctx, s.db, "is-mention-bob")
-	carol := newTestIssueUser(t, ctx, s.db, "is-mention-carol")
-	org := &User{Name: "is-mention-org", LowerName: "is-mention-org", Type: UserTypeOrganization, NumMembers: 2}
+	org := &User{Name: "is-mention-org", LowerName: "is-mention-org", Type: UserTypeOrganization, NumMembers: 1}
 	require.NoError(t, s.db.Create(org).Error)
-	emptyOrg := &User{Name: "is-mention-empty", LowerName: "is-mention-empty", Type: UserTypeOrganization}
-	require.NoError(t, s.db.Create(emptyOrg).Error)
-	for _, uid := range []int64{bob.ID, carol.ID} {
-		require.NoError(t, s.db.Create(&OrgUser{UID: uid, OrgID: org.ID}).Error)
-	}
-	// Alice already relates to the issue and keeps her other flags.
-	require.NoError(t, s.db.Create(&IssueUser{IssueID: 1, UserID: alice.ID, IsPoster: true}).Error)
+	require.NoError(t, s.db.Create(&OrgUser{UID: bob.ID, OrgID: org.ID}).Error)
+
+	// The issue was closed after the caller loaded it.
+	closed := &Issue{RepoID: 7, Index: 1, IsClosed: true}
+	require.NoError(t, s.db.Create(closed).Error)
+	issue := &Issue{ID: closed.ID, RepoID: 7}
+	// Alice already relates to the issue and keeps her other flags. Her row is
+	// from a mention before Gogs 0.15, which did not record the repository.
+	require.NoError(t, s.db.Create(&IssueUser{IssueID: issue.ID, UserID: alice.ID, IsPoster: true, IsClosed: true}).Error)
+	carol := newTestIssueUser(t, ctx, s.db, "is-mention-carol")
 
 	assert.Equal(t, []string{"is-mention-alice", "is-mention-org"}, findLowerMentions("Hi @Is-Mention-Alice and @IS-MENTION-ORG"))
 
-	err := s.updateMentions(ctx, 1, []string{"is-mention-alice", "is-mention-org", "is-mention-empty", "nobody"})
+	// Mentions of organizations mark neither them nor their members.
+	err := s.updateMentions(ctx, issue, []string{"is-mention-alice", "is-mention-carol", "is-mention-org", "nobody"})
 	require.NoError(t, err)
 
 	var ius []*IssueUser
-	err = s.db.Where("issue_id = ?", 1).Order("uid").Find(&ius).Error
+	err = s.db.Where("issue_id = ?", issue.ID).Order("uid").Find(&ius).Error
 	require.NoError(t, err)
 	got := map[int64][2]bool{}
 	for _, iu := range ius {
+		assert.Equal(t, int64(7), iu.RepoID, "user %d", iu.UserID)
+		// The issue is closed, so the closed issue list shows the mention.
+		assert.True(t, iu.IsClosed, "user %d", iu.UserID)
 		got[iu.UserID] = [2]bool{iu.IsMentioned, iu.IsPoster}
 	}
 	assert.Equal(t, map[int64][2]bool{
-		alice.ID:    {true, true},
-		bob.ID:      {true, false},
-		carol.ID:    {true, false},
-		org.ID:      {true, false},
-		emptyOrg.ID: {true, false},
+		alice.ID: {true, true},
+		carol.ID: {true, false},
 	}, got)
 
-	err = s.updateMentions(ctx, 1, nil)
+	err = s.updateMentions(ctx, issue, nil)
 	require.NoError(t, err)
 	var count int64
 	require.NoError(t, s.db.Model(new(IssueUser)).Count(&count).Error)
-	assert.Equal(t, int64(5), count)
+	assert.Equal(t, int64(2), count)
 }

@@ -761,13 +761,13 @@ func (s *UsersStore) GetByKeyID(ctx context.Context, keyID int64) (*User, error)
 
 // GetMailableEmailsByUsernames returns a list of verified primary email
 // addresses (where email notifications are sent to) of users with given list of
-// usernames. Non-existing usernames are ignored.
+// usernames. Non-existing usernames and organizations are ignored.
 func (s *UsersStore) GetMailableEmailsByUsernames(ctx context.Context, usernames []string) ([]string, error) {
 	emails := make([]string, 0, len(usernames))
 	return emails, s.db.WithContext(ctx).
 		Model(&User{}).
 		Select("email").
-		Where("lower_name IN (?) AND is_active = ?", usernames, true).
+		Where("lower_name IN (?) AND is_active = ? AND type = ?", usernames, true, UserTypeIndividual).
 		Find(&emails).Error
 }
 

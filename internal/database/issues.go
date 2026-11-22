@@ -61,6 +61,9 @@ func (issue *Issue) BeforeCreate(tx *gorm.DB) error {
 		issue.CreatedUnix = tx.NowFunc().Unix()
 		issue.UpdatedUnix = issue.CreatedUnix
 	}
+	// Webhook payloads and API responses use the issue just created.
+	issue.Created = time.Unix(issue.CreatedUnix, 0).Local()
+	issue.Updated = time.Unix(issue.UpdatedUnix, 0).Local()
 	return nil
 }
 
@@ -1225,47 +1228,41 @@ func findLowerMentions(content string) []string {
 	return mentions
 }
 
-// updateMentions marks the issue with given ID as mentioning the users with
-// given lowercase names, and the members of the organizations with them.
-func (s *IssuesStore) updateMentions(ctx context.Context, issueID int64, lowerNames []string) error {
+// updateMentions marks the issue as mentioning the users with given lowercase
+// names.
+func (s *IssuesStore) updateMentions(ctx context.Context, issue *Issue, lowerNames []string) error {
 	if len(lowerNames) == 0 {
 		return nil
 	}
 
 	db := s.db.WithContext(ctx)
-	users := make([]*User, 0, len(lowerNames))
-	err := db.Where("lower_name IN ?", lowerNames).Order("lower_name ASC").Find(&users).Error
+	// The issue may have been closed or reopened since the caller loaded it.
+	var isClosed bool
+	err := db.Model(new(Issue)).Where("id = ?", issue.ID).Select("is_closed").Scan(&isClosed).Error
+	if err != nil {
+		return errors.Wrap(err, "get issue status")
+	}
+
+	// Mentions of organizations only link to them, so that anyone cannot list
+	// an issue among the mentions of every member.
+	var userIDs []int64
+	err = db.Model(new(User)).Where("lower_name IN ? AND type = ?", lowerNames, UserTypeIndividual).Pluck("id", &userIDs).Error
 	if err != nil {
 		return errors.Wrap(err, "list mentioned users")
 	}
 
-	userIDs := make([]int64, 0, len(users))
-	for _, user := range users {
-		userIDs = append(userIDs, user.ID)
-		if !user.IsOrganization() || user.NumMembers == 0 {
-			continue
-		}
-
-		members, err := newOrganizationsStore(s.db).listOrgUsers(ctx, user.ID, 0)
-		if err != nil {
-			return errors.Wrapf(err, "list members of organization %d", user.ID)
-		}
-		for _, member := range members {
-			userIDs = append(userIDs, member.UID)
-		}
-	}
-
 	for _, userID := range userIDs {
 		iu := new(IssueUser)
-		err := db.Where("uid = ? AND issue_id = ?", userID, issueID).First(iu).Error
+		err := db.Where("uid = ? AND issue_id = ?", userID, issue.ID).First(iu).Error
 		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.Wrapf(err, "get issue user %d", userID)
 		}
 
 		if err == nil {
-			err = db.Model(iu).Update("is_mentioned", true).Error
+			// Mentions before Gogs 0.15 created rows without the repository.
+			err = db.Model(iu).Updates(map[string]any{"is_mentioned": true, "repo_id": issue.RepoID}).Error
 		} else {
-			err = db.Create(&IssueUser{UserID: userID, IssueID: issueID, IsMentioned: true}).Error
+			err = db.Create(&IssueUser{UserID: userID, RepoID: issue.RepoID, IssueID: issue.ID, IsMentioned: true, IsClosed: isClosed}).Error
 		}
 		if err != nil {
 			return errors.Wrapf(err, "mention user %d", userID)
@@ -1278,7 +1275,7 @@ func (s *IssuesStore) updateMentions(ctx context.Context, issueID int64, lowerNa
 // emails about the issue to them and to the participants of the issue.
 func (s *IssuesStore) mailParticipants(ctx context.Context, logger *logx.Logger, issue *Issue) error {
 	mentions := findLowerMentions(issue.Content)
-	err := s.updateMentions(ctx, issue.ID, mentions)
+	err := s.updateMentions(ctx, issue, mentions)
 	if err != nil {
 		return errors.Wrap(err, "update mentions")
 	}

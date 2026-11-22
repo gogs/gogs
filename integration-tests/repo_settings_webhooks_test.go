@@ -191,12 +191,17 @@ func TestRepoSettingsWebhooks(t *testing.T) {
 			Pusher struct {
 				UserName string `json:"username"`
 			} `json:"pusher"`
+			Commits []struct {
+				Timestamp time.Time `json:"timestamp"`
+			} `json:"commits"`
 		}
 		require.NoError(t, json.Unmarshal(d.Body, &payload), "payload: %s", d.Body)
 		assert.Equal(t, "refs/heads/"+branch, payload.Ref)
 		assert.Equal(t, repoSettingsHead(t, repo, branch), payload.After)
 		assert.Equal(t, repo.Owner+"/"+repo.Name, payload.Repo.FullName)
 		assert.Equal(t, owner.Name, payload.Pusher.UserName)
+		require.Len(t, payload.Commits, 1)
+		assert.False(t, payload.Commits[0].Timestamp.IsZero(), "the commit has its time")
 
 		uuid := d.Header.Get("X-Gogs-Delivery")
 		require.NotEmpty(t, uuid)

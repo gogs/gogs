@@ -940,8 +940,11 @@ func usersGetMailableEmailsByUsernames(t *testing.T, ctx context.Context, s *Use
 	require.NoError(t, err)
 	_, err = s.Create(ctx, "cindy", "cindy@example.com", CreateUserOptions{Activated: true})
 	require.NoError(t, err)
+	org, err := s.Create(ctx, "acme", "acme@example.com", CreateUserOptions{Activated: true})
+	require.NoError(t, err)
+	require.NoError(t, s.db.Model(org).Update("type", UserTypeOrganization).Error)
 
-	got, err := s.GetMailableEmailsByUsernames(ctx, []string{alice.Name, bob.Name, "ignore-non-exist"})
+	got, err := s.GetMailableEmailsByUsernames(ctx, []string{alice.Name, bob.Name, org.Name, "ignore-non-exist"})
 	require.NoError(t, err)
 	want := []string{bob.Email}
 	assert.Equal(t, want, got)

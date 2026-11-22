@@ -76,6 +76,9 @@ func (c *Comment) BeforeCreate(tx *gorm.DB) error {
 		c.CreatedUnix = tx.NowFunc().Unix()
 		c.UpdatedUnix = c.CreatedUnix
 	}
+	// Webhook payloads and API responses use the comment just created.
+	c.Created = time.Unix(c.CreatedUnix, 0).Local()
+	c.Updated = time.Unix(c.UpdatedUnix, 0).Local()
 	return nil
 }
 
@@ -255,7 +258,7 @@ func (s *CommentsStore) create(ctx context.Context, logger *logx.Logger, opts *C
 // issue.
 func (s *CommentsStore) mailParticipants(ctx context.Context, logger *logx.Logger, c *Comment, opType ActionType, issue *Issue) error {
 	mentions := findLowerMentions(c.Content)
-	err := newIssuesStore(s.db).updateMentions(ctx, c.IssueID, mentions)
+	err := newIssuesStore(s.db).updateMentions(ctx, issue, mentions)
 	if err != nil {
 		return errors.Wrap(err, "update mentions")
 	}

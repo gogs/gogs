@@ -35,6 +35,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Changed
 
+- Mentioning an organization in an issue or comment only links to it. It no longer marks the organization or its members as mentioned, or sends email to the organization. [#8528](https://github.com/gogs/gogs/pull/8528)
 - GIF images can be uploaded as attachments to issues, pull requests and comments by default. [#8713](https://github.com/gogs/gogs/pull/8713)
 - Files and diffs that are not UTF-8 are shown in their encoding more often, including short texts such as a one-line commit message in GBK. [#8696](https://github.com/gogs/gogs/pull/8696)
 - Translations are now contributed by pull request to `conf/locale` instead of through Crowdin.
@@ -139,6 +140,10 @@ All notable changes to Gogs are documented in this file.
 - A webhook redelivery that fails now shows as failed, and so does its webhook, even when an earlier delivery succeeded. [#8501](https://github.com/gogs/gogs/pull/8501)
 - A Discord webhook created through the API no longer makes pushes, comments, and other events of its repository fail to reach the repository's other webhooks. [#8501](https://github.com/gogs/gogs/pull/8501)
 - Discord webhooks without a username now deliver, instead of every delivery being rejected by Discord. [#8501](https://github.com/gogs/gogs/pull/8501)
+- Repository search on PostgreSQL matches descriptions regardless of case, as on other databases. [#8528](https://github.com/gogs/gogs/pull/8528)
+- Webhook payloads and API responses for a newly created issue, comment, or repository, and webhook test deliveries, no longer show `0001-01-01T00:00:00Z` as their time. [#8528](https://github.com/gogs/gogs/pull/8528)
+- The issue list of a repository marks issues that mention you as unread until you read them, as it does for your other issues. [#8528](https://github.com/gogs/gogs/pull/8528)
+- Listing or creating comments of an issue that does not exist through the API returns 404 instead of 500. [#8528](https://github.com/gogs/gogs/pull/8528)
 - A webhook delivery to an invalid payload URL or to a blocked local network address now shows as failed with the reason, instead of staying pending and being retried on every delivery run. [#8501](https://github.com/gogs/gogs/pull/8501)
 - External wiki and issue tracker URLs with a query string or fragment, e.g., `doku.php?id=start`, now open the right page instead of a page named after the escaped URL. [#8638](https://github.com/gogs/gogs/pull/8638)
 - The API now lists no branches for an empty repository instead of failing, and creating a file through the contents API in an empty repository makes its first commit. [#8396](https://github.com/gogs/gogs/issues/8396)
