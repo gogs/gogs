@@ -56,7 +56,7 @@ func newTestMirror(t *testing.T, ctx context.Context, s *MirrorsStore, name stri
 
 	owner, err := newUsersStore(s.db).Create(ctx, "mirror-"+name, "mirror-"+name+"@example.com", CreateUserOptions{})
 	require.NoError(t, err)
-	repo, err := newReposStore(s.db).Create(ctx, owner.ID, CreateRepoOptions{Name: name, Mirror: true})
+	repo, err := newReposStore(s.db).create(ctx, owner.ID, CreateRepoOptions{Name: name, Mirror: true})
 	require.NoError(t, err)
 	m := &Mirror{RepoID: repo.ID, Interval: interval, EnablePrune: true, NextSync: nextSync}
 	err = s.db.Create(m).Error
@@ -92,7 +92,7 @@ func mirrorsLoadForRepos(t *testing.T, ctx context.Context, s *MirrorsStore) {
 	repo2, err := reposStore.GetByID(ctx, m2.RepoID)
 	require.NoError(t, err)
 	// A mirror whose mirror settings are gone.
-	repo3, err := reposStore.Create(ctx, repo1.OwnerID, CreateRepoOptions{Name: "repo3", Mirror: true})
+	repo3, err := reposStore.create(ctx, repo1.OwnerID, CreateRepoOptions{Name: "repo3", Mirror: true})
 	require.NoError(t, err)
 	// A regular repository whose ID has a mirror is not looked up.
 	regular := &Repository{ID: m2.RepoID}

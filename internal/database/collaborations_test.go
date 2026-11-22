@@ -66,7 +66,7 @@ func newTestCollabOrgRepo(t *testing.T, ctx context.Context, db *gorm.DB, name s
 	t.Helper()
 	org := &User{Name: name, LowerName: name, Email: name + "@example.com", Type: UserTypeOrganization}
 	require.NoError(t, db.Create(org).Error)
-	repo, err := newReposStore(db).Create(ctx, org.ID, CreateRepoOptions{Name: "repo1"})
+	repo, err := newReposStore(db).create(ctx, org.ID, CreateRepoOptions{Name: "repo1"})
 	require.NoError(t, err)
 	return repo
 }
@@ -145,7 +145,7 @@ func collaborationsAdd(t *testing.T, ctx context.Context, s *CollaborationsStore
 
 	t.Run("organization", func(t *testing.T) {
 		repo := newTestCollabOrgRepo(t, ctx, s.db, "co-add-org")
-		otherRepo, err := newReposStore(s.db).Create(ctx, repo.OwnerID, CreateRepoOptions{Name: "repo2"})
+		otherRepo, err := newReposStore(s.db).create(ctx, repo.OwnerID, CreateRepoOptions{Name: "repo2"})
 		require.NoError(t, err)
 		owner := newTestIssueUser(t, ctx, s.db, "co-add-org-owner")
 		admin := newTestIssueUser(t, ctx, s.db, "co-add-org-admin")
@@ -248,7 +248,7 @@ func collaborationsChangeMode(t *testing.T, ctx context.Context, s *Collaboratio
 
 	t.Run("organization", func(t *testing.T) {
 		repo := newTestCollabOrgRepo(t, ctx, s.db, "co-mode-org")
-		otherRepo, err := newReposStore(s.db).Create(ctx, repo.OwnerID, CreateRepoOptions{Name: "repo2"})
+		otherRepo, err := newReposStore(s.db).create(ctx, repo.OwnerID, CreateRepoOptions{Name: "repo2"})
 		require.NoError(t, err)
 		carol := newTestIssueUser(t, ctx, s.db, "co-mode-org-carol")
 		dave := newTestIssueUser(t, ctx, s.db, "co-mode-org-dave")

@@ -553,7 +553,7 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 		alice, err := s.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 		require.NoError(t, err)
 
-		_, err = reposStore.Create(ctx, alice.ID, CreateRepoOptions{Name: "repo1"})
+		_, err = reposStore.create(ctx, alice.ID, CreateRepoOptions{Name: "repo1"})
 		require.NoError(t, err)
 
 		err = s.DeleteByID(ctx, alice.ID, false)
@@ -587,7 +587,7 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 	require.NoError(t, err)
 	frank, err := s.Create(ctx, "frank", "frank@example.com", CreateUserOptions{})
 	require.NoError(t, err)
-	repo2, err := reposStore.Create(ctx, cindy.ID, CreateRepoOptions{Name: "repo2"})
+	repo2, err := reposStore.create(ctx, cindy.ID, CreateRepoOptions{Name: "repo2"})
 	require.NoError(t, err)
 
 	testUser, err := s.Create(ctx, "testUser", "testUser@example.com", CreateUserOptions{})
@@ -780,7 +780,7 @@ func usersDeleteInactivated(t *testing.T, ctx context.Context, s *UsersStore) {
 	alice, err := s.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	reposStore := newReposStore(s.db)
-	_, err = reposStore.Create(ctx, alice.ID, CreateRepoOptions{Name: "repo1"})
+	_, err = reposStore.create(ctx, alice.ID, CreateRepoOptions{Name: "repo1"})
 	require.NoError(t, err)
 
 	// User with organization membership should be skipped.

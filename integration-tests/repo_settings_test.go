@@ -368,6 +368,54 @@ func TestRepoSettingsDelete(t *testing.T) {
 	assert.NoDirExists(t, database.RepoPath(repo.Owner, repo.Name))
 }
 
+// Deleting a fork gives back the fork count of its base and the repository
+// count of its owner, and deleting a base makes its forks regular
+// repositories.
+func TestRepoSettingsDeleteForks(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	forker := seedUser(t, CreateUserOptions{})
+	other := seedUser(t, CreateUserOptions{})
+	base := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	fork := func(u *User) *Repository {
+		t.Helper()
+		var created repoSettingsCreated
+		authenticatedClient(t, u).doJSON(http.MethodPost, "/api/web/repo/fork/"+strconv.FormatInt(base.ID, 10), map[string]any{"name": UniqueName("fork-")}, http.StatusCreated, &created)
+		got, err := getRepositoryByName(t, u.ID, created.Name)
+		require.NoError(t, err)
+		return &Repository{ID: got.ID, Owner: created.Owner, Name: created.Name}
+	}
+	deleteRepo := func(u *User, repo *Repository) {
+		t.Helper()
+		status, body := authenticatedClient(t, u).do(http.MethodDelete, repoSettingsAPIPath(repo, ""), map[string]any{"repoName": repo.Name})
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	}
+	numRepos := func(u *User) int {
+		t.Helper()
+		got, err := database.Handle.Users().GetByID(t.Context(), u.ID)
+		require.NoError(t, err)
+		return got.NumRepos
+	}
+
+	forked := fork(forker)
+	kept := fork(other)
+	require.Equal(t, 2, repoSettingsGetRepo(t, base.ID).NumForks)
+	require.Equal(t, 1, numRepos(forker))
+
+	deleteRepo(forker, forked)
+	assert.Equal(t, 1, repoSettingsGetRepo(t, base.ID).NumForks, "fork count of the base")
+	assert.Equal(t, 0, numRepos(forker), "repository count of the fork owner")
+
+	deleteRepo(owner, base)
+	assert.Equal(t, 0, numRepos(owner), "repository count of the base owner")
+	// Loading a repository hides a missing base, so read the stored row.
+	stored := new(database.Repository)
+	require.NoError(t, gormDB.Where("id = ?", kept.ID).First(stored).Error)
+	assert.False(t, stored.IsFork, "fork of a deleted base")
+	assert.Zero(t, stored.ForkID)
+}
+
 // Deleting a repository deletes the files attached to its issues, comments and
 // releases.
 func TestRepoSettingsDeleteAttachments(t *testing.T) {

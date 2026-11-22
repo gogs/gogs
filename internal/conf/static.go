@@ -168,7 +168,7 @@ var (
 
 	// Git settings
 	Git struct {
-		// ⚠️ WARNING: Should only be set by "internal/database/repo.go".
+		// ⚠️ WARNING: Should only be set by "internal/database/repositories.go".
 		Version string `ini:"-"`
 
 		GCArgs  []string `ini:"GC_ARGS" delim:" "`

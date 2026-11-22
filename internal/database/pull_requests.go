@@ -51,7 +51,7 @@ type PullRequest struct {
 
 	HeadRepoID   int64
 	HeadRepo     *Repository `json:"-" gorm:"-"`
-	BaseRepoID   int64
+	BaseRepoID   int64       `gorm:"index:idx_pull_request_base_repo_id"`
 	BaseRepo     *Repository `json:"-" gorm:"-"`
 	HeadUserName string
 	HeadBranch   string

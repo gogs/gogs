@@ -170,9 +170,9 @@ func deployKeysDelete(t *testing.T, ctx context.Context, s *DeployKeysStore) {
 	bob, err := usersStore.Create(ctx, "bob", "bob@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	reposStore := newReposStore(s.db)
-	repo1, err := reposStore.Create(ctx, alice.ID, CreateRepoOptions{Name: "repo1"})
+	repo1, err := reposStore.create(ctx, alice.ID, CreateRepoOptions{Name: "repo1"})
 	require.NoError(t, err)
-	repo2, err := reposStore.Create(ctx, alice.ID, CreateRepoOptions{Name: "repo2"})
+	repo2, err := reposStore.create(ctx, alice.ID, CreateRepoOptions{Name: "repo2"})
 	require.NoError(t, err)
 
 	content := newTestSSHKey(t)

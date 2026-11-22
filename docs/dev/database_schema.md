@@ -11,6 +11,7 @@
 Primary keys: id
 Indexes: 
 	"access_user_repo_unique" UNIQUE (user_id, repo_id)
+	"idx_access_repo_id" (repo_id)
 ```
 
 # Table "access_token"
@@ -452,6 +453,7 @@ Indexes:
 Primary keys: id
 Indexes: 
 	"IDX_pull_request_issue_id" (issue_id)
+	"idx_pull_request_base_repo_id" (base_repo_id)
 ```
 
 # Table "release"
@@ -637,6 +639,7 @@ Indexes:
 Primary keys: id
 Indexes: 
 	"UQE_watch_watch" UNIQUE (user_id, repo_id)
+	"idx_watch_repo_id" (repo_id)
 ```
 
 # Table "webhook"

@@ -115,13 +115,15 @@ func getUserProfileRepos(logger *logx.Logger, c flamego.Context, viewer *databas
 		repos, total, err = database.Handle.Organizations().ListAccessibleRepos(ctx, puser.ID, viewer.ID, page, conf.UI.User.RepoPagingNum)
 	} else {
 		showPrivate := puser.canSeePrivate(viewer)
-		repos, err = database.GetUserRepositories(&database.UserRepoOptions{
+		repos, err = database.Handle.Repositories().ListByOwner(ctx, database.UserRepoOptions{
 			UserID:   puser.ID,
 			Private:  showPrivate,
 			Page:     page,
 			PageSize: conf.UI.User.RepoPagingNum,
 		})
-		total = database.CountUserRepositories(logger, puser.ID, showPrivate)
+		if err == nil {
+			total, err = database.Handle.Repositories().Count(ctx, puser.ID, showPrivate)
+		}
 	}
 	if err != nil {
 		logger.Error("Failed to get repositories of user", "userID", puser.ID, "error", err)

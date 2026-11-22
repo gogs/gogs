@@ -425,7 +425,7 @@ func organizationsListAccessibleMirrors(t *testing.T, ctx context.Context, s *Or
 	require.NoError(t, teams.AddMember(ctx, org.ID, team.ID, alice.ID))
 
 	newMirror := func(name string, private bool) *Repository {
-		repo, err := newReposStore(s.db).Create(ctx, org.ID, CreateRepoOptions{Name: name, Private: private, Mirror: true})
+		repo, err := newReposStore(s.db).create(ctx, org.ID, CreateRepoOptions{Name: name, Private: private, Mirror: true})
 		require.NoError(t, err)
 		return repo
 	}

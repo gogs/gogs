@@ -22,20 +22,22 @@ import (
 )
 
 type repoHeader struct {
-	ID                   int64  `json:"id"`
-	Owner                string `json:"owner"`
-	Name                 string `json:"name"`
-	AvatarURL            string `json:"avatarURL"`
-	Visibility           string `json:"visibility"`
-	MirrorOf             string `json:"mirrorOf,omitempty"`
-	WatchCount           int    `json:"watchCount"`
-	StarCount            int    `json:"starCount"`
-	ForkCount            int    `json:"forkCount"`
-	IssuesEnabled        bool   `json:"issuesEnabled"`
-	OpenIssueCount       int    `json:"openIssueCount"`
-	PullRequestsEnabled  bool   `json:"pullRequestsEnabled"`
-	OpenPullRequestCount int    `json:"openPullRequestCount"`
-	WikiEnabled          bool   `json:"wikiEnabled"`
+	ID         int64  `json:"id"`
+	Owner      string `json:"owner"`
+	Name       string `json:"name"`
+	AvatarURL  string `json:"avatarURL"`
+	Visibility string `json:"visibility"`
+	MirrorOf   string `json:"mirrorOf,omitempty"`
+	// ForkOf is the base repository of a fork, for viewers who can read both.
+	ForkOf               *repoHeaderBase `json:"forkOf,omitempty"`
+	WatchCount           int             `json:"watchCount"`
+	StarCount            int             `json:"starCount"`
+	ForkCount            int             `json:"forkCount"`
+	IssuesEnabled        bool            `json:"issuesEnabled"`
+	OpenIssueCount       int             `json:"openIssueCount"`
+	PullRequestsEnabled  bool            `json:"pullRequestsEnabled"`
+	OpenPullRequestCount int             `json:"openPullRequestCount"`
+	WikiEnabled          bool            `json:"wikiEnabled"`
 	// ExternalTrackerURL and ExternalWikiURL are set when the issues or the
 	// wiki are kept elsewhere, for viewers who can read the code.
 	ExternalTrackerURL string `json:"externalTrackerURL,omitempty"`
@@ -52,6 +54,11 @@ type repoHeader struct {
 	// code.
 	DefaultBranch string          `json:"defaultBranch,omitempty"`
 	CloneLinks    *repoCloneLinks `json:"cloneLinks,omitempty"`
+}
+
+type repoHeaderBase struct {
+	Owner string `json:"owner"`
+	Name  string `json:"name"`
 }
 
 func getRepoHeader(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoHeader, err error) {
@@ -99,6 +106,14 @@ func getRepoHeader(c flamego.Context, logger *logx.Logger, repoCtx *repoContext)
 		resp.CloneLinks = repoCloneLinksOf(owner.Name, repo.Name, false)
 		resp.ExternalTrackerURL = repo.ExternalTrackerLink()
 		resp.ExternalWikiURL = repo.ExternalWikiLink()
+
+		if repo.IsFork {
+			resp.ForkOf, err = readableBaseRepo(c.Request().Context(), logger, repoCtx)
+			if err != nil {
+				logger.Error("Failed to get base repository", "repoID", repo.ID, "error", err)
+				return http.StatusInternalServerError, nil, errors.Wrap(err, "get base repository")
+			}
+		}
 	}
 
 	if repo.IsMirror {
@@ -111,6 +126,25 @@ func getRepoHeader(c flamego.Context, logger *logx.Logger, repoCtx *repoContext)
 	}
 
 	return http.StatusOK, resp, nil
+}
+
+// readableBaseRepo returns the base repository of the fork, or nil when it is
+// gone or the viewer cannot read it.
+func readableBaseRepo(ctx context.Context, logger *logx.Logger, repoCtx *repoContext) (*repoHeaderBase, error) {
+	base, err := database.Handle.Repositories().GetByID(ctx, repoCtx.Repo.ForkID)
+	if err != nil {
+		if database.IsErrRepoNotExist(err) {
+			return nil, nil
+		}
+		return nil, errors.Wrap(err, "get repository")
+	}
+	if err = base.GetOwner(); err != nil {
+		return nil, errors.Wrap(err, "get owner")
+	}
+	if !newViewer(ctx, logger, repoCtx.Viewer.User, base.Owner, base).CanRead() {
+		return nil, nil
+	}
+	return &repoHeaderBase{Owner: base.Owner.Name, Name: base.Name}, nil
 }
 
 type repoCommitSignature struct {

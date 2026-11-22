@@ -480,7 +480,7 @@ func viewerRepoCandidates(ctx context.Context, viewer *database.User, ownerID in
 	}
 	var candidates []*database.Repository
 	for opts.Page = 1; len(candidates) < codeSearchMaxRepos; opts.Page++ {
-		repos, _, err := database.SearchRepositoryByName(opts)
+		repos, _, err := database.Handle.Repositories().Search(ctx, *opts)
 		if err != nil {
 			return nil, errors.Wrap(err, "search repositories")
 		}

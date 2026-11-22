@@ -152,7 +152,7 @@ func getDashboard(logger *logx.Logger, c flamego.Context, viewer *database.User,
 			mirrors, err = database.Handle.Organizations().ListAccessibleMirrors(ctx, owner.ID, viewer.ID)
 		}
 	} else {
-		repos, err = database.GetUserRepositories(&database.UserRepoOptions{
+		repos, err = database.Handle.Repositories().ListByOwner(ctx, database.UserRepoOptions{
 			UserID:   owner.ID,
 			Private:  true,
 			Page:     1,
@@ -160,7 +160,7 @@ func getDashboard(logger *logx.Logger, c flamego.Context, viewer *database.User,
 		})
 		repoCount = int64(owner.NumRepos)
 		if err == nil {
-			mirrors, err = database.GetUserMirrorRepositories(owner.ID)
+			mirrors, err = database.Handle.Repositories().ListMirrorsByOwner(ctx, owner.ID)
 		}
 	}
 	if err != nil {
@@ -318,7 +318,7 @@ func listDashboardIssues(logger *logx.Logger, c flamego.Context, viewer *databas
 	if owner.IsOrganization() {
 		repos, _, err = database.Handle.Organizations().ListAccessibleRepos(ctx, owner.ID, viewer.ID, 1, owner.NumRepos)
 	} else {
-		repos, err = database.GetUserRepositories(&database.UserRepoOptions{
+		repos, err = database.Handle.Repositories().ListByOwner(ctx, database.UserRepoOptions{
 			UserID:   owner.ID,
 			Private:  true,
 			Page:     1,
@@ -373,7 +373,7 @@ func listDashboardIssues(logger *logx.Logger, c flamego.Context, viewer *databas
 		}
 	}
 	if !isPull {
-		repoIDs, err = database.FilterRepositoryWithIssues(repoIDs)
+		repoIDs, err = database.Handle.Repositories().FilterIDsWithIssues(ctx, repoIDs)
 		if err != nil {
 			logger.Error("Failed to filter repositories with issues", "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "filter repositories")

@@ -6,11 +6,9 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"reflect"
 	"strconv"
 	"strings"
 	"time"
-	"unsafe"
 
 	"github.com/cockroachdb/errors"
 	"github.com/glebarez/go-sqlite"
@@ -24,56 +22,10 @@ import (
 	"gogs.io/gogs/internal/dbx"
 )
 
-// Engine represents a XORM engine or session.
-type Engine interface {
-	Delete(any) (int64, error)
-	Exec(...any) (sql.Result, error)
-	Find(any, ...any) error
-	Get(any) (bool, error)
-	ID(any) *xorm.Session
-	In(string, ...any) *xorm.Session
-	Insert(...any) (int64, error)
-	InsertOne(any) (int64, error)
-	Iterate(any, xorm.IterFunc) error
-	Sql(string, ...any) *xorm.Session
-	Table(any) *xorm.Session
-	Where(any, ...any) *xorm.Session
-}
-
 var (
 	x            *xorm.Engine
 	legacyTables []any
 )
-
-// legacyTx returns a GORM handle that runs in the same database transaction as
-// the given XORM session, or the global GORM handle when the session is not in
-// a transaction. It allows code that still uses XORM sessions to call helpers
-// that have been migrated to GORM without breaking transaction boundaries.
-//
-// TODO: Remove once all legacy code is migrated to GORM.
-func legacyTx(e Engine) *gorm.DB {
-	sess, ok := e.(*xorm.Session)
-	if !ok {
-		return Handle.db
-	}
-
-	// XORM does not expose the underlying transaction of a session.
-	v := reflect.ValueOf(sess).Elem()
-	if v.FieldByName("isAutoCommit").Bool() {
-		return Handle.db
-	}
-	field := v.FieldByName("tx")
-	tx := reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr())).Elem().Interface().(*core.Tx)
-	if tx == nil {
-		return Handle.db
-	}
-
-	// Passing a context makes GORM clone the statement, so the global handle is
-	// not modified below.
-	db := Handle.db.Session(&gorm.Session{Context: context.Background()})
-	db.Statement.ConnPool = tx.Tx
-	return db
-}
 
 func init() {
 	// Register the pure-Go SQLite driver as "sqlite3" for XORM compatibility.
@@ -273,7 +225,7 @@ func GetStatistic(ctx context.Context, logger *logx.Logger) (stats Statistic) {
 	stats.Counter.User = Handle.Users().Count(ctx)
 	stats.Counter.Org = Handle.Organizations().Count(ctx)
 	stats.Counter.PublicKey = count(new(PublicKey))
-	stats.Counter.Repo = CountRepositories(logger, true)
+	stats.Counter.Repo = count(new(Repository))
 	stats.Counter.Watch = count(new(Watch))
 	stats.Counter.Star = count(new(Star))
 	stats.Counter.Action = count(new(Action))

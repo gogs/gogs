@@ -427,9 +427,9 @@ func permsRecalculateAccesses(t *testing.T, ctx context.Context, s *PermissionsS
 	t.Run("organization", func(t *testing.T) {
 		org := &User{Name: "pr-org", LowerName: "pr-org", Type: UserTypeOrganization}
 		require.NoError(t, s.db.Create(org).Error)
-		repo, err := newReposStore(s.db).Create(ctx, org.ID, CreateRepoOptions{Name: "repo1"})
+		repo, err := newReposStore(s.db).create(ctx, org.ID, CreateRepoOptions{Name: "repo1"})
 		require.NoError(t, err)
-		otherRepo, err := newReposStore(s.db).Create(ctx, org.ID, CreateRepoOptions{Name: "repo2"})
+		otherRepo, err := newReposStore(s.db).create(ctx, org.ID, CreateRepoOptions{Name: "repo2"})
 		require.NoError(t, err)
 
 		newTeam := func(name string, authorize AccessMode, repos []*Repository, members ...string) *Team {
