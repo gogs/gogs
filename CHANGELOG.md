@@ -16,6 +16,12 @@ All notable changes to Gogs are documented in this file.
 
 - Git clone via the built-in SSH server hangs. [#8132](https://github.com/gogs/gogs/issues/8132)
 
+## 0.14.5
+
+### Removed
+
+- The `/debug`, `/debug/pprof/*`, `/debug/profile/*`, and `/urlmap.json` endpoints, which were served to anonymous users. [#8271](https://github.com/gogs/gogs/pull/8271)
+
 ## 0.14.0
 
 ### Added
