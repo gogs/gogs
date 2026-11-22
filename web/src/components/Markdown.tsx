@@ -106,15 +106,26 @@ function toggleTask(source: string, line: number, checked: boolean): string | nu
 }
 
 const ORDERED_LIST_NUMBER = /^((?:[ \t]*>)*[ \t]*)(\d{1,9})(?=[.)])/;
+const ORDERED_LIST_MARKER = /^(?:[ \t]*>)*[ \t]*\d{1,9}[.)][ \t]*/;
 
-// indent returns line with the indentation after its block quote markers, if
-// any, changed by delta spaces. Blank lines stay as they are.
-function indent(line: string, delta: number): string {
-  const quotes = /^(?:[ \t]*> ?)*/.exec(line)![0];
-  const rest = line.slice(quotes.length);
+// contentColumn returns the column the content of the ordered list item that
+// starts on line starts at, with tabs stopping at multiples of 4.
+function contentColumn(line: string): number {
+  let column = 0;
+  for (const c of ORDERED_LIST_MARKER.exec(line)?.[0] ?? "")
+    column = c === "\t" ? column + 4 - (column % 4) : column + 1;
+  return column;
+}
+
+// indent returns line with the indentation after the quotes block quote
+// markers of the list it is in, if any, changed by delta spaces. Blank lines
+// stay as they are.
+function indent(line: string, quotes: number, delta: number): string {
+  const quotesPrefix = new RegExp(String.raw`^(?:[ \t]*> ?){0,${quotes}}`).exec(line)![0];
+  const rest = line.slice(quotesPrefix.length);
   if (rest.trim() === "") return line;
-  if (delta > 0) return quotes + " ".repeat(delta) + rest;
-  return quotes + rest.slice(Math.min(/^ */.exec(rest)![0].length, -delta));
+  if (delta > 0) return quotesPrefix + " ".repeat(delta) + rest;
+  return quotesPrefix + rest.slice(Math.min(/^ */.exec(rest)![0].length, -delta));
 }
 
 // moveTasks returns source with the items of a list, whose source spans the
@@ -138,8 +149,10 @@ function moveTasks(
     const own = ordered ? ORDERED_LIST_NUMBER.exec(item[0]) : null;
     const taken = ordered ? ORDERED_LIST_NUMBER.exec(items[to][0]) : null;
     if (own && taken) {
-      const delta = taken[2].length - own[2].length;
-      item = [item[0].replace(ORDERED_LIST_NUMBER, `$1${taken[2]}`), ...item.slice(1).map((l) => indent(l, delta))];
+      const first = item[0].replace(ORDERED_LIST_NUMBER, `$1${taken[2]}`);
+      const delta = contentColumn(first) - contentColumn(item[0]);
+      const quotes = own[1].split(">").length - 1;
+      item = [first, ...item.slice(1).map((l) => indent(l, quotes, delta))];
     }
     firstLines.push(out.length + 1);
     out.push(...item);
@@ -248,15 +261,17 @@ export function Markdown({
 
   const tasksRef = useRef(tasks);
   // focusLine is the first line of the item moved with the keyboard, whose
-  // handle gets the focus back once the content renders again.
-  const focusLine = useRef<number>(undefined);
+  // handle gets the focus back once the content renders again, unless it is
+  // other content than was saved, e.g., when saving failed.
+  const focusLine = useRef<{ line: number; source: string }>(undefined);
   useLayoutEffect(() => {
     tasksRef.current = tasks;
   });
   useLayoutEffect(() => {
-    const line = focusLine.current;
+    const target = focusLine.current;
     focusLine.current = undefined;
-    if (line === undefined) return;
+    if (target === undefined || tasksRef.current?.source !== target.source) return;
+    const line = target.line;
     for (const item of Array.from(container.current!.querySelectorAll<HTMLElement>("li[data-source-lines]"))) {
       if (taskLines(item)[0] === line) item.querySelector<HTMLElement>(":scope > .task-drag-handle")?.focus();
     }
@@ -285,6 +300,9 @@ export function Markdown({
     // saveOrder saves the order of the items of the list, which were in the
     // order of before.
     const saveOrder = (list: HTMLElement, before: HTMLElement[], moved: HTMLElement, focus: boolean) => {
+      // The content may have rendered again during a drag, which leaves the
+      // list out of the document with the lines of the content before.
+      if (!root.contains(list)) return;
       if (busy) {
         list.append(...before);
         return;
@@ -294,7 +312,7 @@ export function Markdown({
       const order = after.map((item) => inSource.indexOf(item));
       if (order.every((from, to) => from === to)) return;
       const result = moveTasks(tasksRef.current!.source, inSource.map(taskLines), order, list.tagName === "OL");
-      if (focus) focusLine.current = result.firstLines[after.indexOf(moved)];
+      if (focus) focusLine.current = { line: result.firstLines[after.indexOf(moved)], source: result.source };
       void save(result.source, () => list.append(...before));
     };
 
