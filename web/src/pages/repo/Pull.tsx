@@ -283,7 +283,16 @@ function MergeBox({ issueRef, data }: { issueRef: IssueRef; data: RepoPullData }
       {/* Sized and placed like the icons of the timeline events above it, while
           the box lines up with the comments. */}
       <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-(--color-surface) sm:ml-3">
-        <Icon className={cn("size-5.5", color, pull.state === "checking" && "animate-spin")} aria-hidden />
+        {/* The merge glyph has no enclosing circle and looks heavier than the
+            circle icons at the same size. */}
+        <Icon
+          className={cn(
+            pull.state === "merged" ? "size-4.5" : "size-5.5",
+            color,
+            pull.state === "checking" && "animate-spin",
+          )}
+          aria-hidden
+        />
       </span>
       <div className={cn("min-w-0 flex-1 glass rounded-md border", border)}>
         <div className="px-4 py-3 text-sm">
