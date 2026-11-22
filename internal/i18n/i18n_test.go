@@ -48,4 +48,26 @@ func TestLocalizer(t *testing.T) {
 			assert.Contains(t, resp.Header().Get("Set-Cookie"), "lang="+test.wantLang+";")
 		})
 	}
+
+	t.Run("default language not listed", func(t *testing.T) {
+		h, err := Localizer(Options{
+			Files: map[string][]byte{
+				"locale_en-US.ini": []byte("[repo]\nfork = Fork\nstar = Star\n"),
+				"locale_de-DE.ini": []byte("[repo]\nfork = Gabel\n"),
+			},
+			Langs:       []string{"de-DE"},
+			Names:       []string{"Deutsch"},
+			DefaultLang: "en-US",
+		})
+		require.NoError(t, err)
+
+		f := flamego.New()
+		f.Use(h)
+		f.Get("/", func(l Locale) string { return l.Language() + " " + l.Tr("repo::fork") + " " + l.Tr("repo::star") })
+		resp := httptest.NewRecorder()
+		req := httptest.NewRequest("GET", "/", nil)
+		req.Header.Set("Accept-Language", "en-US")
+		f.ServeHTTP(resp, req)
+		assert.Equal(t, "de-DE Gabel Star", resp.Body.String())
+	})
 }

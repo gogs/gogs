@@ -58,7 +58,8 @@ type Options struct {
 	Langs []string
 	// Names are the display names of Langs, in the same order.
 	Names []string
-	// DefaultLang is the language of messages missing from other languages.
+	// DefaultLang is the language of messages missing from other languages. It
+	// need not be one of Langs.
 	DefaultLang string
 }
 
@@ -72,11 +73,7 @@ func Localizer(opts Options) (flamego.Handler, error) {
 		return nil, errors.New("number of languages and names do not match")
 	}
 	store := i18n.NewStore()
-	locales := make(map[string]*i18n.Locale, len(opts.Langs))
-	tags := make([]language.Tag, len(opts.Langs))
-	for i, lang := range opts.Langs {
-		tags[i] = language.Raw.Make(lang)
-
+	load := func(lang, desc string) (*i18n.Locale, error) {
 		name := fmt.Sprintf("locale_%s.ini", lang)
 		data, ok := opts.Files[name]
 		if !ok {
@@ -86,15 +83,32 @@ func Localizer(opts Options) (flamego.Handler, error) {
 		if customPath := filepath.Join(opts.CustomDirectory, name); osx.IsFile(customPath) {
 			custom = append(custom, customPath)
 		}
-		l, err := store.AddLocale(lang, opts.Names[i], data, custom...)
+		l, err := store.AddLocale(lang, desc, data, custom...)
 		if err != nil {
 			return nil, errors.Wrapf(err, "load locale file %q", name)
 		}
+		return l, nil
+	}
+
+	locales := make(map[string]*i18n.Locale, len(opts.Langs))
+	tags := make([]language.Tag, len(opts.Langs))
+	for i, lang := range opts.Langs {
+		tags[i] = language.Raw.Make(lang)
+		l, err := load(lang, opts.Names[i])
+		if err != nil {
+			return nil, err
+		}
 		locales[lang] = l
 	}
+	// The default language fills messages missing from the others, even when
+	// admins leave it out of the languages to choose from.
 	fallback, ok := locales[opts.DefaultLang]
 	if !ok {
-		return nil, errors.Newf("default language %q is not one of the languages", opts.DefaultLang)
+		var err error
+		fallback, err = load(opts.DefaultLang, opts.DefaultLang)
+		if err != nil {
+			return nil, errors.Wrap(err, "load default language")
+		}
 	}
 	matcher := language.NewMatcher(tags)
 	subURL := strings.TrimSuffix(opts.SubURL, "/")
