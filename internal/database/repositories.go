@@ -1986,9 +1986,9 @@ func ownerExistsCond(ownerIDColumn string) string {
 	return ownerIDColumn + dbx.Quote(" IN (SELECT id FROM %s)", "user")
 }
 
-// Count returns the number of repositories, of the owner with given ID when it
-// is positive. Private repositories are counted only when includePrivate is
-// true.
+// Count returns the number of repositories whose owner exists, of the owner
+// with given ID when it is positive. Private repositories are counted only when
+// includePrivate is true.
 func (s *RepositoriesStore) Count(ctx context.Context, ownerID int64, includePrivate bool) (int64, error) {
 	query := s.db.WithContext(ctx).Model(new(Repository)).Where(ownerExistsCond("owner_id"))
 	if ownerID > 0 {
@@ -2002,8 +2002,8 @@ func (s *RepositoriesStore) Count(ctx context.Context, ownerID int64, includePri
 	return count, query.Count(&count).Error
 }
 
-// ListByPage returns the repositories of given page, in the order they were
-// created.
+// ListByPage returns the repositories of given page whose owner exists, in the
+// order they were created.
 func (s *RepositoriesStore) ListByPage(ctx context.Context, page, pageSize int) ([]*Repository, error) {
 	repos := make([]*Repository, 0, pageSize)
 	return repos, s.db.WithContext(ctx).Where(ownerExistsCond("owner_id")).Order("id ASC").Limit(pageSize).Offset((max(page, 1) - 1) * pageSize).Find(&repos).Error
@@ -2105,7 +2105,8 @@ type SearchRepoOptions struct {
 }
 
 // Search returns the repositories of given page whose name or description
-// contains the keyword, ignoring case, and the number of them.
+// contains the keyword, ignoring case, and whose owner exists, and the number
+// of them.
 func (s *RepositoriesStore) Search(ctx context.Context, opts SearchRepoOptions) (repos []*Repository, count int64, err error) {
 	repos = make([]*Repository, 0, opts.PageSize)
 	query := s.db.WithContext(ctx).Table("repository AS repo")
