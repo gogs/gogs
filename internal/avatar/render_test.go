@@ -160,6 +160,21 @@ func TestParseSVG_unsupported(t *testing.T) {
 	})
 }
 
+func TestRender_strokeUnderUnevenTransform(t *testing.T) {
+	const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><g transform="%s" stroke="#000000"><path d="M1 1h4"/></g></svg>`
+	for _, transform := range []string{"scale(2 1)", "matrix(1 0 1 1 0 0)"} {
+		doc, err := parseSVG(fmt.Appendf(nil, svg, transform))
+		require.NoError(t, err)
+		_, err = doc.render(10)
+		assert.Error(t, err, "stroke drawn with the wrong width under %s", transform)
+	}
+
+	doc, err := parseSVG(fmt.Appendf(nil, svg, "rotate(30, 5, 5) scale(2)"))
+	require.NoError(t, err)
+	_, err = doc.render(10)
+	assert.NoError(t, err)
+}
+
 func TestBlendDifference(t *testing.T) {
 	// Opaque white on opaque pastel inverts the pastel.
 	dst := layer{0.8, 0.6, 0.4, 1}

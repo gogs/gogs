@@ -153,7 +153,10 @@ func getUserAvatar(c flamego.Context, logger *logx.Logger, viewer *database.User
 	// The uploaded avatar file also holds identicons saved by earlier versions.
 	avatarPath := userx.CustomAvatarPath(id)
 	if !osx.IsFile(avatarPath) {
-		avatarPath = userx.GeneratedAvatarPath(id)
+		avatarPath = userx.GeneratedAvatarPath(id, avatar.Person)
+	}
+	if !osx.IsFile(avatarPath) {
+		avatarPath = userx.GeneratedAvatarPath(id, avatar.Organization)
 	}
 	if !osx.IsFile(avatarPath) {
 		u, err := database.Handle.Users().GetByID(c.Request().Context(), id)
@@ -170,6 +173,7 @@ func getUserAvatar(c flamego.Context, logger *logx.Logger, viewer *database.User
 		if u.IsOrganization() {
 			kind = avatar.Organization
 		}
+		avatarPath = userx.GeneratedAvatarPath(id, kind)
 		if err = userx.SaveGeneratedAvatar(id, kind); err != nil {
 			logger.Error("Failed to save generated user avatar", "userID", id, "error", err)
 			writeErrorResponse(c.ResponseWriter(), http.StatusInternalServerError, err)

@@ -123,12 +123,12 @@ func TestSaveGeneratedAvatar(t *testing.T) {
 	)
 
 	require.NoError(t, SaveGeneratedAvatar(1, avatar.Person))
-	data, err := os.ReadFile(GeneratedAvatarPath(1))
+	data, err := os.ReadFile(GeneratedAvatarPath(1, avatar.Person))
 	require.NoError(t, err)
 	_, err = png.Decode(bytes.NewReader(data))
 	assert.NoError(t, err)
 
-	entries, err := os.ReadDir(filepath.Dir(GeneratedAvatarPath(1)))
+	entries, err := os.ReadDir(filepath.Dir(GeneratedAvatarPath(1, avatar.Person)))
 	require.NoError(t, err)
 	assert.Len(t, entries, 1, "temporary files are removed")
 }

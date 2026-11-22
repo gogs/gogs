@@ -612,8 +612,12 @@ func (r *renderer) paintShape(dst layer, p *raster.Path, rule raster.FillRule, s
 		}
 	}
 	if !s.stroke.none && s.strokeWidth > 0 {
-		// Transforms here never skew or scale unevenly, so the scale factor of
-		// widths is the square root of the determinant.
+		// Widths scale by the square root of the determinant only under
+		// rotations and uniform scales, which keep circles circles.
+		eps := 1e-9 * (math.Abs(s.m[0]) + math.Abs(s.m[1]))
+		if math.Abs(s.m[0]-s.m[3]) > eps || math.Abs(s.m[1]+s.m[2]) > eps {
+			return errors.New("stroke under a transform that skews, flips or scales unevenly")
+		}
 		scale := math.Sqrt(math.Abs(s.m[0]*s.m[3] - s.m[1]*s.m[2]))
 		outline := raster.Stroke(p, s.strokeWidth*scale)
 		if err := r.paintCoverage(dst, raster.Fill(outline, raster.NonZero, r.size, r.size), s.stroke); err != nil {

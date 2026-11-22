@@ -18,6 +18,7 @@ import (
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/auth"
+	"gogs.io/gogs/internal/avatar"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/dbx"
 	"gogs.io/gogs/internal/errx"
@@ -658,11 +659,17 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 	tempCustomAvatarPath := userx.CustomAvatarPath(testUser.ID)
 	err = os.WriteFile(tempCustomAvatarPath, []byte("test"), 0o600)
 	require.NoError(t, err)
-	tempGeneratedAvatarPath := userx.GeneratedAvatarPath(testUser.ID)
-	err = os.MkdirAll(filepath.Dir(tempGeneratedAvatarPath), os.ModePerm)
-	require.NoError(t, err)
-	err = os.WriteFile(tempGeneratedAvatarPath, []byte("test"), 0o600)
-	require.NoError(t, err)
+	// Both kinds are written, because deleting an organization goes through
+	// the same path.
+	var tempGeneratedAvatarPaths []string
+	for _, kind := range []avatar.Kind{avatar.Person, avatar.Organization} {
+		p := userx.GeneratedAvatarPath(testUser.ID, kind)
+		err = os.MkdirAll(filepath.Dir(p), os.ModePerm)
+		require.NoError(t, err)
+		err = os.WriteFile(p, []byte("test"), 0o600)
+		require.NoError(t, err)
+		tempGeneratedAvatarPaths = append(tempGeneratedAvatarPaths, p)
+	}
 
 	// Verify mock data.
 	repo2, err = reposStore.GetByID(ctx, repo2.ID)
@@ -709,7 +716,9 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 
 	assert.True(t, osx.Exist(tempUserPath))
 	assert.True(t, osx.Exist(tempCustomAvatarPath))
-	assert.True(t, osx.Exist(tempGeneratedAvatarPath))
+	for _, p := range tempGeneratedAvatarPaths {
+		assert.True(t, osx.Exist(p))
+	}
 
 	err = s.DeleteByID(ctx, testUser.ID, false)
 	require.NoError(t, err)
@@ -757,7 +766,9 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 
 	assert.False(t, osx.Exist(tempUserPath))
 	assert.False(t, osx.Exist(tempCustomAvatarPath))
-	assert.False(t, osx.Exist(tempGeneratedAvatarPath))
+	for _, p := range tempGeneratedAvatarPaths {
+		assert.False(t, osx.Exist(p), "%s is not removed", p)
+	}
 
 	_, err = s.GetByID(ctx, testUser.ID)
 	wantErr := ErrUserNotExist{errx.Args{"userID": testUser.ID}}

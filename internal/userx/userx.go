@@ -103,11 +103,17 @@ func CustomAvatarPath(userID int64) string {
 	return filepath.Join(conf.Picture.AvatarUploadPath, strconv.FormatInt(userID, 10))
 }
 
-// GeneratedAvatarPath returns the absolute path of the user generated avatar
-// file. Generated avatars are kept apart from uploaded ones, so saving one never
-// replaces an upload.
-func GeneratedAvatarPath(userID int64) string {
-	return filepath.Join(conf.Server.AppDataPath, "generated-avatars", strconv.FormatInt(userID, 10))
+// GeneratedAvatarPath returns the absolute path of the generated avatar file of
+// the user of the kind. Generated avatars are kept apart from uploaded ones, so
+// saving one never replaces an upload. Each kind has its own directory, so files
+// that earlier versions saved directly under generated-avatars, e.g.,
+// organizations drawn as people, are never served.
+func GeneratedAvatarPath(userID int64, kind avatar.Kind) string {
+	dir := "users"
+	if kind == avatar.Organization {
+		dir = "organizations"
+	}
+	return filepath.Join(conf.Server.AppDataPath, "generated-avatars", dir, strconv.FormatInt(userID, 10))
 }
 
 // SaveGeneratedAvatar draws the avatar of the user, of the given kind, and saves
@@ -121,7 +127,7 @@ func SaveGeneratedAvatar(userID int64, kind avatar.Kind) error {
 		return errors.Wrap(err, "generate avatar")
 	}
 
-	avatarPath := GeneratedAvatarPath(userID)
+	avatarPath := GeneratedAvatarPath(userID, kind)
 	if err = os.MkdirAll(filepath.Dir(avatarPath), os.ModePerm); err != nil {
 		return errors.Wrap(err, "create avatar directory")
 	}
