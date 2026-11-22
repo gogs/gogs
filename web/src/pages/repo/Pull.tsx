@@ -162,7 +162,7 @@ function PullSummary({ data }: { data: RepoPullData }) {
             </TooltipTrigger>
             <TooltipContent>{formatAbsoluteTime(pull.mergedAt)}</TooltipContent>
           </Tooltip>
-          <RichText text={after} />
+          <RichText text={after} code={branches} />
         </>
       ) : null}
     </>
