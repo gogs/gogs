@@ -380,8 +380,8 @@ function CommentCard({
 
   return (
     <div id={anchor} className="flex scroll-mt-4 gap-3">
-      <UserLink user={poster} className="hidden shrink-0 sm:block">
-        <img src={poster.avatarURL} alt="" className="size-10 rounded-full border border-(--color-border)" />
+      <UserLink user={poster} className="hidden shrink-0 self-start rounded-full sm:block">
+        <img src={poster.avatarURL} alt="" className="block size-10 rounded-full border border-(--color-border)" />
       </UserLink>
       <div
         className={cn(
