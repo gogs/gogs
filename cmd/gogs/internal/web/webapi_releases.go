@@ -309,7 +309,7 @@ func postRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, view
 	// Drafts make no tag, so Git would not check their name until they are
 	// published.
 	if !gitRepo.IsValidTagName(ctx, req.TagName) {
-		msg := l.Tr("repo.release.tag_name_invalid")
+		msg := l.Tr("repo::release.tag_name_invalid")
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"tagName": &msg}}, nil
 	}
 	if !gitRepo.HasBranch(ctx, req.Target) {
@@ -441,7 +441,7 @@ func patchRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, vie
 	// Drafts stored before their tag names were checked may have an invalid
 	// one. The tag name cannot be edited, so it is not a field error.
 	if isPublish && !gitRepo.IsValidTagName(c.Request().Context(), rel.TagName) {
-		return http.StatusBadRequest, nil, errors.New(l.Tr("repo.release.tag_name_invalid"))
+		return http.StatusBadRequest, nil, errors.New(l.Tr("repo::release.tag_name_invalid"))
 	}
 	rel.Title = req.Title
 	rel.Note = req.Content
