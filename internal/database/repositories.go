@@ -573,8 +573,7 @@ func (r *Repository) CloneLink() (cl *repox.CloneLink) {
 
 // ForksMayAllowPublicWiki reports whether a private fork of the repository may
 // allow public access to its wiki without being more visible than the
-// repository. Explore lists private repositories that allow public access even
-// when they are unlisted, so forks of an unlisted public repository may not.
+// repository.
 func (r *Repository) ForksMayAllowPublicWiki() bool {
 	return (!r.IsPrivate && !r.IsUnlisted) || (r.IsPrivate && r.AllowPublicWiki)
 }
