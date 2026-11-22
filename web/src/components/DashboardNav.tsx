@@ -40,7 +40,11 @@ export function ContextSwitcher({ data, page }: { data: DashboardContextData; pa
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger className="glass-control flex w-full cursor-pointer items-center gap-2 rounded-md border border-(--color-border) px-2 py-1.5 text-sm hover:bg-(--color-surface)">
-        <img src={data.avatarURL} alt="" className="size-6 shrink-0 rounded-md object-cover" />
+        <img
+          src={data.avatarURL}
+          alt=""
+          className={cn("size-6 shrink-0 object-cover", data.kind === "organization" ? "rounded-md" : "rounded-full")}
+        />
         <span className="sr-only">{t("home.switch_dashboard_context")}: </span>
         <span className="min-w-0 flex-1 truncate text-left font-semibold">{data.name}</span>
         <ChevronDown className="size-4 shrink-0 text-(--color-muted-foreground)" aria-hidden />
@@ -69,6 +73,7 @@ export function ContextSwitcher({ data, page }: { data: DashboardContextData; pa
                   linkProps={{ to: ORG_PATHS[page], params: { org: org.name } }}
                   current={data.kind === "organization" && data.name === org.name}
                   avatarURL={org.avatarURL}
+                  organization
                   onSelect={close}
                 >
                   {org.name}
@@ -98,12 +103,14 @@ function ContextLink({
   linkProps,
   current,
   avatarURL,
+  organization = false,
   onSelect,
   children,
 }: {
   linkProps: ContextLinkTarget;
   current: boolean;
   avatarURL: string;
+  organization?: boolean;
   onSelect: () => void;
   children: ReactNode;
 }) {
@@ -114,7 +121,11 @@ function ContextLink({
       aria-current={current ? "page" : undefined}
       className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-(--color-surface)"
     >
-      <img src={avatarURL} alt="" className="size-5 shrink-0 rounded-sm object-cover" />
+      <img
+        src={avatarURL}
+        alt=""
+        className={cn("size-5 shrink-0 object-cover", organization ? "rounded-sm" : "rounded-full")}
+      />
       <span className={cn("min-w-0 flex-1 truncate", current && "font-semibold")}>{children}</span>
       {current ? <Check className="size-4 shrink-0" aria-hidden /> : null}
     </Link>

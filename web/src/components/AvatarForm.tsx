@@ -5,18 +5,21 @@ import { toast } from "sonner";
 
 import { FormField } from "@/components/FormField";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 // AvatarForm shows an avatar and uploads a new image for it, or deletes the
 // uploaded one. onChanged runs after either, with whether an image was
-// uploaded.
+// uploaded. User avatars show round, other avatars show square.
 export function AvatarForm({
   avatarURL,
+  round = false,
   hasCustomAvatar,
   upload,
   remove,
   onChanged,
 }: {
   avatarURL: string;
+  round?: boolean;
   hasCustomAvatar: boolean;
   upload: (file: File) => Promise<void>;
   remove: () => Promise<void>;
@@ -55,7 +58,14 @@ export function AvatarForm({
     <form onSubmit={onSubmit}>
       <fieldset disabled={pending} className="contents">
         <div className="flex flex-wrap items-start gap-4">
-          <img src={src} alt="" className="size-20 shrink-0 rounded-md border border-(--color-border) object-cover" />
+          <img
+            src={src}
+            alt=""
+            className={cn(
+              "size-20 shrink-0 border border-(--color-border) object-cover",
+              round ? "rounded-full" : "rounded-md",
+            )}
+          />
           <div className="flex min-w-0 flex-1 basis-56 flex-col gap-3">
             <FormField id="avatar" label={t("settings.choose_new_avatar")} invalid={false}>
               <input

@@ -274,10 +274,11 @@ func newPullRequestURL(c flamego.Context, viewer *database.User, repoCtx *repoCo
 }
 
 type repoFork struct {
-	Owner          string `json:"owner"`
-	OwnerAvatarURL string `json:"ownerAvatarURL"`
-	Name           string `json:"name"`
-	IsPrivate      bool   `json:"isPrivate"`
+	Owner               string `json:"owner"`
+	OwnerAvatarURL      string `json:"ownerAvatarURL"`
+	OwnerIsOrganization bool   `json:"ownerIsOrganization"`
+	Name                string `json:"name"`
+	IsPrivate           bool   `json:"isPrivate"`
 }
 
 // getRepoForks lists the forks of the repository that the viewer can see.
@@ -308,10 +309,11 @@ func getRepoForks(c flamego.Context, logger *logx.Logger, viewer *database.User,
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "get owner")
 		}
 		items = append(items, repoFork{
-			Owner:          fork.Owner.Name,
-			OwnerAvatarURL: fork.Owner.AvatarURLPath(),
-			Name:           fork.Name,
-			IsPrivate:      fork.IsPrivate,
+			Owner:               fork.Owner.Name,
+			OwnerAvatarURL:      fork.Owner.AvatarURLPath(),
+			OwnerIsOrganization: fork.Owner.IsOrganization(),
+			Name:                fork.Name,
+			IsPrivate:           fork.IsPrivate,
 		})
 	}
 	return http.StatusOK, map[string][]repoFork{"items": items}, nil

@@ -15,6 +15,7 @@ import (
 
 	"gogs.io/gogs/internal/api/v1types"
 	"gogs.io/gogs/internal/auth"
+	"gogs.io/gogs/internal/avatar"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/dbx"
 	"gogs.io/gogs/internal/errx"
@@ -527,7 +528,8 @@ func (s *UsersStore) DeleteByID(ctx context.Context, userID int64, skipRewriteAu
 
 	_ = os.RemoveAll(repox.UserPath(user.Name))
 	_ = os.Remove(userx.CustomAvatarPath(userID))
-	_ = os.Remove(userx.GeneratedAvatarPath(userID))
+	_ = os.Remove(userx.GeneratedAvatarPath(userID, avatar.Person))
+	_ = os.Remove(userx.GeneratedAvatarPath(userID, avatar.Organization))
 
 	if needsRewriteAuthorizedKeys {
 		err = newPublicKeysStore(s.db).RewriteAuthorizedKeys()

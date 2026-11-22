@@ -195,7 +195,14 @@ function BaseRepoPicker({
                   className="flex w-full items-center gap-2 rounded-sm px-2 py-2 text-left text-sm hover:bg-(--color-surface) focus-visible:bg-(--color-surface) focus-visible:outline-none"
                 >
                   <Check className={cn("size-4 shrink-0", !current && "invisible")} aria-hidden />
-                  <img src={base.ownerAvatarURL} alt="" className="size-5 shrink-0 rounded-full object-cover" />
+                  <img
+                    src={base.ownerAvatarURL}
+                    alt=""
+                    className={cn(
+                      "size-5 shrink-0 object-cover",
+                      base.ownerIsOrganization ? "rounded-sm" : "rounded-full",
+                    )}
+                  />
                   <span className="min-w-0 flex-1 truncate">
                     {base.owner}/<span className="font-semibold">{base.name}</span>
                   </span>

@@ -14,7 +14,6 @@ import (
 	"github.com/cockroachdb/errors"
 
 	"gogs.io/gogs/internal/avatar/raster"
-	"gogs.io/gogs/internal/lazyregexp"
 )
 
 const (
@@ -26,12 +25,13 @@ const (
 	maxUseDepth = 16
 )
 
-// GeneratePNG returns the PNG of the avatar drawn from the seed, size×size pixels.
-func GeneratePNG(seed string, size int) ([]byte, error) {
+// GeneratePNG returns the PNG of the avatar of the kind drawn from the seed,
+// size×size pixels.
+func GeneratePNG(kind Kind, seed string, size int) ([]byte, error) {
 	if size <= 0 {
 		return nil, errors.Newf("invalid size %d", size)
 	}
-	svg, err := Generate(seed)
+	svg, err := Generate(kind, seed)
 	if err != nil {
 		return nil, errors.Wrap(err, "generate SVG")
 	}
@@ -65,7 +65,8 @@ type element struct {
 	parent   *element
 	children []*element
 
-	tx, ty float64
+	// transform is nil when the element has none.
+	transform *raster.Matrix
 
 	// fill, stroke and strokeWidth are nil when inherited.
 	fill        *paint
@@ -103,8 +104,9 @@ var allowedAttributes = map[string][]string{
 }
 
 // ignorableAttributes do not change the pixels: clipping only ever covers the
-// whole canvas, which clips anyway.
-var ignorableAttributes = []string{"clip-path", "clip-rule", "aria-hidden", "shape-rendering", "xmlns"}
+// whole canvas, which clips anyway, and classes only matter to stylesheets,
+// which the subset has none of.
+var ignorableAttributes = []string{"clip-path", "clip-rule", "class", "aria-hidden", "shape-rendering", "xmlns"}
 
 // ignorableElements are skipped along with their content, for the same reasons
 // as ignorableAttributes.
@@ -240,7 +242,9 @@ func (e *element) setAttribute(attr xml.Attr, allowed []string) error {
 		e.viewBox, err = parseViewBox(value)
 		e.hasViewBox = true
 	case "transform":
-		e.tx, e.ty, err = parseTranslate(value)
+		var m raster.Matrix
+		m, err = parseTransform(value)
+		e.transform = &m
 	case "fill", "stroke":
 		var p paint
 		p, err = parsePaint(value)
@@ -381,24 +385,54 @@ func parseViewBox(s string) (box [4]float64, err error) {
 	return box, nil
 }
 
-var translatePattern = lazyregexp.New(`^translate\(\s*([^\s,()]+)(?:\s*[\s,]\s*([^\s,()]+))?\s*\)$`)
+// parseTransform parses a list of matrix, translate, scale and rotate
+// transforms into the matrix of applying them from the last to the first.
+func parseTransform(s string) (raster.Matrix, error) {
+	m := raster.Identity
+	rest := strings.TrimSpace(s)
+	if rest == "" {
+		return m, errors.New("empty transform")
+	}
+	for rest != "" {
+		name, after, ok := strings.Cut(rest, "(")
+		if !ok {
+			return m, errors.New("unsupported transform")
+		}
+		list, after, ok := strings.Cut(after, ")")
+		if !ok {
+			return m, errors.New("unsupported transform")
+		}
+		rest = strings.TrimLeft(after, " \t\n\r,")
 
-// parseTranslate parses a transform, which DiceBear only ever writes as one
-// translation.
-func parseTranslate(s string) (x, y float64, err error) {
-	m := translatePattern.FindStringSubmatch(strings.TrimSpace(s))
-	if m == nil {
-		return 0, 0, errors.New("unsupported transform")
-	}
-	if x, err = parseNumber(m[1]); err != nil {
-		return 0, 0, err
-	}
-	if m[2] != "" {
-		if y, err = parseNumber(m[2]); err != nil {
-			return 0, 0, err
+		var args []float64
+		for field := range strings.FieldsFuncSeq(list, func(r rune) bool { return r == ',' || r == ' ' || r == '\t' || r == '\n' || r == '\r' }) {
+			v, err := parseNumber(field)
+			if err != nil {
+				return m, err
+			}
+			args = append(args, v)
+		}
+
+		switch name = strings.TrimSpace(name); {
+		case name == "matrix" && len(args) == 6:
+			m = m.Mul(raster.Matrix(args))
+		case name == "translate" && len(args) == 1:
+			m = m.Translate(args[0], 0)
+		case name == "translate" && len(args) == 2:
+			m = m.Translate(args[0], args[1])
+		case name == "scale" && len(args) == 1:
+			m = m.Scale(args[0], args[0])
+		case name == "scale" && len(args) == 2:
+			m = m.Scale(args[0], args[1])
+		case name == "rotate" && len(args) == 1:
+			m = m.Rotate(args[0])
+		case name == "rotate" && len(args) == 3:
+			m = m.Translate(args[1], args[2]).Rotate(args[0]).Translate(-args[1], -args[2])
+		default:
+			return m, errors.Newf("unsupported transform %s with %d arguments", name, len(args))
 		}
 	}
-	return x, y, nil
+	return m, nil
 }
 
 func parsePaint(s string) (paint, error) {
@@ -438,7 +472,9 @@ func initialState(m raster.Matrix) state {
 
 // within returns the state of the content of e in the context s.
 func (s state) within(e *element) state {
-	s.m = s.m.Translate(e.tx, e.ty)
+	if e.transform != nil {
+		s.m = s.m.Mul(*e.transform)
+	}
 	if e.fill != nil {
 		s.fill = *e.fill
 	}
@@ -576,8 +612,12 @@ func (r *renderer) paintShape(dst layer, p *raster.Path, rule raster.FillRule, s
 		}
 	}
 	if !s.stroke.none && s.strokeWidth > 0 {
-		// Transforms here are translations and uniform scales, so the scale
-		// factor of widths is the square root of the determinant.
+		// Widths scale by the square root of the determinant only under
+		// rotations and uniform scales, which keep circles circles.
+		eps := 1e-9 * (math.Abs(s.m[0]) + math.Abs(s.m[1]))
+		if math.Abs(s.m[0]-s.m[3]) > eps || math.Abs(s.m[1]+s.m[2]) > eps {
+			return errors.New("stroke under a transform that skews, flips or scales unevenly")
+		}
 		scale := math.Sqrt(math.Abs(s.m[0]*s.m[3] - s.m[1]*s.m[2]))
 		outline := raster.Stroke(p, s.strokeWidth*scale)
 		if err := r.paintCoverage(dst, raster.Fill(outline, raster.NonZero, r.size, r.size), s.stroke); err != nil {

@@ -7,6 +7,7 @@ import (
 	"image/png"
 	"mime/multipart"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -14,7 +15,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"gogs.io/gogs/internal/avatar"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/userx"
 )
 
 // orgNoBody is the body of requests that carry no data, which the web API
@@ -66,6 +69,12 @@ func TestOrgCreate(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, org.IsOrganization())
 	assert.True(t, database.Handle.Organizations().IsOwner(t.Context(), org.ID, owner.ID))
+
+	status, _, generated := c.doRaw(http.MethodGet, "/-/avatars/"+strconv.FormatInt(org.ID, 10), "", nil)
+	require.Equal(t, http.StatusOK, status, "response: %s", generated)
+	saved, err := os.ReadFile(userx.GeneratedAvatarPath(org.ID, avatar.Organization))
+	require.NoError(t, err, "the generated avatar is not saved as an organization avatar")
+	assert.Equal(t, generated, saved)
 
 	status, body := c.do(http.MethodPost, "/api/web/orgs", map[string]any{"orgName": name})
 	assert.Equal(t, http.StatusUnprocessableEntity, status, "duplicate name, response: %s", body)

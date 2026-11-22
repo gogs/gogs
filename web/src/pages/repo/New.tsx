@@ -26,6 +26,7 @@ import {
 } from "@/lib/queries/repo";
 import { FormError, formErrors } from "@/lib/queries/request";
 import { subUrl } from "@/lib/url";
+import { cn } from "@/lib/utils";
 
 const DESCRIPTION_MAX = 512;
 const NO_LICENSE = "none";
@@ -78,7 +79,11 @@ function OwnerField({
           {owners.map((owner) => (
             <SelectItem key={owner.id} value={String(owner.id)}>
               <span className="flex min-w-0 items-center gap-2">
-                <img src={owner.avatarURL} alt="" className="size-5 shrink-0 rounded-sm" />
+                <img
+                  src={owner.avatarURL}
+                  alt=""
+                  className={cn("size-5 shrink-0", owner.isOrganization ? "rounded-sm" : "rounded-full")}
+                />
                 <span className="truncate">{owner.name}</span>
               </span>
             </SelectItem>

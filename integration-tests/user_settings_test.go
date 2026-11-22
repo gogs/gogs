@@ -21,6 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ssh"
 
+	"gogs.io/gogs/internal/avatar"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/userx"
@@ -158,7 +159,7 @@ func TestUserSettingsAvatar(t *testing.T) {
 	generatedImg, err := png.Decode(bytes.NewReader(generated))
 	require.NoError(t, err)
 	assert.Equal(t, image.Rect(0, 0, 290, 290), generatedImg.Bounds())
-	saved, err := os.ReadFile(userx.GeneratedAvatarPath(u.ID))
+	saved, err := os.ReadFile(userx.GeneratedAvatarPath(u.ID, avatar.Person))
 	require.NoError(t, err, "the generated avatar is not saved")
 	assert.Equal(t, generated, saved)
 
