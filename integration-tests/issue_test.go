@@ -1006,6 +1006,70 @@ func TestIssueMarkdownAppLinks(t *testing.T) {
 	assert.Equal(t, 5, marked, "content HTML: %s", got)
 }
 
+// TestMarkdownAppLinksEverywhere checks that every kind of Markdown the web
+// app shows marks the links that lead to its pages.
+func TestMarkdownAppLinksEverywhere(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+	ownerClient := authenticatedClient(t, owner)
+	api := repoCodeAPI(repo)
+	text := "Ask @" + owner.Name + ", please."
+	want := `<a data-app-link href="/` + owner.Name + `" rel="nofollow">@` + owner.Name + `</a>`
+
+	index := issueCreate(t, ownerClient, repo, "App links", text)
+	status, body := ownerClient.do(http.MethodPost, issueAPIPath(repo, "issues", index, "comments"), map[string]any{"content": text})
+	require.Equal(t, http.StatusCreated, status, "response: %s", body)
+	status, body = ownerClient.do(http.MethodPost, issueAPIPath(repo, "milestones"), map[string]any{"title": "v1", "description": text})
+	require.Equal(t, http.StatusCreated, status, "response: %s", body)
+	status, body = ownerClient.do(http.MethodPost, api+"/releases", map[string]any{"tagName": "v1.0", "target": repoSettingsDefaultBranch(t, repo), "title": "v1.0", "content": text})
+	require.Equal(t, http.StatusCreated, status, "response: %s", body)
+	status, body = ownerClient.do(http.MethodPost, api+"/wiki", map[string]any{"title": "Home", "content": text})
+	require.Equal(t, http.StatusCreated, status, "response: %s", body)
+	repoCodeNewFile(t, ownerClient, repo, "docs/README.md", text, "Add docs")
+
+	// rendered returns the strings of the JSON that the request returns.
+	rendered := func(method, path string, body any) func() string {
+		return func() string {
+			var v any
+			ownerClient.doJSON(method, path, body, http.StatusOK, &v)
+			var b strings.Builder
+			var walk func(v any)
+			walk = func(v any) {
+				switch v := v.(type) {
+				case string:
+					b.WriteString(v + "\n")
+				case []any:
+					for _, e := range v {
+						walk(e)
+					}
+				case map[string]any:
+					for _, e := range v {
+						walk(e)
+					}
+				}
+			}
+			walk(v)
+			return b.String()
+		}
+	}
+	tests := map[string]func() string{
+		"comment":   func() string { return issueGet(t, ownerClient, repo, index).Comments[0].ContentHTML },
+		"milestone": rendered(http.MethodGet, issueAPIPath(repo, "milestones"), nil),
+		"release":   rendered(http.MethodGet, api+"/releases", nil),
+		"wiki page": rendered(http.MethodGet, api+"/wiki", nil),
+		"README":    rendered(http.MethodGet, api+"/src/main/docs", nil),
+		"file":      rendered(http.MethodGet, api+"/src/main/docs/README.md", nil),
+		"preview":   rendered(http.MethodPost, issueAPIPath(repo, "markdown"), map[string]any{"text": text}),
+	}
+	for name, got := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Contains(t, got(), want)
+		})
+	}
+}
+
 // issueCommitAbbrev returns the shortest abbreviation of the commit ID that is
 // at least n characters long and not a number, which never links.
 func issueCommitAbbrev(id string, n int) string {
