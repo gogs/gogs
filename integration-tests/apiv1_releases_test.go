@@ -3,6 +3,7 @@ package integrationtests
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -39,6 +40,27 @@ type apiV1ReleaseAsset struct {
 	Size               int64     `json:"size"`
 	Created            time.Time `json:"created_at"`
 	BrowserDownloadURL string    `json:"browser_download_url"`
+}
+
+// apiV1DownloadAsset downloads the content of the asset through the API.
+func apiV1DownloadAsset(t *testing.T, c *client, repo *Repository, assetID int64) (int, string) {
+	t.Helper()
+
+	req, err := http.NewRequest(http.MethodGet, c.baseURL+apiV1RepoPath(repo, "/releases/assets/"+apiV1Itoa(assetID)), nil)
+	require.NoError(t, err)
+	for k, v := range c.header {
+		req.Header[k] = v
+	}
+	req.Header.Set("Accept", "application/octet-stream")
+	resp, err := c.http.Do(req)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	if resp.StatusCode == http.StatusOK {
+		assert.Equal(t, "application/octet-stream", resp.Header.Get("Content-Type"))
+	}
+	return resp.StatusCode, string(body)
 }
 
 // apiV1UploadAsset uploads the content as a file of the name to the release.
@@ -320,7 +342,7 @@ func TestAPIV1Releases(t *testing.T) {
 		assert.Equal(t, "sums.json", asset.Name)
 		assert.Equal(t, sums.BrowserDownloadURL, asset.BrowserDownloadURL)
 
-		for _, name := range []string{"", "..", "dir/app.bin", `dir\app.bin`, "a\nb", strings.Repeat("a", 256), "app.bin"} {
+		for _, name := range []string{"", "..", "dir/app.bin", `dir\app.bin`, "a\nb", "app\xff.bin", strings.Repeat("a", 256), "app.bin"} {
 			status, body := apiV1UploadAsset(t, api, repo, rel.ID, name, []byte("x"))
 			assert.Equal(t, http.StatusUnprocessableEntity, status, "upload %q, response: %s", name, body)
 		}
@@ -329,7 +351,13 @@ func TestAPIV1Releases(t *testing.T) {
 			assert.Equal(t, http.StatusUnprocessableEntity, status, "rename to %q, response: %s", name, body)
 		}
 		api.doJSON(http.MethodGet, releasePath(rel.ID)+"/assets", nil, http.StatusOK, &list)
-		assert.Len(t, list, 2, "no file stored by an invalid upload")
+		assert.Len(t, list, 2, "no file attached by an invalid upload")
+
+		// The download keeps a name with a quote whole.
+		quoted := upload(`a"b.bin`, "quoted")
+		status, header, _ := newClient(t).doRaw(http.MethodGet, strings.TrimPrefix(quoted.BrowserDownloadURL, serverURL), "", nil)
+		require.Equal(t, http.StatusOK, status)
+		assert.Equal(t, `inline; filename="a\"b.bin"`, header.Get("Content-Disposition"))
 
 		// Files of releases of other repositories and files that are not
 		// attached to a release are not found.
@@ -355,6 +383,25 @@ func TestAPIV1Releases(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 		status, _ = download(sums)
 		assert.Equal(t, http.StatusNotFound, status, "file of the deleted asset")
+
+		// A release has at most MAX_FILES downloads, and files its note links
+		// to do not count, as in the web interface.
+		full := create(map[string]any{"tag_name": "full", "draft": true})
+		var first apiV1ReleaseAsset
+		for i := range 10 {
+			status, body := apiV1UploadAsset(t, api, repo, full.ID, "file-"+apiV1Itoa(int64(i))+".bin", []byte("x"))
+			require.Equal(t, http.StatusCreated, status, "file %d, response: %s", i, body)
+			if i == 0 {
+				require.NoError(t, json.Unmarshal(body, &first))
+			}
+		}
+		status, body = apiV1UploadAsset(t, api, repo, full.ID, "one-too-many.bin", []byte("x"))
+		assert.Equal(t, http.StatusUnprocessableEntity, status, "response: %s", body)
+		api.doJSON(http.MethodPatch, releasePath(full.ID), map[string]any{"body": "![Screenshot](" + first.BrowserDownloadURL + ")"}, http.StatusOK, &got)
+		status, body = apiV1UploadAsset(t, api, repo, full.ID, "one-more.bin", []byte("x"))
+		assert.Equal(t, http.StatusCreated, status, "file linked from the note, response: %s", body)
+		status, body = api.do(http.MethodDelete, releasePath(full.ID), nil)
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 
 		// Deleting the release deletes its files.
 		status, body = api.do(http.MethodDelete, releasePath(rel.ID), nil)
@@ -476,6 +523,14 @@ func TestAPIV1ReleasesAccess(t *testing.T) {
 				status, body := c.client.do(http.MethodGet, apiV1RepoPath(public, path), nil)
 				assert.Equal(t, want, status, "%s gets %s, response: %s", name, path, body)
 			}
+			// Downloading through the API takes the same access.
+			for asset, want := range map[int64]int{draftAsset.ID: c.wantDraft, publishedAsset.ID: http.StatusOK} {
+				status, body := apiV1DownloadAsset(t, c.client, public, asset)
+				assert.Equal(t, want, status, "%s downloads asset %d, response: %s", name, asset, body)
+				if want == http.StatusOK {
+					assert.Equal(t, "binary build", body, "%s downloads asset %d", name, asset)
+				}
+			}
 		}
 
 		// 🚨 SECURITY: Unauthenticated callers do not see the email of the
@@ -497,6 +552,27 @@ func TestAPIV1ReleasesAccess(t *testing.T) {
 		}
 	})
 
+	// 🚨 SECURITY: The download URL of a file of a draft only works for those
+	// who see the draft.
+	t.Run("download URL", func(t *testing.T) {
+		reader := seedUser(t, CreateUserOptions{})
+		status, body := api.do(http.MethodPut, apiV1RepoPath(public, "/collaborators/"+reader.Name), map[string]any{"permission": "read"})
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+		for name, c := range map[string]struct {
+			client    *client
+			wantDraft int
+		}{
+			"owner":     {authenticatedClient(t, owner), http.StatusOK},
+			"reader":    {authenticatedClient(t, reader), http.StatusNotFound},
+			"anonymous": {newClient(t), http.StatusNotFound},
+		} {
+			for asset, want := range map[string]int{draftAsset.BrowserDownloadURL: c.wantDraft, publishedAsset.BrowserDownloadURL: http.StatusOK} {
+				status, _, _ := c.client.doRaw(http.MethodGet, strings.TrimPrefix(asset, serverURL), "", nil)
+				assert.Equal(t, want, status, "%s downloads %s", name, asset)
+			}
+		}
+	})
+
 	t.Run("private repository", func(t *testing.T) {
 		for name, c := range map[string]*client{
 			"other":     apiV1Client(t, seedUser(t, CreateUserOptions{})),
@@ -509,8 +585,14 @@ func TestAPIV1ReleasesAccess(t *testing.T) {
 			}
 			status, body = c.do(http.MethodGet, apiV1RepoPath(private, "/releases/assets/"+apiV1Itoa(privateAsset.ID)), nil)
 			assert.Equal(t, http.StatusNotFound, status, "%s gets the asset, response: %s", name, body)
+			status, content := apiV1DownloadAsset(t, c, private, privateAsset.ID)
+			assert.Equal(t, http.StatusNotFound, status, "%s downloads the asset, response: %s", name, content)
 		}
 		reader := addCollaborator(private, "read")
+		// A token reaches files of private repositories through the API.
+		status, content := apiV1DownloadAsset(t, reader, private, privateAsset.ID)
+		assert.Equal(t, http.StatusOK, status)
+		assert.Equal(t, "binary build", content)
 		assert.Equal(t, []string{"v1"}, listTags(reader, private))
 		assert.Equal(t, http.StatusNotFound, getStatus(reader, private, privateReleases.draft.ID))
 	})

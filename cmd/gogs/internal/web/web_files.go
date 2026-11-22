@@ -108,6 +108,11 @@ func getAttachment(c flamego.Context, logger *logx.Logger, viewer *database.User
 			return
 		}
 		repo = release.Repo
+		// Only writers see drafts, so only they download their files.
+		if release.IsDraft && !newViewer(ctx, logger, viewer, repo.Owner, repo).CanWrite() {
+			pages.NotFound(c)
+			return
+		}
 	}
 	var viewerID int64
 	if viewer != nil {
@@ -133,7 +138,7 @@ func getAttachment(c flamego.Context, logger *logx.Logger, viewer *database.User
 
 	w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox")
 	w.Header().Set("Cache-Control", "private,max-age=86400")
-	w.Header().Set("Content-Disposition", fmt.Sprintf(`inline; filename="%s"`, attach.Name))
+	w.Header().Set("Content-Disposition", mime.FormatMediaType("inline", map[string]string{"filename": attach.Name}))
 	if _, err = io.Copy(w, fr); err != nil {
 		logger.Error("Failed to copy attachment to response", "attachmentID", attach.ID, "error", err)
 	}

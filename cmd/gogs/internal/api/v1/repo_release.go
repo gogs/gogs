@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"mime"
 	"net/http"
+	"os"
 	"slices"
 	"strings"
+	"time"
 	"unicode"
 	"unicode/utf8"
 
@@ -270,7 +273,7 @@ func checkReleaseAssetName(c *apiContext, rel *database.Release, name string, as
 	case utf8.RuneCountInString(name) > 255:
 		c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("The name of the file is longer than 255 characters."))
 		return false
-	case strings.ContainsAny(name, `/\`) || strings.ContainsFunc(name, unicode.IsControl):
+	case !utf8.ValidString(name) || strings.ContainsAny(name, `/\`) || strings.ContainsFunc(name, unicode.IsControl):
 		c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("Invalid file name %q.", name))
 		return false
 	case slices.ContainsFunc(rel.Attachments, func(a *database.Attachment) bool { return a.ID != assetID && a.Name == name }):
@@ -295,7 +298,15 @@ func uploadReleaseAsset(c *apiContext) {
 	if !checkReleaseAssetName(c, rel, name, 0) {
 		return
 	}
-	if len(rel.Attachments) >= lim.MaxFiles {
+	// Files the release note links to do not count toward the limit, as in the
+	// web interface.
+	downloads := 0
+	for _, a := range rel.Attachments {
+		if !strings.Contains(rel.Note, "/attachments/"+a.UUID) {
+			downloads++
+		}
+	}
+	if downloads >= lim.MaxFiles {
 		c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("A release has at most %d files.", lim.MaxFiles))
 		return
 	}
@@ -383,7 +394,32 @@ func getReleaseAsset(c *apiContext) {
 	if a == nil {
 		return
 	}
+	// Like GitHub, the content is downloaded by asking for it. Unlike the
+	// download URL of the web interface, this takes access tokens.
+	if strings.Contains(c.Request().Header.Get("Accept"), "application/octet-stream") {
+		downloadReleaseAsset(c, a)
+		return
+	}
 	c.JSONSuccess(a.APIFormat())
+}
+
+func downloadReleaseAsset(c *apiContext, a *database.Attachment) {
+	f, err := os.Open(a.LocalPath())
+	if err != nil {
+		if os.IsNotExist(err) {
+			c.NotFound()
+			return
+		}
+		c.Error(err, "open file")
+		return
+	}
+	defer func() { _ = f.Close() }()
+
+	w := c.ResponseWriter()
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": a.Name}))
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	http.ServeContent(w, c.Request().Request, "", time.Unix(a.CreatedUnix, 0), f)
 }
 
 type editReleaseAssetRequest struct {
