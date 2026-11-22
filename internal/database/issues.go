@@ -541,7 +541,7 @@ func (s *IssuesStore) getByRef(ctx context.Context, ref string) (*Issue, error) 
 func (s *IssuesStore) LoadAttributes(ctx context.Context, issues ...*Issue) (err error) {
 	for _, issue := range issues {
 		if issue.Repo == nil {
-			issue.Repo, err = getRepositoryByID(s.db.WithContext(ctx), issue.RepoID)
+			issue.Repo, err = newReposStore(s.db).getWithAttributes(ctx, issue.RepoID)
 			if err != nil {
 				return errors.Wrapf(err, "get repository %d", issue.RepoID)
 			}

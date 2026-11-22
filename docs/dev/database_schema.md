@@ -478,6 +478,63 @@ Indexes:
 Primary keys: id
 ```
 
+# Table "repository"
+
+```
+         Field         |         Column          |           PostgreSQL           |              MySQL               |            SQLite3             
+-----------------------+-------------------------+--------------------------------+----------------------------------+--------------------------------
+ ID                    | id                      | BIGSERIAL                      | BIGINT AUTO_INCREMENT            | INTEGER AUTOINCREMENT          
+ OwnerID               | owner_id                | BIGINT                         | BIGINT                           | INTEGER                        
+ LowerName             | lower_name              | TEXT NOT NULL                  | VARCHAR(191) NOT NULL            | TEXT NOT NULL                  
+ Name                  | name                    | TEXT NOT NULL                  | VARCHAR(191) NOT NULL            | TEXT NOT NULL                  
+ Description           | description             | VARCHAR(512)                   | VARCHAR(512)                     | VARCHAR(512)                   
+ Website               | website                 | TEXT                           | LONGTEXT                         | TEXT                           
+ DefaultBranch         | default_branch          | TEXT                           | LONGTEXT                         | TEXT                           
+ Size                  | size                    | BIGINT NOT NULL DEFAULT 0      | BIGINT NOT NULL DEFAULT 0        | INTEGER NOT NULL DEFAULT 0     
+ UseCustomAvatar       | use_custom_avatar       | BOOLEAN                        | BOOLEAN                          | NUMERIC                        
+ NumWatches            | num_watches             | BIGINT                         | BIGINT                           | INTEGER                        
+ NumStars              | num_stars               | BIGINT                         | BIGINT                           | INTEGER                        
+ NumForks              | num_forks               | BIGINT                         | BIGINT                           | INTEGER                        
+ NumIssues             | num_issues              | BIGINT                         | BIGINT                           | INTEGER                        
+ NumClosedIssues       | num_closed_issues       | BIGINT                         | BIGINT                           | INTEGER                        
+ NumPulls              | num_pulls               | BIGINT                         | BIGINT                           | INTEGER                        
+ NumClosedPulls        | num_closed_pulls        | BIGINT                         | BIGINT                           | INTEGER                        
+ NumMilestones         | num_milestones          | BIGINT NOT NULL DEFAULT 0      | BIGINT NOT NULL DEFAULT 0        | INTEGER NOT NULL DEFAULT 0     
+ NumClosedMilestones   | num_closed_milestones   | BIGINT NOT NULL DEFAULT 0      | BIGINT NOT NULL DEFAULT 0        | INTEGER NOT NULL DEFAULT 0     
+ IsPrivate             | is_private              | BOOLEAN                        | BOOLEAN                          | NUMERIC                        
+ IsUnlisted            | is_unlisted             | BOOLEAN NOT NULL DEFAULT FALSE | BOOLEAN NOT NULL DEFAULT FALSE   | NUMERIC NOT NULL DEFAULT FALSE 
+ IsEmpty               | is_bare                 | BOOLEAN                        | BOOLEAN                          | NUMERIC                        
+ IsMirror              | is_mirror               | BOOLEAN                        | BOOLEAN                          | NUMERIC                        
+ EnableWiki            | enable_wiki             | BOOLEAN NOT NULL DEFAULT TRUE  | BOOLEAN NOT NULL DEFAULT TRUE    | NUMERIC NOT NULL DEFAULT TRUE  
+ AllowPublicWiki       | allow_public_wiki       | BOOLEAN                        | BOOLEAN                          | NUMERIC                        
+ EnableExternalWiki    | enable_external_wiki    | BOOLEAN                        | BOOLEAN                          | NUMERIC                        
+ ExternalWikiURL       | external_wiki_url       | TEXT                           | LONGTEXT                         | TEXT                           
+ EnableIssues          | enable_issues           | BOOLEAN NOT NULL DEFAULT TRUE  | BOOLEAN NOT NULL DEFAULT TRUE    | NUMERIC NOT NULL DEFAULT TRUE  
+ AllowPublicIssues     | allow_public_issues     | BOOLEAN                        | BOOLEAN                          | NUMERIC                        
+ EnableExternalTracker | enable_external_tracker | BOOLEAN                        | BOOLEAN                          | NUMERIC                        
+ ExternalTrackerURL    | external_tracker_url    | TEXT                           | LONGTEXT                         | TEXT                           
+ ExternalTrackerFormat | external_tracker_format | TEXT                           | LONGTEXT                         | TEXT                           
+ ExternalTrackerStyle  | external_tracker_style  | TEXT                           | LONGTEXT                         | TEXT                           
+ EnablePulls           | enable_pulls            | BOOLEAN NOT NULL DEFAULT TRUE  | BOOLEAN NOT NULL DEFAULT TRUE    | NUMERIC NOT NULL DEFAULT TRUE  
+ PullsIgnoreWhitespace | pulls_ignore_whitespace | BOOLEAN NOT NULL DEFAULT FALSE | BOOLEAN NOT NULL DEFAULT FALSE   | NUMERIC NOT NULL DEFAULT FALSE 
+ PullsAllowMerge       | pulls_allow_merge       | BOOLEAN NOT NULL DEFAULT TRUE  | BOOLEAN NOT NULL DEFAULT TRUE    | NUMERIC NOT NULL DEFAULT TRUE  
+ PullsAllowRebase      | pulls_allow_rebase      | BOOLEAN NOT NULL DEFAULT FALSE | BOOLEAN NOT NULL DEFAULT FALSE   | NUMERIC NOT NULL DEFAULT FALSE 
+ PullsAllowSquash      | pulls_allow_squash      | BOOLEAN NOT NULL DEFAULT FALSE | BOOLEAN NOT NULL DEFAULT FALSE   | NUMERIC NOT NULL DEFAULT FALSE 
+ PullsDeleteBranch     | pulls_delete_branch     | BOOLEAN NOT NULL DEFAULT FALSE | BOOLEAN NOT NULL DEFAULT FALSE   | NUMERIC NOT NULL DEFAULT FALSE 
+ PullsMergeMessage     | pulls_merge_message     | TEXT NOT NULL DEFAULT ''       | VARCHAR(191) NOT NULL DEFAULT '' | TEXT NOT NULL DEFAULT ""       
+ PullsSquashMessage    | pulls_squash_message    | TEXT NOT NULL DEFAULT ''       | VARCHAR(191) NOT NULL DEFAULT '' | TEXT NOT NULL DEFAULT ""       
+ IsFork                | is_fork                 | BOOLEAN NOT NULL DEFAULT FALSE | BOOLEAN NOT NULL DEFAULT FALSE   | NUMERIC NOT NULL DEFAULT FALSE 
+ ForkID                | fork_id                 | BIGINT                         | BIGINT                           | INTEGER                        
+ CreatedUnix           | created_unix            | BIGINT                         | BIGINT                           | INTEGER                        
+ UpdatedUnix           | updated_unix            | BIGINT                         | BIGINT                           | INTEGER                        
+
+Primary keys: id
+Indexes: 
+	"IDX_repository_lower_name" (lower_name)
+	"IDX_repository_name" (name)
+	"UQE_repository_s" UNIQUE (owner_id, lower_name)
+```
+
 # Table "star"
 
 ```

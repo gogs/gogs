@@ -176,7 +176,7 @@ func (s *MirrorsStore) GetByRepoID(ctx context.Context, repoID int64) (*Mirror, 
 		return nil, err
 	}
 
-	m.Repo, err = getRepositoryByID(s.db.WithContext(ctx), repoID)
+	m.Repo, err = newReposStore(s.db).getWithAttributes(ctx, repoID)
 	if err != nil {
 		return nil, errors.Wrap(err, "get repository")
 	}

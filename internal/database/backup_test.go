@@ -27,7 +27,7 @@ func TestDumpAndImport(t *testing.T) {
 	}
 	t.Parallel()
 
-	const wantTables = 35
+	const wantTables = 36
 	if len(Tables) != wantTables {
 		t.Fatalf("New table has added (want %d got %d), please add new tests for the table and update this check", wantTables, len(Tables))
 	}
@@ -471,6 +471,51 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			CreatedUnix:  1588572486,
 		},
 
+		&Repository{
+			ID:                    1,
+			OwnerID:               1,
+			LowerName:             "example",
+			Name:                  "Example",
+			Description:           "An example repository",
+			Website:               "https://example.com",
+			DefaultBranch:         "main",
+			Size:                  1024,
+			NumWatches:            2,
+			NumStars:              1,
+			NumIssues:             1,
+			NumPulls:              1,
+			NumClosedPulls:        1,
+			NumMilestones:         2,
+			NumClosedMilestones:   1,
+			IsPrivate:             true,
+			EnableWiki:            true,
+			EnableExternalWiki:    true,
+			ExternalWikiURL:       "https://wiki.example.com",
+			EnableIssues:          true,
+			EnableExternalTracker: true,
+			ExternalTrackerURL:    "https://tracker.example.com",
+			ExternalTrackerFormat: "https://tracker.example.com/{index}",
+			ExternalTrackerStyle:  "numeric",
+			EnablePulls:           true,
+			PullsAllowMerge:       true,
+			PullsAllowRebase:      true,
+			CreatedUnix:           1588568886,
+			UpdatedUnix:           1588572486,
+		},
+		&Repository{
+			ID:            2,
+			OwnerID:       3,
+			LowerName:     "mirror",
+			Name:          "mirror",
+			DefaultBranch: "master",
+			IsUnlisted:    true,
+			IsMirror:      true,
+			IsFork:        true,
+			ForkID:        1,
+			CreatedUnix:   1588568886,
+			UpdatedUnix:   1588568886,
+		},
+
 		&Star{
 			ID:     1,
 			UserID: 2,
@@ -627,6 +672,9 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 	}
 	// Creating leaves out a false EnablePrune for the column default to apply.
 	err := db.Model(new(Mirror)).Where("id = ?", 2).Update("enable_prune", false).Error
+	require.NoError(t, err)
+	// Creating leaves out false feature switches for the column defaults to apply.
+	err = db.Model(&Repository{ID: 2}).UpdateColumns(map[string]any{"enable_wiki": false, "enable_issues": false, "enable_pulls": false}).Error
 	require.NoError(t, err)
 	// The create hook replaces a zero creation limit and timestamps.
 	err = db.Model(&User{ID: 2}).UpdateColumns(map[string]any{"max_repo_creation": 0, "created_unix": 0, "updated_unix": 0}).Error

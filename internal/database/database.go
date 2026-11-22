@@ -1,7 +1,8 @@
 package database
 
 import (
-	"database/sql"
+	"context"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/database/migrations"
 	"gogs.io/gogs/internal/dbx"
 )
 
@@ -33,7 +35,7 @@ var Tables = []any{
 	new(Notice),
 	new(OrgUser),
 	new(Passkey), new(ProtectBranch), new(PublicKey), new(PullRequest),
-	new(Release),
+	new(Release), new(Repository),
 	new(Star),
 	new(Team), new(TeamRepo), new(TeamUser), new(TwoFactor), new(TwoFactorRecoveryCode),
 	new(Upload), new(User),
@@ -100,16 +102,93 @@ func NewConnection(logger *logx.Logger, logQueries bool) (*gorm.DB, error) {
 	return db, nil
 }
 
+// SetEngine connects to the database. When logQueries is true, every query is
+// logged at the debug level. Otherwise only failed and slow queries are, which
+// suits commands whose console output is read by people, such as backups.
+func SetEngine(logger *logx.Logger, logQueries bool) (*gorm.DB, error) {
+	if conf.Database.Type == "sqlite3" {
+		if err := os.MkdirAll(filepath.Dir(conf.Database.Path), os.ModePerm); err != nil {
+			return nil, errors.Wrap(err, "create directories")
+		}
+	}
+	return NewConnection(logger, logQueries)
+}
+
+func NewEngine(logger *logx.Logger) error {
+	db, err := SetEngine(logger, !conf.IsProdMode())
+	if err != nil {
+		return err
+	}
+
+	if err = migrations.Migrate(logger, db); err != nil {
+		return errors.Newf("migrate: %v", err)
+	}
+	return nil
+}
+
+type Statistic struct {
+	Counter struct {
+		User, Org, PublicKey,
+		Repo, Watch, Star, Action, Access,
+		Issue, Comment, Oauth, Follow,
+		Mirror, Release, LoginSource, Webhook,
+		Milestone, Label, HookTask,
+		Team, UpdateTask, Attachment int64
+	}
+}
+
+func GetStatistic(ctx context.Context, logger *logx.Logger) (stats Statistic) {
+	count := func(table any) int64 {
+		var n int64
+		_ = Handle.db.WithContext(ctx).Model(table).Count(&n).Error
+		return n
+	}
+
+	stats.Counter.User = Handle.Users().Count(ctx)
+	stats.Counter.Org = Handle.Organizations().Count(ctx)
+	stats.Counter.PublicKey = count(new(PublicKey))
+	stats.Counter.Repo = count(new(Repository))
+	stats.Counter.Watch = count(new(Watch))
+	stats.Counter.Star = count(new(Star))
+	stats.Counter.Action = count(new(Action))
+	stats.Counter.Access = count(new(Access))
+	stats.Counter.Issue = count(new(Issue))
+	stats.Counter.Comment = count(new(Comment))
+	stats.Counter.Oauth = 0
+	stats.Counter.Follow = count(new(Follow))
+	stats.Counter.Mirror = count(new(Mirror))
+	stats.Counter.Release = count(new(Release))
+	stats.Counter.LoginSource = Handle.LoginSources().Count(ctx)
+	stats.Counter.Webhook = count(new(Webhook))
+	stats.Counter.Milestone = count(new(Milestone))
+	stats.Counter.Label = count(new(Label))
+	stats.Counter.HookTask = count(new(HookTask))
+	stats.Counter.Team = count(new(Team))
+	stats.Counter.Attachment = count(new(Attachment))
+	return stats
+}
+
+func Ping() error {
+	if Handle == nil {
+		return errors.New("database not available")
+	}
+	sqlDB, err := Handle.db.DB()
+	if err != nil {
+		return err
+	}
+	return sqlDB.Ping()
+}
+
 // DB is the database handler for the storage layer.
 type DB struct {
 	db *gorm.DB
-	// logger is for methods whose signatures are fixed by xorm hooks or
+	// logger is for methods whose signatures are fixed by GORM hooks or
 	// templates, so they cannot receive a logger from their caller.
 	logger *logx.Logger
 }
 
 // handleLogger returns the logger of the global database handle. Only methods
-// whose signatures are fixed by xorm hooks or templates use it, because their
+// whose signatures are fixed by GORM hooks or templates use it, because their
 // callers cannot pass a logger. The handle is nil during installation mode and
 // in tests, which get a no-op logger.
 func handleLogger() *logx.Logger {
@@ -243,13 +322,12 @@ func (db *DB) Webhooks() *WebhooksStore {
 	return newWebhooksStore(db.db)
 }
 
-// ConnectionStats tells how busy the database connections are, across the
-// pools of both ORMs.
+// ConnectionStats tells how busy the database connections are.
 type ConnectionStats struct {
 	InUse int
 	Idle  int
-	// Limit is how many connections the pools may open at most, or 0 when
-	// there is no limit.
+	// Limit is how many connections the pool may open at most, or 0 when there
+	// is no limit.
 	Limit int
 	// WaitCount is how many times a query waited for a connection since the
 	// server started, and WaitDuration how long they waited in total.
@@ -259,23 +337,19 @@ type ConnectionStats struct {
 
 // GetConnectionStats returns how busy the database connections are.
 func GetConnectionStats() ConnectionStats {
-	var out ConnectionStats
-	add := func(stats sql.DBStats) {
-		out.InUse += stats.InUse
-		out.Idle += stats.Idle
-		out.WaitCount += stats.WaitCount
-		out.WaitDuration += stats.WaitDuration
+	if Handle == nil {
+		return ConnectionStats{}
 	}
-	if x != nil {
-		add(x.DB().Stats())
+	sqlDB, err := Handle.db.DB()
+	if err != nil {
+		return ConnectionStats{}
 	}
-	if Handle != nil {
-		if sqlDB, err := Handle.db.DB(); err == nil {
-			add(sqlDB.Stats())
-		}
+	stats := sqlDB.Stats()
+	return ConnectionStats{
+		InUse:        stats.InUse,
+		Idle:         stats.Idle,
+		Limit:        stats.MaxOpenConnections,
+		WaitCount:    stats.WaitCount,
+		WaitDuration: stats.WaitDuration,
 	}
-	if conf.Database.MaxOpenConns > 0 {
-		out.Limit = 2 * conf.Database.MaxOpenConns
-	}
-	return out
 }
