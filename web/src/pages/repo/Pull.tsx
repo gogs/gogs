@@ -331,14 +331,14 @@ function MergeBox({ issueRef, data }: { issueRef: IssueRef; data: RepoPullData }
       <div className={cn("min-w-0 flex-1 glass rounded-md border", border)}>
         {pull.state === "merged" || pull.state === "closed" ? null : <ReviewStatusRows data={data} />}
         <div className="px-4 py-3 text-sm">
-          <p className="font-medium">{message}</p>
+          <p className="font-medium">{blocked ? t("repo.pulls.review.blocked") : message}</p>
           {pull.state === "conflict" ? (
             <p className="mt-1 text-(--color-muted-foreground)">{t("repo.pulls.cannot_auto_merge_helper")}</p>
           ) : null}
           {pull.state === "mergeable" && pull.viewerNotInAllowlist ? (
             <p className="mt-1 text-(--color-muted-foreground)">{t("repo.pulls.merge_not_in_allowlist")}</p>
           ) : null}
-          {blocked ? <p className="mt-1 text-(--color-muted-foreground)">{t("repo.pulls.review.blocked")}</p> : null}
+          {blocked ? <p className="mt-1 text-(--color-muted-foreground)">{t("repo.pulls.no_conflicts")}</p> : null}
         </div>
         {body}
       </div>

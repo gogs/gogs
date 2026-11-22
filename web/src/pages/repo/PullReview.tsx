@@ -630,7 +630,12 @@ export function ReviewersSection({ issueRef, data }: { issueRef: IssueRef; data:
                   </UserLink>
                   {note ? <span className="block text-xs text-(--color-muted-foreground)">{note}</span> : null}
                 </span>
-                <span className={cn("inline-flex shrink-0 items-center gap-1 text-xs", state.className)}>
+                <span
+                  className={cn(
+                    "inline-flex shrink-0 items-center gap-1 text-xs",
+                    note ? "text-(--color-muted-foreground)" : state.className,
+                  )}
+                >
                   <Icon className="size-3.5" aria-hidden />
                   {t(state.label)}
                 </span>
