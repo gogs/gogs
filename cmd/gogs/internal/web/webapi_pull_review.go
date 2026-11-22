@@ -348,7 +348,7 @@ type repoPullCodeCommentRequest struct {
 func postRepoPullCodeComment(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, issue *database.Issue, req repoPullCodeCommentRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	if strings.TrimSpace(req.Content) == "" && len(req.Attachments) == 0 {
-		msg := l.Tr("form.Content") + l.Tr("form.require_error")
+		msg := l.Tr("form::Content") + l.Tr("form::require_error")
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
 	}
 	if statusCode, err = checkNewAttachments(ctx, issueAttachmentLimits(), req.Attachments); err != nil {
@@ -447,7 +447,7 @@ func postRepoPullReview(c flamego.Context, logger *logx.Logger, l i18n.Locale, v
 			}
 		}
 		if n == 0 {
-			msg := l.Tr("form.Content") + l.Tr("form.require_error")
+			msg := l.Tr("form::Content") + l.Tr("form::require_error")
 			return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
 		}
 	}
