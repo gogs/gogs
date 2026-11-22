@@ -276,6 +276,170 @@ func TestAPIV1ListForks(t *testing.T) {
 	assert.False(t, forks[0].Permissions.Push, "owner of the base repository can push to the fork")
 }
 
+func TestAPIV1ForkOfAFork(t *testing.T) {
+	t.Parallel()
+
+	alice := seedUser(t, CreateUserOptions{})
+	bob := seedUser(t, CreateUserOptions{})
+	carol := seedUser(t, CreateUserOptions{})
+	base := seedRepository(t, alice.ID, CreateRepositoryOptions{AutoInit: true})
+	fork1 := repoVisibilityFork(t, authenticatedClient(t, bob), base, bob)
+	fork2 := repoVisibilityFork(t, authenticatedClient(t, carol), fork1, carol)
+	carolAPI := apiV1Client(t, carol)
+
+	// assertFork2 asserts that the repository is fork2, and that its parent is
+	// fork1 without the parent of fork1.
+	assertFork2 := func(t *testing.T, repo apiV1Repo) {
+		t.Helper()
+
+		assert.Equal(t, carol.Name+"/"+fork2.Name, repo.FullName)
+		assert.True(t, repo.Fork)
+		require.NotNil(t, repo.Parent)
+		assert.Equal(t, bob.Name+"/"+fork1.Name, repo.Parent.FullName)
+		assert.Equal(t, bob.Name, repo.Parent.Owner.UserName)
+		assert.True(t, repo.Parent.Fork, "parent is a fork")
+		assert.Nil(t, repo.Parent.Parent, "parent includes its own parent")
+		require.NotNil(t, repo.Parent.Permissions)
+		assert.False(t, repo.Parent.Permissions.Push, "permissions on the fork apply to its parent")
+	}
+	findFork2 := func(t *testing.T, repos []apiV1Repo) apiV1Repo {
+		t.Helper()
+
+		for _, repo := range repos {
+			if repo.ID == fork2.ID {
+				return repo
+			}
+		}
+		require.Failf(t, "fork not listed", "repositories: %v", apiV1RepoNames(repos))
+		return apiV1Repo{}
+	}
+
+	t.Run("get", func(t *testing.T) {
+		var repo apiV1Repo
+		carolAPI.doJSON(http.MethodGet, apiV1RepoPath(fork2, ""), nil, http.StatusOK, &repo)
+		assertFork2(t, repo)
+	})
+	t.Run("parent with the permissions of the viewer", func(t *testing.T) {
+		var repo apiV1Repo
+		apiV1Client(t, bob).doJSON(http.MethodGet, apiV1RepoPath(fork2, ""), nil, http.StatusOK, &repo)
+		require.NotNil(t, repo.Parent)
+		require.NotNil(t, repo.Parent.Permissions)
+		assert.True(t, repo.Parent.Permissions.Admin, "owner of the parent")
+		assert.True(t, repo.Parent.Permissions.Push, "owner of the parent")
+	})
+	t.Run("list own repositories", func(t *testing.T) {
+		var repos []apiV1Repo
+		carolAPI.doJSON(http.MethodGet, "/api/v1/user/repos", nil, http.StatusOK, &repos)
+		assertFork2(t, findFork2(t, repos))
+	})
+	t.Run("search", func(t *testing.T) {
+		var resp struct {
+			Data []apiV1Repo `json:"data"`
+		}
+		carolAPI.doJSON(http.MethodGet, "/api/v1/repos/search?q="+fork2.Name+"&uid="+apiV1Itoa(carol.ID), nil, http.StatusOK, &resp)
+		assertFork2(t, findFork2(t, resp.Data))
+	})
+	t.Run("list forks of a fork", func(t *testing.T) {
+		var forks []apiV1Repo
+		carolAPI.doJSON(http.MethodGet, apiV1RepoPath(fork1, "/forks"), nil, http.StatusOK, &forks)
+		require.Len(t, forks, 1)
+		assertFork2(t, forks[0])
+	})
+	t.Run("webhook payload", func(t *testing.T) {
+		// Forks start without issues.
+		status, body := carolAPI.do(http.MethodPatch, apiV1RepoPath(fork2, "/issue-tracker"), map[string]any{"enable_issues": true})
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+		url, deliveries := repoSettingsWebhookReceiver(t)
+		status, body = authenticatedClient(t, carol).do(http.MethodPost, repoSettingsAPIPath(fork2, "/settings/hooks"), map[string]any{
+			"type":         "gogs",
+			"url":          url,
+			"contentType":  "json",
+			"events":       "choose_events",
+			"chosenEvents": map[string]bool{"issues": true},
+			"active":       true,
+		})
+		require.Equal(t, http.StatusCreated, status, "response: %s", body)
+
+		apiV1CreateIssue(t, carolAPI, fork2, map[string]any{"title": "In a fork of a fork"})
+
+		d := repoSettingsNextDelivery(t, deliveries)
+		var payload struct {
+			Repo apiV1Repo `json:"repository"`
+		}
+		require.NoError(t, json.Unmarshal(d.Body, &payload), "payload: %s", d.Body)
+		assertFork2(t, payload.Repo)
+	})
+}
+
+func TestAPIV1ForkOfUnreadableRepository(t *testing.T) {
+	t.Parallel()
+
+	alice := seedUser(t, CreateUserOptions{})
+	bob := seedUser(t, CreateUserOptions{})
+	dave := seedUser(t, CreateUserOptions{})
+	base := seedRepository(t, alice.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
+	aliceAPI := apiV1Client(t, alice)
+	for _, u := range []*User{bob, dave} {
+		status, body := aliceAPI.do(http.MethodPut, apiV1RepoPath(base, "/collaborators/"+u.Name), map[string]any{"permission": "read"})
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	}
+	fork := repoVisibilityFork(t, authenticatedClient(t, bob), base, bob)
+	bobAPI := apiV1Client(t, bob)
+
+	var repo apiV1Repo
+	bobAPI.doJSON(http.MethodGet, apiV1RepoPath(fork, ""), nil, http.StatusOK, &repo)
+	require.NotNil(t, repo.Parent, "parent while the base repository is readable")
+	assert.Equal(t, alice.Name+"/"+base.Name, repo.Parent.FullName)
+
+	t.Run("private forks are not listed to others", func(t *testing.T) {
+		var forks []apiV1Repo
+		apiV1Client(t, dave).doJSON(http.MethodGet, apiV1RepoPath(base, "/forks"), nil, http.StatusOK, &forks)
+		assert.Empty(t, apiV1RepoNames(forks))
+	})
+
+	t.Run("webhook payload with a private parent", func(t *testing.T) {
+		status, body := bobAPI.do(http.MethodPatch, apiV1RepoPath(fork, "/issue-tracker"), map[string]any{"enable_issues": true})
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+		url, deliveries := repoSettingsWebhookReceiver(t)
+		status, body = authenticatedClient(t, bob).do(http.MethodPost, repoSettingsAPIPath(fork, "/settings/hooks"), map[string]any{
+			"type":         "gogs",
+			"url":          url,
+			"contentType":  "json",
+			"events":       "choose_events",
+			"chosenEvents": map[string]bool{"issues": true},
+			"active":       true,
+		})
+		require.Equal(t, http.StatusCreated, status, "response: %s", body)
+
+		apiV1CreateIssue(t, bobAPI, fork, map[string]any{"title": "In a fork of a private repository"})
+
+		d := repoSettingsNextDelivery(t, deliveries)
+		var payload struct {
+			Repo apiV1Repo `json:"repository"`
+		}
+		require.NoError(t, json.Unmarshal(d.Body, &payload), "payload: %s", d.Body)
+		assert.True(t, payload.Repo.Fork)
+		assert.Nil(t, payload.Repo.Parent, "webhook receivers may not be able to read the parent")
+	})
+
+	status, body := aliceAPI.do(http.MethodDelete, apiV1RepoPath(base, "/collaborators/"+bob.Name), nil)
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+
+	t.Run("get", func(t *testing.T) {
+		var repo apiV1Repo
+		bobAPI.doJSON(http.MethodGet, apiV1RepoPath(fork, ""), nil, http.StatusOK, &repo)
+		assert.True(t, repo.Fork)
+		assert.Nil(t, repo.Parent)
+	})
+	t.Run("list own repositories", func(t *testing.T) {
+		var repos []apiV1Repo
+		bobAPI.doJSON(http.MethodGet, "/api/v1/user/repos", nil, http.StatusOK, &repos)
+		require.Len(t, repos, 1)
+		assert.Equal(t, fork.ID, repos[0].ID)
+		assert.Nil(t, repos[0].Parent)
+	})
+}
+
 func TestAPIV1Releases(t *testing.T) {
 	t.Parallel()
 

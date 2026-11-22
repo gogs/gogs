@@ -268,11 +268,23 @@ func toRepositoryCollaborator(c *database.Collaborator) *v1types.RepositoryColla
 	}
 }
 
-// toRepository converts a database repository to an API repository.
-// It assumes the Owner field has been loaded on the repo.
-func toRepository(repo *database.Repository, perm *v1types.RepositoryPermission) *v1types.Repository {
+// toRepository converts a database repository to an API repository. It
+// assumes the Owner field has been loaded on the repo, and the BaseRepo field
+// with its Owner field if the repo is a fork. The parent is included with
+// basePerm, the permission of the viewer on the base repository, and left out
+// when basePerm is nil, e.g., when the viewer cannot read it.
+func toRepository(repo *database.Repository, perm, basePerm *v1types.RepositoryPermission) *v1types.Repository {
+	apiRepo := toRepositoryWithoutParent(repo, perm)
+	if repo.IsFork && basePerm != nil {
+		// The parent does not include its own parent.
+		apiRepo.Parent = toRepositoryWithoutParent(repo.BaseRepo, basePerm)
+	}
+	return apiRepo
+}
+
+func toRepositoryWithoutParent(repo *database.Repository, perm *v1types.RepositoryPermission) *v1types.Repository {
 	cloneLink := repo.CloneLink()
-	apiRepo := &v1types.Repository{
+	return &v1types.Repository{
 		ID:            repo.ID,
 		Owner:         toUser(repo.Owner),
 		Name:          repo.Name,
@@ -296,9 +308,4 @@ func toRepository(repo *database.Repository, perm *v1types.RepositoryPermission)
 		Updated:       repo.Updated,
 		Permissions:   perm,
 	}
-	if repo.IsFork {
-		p := &v1types.RepositoryPermission{Pull: true}
-		apiRepo.Parent = toRepository(repo.BaseRepo, p)
-	}
-	return apiRepo
 }
