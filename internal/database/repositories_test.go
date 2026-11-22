@@ -1418,9 +1418,12 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 
 		var wg sync.WaitGroup
 		var firstErr, secondErr error
-		wg.Go(func() { firstErr = tc.first(base, baseFork) })
+		// Each gets its own copies, because saving a repository writes to it.
+		firstBase, firstFork := *base, *baseFork
+		secondBase, secondFork := *base, *baseFork
+		wg.Go(func() { firstErr = tc.first(&firstBase, &firstFork) })
 		time.Sleep(500 * time.Millisecond)
-		wg.Go(func() { secondErr = tc.second(base, baseFork) })
+		wg.Go(func() { secondErr = tc.second(&secondBase, &secondFork) })
 		time.Sleep(500 * time.Millisecond)
 		require.NoError(t, hold.Rollback().Error)
 		wg.Wait()
