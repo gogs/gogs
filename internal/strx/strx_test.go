@@ -30,6 +30,21 @@ func TestToUpperFirst(t *testing.T) {
 			s:      "Let's go",
 			expStr: "Let's go",
 		},
+		{
+			name:   "first letter is multi-byte",
+			s:      "élan vital",
+			expStr: "Élan vital",
+		},
+		{
+			name:   "first letter is multi-byte without upper case",
+			s:      "你好，世界",
+			expStr: "你好，世界",
+		},
+		{
+			name:   "invalid UTF-8 is left untouched",
+			s:      "\xffabc",
+			expStr: "\xffabc",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
