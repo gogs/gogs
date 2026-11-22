@@ -1285,7 +1285,7 @@ func CheckRepoStats(logger *logx.Logger) {
 type Watch struct {
 	ID     int64 `gorm:"primaryKey"`
 	UserID int64 `gorm:"uniqueIndex:UQE_watch_watch"`
-	RepoID int64 `gorm:"uniqueIndex:UQE_watch_watch;index:IDX_watch_repo_id"`
+	RepoID int64 `gorm:"uniqueIndex:UQE_watch_watch;index:idx_watch_repo_id"`
 }
 
 type Star struct {

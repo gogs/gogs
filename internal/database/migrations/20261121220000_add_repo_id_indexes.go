@@ -8,9 +8,9 @@ import (
 // repoIDIndexes are the indexes on the columns that deleting a repository
 // deletes rows by, which no index led with before.
 var repoIDIndexes = []struct{ table, column, name string }{
-	{"access", "repo_id", "IDX_access_repo_id"},
-	{"watch", "repo_id", "IDX_watch_repo_id"},
-	{"pull_request", "base_repo_id", "IDX_pull_request_base_repo_id"},
+	{"access", "repo_id", "idx_access_repo_id"},
+	{"watch", "repo_id", "idx_watch_repo_id"},
+	{"pull_request", "base_repo_id", "idx_pull_request_base_repo_id"},
 }
 
 // addRepoIDIndexes indexes the columns that deleting a repository deletes rows
