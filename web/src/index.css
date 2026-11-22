@@ -530,7 +530,7 @@ diffs-container {
     background-color: var(--color-surface);
     color: var(--color-foreground);
   }
-  .markdown li:hover > .task-drag-handle,
+  .markdown li:hover:not(:has(li:hover)) > .task-drag-handle,
   .markdown .task-drag-handle:focus-visible,
   .markdown .task-dragging > .task-drag-handle {
     opacity: 1;

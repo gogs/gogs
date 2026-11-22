@@ -439,10 +439,17 @@ type repoIssueRequest struct {
 	// Attachments are the UUIDs of the files uploaded while editing the
 	// content.
 	Attachments []string `json:"attachments"`
+	// PreviousContent, when set, is the content the new content was made
+	// from. The content is not saved when it changed since, e.g., by someone
+	// else.
+	PreviousContent *string `json:"previousContent"`
 }
 
 func patchRepoIssue(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, issue *database.Issue, req repoIssueRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
+	if req.Content != nil && req.PreviousContent != nil && *req.PreviousContent != issue.Content {
+		return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("repo::issues.content_changed")}, nil
+	}
 	if req.Title != nil {
 		title := strings.TrimSpace(*req.Title)
 		if resp := textFieldError(l, "title", "repo::milestones.title", title, 255); resp != nil {
@@ -636,6 +643,10 @@ type repoIssueCommentRequest struct {
 	Content string `json:"content"`
 	// Attachments are the UUIDs of the uploaded files to attach.
 	Attachments []string `json:"attachments"`
+	// PreviousContent, when set on a change, is the content the new content
+	// was made from. The content is not saved when it changed since, e.g., by
+	// an admin.
+	PreviousContent *string `json:"previousContent"`
 }
 
 // checkNewAttachments returns the status code and the error to answer with
@@ -715,6 +726,9 @@ func patchRepoIssueComment(c flamego.Context, logger *logx.Logger, l i18n.Locale
 	if strings.TrimSpace(req.Content) == "" {
 		msg := l.Tr("form::Content") + l.Tr("form::require_error")
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
+	}
+	if req.PreviousContent != nil && *req.PreviousContent != comment.Content {
+		return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("repo::issues.content_changed")}, nil
 	}
 	if statusCode, err = checkNewAttachments(ctx, issueAttachmentLimits(), req.Attachments); err != nil {
 		if statusCode == http.StatusInternalServerError {

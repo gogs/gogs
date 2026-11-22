@@ -219,6 +219,14 @@ func TestIssueEditAndState(t *testing.T) {
 	assert.Equal(t, "Fixed title", got.Title)
 	assert.Equal(t, "New _content_", got.Content)
 
+	// A change made from content that changed since is refused.
+	status, body = posterClient.do(http.MethodPatch, path, map[string]any{"content": "- [x] Stale", "previousContent": "Old content"})
+	assert.Equal(t, http.StatusConflict, status, "response: %s", body)
+	assert.Equal(t, "New _content_", issueFromDatabase(t, repo, index).Content)
+	status, body = posterClient.do(http.MethodPatch, path, map[string]any{"content": "Newer", "previousContent": "New _content_"})
+	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	assert.Equal(t, "Newer", issueFromDatabase(t, repo, index).Content)
+
 	status, body = posterClient.do(http.MethodPatch, path, map[string]any{"title": ""})
 	assert.Equal(t, http.StatusBadRequest, status, "response: %s", body)
 	status, body = otherClient.do(http.MethodPatch, path, map[string]any{"title": "Hijacked"})
@@ -291,6 +299,12 @@ func TestIssueComments(t *testing.T) {
 
 	status, body = commenterClient.do(http.MethodPatch, commentPath, map[string]any{"content": "I disagree."})
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	comment, err = database.Handle.Comments().GetByID(t.Context(), created.ID)
+	require.NoError(t, err)
+	assert.Equal(t, "I disagree.", comment.Content)
+
+	status, body = commenterClient.do(http.MethodPatch, commentPath, map[string]any{"content": "Stale", "previousContent": "I **agree**."})
+	assert.Equal(t, http.StatusConflict, status, "response: %s", body)
 	comment, err = database.Handle.Comments().GetByID(t.Context(), created.ID)
 	require.NoError(t, err)
 	assert.Equal(t, "I disagree.", comment.Content)

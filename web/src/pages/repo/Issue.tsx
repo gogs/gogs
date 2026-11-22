@@ -164,7 +164,8 @@ export function IssueConversation({
             data.viewerCanEdit
               ? {
                   content: data.content,
-                  save: (content, attachments) => updateRepoIssue(ref, { content, attachments }),
+                  save: (content, attachments, previousContent) =>
+                    updateRepoIssue(ref, { content, attachments, previousContent }),
                 }
               : undefined
           }
@@ -185,7 +186,8 @@ export function IssueConversation({
                 comment.viewerCanEdit
                   ? {
                       content: comment.content ?? "",
-                      save: (content, attachments) => updateRepoIssueComment(ref, comment.id, content, attachments),
+                      save: (content, attachments, previousContent) =>
+                        updateRepoIssueComment(ref, comment.id, content, attachments, previousContent),
                       remove: () => deleteRepoIssueComment(ref, comment.id),
                     }
                   : undefined
@@ -360,11 +362,12 @@ function CommentCard({
   attachments: IssueAttachment[];
   // attachment is how files are added while editing.
   attachment?: IssueAttachmentSettings;
-  // edit saves the content with the files uploaded while editing, and remove
-  // deletes the comment, for viewers who can change it.
+  // edit saves the content with the files uploaded while editing, failing
+  // when given the content it was made from and the content changed since,
+  // and remove deletes the comment, for viewers who can change it.
   edit?: {
     content: string;
-    save: (content: string, attachments: string[]) => Promise<void>;
+    save: (content: string, attachments: string[], previousContent?: string) => Promise<void>;
     remove?: () => Promise<void>;
   };
 }) {
@@ -447,9 +450,14 @@ function CommentCard({
                 edit
                   ? {
                       source: edit.content,
+                      // Loading the page again also shows the content that
+                      // a change failed on for having changed since.
                       save: async (content) => {
-                        await edit.save(content, []);
-                        await router.invalidate();
+                        try {
+                          await edit.save(content, [], edit.content);
+                        } finally {
+                          await router.invalidate();
+                        }
                       },
                     }
                   : undefined

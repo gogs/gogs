@@ -25,8 +25,9 @@ const GRIP_ICON =
   '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>';
 
 // TASK_CHECKBOX finds the checkbox of the task list item it is called on, which
-// the server renders before the text of the item, see dariomark.
-const TASK_CHECKBOX = ':scope > input[type="checkbox"], :scope > p:first-child > input[type="checkbox"]';
+// the server renders before the text of the item, in its first paragraph when
+// the list is loose, see dariomark.
+const TASK_CHECKBOX = ':scope > input[type="checkbox"], :scope > p:first-of-type > input[type="checkbox"]';
 
 // taskLines returns the first and the last line of the source of the task list
 // item, as the server marks them.
@@ -35,13 +36,47 @@ function taskLines(item: HTMLElement): [number, number] {
   return [first, last];
 }
 
-// enableTasks turns on the checkboxes of the task list items in body, labeled
-// with the text of their item, and gives the items of lists that only hold
-// task items a handle to move them.
-function enableTasks(body: HTMLElement, moveLabel: (task: string) => string) {
+// splitLines splits Markdown source into the lines the server numbers: without
+// a byte order mark, at "\r\n", "\n" or "\r".
+function splitLines(source: string): string[] {
+  return source.replace(/^\uFEFF/, "").split(/\r\n|\r|\n/);
+}
+
+function joinLines(lines: string[], source: string): string {
+  return lines.join(source.includes("\r\n") ? "\r\n" : "\n");
+}
+
+const LIST_MARKER = String.raw`(?:[ \t]*>)*[ \t]*(?:[-+*]|\d{1,9}[.)])`;
+const TASK_MARKER_AFTER_LIST_MARKER = new RegExp(String.raw`^(${LIST_MARKER}[ \t]+)\[[ xX\t]\]`);
+const EMPTY_LIST_ITEM = new RegExp(String.raw`^${LIST_MARKER}[ \t]*$`);
+const TASK_MARKER = /^((?:[ \t]*>)*[ \t]*)\[[ xX\t]\]/;
+
+// taskMarker returns the index in lines of the line with the task list item
+// marker of the item that starts at the 1-based line, and the pattern that
+// finds the marker on it. The marker follows the list marker, e.g., "- [ ] a",
+// or follows an empty first line of the item on the next line, e.g.,
+// "-\n  [ ] a". It returns undefined when the item starts on the line of
+// another list item, e.g., the second item of "- - [ ] a", whose line the
+// changes to the item cannot tell from that of the other one.
+function taskMarker(lines: string[], line: number): { index: number; pattern: RegExp } | undefined {
+  const first = lines[line - 1] ?? "";
+  if (TASK_MARKER_AFTER_LIST_MARKER.test(first)) return { index: line - 1, pattern: TASK_MARKER_AFTER_LIST_MARKER };
+  if (EMPTY_LIST_ITEM.test(first) && TASK_MARKER.test(lines[line] ?? "")) return { index: line, pattern: TASK_MARKER };
+  return undefined;
+}
+
+// enableTasks turns on the checkboxes of the task list items in body whose
+// marker is found in source, labeled with the text of their item, and gives
+// the items of lists that only hold such items a handle to move them.
+function enableTasks(body: HTMLElement, source: string, moveLabel: (task: string) => string) {
+  const lines = splitLines(source);
+  const editable = (li: Element) =>
+    li.matches("li.task-list-item[data-source-lines]") &&
+    li.querySelector(TASK_CHECKBOX) !== null &&
+    taskMarker(lines, taskLines(li as HTMLElement)[0]) !== undefined;
   for (const item of Array.from(body.querySelectorAll<HTMLElement>("li.task-list-item[data-source-lines]"))) {
-    const checkbox = item.querySelector<HTMLInputElement>(TASK_CHECKBOX);
-    if (!checkbox) continue;
+    if (!editable(item)) continue;
+    const checkbox = item.querySelector<HTMLInputElement>(TASK_CHECKBOX)!;
     const text = item.cloneNode(true) as HTMLElement;
     text.querySelectorAll("ul, ol").forEach((list) => list.remove());
     const label = (text.textContent ?? "").replace(/\s+/g, " ").trim();
@@ -49,10 +84,7 @@ function enableTasks(body: HTMLElement, moveLabel: (task: string) => string) {
     checkbox.setAttribute("aria-label", label);
 
     const siblings = Array.from(item.parentElement!.children);
-    const movable =
-      siblings.length > 1 &&
-      siblings.every((li) => li.matches("li.task-list-item[data-source-lines]") && li.querySelector(TASK_CHECKBOX));
-    if (!movable) continue;
+    if (siblings.length < 2 || !siblings.every(editable)) continue;
     const handle = document.createElement("button");
     handle.type = "button";
     handle.className = "task-drag-handle";
@@ -62,64 +94,69 @@ function enableTasks(body: HTMLElement, moveLabel: (task: string) => string) {
   }
 }
 
-const MARKDOWN_LINE_BREAK = /\r?\n/;
-
 // toggleTask returns source with the task list item marker of the item that
-// starts at the 1-based line checked or unchecked, or null when the line has
-// no marker. The marker usually follows the list marker, e.g., "- [ ] a", but
-// follows an empty first line of the item on the next line, e.g., "-\n  [ ] a".
+// starts at the 1-based line checked or unchecked, or null when the item has
+// no marker there, see taskMarker.
 function toggleTask(source: string, line: number, checked: boolean): string | null {
-  const lines = source.split(MARKDOWN_LINE_BREAK);
-  const markers = [
-    { index: line - 1, pattern: /^((?:[ \t]*>)*[ \t]*(?:[-+*]|\d{1,9}[.)])[ \t]+)\[[ xX\t]\]/ },
-    { index: line, pattern: /^((?:[ \t]*>)*[ \t]*)\[[ xX\t]\]/ },
-  ];
-  for (const { index, pattern } of markers) {
-    if (index >= lines.length || !pattern.test(lines[index])) continue;
-    lines[index] = lines[index].replace(pattern, `$1[${checked ? "x" : " "}]`);
-    return lines.join(source.includes("\r\n") ? "\r\n" : "\n");
-  }
-  return null;
+  const lines = splitLines(source);
+  const marker = taskMarker(lines, line);
+  if (!marker) return null;
+  lines[marker.index] = lines[marker.index].replace(marker.pattern, `$1[${checked ? "x" : " "}]`);
+  return joinLines(lines, source);
+}
+
+const ORDERED_LIST_NUMBER = /^((?:[ \t]*>)*[ \t]*)(\d{1,9})(?=[.)])/;
+
+// indent returns line with the indentation after its block quote markers, if
+// any, changed by delta spaces. Blank lines stay as they are.
+function indent(line: string, delta: number): string {
+  const quotes = /^(?:[ \t]*> ?)*/.exec(line)![0];
+  const rest = line.slice(quotes.length);
+  if (rest.trim() === "") return line;
+  if (delta > 0) return quotes + " ".repeat(delta) + rest;
+  return quotes + rest.slice(Math.min(/^ */.exec(rest)![0].length, -delta));
 }
 
 // moveTasks returns source with the items of a list, whose source spans the
 // 1-based lines ranges in order, put in the order of the indexes of ranges in
 // order, and the first line of each item in that order. What is between items,
 // e.g., blank lines of a loose list, stays in place, and so do the numbers of
-// an ordered list.
+// an ordered list. An item that takes a number of another width has the rest
+// of its lines indented to match, to keep them in the item.
 function moveTasks(
   source: string,
   ranges: [number, number][],
   order: number[],
   ordered: boolean,
 ): { source: string; firstLines: number[] } {
-  const lines = source.split(MARKDOWN_LINE_BREAK);
+  const lines = splitLines(source);
   const items = ranges.map(([first, last]) => lines.slice(first - 1, last));
-  const number = /^((?:[ \t]*>)*[ \t]*)(\d{1,9})(?=[.)])/;
   const out = lines.slice(0, ranges[0][0] - 1);
   const firstLines: number[] = [];
   order.forEach((from, to) => {
-    const item = items[from].slice();
-    if (ordered) {
-      const n = number.exec(items[to][0])?.[2];
-      if (n) item[0] = item[0].replace(number, `$1${n}`);
+    let item = items[from];
+    const own = ordered ? ORDERED_LIST_NUMBER.exec(item[0]) : null;
+    const taken = ordered ? ORDERED_LIST_NUMBER.exec(items[to][0]) : null;
+    if (own && taken) {
+      const delta = taken[2].length - own[2].length;
+      item = [item[0].replace(ORDERED_LIST_NUMBER, `$1${taken[2]}`), ...item.slice(1).map((l) => indent(l, delta))];
     }
     firstLines.push(out.length + 1);
     out.push(...item);
     if (to + 1 < ranges.length) out.push(...lines.slice(ranges[to][1], ranges[to + 1][0] - 1));
   });
   out.push(...lines.slice(ranges[ranges.length - 1][1]));
-  return { source: out.join(source.includes("\r\n") ? "\r\n" : "\n"), firstLines };
+  return { source: joinLines(out, source), firstLines };
 }
 
 // prepareHTML replaces the code blocks, wherever they are nested, with
 // placeholders that CodeBlock renders into, and, given permalinkLabel, gives
-// each heading with an id a link to itself, and, given moveLabel, makes task
-// lists interactive, see enableTasks.
+// each heading with an id a link to itself, and, given tasks, makes task lists
+// interactive, see enableTasks.
 function prepareHTML(
   html: string,
   permalinkLabel?: (heading: string) => string,
-  moveLabel?: (task: string) => string,
+  tasks?: { source: string; moveLabel: (task: string) => string },
 ): { html: string; blocks: CodeBlockContent[] } {
   const body = new DOMParser().parseFromString(html, "text/html").body;
   const blocks: CodeBlockContent[] = [];
@@ -143,7 +180,7 @@ function prepareHTML(
     anchor.innerHTML = LINK_ICON;
     heading.append(anchor);
   }
-  if (moveLabel) enableTasks(body, moveLabel);
+  if (tasks) enableTasks(body, tasks.source, tasks.moveLabel);
   return { html: body.innerHTML, blocks };
 }
 
@@ -184,15 +221,16 @@ export function Markdown({
   tasks?: { source: string; save: (source: string) => Promise<unknown> };
 }) {
   const { t } = useTranslation();
-  const editableTasks = tasks !== undefined;
+  const taskSource = tasks?.source;
+  const editableTasks = taskSource !== undefined;
   const content = useMemo(
     () =>
       prepareHTML(
         html,
         headingAnchors ? (heading) => t("heading_permalink", { heading }) : undefined,
-        editableTasks ? (task) => t("move_task", { task }) : undefined,
+        taskSource !== undefined ? { source: taskSource, moveLabel: (task) => t("move_task", { task }) } : undefined,
       ),
-    [html, headingAnchors, editableTasks, t],
+    [html, headingAnchors, taskSource, t],
   );
   // React sets the HTML again whenever this object changes, which would drop
   // the code blocks rendered into the placeholders.
@@ -247,6 +285,10 @@ export function Markdown({
     // saveOrder saves the order of the items of the list, which were in the
     // order of before.
     const saveOrder = (list: HTMLElement, before: HTMLElement[], moved: HTMLElement, focus: boolean) => {
+      if (busy) {
+        list.append(...before);
+        return;
+      }
       const after = Array.from(list.children) as HTMLElement[];
       const inSource = [...before].sort((a, b) => taskLines(a)[0] - taskLines(b)[0]);
       const order = after.map((item) => inSource.indexOf(item));

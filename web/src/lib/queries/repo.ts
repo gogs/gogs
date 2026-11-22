@@ -778,7 +778,12 @@ function issueURL(issue: IssueRef, path = "") {
 }
 
 // attachments are the UUIDs of the files uploaded while editing the content.
-export function updateRepoIssue(issue: IssueRef, form: { title?: string; content?: string; attachments?: string[] }) {
+// updateRepoIssue changes the issue. Given previousContent, the content the new
+// content was made from, the change fails when the content changed since.
+export function updateRepoIssue(
+  issue: IssueRef,
+  form: { title?: string; content?: string; attachments?: string[]; previousContent?: string },
+) {
   return submit<void>("PATCH", issueURL(issue), form);
 }
 
@@ -790,8 +795,16 @@ export function createRepoIssueComment(issue: IssueRef, form: { content: string;
   return submit<{ id: number }>("POST", issueURL(issue, "/comments"), form);
 }
 
-export function updateRepoIssueComment(issue: IssueRef, id: number, content: string, attachments: string[] = []) {
-  return submit<void>("PATCH", issueURL(issue, `/comments/${id}`), { content, attachments });
+// updateRepoIssueComment changes the comment, see updateRepoIssue for
+// previousContent.
+export function updateRepoIssueComment(
+  issue: IssueRef,
+  id: number,
+  content: string,
+  attachments: string[] = [],
+  previousContent?: string,
+) {
+  return submit<void>("PATCH", issueURL(issue, `/comments/${id}`), { content, attachments, previousContent });
 }
 
 export function deleteRepoIssueComment(issue: IssueRef, id: number) {
