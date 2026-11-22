@@ -385,12 +385,6 @@ func (s *OrganizationsStore) RemoveMember(ctx context.Context, orgID, userID int
 	})
 }
 
-// removeRepo removes the repository with given ID from the teams of the
-// organization with given ID.
-func (s *OrganizationsStore) removeRepo(ctx context.Context, orgID, repoID int64) error {
-	return s.db.WithContext(ctx).Where("org_id = ? AND repo_id = ?", orgID, repoID).Delete(new(TeamRepo)).Error
-}
-
 // teamRepoIDsOfMember returns the IDs of the repositories that the teams of
 // the organization with given ID, which the user with given ID is a member
 // of, have.

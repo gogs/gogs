@@ -1291,6 +1291,8 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 	starter := newTestIssueUser(t, ctx, s.db, "cf-starter")
 	owner := newTestIssueUser(t, ctx, s.db, "cf-owner")
 	var orgFork *Repository
+	mover := newTestIssueUser(t, ctx, s.db, "cf-mover")
+	var moved *Repository
 	var older *Repository
 
 	for _, tc := range []struct {
@@ -1450,6 +1452,25 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 			},
 			check: func(*Repository, *Repository) {
 				assert.Equal(t, AccessModeOwner, accessModes(t, ctx, newPermissionsStore(s.db), orgFork.ID)[owner.ID], "access of the new owner")
+			},
+		},
+		{
+			name:      "add team member while transferring the newer of two repositories of the team away",
+			baseOwner: org,
+			private:   true,
+			setup: func(base, _ *Repository) {
+				moved = newTestGitRepo(t, ctx, s, org, CreateRepoOptionsLegacy{Name: name("moved"), IsPrivate: true})
+				moved.Owner = org
+				require.NoError(t, teams.AddRepo(ctx, readers, base))
+				require.NoError(t, teams.AddRepo(ctx, readers, moved))
+			},
+			holdTeam: true,
+			first:    func(*Repository, *Repository) error { return transfer(moved, alice) },
+			second:   func(*Repository, *Repository) error { return teams.AddMember(ctx, org.ID, readers.ID, mover.ID) },
+			check: func(base, _ *Repository) {
+				perms := newPermissionsStore(s.db)
+				assert.Equal(t, AccessModeRead, accessModes(t, ctx, perms, base.ID)[mover.ID], "access to the repository kept")
+				assert.NotContains(t, accessModes(t, ctx, perms, moved.ID), mover.ID, "access to the repository transferred away")
 			},
 		},
 		{

@@ -1544,10 +1544,12 @@ func (s *RepositoriesStore) Transfer(ctx context.Context, doer *User, newOwnerNa
 				if err := tx.Model(t).Select("*").Updates(t).Error; err != nil {
 					return errors.Newf("decrease team repository count '%d': %v", t.ID, err)
 				}
-			}
-
-			if err = newOrganizationsStore(tx).removeRepo(ctx, owner.ID, repo.ID); err != nil {
-				return errors.Wrap(err, "remove from teams")
+				// Delete by the unique index, so MySQL locks no rows of other
+				// repositories, which adding a team member may hold.
+				err = tx.Where("team_id = ? AND repo_id = ?", t.ID, repo.ID).Delete(new(TeamRepo)).Error
+				if err != nil {
+					return errors.Wrapf(err, "remove from team %d", t.ID)
+				}
 			}
 		}
 
