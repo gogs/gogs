@@ -7,6 +7,8 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"unknwon.dev/x/logx"
+
+	"gogs.io/gogs/internal/errx"
 )
 
 // CollaborationsStore is the storage layer for collaborators of repositories.
@@ -35,6 +37,14 @@ func (s *CollaborationsStore) IsCollaborator(ctx context.Context, logger *logx.L
 // the repository has keeps their mode.
 func (s *CollaborationsStore) Add(ctx context.Context, repo *Repository, userID int64) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Deleting the repository meanwhile would leave the collaboration and
+		// access behind.
+		if _, exists, err := lockRepository(tx, repo.ID); err != nil {
+			return err
+		} else if !exists {
+			return ErrRepoNotExist{args: errx.Args{"repoID": repo.ID}}
+		}
+
 		// The number of affected rows does not tell whether the row is new,
 		// because MariaDB counts the existing row returned.
 		c := &Collaboration{RepoID: repo.ID, UserID: userID, Mode: AccessModeWrite}

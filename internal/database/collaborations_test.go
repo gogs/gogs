@@ -117,6 +117,14 @@ func collaborationsAdd(t *testing.T, ctx context.Context, s *CollaborationsStore
 	assert.Equal(t, map[int64]AccessMode{9999: AccessModeAdmin, alice.ID: AccessModeWrite}, accessModes(t, ctx, perms, repo.ID))
 	assert.Empty(t, accessModes(t, ctx, perms, other.ID))
 
+	// A deleted repository gets no collaborators.
+	deleted := newTestIssueRepo(t, ctx, s.db, "co-add-deleted")
+	require.NoError(t, s.db.Delete(deleted).Error)
+	err = s.Add(ctx, deleted, alice.ID)
+	assert.True(t, IsErrRepoNotExist(err), "%+v", err)
+	assert.False(t, s.IsCollaborator(ctx, logger, deleted.ID, alice.ID))
+	assert.Empty(t, accessModes(t, ctx, perms, deleted.ID))
+
 	// Adding a collaborator that the repository has keeps their mode.
 	err = s.db.Model(new(Collaboration)).Where("user_id = ?", alice.ID).Update("mode", AccessModeRead).Error
 	require.NoError(t, err)

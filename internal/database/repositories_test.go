@@ -1285,6 +1285,7 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 		})
 	}
 	newcomer := newTestIssueUser(t, ctx, s.db, "cf-newcomer")
+	latecomer := newTestIssueUser(t, ctx, s.db, "cf-latecomer")
 	var older *Repository
 
 	for _, tc := range []struct {
@@ -1377,6 +1378,23 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 			setup:     func(base, _ *Repository) { require.NoError(t, teams.AddRepo(ctx, readers, base)) },
 			holdTeam:  true,
 			first:     func(*Repository, *Repository) error { return teams.AddMember(ctx, org.ID, readers.ID, newcomer.ID) },
+			second:    func(base, _ *Repository) error { return deleteRepo(base) },
+			check: func(base, _ *Repository) {
+				var count int64
+				require.NoError(t, s.db.Model(new(Access)).Where("repo_id = ?", base.ID).Count(&count).Error)
+				assert.Zero(t, count, "accesses of the deleted repository")
+			},
+		},
+		{
+			// Adding the member waits for the organization after reading the
+			// repositories of the team, while deleting the repository has
+			// removed it from the team and waits for the organization too.
+			name:      "add team member while deleting a repository of the team, holding the organization",
+			baseOwner: org,
+			private:   true,
+			setup:     func(base, _ *Repository) { require.NoError(t, teams.AddRepo(ctx, readers, base)) },
+			holdUser:  org,
+			first:     func(*Repository, *Repository) error { return teams.AddMember(ctx, org.ID, readers.ID, latecomer.ID) },
 			second:    func(base, _ *Repository) error { return deleteRepo(base) },
 			check: func(base, _ *Repository) {
 				var count int64

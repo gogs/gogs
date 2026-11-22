@@ -225,12 +225,34 @@ func (s *TeamsStore) AddMember(ctx context.Context, orgID, teamID, userID int64)
 	}
 
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Lock the repositories of the team before rows of the organization
+		// and the team, as other transactions do, so a repository deleted or
+		// transferred meanwhile is skipped rather than given accesses that
+		// outlive it.
+		var repoIDs []int64
+		err := tx.Model(new(TeamRepo)).Where("team_id = ?", teamID).Order("repo_id ASC").Pluck("repo_id", &repoIDs).Error
+		if err != nil {
+			return errors.Wrap(err, "list team repositories")
+		}
+		repos := make([]*Repository, 0, len(repoIDs))
+		for _, repoID := range repoIDs {
+			if ownerID, exists, err := lockRepository(tx, repoID); err != nil {
+				return err
+			} else if !exists || ownerID != orgID {
+				continue
+			}
+			repo, err := newReposStore(tx).getWithAttributes(ctx, repoID)
+			if err != nil {
+				return errors.Wrapf(err, "get repository %d", repoID)
+			}
+			repos = append(repos, repo)
+		}
+
 		if err := newOrganizationsStore(tx).addMember(ctx, orgID, userID); err != nil {
 			return errors.Wrap(err, "add organization member")
 		}
 
-		teams := newTeamsStore(tx)
-		t, err := teams.GetByID(ctx, teamID)
+		t, err := newTeamsStore(tx).GetByID(ctx, teamID)
 		if err != nil {
 			return err
 		}
@@ -244,10 +266,6 @@ func (s *TeamsStore) AddMember(ctx context.Context, orgID, teamID, userID int64)
 			return errors.Wrap(err, "count members")
 		}
 
-		repos, err := teams.ListRepos(ctx, t.ID)
-		if err != nil {
-			return errors.Wrap(err, "list repositories")
-		}
 		for _, repo := range repos {
 			if err = newPermissionsStore(tx).recalculateTeamAccesses(ctx, repo, 0); err != nil {
 				return errors.Wrapf(err, "recalculate accesses of repository %d", repo.ID)
@@ -354,10 +372,14 @@ func (s *TeamsStore) AddRepo(ctx context.Context, t *Team, repo *Repository) err
 	}
 
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if exists, err := lockRepository(tx, repo.ID); err != nil {
+		// The repository may have been deleted or transferred while waiting
+		// for it.
+		if ownerID, exists, err := lockRepository(tx, repo.ID); err != nil {
 			return err
 		} else if !exists {
 			return ErrRepoNotExist{args: errx.Args{"repoID": repo.ID}}
+		} else if ownerID != t.OrgID {
+			return errors.New("repository does not belong to organization")
 		}
 		return newTeamsStore(tx).addRepo(ctx, t, repo)
 	})
@@ -404,7 +426,7 @@ func (s *TeamsStore) RemoveRepo(ctx context.Context, t *Team, repoID int64) erro
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// The repository may have been deleted or left the team while waiting
 		// for it, which removes it from the team too.
-		if exists, err := lockRepository(tx, repoID); err != nil {
+		if _, exists, err := lockRepository(tx, repoID); err != nil {
 			return err
 		} else if !exists || !newTeamsStore(tx).HasRepo(ctx, t.OrgID, t.ID, repoID) {
 			return nil

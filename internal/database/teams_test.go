@@ -347,6 +347,12 @@ func teamsRepos(t *testing.T, ctx context.Context, s *TeamsStore) {
 
 	assert.Error(t, s.AddRepo(ctx, team, foreign))
 	assert.False(t, s.HasRepo(ctx, org.ID, team.ID, foreign.ID))
+	// The owner that counts is the one in the database, e.g., after the
+	// repository was transferred away while the caller held it.
+	moved := newTestTeamRepo(t, ctx, s.db, org, "moved", false)
+	require.NoError(t, s.db.Model(moved).UpdateColumn("owner_id", alice.ID).Error)
+	assert.Error(t, s.AddRepo(ctx, team, moved))
+	assert.False(t, s.HasRepo(ctx, org.ID, team.ID, moved.ID))
 
 	require.NoError(t, s.AddRepo(ctx, team, public))
 	require.NoError(t, s.AddRepo(ctx, team, private))

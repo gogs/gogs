@@ -2207,19 +2207,21 @@ func (s *RepositoriesStore) UpdateSize(ctx context.Context, repo *Repository) er
 }
 
 // lockRepository locks the repository of given ID until the transaction ends,
-// and reports whether it exists. Transactions that change a repository and
-// rows of its organization's teams lock the repository first, so they cannot
-// deadlock.
-func lockRepository(tx *gorm.DB, id int64) (bool, error) {
+// and returns its owner ID as of the lock, and whether it exists. Transactions
+// that change a repository and rows of its organization's teams or
+// collaborators lock the repository first, so they cannot deadlock.
+func lockRepository(tx *gorm.DB, id int64) (ownerID int64, exists bool, err error) {
 	query := tx.Model(new(Repository)).Where("id = ?", id)
 	if !conf.UseSQLite3 {
 		query = query.Clauses(clause.Locking{Strength: "UPDATE"})
 	}
-	var ids []int64
-	if err := query.Pluck("id", &ids).Error; err != nil {
-		return false, errors.Wrap(err, "lock repository")
+	var ownerIDs []int64
+	if err := query.Pluck("owner_id", &ownerIDs).Error; err != nil {
+		return 0, false, errors.Wrap(err, "lock repository")
+	} else if len(ownerIDs) == 0 {
+		return 0, false, nil
 	}
-	return len(ids) > 0, nil
+	return ownerIDs[0], true, nil
 }
 
 type MigrateRepoOptions struct {
