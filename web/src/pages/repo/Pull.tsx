@@ -202,7 +202,11 @@ function PullTabs({
 }) {
   const { t } = useTranslation();
   const params = { owner: issueRef.owner, repo: issueRef.name, index: String(issueRef.index) };
-  const commentCount = data.comments.filter((c) => c.type === "comment").length;
+  // Comments, code comments and their replies count, as on the server, but
+  // not the viewer's comments of a review not submitted yet.
+  const commentCount = [...data.comments.filter((c) => c.type === "comment"), ...data.threads]
+    .flatMap((c) => [c, ...(c.replies ?? [])])
+    .filter((c) => !c.pending).length;
   const tabs = [
     {
       key: "conversation",
