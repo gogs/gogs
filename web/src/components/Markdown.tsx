@@ -67,13 +67,20 @@ function taskMarker(lines: string[], line: number): { index: number; pattern: Re
 
 // enableTasks turns on the checkboxes of the task list items in body whose
 // marker is found in source, labeled with the text of their item, and gives
-// the items of lists that only hold such items a handle to move them.
+// the items of lists that only hold movable items a handle to move them.
 function enableTasks(body: HTMLElement, source: string, moveLabel: (task: string) => string) {
   const lines = splitLines(source);
   const editable = (li: Element) =>
     li.matches("li.task-list-item[data-source-lines]") &&
     li.querySelector(TASK_CHECKBOX) !== null &&
     taskMarker(lines, taskLines(li as HTMLElement)[0]) !== undefined;
+  // An item whose marker is on its second line, e.g., "-\n  [ ] a", cannot be
+  // moved first: its empty first line would underline the text before the
+  // list as a heading.
+  const movable = (li: Element) => {
+    const first = taskLines(li as HTMLElement)[0];
+    return editable(li) && taskMarker(lines, first)!.index === first - 1;
+  };
   for (const item of Array.from(body.querySelectorAll<HTMLElement>("li.task-list-item[data-source-lines]"))) {
     if (!editable(item)) continue;
     const checkbox = item.querySelector<HTMLInputElement>(TASK_CHECKBOX)!;
@@ -84,7 +91,7 @@ function enableTasks(body: HTMLElement, source: string, moveLabel: (task: string
     checkbox.setAttribute("aria-label", label);
 
     const siblings = Array.from(item.parentElement!.children);
-    if (siblings.length < 2 || !siblings.every(editable)) continue;
+    if (siblings.length < 2 || !siblings.every(movable)) continue;
     const handle = document.createElement("button");
     handle.type = "button";
     handle.className = "task-drag-handle";
