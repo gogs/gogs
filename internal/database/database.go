@@ -83,7 +83,7 @@ func NewConnection(logger *logx.Logger, logQueries bool) (*gorm.DB, error) {
 		conf.UsePostgreSQL = true
 	case "mysql":
 		conf.UseMySQL = true
-		db = db.Set("gorm:table_options", "ENGINE=InnoDB ROW_FORMAT=DYNAMIC").Session(&gorm.Session{})
+		db = db.Set("gorm:table_options", "ENGINE=InnoDB").Session(&gorm.Session{})
 	case "sqlite3":
 		conf.UseSQLite3 = true
 	default:
