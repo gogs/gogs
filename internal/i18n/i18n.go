@@ -12,15 +12,21 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
-	"github.com/unknwon/i18n"
 	"golang.org/x/text/language"
+	"unknwon.dev/i18n"
 
 	"gogs.io/gogs/internal/osx"
 )
 
 // Locale is the language of a request.
 type Locale struct {
-	i18n.Locale
+	// Lang is the language tag, e.g., "en-US".
+	Lang string
+
+	// messages and fallback are nil when no locale files are loaded, e.g., in
+	// tests, then Tr returns the key itself.
+	messages *i18n.Locale
+	fallback *i18n.Locale
 }
 
 // Language returns the language tag, e.g., "en-US".
@@ -30,17 +36,18 @@ func (l Locale) Language() string {
 
 // Tr returns the message of the key, with each "{name}" placeholder replaced by
 // the value that follows the name in args, e.g., l.Tr("repo.editor.add", "path",
-// "README.md").
+// "README.md"). A message missing from the language is taken from the default
+// language.
 func (l Locale) Tr(key string, args ...any) string {
-	msg := l.Locale.Tr(key)
-	if len(args) == 0 {
-		return msg
+	if l.messages == nil {
+		return key
 	}
-	oldnew := make([]string, 0, len(args))
-	for i := 0; i+1 < len(args); i += 2 {
-		oldnew = append(oldnew, "{"+fmt.Sprint(args[i])+"}", fmt.Sprint(args[i+1]))
+	// Keys are written as "section.key", which the library looks up as
+	// "section::key". Keys above any section have no dot.
+	if i := strings.IndexByte(key, '.'); i > 0 {
+		key = key[:i] + "::" + key[i+1:]
 	}
-	return strings.NewReplacer(oldnew...).Replace(msg)
+	return l.messages.TranslateNamedWithFallback(l.fallback, key, args...)
 }
 
 // Options configures the languages Localizer chooses from.
@@ -69,8 +76,8 @@ func Localizer(opts Options) (flamego.Handler, error) {
 	if len(opts.Langs) != len(opts.Names) {
 		return nil, errors.New("number of languages and names do not match")
 	}
-	i18n.SetDefaultLang(opts.DefaultLang)
-
+	store := i18n.NewStore()
+	locales := make(map[string]*i18n.Locale, len(opts.Langs))
 	tags := make([]language.Tag, len(opts.Langs))
 	for i, lang := range opts.Langs {
 		tags[i] = language.Raw.Make(lang)
@@ -84,10 +91,21 @@ func Localizer(opts Options) (flamego.Handler, error) {
 		if customPath := filepath.Join(opts.CustomDirectory, name); osx.IsFile(customPath) {
 			custom = append(custom, customPath)
 		}
-		err := i18n.SetMessageWithDesc(lang, opts.Names[i], data, custom...)
-		if err != nil && err != i18n.ErrLangAlreadyExist {
+		// The library picks plural rules by the tag, and does not know some
+		// region subtags, e.g., "SP" of "sr-SP", so those use the base language.
+		storeLang := lang
+		if _, err := language.Parse(lang); err != nil {
+			storeLang, _, _ = strings.Cut(lang, "-")
+		}
+		l, err := store.AddLocale(storeLang, opts.Names[i], data, custom...)
+		if err != nil {
 			return nil, errors.Wrapf(err, "load locale file %q", name)
 		}
+		locales[lang] = l
+	}
+	fallback, ok := locales[opts.DefaultLang]
+	if !ok {
+		return nil, errors.Newf("default language %q is not one of the languages", opts.DefaultLang)
 	}
 	matcher := language.NewMatcher(tags)
 	subURL := strings.TrimSuffix(opts.SubURL, "/")
@@ -104,10 +122,12 @@ func Localizer(opts Options) (flamego.Handler, error) {
 			}
 		}
 
-		if !i18n.IsExist(lang) {
+		messages, ok := locales[lang]
+		if !ok {
 			tags, _, _ := language.ParseAcceptLanguage(r.Header.Get("Accept-Language"))
 			tag, _, _ := matcher.Match(tags...)
 			lang = tag.String()
+			messages = locales[lang]
 			fromQuery, fromCookie = false, false
 		}
 
@@ -120,7 +140,7 @@ func Localizer(opts Options) (flamego.Handler, error) {
 			})
 		}
 
-		c.Map(Locale{Locale: i18n.Locale{Lang: lang}})
+		c.Map(Locale{Lang: lang, messages: messages, fallback: fallback})
 
 		if fromQuery {
 			c.Redirect(subURL+path.Clean(r.URL.EscapedPath()), http.StatusFound)
