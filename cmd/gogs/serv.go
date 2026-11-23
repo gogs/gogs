@@ -67,7 +67,9 @@ func setup(logger *logx.Logger, cmd *cli.Command, logFile string, connectDB bool
 
 	cfg, err := conf.Init(logger, configFromLineage(cmd), true)
 	if err != nil {
-		fail(logger, false, "Internal error", "Failed to init configuration: %v", err)
+		// The run mode is unknown until the configuration loads, so hide the
+		// details in case it is production.
+		fail(logger, true, "Internal error", "Failed to init configuration: %v", err)
 	}
 	prodMode := cfg.App.IsProdMode()
 	if _, err = conf.InitLogging(logger, cfg, true); err != nil {
@@ -81,10 +83,6 @@ func setup(logger *logx.Logger, cmd *cli.Command, logFile string, connectDB bool
 
 	if !connectDB {
 		return logger, cfg
-	}
-
-	if cfg.Database.Type == "sqlite3" {
-		_ = os.Chdir(conf.WorkDir())
 	}
 
 	if _, err := database.SetEngine(logger.Scoped("db"), cfg.Database, !prodMode); err != nil {

@@ -60,7 +60,7 @@ import (
 // done. Once logging is configured, it reports a failure through the
 // configured logger and exits.
 func Run(ctx gocontext.Context, logger *logx.Logger, appVersion, configPath string, portOverride int) (err error) {
-	cfg, gitVer, configured, err := initServices(logger, appVersion, configPath)
+	cfg, gitVer, configured, err := initServices(logger, appVersion, configPath, portOverride)
 	if configured == nil {
 		return errors.Wrap(err, "initialize application")
 	}
@@ -96,12 +96,6 @@ func Run(ctx gocontext.Context, logger *logx.Logger, appVersion, configPath stri
 	}
 	health := newHealth(cfg, traceStore)
 	go health.Run(ctx)
-
-	// The port override works around a port conflict on the first run. Apply it
-	// before anything reads the external URL.
-	if portOverride > 0 {
-		overrideHTTPPort(&cfg.Server, portOverride)
-	}
 
 	sessionOpts, err := parseSessionOptions(logger, cfg.Session, cfg.Server.Subpath, cfg.Security.LoginRememberDays)
 	if err != nil {
@@ -759,17 +753,22 @@ func injected(cfg *conf.Config, gitVersion gitVersion) []any {
 	)
 }
 
-// initServices loads the configuration from customConf and starts the services
-// that it configures. It returns the configuration, the version of Git, and the
-// logger built from the configuration, which replaces the given console logger.
-// It also returns that logger with errors that happen after logging is
-// configured.
-func initServices(logger *logx.Logger, appVersion, customConf string) (_ *conf.Config, _ gitVersion, configured *logx.Logger, _ error) {
+// initServices loads the configuration from customConf, applies the HTTP port
+// override when it is positive, and starts the services that it configures. It
+// returns the configuration, the version of Git, and the logger built from the
+// configuration, which replaces the given console logger. It also returns that
+// logger with errors that happen after logging is configured.
+func initServices(logger *logx.Logger, appVersion, customConf string, portOverride int) (_ *conf.Config, _ gitVersion, configured *logx.Logger, _ error) {
 	cfg, err := conf.Init(logger, customConf, false)
 	if err != nil {
 		return nil, "", nil, errors.Wrap(err, "init configuration")
 	}
 	cfg.App.Version = appVersion
+	// The port override works around a port conflict on the first run. Apply it
+	// before anything reads the external URL.
+	if portOverride > 0 {
+		overrideHTTPPort(&cfg.Server, portOverride)
+	}
 
 	logger, err = conf.InitLogging(logger, cfg, false)
 	if err != nil {

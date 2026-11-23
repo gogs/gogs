@@ -491,7 +491,7 @@ func getAdminConfig(
 		r.codeUnit("admin::config.session.max_life_time", sess.MaxLifeTime, l.Tr("tool::raw_seconds")),
 	)))
 
-	// The cache host is left out because it can hold credentials, emailOpts.g., a
+	// The cache host is left out because it can hold credentials, e.g., a
 	// Redis password.
 	sections = append(sections, r.section("cache", "admin::config.cache_config", rows(
 		r.code("admin::config.cache.adapter", cacheOpts.Adapter),
