@@ -327,7 +327,7 @@ func TestActivateAccount(t *testing.T) {
 
 	// A link that confirms the address of the account does not activate it.
 	stored := userGet(t, u.ID)
-	confirmEmailCode := userx.GenerateConfirmEmailCode(stored.ID, stored.Email, stored.LowerName, stored.Password, stored.Rands)
+	confirmEmailCode := userx.GenerateConfirmEmailCode(cfg.Security.SecretKey, cfg.Auth.ActivateCodeLives, stored.ID, stored.Email, stored.LowerName, stored.Password, stored.Rands)
 	status, body := newClient(t).do(http.MethodPost, "/api/web/user/activate/complete", map[string]any{"code": confirmEmailCode})
 	require.Equal(t, http.StatusBadRequest, status, "response: %s", body)
 

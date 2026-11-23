@@ -31,9 +31,9 @@ type Collaborator struct {
 	Collaboration *Collaboration
 }
 
-func (c *Collaborator) APIFormat() *v1types.RepositoryCollaborator {
+func (c *Collaborator) APIFormat(links LinkOptions) *v1types.RepositoryCollaborator {
 	return &v1types.RepositoryCollaborator{
-		User: c.User.APIFormat(),
+		User: c.User.APIFormat(links),
 		Permissions: v1types.RepositoryPermission{
 			Admin: c.Collaboration.Mode >= AccessModeAdmin,
 			Push:  c.Collaboration.Mode >= AccessModeWrite,

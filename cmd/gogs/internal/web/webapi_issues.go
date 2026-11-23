@@ -49,26 +49,26 @@ type repoIssues struct {
 	NewPullRequestURL string `json:"newPullRequestURL,omitempty"`
 }
 
-func getRepoIssues(c flamego.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext) (statusCode int, resp *repoIssues, err error) {
+func getRepoIssues(c flamego.Context, links database.LinkOptions, ui conf.UIOpts, logger *logx.Logger, viewer *database.User, repoCtx *repoContext) (statusCode int, resp *repoIssues, err error) {
 	repo := repoCtx.Repo
 	// Guests can list the issues of a repository when its issues are public.
 	if !repo.EnableIssues || repo.EnableExternalTracker || (!repoCtx.Viewer.CanRead() && !repo.CanGuestViewIssues()) {
 		return http.StatusNotFound, nil, errors.New("repository does not exist")
 	}
-	return listRepoIssues(c, logger, viewer, repoCtx, false)
+	return listRepoIssues(c, links, ui, logger, viewer, repoCtx, false)
 }
 
-func getRepoPulls(c flamego.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext) (statusCode int, resp *repoIssues, err error) {
+func getRepoPulls(c flamego.Context, links database.LinkOptions, ui conf.UIOpts, logger *logx.Logger, viewer *database.User, repoCtx *repoContext) (statusCode int, resp *repoIssues, err error) {
 	if !repoCtx.Viewer.CanRead() || !repoCtx.Repo.AllowsPulls() {
 		return http.StatusNotFound, nil, errors.New("repository does not exist")
 	}
-	return listRepoIssues(c, logger, viewer, repoCtx, true)
+	return listRepoIssues(c, links, ui, logger, viewer, repoCtx, true)
 }
 
 // listRepoIssues lists the issues or pull requests of the repository, filtered
 // and sorted by the `type`, `labels`, `milestone`, `assignee`, `state`, `sort`
 // and `page` query parameters.
-func listRepoIssues(c flamego.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, isPull bool) (statusCode int, resp *repoIssues, err error) {
+func listRepoIssues(c flamego.Context, links database.LinkOptions, ui conf.UIOpts, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, isPull bool) (statusCode int, resp *repoIssues, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
 	filterMode := database.FilterModeYourRepos
@@ -115,7 +115,7 @@ func listRepoIssues(c flamego.Context, logger *logx.Logger, viewer *database.Use
 		total = stats.ClosedCount
 	}
 	// A page past the end lists the last page.
-	pageSize := int64(max(conf.UI.IssuePagingNum, 1))
+	pageSize := int64(max(ui.IssuePagingNum, 1))
 	page = min(page, max(int((total+pageSize-1)/pageSize), 1))
 
 	issues, err := database.Handle.Issues().List(c.Request().Context(), &database.IssuesOptions{
@@ -125,6 +125,7 @@ func listRepoIssues(c flamego.Context, logger *logx.Logger, viewer *database.Use
 		PosterID:    posterID,
 		MilestoneID: milestoneID,
 		Page:        page,
+		PageSize:    int(pageSize),
 		IsClosed:    isClosed,
 		IsMention:   filterMode == database.FilterModeMention,
 		IsPull:      isPull,
@@ -155,7 +156,7 @@ func listRepoIssues(c flamego.Context, logger *logx.Logger, viewer *database.Use
 				IsClosed:     issue.IsClosed,
 				CommentCount: issue.NumComments,
 				Labels:       make([]dashboardIssueLabel, 0, len(issue.Labels)),
-				Poster:       dashboardIssueUser{Name: issue.Poster.Name, AvatarURL: issue.Poster.AvatarURLPath()},
+				Poster:       dashboardIssueUser{Name: issue.Poster.Name, AvatarURL: issue.Poster.AvatarURLPath(links)},
 				CreatedAt:    issue.Created.UTC(),
 			},
 		}
@@ -163,7 +164,7 @@ func listRepoIssues(c flamego.Context, logger *logx.Logger, viewer *database.Use
 			item.Labels = append(item.Labels, toIssueLabel(label))
 		}
 		if issue.Assignee != nil {
-			item.Assignee = &dashboardIssueUser{Name: issue.Assignee.Name, AvatarURL: issue.Assignee.AvatarURLPath()}
+			item.Assignee = &dashboardIssueUser{Name: issue.Assignee.Name, AvatarURL: issue.Assignee.AvatarURLPath(links)}
 		}
 		if issue.Milestone != nil {
 			item.Milestone = &repoIssueMilestone{ID: issue.Milestone.ID, Name: issue.Milestone.Name}
@@ -175,7 +176,7 @@ func listRepoIssues(c flamego.Context, logger *logx.Logger, viewer *database.Use
 	}
 
 	resp = &repoIssues{
-		listPage:    newListPage(items, page, total, conf.UI.IssuePagingNum),
+		listPage:    newListPage(items, page, total, ui.IssuePagingNum),
 		OpenCount:   stats.OpenCount,
 		ClosedCount: stats.ClosedCount,
 	}
@@ -210,11 +211,11 @@ func listRepoIssues(c flamego.Context, logger *logx.Logger, viewer *database.Use
 	}
 	resp.Assignees = make([]repoIssueAssignee, 0, len(assignees))
 	for _, u := range assignees {
-		resp.Assignees = append(resp.Assignees, repoIssueAssignee{ID: u.ID, Name: u.Name, AvatarURL: u.AvatarURLPath()})
+		resp.Assignees = append(resp.Assignees, repoIssueAssignee{ID: u.ID, Name: u.Name, AvatarURL: u.AvatarURLPath(links)})
 	}
 
 	if isPull && viewer != nil {
-		resp.NewPullRequestURL, err = newPullRequestURL(c, viewer, repoCtx)
+		resp.NewPullRequestURL, err = newPullRequestURL(c, links.Subpath, viewer, repoCtx)
 		if err != nil {
 			logger.Error("Failed to get new pull request URL", "repoID", repo.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "find where to propose a pull request")
@@ -232,7 +233,7 @@ func toIssueLabel(label *database.Label) dashboardIssueLabel {
 // propose one. Writers propose between branches of a repository that takes
 // pull requests, or otherwise to the base repository of a fork, and those who
 // forked the repository propose from their fork.
-func newPullRequestURL(c flamego.Context, viewer *database.User, repoCtx *repoContext) (string, error) {
+func newPullRequestURL(c flamego.Context, subpath string, viewer *database.User, repoCtx *repoContext) (string, error) {
 	repo := repoCtx.Repo
 	isWriter := repoCtx.Viewer.CanWrite()
 	forked := database.Handle.Repositories().HasForkedBy(c.Request().Context(), repo.ID, viewer.ID)
@@ -271,7 +272,7 @@ func newPullRequestURL(c flamego.Context, viewer *database.User, repoCtx *repoCo
 	if !allowed {
 		return "", nil
 	}
-	return base.Link() + "/compare/" + repo.DefaultBranch + "..." + head, nil
+	return base.Link(subpath) + "/compare/" + repo.DefaultBranch + "..." + head, nil
 }
 
 type repoFork struct {
@@ -283,7 +284,7 @@ type repoFork struct {
 }
 
 // getRepoForks lists the forks of the repository that the viewer can see.
-func getRepoForks(c flamego.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext) (statusCode int, resp map[string][]repoFork, err error) {
+func getRepoForks(c flamego.Context, links database.LinkOptions, logger *logx.Logger, viewer *database.User, repoCtx *repoContext) (statusCode int, resp map[string][]repoFork, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
 	// An empty repository has no forks page.
@@ -311,7 +312,7 @@ func getRepoForks(c flamego.Context, logger *logx.Logger, viewer *database.User,
 		}
 		items = append(items, repoFork{
 			Owner:               fork.Owner.Name,
-			OwnerAvatarURL:      fork.Owner.AvatarURLPath(),
+			OwnerAvatarURL:      fork.Owner.AvatarURLPath(links),
 			OwnerIsOrganization: fork.Owner.IsOrganization(),
 			Name:                fork.Name,
 			IsPrivate:           fork.IsPrivate,

@@ -18,6 +18,9 @@ type DiffOptions struct {
 	// The commit ID to use for computing diff between a range of commits (base,
 	// revision]. When not set, only computes diff for a single commit at revision.
 	Base string
+	// ANSICharset is the encoding of files that are not UTF-8, see
+	// encodingx.Detect.
+	ANSICharset string
 }
 
 // Diff returns a parsed diff object between given commits of the repository.
@@ -50,13 +53,13 @@ func (r *Repository) Diff(ctx context.Context, logger *logx.Logger, rev string, 
 	} else {
 		args = []string{"diff", "--full-index", "-M", opt.Base, "--end-of-options", rev}
 	}
-	return r.parseDiff(ctx, logger, args, nil, maxFiles, maxFileLines, maxLineChars)
+	return r.parseDiff(ctx, logger, args, nil, maxFiles, maxFileLines, maxLineChars, opt.ANSICharset)
 }
 
-func (r *Repository) parseDiff(ctx context.Context, logger *logx.Logger, args, envs []string, maxFiles, maxFileLines, maxLineChars int) (*Diff, error) {
+func (r *Repository) parseDiff(ctx context.Context, logger *logx.Logger, args, envs []string, maxFiles, maxFileLines, maxLineChars int, ansiCharset string) (*Diff, error) {
 	stdout, w := io.Pipe()
 	done := make(chan streamParseDiffResult)
-	go streamParseDiff(logger, stdout, done, maxFiles, maxFileLines, maxLineChars)
+	go streamParseDiff(logger, stdout, done, maxFiles, maxFileLines, maxLineChars, ansiCharset)
 
 	err := pipe(ctx, r.path, args, envs, w)
 	_ = w.Close() // Close writer to exit parsing goroutine.

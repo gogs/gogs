@@ -8,23 +8,18 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
-
-	"gogs.io/gogs/internal/conf"
 )
 
 func TestTeams(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	// NOTE: The suite does not run in parallel because it mocks global
-	// configuration that other suites read without locks.
+	t.Parallel()
 
 	ctx := context.Background()
 	s := &TeamsStore{
 		db: newTestDB(t, "TeamsStore"),
 	}
-	conf.SetMockRepository(t, conf.RepositoryOpts{Root: t.TempDir()})
-	conf.SetMockPicture(t, conf.PictureOpts{AvatarUploadPath: t.TempDir()})
 
 	for _, tc := range []struct {
 		name string
@@ -58,7 +53,7 @@ func newTestOrg(t *testing.T, ctx context.Context, db *gorm.DB, name string) (or
 
 	owner = newTestIssueUser(t, ctx, db, name+"-owner")
 	org = &User{Name: name, Email: name + "@example.com"}
-	require.NoError(t, newOrganizationsStore(db).Create(ctx, org, owner))
+	require.NoError(t, newOrganizationsStore(db).Create(ctx, t.TempDir(), org, owner))
 	return org, owner
 }
 

@@ -143,14 +143,14 @@ func (s *ProtectBranchesStore) getRepository(ctx context.Context, repoID int64) 
 // updates them otherwise. The pre-receive hook that enforces the protection is
 // installed before they are saved, so that a failure leaves the branch
 // unprotected rather than protected but not enforced, and the delegate hooks
-// of the repository are synced after.
-func (s *ProtectBranchesStore) Save(ctx context.Context, protectBranch *ProtectBranch) error {
+// of the repository are synced after, all written with the hooks options.
+func (s *ProtectBranchesStore) Save(ctx context.Context, hooks DelegateHooksOptions, protectBranch *ProtectBranch) error {
 	repo, err := s.getRepository(ctx, protectBranch.RepoID)
 	if err != nil {
 		return err
 	}
 	if protectBranch.Protected {
-		err = writeDelegateHook(repo.RepoPath(), git.HookPreReceive)
+		err = writeDelegateHook(hooks, repo.RepoPath(hooks.RepositoryRoot), git.HookPreReceive)
 		if err != nil {
 			return err
 		}
@@ -168,13 +168,13 @@ func (s *ProtectBranchesStore) Save(ctx context.Context, protectBranch *ProtectB
 	if err != nil {
 		return err
 	}
-	return syncRepoDelegateHooks(s.db.WithContext(ctx), repo)
+	return syncRepoDelegateHooks(s.db.WithContext(ctx), hooks, repo)
 }
 
 // SaveForOrg saves the protection options of the branch of an organization's
 // repository like Save, with given allowlist. Users and teams of the allowlist
 // who cannot write to the repository are dropped.
-func (s *ProtectBranchesStore) SaveForOrg(ctx context.Context, logger *logx.Logger, protectBranch *ProtectBranch, allowlistUserIDs, allowlistTeamIDs []int64) error {
+func (s *ProtectBranchesStore) SaveForOrg(ctx context.Context, logger *logx.Logger, hooks DelegateHooksOptions, protectBranch *ProtectBranch, allowlistUserIDs, allowlistTeamIDs []int64) error {
 	repo, err := s.getRepository(ctx, protectBranch.RepoID)
 	if err != nil {
 		return err
@@ -214,5 +214,5 @@ func (s *ProtectBranchesStore) SaveForOrg(ctx context.Context, logger *logx.Logg
 	}
 	protectBranch.AllowlistTeamIDs = strings.Join(validTeamIDs, ",")
 
-	return s.Save(ctx, protectBranch)
+	return s.Save(ctx, hooks, protectBranch)
 }

@@ -9,7 +9,7 @@ import (
 )
 
 func TestSanitizer(t *testing.T) {
-	NewSanitizer()
+	NewSanitizer(nil)
 	tests := []struct {
 		input  string
 		expVal string
@@ -78,7 +78,7 @@ func TestSanitizer(t *testing.T) {
 }
 
 func TestSanitizer_XSS(t *testing.T) {
-	NewSanitizer()
+	NewSanitizer(nil)
 	tests := []struct {
 		input  string
 		expVal string
@@ -138,7 +138,7 @@ func TestSanitizer_XSS(t *testing.T) {
 }
 
 func TestSanitizer_AllowedAttributes(t *testing.T) {
-	NewSanitizer()
+	NewSanitizer(nil)
 	tests := []struct {
 		input  string
 		expVal string

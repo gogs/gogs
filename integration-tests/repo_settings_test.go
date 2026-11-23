@@ -20,7 +20,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ssh"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 )
 
@@ -53,7 +52,7 @@ func repoSettingsGit(t *testing.T, dir string, args ...string) string {
 // repository on disk.
 func repoSettingsDefaultBranch(t *testing.T, repo *Repository) string {
 	t.Helper()
-	return repoSettingsGit(t, database.RepoPath(repo.Owner, repo.Name), "symbolic-ref", "--short", "HEAD")
+	return repoSettingsGit(t, database.RepoPath(cfg.Repository.Root, repo.Owner, repo.Name), "symbolic-ref", "--short", "HEAD")
 }
 
 // repoSettingsAddCommit commits on top of the branch of the repository on disk,
@@ -61,7 +60,7 @@ func repoSettingsDefaultBranch(t *testing.T, repo *Repository) string {
 func repoSettingsAddCommit(t *testing.T, repo *Repository, branch, message string) string {
 	t.Helper()
 
-	dir := database.RepoPath(repo.Owner, repo.Name)
+	dir := database.RepoPath(cfg.Repository.Root, repo.Owner, repo.Name)
 	parent := repoSettingsGit(t, dir, "rev-parse", "refs/heads/"+branch)
 	commit := repoSettingsGit(t, dir, "commit-tree", parent+"^{tree}", "-p", parent, "-m", message)
 	repoSettingsGit(t, dir, "update-ref", "refs/heads/"+branch, commit, parent)
@@ -153,8 +152,8 @@ func TestRepoSettingsGeneral(t *testing.T) {
 	assert.Equal(t, "A renamed repository", got.Description)
 	assert.Equal(t, "https://example.com", got.Website)
 	assert.True(t, got.IsPrivate)
-	assert.DirExists(t, database.RepoPath(owner.Name, newName))
-	assert.NoDirExists(t, database.RepoPath(owner.Name, repo.Name))
+	assert.DirExists(t, database.RepoPath(cfg.Repository.Root, owner.Name, newName))
+	assert.NoDirExists(t, database.RepoPath(cfg.Repository.Root, owner.Name, repo.Name))
 
 	renamedRepo := &Repository{ID: repo.ID, Owner: owner.Name, Name: newName}
 	ownerClient.doJSON(http.MethodGet, repoSettingsAPIPath(renamedRepo, "/settings"), nil, http.StatusOK, &settings)
@@ -256,7 +255,7 @@ func TestRepoSettingsAvatar(t *testing.T) {
 	got, err := getRepository(t, repo.ID)
 	require.NoError(t, err)
 	assert.True(t, got.UseCustomAvatar)
-	avatarPath := filepath.Join(conf.Picture.RepositoryAvatarUploadPath, strconv.FormatInt(repo.ID, 10))
+	avatarPath := filepath.Join(cfg.Picture.RepositoryAvatarUploadPath, strconv.FormatInt(repo.ID, 10))
 	assert.FileExists(t, avatarPath)
 
 	type avatarSettings struct {
@@ -297,9 +296,9 @@ func TestRepoAvatarAccess(t *testing.T) {
 	require.NoError(t, database.Handle.Users().Update(t.Context(), disabled.ID, database.UpdateUserOptions{ProhibitLogin: &prohibitLogin}))
 
 	avatar := []byte("avatar")
-	require.NoError(t, os.MkdirAll(conf.Picture.RepositoryAvatarUploadPath, 0o755))
+	require.NoError(t, os.MkdirAll(cfg.Picture.RepositoryAvatarUploadPath, 0o755))
 	for _, repo := range []*Repository{private, public} {
-		require.NoError(t, os.WriteFile(filepath.Join(conf.Picture.RepositoryAvatarUploadPath, strconv.FormatInt(repo.ID, 10)), avatar, 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(cfg.Picture.RepositoryAvatarUploadPath, strconv.FormatInt(repo.ID, 10)), avatar, 0o644))
 	}
 	avatarPath := func(repo *Repository) string {
 		return "/-/repo-avatars/" + strconv.FormatInt(repo.ID, 10)
@@ -365,7 +364,7 @@ func TestRepoSettingsDelete(t *testing.T) {
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 	_, err = getRepository(t, repo.ID)
 	assert.True(t, database.IsErrRepoNotExist(err), "repository not deleted: %v", err)
-	assert.NoDirExists(t, database.RepoPath(repo.Owner, repo.Name))
+	assert.NoDirExists(t, database.RepoPath(cfg.Repository.Root, repo.Owner, repo.Name))
 }
 
 // Deleting a fork gives back the fork count of its base and the repository
@@ -459,7 +458,7 @@ func TestRepoSettingsDeleteAttachments(t *testing.T) {
 		a, err := database.Handle.Attachments().GetByUUID(t.Context(), uuid)
 		require.NoError(t, err, kind)
 		require.True(t, a.IssueID > 0 || a.ReleaseID > 0, "%s attachment not attached", kind)
-		require.FileExists(t, database.AttachmentLocalPath(uuid), kind)
+		require.FileExists(t, database.AttachmentLocalPath(cfg.Attachment.Path, uuid), kind)
 	}
 
 	status, body = c.do(http.MethodDelete, repoSettingsAPIPath(repo, ""), map[string]any{"repoName": repo.Name})
@@ -467,7 +466,7 @@ func TestRepoSettingsDeleteAttachments(t *testing.T) {
 	for kind, uuid := range uuids {
 		_, err := database.Handle.Attachments().GetByUUID(t.Context(), uuid)
 		assert.True(t, database.IsErrAttachmentNotExist(err), "%s attachment left behind: %v", kind, err)
-		assert.NoFileExists(t, database.AttachmentLocalPath(uuid), kind)
+		assert.NoFileExists(t, database.AttachmentLocalPath(cfg.Attachment.Path, uuid), kind)
 	}
 }
 
@@ -529,8 +528,8 @@ func TestRepoSettingsTransfer(t *testing.T) {
 	got, err := getRepository(t, repo.ID)
 	require.NoError(t, err)
 	assert.Equal(t, newOwner.ID, got.OwnerID)
-	assert.DirExists(t, database.RepoPath(newOwner.Name, repo.Name))
-	assert.NoDirExists(t, database.RepoPath(owner.Name, repo.Name))
+	assert.DirExists(t, database.RepoPath(cfg.Repository.Root, newOwner.Name, repo.Name))
+	assert.NoDirExists(t, database.RepoPath(cfg.Repository.Root, owner.Name, repo.Name))
 	// The new owner stops being a collaborator, and the others stay.
 	collaborators, err := database.Handle.Collaborations().List(t.Context(), got.ID)
 	require.NoError(t, err)
@@ -550,17 +549,17 @@ func TestRepoSettingsDeleteWiki(t *testing.T) {
 	repoSettingsAddCollaborator(t, repo, admin, database.AccessModeAdmin)
 	r, err := getRepository(t, repo.ID)
 	require.NoError(t, err)
-	require.NoError(t, r.InitWiki(t.Context()))
+	require.NoError(t, r.InitWiki(t.Context(), cfg.Repository.Root))
 	require.True(t, r.EnableWiki)
 	path := repoSettingsAPIPath(repo, "/settings/wiki")
 
 	status, body := authenticatedClient(t, admin).do(http.MethodDelete, path, map[string]any{"repoName": repo.Name})
 	require.Equal(t, http.StatusNotFound, status, "response: %s", body)
-	assert.True(t, r.HasWiki())
+	assert.True(t, r.HasWiki(cfg.Repository.Root))
 
 	status, body = authenticatedClient(t, owner).do(http.MethodDelete, path, map[string]any{"repoName": repo.Name})
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-	assert.False(t, r.HasWiki())
+	assert.False(t, r.HasWiki(cfg.Repository.Root))
 	got, err := getRepository(t, repo.ID)
 	require.NoError(t, err)
 	assert.False(t, got.EnableWiki)
@@ -640,7 +639,7 @@ func repoSettingsPublicKey(t *testing.T) string {
 func repoSettingsSeedDeployKey(t *testing.T, repo *Repository, name string) *database.DeployKey {
 	t.Helper()
 
-	key, err := database.Handle.DeployKeys().Add(t.Context(), logger, repo.ID, name, repoSettingsPublicKey(t))
+	key, err := database.Handle.DeployKeys().Add(t.Context(), logger, authorizedKeysOptions(cfg), repo.ID, name, repoSettingsPublicKey(t))
 	require.NoError(t, err)
 	return key
 }
@@ -716,7 +715,7 @@ func TestRepoSettingsBranches(t *testing.T) {
 	repoSettingsAddCollaborator(t, repo, writer, database.AccessModeWrite)
 	defaultBranch := repoSettingsDefaultBranch(t, repo)
 	const branch = "release/v1"
-	repoPath := database.RepoPath(repo.Owner, repo.Name)
+	repoPath := database.RepoPath(cfg.Repository.Root, repo.Owner, repo.Name)
 	repoSettingsGit(t, repoPath, "branch", branch, defaultBranch)
 	c := authenticatedClient(t, owner)
 
@@ -823,7 +822,7 @@ func TestRepoSettingsGitHooks(t *testing.T) {
 	const content = "#!/bin/sh\nexit 0"
 	status, body = c.do(http.MethodPut, path+"/pre-receive", map[string]any{"content": content})
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
-	hookPath := filepath.Join(database.RepoPath(repo.Owner, repo.Name), "custom_hooks", "pre-receive")
+	hookPath := filepath.Join(database.RepoPath(cfg.Repository.Root, repo.Owner, repo.Name), "custom_hooks", "pre-receive")
 	onDisk, err := os.ReadFile(hookPath)
 	require.NoError(t, err)
 	assert.Equal(t, content, string(onDisk))
@@ -847,7 +846,7 @@ func TestRepoSettingsGitHooksRunOnPush(t *testing.T) {
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	c := authenticatedClient(t, owner)
 	path := repoSettingsAPIPath(repo, "/settings/githooks")
-	hooksDir := filepath.Join(database.RepoPath(repo.Owner, repo.Name), "hooks")
+	hooksDir := filepath.Join(database.RepoPath(cfg.Repository.Root, repo.Owner, repo.Name), "hooks")
 
 	// The update hook rejects tags, and the post-receive hook keeps what Git
 	// passes it.
@@ -870,7 +869,7 @@ func TestRepoSettingsGitHooksRunOnPush(t *testing.T) {
 	assert.Contains(t, string(out), "tags are not allowed")
 
 	// Only the branch that the update hook accepted is pushed and recorded.
-	repoPath := database.RepoPath(repo.Owner, repo.Name)
+	repoPath := database.RepoPath(cfg.Repository.Root, repo.Owner, repo.Name)
 	assert.Equal(t, want, gitRun(t, t.TempDir(), "--git-dir", repoPath, "rev-parse", "refs/heads/feature"))
 	_, err = gitCommand(t.TempDir(), "--git-dir", repoPath, "rev-parse", "--verify", "refs/tags/v1").CombinedOutput()
 	assert.Error(t, err, "rejected tag was pushed")

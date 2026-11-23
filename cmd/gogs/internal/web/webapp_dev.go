@@ -17,11 +17,12 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/markup"
 )
 
 // mountWebAppRoutes mounts the catch-all route of the web app, which the Vite
 // dev server serves, and returns the handler that renders its pages.
-func mountWebAppRoutes(logger *logx.Logger, f *flamego.Flame) (http.Handler, error) {
+func mountWebAppRoutes(logger *logx.Logger, f *flamego.Flame, markupOpts markup.Options, indexOpts indexOptions) (http.Handler, error) {
 	viteURL, err := url.Parse("http://localhost:5173")
 	if err != nil {
 		return nil, errors.Wrap(err, "parse Vite URL")
@@ -37,11 +38,11 @@ func mountWebAppRoutes(logger *logx.Logger, f *flamego.Flame) (http.Handler, err
 		}
 		_ = resp.Body.Close()
 		wc := context.WebContextFrom(resp.Request)
-		wc.Notice = readNoticeBanner(logger, conf.CustomDir())
+		wc.Notice = readNoticeBanner(logger, markupOpts, conf.CustomDir())
 		var body []byte
 		inject, err := readInjectContent(conf.CustomDir())
 		if err == nil {
-			body, err = renderIndex(raw, wc, inject)
+			body, err = renderIndex(raw, wc, inject, indexOpts)
 		}
 		if err != nil {
 			logger.Error("Failed to render index", "error", err)

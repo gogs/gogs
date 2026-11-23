@@ -154,20 +154,20 @@ func (d *ldapDirectory) setPassword(t *testing.T, u *ldapUser, password string) 
 // DN or simple auth, that talks to the directory and maps the attributes of
 // the entries addUser adds. The config sets what differs between tests, e.g.,
 // filters.
-func (d *ldapDirectory) newSource(typ auth.Type, cfg ldap.Config) *database.LoginSource {
+func (d *ldapDirectory) newSource(typ auth.Type, ldapConfig ldap.Config) *database.LoginSource {
 	d.t.Helper()
 
-	cfg.Host = d.host
-	cfg.Port = d.port
-	cfg.AttributeUsername = "uid"
-	cfg.AttributeName = "givenName"
-	cfg.AttributeSurname = "sn"
-	cfg.AttributeMail = "mail"
+	ldapConfig.Host = d.host
+	ldapConfig.Port = d.port
+	ldapConfig.AttributeUsername = "uid"
+	ldapConfig.AttributeName = "givenName"
+	ldapConfig.AttributeSurname = "sn"
+	ldapConfig.AttributeMail = "mail"
 	source, err := database.Handle.LoginSources().Create(d.t.Context(), database.CreateLoginSourceOptions{
 		Type:      typ,
 		Name:      UniqueName("ldap-"),
 		Activated: true,
-		Config:    &cfg,
+		Config:    &ldapConfig,
 	})
 	require.NoError(d.t, err)
 	// A source cannot be deleted while accounts are bound to it, e.g., the ones
@@ -181,7 +181,12 @@ func (d *ldapDirectory) newSource(typ auth.Type, cfg ldap.Config) *database.Logi
 			return
 		}
 		for _, id := range userIDs {
-			if err = database.Handle.Users().DeleteByID(ctx, id, true); err != nil {
+			if err = database.Handle.Users().DeleteByID(ctx, database.DeleteUserOptions{
+				RepositoryRoot:   cfg.Repository.Root,
+				AvatarUploadPath: cfg.Picture.AvatarUploadPath,
+				AppDataPath:      cfg.Server.AppDataPath,
+				AuthorizedKeys:   authorizedKeysOptions(cfg),
+			}, id, true); err != nil {
 				d.t.Logf("Failed to delete account %d: %v", id, err)
 			}
 		}

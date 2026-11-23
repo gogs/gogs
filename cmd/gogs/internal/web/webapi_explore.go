@@ -53,7 +53,7 @@ type exploreRepo struct {
 	UpdatedAt       time.Time `json:"updatedAt"`
 }
 
-func getExploreRepos(logger *logx.Logger, c flamego.Context, viewer *database.User) (statusCode int, resp *listPage[exploreRepo], err error) {
+func getExploreRepos(logger *logx.Logger, c flamego.Context, picture conf.PictureOpts, server conf.ServerOpts, ui conf.UIOpts, viewer *database.User) (statusCode int, resp *listPage[exploreRepo], err error) {
 	ctx := c.Request().Context()
 	page := pageParam(c)
 	repos, total, err := database.Handle.Repositories().Search(ctx, database.SearchRepoOptions{
@@ -61,7 +61,7 @@ func getExploreRepos(logger *logx.Logger, c flamego.Context, viewer *database.Us
 		UserID:   cmp.Or(viewer, &database.User{}).ID,
 		OrderBy:  "updated_unix DESC",
 		Page:     page,
-		PageSize: conf.UI.ExplorePagingNum,
+		PageSize: ui.ExplorePagingNum,
 	})
 	if err != nil {
 		logger.Error("Failed to search repositories", "error", err)
@@ -72,18 +72,19 @@ func getExploreRepos(logger *logx.Logger, c flamego.Context, viewer *database.Us
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "load repository attributes")
 	}
 
-	return http.StatusOK, newListPage(toExploreRepos(repos), page, total, conf.UI.ExplorePagingNum), nil
+	return http.StatusOK, newListPage(toExploreRepos(server.Subpath, picture.RepositoryAvatarUploadPath, repos), page, total, ui.ExplorePagingNum), nil
 }
 
-// toExploreRepos converts repositories with their owners loaded.
-func toExploreRepos(repos []*database.Repository) []exploreRepo {
+// toExploreRepos converts repositories with their owners loaded, for a site
+// under subpath whose repository avatars are uploaded to avatarUploadPath.
+func toExploreRepos(subpath, avatarUploadPath string, repos []*database.Repository) []exploreRepo {
 	items := make([]exploreRepo, 0, len(repos))
 	for _, repo := range repos {
 		items = append(items, exploreRepo{
 			Owner:           repo.Owner.Name,
 			Name:            repo.Name,
 			DescriptionHTML: markup.Sanitize(repo.Description),
-			AvatarURL:       repo.RelAvatarLink(),
+			AvatarURL:       repo.RelAvatarLink(subpath, avatarUploadPath),
 			IsPrivate:       repo.IsPrivate,
 			IsUnlisted:      repo.IsUnlisted,
 			IsFork:          repo.IsFork,
@@ -107,13 +108,13 @@ type exploreUser struct {
 	CreatedAt   *time.Time `json:"createdAt,omitempty"`
 }
 
-func toExploreUser(u *database.User) exploreUser {
+func toExploreUser(links database.LinkOptions, u *database.User) exploreUser {
 	user := exploreUser{
 		Name: u.Name,
 		// Users are loaded with an HTML-sanitized full name. Turn it back into
 		// plain text.
 		FullName:  html.UnescapeString(markup.Sanitize(u.FullName)),
-		AvatarURL: u.AvatarURLPath(),
+		AvatarURL: u.AvatarURLPath(links),
 		Location:  u.Location,
 	}
 	// Organizations created before their creation time was recorded have none.
@@ -127,8 +128,7 @@ func toExploreUser(u *database.User) exploreUser {
 // searchExploreUsers lists users of the given type, or searches them by name
 // when the keyword is not empty. It returns the users of the page along with
 // the total number of matches.
-func searchExploreUsers(ctx context.Context, typ database.UserType, keyword string, page int) ([]*database.User, int64, error) {
-	pageSize := conf.UI.ExplorePagingNum
+func searchExploreUsers(ctx context.Context, typ database.UserType, keyword string, page, pageSize int) ([]*database.User, int64, error) {
 	if keyword != "" {
 		if typ == database.UserTypeOrganization {
 			return database.Handle.Organizations().SearchByName(ctx, keyword, page, pageSize, "updated_unix DESC")
@@ -144,9 +144,9 @@ func searchExploreUsers(ctx context.Context, typ database.UserType, keyword stri
 	return users, database.Handle.Users().Count(ctx), err
 }
 
-func getExploreUsers(logger *logx.Logger, c flamego.Context, viewer *database.User) (statusCode int, resp *listPage[exploreUser], err error) {
+func getExploreUsers(logger *logx.Logger, c flamego.Context, links database.LinkOptions, ui conf.UIOpts, viewer *database.User) (statusCode int, resp *listPage[exploreUser], err error) {
 	page := pageParam(c)
-	users, total, err := searchExploreUsers(c.Request().Context(), database.UserTypeIndividual, c.Query("q"), page)
+	users, total, err := searchExploreUsers(c.Request().Context(), database.UserTypeIndividual, c.Query("q"), page, ui.ExplorePagingNum)
 	if err != nil {
 		logger.Error("Failed to search users", "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "search users")
@@ -154,19 +154,19 @@ func getExploreUsers(logger *logx.Logger, c flamego.Context, viewer *database.Us
 
 	items := make([]exploreUser, 0, len(users))
 	for _, u := range users {
-		item := toExploreUser(u)
+		item := toExploreUser(links, u)
 		// Email addresses are only shown to authenticated viewers.
 		if viewer != nil {
 			item.Email = u.Email
 		}
 		items = append(items, item)
 	}
-	return http.StatusOK, newListPage(items, page, total, conf.UI.ExplorePagingNum), nil
+	return http.StatusOK, newListPage(items, page, total, ui.ExplorePagingNum), nil
 }
 
-func getExploreOrganizations(logger *logx.Logger, c flamego.Context) (statusCode int, resp *listPage[exploreUser], err error) {
+func getExploreOrganizations(logger *logx.Logger, c flamego.Context, links database.LinkOptions, ui conf.UIOpts) (statusCode int, resp *listPage[exploreUser], err error) {
 	page := pageParam(c)
-	orgs, total, err := searchExploreUsers(c.Request().Context(), database.UserTypeOrganization, c.Query("q"), page)
+	orgs, total, err := searchExploreUsers(c.Request().Context(), database.UserTypeOrganization, c.Query("q"), page, ui.ExplorePagingNum)
 	if err != nil {
 		logger.Error("Failed to search organizations", "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "search organizations")
@@ -174,10 +174,10 @@ func getExploreOrganizations(logger *logx.Logger, c flamego.Context) (statusCode
 
 	items := make([]exploreUser, 0, len(orgs))
 	for _, org := range orgs {
-		item := toExploreUser(org)
+		item := toExploreUser(links, org)
 		item.Website = org.Website
 		item.Description = org.Description
 		items = append(items, item)
 	}
-	return http.StatusOK, newListPage(items, page, total, conf.UI.ExplorePagingNum), nil
+	return http.StatusOK, newListPage(items, page, total, ui.ExplorePagingNum), nil
 }

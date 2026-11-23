@@ -416,9 +416,9 @@ func TestAPIV1Tags(t *testing.T) {
 	api := apiV1Client(t, owner)
 	mainSHA := apiV1PutFile(t, api, repo, "main.txt", "Main", "")
 
-	gitRepo, err := git.Open(database.RepoPath(repo.Owner, repo.Name))
+	gitRepo, err := git.Open(database.RepoPath(cfg.Repository.Root, repo.Owner, repo.Name))
 	require.NoError(t, err)
-	err = database.Handle.Releases().Create(t.Context(), logger, gitRepo, &database.Release{
+	err = database.Handle.Releases().Create(t.Context(), logger, linkOptions(cfg), gitRepo, &database.Release{
 		RepoID:      repo.ID,
 		PublisherID: owner.ID,
 		TagName:     "v1.0.0",
@@ -459,7 +459,7 @@ func TestAPIV1CreateBranchesAndTags(t *testing.T) {
 	for range 2 {
 		repoSettingsNextEvent(t, deliveries)
 	}
-	repoPath := database.RepoPath(repo.Owner, repo.Name)
+	repoPath := database.RepoPath(cfg.Repository.Root, repo.Owner, repo.Name)
 	repoSettingsGit(t, repoPath, "tag", "-a", "annotated", "-m", "Annotated", featureSHA)
 
 	type ref struct {

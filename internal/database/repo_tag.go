@@ -36,6 +36,6 @@ func GetTagsByPath(ctx context.Context, path string) ([]*Tag, error) {
 	return tags, nil
 }
 
-func (r *Repository) GetTags(ctx context.Context) ([]*Tag, error) {
-	return GetTagsByPath(ctx, r.RepoPath())
+func (r *Repository) GetTags(ctx context.Context, root string) ([]*Tag, error) {
+	return GetTagsByPath(ctx, r.RepoPath(root))
 }

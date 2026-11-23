@@ -17,7 +17,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 )
 
@@ -53,7 +52,7 @@ const (
 func (a *userAuthenticator) authData(t *testing.T, flags byte, attested []byte) []byte {
 	t.Helper()
 
-	rpIDHash := sha256.Sum256([]byte(conf.Server.URL.Hostname()))
+	rpIDHash := sha256.Sum256([]byte(cfg.Server.URL.Hostname()))
 	data := append([]byte{}, rpIDHash[:]...)
 	data = append(data, flags)
 	data = binary.BigEndian.AppendUint32(data, a.signCount)
@@ -66,7 +65,7 @@ func (*userAuthenticator) clientData(t *testing.T, typ, challenge string) []byte
 	b, err := json.Marshal(map[string]any{
 		"type":        typ,
 		"challenge":   challenge,
-		"origin":      conf.Server.URL.Scheme + "://" + conf.Server.URL.Host,
+		"origin":      cfg.Server.URL.Scheme + "://" + cfg.Server.URL.Host,
 		"crossOrigin": false,
 	})
 	require.NoError(t, err)

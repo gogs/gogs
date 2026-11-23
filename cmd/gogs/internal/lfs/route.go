@@ -27,18 +27,19 @@ func RegisterRoutes(logger *logx.Logger, r flamego.Router) {
 	r.Group("", func() {
 		r.Post("/objects/batch", authorize(logger, store, database.AccessModeRead), verifyAccept, verifyContentTypeJSON, serveBatch(logger, store))
 		r.Group("/objects/basic", func() {
-			basic := &basicHandler{
+			r.Combo("/{oid}", verifyOID(logger)).
+				Get(authorize(logger, store, database.AccessModeRead), (*basicHandler).serveDownload).
+				Put(authorize(logger, store, database.AccessModeWrite), verifyContentTypeStream, (*basicHandler).serveUpload)
+			r.Post("/verify", authorize(logger, store, database.AccessModeWrite), verifyAccept, verifyContentTypeJSON, (*basicHandler).serveVerify)
+		}, func(c flamego.Context, lfsOpts conf.LFSOpts) {
+			c.Map(&basicHandler{
 				logger:         logger,
 				store:          store,
-				defaultStorage: lfsx.Storage(conf.LFS.Storage),
+				defaultStorage: lfsx.Storage(lfsOpts.Storage),
 				storagers: map[lfsx.Storage]lfsx.Storager{
-					lfsx.StorageLocal: &lfsx.LocalStorage{Root: conf.LFS.ObjectsPath, TempDir: conf.LFS.ObjectsTempPath},
+					lfsx.StorageLocal: &lfsx.LocalStorage{Root: lfsOpts.ObjectsPath, TempDir: lfsOpts.ObjectsTempPath},
 				},
-			}
-			r.Combo("/{oid}", verifyOID(logger)).
-				Get(authorize(logger, store, database.AccessModeRead), basic.serveDownload).
-				Put(authorize(logger, store, database.AccessModeWrite), verifyContentTypeStream, basic.serveUpload)
-			r.Post("/verify", authorize(logger, store, database.AccessModeWrite), verifyAccept, verifyContentTypeJSON, basic.serveVerify)
+			})
 		})
 	}, authenticate(logger, store))
 }
@@ -56,10 +57,10 @@ func askCredentials(logger *logx.Logger, w http.ResponseWriter) {
 // A request without credentials continues as an anonymous user, whose ID is 0,
 // unless signing in is required to view anything.
 func authenticate(logger *logx.Logger, store Store) flamego.Handler {
-	return func(c flamego.Context) {
+	return func(c flamego.Context, authOpts conf.AuthOpts) {
 		// Like Git over HTTP, a user named by a trusted reverse proxy goes before
 		// Basic authentication.
-		user, viaProxy, err := context.ReverseProxyUser(store, c.Request().Request)
+		user, viaProxy, err := context.ReverseProxyUser(authOpts, store, c.Request().Request)
 		if err != nil {
 			internalServerError(logger, c.ResponseWriter())
 			logger.Error("Failed to authenticate by reverse proxy header", "error", err)
@@ -67,7 +68,7 @@ func authenticate(logger *logx.Logger, store Store) flamego.Handler {
 		} else if viaProxy && user == nil {
 			// Like Git over HTTP, which serves public repositories without
 			// authentication, the viewer may still download what anyone can.
-			if conf.Auth.RequireSigninView {
+			if authOpts.RequireSigninView {
 				c.ResponseWriter().WriteHeader(http.StatusNotFound)
 				return
 			}
@@ -78,7 +79,7 @@ func authenticate(logger *logx.Logger, store Store) flamego.Handler {
 		if !viaProxy {
 			username, password := authx.DecodeBasic(c.Request().Header)
 			if username == "" {
-				if conf.Auth.RequireSigninView {
+				if authOpts.RequireSigninView {
 					askCredentials(logger, c.ResponseWriter())
 					return
 				}
@@ -124,7 +125,7 @@ func authenticate(logger *logx.Logger, store Store) flamego.Handler {
 			}
 		}
 
-		if user.IsDisabled() {
+		if user.IsDisabled(authOpts.RequireEmailConfirmation) {
 			responseJSON(logger, c.ResponseWriter(), http.StatusForbidden, responseError{
 				Message: "User account is disabled",
 			})
@@ -139,7 +140,7 @@ func authenticate(logger *logx.Logger, store Store) flamego.Handler {
 
 // authorize tries to authorize the user to the context repository with given access mode.
 func authorize(logger *logx.Logger, store Store, mode database.AccessMode) flamego.Handler {
-	return func(c flamego.Context, actor *database.User) {
+	return func(c flamego.Context, authOpts conf.AuthOpts, actor *database.User) {
 		username := c.Param("owner")
 		reponame := strings.TrimSuffix(c.Param("repo"), ".git")
 
@@ -174,7 +175,7 @@ func authorize(logger *logx.Logger, store Store, mode database.AccessMode) flame
 			// An anonymous user may have access after signing in, unless it is a
 			// user named by a trusted reverse proxy that has no account, which
 			// credentials cannot change.
-			if _, viaProxy := context.ReverseProxyUsername(c.Request().Request); actor.ID <= 0 && !viaProxy {
+			if _, viaProxy := context.ReverseProxyUsername(authOpts, c.Request().Request); actor.ID <= 0 && !viaProxy {
 				askCredentials(logger, c.ResponseWriter())
 				return
 			}

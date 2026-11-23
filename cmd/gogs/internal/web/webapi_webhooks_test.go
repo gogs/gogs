@@ -22,7 +22,7 @@ func TestValidateWebhookURL(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			status, _ := validateWebhookURL(l, test.url)
+			status, _ := validateWebhookURL(l, nil, test.url)
 			assert.Equal(t, test.wantStatus, status)
 		})
 	}

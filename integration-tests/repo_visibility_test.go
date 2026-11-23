@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/dbx"
 )
@@ -244,7 +243,7 @@ func TestRepoForkVisibility(t *testing.T) {
 
 		// A fork can only be public with a private base by a change outside the
 		// stores, e.g., by an earlier version.
-		db, err := dbx.OpenDB(conf.Database, &gorm.Config{})
+		db, err := dbx.OpenDB(cfg.Database, &gorm.Config{})
 		require.NoError(t, err)
 		require.NoError(t, db.Exec("UPDATE repository SET is_private = ? WHERE id = ?", false, fork.ID).Error)
 		sqlDB, err := db.DB()

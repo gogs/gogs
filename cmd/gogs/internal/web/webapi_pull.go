@@ -13,6 +13,7 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/i18n"
+	"gogs.io/gogs/internal/markup"
 	"unknwon.dev/x/logx"
 )
 
@@ -109,8 +110,9 @@ type pullRange struct {
 }
 
 // describePull describes the state of the pull request and its branches, and
-// returns the commits it merges, which are nil when it is broken.
-func describePull(ctx context.Context, repoCtx *repoContext, issue *database.Issue) (info *repoPullInfo, rng *pullRange, commits []*git.Commit, err error) {
+// returns the commits it merges, which are nil when it is broken. The
+// repositories are stored under repositoryRoot.
+func describePull(ctx context.Context, links database.LinkOptions, repositoryRoot string, repoCtx *repoContext, issue *database.Issue) (info *repoPullInfo, rng *pullRange, commits []*git.Commit, err error) {
 	repo := repoCtx.Repo
 	pull := issue.PullRequest
 	if err = database.Handle.PullRequests().LoadAttributes(ctx, pull); err != nil {
@@ -126,10 +128,10 @@ func describePull(ctx context.Context, repoCtx *repoContext, issue *database.Iss
 		AllowSquash: repo.PullsAllowSquash,
 	}
 	if pull.HeadRepo != nil {
-		info.HeadRepoLink = pull.HeadRepo.Link()
+		info.HeadRepoLink = pull.HeadRepo.Link(links.Subpath)
 	}
 
-	baseGitRepo, err := openRepoGit(repoCtx)
+	baseGitRepo, err := openRepoGit(repositoryRoot, repoCtx)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "open repository")
 	}
@@ -137,7 +139,7 @@ func describePull(ctx context.Context, repoCtx *repoContext, issue *database.Iss
 		info.State = "merged"
 		mergedAt := pull.Merged.UTC()
 		info.MergedAt = &mergedAt
-		merger := toIssueUser(pull.Merger)
+		merger := toIssueUser(links, pull.Merger)
 		info.Merger = &merger
 		rng = &pullRange{GitRepo: baseGitRepo, Owner: repoCtx.Owner.Name, Name: repo.Name, Base: pull.MergeBase, Head: pull.MergedCommitID}
 		if commits, err = baseGitRepo.RevList(ctx, []string{pull.MergeBase + "..." + pull.MergedCommitID}); err != nil {
@@ -169,7 +171,7 @@ func describePull(ctx context.Context, repoCtx *repoContext, issue *database.Iss
 
 	var headGitRepo *git.Repository
 	if pull.HeadRepo != nil {
-		if headGitRepo, err = git.Open(pull.HeadRepo.RepoPath()); err != nil {
+		if headGitRepo, err = git.Open(pull.HeadRepo.RepoPath(repositoryRoot)); err != nil {
 			return nil, nil, nil, errors.Wrap(err, "open head repository")
 		}
 	}
@@ -188,7 +190,7 @@ func describePull(ctx context.Context, repoCtx *repoContext, issue *database.Iss
 		return info, nil, nil, nil
 	}
 
-	meta, err := headGitRepo.PullRequestMeta(ctx, database.RepoPath(repoCtx.Owner.Name, repo.Name), pull.HeadBranch, pull.BaseBranch)
+	meta, err := headGitRepo.PullRequestMeta(ctx, database.RepoPath(repositoryRoot, repoCtx.Owner.Name, repo.Name), pull.HeadBranch, pull.BaseBranch)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "get pull request meta")
 	}
@@ -230,11 +232,11 @@ func describePull(ctx context.Context, repoCtx *repoContext, issue *database.Iss
 
 // getRepoPull describes the pull request with its comments, and the state of
 // its branches.
-func getRepoPull(c flamego.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, issue *database.Issue) (statusCode int, resp *repoPullView, err error) {
+func getRepoPull(c flamego.Context, att conf.AttachmentOpts, markupOpts markup.Options, markdown conf.MarkdownOpts, repoOpts conf.RepositoryOpts, links database.LinkOptions, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, issue *database.Issue) (statusCode int, resp *repoPullView, err error) {
 	ctx := c.Request().Context()
 	resp = &repoPullView{}
 	var rng *pullRange
-	if resp.Pull, rng, _, err = describePull(ctx, repoCtx, issue); err != nil {
+	if resp.Pull, rng, _, err = describePull(ctx, links, repoOpts.Root, repoCtx, issue); err != nil {
 		logger.Error("Failed to describe pull request", "issueID", issue.ID, "repoID", repoCtx.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, err
 	}
@@ -244,10 +246,10 @@ func getRepoPull(c flamego.Context, logger *logx.Logger, viewer *database.User, 
 			Head:               rng.Head,
 			Owner:              rng.Owner,
 			Name:               rng.Name,
-			MarkdownExtensions: conf.Markdown.FileExtensions,
+			MarkdownExtensions: markdown.FileExtensions,
 		}
 	}
-	if resp.repoIssueView, err = toRepoIssueView(ctx, logger, viewer, repoCtx, issue); err != nil {
+	if resp.repoIssueView, err = toRepoIssueView(ctx, logger, links, markupOpts, repoOpts.Root, att, viewer, repoCtx, issue); err != nil {
 		logger.Error("Failed to describe pull request", "issueID", issue.ID, "repoID", repoCtx.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, err
 	}
@@ -259,22 +261,22 @@ type repoPullCommits struct {
 }
 
 // getRepoPullCommits lists the commits the pull request merges, newest first.
-func getRepoPullCommits(c flamego.Context, logger *logx.Logger, repoCtx *repoContext, issue *database.Issue) (statusCode int, resp *repoPullCommits, err error) {
+func getRepoPullCommits(c flamego.Context, markupOpts markup.Options, repoOpts conf.RepositoryOpts, links database.LinkOptions, logger *logx.Logger, repoCtx *repoContext, issue *database.Issue) (statusCode int, resp *repoPullCommits, err error) {
 	ctx := c.Request().Context()
-	_, rng, commits, err := describePull(ctx, repoCtx, issue)
+	_, rng, commits, err := describePull(ctx, links, repoOpts.Root, repoCtx, issue)
 	if err != nil {
 		logger.Error("Failed to describe pull request", "issueID", issue.ID, "repoID", repoCtx.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, err
 	} else if rng == nil {
 		return http.StatusNotFound, nil, errors.New("branches of the pull request do not exist")
 	}
-	return http.StatusOK, &repoPullCommits{Commits: toCommitListItems(ctx, logger, repoCtx.Repo, commits)}, nil
+	return http.StatusOK, &repoPullCommits{Commits: toCommitListItems(ctx, logger, links, markupOpts, repoOpts.Root, repoCtx.Repo, commits)}, nil
 }
 
 // getRepoPullRaw writes the changes of the pull request as text.
-func getRepoPullRaw(c flamego.Context, logger *logx.Logger, repoCtx *repoContext, issue *database.Issue) {
+func getRepoPullRaw(c flamego.Context, repoOpts conf.RepositoryOpts, links database.LinkOptions, logger *logx.Logger, repoCtx *repoContext, issue *database.Issue) {
 	w := c.ResponseWriter()
-	_, rng, _, err := describePull(c.Request().Context(), repoCtx, issue)
+	_, rng, _, err := describePull(c.Request().Context(), links, repoOpts.Root, repoCtx, issue)
 	if err != nil {
 		logger.Error("Failed to describe pull request", "issueID", issue.ID, "repoID", repoCtx.Repo.ID, "error", err)
 		writeErrorResponse(w, http.StatusInternalServerError, err)
@@ -315,7 +317,7 @@ func canPushTo(ctx context.Context, repoCtx *repoContext, branch string, viaPull
 }
 
 // postRepoPullMerge merges the pull request into its base branch.
-func postRepoPullMerge(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, issue *database.Issue, req repoPullMergeRequest) (statusCode int, resp any, err error) {
+func postRepoPullMerge(c flamego.Context, server conf.ServerOpts, notify database.NotifyOptions, repoOpts conf.RepositoryOpts, links database.LinkOptions, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, issue *database.Issue, req repoPullMergeRequest) (statusCode int, resp any, err error) {
 	pull := issue.PullRequest
 	if issue.IsClosed || pull.HasMerged || !pull.CanAutoMerge() {
 		return http.StatusNotFound, nil, errors.New("pull request cannot be merged")
@@ -327,7 +329,7 @@ func postRepoPullMerge(c flamego.Context, logger *logx.Logger, l i18n.Locale, vi
 	} else if !canPush {
 		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("repo::pulls.merge_not_in_allowlist")}, nil
 	}
-	gitRepo, err := openRepoGit(repoCtx)
+	gitRepo, err := openRepoGit(repoOpts.Root, repoCtx)
 	if err != nil {
 		logger.Error("Failed to open repository", "repoID", repoCtx.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
@@ -345,7 +347,7 @@ func postRepoPullMerge(c flamego.Context, logger *logx.Logger, l i18n.Locale, vi
 	if !repoCtx.Repo.AllowsMergeStyle(style) {
 		return http.StatusUnprocessableEntity, &bindingErrorResponse{Error: l.Tr("repo::pulls.merge_style_not_allowed")}, nil
 	}
-	if err = database.Handle.PullRequests().Merge(c.Request().Context(), logger, viewer, pull, gitRepo, style, database.MergeMessage{Title: req.Title, Body: req.Body}); err != nil {
+	if err = database.Handle.PullRequests().Merge(c.Request().Context(), logger, notify, server.AppDataPath, viewer, pull, gitRepo, style, database.MergeMessage{Title: req.Title, Body: req.Body}); err != nil {
 		if errors.Is(err, database.ErrPullRequestNotMergeable) {
 			return http.StatusNotFound, nil, errors.New("pull request cannot be merged")
 		}
@@ -355,11 +357,11 @@ func postRepoPullMerge(c flamego.Context, logger *logx.Logger, l i18n.Locale, vi
 
 	// The merge is done, so failing to delete the branch only leaves it be.
 	if repoCtx.Repo.PullsDeleteBranch {
-		info, _, _, err := describePull(c.Request().Context(), repoCtx, issue)
+		info, _, _, err := describePull(c.Request().Context(), links, repoOpts.Root, repoCtx, issue)
 		if err != nil {
 			logger.Error("Failed to describe pull request", "pullID", pull.ID, "error", err)
 		} else if info.ViewerCanDeleteBranch {
-			if _, err = deleteHeadBranch(c.Request().Context(), logger, viewer, repoCtx, pull); err != nil {
+			if _, err = deleteHeadBranch(c.Request().Context(), logger, links, repoOpts.Root, viewer, repoCtx, pull); err != nil {
 				logger.Error("Failed to delete head branch", "pullID", pull.ID, "error", err)
 			}
 		}
@@ -369,18 +371,18 @@ func postRepoPullMerge(c flamego.Context, logger *logx.Logger, l i18n.Locale, vi
 
 // postRepoPullBranch restores the deleted head branch of the merged pull
 // request at the commit that was merged, like GitHub's "Restore branch".
-func postRepoPullBranch(c flamego.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, issue *database.Issue) (statusCode int, resp any, err error) {
+func postRepoPullBranch(c flamego.Context, links database.LinkOptions, repoOpts conf.RepositoryOpts, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, issue *database.Issue) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
 	pull := issue.PullRequest
-	info, _, _, err := describePull(ctx, repoCtx, issue)
+	info, _, _, err := describePull(ctx, links, repoOpts.Root, repoCtx, issue)
 	if err != nil {
 		logger.Error("Failed to describe pull request", "issueID", issue.ID, "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, err
 	} else if !info.ViewerCanRestoreBranch {
 		return http.StatusNotFound, nil, errors.New("branch cannot be restored")
 	}
-	gitRepo, err := openRepoGit(repoCtx)
+	gitRepo, err := openRepoGit(repoOpts.Root, repoCtx)
 	if err != nil {
 		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
@@ -391,12 +393,12 @@ func postRepoPullBranch(c flamego.Context, logger *logx.Logger, viewer *database
 	}
 	// The branch exists now, so its webhook is queued even when the client has
 	// gone away.
-	if err = database.Handle.Webhooks().Prepare(context.WithoutCancel(ctx), logger, repo, database.HookEventTypeCreate, &v1types.WebhookCreatePayload{
+	if err = database.Handle.Webhooks().Prepare(context.WithoutCancel(ctx), logger, links.ExternalURL, repo, database.HookEventTypeCreate, &v1types.WebhookCreatePayload{
 		Ref:           pull.HeadBranch,
 		RefType:       "branch",
 		DefaultBranch: repo.DefaultBranch,
-		Repo:          repo.APIFormatLegacy(logger, nil),
-		Sender:        viewer.APIFormat(),
+		Repo:          repo.APIFormatLegacy(logger, links, nil),
+		Sender:        viewer.APIFormat(links),
 	}); err != nil {
 		logger.Error("Failed to prepare webhooks for restored branch", "branch", pull.HeadBranch, "repoID", repo.ID, "error", err)
 	}
@@ -405,18 +407,18 @@ func postRepoPullBranch(c flamego.Context, logger *logx.Logger, viewer *database
 
 // deleteRepoPullBranch deletes the head branch of the merged pull request,
 // unless it has commits that were not merged.
-func deleteRepoPullBranch(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, issue *database.Issue) (statusCode int, resp any, err error) {
+func deleteRepoPullBranch(c flamego.Context, repoOpts conf.RepositoryOpts, links database.LinkOptions, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, issue *database.Issue) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
 	pull := issue.PullRequest
-	info, _, _, err := describePull(ctx, repoCtx, issue)
+	info, _, _, err := describePull(ctx, links, repoOpts.Root, repoCtx, issue)
 	if err != nil {
 		logger.Error("Failed to describe pull request", "issueID", issue.ID, "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, err
 	} else if !info.ViewerCanDeleteBranch {
 		return http.StatusNotFound, nil, errors.New("branch cannot be deleted")
 	}
-	deleted, err := deleteHeadBranch(ctx, logger, viewer, repoCtx, pull)
+	deleted, err := deleteHeadBranch(ctx, logger, links, repoOpts.Root, viewer, repoCtx, pull)
 	if err != nil {
 		logger.Error("Failed to delete head branch", "pullID", pull.ID, "error", err)
 		return http.StatusInternalServerError, nil, err
@@ -428,10 +430,10 @@ func deleteRepoPullBranch(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 
 // deleteHeadBranch deletes the head branch of the merged pull request in the
 // base repository, unless it has commits that were not merged, and returns
-// whether it did.
-func deleteHeadBranch(ctx context.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, pull *database.PullRequest) (deleted bool, err error) {
+// whether it did. The repository is stored under repositoryRoot.
+func deleteHeadBranch(ctx context.Context, logger *logx.Logger, links database.LinkOptions, repositoryRoot string, viewer *database.User, repoCtx *repoContext, pull *database.PullRequest) (deleted bool, err error) {
 	repo := repoCtx.Repo
-	gitRepo, err := openRepoGit(repoCtx)
+	gitRepo, err := openRepoGit(repositoryRoot, repoCtx)
 	if err != nil {
 		return false, errors.Wrap(err, "open repository")
 	}
@@ -446,12 +448,12 @@ func deleteHeadBranch(ctx context.Context, logger *logx.Logger, viewer *database
 	}
 	// The branch is gone now, so its webhook is queued even when the client has
 	// gone away.
-	if err = database.Handle.Webhooks().Prepare(context.WithoutCancel(ctx), logger, repo, database.HookEventTypeDelete, &v1types.WebhookDeletePayload{
+	if err = database.Handle.Webhooks().Prepare(context.WithoutCancel(ctx), logger, links.ExternalURL, repo, database.HookEventTypeDelete, &v1types.WebhookDeletePayload{
 		Ref:        pull.HeadBranch,
 		RefType:    "branch",
 		PusherType: v1types.WebhookPusherTypeUser,
-		Repo:       repo.APIFormatLegacy(logger, nil),
-		Sender:     viewer.APIFormat(),
+		Repo:       repo.APIFormatLegacy(logger, links, nil),
+		Sender:     viewer.APIFormat(links),
 	}); err != nil {
 		logger.Error("Failed to prepare webhooks for deleted branch", "branch", pull.HeadBranch, "repoID", repo.ID, "error", err)
 	}

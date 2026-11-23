@@ -5,8 +5,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"gogs.io/gogs/internal/conf"
 )
 
 func TestRepoPathAndWikiPath(t *testing.T) {
@@ -15,11 +13,7 @@ func TestRepoPathAndWikiPath(t *testing.T) {
 		return
 	}
 
-	conf.SetMockRepository(t,
-		conf.RepositoryOpts{
-			Root: "/home/git/gogs-repositories",
-		},
-	)
+	const root = "/home/git/gogs-repositories"
 
 	tests := []struct {
 		repoName string
@@ -44,8 +38,8 @@ func TestRepoPathAndWikiPath(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.repoName, func(t *testing.T) {
-			assert.Equal(t, test.wantRepo, RepoPath("alice", test.repoName))
-			assert.Equal(t, test.wantWiki, WikiPath("alice", test.repoName))
+			assert.Equal(t, test.wantRepo, RepoPath(root, "alice", test.repoName))
+			assert.Equal(t, test.wantWiki, WikiPath(root, "alice", test.repoName))
 		})
 	}
 }

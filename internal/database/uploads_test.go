@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/osx"
 )
 
@@ -37,9 +36,6 @@ func TestUploads(t *testing.T) {
 				err := clearTables(t, s.db)
 				require.NoError(t, err)
 			})
-			opts := conf.RepositoryOpts{}
-			opts.Upload.TempPath = t.TempDir()
-			conf.SetMockRepository(t, opts)
 			tc.test(t, ctx, s)
 		})
 		if t.Failed() {
@@ -49,12 +45,13 @@ func TestUploads(t *testing.T) {
 }
 
 func uploadsNew(t *testing.T, ctx context.Context, s *UploadsStore) {
+	tempPath := t.TempDir()
 	// 🚨 SECURITY: The name must not escape the directory it is committed to.
-	upload, err := s.New(ctx, "../../docs/README.md", strings.NewReader("# Hello"))
+	upload, err := s.New(ctx, tempPath, "../../docs/README.md", strings.NewReader("# Hello"))
 	require.NoError(t, err)
 	assert.Equal(t, "docs/README.md", upload.Name)
-	assert.True(t, strings.HasPrefix(upload.LocalPath(), conf.Repository.Upload.TempPath), "stored at %q", upload.LocalPath())
-	data, err := os.ReadFile(upload.LocalPath())
+	assert.True(t, strings.HasPrefix(upload.LocalPath(tempPath), tempPath), "stored at %q", upload.LocalPath(tempPath))
+	data, err := os.ReadFile(upload.LocalPath(tempPath))
 	require.NoError(t, err)
 	assert.Equal(t, "# Hello", string(data))
 
@@ -63,22 +60,23 @@ func uploadsNew(t *testing.T, ctx context.Context, s *UploadsStore) {
 	assert.Equal(t, upload.ID, got.ID)
 	assert.Equal(t, "docs/README.md", got.Name)
 
-	_, err = s.New(ctx, "/../", strings.NewReader("x"))
+	_, err = s.New(ctx, tempPath, "/../", strings.NewReader("x"))
 	require.Error(t, err)
 }
 
 func uploadsGet(t *testing.T, ctx context.Context, s *UploadsStore) {
+	tempPath := t.TempDir()
 	// Malformed UUIDs are not found either.
 	for _, uuid := range []string{"404", "00000000-0000-0000-0000-000000000000", "urn:uuid:00000000-0000-0000-0000-000000000000"} {
 		_, err := s.GetByUUID(ctx, uuid)
 		assert.True(t, IsErrUploadNotExist(err), "%q: got %v", uuid, err)
 	}
 
-	upload1, err := s.New(ctx, "a.txt", strings.NewReader("a"))
+	upload1, err := s.New(ctx, tempPath, "a.txt", strings.NewReader("a"))
 	require.NoError(t, err)
-	upload2, err := s.New(ctx, "b.txt", strings.NewReader("b"))
+	upload2, err := s.New(ctx, tempPath, "b.txt", strings.NewReader("b"))
 	require.NoError(t, err)
-	_, err = s.New(ctx, "c.txt", strings.NewReader("c"))
+	_, err = s.New(ctx, tempPath, "c.txt", strings.NewReader("c"))
 	require.NoError(t, err)
 
 	// Unknown and malformed UUIDs are skipped.
@@ -96,31 +94,32 @@ func uploadsGet(t *testing.T, ctx context.Context, s *UploadsStore) {
 }
 
 func uploadsDelete(t *testing.T, ctx context.Context, s *UploadsStore) {
-	upload1, err := s.New(ctx, "a.txt", strings.NewReader("a"))
+	tempPath := t.TempDir()
+	upload1, err := s.New(ctx, tempPath, "a.txt", strings.NewReader("a"))
 	require.NoError(t, err)
-	upload2, err := s.New(ctx, "b.txt", strings.NewReader("b"))
+	upload2, err := s.New(ctx, tempPath, "b.txt", strings.NewReader("b"))
 	require.NoError(t, err)
-	upload3, err := s.New(ctx, "c.txt", strings.NewReader("c"))
+	upload3, err := s.New(ctx, tempPath, "c.txt", strings.NewReader("c"))
 	require.NoError(t, err)
 
-	err = s.Delete(ctx, upload1, upload2)
+	err = s.Delete(ctx, tempPath, upload1, upload2)
 	require.NoError(t, err)
 	for _, upload := range []*Upload{upload1, upload2} {
 		_, err = s.GetByUUID(ctx, upload.UUID)
 		assert.True(t, IsErrUploadNotExist(err), "got %v", err)
-		assert.False(t, osx.Exist(upload.LocalPath()), "file of %q not removed", upload.Name)
+		assert.False(t, osx.Exist(upload.LocalPath(tempPath)), "file of %q not removed", upload.Name)
 	}
-	assert.True(t, osx.IsFile(upload3.LocalPath()))
+	assert.True(t, osx.IsFile(upload3.LocalPath(tempPath)))
 
-	err = s.DeleteByUUID(ctx, upload3.UUID)
+	err = s.DeleteByUUID(ctx, tempPath, upload3.UUID)
 	require.NoError(t, err)
 	_, err = s.GetByUUID(ctx, upload3.UUID)
 	assert.True(t, IsErrUploadNotExist(err), "got %v", err)
-	assert.False(t, osx.Exist(upload3.LocalPath()))
+	assert.False(t, osx.Exist(upload3.LocalPath(tempPath)))
 
 	// Deleting an upload that does not exist is not an error.
-	err = s.DeleteByUUID(ctx, upload3.UUID)
+	err = s.DeleteByUUID(ctx, tempPath, upload3.UUID)
 	require.NoError(t, err)
-	err = s.DeleteByUUID(ctx, "404")
+	err = s.DeleteByUUID(ctx, tempPath, "404")
 	require.NoError(t, err)
 }

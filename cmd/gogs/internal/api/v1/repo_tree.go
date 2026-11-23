@@ -3,12 +3,13 @@ package v1
 import (
 	"fmt"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/git"
 )
 
-func getRepoGitTree(c *apiContext) {
+func getRepoGitTree(c *apiContext, repository conf.RepositoryOpts) {
 	sha := c.Param("sha")
-	tree, err := git.RepoLsTree(c.Request().Context(), c.Repo.Repository.RepoPath(), sha)
+	tree, err := git.RepoLsTree(c.Request().Context(), c.Repo.Repository.RepoPath(repository.Root), sha)
 	if err != nil {
 		c.NotFoundOrError(git.NewError(err), "get tree")
 		return

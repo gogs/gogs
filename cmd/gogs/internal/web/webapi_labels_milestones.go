@@ -215,7 +215,7 @@ type repoMilestones struct {
 
 // getRepoMilestones lists the open milestones of the repository, or the
 // closed ones with `state=closed`.
-func getRepoMilestones(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp any, err error) {
+func getRepoMilestones(c flamego.Context, ui conf.UIOpts, repoOpts conf.RepositoryOpts, markupOpts markup.Options, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
 	isClosed := c.Query("state") == "closed"
@@ -229,18 +229,18 @@ func getRepoMilestones(c flamego.Context, logger *logx.Logger, repoCtx *repoCont
 		total = closedCount
 	}
 	page := pageParam(c)
-	miles, err := database.Handle.Milestones().List(ctx, repo.ID, isClosed, page)
+	miles, err := database.Handle.Milestones().List(ctx, repo.ID, isClosed, page, ui.IssuePagingNum)
 	if err != nil {
 		logger.Error("Failed to list milestones", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list milestones")
 	}
 
-	metas := repoCtx.metas()
+	metas := repoCtx.metas(markupOpts.Subpath, repoOpts.Root)
 	descriptions := make([]string, 0, len(miles))
 	for _, m := range miles {
 		descriptions = append(descriptions, m.Content)
 	}
-	commits := markup.ResolveCommits(metas, descriptions...)
+	commits := markup.ResolveCommits(markupOpts, metas, descriptions...)
 	items := make([]repoMilestone, 0, len(miles))
 	for _, m := range miles {
 		openIssues, err := database.Handle.Milestones().CountIssues(ctx, m.RepoID, m.ID, false, false)
@@ -266,14 +266,14 @@ func getRepoMilestones(c flamego.Context, logger *logx.Logger, repoCtx *repoCont
 			item.Completeness = item.ClosedIssueCount * 100 / all
 		}
 		if m.Content != "" {
-			item.DescriptionHTML = markAppLinks(markup.MarkdownWithCommits(m.Content, repo.Link(), metas, commits), repo)
+			item.DescriptionHTML = markAppLinks(markupOpts, markup.MarkdownWithCommits(markupOpts, m.Content, repo.Link(markupOpts.Subpath), metas, commits), repo)
 		}
 		if m.IsClosed {
 			item.ClosedAt = &m.ClosedDate
 		}
 		items = append(items, item)
 	}
-	pageSize := int64(conf.UI.IssuePagingNum)
+	pageSize := int64(ui.IssuePagingNum)
 	return http.StatusOK, &repoMilestones{
 		Items:          items,
 		Page:           page,

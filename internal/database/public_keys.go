@@ -27,7 +27,7 @@ func newPublicKeysStore(db *gorm.DB) *PublicKeysStore {
 // CheckPublicKeyString. It returns ErrKeyAlreadyExist when the key is used by a
 // user key, whatever its comment, and ErrKeyNameAlreadyUsed when the user has a key of
 // the same name.
-func (s *PublicKeysStore) Add(ctx context.Context, logger *logx.Logger, ownerID int64, name, content string) (*PublicKey, error) {
+func (s *PublicKeysStore) Add(ctx context.Context, logger *logx.Logger, authorizedKeys AuthorizedKeysOptions, ownerID int64, name, content string) (*PublicKey, error) {
 	fingerprint, err := publicKeyFingerprint(content)
 	if err != nil {
 		return nil, err
@@ -61,7 +61,7 @@ func (s *PublicKeysStore) Add(ctx context.Context, logger *logx.Logger, ownerID 
 		return nil, errors.Wrap(err, "add key")
 	}
 	// The key is already added, and resyncing SSH keys adds its line.
-	if err = appendAuthorizedKeysToFile(logger, key); err != nil {
+	if err = appendAuthorizedKeysToFile(logger, authorizedKeys, key); err != nil {
 		logger.Error("Failed to append public key to authorized_keys", "keyID", key.ID, "error", err)
 	}
 	return key, nil
@@ -115,7 +115,7 @@ func (s *PublicKeysStore) Touch(ctx context.Context, id int64) error {
 // "authorized_keys" file. Only the owner of the key and site admins can delete
 // it, and others get ErrKeyAccessDenied. Deleting a key that does not exist is
 // not an error.
-func (s *PublicKeysStore) Delete(ctx context.Context, logger *logx.Logger, doer *User, id int64) error {
+func (s *PublicKeysStore) Delete(ctx context.Context, logger *logx.Logger, authorizedKeys AuthorizedKeysOptions, doer *User, id int64) error {
 	key, err := s.GetByID(ctx, id)
 	if err != nil {
 		if IsErrKeyNotExist(err) {
@@ -133,29 +133,46 @@ func (s *PublicKeysStore) Delete(ctx context.Context, logger *logx.Logger, doer 
 	}
 
 	logger.Debug("Rewriting authorized_keys file")
-	return s.RewriteAuthorizedKeys()
+	return s.RewriteAuthorizedKeys(authorizedKeys)
 }
 
-func authorizedKeysPath() string {
-	return filepath.Join(conf.SSH.RootPath, "authorized_keys")
+// AuthorizedKeysOptions are the settings that the "authorized_keys" file is
+// written with.
+type AuthorizedKeysOptions struct {
+	// Path is the path of the file, or empty when the builtin SSH server is
+	// used, which does not read it.
+	Path string
+	// CustomConf is the path of the custom configuration file that each line runs
+	// "gogs serv" with.
+	CustomConf string
 }
 
-// RewriteAuthorizedKeys rewrites the "authorized_keys" file under the SSH root
-// path with all public keys stored in the database. It leaves the file alone
-// with the builtin SSH server, which does not read it.
-func (s *PublicKeysStore) RewriteAuthorizedKeys() error {
-	if conf.SSH.StartBuiltinServer {
+// NewAuthorizedKeysOptions returns the settings of the "authorized_keys" file
+// under the SSH root path, which has no path with the builtin SSH server.
+func NewAuthorizedKeysOptions(sshOpts conf.SSHOpts, customConf string) AuthorizedKeysOptions {
+	opts := AuthorizedKeysOptions{CustomConf: customConf}
+	if !sshOpts.StartBuiltinServer {
+		opts.Path = filepath.Join(sshOpts.RootPath, "authorized_keys")
+	}
+	return opts
+}
+
+// RewriteAuthorizedKeys rewrites the "authorized_keys" file with all public
+// keys stored in the database. It leaves the file alone when it has no path,
+// i.e., with the builtin SSH server, which does not read it.
+func (s *PublicKeysStore) RewriteAuthorizedKeys(authorizedKeys AuthorizedKeysOptions) error {
+	if authorizedKeys.Path == "" {
 		return nil
 	}
 
 	sshOpLocker.Lock()
 	defer sshOpLocker.Unlock()
 
-	err := os.MkdirAll(conf.SSH.RootPath, os.ModePerm)
+	fpath := authorizedKeys.Path
+	err := os.MkdirAll(filepath.Dir(fpath), os.ModePerm)
 	if err != nil {
 		return errors.Wrap(err, "create SSH root path")
 	}
-	fpath := authorizedKeysPath()
 	tempPath := fpath + ".tmp"
 	f, err := os.OpenFile(tempPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
@@ -181,7 +198,7 @@ func (s *PublicKeysStore) RewriteAuthorizedKeys() error {
 			return errors.Wrap(err, "scan rows")
 		}
 
-		_, err = f.WriteString(key.AuthorizedString())
+		_, err = f.WriteString(key.AuthorizedString(authorizedKeys.CustomConf))
 		if err != nil {
 			return errors.Wrapf(err, "write key %d", key.ID)
 		}

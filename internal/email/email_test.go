@@ -7,19 +7,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"gogs.io/gogs/internal/conf"
 )
 
 // TestRenderEmbeddedTemplates ensures every builtin mail template parses and
 // executes against the data shape its production caller supplies, so a syntax
 // regression or missing field is caught at build time, not on the first email.
 func TestRenderEmbeddedTemplates(t *testing.T) {
-	conf.SetMockApp(t, conf.AppOpts{BrandName: "Gogs"})
-	conf.SetMockServer(t, conf.ServerOpts{
-		ExternalURL:        "https://example.test/",
-		LoadAssetsFromDisk: false,
-	})
+	opts := Options{BrandName: "Gogs", ExternalURL: "https://example.test/"}
 	resetTemplateCache(t)
 
 	tests := []struct {
@@ -87,7 +81,7 @@ func TestRenderEmbeddedTemplates(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			body, err := render(tc.name, tc.data)
+			body, err := render(opts, tc.name, tc.data)
 			require.NoError(t, err)
 			assert.NotEmpty(t, body)
 			assert.False(t, strings.Contains(body, "<no value>"), "template referenced a missing data key")
@@ -98,10 +92,9 @@ func TestRenderEmbeddedTemplates(t *testing.T) {
 // TestRenderUnknownTemplate asserts callers get a useful error rather than an
 // empty body when asking for a name that doesn't exist.
 func TestRenderUnknownTemplate(t *testing.T) {
-	conf.SetMockServer(t, conf.ServerOpts{LoadAssetsFromDisk: false})
 	resetTemplateCache(t)
 
-	_, err := render("does/not/exist", nil)
+	_, err := render(Options{}, "does/not/exist", nil)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not found")
 }
@@ -118,9 +111,6 @@ func resetTemplateCache(t *testing.T) {
 // testDoer satisfies the User interface for fields the issue templates touch.
 type testDoer struct{}
 
-func (testDoer) ID() int64                                    { return 1 }
-func (testDoer) DisplayName() string                          { return "alice" }
-func (testDoer) Email() string                                { return "alice@example.test" }
-func (testDoer) GenerateEmailActivateCode(string) string      { return "abc" }
-func (testDoer) GenerateConfirmEmailCode(string) string       { return "abc" }
-func (testDoer) GenerateEmailResetPasswordCode(string) string { return "abc" }
+func (testDoer) ID() int64           { return 1 }
+func (testDoer) DisplayName() string { return "alice" }
+func (testDoer) Email() string       { return "alice@example.test" }

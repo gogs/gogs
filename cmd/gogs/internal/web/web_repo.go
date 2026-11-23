@@ -40,14 +40,14 @@ func writeErrorResponse(w http.ResponseWriter, code int, err error) {
 
 	message := err.Error()
 	// Match the JSON-API ReturnHandler: in prod, never leak 5xx detail.
-	if code >= http.StatusInternalServerError && conf.IsProdMode() {
+	if code >= http.StatusInternalServerError && flamego.Env() == flamego.EnvTypeProd {
 		message = "Internal server error"
 	}
 	w.WriteHeader(code)
 	_ = json.NewEncoder(w).Encode(map[string]string{"error": message})
 }
 
-func getRepoCommitRaw(logger *logx.Logger, c flamego.Context, repoCtx *repoContext) {
+func getRepoCommitRaw(logger *logx.Logger, c flamego.Context, repoOpts conf.RepositoryOpts, repoCtx *repoContext) {
 	w := c.ResponseWriter()
 	if !repoCtx.Viewer.CanRead() {
 		writeErrorResponse(w, http.StatusNotFound, errors.New("repository does not exist"))
@@ -59,7 +59,7 @@ func getRepoCommitRaw(logger *logx.Logger, c flamego.Context, repoCtx *repoConte
 	sha := c.Param("sha")
 	format := c.Param("format")
 
-	gitRepo, err := git.Open(repox.RepositoryPath(owner.Name, repo.Name))
+	gitRepo, err := git.Open(repox.RepositoryPath(repoOpts.Root, owner.Name, repo.Name))
 	if err != nil {
 		logger.Error("Failed to open repository", "ownerName", owner.Name, "repoName", repo.Name, "error", err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "open repository"))
@@ -91,7 +91,7 @@ func getRepoCommitRaw(logger *logx.Logger, c flamego.Context, repoCtx *repoConte
 }
 
 // getRepoCompareRaw writes the diff from one commit to another as text.
-func getRepoCompareRaw(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) {
+func getRepoCompareRaw(c flamego.Context, repoOpts conf.RepositoryOpts, logger *logx.Logger, repoCtx *repoContext) {
 	w := c.ResponseWriter()
 	if !repoCtx.Viewer.CanRead() {
 		writeErrorResponse(w, http.StatusNotFound, errors.New("repository does not exist"))
@@ -101,7 +101,7 @@ func getRepoCompareRaw(c flamego.Context, logger *logx.Logger, repoCtx *repoCont
 	owner := repoCtx.Owner
 	repo := repoCtx.Repo
 	before, after := c.Param("before"), c.Param("after")
-	gitRepo, err := git.Open(repox.RepositoryPath(owner.Name, repo.Name))
+	gitRepo, err := git.Open(repox.RepositoryPath(repoOpts.Root, owner.Name, repo.Name))
 	if err != nil {
 		logger.Error("Failed to open repository", "ownerName", owner.Name, "repoName", repo.Name, "error", err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "open repository"))
@@ -153,7 +153,7 @@ func resolveRef(ctx context.Context, gitRepo *git.Repository, ref string) (*git.
 	return commit, nil
 }
 
-func getRepoRawFile(logger *logx.Logger, c flamego.Context, repoCtx *repoContext) {
+func getRepoRawFile(logger *logx.Logger, c flamego.Context, repoOpts conf.RepositoryOpts, repoCtx *repoContext) {
 	w := c.ResponseWriter()
 	if !repoCtx.Viewer.CanRead() {
 		writeErrorResponse(w, http.StatusNotFound, errors.New("repository does not exist"))
@@ -171,7 +171,7 @@ func getRepoRawFile(logger *logx.Logger, c flamego.Context, repoCtx *repoContext
 		return
 	}
 
-	gitRepo, err := git.Open(repox.RepositoryPath(owner.Name, repo.Name))
+	gitRepo, err := git.Open(repox.RepositoryPath(repoOpts.Root, owner.Name, repo.Name))
 	if err != nil {
 		logger.Error("Failed to open repository", "ownerName", owner.Name, "repoName", repo.Name, "error", err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "open repository"))
@@ -227,7 +227,7 @@ func getRepoRawFile(logger *logx.Logger, c flamego.Context, repoCtx *repoContext
 	case !mimex.IsText(data) && !mimex.IsImage(data):
 		w.Header().Set("Content-Disposition", `attachment; filename="`+path.Base(filepath)+`"`)
 		w.Header().Set("Content-Transfer-Encoding", "binary")
-	case mimex.IsText(data) && (!conf.Repository.EnableRawFileRenderMode || !render):
+	case mimex.IsText(data) && (!repoOpts.EnableRawFileRenderMode || !render):
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	}
 
@@ -237,8 +237,8 @@ func getRepoRawFile(logger *logx.Logger, c flamego.Context, repoCtx *repoContext
 // readableRepo returns the repository in the path when the viewer can read
 // it, and nil otherwise. It writes nothing, so the web app renders the page and
 // tells the viewer what is wrong.
-func readableRepo(c flamego.Context, logger *logx.Logger, viewer *database.User) *database.Repository {
-	if viewer == nil && conf.Auth.RequireSigninView || viewer != nil && (viewer.ProhibitLogin || viewer.IsDisabled()) {
+func readableRepo(c flamego.Context, auth conf.AuthOpts, logger *logx.Logger, viewer *database.User) *database.Repository {
+	if viewer == nil && auth.RequireSigninView || viewer != nil && (viewer.ProhibitLogin || viewer.IsDisabled(auth.RequireEmailConfirmation)) {
 		return nil
 	}
 
@@ -259,7 +259,7 @@ func readableRepo(c flamego.Context, logger *logx.Logger, viewer *database.User)
 		}
 		return nil
 	}
-	if !newViewer(ctx, logger, viewer, owner, repo).CanRead() {
+	if !newViewer(ctx, logger, auth.RequireEmailConfirmation, viewer, owner, repo).CanRead() {
 		return nil
 	}
 	return repo
@@ -268,8 +268,8 @@ func readableRepo(c flamego.Context, logger *logx.Logger, viewer *database.User)
 // maybeRedirectToExternalTracker sends the pages of issues to the external
 // issue tracker of the repository when it has one. Pull requests share their
 // numbers with issues and keep their pages here.
-func maybeRedirectToExternalTracker(c flamego.Context, logger *logx.Logger, viewer *database.User) {
-	repo := readableRepo(c, logger, viewer)
+func maybeRedirectToExternalTracker(c flamego.Context, auth conf.AuthOpts, logger *logx.Logger, viewer *database.User) {
+	repo := readableRepo(c, auth, logger, viewer)
 	if repo == nil {
 		return
 	}
@@ -294,8 +294,8 @@ func maybeRedirectToExternalTracker(c flamego.Context, logger *logx.Logger, view
 
 // maybeRedirectToExternalWiki sends the pages of the wiki to the external wiki
 // of the repository when it has one.
-func maybeRedirectToExternalWiki(c flamego.Context, logger *logx.Logger, viewer *database.User) {
-	repo := readableRepo(c, logger, viewer)
+func maybeRedirectToExternalWiki(c flamego.Context, auth conf.AuthOpts, logger *logx.Logger, viewer *database.User) {
+	repo := readableRepo(c, auth, logger, viewer)
 	if repo == nil {
 		return
 	}

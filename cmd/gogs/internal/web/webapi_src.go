@@ -30,17 +30,27 @@ type repoCloneLinks struct {
 }
 
 // repoCloneLinksOf returns the clone links of the repository for the
-// protocols the site serves.
-func repoCloneLinksOf(owner, repo string, isWiki bool) *repoCloneLinks {
-	links := repox.NewCloneLink(owner, repo, isWiki)
+// protocols the site serves, i.e., HTTP unless httpGitDisabled and SSH unless
+// sshDisabled.
+func repoCloneLinksOf(links database.LinkOptions, httpGitDisabled, sshDisabled bool, owner, repo string, isWiki bool) *repoCloneLinks {
+	cloneLink := repox.NewCloneLink(links.CloneLinkOptions(), owner, repo, isWiki)
 	resp := &repoCloneLinks{}
-	if !conf.Repository.DisableHTTPGit {
-		resp.HTTPS = links.HTTPS
+	if !httpGitDisabled {
+		resp.HTTPS = cloneLink.HTTPS
 	}
-	if !conf.SSH.Disabled {
-		resp.SSH = links.SSH
+	if !sshDisabled {
+		resp.SSH = cloneLink.SSH
 	}
 	return resp
+}
+
+// fileRenderOptions are the settings that files of repositories are shown
+// with.
+type fileRenderOptions struct {
+	markup             markup.Options
+	markdownExtensions []string
+	// ansiCharset is the encoding that text not in UTF-8 is read in first.
+	ansiCharset string
 }
 
 type repoEntryCommit struct {
@@ -174,7 +184,7 @@ type repoSrcResponse struct {
 // getRepoSrc describes the directory or the file at the path after the ref
 // in the route, for the code browser, or the quick guide of an empty
 // repository.
-func getRepoSrc(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoSrcResponse, err error) {
+func getRepoSrc(c flamego.Context, sshOpts conf.SSHOpts, markdown conf.MarkdownOpts, markupOpts markup.Options, links database.LinkOptions, repoOpts conf.RepositoryOpts, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoSrcResponse, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
 	if !repoCtx.Viewer.CanRead() {
@@ -190,11 +200,11 @@ func getRepoSrc(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (s
 			return http.StatusNotFound, nil, errors.New("repository is empty")
 		}
 		resp.Empty = true
-		resp.CloneLinks = repoCloneLinksOf(repoCtx.Owner.Name, repo.Name, false)
+		resp.CloneLinks = repoCloneLinksOf(links, repoOpts.DisableHTTPGit, sshOpts.Disabled, repoCtx.Owner.Name, repo.Name, false)
 		return http.StatusOK, resp, nil
 	}
 
-	gitRepo, err := openRepoGit(repoCtx)
+	gitRepo, err := openRepoGit(repoOpts.Root, repoCtx)
 	if err != nil {
 		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
@@ -235,12 +245,12 @@ func getRepoSrc(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (s
 			}
 			if editable {
 				resp.Editor = "ok"
-				resp.CanUploadFile = conf.Repository.Upload.Enabled
+				resp.CanUploadFile = repoOpts.Upload.Enabled
 			}
 		}
 	}
 	if ref.Type == "branch" {
-		resp.PullRequest = pullRequestTarget(ctx, logger, repoCtx, ref.Name)
+		resp.PullRequest = pullRequestTarget(ctx, logger, links.Subpath, repoCtx, ref.Name)
 	}
 	if resp.Branches, err = gitRepo.Branches(ctx); err != nil {
 		logger.Error("Failed to list branches", "repoID", repo.ID, "error", err)
@@ -259,17 +269,18 @@ func getRepoSrc(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (s
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "get last commit")
 		}
 	}
-	resp.LatestCommit = &toCommitListItems(ctx, logger, repo, []*git.Commit{latestCommit})[0]
+	resp.LatestCommit = &toCommitListItems(ctx, logger, links, markupOpts, repoOpts.Root, repo, []*git.Commit{latestCommit})[0]
 
 	// Relative links in rendered files resolve against the directory they
 	// are in.
-	treeLink := repo.Link() + "/src/" + ref.Name
+	treeLink := repo.Link(markupOpts.Subpath) + "/src/" + ref.Name
+	renderOpts := fileRenderOptions{markup: markupOpts, markdownExtensions: markdown.FileExtensions, ansiCharset: repoOpts.ANSICharset}
 	if treePath != "" {
 		treeLink += "/" + treePath
 	}
 	if !entry.IsTree() {
 		resp.Kind = "file"
-		resp.File, err = describeRepoFile(ctx, logger, repo, ref.Commit, entry, treePath, path.Dir(treeLink))
+		resp.File, err = describeRepoFile(ctx, logger, renderOpts, repo, ref.Commit, entry, treePath, path.Dir(treeLink), repo.ComposeMetas(markupOpts.Subpath, repoOpts.Root))
 		if err != nil {
 			logger.Error("Failed to read file", "treePath", treePath, "repoID", repo.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "read file")
@@ -282,7 +293,7 @@ func getRepoSrc(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (s
 		resp.Summary = &repoSrcSummary{
 			Description: repo.Description,
 			Website:     repo.Website,
-			CloneLinks:  repoCloneLinksOf(repoCtx.Owner.Name, repo.Name, false),
+			CloneLinks:  repoCloneLinksOf(links, repoOpts.DisableHTTPGit, sshOpts.Disabled, repoCtx.Owner.Name, repo.Name, false),
 		}
 		if resp.Summary.CommitCount, err = ref.Commit.CommitsCount(ctx); err != nil {
 			logger.Error("Failed to count commits", "repoID", repo.ID, "error", err)
@@ -308,13 +319,13 @@ func getRepoSrc(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (s
 	defer cancel()
 	infos, err := entries.CommitsInfo(infoCtx, ref.Commit, git.CommitsInfoOptions{
 		Path:           treePath,
-		MaxConcurrency: conf.Repository.CommitsFetchConcurrency,
+		MaxConcurrency: repoOpts.CommitsFetchConcurrency,
 	})
 	if err != nil {
 		logger.Error("Failed to get last commits of tree entries", "treePath", treePath, "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get commits info")
 	}
-	metas := repo.ComposeMetas()
+	metas := repo.ComposeMetas(markupOpts.Subpath, repoOpts.Root)
 	dirCount := 0
 	for _, e := range entries {
 		if e.IsTree() {
@@ -327,7 +338,7 @@ func getRepoSrc(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (s
 		switch {
 		case info.Submodule != nil:
 			item.Type = "submodule"
-			item.SubmoduleURL = git.InferSubmoduleURL(repo.Link(), info.Submodule)
+			item.SubmoduleURL = git.InferSubmoduleURL(repo.Link(markupOpts.Subpath), info.Submodule)
 			item.SubmoduleCommit = info.Submodule.Commit
 		case info.Entry.IsTree():
 			item.Type = "dir"
@@ -344,14 +355,14 @@ func getRepoSrc(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (s
 		if info.Commit != nil {
 			item.Commit = &repoEntryCommit{
 				SHA:         info.Commit.ID.String(),
-				SubjectHTML: markup.RenderCommitMessage(info.Commit.Summary(), repo.Link(), metas),
+				SubjectHTML: markup.RenderCommitMessage(markupOpts, info.Commit.Summary(), repo.Link(markupOpts.Subpath), metas),
 				When:        info.Commit.Committer.When.UTC(),
 			}
 		}
 		resp.Entries = append(resp.Entries, item)
 	}
 
-	if resp.Overview, err = readOverviewFiles(ctx, logger, ref.Commit, entries, treePath == "", treeLink, repo, metas); err != nil {
+	if resp.Overview, err = readOverviewFiles(ctx, logger, renderOpts, ref.Commit, entries, treePath == "", treeLink, repo, metas); err != nil {
 		logger.Error("Failed to read overview files", "treePath", treePath, "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "read overview files")
 	}
@@ -415,7 +426,7 @@ func overviewKindOf(name string) string {
 // which are looked up in ".github", then in the root directory, then in
 // "docs", as on GitHub. Relative links in a file resolve against its
 // directory under treeLink.
-func readOverviewFiles(ctx context.Context, logger *logx.Logger, commit *git.Commit, entries git.Entries, isRoot bool, treeLink string, repo *database.Repository, metas map[string]string) ([]repoOverviewFile, error) {
+func readOverviewFiles(ctx context.Context, logger *logx.Logger, opts fileRenderOptions, commit *git.Commit, entries git.Entries, isRoot bool, treeLink string, repo *database.Repository, metas map[string]string) ([]repoOverviewFile, error) {
 	type found struct {
 		dir   string
 		entry *git.TreeEntry
@@ -479,13 +490,13 @@ func readOverviewFiles(ctx context.Context, logger *logx.Logger, commit *git.Com
 		}
 		file := repoOverviewFile{Kind: kind, Path: path.Join(f.dir, f.entry.Name())}
 		dirLink := strings.TrimSuffix(treeLink+"/"+f.dir, "/")
-		switch markup.Detect(f.entry.Name()) {
+		switch markup.Detect(opts.markdownExtensions, f.entry.Name()) {
 		case markup.TypeMarkdown:
-			file.HTML = markAppLinks(markup.MarkdownFile(p, dirLink, metas), repo)
+			file.HTML = markAppLinks(opts.markup, markup.MarkdownFile(opts.markup, p, dirLink, metas), repo)
 		case markup.TypeOrgMode:
-			file.HTML = markAppLinks(markup.OrgMode(p, dirLink, metas), repo)
+			file.HTML = markAppLinks(opts.markup, markup.OrgMode(opts.markup, p, dirLink, metas), repo)
 		default:
-			file.Text = toUTF8(logger, p)
+			file.Text = toUTF8(logger, opts.ansiCharset, p)
 		}
 		overview = append(overview, file)
 	}
@@ -493,8 +504,9 @@ func readOverviewFiles(ctx context.Context, logger *logx.Logger, commit *git.Com
 }
 
 // describeRepoFile reads the file of the entry to show it. Relative links in
-// a file in a markup language resolve against dirLink.
-func describeRepoFile(ctx context.Context, logger *logx.Logger, repo *database.Repository, commit *git.Commit, entry *git.TreeEntry, treePath, dirLink string) (*repoFile, error) {
+// a file in a markup language resolve against dirLink, and its references are
+// rendered with metas.
+func describeRepoFile(ctx context.Context, logger *logx.Logger, opts fileRenderOptions, repo *database.Repository, commit *git.Commit, entry *git.TreeEntry, treePath, dirLink string, metas map[string]string) (*repoFile, error) {
 	blob := entry.Blob()
 	p, err := blob.Bytes(ctx)
 	if err != nil {
@@ -507,26 +519,26 @@ func describeRepoFile(ctx context.Context, logger *logx.Logger, repo *database.R
 	}
 	switch {
 	case mimex.IsText(p):
-		if file.Size >= conf.UI.MaxDisplayFileSize {
+		if file.Size >= opts.markup.MaxDisplayFileSize {
 			file.Kind = "too_large"
 			break
 		}
-		content := toUTF8(logger, p)
+		content := toUTF8(logger, opts.ansiCharset, p)
 		file.Content = &content
 		indent, err := editorconfigIndent(ctx, commit, treePath)
 		if err != nil {
 			return nil, errors.Wrap(err, "read .editorconfig")
 		}
 		file.TabWidth = indent.TabWidth
-		switch markup.Detect(file.Name) {
+		switch markup.Detect(opts.markdownExtensions, file.Name) {
 		case markup.TypeMarkdown:
 			file.Kind = "markup"
-			file.HTML = markAppLinks(markup.MarkdownFile(p, dirLink, repo.ComposeMetas()), repo)
+			file.HTML = markAppLinks(opts.markup, markup.MarkdownFile(opts.markup, p, dirLink, metas), repo)
 		case markup.TypeOrgMode:
 			file.Kind = "markup"
-			file.HTML = markAppLinks(markup.OrgMode(p, dirLink, repo.ComposeMetas()), repo)
+			file.HTML = markAppLinks(opts.markup, markup.OrgMode(opts.markup, p, dirLink, metas), repo)
 		case markup.TypeIPythonNotebook:
-			file.Notebook, err = parseNotebook(p, dirLink, repo, repo.ComposeMetas())
+			file.Notebook, err = parseNotebook(opts.markup, p, dirLink, repo, metas)
 			if err == nil {
 				file.Kind = "notebook"
 				break
@@ -549,9 +561,9 @@ func describeRepoFile(ctx context.Context, logger *logx.Logger, repo *database.R
 }
 
 // toUTF8 converts text in another encoding to UTF-8, keeping it as is when
-// the encoding is not known.
-func toUTF8(logger *logx.Logger, p []byte) string {
-	content, err := template.ToUTF8WithErr(logger, p)
+// the encoding is not known. Text not in UTF-8 is read in ansiCharset first.
+func toUTF8(logger *logx.Logger, ansiCharset string, p []byte) string {
+	content, err := template.ToUTF8WithErr(logger, p, ansiCharset)
 	if err != nil {
 		return string(p)
 	}
@@ -605,8 +617,8 @@ func editorconfigIndent(ctx context.Context, commit *git.Commit, filePath string
 
 // pullRequestTarget returns where the viewer can propose the changes of the
 // branch: writers and those who forked the repository can, when the repository, or its base for a fork, takes pull
-// requests.
-func pullRequestTarget(ctx context.Context, logger *logx.Logger, repoCtx *repoContext, branch string) *repoPullRequestTarget {
+// requests. The links are under subpath.
+func pullRequestTarget(ctx context.Context, logger *logx.Logger, subpath string, repoCtx *repoContext, branch string) *repoPullRequestTarget {
 	repo := repoCtx.Repo
 	viewer := repoCtx.Viewer
 	if !viewer.CanWrite() && (!viewer.Authenticated() || !database.Handle.Repositories().HasForkedBy(ctx, repo.ID, viewer.ID())) {
@@ -616,7 +628,7 @@ func pullRequestTarget(ctx context.Context, logger *logx.Logger, repoCtx *repoCo
 		if !repo.AllowsPulls() {
 			return nil
 		}
-		return &repoPullRequestTarget{RepoLink: repo.Link(), BaseBranch: repo.DefaultBranch, Head: branch}
+		return &repoPullRequestTarget{RepoLink: repo.Link(subpath), BaseBranch: repo.DefaultBranch, Head: branch}
 	}
 	base, err := database.Handle.Repositories().GetByID(ctx, repo.ForkID)
 	if err != nil {
@@ -628,9 +640,9 @@ func pullRequestTarget(ctx context.Context, logger *logx.Logger, repoCtx *repoCo
 		return nil
 	}
 	if viewer.CanWrite() {
-		return &repoPullRequestTarget{RepoLink: base.Link(), BaseBranch: base.DefaultBranch, Head: repoCtx.Owner.Name + ":" + branch}
+		return &repoPullRequestTarget{RepoLink: base.Link(subpath), BaseBranch: base.DefaultBranch, Head: repoCtx.Owner.Name + ":" + branch}
 	}
-	return &repoPullRequestTarget{RepoLink: repo.Link(), BaseBranch: repo.DefaultBranch, Head: viewer.Name + ":" + branch}
+	return &repoPullRequestTarget{RepoLink: repo.Link(subpath), BaseBranch: repo.DefaultBranch, Head: viewer.Name + ":" + branch}
 }
 
 // repoPathsMax bounds how many paths a file list has, which is for jumping to
@@ -647,10 +659,10 @@ type repoPathsResponse struct {
 
 // getRepoPaths lists the paths of every file of the ref in the route, or of
 // the default branch without one.
-func getRepoPaths(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoPathsResponse, err error) {
+func getRepoPaths(c flamego.Context, repoOpts conf.RepositoryOpts, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoPathsResponse, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
-	gitRepo, err := openRepoGit(repoCtx)
+	gitRepo, err := openRepoGit(repoOpts.Root, repoCtx)
 	if err != nil {
 		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")

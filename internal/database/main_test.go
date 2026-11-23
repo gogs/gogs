@@ -10,7 +10,6 @@ import (
 	"gorm.io/gorm/logger"
 	"unknwon.dev/x/logx"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database/migrations"
 	"gogs.io/gogs/internal/dbtest"
 )
@@ -26,22 +25,13 @@ func TestMain(m *testing.M) {
 	// NOTE: AutoMigrate does not respect logger passed in gorm.Config.
 	logger.Default = logger.Default.LogMode(level)
 
-	switch os.Getenv("GOGS_DATABASE_TYPE") {
-	case "mysql":
-		conf.UseMySQL = true
-	case "postgres":
-		conf.UsePostgreSQL = true
-	default:
-		conf.UseSQLite3 = true
-	}
-
 	os.Exit(m.Run())
 }
 
 // newTestDB returns a new test database with the schema created by migrations.
 func newTestDB(t *testing.T, suite string) *gorm.DB {
 	db := dbtest.NewDB(t, suite)
-	err := migrations.Migrate(logx.NewNoopLogger(), db)
+	err := migrations.Migrate(logx.NewNoopLogger(), db, "")
 	require.NoError(t, err)
 	return db
 }

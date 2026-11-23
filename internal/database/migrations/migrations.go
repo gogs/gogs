@@ -33,7 +33,7 @@ const minDBVersion = 19
 // databases migrated by the legacy runner. So do the migrations that add what
 // XORM and GORM used to add on startup, because databases that ran a version
 // from before goose already have it.
-func newMigrations(logger *logx.Logger, db *gorm.DB) []*goose.Migration {
+func newMigrations(logger *logx.Logger, db *gorm.DB, authorizedKeysPath string) []*goose.Migration {
 	return []*goose.Migration{
 		newMigration(logger, db, 19, "create missing tables", createBaselineTables),
 		newMigration(logger, db, 20, "migrate access tokens to store SHA256", migrateAccessTokenToSHA256),
@@ -51,7 +51,9 @@ func newMigrations(logger *logx.Logger, db *gorm.DB) []*goose.Migration {
 		newMigration(logger, db, 20261116225300, "add repository pull request merge settings", addRepositoryPullsMergeSettings),
 		newMigration(logger, db, 20261117073704, "drop protect_branch_whitelist table", dropProtectBranchWhitelistTable),
 		newMigration(logger, db, 20261118160000, "disable push allowlists of protected branches of user repositories", DisableProtectBranchAllowlistOfUserRepositories),
-		newMigration(logger, db, 20261118175404, "add unique index on public_key.owner_id and public_key.fingerprint", addPublicKeyOwnerIDFingerprintUniqueIndex),
+		newMigration(logger, db, 20261118175404, "add unique index on public_key.owner_id and public_key.fingerprint", func(db *gorm.DB) error {
+			return addPublicKeyOwnerIDFingerprintUniqueIndex(db, authorizedKeysPath)
+		}),
 		newMigration(logger, db, 20261120033000, "drop user.avatar and user.avatar_email", dropUserAvatarAndAvatarEmail),
 		newMigration(logger, db, 20261121213349, "add index on issue_user.issue_id", addIssueUserIssueIDIndex),
 		newMigration(logger, db, 20261121220000, "add indexes on access.repo_id, watch.repo_id and pull_request.base_repo_id", addRepoIDIndexes),
@@ -81,12 +83,14 @@ func newMigration(logger *logx.Logger, db *gorm.DB, version int64, description s
 }
 
 // Migrate migrates the database schema and/or data to the current version.
-func Migrate(logger *logx.Logger, db *gorm.DB) error {
-	return migrateTo(logger, db, goose.MaxVersion)
+// Migrations that remove public keys also remove their lines from the
+// authorized_keys file at the path, unless it is empty.
+func Migrate(logger *logx.Logger, db *gorm.DB, authorizedKeysPath string) error {
+	return migrateTo(logger, db, goose.MaxVersion, authorizedKeysPath)
 }
 
 // migrateTo runs the migrations up to and including the given version.
-func migrateTo(logger *logx.Logger, db *gorm.DB, version int64) error {
+func migrateTo(logger *logx.Logger, db *gorm.DB, version int64, authorizedKeysPath string) error {
 	sqlDB, err := db.DB()
 	if err != nil {
 		return errors.Wrap(err, "get underlying *sql.DB")
@@ -113,7 +117,7 @@ func migrateTo(logger *logx.Logger, db *gorm.DB, version int64) error {
 		sqlDB,
 		nil,
 		goose.WithDisableGlobalRegistry(true),
-		goose.WithGoMigrations(newMigrations(logger, db)...),
+		goose.WithGoMigrations(newMigrations(logger, db, authorizedKeysPath)...),
 	)
 	if err != nil {
 		return errors.Wrap(err, "new goose provider")

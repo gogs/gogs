@@ -9,11 +9,25 @@ import (
 	"gorm.io/gorm"
 	"unknwon.dev/x/logx"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/email"
+	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/strx"
-	"gogs.io/gogs/internal/userx"
 )
+
+// NotifyOptions are the settings that telling people about changes to issues,
+// pull requests and their comments reads, i.e., webhooks, mentions and emails.
+type NotifyOptions struct {
+	Links LinkOptions
+	// RepositoryRoot is where repositories are stored, in which emails resolve
+	// the commit IDs they mention.
+	RepositoryRoot string
+	// Markup finds the mentions.
+	Markup markup.Options
+	// EnableEmailNotification sends emails to watchers, participants and mentioned
+	// users.
+	EnableEmailNotification bool
+	Email                   email.Options
+}
 
 func (issue *Issue) MailSubject() string {
 	return fmt.Sprintf("[%s] %s (#%d)", issue.Repo.Name, issue.Title, issue.Index)
@@ -36,43 +50,15 @@ func (mu mailerUser) Email() string {
 	return mu.user.Email
 }
 
-func (mu mailerUser) GenerateEmailActivateCode(email string) string {
-	return userx.GenerateActivateCode(
-		mu.user.ID,
-		email,
-		mu.user.Name,
-		mu.user.Password,
-		mu.user.Rands,
-	)
-}
-
-func (mu mailerUser) GenerateConfirmEmailCode(email string) string {
-	return userx.GenerateConfirmEmailCode(
-		mu.user.ID,
-		email,
-		mu.user.Name,
-		mu.user.Password,
-		mu.user.Rands,
-	)
-}
-
-func (mu mailerUser) GenerateEmailResetPasswordCode(email string) string {
-	return userx.GenerateResetPasswordCode(
-		mu.user.ID,
-		email,
-		mu.user.Name,
-		mu.user.Password,
-		mu.user.Rands,
-	)
-}
-
 func NewMailerUser(u *User) email.User {
 	return mailerUser{u}
 }
 
 // mailerRepo is a wrapper for satisfying mailer.Repository interface.
 type mailerRepo struct {
-	repo *Repository
+	repo  *Repository
+	links LinkOptions
+	root  string
 }
 
 func (mr mailerRepo) FullName() string {
@@ -80,14 +66,14 @@ func (mr mailerRepo) FullName() string {
 }
 
 func (mr mailerRepo) HTMLURL() string {
-	return mr.repo.HTMLURL()
+	return mr.repo.HTMLURL(mr.links.ExternalURL)
 }
 
 // ComposeMetas leaves out the repository to resolve commit IDs in when guests
 // who cannot read the code take part in its issues, and so receive its mails,
 // so that commit links do not reveal which commits it has.
 func (mr mailerRepo) ComposeMetas() map[string]string {
-	metas := mr.repo.ComposeMetas()
+	metas := mr.repo.ComposeMetas(mr.links.Subpath, mr.root)
 	if !mr.repo.IsPrivate || !mr.repo.CanGuestViewIssues() {
 		return metas
 	}
@@ -96,13 +82,16 @@ func (mr mailerRepo) ComposeMetas() map[string]string {
 	return metas
 }
 
-func NewMailerRepo(repo *Repository) email.Repository {
-	return mailerRepo{repo}
+// NewMailerRepo returns the repository for emails, whose links are made of
+// given settings and whose path is under the root of the repositories.
+func NewMailerRepo(links LinkOptions, root string, repo *Repository) email.Repository {
+	return mailerRepo{repo: repo, links: links, root: root}
 }
 
 // mailerIssue is a wrapper for satisfying mailer.Issue interface.
 type mailerIssue struct {
-	issue *Issue
+	issue       *Issue
+	externalURL string
 }
 
 func (mi mailerIssue) MailSubject() string {
@@ -114,21 +103,23 @@ func (mi mailerIssue) Content() string {
 }
 
 func (mi mailerIssue) HTMLURL() string {
-	return mi.issue.HTMLURL()
+	return mi.issue.HTMLURL(mi.externalURL)
 }
 
-func NewMailerIssue(issue *Issue) email.Issue {
-	return mailerIssue{issue}
+// NewMailerIssue returns the issue for emails, whose link starts with the
+// external URL.
+func NewMailerIssue(externalURL string, issue *Issue) email.Issue {
+	return mailerIssue{issue: issue, externalURL: externalURL}
 }
 
 // mailIssueCommentToParticipants can be used for both new issue creation and comment.
 // This function sends two lists of emails:
 // 1. Repository watchers, users who participated in comments and the assignee.
 // 2. Users who are not in 1. but get mentioned in current issue/comment.
-func mailIssueCommentToParticipants(logger *logx.Logger, tx *gorm.DB, issue *Issue, doer *User, mentions []string) error {
+func mailIssueCommentToParticipants(logger *logx.Logger, notify NotifyOptions, tx *gorm.DB, issue *Issue, doer *User, mentions []string) error {
 	ctx := context.TODO()
 
-	if !conf.User.EnableEmailNotification {
+	if !notify.EnableEmailNotification {
 		return nil
 	}
 
@@ -181,7 +172,9 @@ func mailIssueCommentToParticipants(logger *logx.Logger, tx *gorm.DB, issue *Iss
 			names = append(names, issue.Assignee.Name)
 		}
 	}
-	if err = email.SendIssueCommentMail(logger, NewMailerIssue(issue), NewMailerRepo(issue.Repo), NewMailerUser(doer), tos); err != nil {
+	mailerIssue := NewMailerIssue(notify.Links.ExternalURL, issue)
+	mailerRepo := NewMailerRepo(notify.Links, notify.RepositoryRoot, issue.Repo)
+	if err = email.SendIssueCommentMail(logger, notify.Email, mailerIssue, mailerRepo, NewMailerUser(doer), tos); err != nil {
 		return errors.Wrap(err, "send issue comment mail")
 	}
 
@@ -200,7 +193,7 @@ func mailIssueCommentToParticipants(logger *logx.Logger, tx *gorm.DB, issue *Iss
 	if err != nil {
 		return errors.Wrap(err, "get mailable emails by usernames")
 	}
-	if err = email.SendIssueMentionMail(logger, NewMailerIssue(issue), NewMailerRepo(issue.Repo), NewMailerUser(doer), tos); err != nil {
+	if err = email.SendIssueMentionMail(logger, notify.Email, mailerIssue, mailerRepo, NewMailerUser(doer), tos); err != nil {
 		return errors.Wrap(err, "send issue mention mail")
 	}
 	return nil

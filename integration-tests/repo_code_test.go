@@ -39,7 +39,7 @@ func repoCodePage(repo *Repository) string {
 func repoCodeGit(t *testing.T, repo *Repository, args ...string) string {
 	t.Helper()
 
-	cmd := exec.Command("git", append([]string{"-C", database.RepoPath(repo.Owner, repo.Name)}, args...)...)
+	cmd := exec.Command("git", append([]string{"-C", database.RepoPath(cfg.Repository.Root, repo.Owner, repo.Name)}, args...)...)
 	out, err := cmd.CombinedOutput()
 	require.NoError(t, err, "git %v: %s", args, out)
 	return strings.TrimSuffix(string(out), "\n")
@@ -1127,7 +1127,7 @@ func TestRepoCodeReleaseChanges(t *testing.T) {
 	}
 	gone := func(uuid string) bool {
 		_, err := database.Handle.Attachments().GetByUUID(t.Context(), uuid)
-		_, statErr := os.Stat(database.AttachmentLocalPath(uuid))
+		_, statErr := os.Stat(database.AttachmentLocalPath(cfg.Attachment.Path, uuid))
 		return database.IsErrAttachmentNotExist(err) && os.IsNotExist(statErr)
 	}
 
@@ -1236,7 +1236,7 @@ func TestRepoCodeWiki(t *testing.T) {
 	status, body = otherClient.do(http.MethodPost, api+"/wiki", map[string]any{"title": "Spam", "content": "Spam."})
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 
-	wikiPath := database.WikiPath(repo.Owner, repo.Name)
+	wikiPath := database.WikiPath(cfg.Repository.Root, repo.Owner, repo.Name)
 	wikiGit := func(args ...string) string {
 		out, err := exec.Command("git", append([]string{"-C", wikiPath}, args...)...).CombinedOutput()
 		require.NoError(t, err, "git %v: %s", args, out)
@@ -1321,7 +1321,7 @@ func TestRepoCodeForks(t *testing.T) {
 	forkerUser, err := database.Handle.Users().GetByID(t.Context(), forker.ID)
 	require.NoError(t, err)
 	forkName := UniqueName("fork-")
-	_, err = database.Handle.Repositories().Fork(t.Context(), logger, forkerUser, forkerUser, base, forkName, "")
+	_, err = database.Handle.Repositories().Fork(t.Context(), logger, repoCreationOptions(cfg), forkerUser, forkerUser, base, forkName, "")
 	require.NoError(t, err)
 
 	type fork struct {

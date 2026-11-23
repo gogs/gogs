@@ -9,6 +9,7 @@ import (
 	"github.com/flamego/flamego"
 	"unknwon.dev/x/logx"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/telemetry"
 )
@@ -22,10 +23,11 @@ type Viewer struct {
 }
 
 // newViewer returns the viewer for the request. Disabled users are effectively
-// visiting as anonymous users.
-func newViewer(ctx context.Context, logger *logx.Logger, user *database.User, owner *database.User, repo *database.Repository) *Viewer {
+// visiting as anonymous users, which includes users who have not confirmed their
+// email when requireEmailConfirmation is true.
+func newViewer(ctx context.Context, logger *logx.Logger, requireEmailConfirmation bool, user *database.User, owner *database.User, repo *database.Repository) *Viewer {
 	v := &Viewer{}
-	if user != nil && !user.IsDisabled() {
+	if user != nil && !user.IsDisabled(requireEmailConfirmation) {
 		v.User = user
 	}
 	if v.User != nil && v.IsAdmin {
@@ -79,9 +81,10 @@ type repoContext struct {
 // metas returns the metas to render Markdown of the repository for the
 // viewer. Viewers who cannot read the code, e.g., guests of the issues of a
 // private repository, get no repository to resolve commit IDs in, so that
-// commit links do not reveal which commits it has.
-func (rc *repoContext) metas() map[string]string {
-	metas := rc.Repo.ComposeMetas()
+// commit links do not reveal which commits it has. The links are under subpath,
+// and repositories are stored under root.
+func (rc *repoContext) metas(subpath, root string) map[string]string {
+	metas := rc.Repo.ComposeMetas(subpath, root)
 	if rc.Viewer.CanRead() {
 		return metas
 	}
@@ -92,7 +95,7 @@ func (rc *repoContext) metas() map[string]string {
 
 // withRepoContext injects the repoContext of the repository derived from the
 // route.
-func withRepoContext(logger *logx.Logger, c flamego.Context, user *database.User) {
+func withRepoContext(logger *logx.Logger, c flamego.Context, auth conf.AuthOpts, user *database.User) {
 	ctx := c.Request().Context()
 	w := c.ResponseWriter()
 	ownerName := c.Param("owner")
@@ -124,6 +127,6 @@ func withRepoContext(logger *logx.Logger, c flamego.Context, user *database.User
 	c.Map(&repoContext{
 		Owner:  owner,
 		Repo:   repo,
-		Viewer: newViewer(ctx, logger, user, owner, repo),
+		Viewer: newViewer(ctx, logger, auth.RequireEmailConfirmation, user, owner, repo),
 	})
 }

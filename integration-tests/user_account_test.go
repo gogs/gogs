@@ -67,7 +67,7 @@ func TestUserResetPassword(t *testing.T) {
 	u := seedUser(t, CreateUserOptions{})
 	stored, err := database.Handle.Users().GetByID(t.Context(), u.ID)
 	require.NoError(t, err)
-	code := userx.GenerateResetPasswordCode(stored.ID, stored.Email, stored.LowerName, stored.Password, stored.Rands)
+	code := userx.GenerateResetPasswordCode(cfg.Security.SecretKey, cfg.Auth.ResetPasswordCodeLives, stored.ID, stored.Email, stored.LowerName, stored.Password, stored.Rands)
 
 	type pageResp struct {
 		EmailEnabled bool `json:"emailEnabled"`

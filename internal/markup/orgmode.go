@@ -38,6 +38,6 @@ func RawOrgMode(body []byte, urlPrefix string) (result []byte) {
 }
 
 // OrgMode takes a string or []byte and renders to HTML in Org-mode syntax with special links.
-func OrgMode(input any, urlPrefix string, metas map[string]string) []byte {
-	return Render(TypeOrgMode, input, urlPrefix, metas)
+func OrgMode(o Options, input any, urlPrefix string, metas map[string]string) []byte {
+	return Render(o, TypeOrgMode, input, urlPrefix, metas)
 }

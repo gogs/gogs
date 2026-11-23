@@ -13,7 +13,7 @@ import (
 	"gogs.io/gogs/internal/database"
 )
 
-func queryIssues(c *apiContext, opts *database.IssuesOptions) {
+func queryIssues(c *apiContext, links database.LinkOptions, opts *database.IssuesOptions) {
 	issues, err := database.Handle.Issues().List(c.Request().Context(), opts)
 	if err != nil {
 		c.Error(err, "list issues")
@@ -28,40 +28,42 @@ func queryIssues(c *apiContext, opts *database.IssuesOptions) {
 
 	apiIssues := make([]*v1types.Issue, len(issues))
 	for i := range issues {
-		apiIssues[i] = toIssue(issues[i])
+		apiIssues[i] = toIssue(links, issues[i])
 	}
 
-	c.SetLinkHeader(int(count), conf.UI.IssuePagingNum)
+	c.SetLinkHeader(int(count), opts.PageSize)
 	c.JSONSuccess(&apiIssues)
 }
 
-func listUserIssues(c *apiContext) {
+func listUserIssues(c *apiContext, ui conf.UIOpts, links database.LinkOptions) {
 	opts := database.IssuesOptions{
 		AssigneeID: c.User.ID,
-		Page:       c.queryPage(conf.UI.IssuePagingNum),
+		Page:       c.queryPage(ui.IssuePagingNum),
+		PageSize:   ui.IssuePagingNum,
 		IsClosed:   v1types.IssueStateType(c.Query("state")) == v1types.IssueStateClosed,
 	}
 
-	queryIssues(c, &opts)
+	queryIssues(c, links, &opts)
 }
 
-func listIssues(c *apiContext) {
+func listIssues(c *apiContext, ui conf.UIOpts, links database.LinkOptions) {
 	opts := database.IssuesOptions{
 		RepoID:   c.Repo.Repository.ID,
-		Page:     c.queryPage(conf.UI.IssuePagingNum),
+		Page:     c.queryPage(ui.IssuePagingNum),
+		PageSize: ui.IssuePagingNum,
 		IsClosed: v1types.IssueStateType(c.Query("state")) == v1types.IssueStateClosed,
 	}
 
-	queryIssues(c, &opts)
+	queryIssues(c, links, &opts)
 }
 
-func getIssue(c *apiContext) {
+func getIssue(c *apiContext, links database.LinkOptions) {
 	issue, err := database.Handle.Issues().GetByIndex(c.Request().Context(), c.Repo.Repository.ID, c.ParamInt64("index"))
 	if err != nil {
 		c.NotFoundOrError(err, "get issue by index")
 		return
 	}
-	c.JSONSuccess(toIssue(issue))
+	c.JSONSuccess(toIssue(links, issue))
 }
 
 type createIssueRequest struct {
@@ -83,7 +85,7 @@ func isAssignable(ctx context.Context, repo *database.Repository, u *database.Us
 	return slices.ContainsFunc(assignees, func(a *database.User) bool { return a.ID == u.ID }), nil
 }
 
-func createIssue(c *apiContext, form createIssueRequest) {
+func createIssue(c *apiContext, notify database.NotifyOptions, form createIssueRequest) {
 	issue := &database.Issue{
 		RepoID:   c.Repo.Repository.ID,
 		Title:    form.Title,
@@ -118,13 +120,13 @@ func createIssue(c *apiContext, form createIssueRequest) {
 		form.Labels = nil
 	}
 
-	if err := database.Handle.Issues().Create(c.Request().Context(), c.Logger, c.Repo.Repository, issue, form.Labels, nil); err != nil {
+	if err := database.Handle.Issues().Create(c.Request().Context(), c.Logger, notify, c.Repo.Repository, issue, form.Labels, nil); err != nil {
 		c.Error(err, "new issue")
 		return
 	}
 
 	if form.Closed {
-		if err := database.Handle.Issues().ChangeStatus(c.Request().Context(), c.Logger, c.User, c.Repo.Repository, issue, true); err != nil {
+		if err := database.Handle.Issues().ChangeStatus(c.Request().Context(), c.Logger, notify, c.User, c.Repo.Repository, issue, true); err != nil {
 			c.Error(err, "change status to closed")
 			return
 		}
@@ -137,7 +139,7 @@ func createIssue(c *apiContext, form createIssueRequest) {
 		c.Error(err, "get issue by ID")
 		return
 	}
-	c.JSON(http.StatusCreated, toIssue(issue))
+	c.JSON(http.StatusCreated, toIssue(notify.Links, issue))
 }
 
 type editIssueRequest struct {
@@ -148,7 +150,7 @@ type editIssueRequest struct {
 	State     *string `json:"state"`
 }
 
-func editIssue(c *apiContext, form editIssueRequest) {
+func editIssue(c *apiContext, notify database.NotifyOptions, form editIssueRequest) {
 	issue, err := database.Handle.Issues().GetByIndex(c.Request().Context(), c.Repo.Repository.ID, c.ParamInt64("index"))
 	if err != nil {
 		c.NotFoundOrError(err, "get issue by index")
@@ -203,7 +205,7 @@ func editIssue(c *apiContext, form editIssueRequest) {
 	if c.Repo.IsWriter() && form.Milestone != nil &&
 		issue.MilestoneID != *form.Milestone {
 		issue.MilestoneID = *form.Milestone
-		if err = database.Handle.Milestones().AssignIssue(ctx, c.Logger, c.User, issue); err != nil {
+		if err = database.Handle.Milestones().AssignIssue(ctx, c.Logger, notify.Links, c.User, issue); err != nil {
 			c.Error(err, "change milestone assign")
 			return
 		}
@@ -214,7 +216,7 @@ func editIssue(c *apiContext, form editIssueRequest) {
 		return
 	}
 	if form.State != nil {
-		if err = database.Handle.Issues().ChangeStatus(ctx, c.Logger, c.User, c.Repo.Repository, issue, v1types.IssueStateClosed == v1types.IssueStateType(*form.State)); err != nil {
+		if err = database.Handle.Issues().ChangeStatus(ctx, c.Logger, notify, c.User, c.Repo.Repository, issue, v1types.IssueStateClosed == v1types.IssueStateType(*form.State)); err != nil {
 			c.Error(err, "change status")
 			return
 		}
@@ -226,5 +228,5 @@ func editIssue(c *apiContext, form editIssueRequest) {
 		c.Error(err, "get issue by ID")
 		return
 	}
-	c.JSON(http.StatusCreated, toIssue(issue))
+	c.JSON(http.StatusCreated, toIssue(notify.Links, issue))
 }

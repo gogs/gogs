@@ -642,7 +642,7 @@ func TestIssueEditAttachmentsClientGone(t *testing.T) {
 	}
 	gone := func(uuid string) bool {
 		_, err := database.Handle.Attachments().GetByUUID(t.Context(), uuid)
-		_, statErr := os.Stat(database.AttachmentLocalPath(uuid))
+		_, statErr := os.Stat(database.AttachmentLocalPath(cfg.Attachment.Path, uuid))
 		return database.IsErrAttachmentNotExist(err) && os.IsNotExist(statErr)
 	}
 	attachedTo := func(uuid string, issueID, commentID int64) bool {
@@ -867,7 +867,7 @@ func TestIssueMarkdownCommitLinks(t *testing.T) {
 	other := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	ownerClient := authenticatedClient(t, owner)
 
-	dir := database.RepoPath(repo.Owner, repo.Name)
+	dir := database.RepoPath(cfg.Repository.Root, repo.Owner, repo.Name)
 	commitID := repoSettingsGit(t, dir, "rev-parse", "HEAD")
 	short, abbrev9, abbrev10 := issueCommitAbbrev(commitID, 7), issueCommitAbbrev(commitID, 9), issueCommitAbbrev(commitID, 10)
 	otherCommitID := repoSettingsAddCommit(t, other, repoSettingsDefaultBranch(t, other), "Only in the other repository")
@@ -908,7 +908,7 @@ func TestIssueMarkdownCommitLinks(t *testing.T) {
 	t.Run("guests who cannot read the code", func(t *testing.T) {
 		private := seedRepository(t, owner.ID, CreateRepositoryOptions{Private: true, AutoInit: true})
 		repoVisibilityPutPublicAccess(t, ownerClient, private, false, true)
-		privateID := repoSettingsGit(t, database.RepoPath(private.Owner, private.Name), "rev-parse", "HEAD")
+		privateID := repoSettingsGit(t, database.RepoPath(cfg.Repository.Root, private.Owner, private.Name), "rev-parse", "HEAD")
 		privateShort := issueCommitAbbrev(privateID, 7)
 		privateLink := `<a data-app-link href="/` + private.Owner + "/" + private.Name + "/commit/" + privateID + `" rel="nofollow"><code>` + privateShort[:min(len(privateShort), 10)] + "</code></a>"
 		guestClient := authenticatedClient(t, seedUser(t, CreateUserOptions{}))
@@ -960,7 +960,7 @@ func TestIssueMarkdownAppLinks(t *testing.T) {
 	require.NoError(t, json.Unmarshal(body, &attachment))
 
 	branch := repoSettingsDefaultBranch(t, repo)
-	commitID := repoSettingsGit(t, database.RepoPath(repo.Owner, repo.Name), "rev-parse", "HEAD")
+	commitID := repoSettingsGit(t, database.RepoPath(cfg.Repository.Root, repo.Owner, repo.Name), "rev-parse", "HEAD")
 	repoPath := "/" + repo.Owner + "/" + repo.Name
 	trackedPath := "/" + tracked.Owner + "/" + tracked.Name
 	content := strings.Join([]string{

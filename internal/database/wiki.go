@@ -36,44 +36,45 @@ func CleanWikiPageName(name string) string {
 // WikiCloneLink returns clone URLs of repository wiki.
 //
 // Deprecated: Use repox.NewCloneLink instead.
-func (r *Repository) WikiCloneLink() (cl *repox.CloneLink) {
-	return r.cloneLink(true)
+func (r *Repository) WikiCloneLink(links LinkOptions) (cl *repox.CloneLink) {
+	return r.cloneLink(links, true)
 }
 
-// WikiPath returns wiki data path by given user and repository name.
-func WikiPath(userName, repoName string) string {
+// WikiPath returns wiki data path by given user and repository name under the
+// root of the repositories.
+func WikiPath(root, userName, repoName string) string {
 	// 🚨 SECURITY: Prevent path traversal in repository name.
-	return filepath.Join(repox.UserPath(userName), pathx.Clean(strings.ToLower(repoName))+".wiki.git")
+	return filepath.Join(repox.UserPath(root, userName), pathx.Clean(strings.ToLower(repoName))+".wiki.git")
 }
 
-func (r *Repository) WikiPath() string {
-	return WikiPath(r.MustOwner().Name, r.Name)
+func (r *Repository) WikiPath(root string) string {
+	return WikiPath(root, r.MustOwner().Name, r.Name)
 }
 
 // HasWiki returns true if repository has wiki.
-func (r *Repository) HasWiki() bool {
-	return osx.IsDir(r.WikiPath())
+func (r *Repository) HasWiki(root string) bool {
+	return osx.IsDir(r.WikiPath(root))
 }
 
 // HasWikiPages returns true if the wiki has a branch of pages. A wiki that a
 // push created before pushing anything, e.g., a dry run, has none.
-func (r *Repository) HasWikiPages(ctx context.Context) bool {
-	wikiPath := r.WikiPath()
+func (r *Repository) HasWikiPages(ctx context.Context, root string) bool {
+	wikiPath := r.WikiPath(root)
 	return git.RepoHasBranch(ctx, wikiPath, WikiBranch(ctx, wikiPath))
 }
 
 // InitWiki initializes a wiki for repository,
 // it does nothing when repository already has wiki.
-func (r *Repository) InitWiki(ctx context.Context) error {
+func (r *Repository) InitWiki(ctx context.Context, root string) error {
 	// Stopping midway, e.g., when the client disconnects, would leave a
 	// partial change behind.
 	ctx = context.WithoutCancel(ctx)
 
-	if r.HasWiki() {
+	if r.HasWiki(root) {
 		return nil
 	}
 
-	if err := git.Init(ctx, r.WikiPath(), git.InitOptions{Bare: true}); err != nil {
+	if err := git.Init(ctx, r.WikiPath(root), git.InitOptions{Bare: true}); err != nil {
 		return errors.Newf("init repository: %v", err)
 	}
 	return nil
@@ -82,11 +83,11 @@ func (r *Repository) InitWiki(ctx context.Context) error {
 // InitWikiForPush creates the wiki repository for a push to a wiki that has no
 // pages yet, so a wiki can be started by pushing to it instead of from the web.
 // It does nothing when the repository has no wiki or uses an external one.
-func (r *Repository) InitWikiForPush(ctx context.Context) error {
+func (r *Repository) InitWikiForPush(ctx context.Context, root string) error {
 	if !r.EnableWiki || r.EnableExternalWiki {
 		return nil
 	}
-	return r.InitWiki(ctx)
+	return r.InitWiki(ctx, root)
 }
 
 // UpdateWikiHEAD points HEAD of the wiki in the path to the branch of its pages
@@ -99,8 +100,8 @@ func UpdateWikiHEAD(ctx context.Context, wikiPath string) error {
 
 // wikiParent returns the branch that wiki pages are committed to and its
 // latest commit, which is nil when the wiki has no pages yet.
-func (r *Repository) wikiParent(ctx context.Context) (string, *git.Commit, error) {
-	wikiPath := r.WikiPath()
+func (r *Repository) wikiParent(ctx context.Context, root string) (string, *git.Commit, error) {
+	wikiPath := r.WikiPath(root)
 	wikiRepo, err := git.Open(wikiPath)
 	if err != nil {
 		return "", nil, errors.Wrap(err, "open wiki repository")
@@ -125,16 +126,17 @@ func (r *Repository) wikiParent(ctx context.Context) (string, *git.Commit, error
 }
 
 // updateWikiPage adds new page to repository wiki, or changes the page named
-// oldTitle when isNew is false. Titles are page names, not URLs.
-func (r *Repository) updateWikiPage(ctx context.Context, doer *User, oldTitle, title, content, message string, isNew bool) error {
+// oldTitle when isNew is false. Titles are page names, not URLs. The wiki is
+// under root, and the temporary repository under appDataPath.
+func (r *Repository) updateWikiPage(ctx context.Context, root, appDataPath string, doer *User, oldTitle, title, content, message string, isNew bool) error {
 	wikiWorkingPool.CheckIn(strconv.FormatInt(r.ID, 10))
 	defer wikiWorkingPool.CheckOut(strconv.FormatInt(r.ID, 10))
 
-	if err := r.InitWiki(ctx); err != nil {
+	if err := r.InitWiki(ctx, root); err != nil {
 		return errors.Newf("InitWiki: %v", err)
 	}
 
-	branch, parent, err := r.wikiParent(ctx)
+	branch, parent, err := r.wikiParent(ctx, root)
 	if err != nil {
 		return err
 	}
@@ -145,7 +147,7 @@ func (r *Repository) updateWikiPage(ctx context.Context, doer *User, oldTitle, t
 		message = "Update page '" + title + "'"
 	}
 	sig := &git.Signature{Name: doer.DisplayName(), Email: doer.Email}
-	_, err = commitAndPush(ctx, r.WikiPath(), parent, branch, message, sig, sig, git.PushOptions{}, func(tmpRepo *git.Repository) error {
+	_, err = commitAndPush(ctx, appDataPath, r.WikiPath(root), parent, branch, message, sig, sig, git.PushOptions{}, func(tmpRepo *git.Repository) error {
 		if parent != nil {
 			if isNew {
 				entry, err := treeEntry(ctx, parent, filename)
@@ -181,19 +183,19 @@ func (r *Repository) updateWikiPage(ctx context.Context, doer *User, oldTitle, t
 	return err
 }
 
-func (r *Repository) AddWikiPage(ctx context.Context, doer *User, title, content, message string) error {
-	return r.updateWikiPage(ctx, doer, "", title, content, message, true)
+func (r *Repository) AddWikiPage(ctx context.Context, root, appDataPath string, doer *User, title, content, message string) error {
+	return r.updateWikiPage(ctx, root, appDataPath, doer, "", title, content, message, true)
 }
 
-func (r *Repository) EditWikiPage(ctx context.Context, doer *User, oldTitle, title, content, message string) error {
-	return r.updateWikiPage(ctx, doer, oldTitle, title, content, message, false)
+func (r *Repository) EditWikiPage(ctx context.Context, root, appDataPath string, doer *User, oldTitle, title, content, message string) error {
+	return r.updateWikiPage(ctx, root, appDataPath, doer, oldTitle, title, content, message, false)
 }
 
-func (r *Repository) DeleteWikiPage(ctx context.Context, doer *User, title string) (err error) {
+func (r *Repository) DeleteWikiPage(ctx context.Context, root, appDataPath string, doer *User, title string) (err error) {
 	wikiWorkingPool.CheckIn(strconv.FormatInt(r.ID, 10))
 	defer wikiWorkingPool.CheckOut(strconv.FormatInt(r.ID, 10))
 
-	branch, parent, err := r.wikiParent(ctx)
+	branch, parent, err := r.wikiParent(ctx, root)
 	if err != nil {
 		return err
 	} else if parent == nil {
@@ -203,7 +205,7 @@ func (r *Repository) DeleteWikiPage(ctx context.Context, doer *User, title strin
 	title = CleanWikiPageName(title)
 	filename := title + ".md"
 	sig := &git.Signature{Name: doer.DisplayName(), Email: doer.Email}
-	_, err = commitAndPush(ctx, r.WikiPath(), parent, branch, "Delete page '"+title+"'", sig, sig, git.PushOptions{}, func(tmpRepo *git.Repository) error {
+	_, err = commitAndPush(ctx, appDataPath, r.WikiPath(root), parent, branch, "Delete page '"+title+"'", sig, sig, git.PushOptions{}, func(tmpRepo *git.Repository) error {
 		entry, err := treeEntry(ctx, parent, filename)
 		if err != nil {
 			return err

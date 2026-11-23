@@ -22,31 +22,24 @@ import (
 
 type testUserKey struct{}
 
-// newTestRoutingHandler returns the routing handler that takes the authenticated
-// user of a request from its context value of testUserKey.
-func newTestRoutingHandler(t *testing.T) (http.Handler, error) {
-	beforeURL := conf.Server.URL
-	t.Cleanup(func() { conf.Server.URL = beforeURL })
-	conf.Server.URL = &url.URL{Scheme: "http", Host: "localhost:3000"}
-
+// newTestRoutingHandler returns the routing handler of a site with given
+// authentication settings, which takes the authenticated user of a request from
+// its context value of testUserKey.
+func newTestRoutingHandler(auth conf.AuthOpts) (http.Handler, error) {
+	cfg := &conf.Config{
+		Server: conf.ServerOpts{URL: &url.URL{Scheme: "http", Host: "localhost:3000"}},
+		Auth:   auth,
+	}
 	localizer := func(c flamego.Context) {
 		c.Map(i18n.Locale{Lang: "en-US"})
 	}
-	return newRoutingHandler(logx.NewNoopLogger(), localizer, session.Sessioner(), func(c flamego.Context) {
+	return newRoutingHandler(logx.NewNoopLogger(), cfg, "", localizer, session.Sessioner(), func(c flamego.Context) {
 		user, _ := c.Request().Context().Value(testUserKey{}).(*database.User)
 		c.Map(user, authMethod{})
 	}, nil, nil)
 }
 
 func TestRequireViewAccess(t *testing.T) {
-	beforeSigninView, beforeConfirmation := conf.Auth.RequireSigninView, conf.Auth.RequireEmailConfirmation
-	t.Cleanup(func() {
-		conf.Auth.RequireSigninView, conf.Auth.RequireEmailConfirmation = beforeSigninView, beforeConfirmation
-	})
-
-	handler, err := newTestRoutingHandler(t)
-	require.NoError(t, err)
-
 	// The gate runs before any database or Git access, so these requests are
 	// answered without either being set up.
 	paths := []string{
@@ -120,8 +113,11 @@ func TestRequireViewAccess(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			conf.Auth.RequireSigninView = test.requireSigninView
-			conf.Auth.RequireEmailConfirmation = test.requireEmailConfirmation
+			handler, err := newTestRoutingHandler(conf.AuthOpts{
+				RequireSigninView:        test.requireSigninView,
+				RequireEmailConfirmation: test.requireEmailConfirmation,
+			})
+			require.NoError(t, err)
 			for _, path := range paths {
 				req := httptest.NewRequest(http.MethodGet, path, nil)
 				if test.viewer != nil {
@@ -137,16 +133,10 @@ func TestRequireViewAccess(t *testing.T) {
 }
 
 func TestRequireAuthenticated(t *testing.T) {
-	beforeSigninView := conf.Auth.RequireSigninView
-	t.Cleanup(func() {
-		conf.Auth.RequireSigninView = beforeSigninView
-	})
 	// Dashboards, user settings, the people and teams of organizations, the
 	// settings of repositories, and the admin panel need an authenticated viewer even on
 	// sites that do not require signing in to view content.
-	conf.Auth.RequireSigninView = false
-
-	handler, err := newTestRoutingHandler(t)
+	handler, err := newTestRoutingHandler(conf.AuthOpts{RequireSigninView: false})
 	require.NoError(t, err)
 
 	for _, path := range []string{
@@ -207,7 +197,7 @@ func TestRequireAuthenticated(t *testing.T) {
 }
 
 func TestRequireAdmin(t *testing.T) {
-	handler, err := newTestRoutingHandler(t)
+	handler, err := newTestRoutingHandler(conf.AuthOpts{})
 	require.NoError(t, err)
 
 	// An authenticated user who is not a site admin reaches none of the admin panel,
@@ -256,7 +246,7 @@ func TestRequireAdmin(t *testing.T) {
 }
 
 func TestRequireJSON(t *testing.T) {
-	handler, err := newTestRoutingHandler(t)
+	handler, err := newTestRoutingHandler(conf.AuthOpts{})
 	require.NoError(t, err)
 
 	// Requests that pass the check reach the sign-in gate of each route, which
@@ -312,11 +302,7 @@ func TestRequireJSON(t *testing.T) {
 }
 
 func TestCrossOriginProtection(t *testing.T) {
-	beforeURL := conf.Server.URL
-	t.Cleanup(func() { conf.Server.URL = beforeURL })
-	conf.Server.URL = &url.URL{Scheme: "https", Host: "git.example.com"}
-
-	crossOrigin, err := newCrossOriginProtection()
+	crossOrigin, err := newCrossOriginProtection(&url.URL{Scheme: "https", Host: "git.example.com"})
 	require.NoError(t, err)
 	var reached bool
 	f := flamego.New()
@@ -413,24 +399,22 @@ func TestCrossOriginProtection(t *testing.T) {
 }
 
 func TestCompleteSignInRegeneratesSessionID(t *testing.T) {
-	beforeName := conf.Session.CookieName
-	t.Cleanup(func() { conf.Session.CookieName = beforeName })
-	conf.Session.CookieName = "i_like_gogs"
-
 	for _, provider := range []string{"memory", "file"} {
 		t.Run(provider, func(t *testing.T) {
-			beforeSession := conf.Session
-			t.Cleanup(func() { conf.Session = beforeSession })
-			conf.Session.Provider = provider
-			conf.Session.ProviderConfig = t.TempDir()
-			opts, err := parseSessionOptions(logx.NewNoopLogger())
+			sessionOpts := conf.SessionOpts{
+				Provider:       provider,
+				ProviderConfig: t.TempDir(),
+				CookieName:     "i_like_gogs",
+			}
+			opts, err := parseSessionOptions(logx.NewNoopLogger(), sessionOpts, "", 0)
 			require.NoError(t, err)
+			cookies := newSignInCookies(sessionOpts, conf.SecurityOpts{}, "")
 
 			f := flamego.New()
 			f.Use(session.Sessioner(opts))
 			f.Get("/plant", func(sess session.Session) { sess.Set("mfaUserID", int64(7)) })
 			f.Get("/sign-in", func(w http.ResponseWriter, r *http.Request, store session.Store, sess session.Session) {
-				require.NoError(t, completeSignIn(w, r, store, sess, &database.User{ID: 7, Name: "alice"}))
+				require.NoError(t, completeSignIn(w, r, cookies, store, sess, &database.User{ID: 7, Name: "alice"}))
 			})
 			f.Get("/whoami", func(w http.ResponseWriter, sess session.Session) {
 				uid, _ := sess.Get("uid").(int64)
@@ -440,7 +424,7 @@ func TestCompleteSignInRegeneratesSessionID(t *testing.T) {
 			get := func(path, sid string) *httptest.ResponseRecorder {
 				req := httptest.NewRequest(http.MethodGet, path, nil)
 				if sid != "" {
-					req.AddCookie(&http.Cookie{Name: conf.Session.CookieName, Value: sid})
+					req.AddCookie(&http.Cookie{Name: sessionOpts.CookieName, Value: sid})
 				}
 				resp := httptest.NewRecorder()
 				f.ServeHTTP(resp, req)
@@ -449,7 +433,7 @@ func TestCompleteSignInRegeneratesSessionID(t *testing.T) {
 			sessionCookie := func(resp *httptest.ResponseRecorder) *http.Cookie {
 				var found *http.Cookie
 				for _, c := range resp.Result().Cookies() {
-					if c.Name == conf.Session.CookieName {
+					if c.Name == sessionOpts.CookieName {
 						require.Nil(t, found, "session cookie set more than once")
 						found = c
 					}

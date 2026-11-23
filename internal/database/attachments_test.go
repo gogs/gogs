@@ -6,13 +6,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/osx"
 )
 
@@ -52,28 +50,12 @@ func TestAttachments(t *testing.T) {
 	}
 }
 
-var mockAttachmentPath sync.Mutex
-
-// setMockAttachmentPath stores attachments in a new temporary directory until
-// the test ends.
-func setMockAttachmentPath(t *testing.T) {
-	t.Helper()
-
-	mockAttachmentPath.Lock()
-	before := conf.Attachment.Path
-	conf.Attachment.Path = t.TempDir()
-	t.Cleanup(func() {
-		conf.Attachment.Path = before
-		mockAttachmentPath.Unlock()
-	})
-}
-
 // newTestAttachment creates an attachment of given name and content, and
 // attaches it to the given issue, comment and release.
-func newTestAttachment(t *testing.T, ctx context.Context, s *AttachmentsStore, name string, issueID, commentID, releaseID int64) *Attachment {
+func newTestAttachment(t *testing.T, ctx context.Context, attachmentPath string, s *AttachmentsStore, name string, issueID, commentID, releaseID int64) *Attachment {
 	t.Helper()
 
-	a, err := s.Create(ctx, 1, name, strings.NewReader(name))
+	a, err := s.Create(ctx, attachmentPath, 1, name, strings.NewReader(name))
 	require.NoError(t, err)
 	a.IssueID, a.CommentID, a.ReleaseID = issueID, commentID, releaseID
 	err = s.db.Model(a).Select("issue_id", "comment_id", "release_id").Updates(a).Error
@@ -90,13 +72,13 @@ func attachmentUUIDs(attachments []*Attachment) []string {
 }
 
 func attachmentsCreate(t *testing.T, ctx context.Context, s *AttachmentsStore) {
-	setMockAttachmentPath(t)
+	attachmentPath := t.TempDir()
 
-	a, err := s.Create(ctx, 7, "notes.txt", strings.NewReader("hello world"))
+	a, err := s.Create(ctx, attachmentPath, 7, "notes.txt", strings.NewReader("hello world"))
 	require.NoError(t, err)
 	assert.NotZero(t, a.ID)
-	assert.True(t, strings.HasPrefix(a.LocalPath(), conf.Attachment.Path), "stored at %q", a.LocalPath())
-	content, err := os.ReadFile(a.LocalPath())
+	assert.True(t, strings.HasPrefix(a.LocalPath(attachmentPath), attachmentPath), "stored at %q", a.LocalPath(attachmentPath))
+	content, err := os.ReadFile(a.LocalPath(attachmentPath))
 	require.NoError(t, err)
 	assert.Equal(t, "hello world", string(content))
 
@@ -109,29 +91,29 @@ func attachmentsCreate(t *testing.T, ctx context.Context, s *AttachmentsStore) {
 	assert.NotZero(t, got.CreatedUnix)
 	assert.Equal(t, got.CreatedUnix, got.Created.Unix())
 
-	b, err := s.Create(ctx, 7, "notes.txt", strings.NewReader(""))
+	b, err := s.Create(ctx, attachmentPath, 7, "notes.txt", strings.NewReader(""))
 	require.NoError(t, err)
 	assert.NotEqual(t, a.UUID, b.UUID)
 
 	// A file whose attachment fails to save is not kept.
 	canceled, cancel := context.WithCancel(ctx)
 	cancel()
-	_, err = s.Create(canceled, 7, "notes.txt", strings.NewReader("lost"))
+	_, err = s.Create(canceled, attachmentPath, 7, "notes.txt", strings.NewReader("lost"))
 	require.Error(t, err)
 	var files []string
-	err = filepath.WalkDir(conf.Attachment.Path, func(path string, d fs.DirEntry, err error) error {
+	err = filepath.WalkDir(attachmentPath, func(path string, d fs.DirEntry, err error) error {
 		if err == nil && !d.IsDir() {
 			files = append(files, path)
 		}
 		return err
 	})
 	require.NoError(t, err)
-	assert.ElementsMatch(t, []string{filepath.Clean(a.LocalPath()), filepath.Clean(b.LocalPath())}, files)
+	assert.ElementsMatch(t, []string{filepath.Clean(a.LocalPath(attachmentPath)), filepath.Clean(b.LocalPath(attachmentPath))}, files)
 }
 
 func attachmentsGetByUUID(t *testing.T, ctx context.Context, s *AttachmentsStore) {
-	setMockAttachmentPath(t)
-	a := newTestAttachment(t, ctx, s, "a.txt", 0, 0, 0)
+	attachmentPath := t.TempDir()
+	a := newTestAttachment(t, ctx, attachmentPath, s, "a.txt", 0, 0, 0)
 
 	got, err := s.GetByUUID(ctx, a.UUID)
 	require.NoError(t, err)
@@ -146,12 +128,12 @@ func attachmentsGetByUUID(t *testing.T, ctx context.Context, s *AttachmentsStore
 }
 
 func attachmentsBind(t *testing.T, ctx context.Context, s *AttachmentsStore) {
-	setMockAttachmentPath(t)
-	unbound1 := newTestAttachment(t, ctx, s, "unbound1", 0, 0, 0)
-	unbound2 := newTestAttachment(t, ctx, s, "unbound2", 0, 0, 0)
-	untouched := newTestAttachment(t, ctx, s, "untouched", 0, 0, 0)
-	ofIssue := newTestAttachment(t, ctx, s, "of-issue", 9, 0, 0)
-	ofRelease := newTestAttachment(t, ctx, s, "of-release", 0, 0, 9)
+	attachmentPath := t.TempDir()
+	unbound1 := newTestAttachment(t, ctx, attachmentPath, s, "unbound1", 0, 0, 0)
+	unbound2 := newTestAttachment(t, ctx, attachmentPath, s, "unbound2", 0, 0, 0)
+	untouched := newTestAttachment(t, ctx, attachmentPath, s, "untouched", 0, 0, 0)
+	ofIssue := newTestAttachment(t, ctx, attachmentPath, s, "of-issue", 9, 0, 0)
+	ofRelease := newTestAttachment(t, ctx, attachmentPath, s, "of-release", 0, 0, 9)
 
 	err := s.Bind(ctx, 3, 4, []string{unbound1.UUID, ofIssue.UUID, ofRelease.UUID, "not-a-uuid", "urn:uuid:" + untouched.UUID})
 	require.NoError(t, err)
@@ -178,10 +160,10 @@ func attachmentsBind(t *testing.T, ctx context.Context, s *AttachmentsStore) {
 }
 
 func attachmentsBindToRelease(t *testing.T, ctx context.Context, s *AttachmentsStore) {
-	setMockAttachmentPath(t)
-	unbound := newTestAttachment(t, ctx, s, "unbound", 0, 0, 0)
-	untouched := newTestAttachment(t, ctx, s, "untouched", 0, 0, 0)
-	ofIssue := newTestAttachment(t, ctx, s, "of-issue", 9, 0, 0)
+	attachmentPath := t.TempDir()
+	unbound := newTestAttachment(t, ctx, attachmentPath, s, "unbound", 0, 0, 0)
+	untouched := newTestAttachment(t, ctx, attachmentPath, s, "untouched", 0, 0, 0)
+	ofIssue := newTestAttachment(t, ctx, attachmentPath, s, "of-issue", 9, 0, 0)
 
 	err := s.bindToRelease(ctx, 3, []string{unbound.UUID, ofIssue.UUID, "not-a-uuid"})
 	require.NoError(t, err)
@@ -198,13 +180,13 @@ func attachmentsBindToRelease(t *testing.T, ctx context.Context, s *AttachmentsS
 }
 
 func attachmentsList(t *testing.T, ctx context.Context, s *AttachmentsStore) {
-	setMockAttachmentPath(t)
-	issue1 := newTestAttachment(t, ctx, s, "issue1", 1, 0, 0)
-	issue2 := newTestAttachment(t, ctx, s, "issue2", 1, 0, 0)
-	comment := newTestAttachment(t, ctx, s, "comment", 1, 2, 0)
-	newTestAttachment(t, ctx, s, "other-issue", 2, 1, 0)
-	release := newTestAttachment(t, ctx, s, "release", 0, 0, 1)
-	newTestAttachment(t, ctx, s, "unbound", 0, 0, 0)
+	attachmentPath := t.TempDir()
+	issue1 := newTestAttachment(t, ctx, attachmentPath, s, "issue1", 1, 0, 0)
+	issue2 := newTestAttachment(t, ctx, attachmentPath, s, "issue2", 1, 0, 0)
+	comment := newTestAttachment(t, ctx, attachmentPath, s, "comment", 1, 2, 0)
+	newTestAttachment(t, ctx, attachmentPath, s, "other-issue", 2, 1, 0)
+	release := newTestAttachment(t, ctx, attachmentPath, s, "release", 0, 0, 1)
+	newTestAttachment(t, ctx, attachmentPath, s, "unbound", 0, 0, 0)
 
 	got, err := s.ListByIssueID(ctx, 1)
 	require.NoError(t, err)
@@ -235,30 +217,30 @@ func attachmentsList(t *testing.T, ctx context.Context, s *AttachmentsStore) {
 }
 
 func attachmentsDelete(t *testing.T, ctx context.Context, s *AttachmentsStore) {
-	setMockAttachmentPath(t)
-	removed := newTestAttachment(t, ctx, s, "removed", 0, 0, 1)
-	kept := newTestAttachment(t, ctx, s, "kept", 0, 0, 1)
-	other := newTestAttachment(t, ctx, s, "other", 0, 0, 1)
+	attachmentPath := t.TempDir()
+	removed := newTestAttachment(t, ctx, attachmentPath, s, "removed", 0, 0, 1)
+	kept := newTestAttachment(t, ctx, attachmentPath, s, "kept", 0, 0, 1)
+	other := newTestAttachment(t, ctx, attachmentPath, s, "other", 0, 0, 1)
 
 	// The row is deleted by ID even when other fields are stale.
 	removed.ReleaseID = 2
-	err := s.Delete(ctx, true, removed)
+	err := s.Delete(ctx, attachmentPath, true, removed)
 	require.NoError(t, err)
-	assert.False(t, osx.Exist(removed.LocalPath()), "file not removed")
+	assert.False(t, osx.Exist(removed.LocalPath(attachmentPath)), "file not removed")
 	_, err = s.GetByUUID(ctx, removed.UUID)
 	assert.True(t, IsErrAttachmentNotExist(err), "got %v", err)
 
-	err = s.Delete(ctx, false, kept)
+	err = s.Delete(ctx, attachmentPath, false, kept)
 	require.NoError(t, err)
-	assert.True(t, osx.IsFile(kept.LocalPath()), "file removed")
+	assert.True(t, osx.IsFile(kept.LocalPath(attachmentPath)), "file removed")
 	_, err = s.GetByUUID(ctx, kept.UUID)
 	assert.True(t, IsErrAttachmentNotExist(err), "got %v", err)
 
 	// A file that is already gone does not stop deleting the attachment.
-	gone := newTestAttachment(t, ctx, s, "gone", 0, 0, 1)
-	err = os.Remove(gone.LocalPath())
+	gone := newTestAttachment(t, ctx, attachmentPath, s, "gone", 0, 0, 1)
+	err = os.Remove(gone.LocalPath(attachmentPath))
 	require.NoError(t, err)
-	err = s.Delete(ctx, true, gone)
+	err = s.Delete(ctx, attachmentPath, true, gone)
 	require.NoError(t, err)
 	_, err = s.GetByUUID(ctx, gone.UUID)
 	assert.True(t, IsErrAttachmentNotExist(err), "got %v", err)
@@ -266,42 +248,42 @@ func attachmentsDelete(t *testing.T, ctx context.Context, s *AttachmentsStore) {
 	got, err := s.GetByUUID(ctx, other.UUID)
 	require.NoError(t, err)
 	assert.Equal(t, other.ID, got.ID)
-	assert.True(t, osx.IsFile(other.LocalPath()), "file of other attachment removed")
+	assert.True(t, osx.IsFile(other.LocalPath(attachmentPath)), "file of other attachment removed")
 
-	err = s.Delete(ctx, true)
+	err = s.Delete(ctx, attachmentPath, true)
 	require.NoError(t, err)
 }
 
 func attachmentsDeleteByCommentID(t *testing.T, ctx context.Context, s *AttachmentsStore) {
-	setMockAttachmentPath(t)
-	comment1 := newTestAttachment(t, ctx, s, "comment1", 1, 2, 0)
-	comment2 := newTestAttachment(t, ctx, s, "comment2", 1, 2, 0)
-	issue := newTestAttachment(t, ctx, s, "issue", 1, 0, 0)
-	otherComment := newTestAttachment(t, ctx, s, "other-comment", 1, 3, 0)
+	attachmentPath := t.TempDir()
+	comment1 := newTestAttachment(t, ctx, attachmentPath, s, "comment1", 1, 2, 0)
+	comment2 := newTestAttachment(t, ctx, attachmentPath, s, "comment2", 1, 2, 0)
+	issue := newTestAttachment(t, ctx, attachmentPath, s, "issue", 1, 0, 0)
+	otherComment := newTestAttachment(t, ctx, attachmentPath, s, "other-comment", 1, 3, 0)
 
 	// An ID of 0 deletes nothing, rather than the attachments of no comment.
-	err := s.DeleteByCommentID(ctx, 0, true)
+	err := s.DeleteByCommentID(ctx, attachmentPath, 0, true)
 	require.NoError(t, err)
 	_, err = s.GetByUUID(ctx, issue.UUID)
 	require.NoError(t, err)
-	require.True(t, osx.IsFile(issue.LocalPath()), "file of issue attachment removed")
+	require.True(t, osx.IsFile(issue.LocalPath(attachmentPath)), "file of issue attachment removed")
 
-	err = s.DeleteByCommentID(ctx, 2, true)
+	err = s.DeleteByCommentID(ctx, attachmentPath, 2, true)
 	require.NoError(t, err)
 	for _, a := range []*Attachment{comment1, comment2} {
 		_, err = s.GetByUUID(ctx, a.UUID)
 		assert.True(t, IsErrAttachmentNotExist(err), "got %v", err)
-		assert.False(t, osx.Exist(a.LocalPath()), "file of %s not removed", a.Name)
+		assert.False(t, osx.Exist(a.LocalPath(attachmentPath)), "file of %s not removed", a.Name)
 	}
 	for _, a := range []*Attachment{issue, otherComment} {
 		_, err = s.GetByUUID(ctx, a.UUID)
 		require.NoError(t, err)
-		assert.True(t, osx.IsFile(a.LocalPath()), "file of %s removed", a.Name)
+		assert.True(t, osx.IsFile(a.LocalPath(attachmentPath)), "file of %s removed", a.Name)
 	}
 
-	err = s.DeleteByCommentID(ctx, 3, false)
+	err = s.DeleteByCommentID(ctx, attachmentPath, 3, false)
 	require.NoError(t, err)
 	_, err = s.GetByUUID(ctx, otherComment.UUID)
 	assert.True(t, IsErrAttachmentNotExist(err), "got %v", err)
-	assert.True(t, osx.IsFile(otherComment.LocalPath()), "file removed")
+	assert.True(t, osx.IsFile(otherComment.LocalPath(attachmentPath)), "file removed")
 }

@@ -68,7 +68,7 @@ type orgMembers struct {
 	Items []orgMember `json:"items"`
 }
 
-func getOrgMembers(c flamego.Context, logger *logx.Logger, m *orgMembership) (statusCode int, resp *orgMembers, err error) {
+func getOrgMembers(c flamego.Context, links database.LinkOptions, logger *logx.Logger, m *orgMembership) (statusCode int, resp *orgMembers, err error) {
 	ctx := c.Request().Context()
 	org := m.Org
 	members, err := database.Handle.Organizations().ListMembers(ctx, org.ID, 0)
@@ -78,7 +78,7 @@ func getOrgMembers(c flamego.Context, logger *logx.Logger, m *orgMembership) (st
 	}
 	resp = &orgMembers{Items: make([]orgMember, 0, len(members))}
 	for _, u := range members {
-		member := toExploreUser(u)
+		member := toExploreUser(links, u)
 		resp.Items = append(resp.Items, orgMember{
 			Name:      member.Name,
 			FullName:  member.FullName,
@@ -199,16 +199,16 @@ type orgTeams struct {
 	Items []orgTeamSummary `json:"items"`
 }
 
-func toOrgTeamMembers(users []*database.User) []orgTeamMember {
+func toOrgTeamMembers(links database.LinkOptions, users []*database.User) []orgTeamMember {
 	items := make([]orgTeamMember, 0, len(users))
 	for _, u := range users {
-		member := toExploreUser(u)
+		member := toExploreUser(links, u)
 		items = append(items, orgTeamMember{Name: member.Name, FullName: member.FullName, AvatarURL: member.AvatarURL})
 	}
 	return items
 }
 
-func getOrgTeams(c flamego.Context, logger *logx.Logger, viewer *database.User, m *orgMembership) (statusCode int, resp *orgTeams, err error) {
+func getOrgTeams(c flamego.Context, links database.LinkOptions, logger *logx.Logger, viewer *database.User, m *orgMembership) (statusCode int, resp *orgTeams, err error) {
 	ctx := c.Request().Context()
 	teams, err := m.visibleTeams(ctx, viewer.ID)
 	if err != nil {
@@ -227,7 +227,7 @@ func getOrgTeams(c flamego.Context, logger *logx.Logger, viewer *database.User, 
 			LowerName:      t.LowerName,
 			MemberCount:    t.NumMembers,
 			RepoCount:      t.NumRepos,
-			Members:        toOrgTeamMembers(members),
+			Members:        toOrgTeamMembers(links, members),
 			ViewerIsMember: database.Handle.Teams().IsMember(ctx, t.OrgID, t.ID, viewer.ID),
 		})
 	}
@@ -308,14 +308,14 @@ type orgTeamMembers struct {
 	Items []orgTeamMember `json:"items"`
 }
 
-func getOrgTeamMembers(c flamego.Context, logger *logx.Logger, team *orgTeam) (statusCode int, resp *orgTeamMembers, err error) {
+func getOrgTeamMembers(c flamego.Context, links database.LinkOptions, logger *logx.Logger, team *orgTeam) (statusCode int, resp *orgTeamMembers, err error) {
 	ctx := c.Request().Context()
 	members, err := database.Handle.Teams().ListMembers(ctx, team.ID)
 	if err != nil {
 		logger.Error("Failed to get members of team", "teamID", team.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get team members")
 	}
-	return http.StatusOK, &orgTeamMembers{Items: toOrgTeamMembers(members)}, nil
+	return http.StatusOK, &orgTeamMembers{Items: toOrgTeamMembers(links, members)}, nil
 }
 
 // putOrgTeamMember adds a user to the team, which also makes them a member of

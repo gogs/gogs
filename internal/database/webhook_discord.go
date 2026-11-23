@@ -9,7 +9,6 @@ import (
 	"github.com/cockroachdb/errors"
 
 	"gogs.io/gogs/internal/api/v1types"
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/git"
 )
 
@@ -68,7 +67,7 @@ func DiscordSHALinkFormatter(url, text string) string {
 }
 
 // getDiscordCreatePayload composes Discord payload for creating a new branch or tag.
-func getDiscordCreatePayload(p *v1types.WebhookCreatePayload) *DiscordPayload {
+func getDiscordCreatePayload(externalURL string, p *v1types.WebhookCreatePayload) *DiscordPayload {
 	refName := git.RefShortName(p.Ref)
 	repoLink := DiscordLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
 	refLink := DiscordLinkFormatter(p.Repo.HTMLURL+"/src/"+refName, refName)
@@ -76,7 +75,7 @@ func getDiscordCreatePayload(p *v1types.WebhookCreatePayload) *DiscordPayload {
 	return &DiscordPayload{
 		Embeds: []*DiscordEmbedObject{{
 			Description: content,
-			URL:         conf.Server.ExternalURL + p.Sender.UserName,
+			URL:         externalURL + p.Sender.UserName,
 			Author: &DiscordEmbedAuthorObject{
 				Name:    p.Sender.UserName,
 				IconURL: p.Sender.AvatarURL,
@@ -86,14 +85,14 @@ func getDiscordCreatePayload(p *v1types.WebhookCreatePayload) *DiscordPayload {
 }
 
 // getDiscordDeletePayload composes Discord payload for deleting a branch or tag.
-func getDiscordDeletePayload(p *v1types.WebhookDeletePayload) *DiscordPayload {
+func getDiscordDeletePayload(externalURL string, p *v1types.WebhookDeletePayload) *DiscordPayload {
 	refName := git.RefShortName(p.Ref)
 	repoLink := DiscordLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
 	content := fmt.Sprintf("Deleted %s: %s/%s", p.RefType, repoLink, refName)
 	return &DiscordPayload{
 		Embeds: []*DiscordEmbedObject{{
 			Description: content,
-			URL:         conf.Server.ExternalURL + p.Sender.UserName,
+			URL:         externalURL + p.Sender.UserName,
 			Author: &DiscordEmbedAuthorObject{
 				Name:    p.Sender.UserName,
 				IconURL: p.Sender.AvatarURL,
@@ -103,14 +102,14 @@ func getDiscordDeletePayload(p *v1types.WebhookDeletePayload) *DiscordPayload {
 }
 
 // getDiscordForkPayload composes Discord payload for forking a repository.
-func getDiscordForkPayload(p *v1types.WebhookForkPayload) *DiscordPayload {
+func getDiscordForkPayload(externalURL string, p *v1types.WebhookForkPayload) *DiscordPayload {
 	baseLink := DiscordLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
 	forkLink := DiscordLinkFormatter(p.Forkee.HTMLURL, p.Forkee.FullName)
 	content := fmt.Sprintf("%s is forked to %s", baseLink, forkLink)
 	return &DiscordPayload{
 		Embeds: []*DiscordEmbedObject{{
 			Description: content,
-			URL:         conf.Server.ExternalURL + p.Sender.UserName,
+			URL:         externalURL + p.Sender.UserName,
 			Author: &DiscordEmbedAuthorObject{
 				Name:    p.Sender.UserName,
 				IconURL: p.Sender.AvatarURL,
@@ -119,7 +118,7 @@ func getDiscordForkPayload(p *v1types.WebhookForkPayload) *DiscordPayload {
 	}
 }
 
-func getDiscordPushPayload(p *v1types.WebhookPushPayload, slack *SlackMeta) *DiscordPayload {
+func getDiscordPushPayload(externalURL string, p *v1types.WebhookPushPayload, slack *SlackMeta) *DiscordPayload {
 	// n new commits
 	var (
 		branchName   = git.RefShortName(p.Ref)
@@ -159,7 +158,7 @@ func getDiscordPushPayload(p *v1types.WebhookPushPayload, slack *SlackMeta) *Dis
 		AvatarURL: slack.IconURL,
 		Embeds: []*DiscordEmbedObject{{
 			Description: content.String(),
-			URL:         conf.Server.ExternalURL + p.Sender.UserName,
+			URL:         externalURL + p.Sender.UserName,
 			Color:       int(color),
 			Author: &DiscordEmbedAuthorObject{
 				Name:    p.Sender.UserName,
@@ -353,14 +352,14 @@ func getDiscordPullRequestPayload(p *v1types.WebhookPullRequestPayload, slack *S
 	}
 }
 
-func getDiscordReleasePayload(p *v1types.WebhookReleasePayload) *DiscordPayload {
+func getDiscordReleasePayload(externalURL string, p *v1types.WebhookReleasePayload) *DiscordPayload {
 	repoLink := DiscordLinkFormatter(p.Repository.HTMLURL, p.Repository.Name)
 	refLink := DiscordLinkFormatter(p.Repository.HTMLURL+"/src/"+p.Release.TagName, p.Release.TagName)
 	content := fmt.Sprintf("Published new release %s of %s", refLink, repoLink)
 	return &DiscordPayload{
 		Embeds: []*DiscordEmbedObject{{
 			Description: content,
-			URL:         conf.Server.ExternalURL + p.Sender.UserName,
+			URL:         externalURL + p.Sender.UserName,
 			Author: &DiscordEmbedAuthorObject{
 				Name:    p.Sender.UserName,
 				IconURL: p.Sender.AvatarURL,
@@ -369,7 +368,9 @@ func getDiscordReleasePayload(p *v1types.WebhookReleasePayload) *DiscordPayload 
 	}
 }
 
-func GetDiscordPayload(p v1types.WebhookPayloader, event HookEventType, meta string) (payload *DiscordPayload, err error) {
+// GetDiscordPayload returns the Discord payload of given event, whose links to
+// users start with the external URL.
+func GetDiscordPayload(externalURL string, p v1types.WebhookPayloader, event HookEventType, meta string) (payload *DiscordPayload, err error) {
 	// Discord webhooks created through API v1 have no settings.
 	slack := &SlackMeta{}
 	if meta != "" {
@@ -380,13 +381,13 @@ func GetDiscordPayload(p v1types.WebhookPayloader, event HookEventType, meta str
 
 	switch event {
 	case HookEventTypeCreate:
-		payload = getDiscordCreatePayload(p.(*v1types.WebhookCreatePayload))
+		payload = getDiscordCreatePayload(externalURL, p.(*v1types.WebhookCreatePayload))
 	case HookEventTypeDelete:
-		payload = getDiscordDeletePayload(p.(*v1types.WebhookDeletePayload))
+		payload = getDiscordDeletePayload(externalURL, p.(*v1types.WebhookDeletePayload))
 	case HookEventTypeFork:
-		payload = getDiscordForkPayload(p.(*v1types.WebhookForkPayload))
+		payload = getDiscordForkPayload(externalURL, p.(*v1types.WebhookForkPayload))
 	case HookEventTypePush:
-		payload = getDiscordPushPayload(p.(*v1types.WebhookPushPayload), slack)
+		payload = getDiscordPushPayload(externalURL, p.(*v1types.WebhookPushPayload), slack)
 	case HookEventTypeIssues:
 		payload = getDiscordIssuesPayload(p.(*v1types.WebhookIssuesPayload), slack)
 	case HookEventTypeIssueComment:
@@ -394,7 +395,7 @@ func GetDiscordPayload(p v1types.WebhookPayloader, event HookEventType, meta str
 	case HookEventTypePullRequest:
 		payload = getDiscordPullRequestPayload(p.(*v1types.WebhookPullRequestPayload), slack)
 	case HookEventTypeRelease:
-		payload = getDiscordReleasePayload(p.(*v1types.WebhookReleasePayload))
+		payload = getDiscordReleasePayload(externalURL, p.(*v1types.WebhookReleasePayload))
 	default:
 		return nil, errors.Errorf("unexpected event %q", event)
 	}

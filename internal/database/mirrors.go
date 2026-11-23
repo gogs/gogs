@@ -16,7 +16,6 @@ import (
 	"unknwon.dev/ini/v2"
 	"unknwon.dev/x/logx"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/netx"
 	"gogs.io/gogs/internal/sync"
@@ -78,12 +77,12 @@ func (m *Mirror) AfterFind(_ *gorm.DB) error {
 	return nil
 }
 
-func (m *Mirror) readAddress(logger *logx.Logger) {
+func (m *Mirror) readAddress(logger *logx.Logger, root string) {
 	if len(m.address) > 0 {
 		return
 	}
 
-	cfg, err := ini.Load(m.Repo.GitConfigPath(), ini.IgnoreInlineComment(true))
+	cfg, err := ini.Load(m.Repo.GitConfigPath(root), ini.IgnoreInlineComment(true))
 	if err != nil {
 		logger.Error("Failed to load Git config", "error", err)
 		return
@@ -111,27 +110,31 @@ func HandleMirrorCredentials(url string, mosaics bool) string {
 	return url[:start+3] + url[i+1:]
 }
 
-// Address returns mirror address from Git repository config without credentials.
-func (m *Mirror) Address() string {
-	m.readAddress(handleLogger())
+// Address returns mirror address from Git repository config without
+// credentials. The Git repository is under root.
+func (m *Mirror) Address(root string) string {
+	m.readAddress(handleLogger(), root)
 	return HandleMirrorCredentials(m.address, false)
 }
 
-// MosaicsAddress returns mirror address from Git repository config with credentials under mosaics.
-func (m *Mirror) MosaicsAddress() string {
-	m.readAddress(handleLogger())
+// MosaicsAddress returns mirror address from Git repository config with
+// credentials under mosaics. The Git repository is under root.
+func (m *Mirror) MosaicsAddress(root string) string {
+	m.readAddress(handleLogger(), root)
 	return HandleMirrorCredentials(m.address, true)
 }
 
 // RawAddress returns raw mirror address directly from Git repository config.
-func (m *Mirror) RawAddress() string {
-	m.readAddress(handleLogger())
+// The Git repository is under root.
+func (m *Mirror) RawAddress(root string) string {
+	m.readAddress(handleLogger(), root)
 	return m.address
 }
 
-// SaveAddress writes new address to Git repository config.
-func (m *Mirror) SaveAddress(ctx context.Context, addr string) error {
-	gitRepo, err := git.Open(m.Repo.RepoPath())
+// SaveAddress writes new address to Git repository config. The Git repository
+// is under root.
+func (m *Mirror) SaveAddress(ctx context.Context, root, addr string) error {
+	gitRepo, err := git.Open(m.Repo.RepoPath(root))
 	if err != nil {
 		return errors.Wrap(err, "open repository")
 	}
@@ -420,21 +423,22 @@ func mirrorRemoteUpdate(timeout time.Duration, repoPath string, prune bool) (str
 }
 
 // runSync returns true if sync finished without error.
-func (m *Mirror) runSync(logger *logx.Logger) ([]*mirrorSyncResult, bool) {
-	repoPath := m.Repo.RepoPath()
-	wikiPath := m.Repo.WikiPath()
-	timeout := time.Duration(conf.Git.Timeout.Mirror) * time.Second
+func (m *Mirror) runSync(logger *logx.Logger, opts SyncMirrorsOptions) ([]*mirrorSyncResult, bool) {
+	root := opts.Push.Notify.RepositoryRoot
+	repoPath := m.Repo.RepoPath(root)
+	wikiPath := m.Repo.WikiPath(root)
+	timeout := opts.Timeout
 
 	// Re-check the mirror address against the local-network blocklist on every
 	// sync. The address was validated when the mirror was created, but DNS for
 	// that hostname may have changed in the meantime to point at an internal
 	// host, so the up-front check is not sufficient on its own.
-	rawAddr := m.RawAddress()
+	rawAddr := m.RawAddress(root)
 	if u, err := url.Parse(rawAddr); err == nil &&
 		(u.Scheme == "http" || u.Scheme == "https" || u.Scheme == "git") &&
-		netx.IsBlockedLocalHostname(u.Hostname(), conf.Security.LocalNetworkAllowlist) {
-		desc := fmt.Sprintf("Source URL of mirror repository '%s' resolves to a blocked local address: %s", m.Repo.FullName(), m.MosaicsAddress())
-		logger.Error("Source URL of mirror repository resolves to a blocked local address", "repo", m.Repo.FullName(), "address", m.MosaicsAddress())
+		netx.IsBlockedLocalHostname(u.Hostname(), opts.LocalNetworkAllowlist) {
+		desc := fmt.Sprintf("Source URL of mirror repository '%s' resolves to a blocked local address: %s", m.Repo.FullName(), m.MosaicsAddress(root))
+		logger.Error("Source URL of mirror repository resolves to a blocked local address", "repo", m.Repo.FullName(), "address", m.MosaicsAddress(root))
 		if err := Handle.Notices().Create(context.TODO(), NoticeTypeRepository, desc); err != nil {
 			logger.Error("Failed to create repository notice", "error", err)
 		}
@@ -444,7 +448,7 @@ func (m *Mirror) runSync(logger *logx.Logger) ([]*mirrorSyncResult, bool) {
 	// Do a fast-fail test against the repository URL to ensure it is accessible,
 	// to prevent long blocking on URL resolution without syncing anything.
 	if !isMirrorURLAccessible(time.Minute, rawAddr) {
-		desc := fmt.Sprintf("Source URL of mirror repository '%s' is not accessible: %s", m.Repo.FullName(), m.MosaicsAddress())
+		desc := fmt.Sprintf("Source URL of mirror repository '%s' is not accessible: %s", m.Repo.FullName(), m.MosaicsAddress(root))
 		if err := Handle.Notices().Create(context.TODO(), NoticeTypeRepository, desc); err != nil {
 			logger.Error("Failed to create repository notice", "error", err)
 		}
@@ -464,11 +468,11 @@ func (m *Mirror) runSync(logger *logx.Logger) ([]*mirrorSyncResult, bool) {
 		return nil, false
 	}
 
-	if err := Handle.Repositories().UpdateSize(context.Background(), m.Repo); err != nil {
+	if err := Handle.Repositories().UpdateSize(context.Background(), root, m.Repo); err != nil {
 		logger.Error("Failed to update repository size", "repoID", m.Repo.ID, "error", err)
 	}
 
-	if m.Repo.HasWiki() {
+	if m.Repo.HasWiki(root) {
 		// Even if wiki sync failed, we still want results from the main repository.
 		if _, err := mirrorRemoteUpdate(timeout, wikiPath, true); err != nil {
 			logger.Error("Failed to update mirror wiki repository", "wikiPath", wikiPath, "error", err)
@@ -504,10 +508,22 @@ func MirrorUpdate(logger *logx.Logger) {
 	}
 }
 
+// SyncMirrorsOptions are the settings that syncing mirrors reads.
+type SyncMirrorsOptions struct {
+	// Timeout is how long fetching from the source of a mirror may take.
+	Timeout time.Duration
+	// LocalNetworkAllowlist lists the local hostnames that sources of mirrors may
+	// resolve to.
+	LocalNetworkAllowlist []string
+	// Push makes the actions and webhooks of the commits that syncs fetch.
+	Push PushOptions
+}
+
 // SyncMirrors checks and syncs mirrors.
 //
 // TODO: sync more mirrors at same time.
-func SyncMirrors(logger *logx.Logger) {
+func SyncMirrors(logger *logx.Logger, opts SyncMirrorsOptions) {
+	root := opts.Push.Notify.RepositoryRoot
 	ctx := context.Background()
 	mirrors := Handle.Mirrors()
 
@@ -523,7 +539,7 @@ func SyncMirrors(logger *logx.Logger) {
 			continue
 		}
 
-		results, ok := m.runSync(logger)
+		results, ok := m.runSync(logger, opts)
 		if !ok {
 			continue
 		}
@@ -536,7 +552,7 @@ func SyncMirrors(logger *logx.Logger) {
 		// Pushes clear the empty state of a repository, but a mirror of an empty
 		// repository only receives commits through syncs.
 		if m.Repo.IsEmpty {
-			hasBranches, err := git.RepoHasBranches(ctx, m.Repo.RepoPath())
+			hasBranches, err := git.RepoHasBranches(ctx, m.Repo.RepoPath(root))
 			if err != nil {
 				logger.Error("Failed to check if repository has branches", "repoID", m.RepoID, "error", err)
 			} else if hasBranches {
@@ -548,11 +564,11 @@ func SyncMirrors(logger *logx.Logger) {
 			}
 		}
 
-		if !m.Repo.IsEmpty && !git.RepoHasBranch(ctx, m.Repo.RepoPath(), m.Repo.DefaultBranch) {
-			branch, err := remoteDefaultBranch(time.Duration(conf.Git.Timeout.Mirror)*time.Second, m.RawAddress())
+		if !m.Repo.IsEmpty && !git.RepoHasBranch(ctx, m.Repo.RepoPath(root), m.Repo.DefaultBranch) {
+			branch, err := remoteDefaultBranch(opts.Timeout, m.RawAddress(root))
 			if err != nil {
 				logger.Error("Failed to get default branch of mirror source", "repoID", m.RepoID, "error", err)
-			} else if err = m.Repo.setDefaultBranchIfMissing(ctx, branch); err != nil {
+			} else if err = m.Repo.setDefaultBranchIfMissing(ctx, root, branch); err != nil {
 				logger.Error("Failed to set default branch", "repoID", m.RepoID, "error", err)
 			}
 		}
@@ -565,7 +581,7 @@ func SyncMirrors(logger *logx.Logger) {
 			logger.Debug("No commits fetched", "repoID", m.RepoID)
 		}
 
-		gitRepo, err := git.Open(m.Repo.RepoPath())
+		gitRepo, err := git.Open(m.Repo.RepoPath(root))
 		if err != nil {
 			logger.Error("Failed to open repository", "repoID", m.RepoID, "error", err)
 			continue
@@ -662,12 +678,15 @@ func SyncMirrors(logger *logx.Logger) {
 			}
 			err = Handle.Actions().MirrorSyncPush(ctx, logger,
 				MirrorSyncPushOptions{
-					Owner:       m.Repo.MustOwner(),
-					Repo:        m.Repo,
-					RefName:     result.refName,
-					OldCommitID: oldCommitID,
-					NewCommitID: newCommitID,
-					Commits:     pushCommits,
+					Owner:            m.Repo.MustOwner(),
+					Repo:             m.Repo,
+					RefName:          result.refName,
+					OldCommitID:      oldCommitID,
+					NewCommitID:      newCommitID,
+					Commits:          pushCommits,
+					FeedMaxCommitNum: opts.Push.FeedMaxCommitNum,
+					RepositoryRoot:   root,
+					Links:            opts.Push.Notify.Links,
 				},
 			)
 			if err != nil {
@@ -702,6 +721,6 @@ func SyncMirrors(logger *logx.Logger) {
 	}
 }
 
-func InitSyncMirrors(logger *logx.Logger) {
-	go SyncMirrors(logger)
+func InitSyncMirrors(logger *logx.Logger, opts SyncMirrorsOptions) {
+	go SyncMirrors(logger, opts)
 }

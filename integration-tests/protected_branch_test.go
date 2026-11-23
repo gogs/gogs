@@ -259,7 +259,7 @@ func TestProtectedBranchRules(t *testing.T) {
 				"content":   "content\n",
 			})
 		}
-		before := gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(repo.Owner, repo.Name), "rev-parse", "refs/heads/dev")
+		before := gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(cfg.Repository.Root, repo.Owner, repo.Name), "rev-parse", "refs/heads/dev")
 		status, body := commit("")
 		assert.Equal(t, http.StatusForbidden, status, "response: %s", body)
 		var refused struct {
@@ -269,7 +269,7 @@ func TestProtectedBranchRules(t *testing.T) {
 		require.NoError(t, json.Unmarshal(body, &refused))
 		assert.Equal(t, map[string]string{"branch": "Branch <code>{branch}</code> is protected and you are not in the push allowlist."}, refused.Fields)
 		assert.Equal(t, "dev", refused.Branch)
-		assert.Equal(t, before, gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(repo.Owner, repo.Name), "rev-parse", "refs/heads/dev"))
+		assert.Equal(t, before, gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(cfg.Repository.Root, repo.Owner, repo.Name), "rev-parse", "refs/heads/dev"))
 
 		status, body = commit(UniqueName("proposal-"))
 		assert.Equal(t, http.StatusOK, status, "response: %s", body)
@@ -281,7 +281,7 @@ func TestProtectedBranchRules(t *testing.T) {
 			"enableAllowlist":  true,
 			"allowlistUserIDs": []int64{listed.ID},
 		})
-		gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(repo.Owner, repo.Name), "branch", "-D", "staging")
+		gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(cfg.Repository.Root, repo.Owner, repo.Name), "branch", "-D", "staging")
 		status, body = commit("staging")
 		assert.Equal(t, http.StatusForbidden, status, "response: %s", body)
 		refused.Fields, refused.Branch = nil, ""
@@ -307,14 +307,14 @@ func TestProtectedBranchRules(t *testing.T) {
 			"enableAllowlist":  true,
 			"allowlistUserIDs": []int64{listed.ID},
 		})
-		gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(repo.Owner, repo.Name), "branch", "-D", branch)
+		gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(cfg.Repository.Root, repo.Owner, repo.Name), "branch", "-D", branch)
 
 		unlistedClient := authenticatedClient(t, unlisted)
 		assert.False(t, pullGet(t, unlistedClient, repo, index).Pull.ViewerCanRestoreBranch)
 		path := issueAPIPath(repo, "pulls", index, "branch")
 		status, body = unlistedClient.do(http.MethodPost, path, map[string]any{})
 		assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
-		_, err := gitCommand(t.TempDir(), "--git-dir", database.RepoPath(repo.Owner, repo.Name), "rev-parse", "--verify", "refs/heads/"+branch).CombinedOutput()
+		_, err := gitCommand(t.TempDir(), "--git-dir", database.RepoPath(cfg.Repository.Root, repo.Owner, repo.Name), "rev-parse", "--verify", "refs/heads/"+branch).CombinedOutput()
 		assert.Error(t, err, "branch was restored")
 
 		assert.True(t, pullGet(t, listedClient, repo, index).Pull.ViewerCanRestoreBranch)
@@ -342,7 +342,7 @@ func TestProtectedBranchRules(t *testing.T) {
 		gitRun(t, dir, "push", "origin", "main:refs/heads/release")
 		protect(t, "release", map[string]any{"protected": true})
 		// Protection outlives a branch deleted outside of Gogs.
-		gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(repo.Owner, repo.Name), "branch", "-D", "release")
+		gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(cfg.Repository.Root, repo.Owner, repo.Name), "branch", "-D", "release")
 
 		out, err := gitCommand(dir, "push", "origin", "main:refs/heads/release").CombinedOutput()
 		require.NoError(t, err, "push: %s", out)
@@ -360,7 +360,7 @@ func TestProtectedBranchRules(t *testing.T) {
 			"enableAllowlist":  true,
 			"allowlistUserIDs": []int64{listed.ID},
 		})
-		gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(repo.Owner, repo.Name), "branch", "-D", "hotfix")
+		gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(cfg.Repository.Root, repo.Owner, repo.Name), "branch", "-D", "hotfix")
 		create := func(u *User, kind, name string) (int, []byte) {
 			return apiV1Client(t, u).do(http.MethodPost, apiV1RepoPath(repo, "/"+kind), map[string]any{"name": name})
 		}
@@ -371,7 +371,7 @@ func TestProtectedBranchRules(t *testing.T) {
 		status, body = create(unlisted, "branches", "hotfix")
 		assert.Equal(t, http.StatusForbidden, status, "response: %s", body)
 		assert.Contains(t, string(body), "you are not in the push allowlist")
-		_, err := gitCommand(t.TempDir(), "--git-dir", database.RepoPath(repo.Owner, repo.Name), "rev-parse", "--verify", "refs/heads/hotfix").CombinedOutput()
+		_, err := gitCommand(t.TempDir(), "--git-dir", database.RepoPath(cfg.Repository.Root, repo.Owner, repo.Name), "rev-parse", "--verify", "refs/heads/hotfix").CombinedOutput()
 		assert.Error(t, err, "branch was created")
 
 		status, body = create(listed, "branches", "hotfix")

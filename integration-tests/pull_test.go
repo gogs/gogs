@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/dbx"
 )
@@ -23,7 +22,7 @@ import (
 func pullGit(t *testing.T, repo *Repository, args ...string) (string, error) {
 	t.Helper()
 
-	cmd := exec.Command("git", append([]string{"-C", database.RepoPath(repo.Owner, repo.Name)}, args...)...)
+	cmd := exec.Command("git", append([]string{"-C", database.RepoPath(cfg.Repository.Root, repo.Owner, repo.Name)}, args...)...)
 	out, err := cmd.CombinedOutput()
 	return strings.TrimSpace(string(out)), err
 }
@@ -434,7 +433,7 @@ func TestPullMergeDatabaseFailure(t *testing.T) {
 	issue := issueFromDatabase(t, repo, index)
 	baseCommit := pullMustGit(t, repo, "rev-parse", "main")
 
-	db, err := dbx.OpenDB(conf.Database, &gorm.Config{})
+	db, err := dbx.OpenDB(cfg.Database, &gorm.Config{})
 	require.NoError(t, err)
 	sqlDB, err := db.DB()
 	require.NoError(t, err)

@@ -48,9 +48,9 @@ func (s *OrganizationsStore) List(ctx context.Context, opts ListOrgsOptions) ([]
 		ORDER BY org.id ASC
 	*/
 	tx := s.db.WithContext(ctx).
-		Joins(dbx.Quote("JOIN org_user ON org_user.org_id = %s.id", "user")).
+		Joins(dbx.Quote(s.db.Name(), "JOIN org_user ON org_user.org_id = %s.id", "user")).
 		Where("org_user.uid = ?", opts.MemberID).
-		Order(dbx.Quote("%s.id ASC", "user"))
+		Order(dbx.Quote(s.db.Name(), "%s.id ASC", "user"))
 	if !opts.IncludePrivateMembers {
 		tx = tx.Where("org_user.is_public = ?", true)
 	}
@@ -86,8 +86,9 @@ func (err ErrOrgOwnerIsOrganization) Error() string {
 
 // Create creates the organization with the owner as its first member, and
 // the owner team of the organization with the owner in it. It returns
-// ErrOrgOwnerIsOrganization when the owner is an organization.
-func (s *OrganizationsStore) Create(ctx context.Context, org, owner *User) (err error) {
+// ErrOrgOwnerIsOrganization when the owner is an organization. The directory of
+// its repositories is created under repositoryRoot.
+func (s *OrganizationsStore) Create(ctx context.Context, repositoryRoot string, org, owner *User) (err error) {
 	if owner.IsOrganization() {
 		return ErrOrgOwnerIsOrganization{args: errx.Args{"ownerID": owner.ID}}
 	}
@@ -150,7 +151,7 @@ func (s *OrganizationsStore) Create(ctx context.Context, org, owner *User) (err 
 			return errors.Wrap(err, "create team user")
 		}
 
-		if err = os.MkdirAll(repox.UserPath(org.Name), os.ModePerm); err != nil {
+		if err = os.MkdirAll(repox.UserPath(repositoryRoot, org.Name), os.ModePerm); err != nil {
 			return errors.Wrap(err, "create directory")
 		}
 		return nil
@@ -194,8 +195,8 @@ func (s *OrganizationsStore) ListByPage(ctx context.Context, page, pageSize int)
 }
 
 // Delete deletes the organization, which must have no repositories, with its
-// teams and memberships.
-func (s *OrganizationsStore) Delete(ctx context.Context, org *Organization) error {
+// teams and memberships, and its files.
+func (s *OrganizationsStore) Delete(ctx context.Context, opts DeleteUserOptions, org *Organization) error {
 	// A column with 0 means "none" in some tables, e.g., webhooks of
 	// repositories have org_id 0, so deleting by a non-positive ID would hit
 	// rows of no organization.
@@ -203,7 +204,7 @@ func (s *OrganizationsStore) Delete(ctx context.Context, org *Organization) erro
 		return errors.Newf("invalid organization ID %d", org.ID)
 	}
 
-	err := newUsersStore(s.db).DeleteByID(ctx, org.ID, false)
+	err := newUsersStore(s.db).DeleteByID(ctx, opts, org.ID, false)
 	if err != nil {
 		return err
 	}
@@ -253,10 +254,10 @@ func (s *OrganizationsStore) IsPublicMember(ctx context.Context, orgID, userID i
 func (s *OrganizationsStore) ListOwnedBy(ctx context.Context, userID int64) ([]*Organization, error) {
 	orgs := make([]*Organization, 0, 10)
 	return orgs, s.db.WithContext(ctx).
-		Joins(dbx.Quote("JOIN org_user ON org_user.org_id = %s.id", "user")).
+		Joins(dbx.Quote(s.db.Name(), "JOIN org_user ON org_user.org_id = %s.id", "user")).
 		Where("org_user.uid = ? AND org_user.is_owner = ?", userID, true).
-		Order(dbx.Quote("%s.updated_unix DESC", "user")).
-		Order(dbx.Quote("%s.id DESC", "user")).
+		Order(dbx.Quote(s.db.Name(), "%s.updated_unix DESC", "user")).
+		Order(dbx.Quote(s.db.Name(), "%s.id DESC", "user")).
 		Find(&orgs).Error
 }
 

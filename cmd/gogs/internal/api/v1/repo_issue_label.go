@@ -25,7 +25,7 @@ type issueLabelsRequest struct {
 	Labels []int64 `json:"labels"`
 }
 
-func addIssueLabels(c *apiContext, form issueLabelsRequest) {
+func addIssueLabels(c *apiContext, links database.LinkOptions, form issueLabelsRequest) {
 	issue, err := database.Handle.Issues().GetByIndex(c.Request().Context(), c.Repo.Repository.ID, c.ParamInt64("index"))
 	if err != nil {
 		c.NotFoundOrError(err, "get issue by index")
@@ -38,7 +38,7 @@ func addIssueLabels(c *apiContext, form issueLabelsRequest) {
 		return
 	}
 
-	if err = database.Handle.Issues().AddLabels(c.Request().Context(), c.Logger, c.User, issue, labels...); err != nil {
+	if err = database.Handle.Issues().AddLabels(c.Request().Context(), c.Logger, links, c.User, issue, labels...); err != nil {
 		c.Error(err, "add labels")
 		return
 	}
@@ -112,14 +112,14 @@ func replaceIssueLabels(c *apiContext, form issueLabelsRequest) {
 	c.JSONSuccess(&apiLabels)
 }
 
-func clearIssueLabels(c *apiContext) {
+func clearIssueLabels(c *apiContext, links database.LinkOptions) {
 	issue, err := database.Handle.Issues().GetByIndex(c.Request().Context(), c.Repo.Repository.ID, c.ParamInt64("index"))
 	if err != nil {
 		c.NotFoundOrError(err, "get issue by index")
 		return
 	}
 
-	if err := database.Handle.Issues().ClearLabels(c.Request().Context(), c.Logger, c.User, issue); err != nil {
+	if err := database.Handle.Issues().ClearLabels(c.Request().Context(), c.Logger, links, c.User, issue); err != nil {
 		c.Error(err, "clear labels")
 		return
 	}

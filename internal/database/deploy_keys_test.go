@@ -45,11 +45,11 @@ func TestDeployKeys(t *testing.T) {
 }
 
 func deployKeysAdd(t *testing.T, ctx context.Context, s *DeployKeysStore) {
-	authorizedKeys := setMockSSHForKeys(t)
+	authorizedKeys := newTestAuthorizedKeys(t)
 	logger := logx.NewNoopLogger()
 
 	content := newTestSSHKey(t)
-	key, err := s.Add(ctx, logger, 1, "deploy", content)
+	key, err := s.Add(ctx, logger, authorizedKeys, 1, "deploy", content)
 	require.NoError(t, err)
 	assert.Equal(t, content, key.Content)
 	assert.NotEmpty(t, key.Fingerprint)
@@ -59,42 +59,42 @@ func deployKeysAdd(t *testing.T, ctx context.Context, s *DeployKeysStore) {
 	assert.Equal(t, KeyTypeDeploy, int(pkey.Type))
 	assert.Equal(t, AccessModeRead, pkey.Mode)
 	assert.Equal(t, key.Fingerprint, pkey.Fingerprint)
-	assert.Contains(t, readAuthorizedKeys(t, authorizedKeys), fmt.Sprintf("key-%d", pkey.ID))
+	assert.Contains(t, readAuthorizedKeys(t, authorizedKeys.Path), fmt.Sprintf("key-%d", pkey.ID))
 
 	// Repositories that use the same content share its public key.
-	key2, err := s.Add(ctx, logger, 2, "deploy", content)
+	key2, err := s.Add(ctx, logger, authorizedKeys, 2, "deploy", content)
 	require.NoError(t, err)
 	assert.Equal(t, key.KeyID, key2.KeyID)
 	assert.NotEqual(t, key.ID, key2.ID)
 	// So do they when the comments of the contents differ.
-	key3, err := s.Add(ctx, logger, 3, "deploy", content+" ci@example.com")
+	key3, err := s.Add(ctx, logger, authorizedKeys, 3, "deploy", content+" ci@example.com")
 	require.NoError(t, err)
 	assert.Equal(t, key.KeyID, key3.KeyID)
 
-	_, err = s.Add(ctx, logger, 1, "again", content)
+	_, err = s.Add(ctx, logger, authorizedKeys, 1, "again", content)
 	assert.True(t, IsErrDeployKeyAlreadyExist(err), "got %v", err)
 	// A key rolled back leaves no line, whose key ID a later key may get.
 	rolledBack := newTestSSHKey(t)
-	_, err = s.Add(ctx, logger, 1, "deploy", rolledBack)
+	_, err = s.Add(ctx, logger, authorizedKeys, 1, "deploy", rolledBack)
 	assert.True(t, IsErrDeployKeyNameAlreadyUsed(err), "got %v", err)
-	assert.NotContains(t, readAuthorizedKeys(t, authorizedKeys), rolledBack)
+	assert.NotContains(t, readAuthorizedKeys(t, authorizedKeys.Path), rolledBack)
 
 	// Content of a user key cannot be a deploy key.
 	userContent := newTestSSHKey(t)
-	_, err = newPublicKeysStore(s.db).Add(ctx, logger, 1, "laptop", userContent)
+	_, err = newPublicKeysStore(s.db).Add(ctx, logger, authorizedKeys, 1, "laptop", userContent)
 	require.NoError(t, err)
-	_, err = s.Add(ctx, logger, 1, "user", userContent)
+	_, err = s.Add(ctx, logger, authorizedKeys, 1, "user", userContent)
 	assert.True(t, IsErrKeyAlreadyExist(err), "got %v", err)
 }
 
 func deployKeysGet(t *testing.T, ctx context.Context, s *DeployKeysStore) {
-	setMockSSHForKeys(t)
+	authorizedKeys := newTestAuthorizedKeys(t)
 
 	_, err := s.GetByID(ctx, 404)
 	assert.True(t, IsErrDeployKeyNotExist(err), "got %v", err)
 
 	content := newTestSSHKey(t)
-	key, err := s.Add(ctx, logx.NewNoopLogger(), 1, "deploy", content)
+	key, err := s.Add(ctx, logx.NewNoopLogger(), authorizedKeys, 1, "deploy", content)
 	require.NoError(t, err)
 
 	got, err := s.GetByID(ctx, key.ID)
@@ -111,15 +111,15 @@ func deployKeysGet(t *testing.T, ctx context.Context, s *DeployKeysStore) {
 }
 
 func deployKeysList(t *testing.T, ctx context.Context, s *DeployKeysStore) {
-	setMockSSHForKeys(t)
+	authorizedKeys := newTestAuthorizedKeys(t)
 	logger := logx.NewNoopLogger()
 
 	content1, content2 := newTestSSHKey(t), newTestSSHKey(t)
-	_, err := s.Add(ctx, logger, 1, "first", content1)
+	_, err := s.Add(ctx, logger, authorizedKeys, 1, "first", content1)
 	require.NoError(t, err)
-	_, err = s.Add(ctx, logger, 1, "second", content2)
+	_, err = s.Add(ctx, logger, authorizedKeys, 1, "second", content2)
 	require.NoError(t, err)
-	_, err = s.Add(ctx, logger, 2, "other", newTestSSHKey(t))
+	_, err = s.Add(ctx, logger, authorizedKeys, 2, "other", newTestSSHKey(t))
 	require.NoError(t, err)
 
 	keys, err := s.List(ctx, 1)
@@ -143,9 +143,9 @@ func deployKeysList(t *testing.T, ctx context.Context, s *DeployKeysStore) {
 }
 
 func deployKeysTouch(t *testing.T, ctx context.Context, s *DeployKeysStore) {
-	setMockSSHForKeys(t)
+	authorizedKeys := newTestAuthorizedKeys(t)
 
-	key, err := s.Add(ctx, logx.NewNoopLogger(), 1, "deploy", newTestSSHKey(t))
+	key, err := s.Add(ctx, logx.NewNoopLogger(), authorizedKeys, 1, "deploy", newTestSSHKey(t))
 	require.NoError(t, err)
 	err = s.db.Model(new(DeployKey)).Where("id = ?", key.ID).
 		Updates(map[string]any{"created_unix": 1, "updated_unix": 1}).Error
@@ -161,7 +161,7 @@ func deployKeysTouch(t *testing.T, ctx context.Context, s *DeployKeysStore) {
 }
 
 func deployKeysDelete(t *testing.T, ctx context.Context, s *DeployKeysStore) {
-	authorizedKeys := setMockSSHForKeys(t)
+	authorizedKeys := newTestAuthorizedKeys(t)
 	logger := logx.NewNoopLogger()
 
 	usersStore := newUsersStore(s.db)
@@ -176,33 +176,33 @@ func deployKeysDelete(t *testing.T, ctx context.Context, s *DeployKeysStore) {
 	require.NoError(t, err)
 
 	content := newTestSSHKey(t)
-	key1, err := s.Add(ctx, logger, repo1.ID, "deploy", content)
+	key1, err := s.Add(ctx, logger, authorizedKeys, repo1.ID, "deploy", content)
 	require.NoError(t, err)
-	key2, err := s.Add(ctx, logger, repo2.ID, "deploy", content)
+	key2, err := s.Add(ctx, logger, authorizedKeys, repo2.ID, "deploy", content)
 	require.NoError(t, err)
 
 	// Users who are not admins of the repository cannot delete its keys.
-	err = s.Delete(ctx, logger, bob, key1.ID)
+	err = s.Delete(ctx, logger, authorizedKeys, bob, key1.ID)
 	assert.True(t, IsErrKeyAccessDenied(err), "got %v", err)
 
 	// The public key stays while another repository uses it.
-	err = s.Delete(ctx, logger, alice, key1.ID)
+	err = s.Delete(ctx, logger, authorizedKeys, alice, key1.ID)
 	require.NoError(t, err)
 	_, err = s.GetByID(ctx, key1.ID)
 	assert.True(t, IsErrDeployKeyNotExist(err), "got %v", err)
 	_, err = newPublicKeysStore(s.db).GetByID(ctx, key1.KeyID)
 	require.NoError(t, err)
-	assert.Contains(t, readAuthorizedKeys(t, authorizedKeys), fmt.Sprintf("key-%d ", key1.KeyID))
+	assert.Contains(t, readAuthorizedKeys(t, authorizedKeys.Path), fmt.Sprintf("key-%d ", key1.KeyID))
 
 	// Site admins can delete keys of any repository, and the last one takes its
 	// public key with it.
-	err = s.Delete(ctx, logger, &User{ID: bob.ID, IsAdmin: true}, key2.ID)
+	err = s.Delete(ctx, logger, authorizedKeys, &User{ID: bob.ID, IsAdmin: true}, key2.ID)
 	require.NoError(t, err)
 	_, err = newPublicKeysStore(s.db).GetByID(ctx, key2.KeyID)
 	assert.True(t, IsErrKeyNotExist(err), "got %v", err)
-	assert.NotContains(t, readAuthorizedKeys(t, authorizedKeys), fmt.Sprintf("key-%d ", key2.KeyID))
+	assert.NotContains(t, readAuthorizedKeys(t, authorizedKeys.Path), fmt.Sprintf("key-%d ", key2.KeyID))
 
 	// Deleting a key that does not exist is not an error.
-	err = s.Delete(ctx, logger, alice, key1.ID)
+	err = s.Delete(ctx, logger, authorizedKeys, alice, key1.ID)
 	require.NoError(t, err)
 }

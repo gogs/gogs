@@ -26,9 +26,7 @@ func TestIsRequestFromTrustedProxy(t *testing.T) {
 		return n
 	}
 
-	original := conf.Auth.TrustedProxyCIDRs
-	t.Cleanup(func() { conf.Auth.TrustedProxyCIDRs = original })
-	conf.Auth.TrustedProxyCIDRs = []*net.IPNet{
+	trustedProxyCIDRs := []*net.IPNet{
 		mustCIDR("127.0.0.0/8"),
 		mustCIDR("::1/128"),
 		mustCIDR("10.1.0.0/16"),
@@ -51,7 +49,7 @@ func TestIsRequestFromTrustedProxy(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			req := &http.Request{RemoteAddr: tc.remoteAddr}
-			require.Equal(t, tc.want, isRequestFromTrustedProxy(req))
+			require.Equal(t, tc.want, isRequestFromTrustedProxy(trustedProxyCIDRs, req))
 		})
 	}
 }
@@ -146,7 +144,7 @@ func TestAuthenticatedUserBasicAuth(t *testing.T) {
 				f.Get("/api/web/user/settings/passkeys/registration", func() {})
 				f.Any("/{**}", func() {})
 			}, func(r *http.Request, sess session.Session) {
-				got, gotBasicAuth, _ = AuthenticatedUser(logx.NewNoopLogger(), store, r, sess)
+				got, gotBasicAuth, _ = AuthenticatedUser(logx.NewNoopLogger(), conf.AuthOpts{}, store, r, sess)
 			})
 			req := httptest.NewRequest(http.MethodGet, tc.path, nil)
 			req.SetBasicAuth("alice", "secret")
@@ -179,18 +177,18 @@ func (s racingRegistrationStore) CreateUser(context.Context, string, string, dat
 func TestReverseProxyUser_concurrentRegistration(t *testing.T) {
 	_, trusted, err := net.ParseCIDR("127.0.0.0/8")
 	require.NoError(t, err)
-	conf.SetMockAuth(t, conf.AuthOpts{
+	authOpts := conf.AuthOpts{
 		EnableReverseProxyAuthentication:   true,
 		EnableReverseProxyAutoRegistration: true,
 		ReverseProxyAuthenticationHeader:   "X-WEBAUTH-USER",
 		TrustedProxyCIDRs:                  []*net.IPNet{trusted},
-	})
+	}
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.RemoteAddr = "127.0.0.1:1234"
 	req.Header.Set("X-WEBAUTH-USER", "alice")
 
-	user, ok, err := ReverseProxyUser(racingRegistrationStore{registered: new(bool)}, req)
+	user, ok, err := ReverseProxyUser(authOpts, racingRegistrationStore{registered: new(bool)}, req)
 	require.NoError(t, err)
 	assert.True(t, ok)
 	require.NotNil(t, user)
@@ -208,18 +206,18 @@ func (orgStore) GetUserByUsername(_ context.Context, username string) (*database
 func TestReverseProxyUser_organization(t *testing.T) {
 	_, trusted, err := net.ParseCIDR("127.0.0.0/8")
 	require.NoError(t, err)
-	conf.SetMockAuth(t, conf.AuthOpts{
+	authOpts := conf.AuthOpts{
 		EnableReverseProxyAuthentication:   true,
 		EnableReverseProxyAutoRegistration: true,
 		ReverseProxyAuthenticationHeader:   "X-WEBAUTH-USER",
 		TrustedProxyCIDRs:                  []*net.IPNet{trusted},
-	})
+	}
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.RemoteAddr = "127.0.0.1:1234"
 	req.Header.Set("X-WEBAUTH-USER", "acme")
 
-	user, ok, err := ReverseProxyUser(orgStore{}, req)
+	user, ok, err := ReverseProxyUser(authOpts, orgStore{}, req)
 	require.NoError(t, err)
 	assert.True(t, ok, "the header still decides the viewer")
 	assert.Nil(t, user)

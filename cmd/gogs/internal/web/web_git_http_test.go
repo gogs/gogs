@@ -140,14 +140,13 @@ func TestHTTPContexter_reverseProxy(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			conf.SetMockAuth(t, conf.AuthOpts{
+			m := flamego.New()
+			m.Map(conf.ServerOpts{}, conf.HTTPOpts{}, conf.RepositoryOpts{}, conf.AuthOpts{
 				EnableReverseProxyAuthentication:   true,
 				EnableReverseProxyAutoRegistration: test.autoRegistration,
 				ReverseProxyAuthenticationHeader:   "X-WEBAUTH-USER",
 				TrustedProxyCIDRs:                  []*net.IPNet{trusted},
 			})
-
-			m := flamego.New()
 			m.Get("/{owner}/{repo}/info/refs", gitHTTPContexter(logx.NewNoopLogger(), reverseProxyStore{}), func(w http.ResponseWriter) {
 				w.WriteHeader(http.StatusOK)
 			})

@@ -7,32 +7,31 @@ import (
 	"strings"
 
 	"gogs.io/gogs/internal/api/v1types"
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/markup"
 )
 
 // toAllowedPageSize makes sure page size is in allowed range.
-func toAllowedPageSize(size int) int {
+func toAllowedPageSize(size, maxResponseItems int) int {
 	if size <= 0 {
 		size = 10
-	} else if size > conf.API.MaxResponseItems {
-		size = conf.API.MaxResponseItems
+	} else if size > maxResponseItems {
+		size = maxResponseItems
 	}
 	return size
 }
 
 // toUser converts a database user to an API user with the full name sanitized
 // for safe HTML rendering.
-func toUser(u *database.User) *v1types.User {
+func toUser(links database.LinkOptions, u *database.User) *v1types.User {
 	return &v1types.User{
 		ID:        u.ID,
 		UserName:  u.Name,
 		Login:     u.Name,
 		FullName:  markup.Sanitize(u.FullName),
 		Email:     u.Email,
-		AvatarURL: u.AvatarURL(),
+		AvatarURL: u.AvatarURL(links),
 	}
 }
 
@@ -135,10 +134,10 @@ func toDeployKey(apiLink string, key *database.DeployKey) *v1types.RepositoryDep
 	}
 }
 
-func toOrganization(org *database.User) *v1types.Organization {
+func toOrganization(links database.LinkOptions, org *database.User) *v1types.Organization {
 	return &v1types.Organization{
 		ID:          org.ID,
-		AvatarURL:   org.AvatarURL(),
+		AvatarURL:   org.AvatarURL(links),
 		UserName:    org.Name,
 		FullName:    org.FullName,
 		Description: org.Description,
@@ -175,7 +174,7 @@ func issueState(isClosed bool) v1types.IssueStateType {
 // It assumes the following fields have been assigned with valid values:
 // Required - Poster, Labels
 // Optional - Milestone, Assignee, PullRequest
-func toIssue(issue *database.Issue) *v1types.Issue {
+func toIssue(links database.LinkOptions, issue *database.Issue) *v1types.Issue {
 	labels := make([]*v1types.IssueLabel, len(issue.Labels))
 	for i := range issue.Labels {
 		labels[i] = toIssueLabel(issue.Labels[i])
@@ -184,7 +183,7 @@ func toIssue(issue *database.Issue) *v1types.Issue {
 	apiIssue := &v1types.Issue{
 		ID:       issue.ID,
 		Index:    issue.Index,
-		Poster:   toUser(issue.Poster),
+		Poster:   toUser(links, issue.Poster),
 		Title:    issue.Title,
 		Body:     issue.Content,
 		Labels:   labels,
@@ -198,7 +197,7 @@ func toIssue(issue *database.Issue) *v1types.Issue {
 		apiIssue.Milestone = toIssueMilestone(issue.Milestone)
 	}
 	if issue.Assignee != nil {
-		apiIssue.Assignee = toUser(issue.Assignee)
+		apiIssue.Assignee = toUser(links, issue.Assignee)
 	}
 	if issue.IsPull {
 		apiIssue.PullRequest = &v1types.PullRequestMeta{
@@ -212,11 +211,11 @@ func toIssue(issue *database.Issue) *v1types.Issue {
 	return apiIssue
 }
 
-func toIssueComment(c *database.Comment) *v1types.IssueComment {
+func toIssueComment(links database.LinkOptions, c *database.Comment) *v1types.IssueComment {
 	return &v1types.IssueComment{
 		ID:      c.ID,
-		HTMLURL: c.HTMLURL(),
-		Poster:  toUser(c.Poster),
+		HTMLURL: c.HTMLURL(links.ExternalURL),
+		Poster:  toUser(links, c.Poster),
 		Body:    c.Content,
 		Created: c.Created,
 		Updated: c.Updated,
@@ -243,7 +242,7 @@ func toIssueMilestone(m *database.Milestone) *v1types.IssueMilestone {
 
 // toRelease converts a database release to an API release.
 // It assumes the Publisher field has been assigned.
-func toRelease(r *database.Release) *v1types.RepositoryRelease {
+func toRelease(links database.LinkOptions, r *database.Release) *v1types.RepositoryRelease {
 	return &v1types.RepositoryRelease{
 		ID:              r.ID,
 		TagName:         r.TagName,
@@ -252,14 +251,14 @@ func toRelease(r *database.Release) *v1types.RepositoryRelease {
 		Body:            r.Note,
 		Draft:           r.IsDraft,
 		Prerelease:      r.IsPrerelease,
-		Author:          toUser(r.Publisher),
+		Author:          toUser(links, r.Publisher),
 		Created:         r.Created,
 	}
 }
 
-func toRepositoryCollaborator(c *database.Collaborator) *v1types.RepositoryCollaborator {
+func toRepositoryCollaborator(links database.LinkOptions, c *database.Collaborator) *v1types.RepositoryCollaborator {
 	return &v1types.RepositoryCollaborator{
-		User: toUser(c.User),
+		User: toUser(links, c.User),
 		Permissions: v1types.RepositoryPermission{
 			Admin: c.Collaboration.Mode >= database.AccessModeAdmin,
 			Push:  c.Collaboration.Mode >= database.AccessModeWrite,
@@ -273,20 +272,20 @@ func toRepositoryCollaborator(c *database.Collaborator) *v1types.RepositoryColla
 // with its Owner field if the repo is a fork. The parent is included with
 // basePerm, the permission of the viewer on the base repository, and left out
 // when basePerm is nil, e.g., when the viewer cannot read it.
-func toRepository(repo *database.Repository, perm, basePerm *v1types.RepositoryPermission) *v1types.Repository {
-	apiRepo := toRepositoryWithoutParent(repo, perm)
+func toRepository(links database.LinkOptions, repo *database.Repository, perm, basePerm *v1types.RepositoryPermission) *v1types.Repository {
+	apiRepo := toRepositoryWithoutParent(links, repo, perm)
 	if repo.IsFork && basePerm != nil {
 		// The parent does not include its own parent.
-		apiRepo.Parent = toRepositoryWithoutParent(repo.BaseRepo, basePerm)
+		apiRepo.Parent = toRepositoryWithoutParent(links, repo.BaseRepo, basePerm)
 	}
 	return apiRepo
 }
 
-func toRepositoryWithoutParent(repo *database.Repository, perm *v1types.RepositoryPermission) *v1types.Repository {
-	cloneLink := repo.CloneLink()
+func toRepositoryWithoutParent(links database.LinkOptions, repo *database.Repository, perm *v1types.RepositoryPermission) *v1types.Repository {
+	cloneLink := repo.CloneLink(links)
 	return &v1types.Repository{
 		ID:            repo.ID,
-		Owner:         toUser(repo.Owner),
+		Owner:         toUser(links, repo.Owner),
 		Name:          repo.Name,
 		FullName:      repo.FullName(),
 		Description:   repo.Description,
@@ -295,7 +294,7 @@ func toRepositoryWithoutParent(repo *database.Repository, perm *v1types.Reposito
 		Empty:         repo.IsEmpty,
 		Mirror:        repo.IsMirror,
 		Size:          repo.Size,
-		HTMLURL:       repo.HTMLURL(),
+		HTMLURL:       repo.HTMLURL(links.ExternalURL),
 		SSHURL:        cloneLink.SSH,
 		CloneURL:      cloneLink.HTTPS,
 		Website:       repo.Website,

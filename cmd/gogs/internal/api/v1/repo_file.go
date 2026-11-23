@@ -16,7 +16,7 @@ import (
 	"gogs.io/gogs/internal/repox"
 )
 
-func getRawFile(c *apiContext) {
+func getRawFile(c *apiContext, repository conf.RepositoryOpts) {
 	if !c.Repo.HasAccess() {
 		c.NotFound()
 		return
@@ -28,7 +28,7 @@ func getRawFile(c *apiContext) {
 	}
 
 	ctx := c.Request().Context()
-	gitRepo, err := git.Open(database.RepoPath(c.Repo.Owner.Name, c.Repo.Repository.Name))
+	gitRepo, err := git.Open(database.RepoPath(repository.Root, c.Repo.Owner.Name, c.Repo.Repository.Name))
 	if err != nil {
 		c.webError(err, "open repository")
 		return
@@ -92,12 +92,12 @@ func getRawFile(c *apiContext) {
 		c.NotFound()
 		return
 	}
-	if err = serveBlob(c, commit, treePath, entry.Blob()); err != nil {
+	if err = serveBlob(c, repository.EnableRawFileRenderMode, commit, treePath, entry.Blob()); err != nil {
 		c.Error(err, "serve blob")
 	}
 }
 
-func serveBlob(c *apiContext, commit *git.Commit, treePath string, blob *git.Blob) error {
+func serveBlob(c *apiContext, enableRawFileRenderMode bool, commit *git.Commit, treePath string, blob *git.Blob) error {
 	ctx := c.Request().Context()
 	data, err := blob.Bytes(ctx)
 	if err != nil {
@@ -116,7 +116,7 @@ func serveBlob(c *apiContext, commit *git.Commit, treePath string, blob *git.Blo
 			w.Header().Set("Content-Disposition", "attachment; filename=\""+path.Base(treePath)+"\"")
 			w.Header().Set("Content-Transfer-Encoding", "binary")
 		}
-	} else if !conf.Repository.EnableRawFileRenderMode || !c.QueryBool("render") {
+	} else if !enableRawFileRenderMode || !c.QueryBool("render") {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	}
 
@@ -126,15 +126,15 @@ func serveBlob(c *apiContext, commit *git.Commit, treePath string, blob *git.Blo
 	return nil
 }
 
-func getArchive(c *apiContext) {
-	repoPath := database.RepoPath(c.Param("username"), c.Param("reponame"))
+func getArchive(c *apiContext, server conf.ServerOpts, repository conf.RepositoryOpts) {
+	repoPath := database.RepoPath(repository.Root, c.Param("username"), c.Param("reponame"))
 	gitRepo, err := git.Open(repoPath)
 	if err != nil {
 		c.Error(err, "open repository")
 		return
 	}
 
-	archivePath, name, err := repox.PrepareArchive(c.Request().Context(), gitRepo, c.Repo.Repository.Name, c.Param("**"))
+	archivePath, name, err := repox.PrepareArchive(c.Request().Context(), server.AppDataPath, gitRepo, c.Repo.Repository.Name, c.Param("**"))
 	if err != nil {
 		// Responds with the web pages, as it did before migrating to Flamego.
 		c.webNotFoundOrError(err, "prepare archive")
@@ -144,8 +144,8 @@ func getArchive(c *apiContext) {
 	repox.ServeArchive(c.ResponseWriter(), c.Request().Request, archivePath, name)
 }
 
-func getEditorconfig(c *apiContext) {
-	gitRepo, err := git.Open(database.RepoPath(c.Repo.Owner.Name, c.Repo.Repository.Name))
+func getEditorconfig(c *apiContext, repository conf.RepositoryOpts) {
+	gitRepo, err := git.Open(database.RepoPath(repository.Root, c.Repo.Owner.Name, c.Repo.Repository.Name))
 	if err != nil {
 		c.webError(err, "open repository")
 		return

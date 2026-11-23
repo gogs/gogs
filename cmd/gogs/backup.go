@@ -51,15 +51,15 @@ func runBackup(ctx context.Context, cmd *cli.Command) error {
 	logger := conf.NewConsoleLogger(os.Stdout)
 	zip.Verbose = cmd.Bool("verbose")
 
-	err := conf.Init(logger, configFromLineage(cmd))
+	cfg, err := conf.Init(logger, configFromLineage(cmd), false)
 	if err != nil {
 		return errors.Wrap(err, "init configuration")
 	}
-	if _, err = conf.InitLogging(logger, true); err != nil {
+	if _, err = conf.InitLogging(logger, cfg, true); err != nil {
 		return errors.Wrap(err, "init logging")
 	}
 
-	conn, err := database.SetEngine(logger.Scoped("db"), false)
+	conn, err := database.SetEngine(logger.Scoped("db"), cfg.Database, false)
 	if err != nil {
 		return errors.Wrap(err, "set engine")
 	}
@@ -79,7 +79,7 @@ func runBackup(ctx context.Context, cmd *cli.Command) error {
 	metadata := ini.Empty()
 	metadata.Section("").Key("VERSION").SetValue(strconv.Itoa(currentBackupFormatVersion))
 	metadata.Section("").Key("DATE_TIME").SetValue(time.Now().String())
-	metadata.Section("").Key("GOGS_VERSION").SetValue(conf.App.Version)
+	metadata.Section("").Key("GOGS_VERSION").SetValue(version)
 	if err = metadata.SaveTo(metaFile); err != nil {
 		logger.FatalContext(ctx, "Failed to save metadata", "metadataPath", metaFile, "error", err)
 	}
@@ -113,7 +113,7 @@ func runBackup(ctx context.Context, cmd *cli.Command) error {
 
 		// Data files
 		for _, dir := range backupDataDirs {
-			dirPath := filepath.Join(conf.Server.AppDataPath, dir)
+			dirPath := filepath.Join(cfg.Server.AppDataPath, dir)
 			if !osx.IsDir(dirPath) {
 				continue
 			}
@@ -127,7 +127,7 @@ func runBackup(ctx context.Context, cmd *cli.Command) error {
 	// Repositories
 	if !cmd.Bool("exclude-repos") && !cmd.Bool("database-only") {
 		reposDump := filepath.Join(rootDir, "repositories.zip")
-		logger.Info("Dumping repositories", "repoRoot", conf.Repository.Root)
+		logger.Info("Dumping repositories", "repoRoot", cfg.Repository.Root)
 		if cmd.Bool("exclude-mirror-repos") {
 			repos, err := database.Handle.Repositories().ListNonMirrors(ctx)
 			if err != nil {
@@ -137,10 +137,10 @@ func runBackup(ctx context.Context, cmd *cli.Command) error {
 			if err != nil {
 				logger.FatalContext(ctx, "Failed to create repositories archive", "reposArchivePath", reposDump, "error", err)
 			}
-			baseDir := filepath.Base(conf.Repository.Root)
+			baseDir := filepath.Base(cfg.Repository.Root)
 			for _, r := range repos {
 				name := r.FullName() + ".git"
-				if err := reposZip.AddDir(filepath.Join(baseDir, name), filepath.Join(conf.Repository.Root, name)); err != nil {
+				if err := reposZip.AddDir(filepath.Join(baseDir, name), filepath.Join(cfg.Repository.Root, name)); err != nil {
 					logger.FatalContext(ctx, "Failed to add repository to archive", "repoPath", name, "error", err)
 				}
 			}
@@ -148,7 +148,7 @@ func runBackup(ctx context.Context, cmd *cli.Command) error {
 				logger.FatalContext(ctx, "Failed to save repositories archive", "reposArchivePath", reposDump, "error", err)
 			}
 		} else {
-			if err = zip.PackTo(conf.Repository.Root, reposDump, true); err != nil {
+			if err = zip.PackTo(cfg.Repository.Root, reposDump, true); err != nil {
 				logger.FatalContext(ctx, "Failed to dump repositories", "error", err)
 			}
 		}

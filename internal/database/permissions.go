@@ -9,8 +9,6 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"unknwon.dev/x/logx"
-
-	"gogs.io/gogs/internal/conf"
 )
 
 // Access represents the highest access level that a user has to a repository. The
@@ -159,7 +157,7 @@ func (s *PermissionsStore) SetRepoPerms(ctx context.Context, repoID int64, acces
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// On SQLite, two transactions that read before they write deadlock each
 		// other, so take the write lock first.
-		if conf.UseSQLite3 {
+		if tx.Name() == "sqlite" {
 			err := tx.Exec("UPDATE access SET mode = mode WHERE repo_id = ?", repoID).Error
 			if err != nil {
 				return errors.Wrap(err, "lock accesses")

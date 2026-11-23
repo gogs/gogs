@@ -42,10 +42,10 @@ var Tables = []any{
 	new(Watch), new(Webhook),
 }
 
-// NewConnection returns a new database connection with the given logger. When
-// logQueries is true, every query is logged at the debug level. Otherwise only
-// failed and slow queries are.
-func NewConnection(logger *logx.Logger, logQueries bool) (*gorm.DB, error) {
+// NewConnection returns a new database connection with the given logger and
+// options. When logQueries is true, every query is logged at the debug level.
+// Otherwise only failed and slow queries are.
+func NewConnection(logger *logx.Logger, opts conf.DatabaseOpts, logQueries bool) (*gorm.DB, error) {
 	level := gormlogger.Warn
 	if logQueries {
 		level = gormlogger.Info
@@ -55,7 +55,7 @@ func NewConnection(logger *logx.Logger, logQueries bool) (*gorm.DB, error) {
 	gormlogger.Default = dbx.NewLogger(logger.Scoped("gorm"), level, 100*time.Millisecond)
 
 	db, err := dbx.OpenDB(
-		conf.Database,
+		opts,
 		&gorm.Config{
 			SkipDefaultTransaction: true,
 			NamingStrategy: schema.NamingStrategy{
@@ -77,18 +77,14 @@ func NewConnection(logger *logx.Logger, logQueries bool) (*gorm.DB, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "get underlying *sql.DB")
 	}
-	sqlDB.SetMaxOpenConns(conf.Database.MaxOpenConns)
-	sqlDB.SetMaxIdleConns(conf.Database.MaxIdleConns)
+	sqlDB.SetMaxOpenConns(opts.MaxOpenConns)
+	sqlDB.SetMaxIdleConns(opts.MaxIdleConns)
 	sqlDB.SetConnMaxLifetime(time.Minute)
 
-	switch conf.Database.Type {
-	case "postgres":
-		conf.UsePostgreSQL = true
+	switch opts.Type {
+	case "postgres", "sqlite3":
 	case "mysql":
-		conf.UseMySQL = true
 		db = db.Set("gorm:table_options", "ENGINE=InnoDB").Session(&gorm.Session{})
-	case "sqlite3":
-		conf.UseSQLite3 = true
 	default:
 		panic("unreachable")
 	}
@@ -102,25 +98,30 @@ func NewConnection(logger *logx.Logger, logQueries bool) (*gorm.DB, error) {
 	return db, nil
 }
 
-// SetEngine connects to the database. When logQueries is true, every query is
-// logged at the debug level. Otherwise only failed and slow queries are, which
-// suits commands whose console output is read by people, such as backups.
-func SetEngine(logger *logx.Logger, logQueries bool) (*gorm.DB, error) {
-	if conf.Database.Type == "sqlite3" {
-		if err := os.MkdirAll(filepath.Dir(conf.Database.Path), os.ModePerm); err != nil {
+// SetEngine connects to the database with the given options. When logQueries
+// is true, every query is logged at the debug level. Otherwise only failed and
+// slow queries are, which suits commands whose console output is read by
+// people, such as backups.
+func SetEngine(logger *logx.Logger, opts conf.DatabaseOpts, logQueries bool) (*gorm.DB, error) {
+	if opts.Type == "sqlite3" {
+		if err := os.MkdirAll(filepath.Dir(opts.Path), os.ModePerm); err != nil {
 			return nil, errors.Wrap(err, "create directories")
 		}
 	}
-	return NewConnection(logger, logQueries)
+	return NewConnection(logger, opts, logQueries)
 }
 
-func NewEngine(logger *logx.Logger) error {
-	db, err := SetEngine(logger, !conf.IsProdMode())
+// NewEngine connects to the database with the given options and migrates it.
+// Every query is logged unless isProdMode is true. Migrations that remove public
+// keys also remove their lines from the "authorized_keys" file at
+// authorizedKeysPath, unless it is empty.
+func NewEngine(logger *logx.Logger, opts conf.DatabaseOpts, isProdMode bool, authorizedKeysPath string) error {
+	db, err := SetEngine(logger, opts, !isProdMode)
 	if err != nil {
 		return err
 	}
 
-	if err = migrations.Migrate(logger, db); err != nil {
+	if err = migrations.Migrate(logger, db, authorizedKeysPath); err != nil {
 		return errors.Newf("migrate: %v", err)
 	}
 	return nil

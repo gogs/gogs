@@ -21,7 +21,7 @@ type message struct {
 	confirmChan chan struct{}
 }
 
-func newMessageFrom(logger *logx.Logger, to []string, from, subject, htmlBody string) (*message, error) {
+func newMessageFrom(logger *logx.Logger, opts conf.EmailOpts, to []string, from, subject, htmlBody string) (*message, error) {
 	logger.Debug("Creating email message", "subject", subject, "htmlBody", htmlBody)
 
 	m := gomail.NewMsg()
@@ -31,15 +31,15 @@ func newMessageFrom(logger *logx.Logger, to []string, from, subject, htmlBody st
 	if err := m.To(to...); err != nil {
 		return nil, errors.Wrap(err, "set To addresses")
 	}
-	m.Subject(conf.Email.SubjectPrefix + subject)
+	m.Subject(opts.SubjectPrefix + subject)
 	m.SetDate()
 
-	if conf.Email.UsePlainText || conf.Email.AddPlainTextAlt {
+	if opts.UsePlainText || opts.AddPlainTextAlt {
 		plainBody, err := html2text.FromString(htmlBody)
 		if err != nil {
 			return nil, errors.Wrap(err, "convert HTML to plain text")
 		}
-		if conf.Email.UsePlainText {
+		if opts.UsePlainText {
 			m.SetBodyString(gomail.TypeTextPlain, plainBody)
 		} else {
 			m.SetBodyString(gomail.TypeTextPlain, plainBody)
@@ -55,13 +55,11 @@ func newMessageFrom(logger *logx.Logger, to []string, from, subject, htmlBody st
 	}, nil
 }
 
-func newMessage(logger *logx.Logger, to []string, subject, body string) (*message, error) {
-	return newMessageFrom(logger, to, conf.Email.From, subject, body)
+func newMessage(logger *logx.Logger, opts conf.EmailOpts, to []string, subject, body string) (*message, error) {
+	return newMessageFrom(logger, opts, to, opts.From, subject, body)
 }
 
-func newSMTPClient() (*gomail.Client, error) {
-	opts := conf.Email
-
+func newSMTPClient(opts conf.EmailOpts) (*gomail.Client, error) {
 	host, portStr, err := net.SplitHostPort(opts.Host)
 	if err != nil {
 		return nil, err
@@ -109,20 +107,20 @@ func newSMTPClient() (*gomail.Client, error) {
 	return gomail.NewClient(host, clientOpts...)
 }
 
-func sendMessage(msg *message) error {
-	client, err := newSMTPClient()
+func sendMessage(opts conf.EmailOpts, msg *message) error {
+	client, err := newSMTPClient(opts)
 	if err != nil {
 		return err
 	}
 	return client.DialAndSend(msg.msg)
 }
 
-func processMailQueue(logger *logx.Logger) {
+func processMailQueue(logger *logx.Logger, opts conf.EmailOpts) {
 	for msg := range mailQueue {
 		queued.Add(-1)
 		to := strings.Join(msg.msg.GetToString(), ", ")
 		logger.Debug("Sending email", "to", to, "description", msg.info)
-		if err := sendMessage(msg); err != nil {
+		if err := sendMessage(opts, msg); err != nil {
 			logger.Error("Failed to send email", "to", to, "description", msg.info, "error", err)
 		} else {
 			logger.Debug("Sent email", "to", to, "description", msg.info)
@@ -142,31 +140,32 @@ func QueueLen() int64 {
 	return queued.Load()
 }
 
-// NewContext initializes settings for mailer.
-func NewContext(logger *logx.Logger) {
+// NewContext starts sending the queued mail with the settings when sending
+// mail is enabled.
+func NewContext(logger *logx.Logger, opts conf.EmailOpts) {
 	// Need to check if mailQueue is nil because during reinstall (user had installed
 	// before but switched install lock off), this function is called again while
 	// the mail queue is already processing tasks, which produces a race condition.
-	if !conf.Email.Enabled || mailQueue != nil {
+	if !opts.Enabled || mailQueue != nil {
 		return
 	}
 
 	mailQueue = make(chan *message, 1000)
-	go processMailQueue(logger)
+	go processMailQueue(logger, opts)
 }
 
 // send puts new message object into mail queue.
 // It returns without confirmation (mail processed asynchronously) in normal cases,
 // but blocks in hook mode to make sure mail has been sent.
-func send(msg *message) {
-	if !conf.Email.Enabled {
+func send(opts Options, msg *message) {
+	if !opts.Email.Enabled {
 		return
 	}
 
 	queued.Add(1)
 	mailQueue <- msg
 
-	if conf.HookMode {
+	if opts.HookMode {
 		<-msg.confirmChan
 		return
 	}

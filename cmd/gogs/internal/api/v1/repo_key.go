@@ -10,8 +10,8 @@ import (
 	"gogs.io/gogs/internal/database"
 )
 
-func composeDeployKeysAPILink(repoPath string) string {
-	return conf.Server.ExternalURL + "api/v1/repos/" + repoPath + "/keys/"
+func composeDeployKeysAPILink(c *apiContext) string {
+	return c.BaseURL + "/repos/" + c.Repo.Owner.Name + "/" + c.Repo.Repository.Name + "/keys/"
 }
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories-Deploy-Keys#list-deploy-keys
@@ -22,7 +22,7 @@ func listDeployKeys(c *apiContext) {
 		return
 	}
 
-	apiLink := composeDeployKeysAPILink(c.Repo.Owner.Name + "/" + c.Repo.Repository.Name)
+	apiLink := composeDeployKeysAPILink(c)
 	apiKeys := make([]*v1types.RepositoryDeployKey, len(keys))
 	for i := range keys {
 		apiKeys[i] = toDeployKey(apiLink, keys[i])
@@ -44,7 +44,7 @@ func getDeployKey(c *apiContext) {
 		return
 	}
 
-	apiLink := composeDeployKeysAPILink(c.Repo.Owner.Name + "/" + c.Repo.Repository.Name)
+	apiLink := composeDeployKeysAPILink(c)
 	c.JSONSuccess(toDeployKey(apiLink, key))
 }
 
@@ -80,25 +80,25 @@ type createDeployKeyRequest struct {
 	Key   string `json:"key" binding:"Required"`
 }
 
-func createDeployKey(c *apiContext, form createDeployKeyRequest) {
-	content, err := database.CheckPublicKeyString(c.Logger, form.Key)
+func createDeployKey(c *apiContext, sshOpts conf.SSHOpts, authorizedKeys database.AuthorizedKeysOptions, form createDeployKeyRequest) {
+	content, err := database.CheckPublicKeyString(c.Logger, sshOpts, form.Key)
 	if err != nil {
 		handleCheckKeyStringError(c, err)
 		return
 	}
 
-	key, err := database.Handle.DeployKeys().Add(c.Request().Context(), c.Logger, c.Repo.Repository.ID, form.Title, content)
+	key, err := database.Handle.DeployKeys().Add(c.Request().Context(), c.Logger, authorizedKeys, c.Repo.Repository.ID, form.Title, content)
 	if err != nil {
 		handleAddKeyError(c, err)
 		return
 	}
 
-	apiLink := composeDeployKeysAPILink(c.Repo.Owner.Name + "/" + c.Repo.Repository.Name)
+	apiLink := composeDeployKeysAPILink(c)
 	c.JSON(http.StatusCreated, toDeployKey(apiLink, key))
 }
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories-Deploy-Keys#remove-a-deploy-key
-func deleteDeploykey(c *apiContext) {
+func deleteDeploykey(c *apiContext, authorizedKeys database.AuthorizedKeysOptions) {
 	key, err := database.Handle.DeployKeys().GetByID(c.Request().Context(), c.ParamInt64("id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get deploy key by ID")
@@ -110,7 +110,7 @@ func deleteDeploykey(c *apiContext) {
 		return
 	}
 
-	if err := database.Handle.DeployKeys().Delete(c.Request().Context(), c.Logger, c.User, key.ID); err != nil {
+	if err := database.Handle.DeployKeys().Delete(c.Request().Context(), c.Logger, authorizedKeys, c.User, key.ID); err != nil {
 		if database.IsErrKeyAccessDenied(err) {
 			c.ErrorStatus(http.StatusForbidden, errors.New("You do not have access to this key"))
 		} else {

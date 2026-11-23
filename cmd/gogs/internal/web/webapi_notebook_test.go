@@ -10,11 +10,11 @@ import (
 )
 
 func TestParseNotebook(t *testing.T) {
-	markup.NewSanitizer()
+	markup.NewSanitizer(nil)
 	intPtr := func(v int) *int { return &v }
 
 	t.Run("nbformat 4", func(t *testing.T) {
-		nb, err := parseNotebook([]byte(`{
+		nb, err := parseNotebook(markup.Options{}, []byte(`{
   "metadata": {"language_info": {"name": "python", "file_extension": ".py"}},
   "nbformat": 4,
   "cells": [
@@ -57,7 +57,7 @@ func TestParseNotebook(t *testing.T) {
 	})
 
 	t.Run("nbformat 3", func(t *testing.T) {
-		nb, err := parseNotebook([]byte(`{
+		nb, err := parseNotebook(markup.Options{}, []byte(`{
   "nbformat": 3,
   "worksheets": [{"cells": [
     {"cell_type": "heading", "level": 2, "source": ["Results"]},
@@ -87,7 +87,7 @@ func TestParseNotebook(t *testing.T) {
 	})
 
 	t.Run("not a notebook", func(t *testing.T) {
-		_, err := parseNotebook([]byte(`{"cells": "nope"}`), "", nil, nil)
+		_, err := parseNotebook(markup.Options{}, []byte(`{"cells": "nope"}`), "", nil, nil)
 		assert.Error(t, err)
 	})
 }

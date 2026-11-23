@@ -52,9 +52,10 @@ func wikiPageName(c flamego.Context) string {
 	return name
 }
 
-// openWiki returns the wiki repository and the latest commit of its branch.
-func openWiki(c flamego.Context, repo *database.Repository) (*git.Repository, string, *git.Commit, error) {
-	wikiPath := repo.WikiPath()
+// openWiki returns the wiki repository and the latest commit of its branch. The
+// repository is stored under root.
+func openWiki(c flamego.Context, root string, repo *database.Repository) (*git.Repository, string, *git.Commit, error) {
+	wikiPath := repo.WikiPath(root)
 	wikiRepo, err := git.Open(wikiPath)
 	if err != nil {
 		return nil, "", nil, errors.Wrap(err, "open wiki repository")
@@ -126,14 +127,14 @@ type repoWikiResponse struct {
 	ViewerCanWrite bool            `json:"viewerCanWrite"`
 }
 
-func getRepoWiki(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoWikiResponse, err error) {
+func getRepoWiki(c flamego.Context, markupOpts markup.Options, sshOpts conf.SSHOpts, links database.LinkOptions, repoOpts conf.RepositoryOpts, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoWikiResponse, err error) {
 	repo := repoCtx.Repo
 	resp = &repoWikiResponse{ViewerCanWrite: viewerCanWriteWiki(repoCtx)}
-	if !repo.HasWikiPages(c.Request().Context()) {
+	if !repo.HasWikiPages(c.Request().Context(), repoOpts.Root) {
 		return http.StatusOK, resp, nil
 	}
 
-	wikiRepo, branch, commit, err := openWiki(c, repo)
+	wikiRepo, branch, commit, err := openWiki(c, repoOpts.Root, repo)
 	if err != nil {
 		logger.Error("Failed to open wiki", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, err
@@ -163,20 +164,20 @@ func getRepoWiki(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (
 		return http.StatusInternalServerError, nil, err
 	}
 
-	links := repox.NewCloneLink(repoCtx.Owner.Name, repo.Name, true)
+	cloneLink := repox.NewCloneLink(links.CloneLinkOptions(), repoCtx.Owner.Name, repo.Name, true)
 	resp.HasWiki = true
 	resp.Page = &wikiPage{
 		Name:   name,
-		HTML:   markAppLinks(markup.MarkdownFile(content, repo.Link()+"/wiki", repoCtx.metas()), repo),
+		HTML:   markAppLinks(markupOpts, markup.MarkdownFile(markupOpts, content, repo.Link(markupOpts.Subpath)+"/wiki", repoCtx.metas(markupOpts.Subpath, repoOpts.Root)), repo),
 		Author: wikiPageAuthor{Name: commits[0].Author.Name, When: commits[0].Author.When},
 	}
 	resp.Pages = pages
 	resp.CloneLinks = &wikiCloneLinks{}
-	if !conf.Repository.DisableHTTPGit {
-		resp.CloneLinks.HTTPS = links.HTTPS
+	if !repoOpts.DisableHTTPGit {
+		resp.CloneLinks.HTTPS = cloneLink.HTTPS
 	}
-	if !conf.SSH.Disabled {
-		resp.CloneLinks.SSH = links.SSH
+	if !sshOpts.Disabled {
+		resp.CloneLinks.SSH = cloneLink.SSH
 	}
 	return http.StatusOK, resp, nil
 }
@@ -191,14 +192,14 @@ type repoWikiPagesResponse struct {
 	ViewerCanWrite bool               `json:"viewerCanWrite"`
 }
 
-func getRepoWikiPages(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoWikiPagesResponse, err error) {
+func getRepoWikiPages(c flamego.Context, repoOpts conf.RepositoryOpts, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoWikiPagesResponse, err error) {
 	repo := repoCtx.Repo
 	resp = &repoWikiPagesResponse{Pages: []repoWikiPageItem{}, ViewerCanWrite: viewerCanWriteWiki(repoCtx)}
-	if !repo.HasWikiPages(c.Request().Context()) {
+	if !repo.HasWikiPages(c.Request().Context(), repoOpts.Root) {
 		return http.StatusOK, resp, nil
 	}
 
-	wikiRepo, branch, commit, err := openWiki(c, repo)
+	wikiRepo, branch, commit, err := openWiki(c, repoOpts.Root, repo)
 	if err != nil {
 		logger.Error("Failed to open wiki", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, err
@@ -224,12 +225,12 @@ type repoWikiPageSource struct {
 	Content string `json:"content"`
 }
 
-func getRepoWikiPageSource(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoWikiPageSource, err error) {
+func getRepoWikiPageSource(c flamego.Context, repoOpts conf.RepositoryOpts, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoWikiPageSource, err error) {
 	repo := repoCtx.Repo
-	if !repo.HasWikiPages(c.Request().Context()) {
+	if !repo.HasWikiPages(c.Request().Context(), repoOpts.Root) {
 		return http.StatusNotFound, nil, errors.New("page does not exist")
 	}
-	_, _, commit, err := openWiki(c, repo)
+	_, _, commit, err := openWiki(c, repoOpts.Root, repo)
 	if err != nil {
 		logger.Error("Failed to open wiki", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, err
@@ -273,12 +274,12 @@ type repoWikiPageResult struct {
 	Name string `json:"name"`
 }
 
-func postRepoWikiPage(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, req repoWikiPageRequest) (statusCode int, resp any, err error) {
+func postRepoWikiPage(c flamego.Context, server conf.ServerOpts, repoOpts conf.RepositoryOpts, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, req repoWikiPageRequest) (statusCode int, resp any, err error) {
 	if resp := wikiPageRequestError(l, &req); resp != nil {
 		return http.StatusBadRequest, resp, nil
 	}
 	repo := repoCtx.Repo
-	if err = repo.AddWikiPage(c.Request().Context(), viewer, req.Title, req.Content, req.Message); err != nil {
+	if err = repo.AddWikiPage(c.Request().Context(), repoOpts.Root, server.AppDataPath, viewer, req.Title, req.Content, req.Message); err != nil {
 		if database.IsErrWikiAlreadyExist(err) {
 			msg := l.Tr("repo::wiki.page_already_exists")
 			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"title": &msg}}, nil
@@ -289,15 +290,15 @@ func postRepoWikiPage(c flamego.Context, logger *logx.Logger, l i18n.Locale, vie
 	return http.StatusCreated, &repoWikiPageResult{Name: database.CleanWikiPageName(req.Title)}, nil
 }
 
-func patchRepoWikiPage(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, req repoWikiPageRequest) (statusCode int, resp any, err error) {
+func patchRepoWikiPage(c flamego.Context, server conf.ServerOpts, repoOpts conf.RepositoryOpts, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, req repoWikiPageRequest) (statusCode int, resp any, err error) {
 	if resp := wikiPageRequestError(l, &req); resp != nil {
 		return http.StatusBadRequest, resp, nil
 	}
 	repo := repoCtx.Repo
-	if !repo.HasWikiPages(c.Request().Context()) {
+	if !repo.HasWikiPages(c.Request().Context(), repoOpts.Root) {
 		return http.StatusNotFound, nil, errors.New("page does not exist")
 	}
-	_, _, commit, err := openWiki(c, repo)
+	_, _, commit, err := openWiki(c, repoOpts.Root, repo)
 	if err != nil {
 		logger.Error("Failed to open wiki", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, err
@@ -310,7 +311,7 @@ func patchRepoWikiPage(c flamego.Context, logger *logx.Logger, l i18n.Locale, vi
 		return http.StatusNotFound, nil, errors.New("page does not exist")
 	}
 
-	if err = repo.EditWikiPage(c.Request().Context(), viewer, req.OldTitle, req.Title, req.Content, req.Message); err != nil {
+	if err = repo.EditWikiPage(c.Request().Context(), repoOpts.Root, server.AppDataPath, viewer, req.OldTitle, req.Title, req.Content, req.Message); err != nil {
 		if database.IsErrWikiAlreadyExist(err) {
 			msg := l.Tr("repo::wiki.page_already_exists")
 			return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"title": &msg}}, nil
@@ -321,12 +322,12 @@ func patchRepoWikiPage(c flamego.Context, logger *logx.Logger, l i18n.Locale, vi
 	return http.StatusOK, &repoWikiPageResult{Name: database.CleanWikiPageName(req.Title)}, nil
 }
 
-func deleteRepoWikiPage(c flamego.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext) (statusCode int, resp any, err error) {
+func deleteRepoWikiPage(c flamego.Context, server conf.ServerOpts, repoOpts conf.RepositoryOpts, logger *logx.Logger, viewer *database.User, repoCtx *repoContext) (statusCode int, resp any, err error) {
 	repo := repoCtx.Repo
-	if !repo.HasWikiPages(c.Request().Context()) {
+	if !repo.HasWikiPages(c.Request().Context(), repoOpts.Root) {
 		return http.StatusNotFound, nil, errors.New("page does not exist")
 	}
-	_, _, commit, err := openWiki(c, repo)
+	_, _, commit, err := openWiki(c, repoOpts.Root, repo)
 	if err != nil {
 		logger.Error("Failed to open wiki", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, err
@@ -339,7 +340,7 @@ func deleteRepoWikiPage(c flamego.Context, logger *logx.Logger, viewer *database
 	} else if !found {
 		return http.StatusNotFound, nil, errors.New("page does not exist")
 	}
-	if err = repo.DeleteWikiPage(c.Request().Context(), viewer, name); err != nil {
+	if err = repo.DeleteWikiPage(c.Request().Context(), repoOpts.Root, server.AppDataPath, viewer, name); err != nil {
 		logger.Error("Failed to delete wiki page", "repoID", repo.ID, "pageName", name, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete page")
 	}

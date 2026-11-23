@@ -29,7 +29,7 @@ func newDeployKeysStore(db *gorm.DB) *DeployKeysStore {
 // ErrKeyAlreadyExist when the content is used by a user key,
 // ErrDeployKeyAlreadyExist when the repository already has the key, and
 // ErrDeployKeyNameAlreadyUsed when the repository has a key of the same name.
-func (s *DeployKeysStore) Add(ctx context.Context, logger *logx.Logger, repoID int64, name, content string) (*DeployKey, error) {
+func (s *DeployKeysStore) Add(ctx context.Context, logger *logx.Logger, authorizedKeys AuthorizedKeysOptions, repoID int64, name, content string) (*DeployKey, error) {
 	fingerprint, err := publicKeyFingerprint(content)
 	if err != nil {
 		return nil, err
@@ -50,7 +50,7 @@ func (s *DeployKeysStore) Add(ctx context.Context, logger *logx.Logger, repoID i
 
 		if added != nil {
 			// The key is already added, and resyncing SSH keys adds its line.
-			if err = appendAuthorizedKeysToFile(logger, added); err != nil {
+			if err = appendAuthorizedKeysToFile(logger, authorizedKeys, added); err != nil {
 				logger.Error("Failed to append deploy key to authorized_keys", "keyID", added.ID, "error", err)
 			}
 		}
@@ -195,7 +195,7 @@ func (s *DeployKeysStore) Touch(ctx context.Context, id int64) error {
 // repository uses it. Only site admins and admins of the repository can delete
 // it, and others get ErrKeyAccessDenied. Deleting a key that does not exist is
 // not an error.
-func (s *DeployKeysStore) Delete(ctx context.Context, logger *logx.Logger, doer *User, id int64) error {
+func (s *DeployKeysStore) Delete(ctx context.Context, logger *logx.Logger, authorizedKeys AuthorizedKeysOptions, doer *User, id int64) error {
 	key, err := s.GetByID(ctx, id)
 	if err != nil {
 		if IsErrDeployKeyNotExist(err) {
@@ -240,7 +240,7 @@ func (s *DeployKeysStore) Delete(ctx context.Context, logger *logx.Logger, doer 
 	if !publicKeyDeleted {
 		return nil
 	}
-	return newPublicKeysStore(s.db).RewriteAuthorizedKeys()
+	return newPublicKeysStore(s.db).RewriteAuthorizedKeys(authorizedKeys)
 }
 
 // lockPublicKeys locks the public keys of given IDs until the transaction ends.

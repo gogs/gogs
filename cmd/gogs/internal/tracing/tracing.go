@@ -14,8 +14,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"unknwon.dev/x/logx"
-
-	"gogs.io/gogs/internal/conf"
 )
 
 // recordUnsampled records the spans that its sampler drops, e.g., of a request
@@ -41,8 +39,8 @@ func (s recordUnsampled) ShouldSample(p sdktrace.SamplingParameters) sdktrace.Sa
 // processors and exports the spans that are left, which wait in a batch for up
 // to 5 seconds, giving up after the timeout, or nil when tracing is disabled or
 // there is neither an endpoint nor a processor.
-func Init(ctx context.Context, logger *logx.Logger, processors ...sdktrace.SpanProcessor) (shutdown func(timeout time.Duration), err error) {
-	if !conf.Tracing.Enabled {
+func Init(ctx context.Context, logger *logx.Logger, enabled bool, processors ...sdktrace.SpanProcessor) (shutdown func(timeout time.Duration), err error) {
+	if !enabled {
 		return nil, nil
 	}
 	export := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT") != "" || os.Getenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT") != ""

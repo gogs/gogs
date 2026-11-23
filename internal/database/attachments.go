@@ -13,7 +13,6 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
 )
 
@@ -47,14 +46,16 @@ func (a *Attachment) AfterFind(_ *gorm.DB) error {
 	return nil
 }
 
-// AttachmentLocalPath returns where attachment is stored in local file system based on given UUID.
-func AttachmentLocalPath(uuid string) string {
-	return path.Join(conf.Attachment.Path, uuid[0:1], uuid[1:2], uuid)
+// AttachmentLocalPath returns where attachment is stored in local file system
+// under the attachment path based on given UUID.
+func AttachmentLocalPath(attachmentPath, uuid string) string {
+	return path.Join(attachmentPath, uuid[0:1], uuid[1:2], uuid)
 }
 
-// LocalPath returns where attachment is stored in local file system.
-func (a *Attachment) LocalPath() string {
-	return AttachmentLocalPath(a.UUID)
+// LocalPath returns where attachment is stored in local file system under the
+// attachment path.
+func (a *Attachment) LocalPath(attachmentPath string) string {
+	return AttachmentLocalPath(attachmentPath, a.UUID)
 }
 
 var _ errx.NotFound = (*ErrAttachmentNotExist)(nil)
@@ -87,15 +88,15 @@ func newAttachmentsStore(db *gorm.DB) *AttachmentsStore {
 }
 
 // Create stores the content of r as a new attachment uploaded by the user with
-// given ID, which is not attached to anything yet.
-func (s *AttachmentsStore) Create(ctx context.Context, uploaderID int64, name string, r io.Reader) (*Attachment, error) {
+// given ID under the attachment path, which is not attached to anything yet.
+func (s *AttachmentsStore) Create(ctx context.Context, attachmentPath string, uploaderID int64, name string, r io.Reader) (*Attachment, error) {
 	attach := &Attachment{
 		UUID:       uuid.New().String(),
 		UploaderID: uploaderID,
 		Name:       name,
 	}
 
-	localPath := attach.LocalPath()
+	localPath := attach.LocalPath(attachmentPath)
 	err := os.MkdirAll(path.Dir(localPath), os.ModePerm)
 	if err != nil {
 		return nil, errors.Wrap(err, "create directory")
@@ -194,11 +195,12 @@ func (s *AttachmentsStore) listBy(ctx context.Context, cond string, id int64) ([
 	return attachments, s.db.WithContext(ctx).Where(cond, id).Order("id").Find(&attachments).Error
 }
 
-// Delete deletes given attachments, and their files when remove is true.
-func (s *AttachmentsStore) Delete(ctx context.Context, remove bool, attachments ...*Attachment) error {
+// Delete deletes given attachments, and their files under the attachment path
+// when remove is true.
+func (s *AttachmentsStore) Delete(ctx context.Context, attachmentPath string, remove bool, attachments ...*Attachment) error {
 	for _, a := range attachments {
 		if remove {
-			err := os.Remove(a.LocalPath())
+			err := os.Remove(a.LocalPath(attachmentPath))
 			if err != nil && !os.IsNotExist(err) {
 				return errors.Wrapf(err, "remove file of attachment %d", a.ID)
 			}
@@ -215,11 +217,11 @@ func (s *AttachmentsStore) Delete(ctx context.Context, remove bool, attachments 
 }
 
 // DeleteByCommentID deletes the attachments of the comment with given ID, and
-// their files when remove is true.
-func (s *AttachmentsStore) DeleteByCommentID(ctx context.Context, commentID int64, remove bool) error {
+// their files under the attachment path when remove is true.
+func (s *AttachmentsStore) DeleteByCommentID(ctx context.Context, attachmentPath string, commentID int64, remove bool) error {
 	attachments, err := s.ListByCommentID(ctx, commentID)
 	if err != nil {
 		return errors.Wrap(err, "list attachments")
 	}
-	return s.Delete(ctx, remove, attachments...)
+	return s.Delete(ctx, attachmentPath, remove, attachments...)
 }

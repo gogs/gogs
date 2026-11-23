@@ -23,8 +23,8 @@ func getUserByParams(c *apiContext) *database.User {
 	return getUserByParamsName(c, "username")
 }
 
-func composePublicKeysAPILink() string {
-	return conf.Server.ExternalURL + "api/v1/user/keys/"
+func composePublicKeysAPILink(c *apiContext) string {
+	return c.BaseURL + "/user/keys/"
 }
 
 func listPublicKeysOfUser(c *apiContext, uid int64) {
@@ -34,7 +34,7 @@ func listPublicKeysOfUser(c *apiContext, uid int64) {
 		return
 	}
 
-	apiLink := composePublicKeysAPILink()
+	apiLink := composePublicKeysAPILink(c)
 	apiKeys := make([]*v1types.UserPublicKey, len(keys))
 	for i := range keys {
 		apiKeys[i] = toUserPublicKey(apiLink, keys[i])
@@ -62,7 +62,7 @@ func getPublicKey(c *apiContext) {
 		return
 	}
 
-	apiLink := composePublicKeysAPILink()
+	apiLink := composePublicKeysAPILink(c)
 	c.JSONSuccess(toUserPublicKey(apiLink, key))
 }
 
@@ -71,28 +71,28 @@ type createPublicKeyRequest struct {
 	Key   string `json:"key" binding:"Required"`
 }
 
-func createUserPublicKey(c *apiContext, form createPublicKeyRequest, uid int64) {
-	content, err := database.CheckPublicKeyString(c.Logger, form.Key)
+func createUserPublicKey(c *apiContext, sshOpts conf.SSHOpts, authorizedKeys database.AuthorizedKeysOptions, form createPublicKeyRequest, uid int64) {
+	content, err := database.CheckPublicKeyString(c.Logger, sshOpts, form.Key)
 	if err != nil {
 		handleCheckKeyStringError(c, err)
 		return
 	}
 
-	key, err := database.Handle.PublicKeys().Add(c.Request().Context(), c.Logger, uid, form.Title, content)
+	key, err := database.Handle.PublicKeys().Add(c.Request().Context(), c.Logger, authorizedKeys, uid, form.Title, content)
 	if err != nil {
 		handleAddKeyError(c, err)
 		return
 	}
-	apiLink := composePublicKeysAPILink()
+	apiLink := composePublicKeysAPILink(c)
 	c.JSON(http.StatusCreated, toUserPublicKey(apiLink, key))
 }
 
-func createPublicKey(c *apiContext, form createPublicKeyRequest) {
-	createUserPublicKey(c, form, c.User.ID)
+func createPublicKey(c *apiContext, sshOpts conf.SSHOpts, authorizedKeys database.AuthorizedKeysOptions, form createPublicKeyRequest) {
+	createUserPublicKey(c, sshOpts, authorizedKeys, form, c.User.ID)
 }
 
-func deletePublicKey(c *apiContext) {
-	if err := database.Handle.PublicKeys().Delete(c.Request().Context(), c.Logger, c.User, c.ParamInt64("id")); err != nil {
+func deletePublicKey(c *apiContext, authorizedKeys database.AuthorizedKeysOptions) {
+	if err := database.Handle.PublicKeys().Delete(c.Request().Context(), c.Logger, authorizedKeys, c.User, c.ParamInt64("id")); err != nil {
 		if database.IsErrKeyAccessDenied(err) {
 			c.ErrorStatus(http.StatusForbidden, errors.New("You do not have access to this key."))
 		} else {

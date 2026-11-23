@@ -16,7 +16,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/repox"
 )
@@ -174,7 +173,7 @@ func TestAdminOperations(t *testing.T) {
 
 	t.Run("git gc", func(t *testing.T) {
 		repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
-		packs := filepath.Join(repox.RepositoryPath(repo.Owner, repo.Name), "objects", "pack", "*.pack")
+		packs := filepath.Join(repox.RepositoryPath(cfg.Repository.Root, repo.Owner, repo.Name), "objects", "pack", "*.pack")
 		// The commit of a new repository is pushed as loose objects, which
 		// garbage collection packs.
 		before, err := filepath.Glob(packs)
@@ -193,9 +192,9 @@ func TestAdminOperations(t *testing.T) {
 		// protected branch, and loses the others.
 		unprotected := seedRepository(t, owner.ID, CreateRepositoryOptions{})
 		protected := seedRepository(t, owner.ID, CreateRepositoryOptions{})
-		require.NoError(t, database.Handle.ProtectBranches().Save(t.Context(), &database.ProtectBranch{RepoID: protected.ID, Name: "main", Protected: true}))
+		require.NoError(t, database.Handle.ProtectBranches().Save(t.Context(), database.DelegateHooksOptions{RepositoryRoot: cfg.Repository.Root, ScriptType: cfg.Repository.ScriptType, CustomConf: cfg.CustomConf}, &database.ProtectBranch{RepoID: protected.ID, Name: "main", Protected: true}))
 		hook := func(repo *Repository) string {
-			return filepath.Join(repox.RepositoryPath(repo.Owner, repo.Name), "hooks", "pre-receive")
+			return filepath.Join(repox.RepositoryPath(cfg.Repository.Root, repo.Owner, repo.Name), "hooks", "pre-receive")
 		}
 		for _, repo := range []*Repository{unprotected, protected} {
 			require.NoError(t, os.WriteFile(hook(repo), []byte("#!/bin/sh\nexit 1\n"), 0o755))
@@ -213,7 +212,7 @@ func TestAdminOperations(t *testing.T) {
 
 	t.Run("delete archives", func(t *testing.T) {
 		repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
-		repoPath := repox.RepositoryPath(repo.Owner, repo.Name)
+		repoPath := repox.RepositoryPath(cfg.Repository.Root, repo.Owner, repo.Name)
 		archive := filepath.Join(repoPath, "archives", "zip", "main.zip")
 		require.NoError(t, os.MkdirAll(filepath.Dir(archive), 0o755))
 		require.NoError(t, os.WriteFile(archive, []byte("archive"), 0o644))
@@ -228,7 +227,7 @@ func TestAdminOperations(t *testing.T) {
 
 	t.Run("reinit missing", func(t *testing.T) {
 		repo := seedRepository(t, owner.ID, CreateRepositoryOptions{})
-		repoPath := repox.RepositoryPath(repo.Owner, repo.Name)
+		repoPath := repox.RepositoryPath(cfg.Repository.Root, repo.Owner, repo.Name)
 		require.NoError(t, os.RemoveAll(repoPath))
 
 		msg := adminRunOperation(t, admin, nonAdmin, anonymous, "reinit-missing-repos")
@@ -242,7 +241,7 @@ func TestAdminOperations(t *testing.T) {
 	t.Run("delete missing", func(t *testing.T) {
 		kept := seedRepository(t, owner.ID, CreateRepositoryOptions{})
 		missing := seedRepository(t, owner.ID, CreateRepositoryOptions{})
-		require.NoError(t, os.RemoveAll(repox.RepositoryPath(missing.Owner, missing.Name)))
+		require.NoError(t, os.RemoveAll(repox.RepositoryPath(cfg.Repository.Root, missing.Owner, missing.Name)))
 
 		msg := adminRunOperation(t, admin, nonAdmin, anonymous, "delete-missing-repos")
 		assert.Equal(t, "Deleted the records of repositories that lost their Git files.", msg)
@@ -279,8 +278,8 @@ func TestAdminConfig(t *testing.T) {
 	assert.Contains(t, server, u.Port())
 	assert.Contains(t, adminReportValues(t, resp.Sections, "email"), "127.0.0.1:1")
 	assert.Contains(t, adminReportValues(t, resp.Sections, "session"), "file")
-	assert.Contains(t, adminReportValues(t, resp.Sections, "repository"), conf.Repository.Root)
-	assert.NotContains(t, string(body), conf.Security.SecretKey, "secret key disclosed")
+	assert.Contains(t, adminReportValues(t, resp.Sections, "repository"), cfg.Repository.Root)
+	assert.NotContains(t, string(body), cfg.Security.SecretKey, "secret key disclosed")
 }
 
 func TestAdminTestMail(t *testing.T) {
@@ -340,7 +339,7 @@ func adminSeedOrganization(t *testing.T, ownerID int64) *database.User {
 		IsActive: true,
 		Type:     database.UserTypeOrganization,
 	}
-	require.NoError(t, database.Handle.Organizations().Create(t.Context(), org, owner))
+	require.NoError(t, database.Handle.Organizations().Create(t.Context(), cfg.Repository.Root, org, owner))
 	return org
 }
 
@@ -383,7 +382,7 @@ func TestAdminRepos(t *testing.T) {
 	admin, nonAdmin, anonymous := adminClients(t)
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{Private: true, AutoInit: true})
-	repoPath := repox.RepositoryPath(repo.Owner, repo.Name)
+	repoPath := repox.RepositoryPath(cfg.Repository.Root, repo.Owner, repo.Name)
 
 	t.Run("list", func(t *testing.T) {
 		path := "/api/web/admin/repos?q=" + url.QueryEscape(repo.Name)

@@ -61,7 +61,7 @@ type repoHeaderBase struct {
 	Name  string `json:"name"`
 }
 
-func getRepoHeader(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoHeader, err error) {
+func getRepoHeader(c flamego.Context, auth conf.AuthOpts, picture conf.PictureOpts, sshOpts conf.SSHOpts, repoOpts conf.RepositoryOpts, links database.LinkOptions, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoHeader, err error) {
 	owner := repoCtx.Owner
 	repo := repoCtx.Repo
 
@@ -84,7 +84,7 @@ func getRepoHeader(c flamego.Context, logger *logx.Logger, repoCtx *repoContext)
 		ID:                   repo.ID,
 		Owner:                owner.Name,
 		Name:                 repo.Name,
-		AvatarURL:            cmp.Or(repo.AvatarLink(), owner.AvatarURL()),
+		AvatarURL:            cmp.Or(repo.AvatarLink(links, picture.RepositoryAvatarUploadPath), owner.AvatarURL(links)),
 		Visibility:           visibility,
 		WatchCount:           repo.NumWatches,
 		StarCount:            repo.NumStars,
@@ -103,12 +103,12 @@ func getRepoHeader(c flamego.Context, logger *logx.Logger, repoCtx *repoContext)
 	}
 	if repoCtx.Viewer.CanRead() {
 		resp.DefaultBranch = repo.DefaultBranch
-		resp.CloneLinks = repoCloneLinksOf(owner.Name, repo.Name, false)
+		resp.CloneLinks = repoCloneLinksOf(links, repoOpts.DisableHTTPGit, sshOpts.Disabled, owner.Name, repo.Name, false)
 		resp.ExternalTrackerURL = repo.ExternalTrackerLink()
 		resp.ExternalWikiURL = repo.ExternalWikiLink()
 
 		if repo.IsFork {
-			resp.ForkOf, err = readableBaseRepo(c.Request().Context(), logger, repoCtx)
+			resp.ForkOf, err = readableBaseRepo(c.Request().Context(), logger, auth.RequireEmailConfirmation, repoCtx)
 			if err != nil {
 				logger.Error("Failed to get base repository", "repoID", repo.ID, "error", err)
 				return http.StatusInternalServerError, nil, errors.Wrap(err, "get base repository")
@@ -121,7 +121,7 @@ func getRepoHeader(c flamego.Context, logger *logx.Logger, repoCtx *repoContext)
 		if err != nil {
 			logger.Error("Failed to get mirror by repository ID", "repoID", repo.ID, "error", err)
 		} else if mirror != nil {
-			resp.MirrorOf = mirror.Address()
+			resp.MirrorOf = mirror.Address(repoOpts.Root)
 		}
 	}
 
@@ -130,7 +130,7 @@ func getRepoHeader(c flamego.Context, logger *logx.Logger, repoCtx *repoContext)
 
 // readableBaseRepo returns the base repository of the fork, or nil when it is
 // gone or the viewer cannot read it.
-func readableBaseRepo(ctx context.Context, logger *logx.Logger, repoCtx *repoContext) (*repoHeaderBase, error) {
+func readableBaseRepo(ctx context.Context, logger *logx.Logger, requireEmailConfirmation bool, repoCtx *repoContext) (*repoHeaderBase, error) {
 	base, err := database.Handle.Repositories().GetByID(ctx, repoCtx.Repo.ForkID)
 	if err != nil {
 		if database.IsErrRepoNotExist(err) {
@@ -141,7 +141,7 @@ func readableBaseRepo(ctx context.Context, logger *logx.Logger, repoCtx *repoCon
 	if err = base.GetOwner(); err != nil {
 		return nil, errors.Wrap(err, "get owner")
 	}
-	if !newViewer(ctx, logger, repoCtx.Viewer.User, base.Owner, base).CanRead() {
+	if !newViewer(ctx, logger, requireEmailConfirmation, repoCtx.Viewer.User, base.Owner, base).CanRead() {
 		return nil, nil
 	}
 	return &repoHeaderBase{Owner: base.Owner.Name, Name: base.Name}, nil
@@ -170,7 +170,7 @@ type repoCommit struct {
 	MarkdownExtensions []string `json:"markdownExtensions"`
 }
 
-func getRepoCommit(logger *logx.Logger, c flamego.Context, repoCtx *repoContext) (statusCode int, resp *repoCommit, err error) {
+func getRepoCommit(logger *logx.Logger, c flamego.Context, markupOpts markup.Options, markdown conf.MarkdownOpts, links database.LinkOptions, repoOpts conf.RepositoryOpts, repoCtx *repoContext) (statusCode int, resp *repoCommit, err error) {
 	if !repoCtx.Viewer.CanRead() {
 		return http.StatusNotFound, nil, errors.New("repository does not exist")
 	}
@@ -180,7 +180,7 @@ func getRepoCommit(logger *logx.Logger, c flamego.Context, repoCtx *repoContext)
 	repo := repoCtx.Repo
 	commitID := c.Param("sha")
 
-	commit, err := git.RepoCatFileCommit(ctx, repox.RepositoryPath(owner.Name, repo.Name), commitID)
+	commit, err := git.RepoCatFileCommit(ctx, repox.RepositoryPath(repoOpts.Root, owner.Name, repo.Name), commitID)
 	if err != nil {
 		if git.IsErrRevisionNotExist(err) {
 			return http.StatusNotFound, nil, nil
@@ -204,10 +204,10 @@ func getRepoCommit(logger *logx.Logger, c flamego.Context, repoCtx *repoContext)
 			Name:      s.Name,
 			Email:     s.Email,
 			When:      s.When.UTC(),
-			AvatarURL: userx.GeneratedAvatarURLPath(s.Email),
+			AvatarURL: userx.GeneratedAvatarURLPath(links.SecretKey, links.Subpath, s.Email),
 		}
 		if u, err := database.Handle.Users().GetByEmail(ctx, s.Email); err == nil && u != nil {
-			sig.ProfileURL = conf.Server.Subpath + "/" + u.Name
+			sig.ProfileURL = u.HomeURLPath(links.Subpath)
 		}
 		return sig
 	}
@@ -218,15 +218,15 @@ func getRepoCommit(logger *logx.Logger, c flamego.Context, repoCtx *repoContext)
 		body = msg[len(subject):]
 	}
 
-	metas := repo.ComposeMetas()
+	metas := repo.ComposeMetas(markupOpts.Subpath, repoOpts.Root)
 	return http.StatusOK, &repoCommit{
 		SHA:                commitID,
 		Subject:            subject,
-		SubjectHTML:        markup.RenderCommitMessage(subject, repo.Link(), metas),
-		BodyHTML:           markup.RenderCommitMessage(strings.TrimSpace(body), repo.Link(), metas),
+		SubjectHTML:        markup.RenderCommitMessage(markupOpts, subject, repo.Link(markupOpts.Subpath), metas),
+		BodyHTML:           markup.RenderCommitMessage(markupOpts, strings.TrimSpace(body), repo.Link(markupOpts.Subpath), metas),
 		Author:             toSignature(commit.Author),
 		Parents:            parents,
-		MarkdownExtensions: conf.Markdown.FileExtensions,
+		MarkdownExtensions: markdown.FileExtensions,
 	}, nil
 }
 
@@ -236,16 +236,16 @@ type repoMarkdownFile struct {
 
 // getRepoMarkdownFile renders the Markdown file at the path in the commit the
 // way the file view does, e.g., to show the rich diff of a commit.
-func getRepoMarkdownFile(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoMarkdownFile, err error) {
+func getRepoMarkdownFile(c flamego.Context, markupOpts markup.Options, markdown conf.MarkdownOpts, repoOpts conf.RepositoryOpts, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoMarkdownFile, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
 	sha := c.Param("sha")
 	treePath := pathx.Clean(c.Param("path"))
-	if !markup.IsMarkdownFile(treePath) {
+	if !markup.IsMarkdownFile(markdown.FileExtensions, treePath) {
 		return http.StatusNotFound, nil, errors.New("file is not Markdown")
 	}
 
-	gitRepo, err := openRepoGit(repoCtx)
+	gitRepo, err := openRepoGit(repoOpts.Root, repoCtx)
 	if err != nil {
 		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
@@ -272,9 +272,9 @@ func getRepoMarkdownFile(c flamego.Context, logger *logx.Logger, repoCtx *repoCo
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "read blob")
 	}
 
-	fileLink := repo.Link() + "/src/" + commit.ID.String() + "/" + escapePath(treePath)
+	fileLink := repo.Link(markupOpts.Subpath) + "/src/" + commit.ID.String() + "/" + escapePath(treePath)
 	return http.StatusOK, &repoMarkdownFile{
-		HTML: markAppLinks(markup.MarkdownFile(p, path.Dir(fileLink), repo.ComposeMetas()), repo),
+		HTML: markAppLinks(markupOpts, markup.MarkdownFile(markupOpts, p, path.Dir(fileLink), repo.ComposeMetas(markupOpts.Subpath, repoOpts.Root)), repo),
 	}, nil
 }
 

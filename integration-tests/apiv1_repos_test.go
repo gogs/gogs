@@ -276,7 +276,7 @@ func TestAPIV1ListForks(t *testing.T) {
 	baseRepo, err := getRepository(t, repo.ID)
 	require.NoError(t, err)
 	forkName := UniqueName("fork-")
-	_, err = database.Handle.Repositories().Fork(ctx, logger, forkOwner, forkOwner, baseRepo, forkName, "")
+	_, err = database.Handle.Repositories().Fork(ctx, logger, repoCreationOptions(cfg), forkOwner, forkOwner, baseRepo, forkName, "")
 	require.NoError(t, err)
 
 	var forks []apiV1Repo
@@ -459,9 +459,9 @@ func TestAPIV1Releases(t *testing.T) {
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 
-	gitRepo, err := git.Open(database.RepoPath(repo.Owner, repo.Name))
+	gitRepo, err := git.Open(database.RepoPath(cfg.Repository.Root, repo.Owner, repo.Name))
 	require.NoError(t, err)
-	err = database.Handle.Releases().Create(t.Context(), logger, gitRepo, &database.Release{
+	err = database.Handle.Releases().Create(t.Context(), logger, linkOptions(cfg), gitRepo, &database.Release{
 		RepoID:      repo.ID,
 		PublisherID: owner.ID,
 		TagName:     "v1.0.0",

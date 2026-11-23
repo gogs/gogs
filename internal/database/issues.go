@@ -14,7 +14,6 @@ import (
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/api/v1types"
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/markup"
 )
@@ -82,14 +81,15 @@ func (issue *Issue) AfterFind(_ *gorm.DB) error {
 	return nil
 }
 
-func (issue *Issue) HTMLURL() string {
+// HTMLURL returns the full URL to the issue, which starts with the external URL.
+func (issue *Issue) HTMLURL(externalURL string) string {
 	var path string
 	if issue.IsPull {
 		path = "pulls"
 	} else {
 		path = "issues"
 	}
-	return fmt.Sprintf("%s/%s/%d", issue.Repo.HTMLURL(), path, issue.Index)
+	return fmt.Sprintf("%s/%s/%d", issue.Repo.HTMLURL(externalURL), path, issue.Index)
 }
 
 // State returns string representation of issue status.
@@ -104,7 +104,7 @@ func (issue *Issue) State() v1types.IssueStateType {
 // been assigned with values:
 // Required - Poster, Labels
 // Optional - Milestone, Assignee, PullRequest
-func (issue *Issue) APIFormat() *v1types.Issue {
+func (issue *Issue) APIFormat(links LinkOptions) *v1types.Issue {
 	apiLabels := make([]*v1types.IssueLabel, len(issue.Labels))
 	for i := range issue.Labels {
 		apiLabels[i] = issue.Labels[i].APIFormat()
@@ -113,7 +113,7 @@ func (issue *Issue) APIFormat() *v1types.Issue {
 	apiIssue := &v1types.Issue{
 		ID:       issue.ID,
 		Index:    issue.Index,
-		Poster:   issue.Poster.APIFormat(),
+		Poster:   issue.Poster.APIFormat(links),
 		Title:    issue.Title,
 		Body:     issue.Content,
 		Labels:   apiLabels,
@@ -127,7 +127,7 @@ func (issue *Issue) APIFormat() *v1types.Issue {
 		apiIssue.Milestone = issue.Milestone.APIFormat()
 	}
 	if issue.Assignee != nil {
-		apiIssue.Assignee = issue.Assignee.APIFormat()
+		apiIssue.Assignee = issue.Assignee.APIFormat(links)
 	}
 	if issue.IsPull {
 		apiIssue.PullRequest = &v1types.PullRequestMeta{
@@ -186,6 +186,7 @@ type IssuesOptions struct {
 	MilestoneID int64
 	RepoIDs     []int64
 	Page        int
+	PageSize    int
 	IsClosed    bool
 	IsMention   bool
 	IsPull      bool
@@ -285,7 +286,7 @@ func newIssuesStore(db *gorm.DB) *IssuesStore {
 // webhooks. Labels of other repositories and attachments that are already
 // attached are skipped, and so are a milestone and an assignee that do not
 // exist.
-func (s *IssuesStore) Create(ctx context.Context, logger *logx.Logger, repo *Repository, issue *Issue, labelIDs []int64, uuids []string) error {
+func (s *IssuesStore) Create(ctx context.Context, logger *logx.Logger, notify NotifyOptions, repo *Repository, issue *Issue, labelIDs []int64, uuids []string) error {
 	// Stopping midway, e.g., when the client disconnects, would leave a partial
 	// change behind.
 	ctx = context.WithoutCancel(ctx)
@@ -314,16 +315,17 @@ func (s *IssuesStore) Create(ctx context.Context, logger *logx.Logger, repo *Rep
 	if err != nil {
 		logger.Error("Failed to notify watchers", "error", err)
 	}
-	if err = s.mailParticipants(ctx, logger, issue); err != nil {
+	if err = s.mailParticipants(ctx, logger, notify, issue); err != nil {
 		logger.Error("Failed to mail participants", "error", err)
 	}
 
-	err = newWebhooksStore(s.db).Prepare(ctx, logger, repo, HookEventTypeIssues, &v1types.WebhookIssuesPayload{
+	links := notify.Links
+	err = newWebhooksStore(s.db).Prepare(ctx, logger, links.ExternalURL, repo, HookEventTypeIssues, &v1types.WebhookIssuesPayload{
 		Action:     v1types.WebhookIssueOpened,
 		Index:      issue.Index,
-		Issue:      issue.APIFormat(),
-		Repository: repo.APIFormatLegacy(logger, nil),
-		Sender:     issue.Poster.APIFormat(),
+		Issue:      issue.APIFormat(links),
+		Repository: repo.APIFormatLegacy(logger, links, nil),
+		Sender:     issue.Poster.APIFormat(links),
 	})
 	if err != nil {
 		logger.Error("Failed to prepare webhooks", "error", err)
@@ -344,7 +346,7 @@ func (s *IssuesStore) create(ctx context.Context, opts NewIssueOptions) error {
 	// concurrent creates.
 	var err error
 	var labels []*Label
-	if len(opts.LableIDs) > 0 && !conf.UseSQLite3 {
+	if len(opts.LableIDs) > 0 && s.db.Name() != "sqlite" {
 		labels, err = newLabelsStore(s.db).ListByIDs(ctx, opts.Repo.ID, opts.LableIDs)
 		if err != nil {
 			return errors.Wrap(err, "list labels")
@@ -427,7 +429,7 @@ func (s *IssuesStore) create(ctx context.Context, opts NewIssueOptions) error {
 	}
 
 	if len(opts.LableIDs) > 0 {
-		if conf.UseSQLite3 {
+		if s.db.Name() == "sqlite" {
 			labels, err = newLabelsStore(s.db).ListByIDs(ctx, opts.Repo.ID, opts.LableIDs)
 			if err != nil {
 				return errors.Wrap(err, "list labels")
@@ -697,11 +699,11 @@ func (s *IssuesStore) List(ctx context.Context, opts *IssuesOptions) ([]*Issue, 
 	}
 
 	page := max(opts.Page, 1)
-	issues := make([]*Issue, 0, conf.UI.IssuePagingNum)
+	issues := make([]*Issue, 0, opts.PageSize)
 	err := db.Select("issue.*").
 		Order("issue.id " + order).
-		Limit(conf.UI.IssuePagingNum).
-		Offset((page - 1) * conf.UI.IssuePagingNum).
+		Limit(opts.PageSize).
+		Offset((page - 1) * opts.PageSize).
 		Find(&issues).Error
 	if err != nil {
 		return nil, errors.Wrap(err, "list issues")
@@ -941,27 +943,27 @@ func (s *IssuesStore) UpdateAssignee(ctx context.Context, issue *Issue) error {
 // prepareWebhooks prepares the deliveries of given action on the issue, or on
 // its pull request, of given repository as the doer. Failing to prepare them
 // is logged.
-func (s *IssuesStore) prepareWebhooks(ctx context.Context, logger *logx.Logger, doer *User, repo *Repository, issue *Issue, action v1types.WebhookIssueAction, changes *v1types.WebhookChangesPayload) {
+func (s *IssuesStore) prepareWebhooks(ctx context.Context, logger *logx.Logger, links LinkOptions, doer *User, repo *Repository, issue *Issue, action v1types.WebhookIssueAction, changes *v1types.WebhookChangesPayload) {
 	webhooks := newWebhooksStore(s.db)
 	var err error
 	if issue.IsPull {
 		issue.PullRequest.Issue = issue
-		err = webhooks.Prepare(ctx, logger, repo, HookEventTypePullRequest, &v1types.WebhookPullRequestPayload{
+		err = webhooks.Prepare(ctx, logger, links.ExternalURL, repo, HookEventTypePullRequest, &v1types.WebhookPullRequestPayload{
 			Action:      action,
 			Index:       issue.Index,
-			PullRequest: issue.PullRequest.APIFormat(logger),
+			PullRequest: issue.PullRequest.APIFormat(logger, links),
 			Changes:     changes,
-			Repository:  repo.APIFormatLegacy(logger, nil),
-			Sender:      doer.APIFormat(),
+			Repository:  repo.APIFormatLegacy(logger, links, nil),
+			Sender:      doer.APIFormat(links),
 		})
 	} else {
-		err = webhooks.Prepare(ctx, logger, repo, HookEventTypeIssues, &v1types.WebhookIssuesPayload{
+		err = webhooks.Prepare(ctx, logger, links.ExternalURL, repo, HookEventTypeIssues, &v1types.WebhookIssuesPayload{
 			Action:     action,
 			Index:      issue.Index,
-			Issue:      issue.APIFormat(),
+			Issue:      issue.APIFormat(links),
 			Changes:    changes,
-			Repository: repo.APIFormatLegacy(logger, nil),
-			Sender:     doer.APIFormat(),
+			Repository: repo.APIFormatLegacy(logger, links, nil),
+			Sender:     doer.APIFormat(links),
 		})
 	}
 	if err != nil {
@@ -972,7 +974,7 @@ func (s *IssuesStore) prepareWebhooks(ctx context.Context, logger *logx.Logger, 
 // ChangeStatus closes or reopens the issue of given repository as the doer,
 // updates the numbers of closed issues of its labels and milestone, and
 // comments on it. Changing the issue to the status it has is a no-op.
-func (s *IssuesStore) ChangeStatus(ctx context.Context, logger *logx.Logger, doer *User, repo *Repository, issue *Issue, isClosed bool) error {
+func (s *IssuesStore) ChangeStatus(ctx context.Context, logger *logx.Logger, notify NotifyOptions, doer *User, repo *Repository, issue *Issue, isClosed bool) error {
 	// Stopping midway, e.g., when the client disconnects, would leave a partial
 	// change behind.
 	ctx = context.WithoutCancel(ctx)
@@ -981,7 +983,7 @@ func (s *IssuesStore) ChangeStatus(ctx context.Context, logger *logx.Logger, doe
 	}
 
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		return newIssuesStore(tx).changeStatus(ctx, logger, doer, repo, issue, isClosed)
+		return newIssuesStore(tx).changeStatus(ctx, logger, notify, doer, repo, issue, isClosed)
 	})
 	if errors.Is(err, errIssueStatusUnchanged) {
 		return nil
@@ -993,7 +995,7 @@ func (s *IssuesStore) ChangeStatus(ctx context.Context, logger *logx.Logger, doe
 	if isClosed {
 		action = v1types.WebhookIssueClosed
 	}
-	s.prepareWebhooks(ctx, logger, doer, repo, issue, action, nil)
+	s.prepareWebhooks(ctx, logger, notify.Links, doer, repo, issue, action, nil)
 	return nil
 }
 
@@ -1002,14 +1004,14 @@ func (s *IssuesStore) ChangeStatus(ctx context.Context, logger *logx.Logger, doe
 var errIssueStatusUnchanged = errors.New("issue already has the status")
 
 // changeStatus is ChangeStatus without a transaction of its own and webhooks.
-func (s *IssuesStore) changeStatus(ctx context.Context, logger *logx.Logger, doer *User, repo *Repository, issue *Issue, isClosed bool) error {
+func (s *IssuesStore) changeStatus(ctx context.Context, logger *logx.Logger, notify NotifyOptions, doer *User, repo *Repository, issue *Issue, isClosed bool) error {
 	if issue.IsClosed == isClosed {
 		return nil
 	}
 	if err := s.setStatus(ctx, issue, isClosed); err != nil {
 		return err
 	}
-	return s.recordStatus(ctx, logger, doer, repo, issue)
+	return s.recordStatus(ctx, logger, notify, doer, repo, issue)
 }
 
 // setStatus closes or reopens the issue, and nothing else. It returns
@@ -1035,7 +1037,7 @@ func (s *IssuesStore) setStatus(ctx context.Context, issue *Issue, isClosed bool
 // recordStatus updates the numbers of closed issues of the labels and the
 // milestone of the issue, comments on it, and updates its users, after
 // setStatus changed its status.
-func (s *IssuesStore) recordStatus(ctx context.Context, logger *logx.Logger, doer *User, repo *Repository, issue *Issue) (err error) {
+func (s *IssuesStore) recordStatus(ctx context.Context, logger *logx.Logger, notify NotifyOptions, doer *User, repo *Repository, issue *Issue) (err error) {
 	isClosed := issue.IsClosed
 	// The issue is locked now, so its milestone is the one that a concurrent
 	// move committed, if any.
@@ -1065,7 +1067,7 @@ func (s *IssuesStore) recordStatus(ctx context.Context, logger *logx.Logger, doe
 		return errors.Wrap(err, "update milestone")
 	}
 
-	_, err = newCommentsStore(s.db).createStatus(ctx, logger, doer, repo, issue)
+	_, err = newCommentsStore(s.db).createStatus(ctx, logger, notify, doer, repo, issue)
 	if err != nil {
 		return errors.Wrap(err, "create comment")
 	}
@@ -1080,7 +1082,7 @@ func (s *IssuesStore) recordStatus(ctx context.Context, logger *logx.Logger, doe
 }
 
 // ChangeTitle changes the title of the issue as the doer.
-func (s *IssuesStore) ChangeTitle(ctx context.Context, logger *logx.Logger, doer *User, issue *Issue, title string) error {
+func (s *IssuesStore) ChangeTitle(ctx context.Context, logger *logx.Logger, links LinkOptions, doer *User, issue *Issue, title string) error {
 	// Stopping midway, e.g., when the client disconnects, would leave a partial
 	// change behind.
 	ctx = context.WithoutCancel(ctx)
@@ -1090,14 +1092,14 @@ func (s *IssuesStore) ChangeTitle(ctx context.Context, logger *logx.Logger, doer
 		return errors.Wrap(err, "update issue")
 	}
 
-	s.prepareWebhooks(ctx, logger, doer, issue.Repo, issue, v1types.WebhookIssueEdited, &v1types.WebhookChangesPayload{
+	s.prepareWebhooks(ctx, logger, links, doer, issue.Repo, issue, v1types.WebhookIssueEdited, &v1types.WebhookChangesPayload{
 		Title: &v1types.WebhookChangesFromPayload{From: oldTitle},
 	})
 	return nil
 }
 
 // ChangeContent changes the content of the issue as the doer.
-func (s *IssuesStore) ChangeContent(ctx context.Context, logger *logx.Logger, doer *User, issue *Issue, content string) error {
+func (s *IssuesStore) ChangeContent(ctx context.Context, logger *logx.Logger, links LinkOptions, doer *User, issue *Issue, content string) error {
 	// Stopping midway, e.g., when the client disconnects, would leave a partial
 	// change behind.
 	ctx = context.WithoutCancel(ctx)
@@ -1107,7 +1109,7 @@ func (s *IssuesStore) ChangeContent(ctx context.Context, logger *logx.Logger, do
 		return errors.Wrap(err, "update issue")
 	}
 
-	s.prepareWebhooks(ctx, logger, doer, issue.Repo, issue, v1types.WebhookIssueEdited, &v1types.WebhookChangesPayload{
+	s.prepareWebhooks(ctx, logger, links, doer, issue.Repo, issue, v1types.WebhookIssueEdited, &v1types.WebhookChangesPayload{
 		Body: &v1types.WebhookChangesFromPayload{From: oldContent},
 	})
 	return nil
@@ -1115,7 +1117,7 @@ func (s *IssuesStore) ChangeContent(ctx context.Context, logger *logx.Logger, do
 
 // ChangeAssignee assigns the issue to the user with given ID as the doer, or
 // unassigns it when the user does not exist, e.g., when the ID is 0.
-func (s *IssuesStore) ChangeAssignee(ctx context.Context, logger *logx.Logger, doer *User, issue *Issue, assigneeID int64) error {
+func (s *IssuesStore) ChangeAssignee(ctx context.Context, logger *logx.Logger, links LinkOptions, doer *User, issue *Issue, assigneeID int64) error {
 	// Stopping midway, e.g., when the client disconnects, would leave a partial
 	// change behind.
 	ctx = context.WithoutCancel(ctx)
@@ -1135,13 +1137,13 @@ func (s *IssuesStore) ChangeAssignee(ctx context.Context, logger *logx.Logger, d
 	if assignee == nil {
 		action = v1types.WebhookIssueUnassigned
 	}
-	s.prepareWebhooks(ctx, logger, doer, issue.Repo, issue, action, nil)
+	s.prepareWebhooks(ctx, logger, links, doer, issue.Repo, issue, action, nil)
 	return nil
 }
 
 // AddLabels adds given labels to the issue as the doer. Labels that the issue
 // has are skipped.
-func (s *IssuesStore) AddLabels(ctx context.Context, logger *logx.Logger, doer *User, issue *Issue, labels ...*Label) error {
+func (s *IssuesStore) AddLabels(ctx context.Context, logger *logx.Logger, links LinkOptions, doer *User, issue *Issue, labels ...*Label) error {
 	// Stopping midway, e.g., when the client disconnects, would leave a partial
 	// change behind.
 	ctx = context.WithoutCancel(ctx)
@@ -1150,12 +1152,12 @@ func (s *IssuesStore) AddLabels(ctx context.Context, logger *logx.Logger, doer *
 		return err
 	}
 
-	s.prepareWebhooks(ctx, logger, doer, issue.Repo, issue, v1types.WebhookIssueLabelUpdated, nil)
+	s.prepareWebhooks(ctx, logger, links, doer, issue.Repo, issue, v1types.WebhookIssueLabelUpdated, nil)
 	return nil
 }
 
 // RemoveLabel removes the label from the issue as the doer.
-func (s *IssuesStore) RemoveLabel(ctx context.Context, logger *logx.Logger, doer *User, issue *Issue, label *Label) error {
+func (s *IssuesStore) RemoveLabel(ctx context.Context, logger *logx.Logger, links LinkOptions, doer *User, issue *Issue, label *Label) error {
 	// Stopping midway, e.g., when the client disconnects, would leave a partial
 	// change behind.
 	ctx = context.WithoutCancel(ctx)
@@ -1164,7 +1166,7 @@ func (s *IssuesStore) RemoveLabel(ctx context.Context, logger *logx.Logger, doer
 		return err
 	}
 
-	s.prepareWebhooks(ctx, logger, doer, issue.Repo, issue, v1types.WebhookIssueLabelUpdated, nil)
+	s.prepareWebhooks(ctx, logger, links, doer, issue.Repo, issue, v1types.WebhookIssueLabelUpdated, nil)
 	return nil
 }
 
@@ -1185,7 +1187,7 @@ func (s *IssuesStore) clearLabels(ctx context.Context, issue *Issue) error {
 }
 
 // ClearLabels removes all labels from the issue as the doer.
-func (s *IssuesStore) ClearLabels(ctx context.Context, logger *logx.Logger, doer *User, issue *Issue) error {
+func (s *IssuesStore) ClearLabels(ctx context.Context, logger *logx.Logger, links LinkOptions, doer *User, issue *Issue) error {
 	// Stopping midway, e.g., when the client disconnects, would leave a partial
 	// change behind.
 	ctx = context.WithoutCancel(ctx)
@@ -1196,7 +1198,7 @@ func (s *IssuesStore) ClearLabels(ctx context.Context, logger *logx.Logger, doer
 		return err
 	}
 
-	s.prepareWebhooks(ctx, logger, doer, issue.Repo, issue, v1types.WebhookIssueLabelCleared, nil)
+	s.prepareWebhooks(ctx, logger, links, doer, issue.Repo, issue, v1types.WebhookIssueLabelCleared, nil)
 	return nil
 }
 
@@ -1220,8 +1222,8 @@ func (s *IssuesStore) listParticipants(ctx context.Context, issueID int64) ([]*U
 }
 
 // findLowerMentions returns the lowercase names that the content mentions.
-func findLowerMentions(content string) []string {
-	mentions := markup.FindAllMentions(content)
+func findLowerMentions(markupOpts markup.Options, content string) []string {
+	mentions := markup.FindAllMentions(markupOpts, content)
 	for i := range mentions {
 		mentions[i] = strings.ToLower(mentions[i])
 	}
@@ -1273,14 +1275,14 @@ func (s *IssuesStore) updateMentions(ctx context.Context, issue *Issue, lowerNam
 
 // mailParticipants marks the users the issue mentions as mentioned, and sends
 // emails about the issue to them and to the participants of the issue.
-func (s *IssuesStore) mailParticipants(ctx context.Context, logger *logx.Logger, issue *Issue) error {
-	mentions := findLowerMentions(issue.Content)
+func (s *IssuesStore) mailParticipants(ctx context.Context, logger *logx.Logger, notify NotifyOptions, issue *Issue) error {
+	mentions := findLowerMentions(notify.Markup, issue.Content)
 	err := s.updateMentions(ctx, issue, mentions)
 	if err != nil {
 		return errors.Wrap(err, "update mentions")
 	}
 
-	if err = mailIssueCommentToParticipants(logger, s.db.WithContext(ctx), issue, issue.Poster, mentions); err != nil {
+	if err = mailIssueCommentToParticipants(logger, notify, s.db.WithContext(ctx), issue, issue.Poster, mentions); err != nil {
 		logger.Error("Failed to mail participants", "error", err)
 	}
 	return nil

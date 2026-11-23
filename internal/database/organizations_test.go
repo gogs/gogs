@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/dbx"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/repox"
@@ -17,15 +16,12 @@ func TestOrgs(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	// NOTE: The suite does not run in parallel because it mocks global
-	// configuration that other suites read without locks.
+	t.Parallel()
 
 	ctx := context.Background()
 	s := &OrganizationsStore{
 		db: newTestDB(t, "OrganizationsStore"),
 	}
-	conf.SetMockRepository(t, conf.RepositoryOpts{Root: t.TempDir()})
-	conf.SetMockPicture(t, conf.PictureOpts{AvatarUploadPath: t.TempDir()})
 
 	for _, tc := range []struct {
 		name string
@@ -70,7 +66,7 @@ func orgsList(t *testing.T, ctx context.Context, s *OrganizationsStore) {
 	org2, err := usersStore.Create(ctx, "org2", "org2@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	err = s.db.Exec(
-		dbx.Quote("UPDATE %s SET type = ? WHERE id IN (?, ?)", "user"),
+		dbx.Quote(s.db.Name(), "UPDATE %s SET type = ? WHERE id IN (?, ?)", "user"),
 		UserTypeOrganization, org1.ID, org2.ID,
 	).Error
 	require.NoError(t, err)
@@ -135,7 +131,7 @@ func organizationsSearchByName(t *testing.T, ctx context.Context, s *Organizatio
 	org2, err := usersStore.Create(ctx, "org2", "org2@example.com", CreateUserOptions{FullName: "Acme Corp 2"})
 	require.NoError(t, err)
 	err = s.db.Exec(
-		dbx.Quote("UPDATE %s SET type = ? WHERE id IN (?, ?)", "user"),
+		dbx.Quote(s.db.Name(), "UPDATE %s SET type = ? WHERE id IN (?, ?)", "user"),
 		UserTypeOrganization, org1.ID, org2.ID,
 	).Error
 	require.NoError(t, err)
@@ -189,19 +185,20 @@ func organizationsCountByUser(t *testing.T, ctx context.Context, s *Organization
 }
 
 func organizationsCreate(t *testing.T, ctx context.Context, s *OrganizationsStore) {
+	root := t.TempDir()
 	owner := newTestIssueUser(t, ctx, s.db, "oc-owner")
 
-	err := s.Create(ctx, &User{Name: "oc-owner", Email: "oc-taken@example.com"}, owner)
+	err := s.Create(ctx, root, &User{Name: "oc-owner", Email: "oc-taken@example.com"}, owner)
 	assert.True(t, IsErrUserAlreadyExist(err), "got %v", err)
-	err = s.Create(ctx, &User{Name: "new", Email: "oc-new@example.com"}, owner)
+	err = s.Create(ctx, root, &User{Name: "new", Email: "oc-new@example.com"}, owner)
 	assert.True(t, IsErrNameNotAllowed(err), "got %v", err)
 	existing, _ := newTestOrg(t, ctx, s.db, "oc-existing")
-	err = s.Create(ctx, &User{Name: "oc-owned-by-org", Email: "oc-owned@example.com"}, existing)
+	err = s.Create(ctx, root, &User{Name: "oc-owned-by-org", Email: "oc-owned@example.com"}, existing)
 	assert.True(t, IsErrOrgOwnerIsOrganization(err), "got %v", err)
 	assert.False(t, newUsersStore(s.db).IsUsernameUsed(ctx, "oc-owned-by-org", 0))
 
 	org := &User{Name: "OC-Org", Email: "oc-org@example.com"}
-	require.NoError(t, s.Create(ctx, org, owner))
+	require.NoError(t, s.Create(ctx, root, org, owner))
 	got, err := s.GetByName(ctx, "oc-org")
 	require.NoError(t, err)
 	assert.Equal(t, org.ID, got.ID)
@@ -211,7 +208,7 @@ func organizationsCreate(t *testing.T, ctx context.Context, s *OrganizationsStor
 	assert.Equal(t, 1, got.NumMembers)
 	assert.Equal(t, -1, got.MaxRepoCreation)
 	assert.NotZero(t, got.CreatedUnix)
-	assert.True(t, osx.IsDir(repox.UserPath(org.Name)))
+	assert.True(t, osx.IsDir(repox.UserPath(root, org.Name)))
 
 	assert.True(t, s.IsOwner(ctx, org.ID, owner.ID))
 	assert.False(t, s.IsPublicMember(ctx, org.ID, owner.ID))
@@ -252,6 +249,7 @@ func organizationsListByPage(t *testing.T, ctx context.Context, s *Organizations
 }
 
 func organizationsDelete(t *testing.T, ctx context.Context, s *OrganizationsStore) {
+	opts := DeleteUserOptions{RepositoryRoot: t.TempDir(), AvatarUploadPath: t.TempDir(), AppDataPath: t.TempDir()}
 	org, owner := newTestOrg(t, ctx, s.db, "od-org")
 	kept, keptOwner := newTestOrg(t, ctx, s.db, "od-kept")
 	teams := newTeamsStore(s.db)
@@ -264,7 +262,7 @@ func organizationsDelete(t *testing.T, ctx context.Context, s *OrganizationsStor
 	require.NoError(t, s.db.Create(&TeamRepo{OrgID: org.ID, TeamID: team.ID, RepoID: 9999}).Error)
 	require.NoError(t, s.db.Create(&TeamRepo{OrgID: kept.ID, TeamID: keptTeam.ID, RepoID: 9999}).Error)
 
-	require.NoError(t, s.Delete(ctx, org))
+	require.NoError(t, s.Delete(ctx, opts, org))
 	_, err := s.GetByName(ctx, org.Name)
 	assert.Equal(t, ErrOrgNotExist, err)
 	countOf := func(table any, orgID int64) int64 {
@@ -282,7 +280,7 @@ func organizationsDelete(t *testing.T, ctx context.Context, s *OrganizationsStor
 	// must not delete them.
 	repoHook := &Webhook{RepoID: 1, URL: "https://example.com/hook"}
 	require.NoError(t, s.db.Create(repoHook).Error)
-	assert.Error(t, s.Delete(ctx, &Organization{}))
+	assert.Error(t, s.Delete(ctx, opts, &Organization{}))
 	var count int64
 	require.NoError(t, s.db.Model(new(Webhook)).Where("id = ?", repoHook.ID).Count(&count).Error)
 	assert.Equal(t, int64(1), count, "webhook of repository")

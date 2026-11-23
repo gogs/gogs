@@ -10,7 +10,7 @@ import (
 	"gogs.io/gogs/internal/database"
 )
 
-func listCollaborators(c *apiContext) {
+func listCollaborators(c *apiContext, links database.LinkOptions) {
 	collaborators, err := database.Handle.Collaborations().List(c.Request().Context(), c.Repo.Repository.ID)
 	if err != nil {
 		c.Error(err, "get collaborators")
@@ -19,7 +19,7 @@ func listCollaborators(c *apiContext) {
 
 	apiCollaborators := make([]*v1types.RepositoryCollaborator, len(collaborators))
 	for i := range collaborators {
-		apiCollaborators[i] = toRepositoryCollaborator(collaborators[i])
+		apiCollaborators[i] = toRepositoryCollaborator(links, collaborators[i])
 	}
 	c.JSONSuccess(&apiCollaborators)
 }

@@ -66,9 +66,9 @@ type userEmailAddedResponse struct {
 
 // postUserEmail adds an email address to the authenticated user, and sends it a
 // confirmation link when the site requires one.
-func postUserEmail(c flamego.Context, logger *logx.Logger, ca cache.Cache, l i18n.Locale, viewer *database.User, req userEmailRequest) (statusCode int, resp any, err error) {
+func postUserEmail(c flamego.Context, emailOpts email.Options, sec conf.SecurityOpts, auth conf.AuthOpts, logger *logx.Logger, ca cache.Cache, l i18n.Locale, viewer *database.User, req userEmailRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
-	err = database.Handle.Users().AddEmail(ctx, viewer.ID, req.Email, !conf.Auth.RequireEmailConfirmation)
+	err = database.Handle.Users().AddEmail(ctx, viewer.ID, req.Email, !auth.RequireEmailConfirmation)
 	if err != nil {
 		if database.IsErrEmailAlreadyUsed(err) {
 			msg := l.Tr("form::email_been_used")
@@ -77,17 +77,18 @@ func postUserEmail(c flamego.Context, logger *logx.Logger, ca cache.Cache, l i18
 		logger.Error("Failed to add email", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "add email")
 	}
-	if !conf.Auth.RequireEmailConfirmation {
+	if !auth.RequireEmailConfirmation {
 		return http.StatusCreated, &userEmailAddedResponse{}, nil
 	}
 
-	if err := email.SendActivateEmailMail(logger, l, database.NewMailerUser(viewer), req.Email); err != nil {
+	code := userx.GenerateConfirmEmailCode(sec.SecretKey, auth.ActivateCodeLives, viewer.ID, req.Email, viewer.Name, viewer.Password, viewer.Rands)
+	if err := email.SendActivateEmailMail(logger, emailOpts, l, database.NewMailerUser(viewer), req.Email, code); err != nil {
 		logger.Error("Failed to send confirmation mail", "userID", viewer.ID, "error", err)
 	}
 	if err := ca.Set(ctx, userx.MailResendCacheKey(viewer.ID), 1, 180*time.Second); err != nil {
 		logger.Error("Failed to put mail resend cache", "userID", viewer.ID, "error", err)
 	}
-	return http.StatusCreated, &userEmailAddedResponse{ConfirmationSent: true, CodeLifetimeHours: conf.Auth.ActivateCodeLives / 60}, nil
+	return http.StatusCreated, &userEmailAddedResponse{ConfirmationSent: true, CodeLifetimeHours: auth.ActivateCodeLives / 60}, nil
 }
 
 // putUserEmailPrimary makes a confirmed email address of the authenticated user
@@ -157,8 +158,8 @@ type userSSHKeyRequest struct {
 	Content  string `json:"content" validate:"required"`
 }
 
-func postUserSSHKey(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, req userSSHKeyRequest) (statusCode int, resp any, err error) {
-	content, err := database.CheckPublicKeyString(logger, req.Content)
+func postUserSSHKey(c flamego.Context, authorizedKeys database.AuthorizedKeysOptions, sshOpts conf.SSHOpts, logger *logx.Logger, l i18n.Locale, viewer *database.User, req userSSHKeyRequest) (statusCode int, resp any, err error) {
+	content, err := database.CheckPublicKeyString(logger, sshOpts, req.Content)
 	if database.IsErrKeyCheckFailed(err) {
 		logger.Error("Failed to check public key", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "check public key")
@@ -169,7 +170,7 @@ func postUserSSHKey(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewe
 		msg := l.Tr("form::invalid_ssh_key", "error", err)
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
 	}
-	if _, err = database.Handle.PublicKeys().Add(c.Request().Context(), logger, viewer.ID, req.SSHTitle, content); err != nil {
+	if _, err = database.Handle.PublicKeys().Add(c.Request().Context(), logger, authorizedKeys, viewer.ID, req.SSHTitle, content); err != nil {
 		var msg string
 		switch {
 		case database.IsErrKeyAlreadyExist(err):
@@ -187,7 +188,7 @@ func postUserSSHKey(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewe
 
 // deleteUserSSHKey deletes an SSH key of the authenticated user. Keys of other
 // users are not found, even for site admins.
-func deleteUserSSHKey(c flamego.Context, logger *logx.Logger, viewer *database.User) (statusCode int, resp any, err error) {
+func deleteUserSSHKey(c flamego.Context, authorizedKeys database.AuthorizedKeysOptions, logger *logx.Logger, viewer *database.User) (statusCode int, resp any, err error) {
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	key, err := database.Handle.PublicKeys().GetByID(c.Request().Context(), id)
 	if err != nil {
@@ -200,7 +201,7 @@ func deleteUserSSHKey(c flamego.Context, logger *logx.Logger, viewer *database.U
 	if key.OwnerID != viewer.ID {
 		return http.StatusNotFound, nil, errors.New("key not found")
 	}
-	if err = database.Handle.PublicKeys().Delete(c.Request().Context(), logger, viewer, key.ID); err != nil {
+	if err = database.Handle.PublicKeys().Delete(c.Request().Context(), logger, authorizedKeys, viewer, key.ID); err != nil {
 		logger.Error("Failed to delete public key", "keyID", key.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete public key")
 	}
@@ -231,7 +232,7 @@ type userTwoFactorEnrollment struct {
 // getUserTwoFactorEnrollment returns the secret to add to an authentication
 // app. The same secret is returned until it is confirmed, so reloading the
 // page does not invalidate a scanned code.
-func getUserTwoFactorEnrollment(c flamego.Context, logger *logx.Logger, sess session.Session, viewer *database.User) (statusCode int, resp any, err error) {
+func getUserTwoFactorEnrollment(c flamego.Context, app conf.AppOpts, logger *logx.Logger, sess session.Session, viewer *database.User) (statusCode int, resp any, err error) {
 	if database.Handle.TwoFactors().IsEnabled(c.Request().Context(), logger, viewer.ID) {
 		return http.StatusNotFound, nil, errors.New("two-factor authentication is already enabled")
 	}
@@ -242,7 +243,7 @@ func getUserTwoFactorEnrollment(c flamego.Context, logger *logx.Logger, sess ses
 	}
 	if key == nil {
 		key, err = totp.Generate(totp.GenerateOpts{
-			Issuer:      conf.App.BrandName,
+			Issuer:      app.BrandName,
 			AccountName: viewer.Email,
 		})
 		if err != nil {
@@ -276,7 +277,7 @@ type userTwoFactorRequest struct {
 
 // postUserTwoFactor enables two-factor authentication once the user enters a
 // passcode for the secret they are enrolling with.
-func postUserTwoFactor(c flamego.Context, logger *logx.Logger, sess session.Session, l i18n.Locale, viewer *database.User, req userTwoFactorRequest) (statusCode int, resp any, err error) {
+func postUserTwoFactor(c flamego.Context, sec conf.SecurityOpts, logger *logx.Logger, sess session.Session, l i18n.Locale, viewer *database.User, req userTwoFactorRequest) (statusCode int, resp any, err error) {
 	secret, ok := sess.Get(twoFactorSecretSessionKey).(string)
 	if !ok {
 		return http.StatusNotFound, nil, errors.New("no two-factor authentication secret to confirm")
@@ -285,7 +286,7 @@ func postUserTwoFactor(c flamego.Context, logger *logx.Logger, sess session.Sess
 		msg := l.Tr("settings::two_factor_invalid_passcode")
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"passcode": &msg}}, nil
 	}
-	if err = database.Handle.TwoFactors().Create(c.Request().Context(), viewer.ID, conf.Security.SecretKey, secret); err != nil {
+	if err = database.Handle.TwoFactors().Create(c.Request().Context(), viewer.ID, sec.SecretKey, secret); err != nil {
 		logger.Error("Failed to enable two-factor authentication", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "create two factor")
 	}

@@ -26,7 +26,7 @@ func TestRenderIndex_injection(t *testing.T) {
 	require.NoError(t, err)
 
 	shell := `<html><head>{{.WebContext}}</head><body><div id="root"></div></body></html>`
-	got, err := renderIndex([]byte(shell), context.WebContext{Lang: "en-US"}, inject)
+	got, err := renderIndex([]byte(shell), context.WebContext{Lang: "en-US"}, inject, indexOptions{})
 	require.NoError(t, err)
 
 	out := string(got)
@@ -56,7 +56,7 @@ func TestRenderIndex_entrypointPaths(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := renderIndex([]byte(shell), context.WebContext{Lang: "en-US", SubURL: test.subURL}, injectContent{})
+			got, err := renderIndex([]byte(shell), context.WebContext{Lang: "en-US", SubURL: test.subURL}, injectContent{}, indexOptions{})
 			require.NoError(t, err)
 			assert.Contains(t, string(got), test.want)
 		})
@@ -92,7 +92,7 @@ func TestWebLocales(t *testing.T) {
 	assert.NotEqual(t, webLocaleURL("en-US"), webLocaleURL("de-DE"))
 	assert.Equal(t, webLocaleURL("en-US"), webLocaleURL("xx-XX"), "unknown languages use en-US")
 
-	out, err := renderIndex([]byte(`<head>{{.WebContext}}</head>`), context.WebContext{Lang: "de-DE", SubURL: "/gogs"}, injectContent{})
+	out, err := renderIndex([]byte(`<head>{{.WebContext}}</head>`), context.WebContext{Lang: "de-DE", SubURL: "/gogs"}, injectContent{}, indexOptions{})
 	require.NoError(t, err)
 	assert.Contains(t, string(out), `"localeURL":"/gogs`+webLocaleURL("de-DE")+`"`)
 	assert.Contains(t, string(out), `<link rel="preload" as="fetch" crossorigin href="/gogs`+webLocaleURL("de-DE")+`">`)
@@ -104,7 +104,7 @@ func TestRenderIndex_serverError(t *testing.T) {
 		Lang:  "en-US",
 		Page:  context.WebPageServerError,
 		Error: `open </script><script>alert(1)</script>: no such file`,
-	}, injectContent{})
+	}, injectContent{}, indexOptions{})
 	require.NoError(t, err)
 
 	out := string(got)

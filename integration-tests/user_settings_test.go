@@ -22,7 +22,6 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"gogs.io/gogs/internal/avatar"
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/userx"
 )
@@ -159,20 +158,20 @@ func TestUserSettingsAvatar(t *testing.T) {
 	generatedImg, err := png.Decode(bytes.NewReader(generated))
 	require.NoError(t, err)
 	assert.Equal(t, image.Rect(0, 0, 290, 290), generatedImg.Bounds())
-	saved, err := os.ReadFile(userx.GeneratedAvatarPath(u.ID, avatar.Person))
+	saved, err := os.ReadFile(userx.GeneratedAvatarPath(cfg.Server.AppDataPath, u.ID, avatar.Person))
 	require.NoError(t, err, "the generated avatar is not saved")
 	assert.Equal(t, generated, saved)
 
 	// An avatar file saved by an earlier version, e.g., an identicon, is kept.
 	other := seedUser(t, CreateUserOptions{})
-	require.NoError(t, os.MkdirAll(conf.Picture.AvatarUploadPath, 0o755))
-	require.NoError(t, os.WriteFile(userx.CustomAvatarPath(other.ID), []byte("identicon"), 0o644))
+	require.NoError(t, os.MkdirAll(cfg.Picture.AvatarUploadPath, 0o755))
+	require.NoError(t, os.WriteFile(userx.CustomAvatarPath(cfg.Picture.AvatarUploadPath, other.ID), []byte("identicon"), 0o644))
 	_, _, body = anonymous.doRaw(http.MethodGet, "/-/avatars/"+strconv.FormatInt(other.ID, 10), "", nil)
 	assert.Equal(t, "identicon", string(body))
 
 	// An upload that an earlier version stopped showing without deleting it can
 	// be deleted.
-	require.NoError(t, os.WriteFile(userx.CustomAvatarPath(u.ID), []byte("leftover"), 0o644))
+	require.NoError(t, os.WriteFile(userx.CustomAvatarPath(cfg.Picture.AvatarUploadPath, u.ID), []byte("leftover"), 0o644))
 	var leftover struct {
 		HasCustomAvatar bool `json:"hasCustomAvatar"`
 	}
@@ -288,7 +287,7 @@ func TestUserSettingsOrganizations(t *testing.T) {
 		IsActive: true,
 		Type:     database.UserTypeOrganization,
 	}
-	require.NoError(t, database.Handle.Organizations().Create(t.Context(), org, userGet(t, u.ID)))
+	require.NoError(t, database.Handle.Organizations().Create(t.Context(), cfg.Repository.Root, org, userGet(t, u.ID)))
 
 	type orgItem struct {
 		Name string `json:"name"`
@@ -379,7 +378,7 @@ func userSeedSSHKey(t *testing.T, userID int64, name string) (*database.PublicKe
 	sshPub, err := ssh.NewPublicKey(pub)
 	require.NoError(t, err)
 	content := strings.TrimSpace(string(ssh.MarshalAuthorizedKey(sshPub)))
-	key, err := database.Handle.PublicKeys().Add(t.Context(), logger, userID, name, content+" "+name+"@example.com")
+	key, err := database.Handle.PublicKeys().Add(t.Context(), logger, authorizedKeysOptions(cfg), userID, name, content+" "+name+"@example.com")
 	require.NoError(t, err)
 	return key, content
 }

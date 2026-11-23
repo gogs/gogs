@@ -1,6 +1,8 @@
 package web
 
 import (
+	"time"
+
 	"context"
 	"net/http"
 	"slices"
@@ -65,24 +67,24 @@ type repoNewOptions struct {
 // repoNewOwners lists the owners the viewer can create repositories for: the
 // viewer and the organizations they own, and then the given owner when it is
 // none of them, e.g., an organization a site admin asks for.
-func repoNewOwners(ctx context.Context, viewer, owner *database.User) ([]repoNewOwner, error) {
+func repoNewOwners(ctx context.Context, links database.LinkOptions, viewer, owner *database.User) ([]repoNewOwner, error) {
 	orgs, err := database.Handle.Organizations().ListOwnedBy(ctx, viewer.ID)
 	if err != nil {
 		return nil, errors.Wrap(err, "get owned organizations")
 	}
-	owners := []repoNewOwner{{ID: viewer.ID, Name: viewer.Name, AvatarURL: viewer.AvatarURLPath()}}
+	owners := []repoNewOwner{{ID: viewer.ID, Name: viewer.Name, AvatarURL: viewer.AvatarURLPath(links)}}
 	listed := owner.ID == viewer.ID
 	for _, org := range orgs {
-		owners = append(owners, repoNewOwner{ID: org.ID, Name: org.Name, AvatarURL: org.AvatarURLPath(), IsOrganization: true})
+		owners = append(owners, repoNewOwner{ID: org.ID, Name: org.Name, AvatarURL: org.AvatarURLPath(links), IsOrganization: true})
 		listed = listed || org.ID == owner.ID
 	}
 	if !listed {
-		owners = append(owners, repoNewOwner{ID: owner.ID, Name: owner.Name, AvatarURL: owner.AvatarURLPath(), IsOrganization: owner.IsOrganization()})
+		owners = append(owners, repoNewOwner{ID: owner.ID, Name: owner.Name, AvatarURL: owner.AvatarURLPath(links), IsOrganization: owner.IsOrganization()})
 	}
 	return owners, nil
 }
 
-func getRepoNew(c flamego.Context, logger *logx.Logger, viewer *database.User) (statusCode int, resp any, err error) {
+func getRepoNew(c flamego.Context, links database.LinkOptions, repoOpts conf.RepositoryOpts, logger *logx.Logger, viewer *database.User) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	orgID, _ := strconv.ParseInt(c.Query("org"), 10, 64)
 	owner, err := repoOwner(c.Request().Context(), viewer, orgID)
@@ -93,7 +95,7 @@ func getRepoNew(c flamego.Context, logger *logx.Logger, viewer *database.User) (
 		logger.Error("Failed to get owner", "ownerID", orgID, "error", err)
 		return http.StatusInternalServerError, nil, err
 	}
-	owners, err := repoNewOwners(ctx, viewer, owner)
+	owners, err := repoNewOwners(ctx, links, viewer, owner)
 	if err != nil {
 		logger.Error("Failed to list owners", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, err
@@ -102,8 +104,8 @@ func getRepoNew(c flamego.Context, logger *logx.Logger, viewer *database.User) (
 		Owners:         owners,
 		OwnerID:        owner.ID,
 		Private:        viewer.LastRepoVisibility,
-		ForcePrivate:   conf.Repository.ForcePrivate,
-		CanImportLocal: viewer.CanImportLocal(),
+		ForcePrivate:   repoOpts.ForcePrivate,
+		CanImportLocal: viewer.CanImportLocal(repoOpts.EnableLocalPathMigration),
 		Gitignores:     database.Gitignores,
 		Licenses:       database.Licenses,
 		Readmes:        database.Readmes,
@@ -138,9 +140,9 @@ func repoNameTakenError(l i18n.Locale) (int, *bindingErrorResponse) {
 
 // checkRepoName returns the response for a name the owner already has a
 // repository of. CreateRepository finds the directory of that repository first
-// and reports it as an unexpected error.
-func checkRepoName(ctx context.Context, logger *logx.Logger, l i18n.Locale, owner *database.User, name string) (statusCode int, resp any, err error) {
-	taken, err := database.Handle.Repositories().Exists(ctx, owner, name)
+// and reports it as an unexpected error. Repositories are stored under root.
+func checkRepoName(ctx context.Context, logger *logx.Logger, l i18n.Locale, root string, owner *database.User, name string) (statusCode int, resp any, err error) {
+	taken, err := database.Handle.Repositories().Exists(ctx, root, owner, name)
 	if err != nil {
 		logger.Error("Failed to check repository existence", "ownerName", owner.Name, "repoName", name, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "check repository existence")
@@ -174,7 +176,7 @@ type repoCreateRequest struct {
 	ObjectFormat string `json:"objectFormat" validate:"omitempty,oneof=sha1 sha256"`
 }
 
-func postRepoCreate(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, req repoCreateRequest) (statusCode int, resp any, err error) {
+func postRepoCreate(c flamego.Context, repoDeletion database.DeleteRepoOptions, repoCreation database.RepoCreationOptions, logger *logx.Logger, l i18n.Locale, viewer *database.User, req repoCreateRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	owner, err := repoOwner(c.Request().Context(), viewer, req.OwnerID)
 	if errors.Is(err, errRepoOwnerNotAllowed) {
@@ -183,14 +185,14 @@ func postRepoCreate(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewe
 		logger.Error("Failed to get owner", "ownerID", req.OwnerID, "error", err)
 		return http.StatusInternalServerError, nil, err
 	}
-	if code, resp, err := checkRepoName(ctx, logger, l, owner, req.RepoName); code != 0 {
+	if code, resp, err := checkRepoName(ctx, logger, l, repoCreation.Root, owner, req.RepoName); code != 0 {
 		return code, resp, err
 	}
 
 	opts := database.CreateRepoOptionsLegacy{
 		Name:         req.RepoName,
 		Description:  req.Description,
-		IsPrivate:    req.Private || conf.Repository.ForcePrivate,
+		IsPrivate:    req.Private || repoCreation.ForcePrivate,
 		IsUnlisted:   req.Unlisted,
 		AutoInit:     req.AutoInit,
 		ObjectFormat: git.ObjectFormat(req.ObjectFormat),
@@ -220,10 +222,10 @@ func postRepoCreate(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewe
 		opts.Readme = req.Readme
 	}
 
-	repo, err := database.Handle.Repositories().Create(c.Request().Context(), logger, viewer, owner, opts)
+	repo, err := database.Handle.Repositories().Create(c.Request().Context(), logger, repoCreation, viewer, owner, opts)
 	if err != nil {
 		if repo != nil {
-			if errDelete := database.Handle.Repositories().Delete(ctx, logger, owner.ID, repo.ID); errDelete != nil {
+			if errDelete := database.Handle.Repositories().Delete(ctx, logger, repoDeletion, owner.ID, repo.ID); errDelete != nil {
 				logger.Error("Failed to delete repository", "repoID", repo.ID, "error", errDelete)
 			}
 		}
@@ -271,7 +273,7 @@ func cloneAddrError(l i18n.Locale, label string, err error) (statusCode int, msg
 	return 0, "", false
 }
 
-func postRepoMigrate(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, req repoMigrateRequest) (statusCode int, resp any, err error) {
+func postRepoMigrate(c flamego.Context, sec conf.SecurityOpts, repoOpts conf.RepositoryOpts, gitOpts conf.GitOpts, mirror conf.MirrorOpts, repoDeletion database.DeleteRepoOptions, repoCreation database.RepoCreationOptions, logger *logx.Logger, l i18n.Locale, viewer *database.User, req repoMigrateRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	owner, err := repoOwner(c.Request().Context(), viewer, req.OwnerID)
 	if errors.Is(err, errRepoOwnerNotAllowed) {
@@ -280,7 +282,7 @@ func postRepoMigrate(c flamego.Context, logger *logx.Logger, l i18n.Locale, view
 		logger.Error("Failed to get owner", "ownerID", req.OwnerID, "error", err)
 		return http.StatusInternalServerError, nil, err
 	}
-	if code, resp, err := checkRepoName(ctx, logger, l, owner, req.RepoName); code != 0 {
+	if code, resp, err := checkRepoName(ctx, logger, l, repoCreation.Root, owner, req.RepoName); code != 0 {
 		return code, resp, err
 	}
 
@@ -289,6 +291,9 @@ func postRepoMigrate(c flamego.Context, logger *logx.Logger, l i18n.Locale, view
 		User:         viewer,
 		AuthUsername: req.AuthUsername,
 		AuthPassword: req.AuthPassword,
+
+		LocalNetworkAllowlist:    sec.LocalNetworkAllowlist,
+		EnableLocalPathMigration: repoOpts.EnableLocalPathMigration,
 	})
 	if err != nil {
 		code, msg, ok := cloneAddrError(l, l.Tr("form::CloneAddr"), err)
@@ -299,19 +304,21 @@ func postRepoMigrate(c flamego.Context, logger *logx.Logger, l i18n.Locale, view
 		return code, &bindingErrorResponse{Fields: fieldErrors{"cloneAddr": &msg}}, nil
 	}
 
-	repo, err := database.Handle.Repositories().Migrate(c.Request().Context(), logger, viewer, owner, database.MigrateRepoOptions{
-		Name:        req.RepoName,
-		Description: req.Description,
-		IsPrivate:   req.Private || conf.Repository.ForcePrivate,
-		IsUnlisted:  req.Unlisted,
-		IsMirror:    req.Mirror,
-		RemoteAddr:  remoteAddr,
+	repo, err := database.Handle.Repositories().Migrate(c.Request().Context(), logger, repoCreation, viewer, owner, database.MigrateRepoOptions{
+		Name:           req.RepoName,
+		Description:    req.Description,
+		IsPrivate:      req.Private || repoCreation.ForcePrivate,
+		IsUnlisted:     req.Unlisted,
+		IsMirror:       req.Mirror,
+		RemoteAddr:     remoteAddr,
+		Timeout:        time.Duration(gitOpts.Timeout.Migrate) * time.Second,
+		MirrorInterval: mirror.DefaultInterval,
 	})
 	if err == nil {
 		return http.StatusCreated, &repoCreated{Owner: owner.Name, Name: repo.Name}, nil
 	}
 	if repo != nil {
-		if errDelete := database.Handle.Repositories().Delete(ctx, logger, owner.ID, repo.ID); errDelete != nil {
+		if errDelete := database.Handle.Repositories().Delete(ctx, logger, repoDeletion, owner.ID, repo.ID); errDelete != nil {
 			logger.Error("Failed to delete repository", "repoID", repo.ID, "error", errDelete)
 		}
 	}

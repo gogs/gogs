@@ -38,17 +38,22 @@ func parseUserFromCode(ctx stdctx.Context, logger *logx.Logger, code string) (us
 	return nil
 }
 
-func verifyUserActivateCode(ctx stdctx.Context, logger *logx.Logger, code string) *database.User {
+// verifyUserActivateCode returns the user that the activation code is for, or
+// nil when the code is not signed with secretKey or is older than minutes.
+func verifyUserActivateCode(ctx stdctx.Context, logger *logx.Logger, secretKey string, minutes int, code string) *database.User {
 	user := parseUserFromCode(ctx, logger, code)
-	if user != nil && userx.VerifyActivateCode(code, user.ID, user.Email, user.LowerName, user.Password, user.Rands) {
+	if user != nil && userx.VerifyActivateCode(secretKey, minutes, code, user.ID, user.Email, user.LowerName, user.Password, user.Rands) {
 		return user
 	}
 	return nil
 }
 
-func verifyUserResetPasswordCode(ctx stdctx.Context, logger *logx.Logger, code string) *database.User {
+// verifyUserResetPasswordCode returns the user that the code to reset the
+// password is for, or nil when the code is not signed with secretKey or is older
+// than minutes.
+func verifyUserResetPasswordCode(ctx stdctx.Context, logger *logx.Logger, secretKey string, minutes int, code string) *database.User {
 	user := parseUserFromCode(ctx, logger, code)
-	if user != nil && userx.VerifyResetPasswordCode(code, user.ID, user.Email, user.LowerName, user.Password, user.Rands) {
+	if user != nil && userx.VerifyResetPasswordCode(secretKey, minutes, code, user.ID, user.Email, user.LowerName, user.Password, user.Rands) {
 		return user
 	}
 	return nil
@@ -70,10 +75,10 @@ type getUserSignUpResponse struct {
 	AntiBotVerification string `json:"antiBotVerification"`
 }
 
-func getUserSignUp() (statusCode int, resp *getUserSignUpResponse, err error) {
+func getUserSignUp(auth conf.AuthOpts) (statusCode int, resp *getUserSignUpResponse, err error) {
 	return http.StatusOK, &getUserSignUpResponse{
-		RegistrationDisabled: conf.Auth.DisableRegistration,
-		AntiBotVerification:  conf.Auth.AntiBotVerification,
+		RegistrationDisabled: auth.DisableRegistration,
+		AntiBotVerification:  auth.AntiBotVerification,
 	}, nil
 }
 
@@ -92,13 +97,13 @@ type userSignUpResponse struct {
 	Hours                     int    `json:"hours,omitempty"`
 }
 
-func postUserSignUp(logger *logx.Logger, r *http.Request, ca cache.Cache, l i18n.Locale, verifyAntiBot antiBotVerifier, req userSignUpRequest) (statusCode int, resp any, err error) {
-	if conf.Auth.DisableRegistration {
+func postUserSignUp(logger *logx.Logger, emailOpts email.Options, sec conf.SecurityOpts, auth conf.AuthOpts, r *http.Request, ca cache.Cache, l i18n.Locale, verifyAntiBot antiBotVerifier, req userSignUpRequest) (statusCode int, resp any, err error) {
+	if auth.DisableRegistration {
 		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("auth::disable_register_prompt")}, nil
 	}
 	if !verifyAntiBot(req.AntiBotPayload) {
 		msg := l.Tr("form::captcha_incorrect")
-		if conf.Auth.AntiBotVerification == conf.AntiBotVerificationAltcha {
+		if auth.AntiBotVerification == conf.AntiBotVerificationAltcha {
 			msg = l.Tr("form::anti_bot_verification_failed")
 		}
 		return http.StatusUnauthorized, &bindingErrorResponse{
@@ -111,7 +116,7 @@ func postUserSignUp(logger *logx.Logger, r *http.Request, ca cache.Cache, l i18n
 		req.Email,
 		database.CreateUserOptions{
 			Password:  req.Password,
-			Activated: !conf.Auth.RequireEmailConfirmation,
+			Activated: !auth.RequireEmailConfirmation,
 		},
 	)
 	if err != nil {
@@ -148,8 +153,8 @@ func postUserSignUp(logger *logx.Logger, r *http.Request, ca cache.Cache, l i18n
 		}
 	}
 
-	if conf.Auth.RequireEmailConfirmation && u.ID > 1 {
-		if err := email.SendActivateAccountMail(logger, l, database.NewMailerUser(u)); err != nil {
+	if auth.RequireEmailConfirmation && u.ID > 1 {
+		if err := sendActivateAccountMail(logger, emailOpts, sec.SecretKey, l, u); err != nil {
 			logger.Error("Failed to send activation mail", "username", u.Name, "error", err)
 		}
 		if err := ca.Set(r.Context(), userx.MailResendCacheKey(u.ID), 1, 180*time.Second); err != nil {
@@ -158,11 +163,18 @@ func postUserSignUp(logger *logx.Logger, r *http.Request, ca cache.Cache, l i18n
 		return http.StatusOK, &userSignUpResponse{
 			EmailConfirmationRequired: true,
 			Email:                     u.Email,
-			Hours:                     conf.Auth.ActivateCodeLives / 60,
+			Hours:                     auth.ActivateCodeLives / 60,
 		}, nil
 	}
 
 	return http.StatusOK, &userSignUpResponse{}, nil
+}
+
+// sendActivateAccountMail sends the user the code that activates the account,
+// which is signed with secretKey.
+func sendActivateAccountMail(logger *logx.Logger, emailOpts email.Options, secretKey string, l i18n.Locale, u *database.User) error {
+	code := userx.GenerateActivateCode(secretKey, emailOpts.ActivateCodeLives, u.ID, u.Email, u.Name, u.Password, u.Rands)
+	return email.SendActivateAccountMail(logger, emailOpts, l, database.NewMailerUser(u), code)
 }
 
 func getUserSignIn(logger *logx.Logger, r *http.Request) (statusCode int, resp *getUserSignInResponse, err error) {
@@ -189,11 +201,11 @@ type getUserResetPasswordResponse struct {
 	Valid        bool `json:"valid"`
 }
 
-func getUserResetPassword(logger *logx.Logger, r *http.Request) (statusCode int, resp *getUserResetPasswordResponse, err error) {
+func getUserResetPassword(logger *logx.Logger, sec conf.SecurityOpts, auth conf.AuthOpts, emailOpts conf.EmailOpts, r *http.Request) (statusCode int, resp *getUserResetPasswordResponse, err error) {
 	code := r.URL.Query().Get("code")
 	return http.StatusOK, &getUserResetPasswordResponse{
-		EmailEnabled: conf.Email.Enabled,
-		Valid:        code != "" && verifyUserResetPasswordCode(r.Context(), logger, code) != nil,
+		EmailEnabled: emailOpts.Enabled,
+		Valid:        code != "" && verifyUserResetPasswordCode(r.Context(), logger, sec.SecretKey, auth.ResetPasswordCodeLives, code) != nil,
 	}, nil
 }
 
@@ -211,8 +223,8 @@ type userResetPasswordResponse struct {
 	ResendLimited bool `json:"resendLimited,omitempty"`
 }
 
-func postUserResetPassword(logger *logx.Logger, r *http.Request, ca cache.Cache, l i18n.Locale, req userResetPasswordEmailRequest) (statusCode int, resp any, err error) {
-	if !conf.Email.Enabled {
+func postUserResetPassword(logger *logx.Logger, sec conf.SecurityOpts, auth conf.AuthOpts, emailOpts email.Options, r *http.Request, ca cache.Cache, l i18n.Locale, req userResetPasswordEmailRequest) (statusCode int, resp any, err error) {
+	if !emailOpts.Email.Enabled {
 		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("auth::disable_register_mail")}, nil
 	}
 
@@ -220,7 +232,7 @@ func postUserResetPassword(logger *logx.Logger, r *http.Request, ca cache.Cache,
 	u, err := database.Handle.Users().GetByEmail(ctx, req.Email)
 	if err != nil {
 		if database.IsErrUserNotExist(err) {
-			return http.StatusOK, &userResetPasswordResponse{Hours: conf.Auth.ResetPasswordCodeLives / 60}, nil
+			return http.StatusOK, &userResetPasswordResponse{Hours: auth.ResetPasswordCodeLives / 60}, nil
 		}
 		logger.Error("Failed to get user by email", "email", req.Email, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by email")
@@ -233,25 +245,26 @@ func postUserResetPassword(logger *logx.Logger, r *http.Request, ca cache.Cache,
 
 	if _, err := ca.Get(ctx, userx.MailResendCacheKey(u.ID)); err == nil {
 		return http.StatusOK, &userResetPasswordResponse{
-			Hours:         conf.Auth.ResetPasswordCodeLives / 60,
+			Hours:         auth.ResetPasswordCodeLives / 60,
 			ResendLimited: true,
 		}, nil
 	} else if !errors.Is(err, os.ErrNotExist) {
 		logger.Error("Failed to get mail resend cache", "username", u.Name, "error", err)
 	}
 
-	if err = email.SendResetPasswordMail(logger, l, database.NewMailerUser(u)); err != nil {
+	code := userx.GenerateResetPasswordCode(sec.SecretKey, auth.ResetPasswordCodeLives, u.ID, u.Email, u.Name, u.Password, u.Rands)
+	if err = email.SendResetPasswordMail(logger, emailOpts, l, database.NewMailerUser(u), code); err != nil {
 		logger.Error("Failed to send reset password mail", "username", u.Name, "error", err)
 	}
 	if err = ca.Set(ctx, userx.MailResendCacheKey(u.ID), 1, 180*time.Second); err != nil {
 		logger.Error("Failed to set mail resend cache", "username", u.Name, "error", err)
 	}
 
-	return http.StatusOK, &userResetPasswordResponse{Hours: conf.Auth.ResetPasswordCodeLives / 60}, nil
+	return http.StatusOK, &userResetPasswordResponse{Hours: auth.ResetPasswordCodeLives / 60}, nil
 }
 
-func postUserResetPasswordComplete(logger *logx.Logger, r *http.Request, l i18n.Locale, req userResetPasswordCompleteRequest) (statusCode int, resp any, err error) {
-	u := verifyUserResetPasswordCode(r.Context(), logger, req.Code)
+func postUserResetPasswordComplete(logger *logx.Logger, sec conf.SecurityOpts, auth conf.AuthOpts, r *http.Request, l i18n.Locale, req userResetPasswordCompleteRequest) (statusCode int, resp any, err error) {
+	u := verifyUserResetPasswordCode(r.Context(), logger, sec.SecretKey, auth.ResetPasswordCodeLives, req.Code)
 	if u == nil {
 		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("auth::invalid_code")}, nil
 	}
@@ -272,7 +285,7 @@ type userSignInResponse struct {
 	MFA bool `json:"mfa,omitempty"`
 }
 
-func postUserSignIn(logger *logx.Logger, r *http.Request, w http.ResponseWriter, store session.Store, sess session.Session, l i18n.Locale, req userSignInRequest) (statusCode int, resp any, err error) {
+func postUserSignIn(logger *logx.Logger, cookies signInCookies, r *http.Request, w http.ResponseWriter, store session.Store, sess session.Session, l i18n.Locale, req userSignInRequest) (statusCode int, resp any, err error) {
 	u, err := database.Handle.Users().Authenticate(r.Context(), logger, req.Username, req.Password, req.LoginSource)
 	if err != nil {
 		switch {
@@ -298,17 +311,37 @@ func postUserSignIn(logger *logx.Logger, r *http.Request, w http.ResponseWriter,
 		return http.StatusOK, &userSignInResponse{MFA: true}, nil
 	}
 
-	if err = completeSignIn(w, r, store, sess, u); err != nil {
+	if err = completeSignIn(w, r, cookies, store, sess, u); err != nil {
 		logger.Error("Failed to complete sign-in", "userID", u.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "complete sign-in")
 	}
 	return http.StatusOK, &userSignInResponse{}, nil
 }
 
+// signInCookies are the cookies that signing in and out set.
+type signInCookies struct {
+	// path is where the cookies are sent, i.e., the subpath of the site.
+	path string
+	// session is the name of the session cookie.
+	session string
+	// loginStatus is the name of the cookie that tells whether the viewer is
+	// authenticated, or empty when it is not set.
+	loginStatus string
+}
+
+// newSignInCookies returns the cookies of a site under subpath.
+func newSignInCookies(sessionOpts conf.SessionOpts, sec conf.SecurityOpts, subpath string) signInCookies {
+	cookies := signInCookies{path: cmp.Or(subpath, "/"), session: sessionOpts.CookieName}
+	if sec.EnableLoginStatusCookie {
+		cookies.loginStatus = sec.LoginStatusCookieName
+	}
+	return cookies
+}
+
 // completeSignIn signs in u under a new session, which drops any in-flight MFA
 // state, and sets the login-status cookie when it is enabled. The caller is
 // responsible for navigating to a post-login destination via /redirect?to=.
-func completeSignIn(w http.ResponseWriter, r *http.Request, store session.Store, sess session.Session, u *database.User) error {
+func completeSignIn(w http.ResponseWriter, r *http.Request, cookies signInCookies, store session.Store, sess session.Session, u *database.User) error {
 	// Sign in under a new session ID, so a session ID planted in the browser
 	// before signing in (session fixation) is not authenticated too. The old
 	// session is deleted rather than carried over.
@@ -319,10 +352,10 @@ func completeSignIn(w http.ResponseWriter, r *http.Request, store session.Store,
 	// The session middleware has set the cookie when it started a new session,
 	// which would leave two session cookies on the response.
 	header := w.Header()
-	cookies := header.Values("Set-Cookie")
+	setCookies := header.Values("Set-Cookie")
 	header.Del("Set-Cookie")
-	for _, c := range cookies {
-		if !strings.HasPrefix(c, conf.Session.CookieName+"=") {
+	for _, c := range setCookies {
+		if !strings.HasPrefix(c, cookies.session+"=") {
 			header.Add("Set-Cookie", c)
 		}
 	}
@@ -332,11 +365,11 @@ func completeSignIn(w http.ResponseWriter, r *http.Request, store session.Store,
 	sess.Set("uid", u.ID)
 	sess.Set("uname", u.Name)
 
-	if conf.Security.EnableLoginStatusCookie {
+	if cookies.loginStatus != "" {
 		http.SetCookie(w, &http.Cookie{
-			Name:  conf.Security.LoginStatusCookieName,
+			Name:  cookies.loginStatus,
 			Value: "true",
-			Path:  cmp.Or(conf.Server.Subpath, "/"),
+			Path:  cookies.path,
 		})
 	}
 	return nil
@@ -355,7 +388,7 @@ type userMFARequest struct {
 
 type userMFAResponse struct{}
 
-func postUserMFA(logger *logx.Logger, r *http.Request, w http.ResponseWriter, store session.Store, sess session.Session, ca cache.Cache, l i18n.Locale, req userMFARequest) (statusCode int, resp any, err error) {
+func postUserMFA(logger *logx.Logger, sec conf.SecurityOpts, cookies signInCookies, r *http.Request, w http.ResponseWriter, store session.Store, sess session.Session, ca cache.Cache, l i18n.Locale, req userMFARequest) (statusCode int, resp any, err error) {
 	userID, ok := sess.Get("mfaUserID").(int64)
 	if !ok {
 		return http.StatusUnauthorized, &bindingErrorResponse{Error: l.Tr("auth::mfa_session_expired")}, nil
@@ -367,7 +400,7 @@ func postUserMFA(logger *logx.Logger, r *http.Request, w http.ResponseWriter, st
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get two factor by user ID")
 	}
 
-	valid, err := t.ValidateTOTP(req.Passcode)
+	valid, err := t.ValidateTOTP(sec.SecretKey, req.Passcode)
 	if err != nil {
 		logger.Error("Failed to validate TOTP", "userID", userID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "validate TOTP")
@@ -398,7 +431,7 @@ func postUserMFA(logger *logx.Logger, r *http.Request, w http.ResponseWriter, st
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by ID")
 	}
 
-	if err = completeSignIn(w, r, store, sess, u); err != nil {
+	if err = completeSignIn(w, r, cookies, store, sess, u); err != nil {
 		logger.Error("Failed to complete sign-in", "userID", u.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "complete sign-in")
 	}
@@ -409,7 +442,7 @@ type userMFARecoveryRequest struct {
 	RecoveryCode string `json:"recoveryCode" validate:"required,len=11"`
 }
 
-func postUserMFARecovery(logger *logx.Logger, r *http.Request, w http.ResponseWriter, store session.Store, sess session.Session, l i18n.Locale, req userMFARecoveryRequest) (statusCode int, resp any, err error) {
+func postUserMFARecovery(logger *logx.Logger, cookies signInCookies, r *http.Request, w http.ResponseWriter, store session.Store, sess session.Session, l i18n.Locale, req userMFARecoveryRequest) (statusCode int, resp any, err error) {
 	userID, ok := sess.Get("mfaUserID").(int64)
 	if !ok {
 		return http.StatusUnauthorized, &bindingErrorResponse{Error: l.Tr("auth::mfa_session_expired")}, nil
@@ -432,7 +465,7 @@ func postUserMFARecovery(logger *logx.Logger, r *http.Request, w http.ResponseWr
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user by ID")
 	}
 
-	if err = completeSignIn(w, r, store, sess, u); err != nil {
+	if err = completeSignIn(w, r, cookies, store, sess, u); err != nil {
 		logger.Error("Failed to complete sign-in", "userID", u.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "complete sign-in")
 	}
@@ -446,16 +479,16 @@ type userInfo struct {
 	CanCreateOrganization bool   `json:"canCreateOrganization"`
 }
 
-func getUserInfo(user *database.User) (statusCode int, resp *userInfo, err error) {
+func getUserInfo(admin conf.AdminOpts, links database.LinkOptions, user *database.User) (statusCode int, resp *userInfo, err error) {
 	if user == nil {
 		return http.StatusNoContent, nil, nil
 	}
 	return http.StatusOK,
 		&userInfo{
 			Username:              user.Name,
-			AvatarURL:             user.AvatarURL(),
+			AvatarURL:             user.AvatarURL(links),
 			IsAdmin:               user.IsAdmin,
-			CanCreateOrganization: user.CanCreateOrganization(),
+			CanCreateOrganization: user.CanCreateOrganization(admin.DisableRegularOrgCreation),
 		},
 		nil
 }
@@ -465,7 +498,7 @@ type getUserActivateResponse struct {
 	CodeLifetimeHours int    `json:"codeLifetimeHours,omitempty"`
 }
 
-func getUserActivate(u *database.User) (statusCode int, resp any, err error) {
+func getUserActivate(auth conf.AuthOpts, u *database.User) (statusCode int, resp any, err error) {
 	if u == nil {
 		return http.StatusUnauthorized, nil, nil
 	}
@@ -475,7 +508,7 @@ func getUserActivate(u *database.User) (statusCode int, resp any, err error) {
 	}
 	return http.StatusOK, &getUserActivateResponse{
 		Email:             u.Email,
-		CodeLifetimeHours: conf.Auth.ActivateCodeLives / 60,
+		CodeLifetimeHours: auth.ActivateCodeLives / 60,
 	}, nil
 }
 
@@ -484,14 +517,14 @@ type postUserActivateResponse struct {
 	CodeLifetimeHours int  `json:"codeLifetimeHours,omitempty"`
 }
 
-func postUserActivate(logger *logx.Logger, r *http.Request, u *database.User, ca cache.Cache, l i18n.Locale) (statusCode int, resp any, err error) {
+func postUserActivate(logger *logx.Logger, emailOpts email.Options, sec conf.SecurityOpts, auth conf.AuthOpts, r *http.Request, u *database.User, ca cache.Cache, l i18n.Locale) (statusCode int, resp any, err error) {
 	if u == nil {
 		return http.StatusUnauthorized, nil, nil
 	}
 	if u.IsActive {
 		return http.StatusNotFound, nil, nil
 	}
-	if !conf.Auth.RequireEmailConfirmation {
+	if !auth.RequireEmailConfirmation {
 		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("auth::disable_register_mail")}, nil
 	}
 
@@ -499,27 +532,27 @@ func postUserActivate(logger *logx.Logger, r *http.Request, u *database.User, ca
 	if _, err := ca.Get(ctx, userx.MailResendCacheKey(u.ID)); err == nil {
 		return http.StatusOK, &postUserActivateResponse{
 			RateLimited:       true,
-			CodeLifetimeHours: conf.Auth.ActivateCodeLives / 60,
+			CodeLifetimeHours: auth.ActivateCodeLives / 60,
 		}, nil
 	} else if !errors.Is(err, os.ErrNotExist) {
 		logger.Error("Failed to get mail resend cache", "username", u.Name, "error", err)
 	}
 
-	if err := email.SendActivateAccountMail(logger, l, database.NewMailerUser(u)); err != nil {
+	if err := sendActivateAccountMail(logger, emailOpts, sec.SecretKey, l, u); err != nil {
 		logger.Error("Failed to send activation mail", "username", u.Name, "error", err)
 	}
 	if err := ca.Set(ctx, userx.MailResendCacheKey(u.ID), 1, 180*time.Second); err != nil {
 		logger.Error("Failed to set mail resend cache", "username", u.Name, "error", err)
 	}
-	return http.StatusOK, &postUserActivateResponse{CodeLifetimeHours: conf.Auth.ActivateCodeLives / 60}, nil
+	return http.StatusOK, &postUserActivateResponse{CodeLifetimeHours: auth.ActivateCodeLives / 60}, nil
 }
 
 type userActivateCompleteRequest struct {
 	Code string `json:"code" validate:"required"`
 }
 
-func postUserActivateComplete(logger *logx.Logger, r *http.Request, w http.ResponseWriter, store session.Store, sess session.Session, l i18n.Locale, req userActivateCompleteRequest) (statusCode int, resp any, err error) {
-	target := verifyUserActivateCode(r.Context(), logger, req.Code)
+func postUserActivateComplete(logger *logx.Logger, sec conf.SecurityOpts, auth conf.AuthOpts, cookies signInCookies, r *http.Request, w http.ResponseWriter, store session.Store, sess session.Session, l i18n.Locale, req userActivateCompleteRequest) (statusCode int, resp any, err error) {
+	target := verifyUserActivateCode(r.Context(), logger, sec.SecretKey, auth.ActivateCodeLives, req.Code)
 	if target == nil || target.IsActive {
 		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("auth::invalid_code")}, nil
 	}
@@ -542,7 +575,7 @@ func postUserActivateComplete(logger *logx.Logger, r *http.Request, w http.Respo
 	// Holding the activation code only proves access to the mailbox, which is not
 	// enough to skip the second factor.
 	if !database.Handle.TwoFactors().IsEnabled(r.Context(), logger, target.ID) {
-		if err := completeSignIn(w, r, store, sess, target); err != nil {
+		if err := completeSignIn(w, r, cookies, store, sess, target); err != nil {
 			logger.Error("Failed to complete sign-in", "userID", target.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "complete sign-in")
 		}
@@ -554,17 +587,17 @@ type postUserSignOutResponse struct {
 	RedirectTo string `json:"redirectTo,omitempty"`
 }
 
-func postUserSignOut(w http.ResponseWriter, sess session.Session) (statusCode int, resp *postUserSignOutResponse, err error) {
+func postUserSignOut(w http.ResponseWriter, auth conf.AuthOpts, cookies signInCookies, sess session.Session) (statusCode int, resp *postUserSignOutResponse, err error) {
 	sess.Flush()
 	http.SetCookie(w, &http.Cookie{
-		Name:     conf.Session.CookieName,
-		Path:     cmp.Or(conf.Server.Subpath, "/"),
+		Name:     cookies.session,
+		Path:     cookies.path,
 		HttpOnly: true,
 		Expires:  time.Unix(0, 0),
 		MaxAge:   -1,
 	})
-	if conf.Auth.CustomLogoutURL != "" {
-		return http.StatusOK, &postUserSignOutResponse{RedirectTo: conf.Auth.CustomLogoutURL}, nil
+	if auth.CustomLogoutURL != "" {
+		return http.StatusOK, &postUserSignOutResponse{RedirectTo: auth.CustomLogoutURL}, nil
 	}
 	return http.StatusNoContent, nil, nil
 }

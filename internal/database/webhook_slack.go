@@ -8,7 +8,6 @@ import (
 	"github.com/cockroachdb/errors"
 
 	"gogs.io/gogs/internal/api/v1types"
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/git"
 )
 
@@ -141,8 +140,8 @@ func getSlackPushPayload(p *v1types.WebhookPushPayload, slack *SlackMeta) *Slack
 	}
 }
 
-func getSlackIssuesPayload(p *v1types.WebhookIssuesPayload, slack *SlackMeta) *SlackPayload {
-	senderLink := SlackLinkFormatter(conf.Server.ExternalURL+p.Sender.UserName, p.Sender.UserName)
+func getSlackIssuesPayload(externalURL string, p *v1types.WebhookIssuesPayload, slack *SlackMeta) *SlackPayload {
+	senderLink := SlackLinkFormatter(externalURL+p.Sender.UserName, p.Sender.UserName)
 	titleLink := SlackLinkFormatter(fmt.Sprintf("%s/issues/%d", p.Repository.HTMLURL, p.Index),
 		fmt.Sprintf("#%d %s", p.Index, p.Issue.Title))
 	var text, title, attachmentText string
@@ -160,7 +159,7 @@ func getSlackIssuesPayload(p *v1types.WebhookIssuesPayload, slack *SlackMeta) *S
 		attachmentText = SlackTextFormatter(p.Issue.Body)
 	case v1types.WebhookIssueAssigned:
 		text = fmt.Sprintf("[%s] Issue assigned to %s: %s by %s", p.Repository.FullName,
-			SlackLinkFormatter(conf.Server.ExternalURL+p.Issue.Assignee.UserName, p.Issue.Assignee.UserName),
+			SlackLinkFormatter(externalURL+p.Issue.Assignee.UserName, p.Issue.Assignee.UserName),
 			titleLink, senderLink)
 	case v1types.WebhookIssueUnassigned:
 		text = fmt.Sprintf("[%s] Issue unassigned: %s by %s", p.Repository.FullName, titleLink, senderLink)
@@ -187,8 +186,8 @@ func getSlackIssuesPayload(p *v1types.WebhookIssuesPayload, slack *SlackMeta) *S
 	}
 }
 
-func getSlackIssueCommentPayload(p *v1types.WebhookIssueCommentPayload, slack *SlackMeta) *SlackPayload {
-	senderLink := SlackLinkFormatter(conf.Server.ExternalURL+p.Sender.UserName, p.Sender.UserName)
+func getSlackIssueCommentPayload(externalURL string, p *v1types.WebhookIssueCommentPayload, slack *SlackMeta) *SlackPayload {
+	senderLink := SlackLinkFormatter(externalURL+p.Sender.UserName, p.Sender.UserName)
 	titleLink := SlackLinkFormatter(fmt.Sprintf("%s/issues/%d#%s", p.Repository.HTMLURL, p.Issue.Index, CommentHashTag(p.Comment.ID)),
 		fmt.Sprintf("#%d %s", p.Issue.Index, p.Issue.Title))
 	var text, title, attachmentText string
@@ -221,8 +220,8 @@ func getSlackIssueCommentPayload(p *v1types.WebhookIssueCommentPayload, slack *S
 	}
 }
 
-func getSlackPullRequestPayload(p *v1types.WebhookPullRequestPayload, slack *SlackMeta) *SlackPayload {
-	senderLink := SlackLinkFormatter(conf.Server.ExternalURL+p.Sender.UserName, p.Sender.UserName)
+func getSlackPullRequestPayload(externalURL string, p *v1types.WebhookPullRequestPayload, slack *SlackMeta) *SlackPayload {
+	senderLink := SlackLinkFormatter(externalURL+p.Sender.UserName, p.Sender.UserName)
 	titleLink := SlackLinkFormatter(fmt.Sprintf("%s/pulls/%d", p.Repository.HTMLURL, p.Index),
 		fmt.Sprintf("#%d %s", p.Index, p.PullRequest.Title))
 	var text, title, attachmentText string
@@ -244,7 +243,7 @@ func getSlackPullRequestPayload(p *v1types.WebhookPullRequestPayload, slack *Sla
 		attachmentText = SlackTextFormatter(p.PullRequest.Body)
 	case v1types.WebhookIssueAssigned:
 		text = fmt.Sprintf("[%s] Pull request assigned to %s: %s by %s", p.Repository.FullName,
-			SlackLinkFormatter(conf.Server.ExternalURL+p.PullRequest.Assignee.UserName, p.PullRequest.Assignee.UserName),
+			SlackLinkFormatter(externalURL+p.PullRequest.Assignee.UserName, p.PullRequest.Assignee.UserName),
 			titleLink, senderLink)
 	case v1types.WebhookIssueUnassigned:
 		text = fmt.Sprintf("[%s] Pull request unassigned: %s by %s", p.Repository.FullName, titleLink, senderLink)
@@ -282,7 +281,9 @@ func getSlackReleasePayload(p *v1types.WebhookReleasePayload) *SlackPayload {
 	}
 }
 
-func GetSlackPayload(p v1types.WebhookPayloader, event HookEventType, meta string) (payload *SlackPayload, err error) {
+// GetSlackPayload returns the Slack payload of given event, whose links to users
+// start with the external URL.
+func GetSlackPayload(externalURL string, p v1types.WebhookPayloader, event HookEventType, meta string) (payload *SlackPayload, err error) {
 	slack := &SlackMeta{}
 	if err := json.Unmarshal([]byte(meta), slack); err != nil {
 		return nil, errors.Newf("unmarshal: %v", err)
@@ -298,11 +299,11 @@ func GetSlackPayload(p v1types.WebhookPayloader, event HookEventType, meta strin
 	case HookEventTypePush:
 		payload = getSlackPushPayload(p.(*v1types.WebhookPushPayload), slack)
 	case HookEventTypeIssues:
-		payload = getSlackIssuesPayload(p.(*v1types.WebhookIssuesPayload), slack)
+		payload = getSlackIssuesPayload(externalURL, p.(*v1types.WebhookIssuesPayload), slack)
 	case HookEventTypeIssueComment:
-		payload = getSlackIssueCommentPayload(p.(*v1types.WebhookIssueCommentPayload), slack)
+		payload = getSlackIssueCommentPayload(externalURL, p.(*v1types.WebhookIssueCommentPayload), slack)
 	case HookEventTypePullRequest:
-		payload = getSlackPullRequestPayload(p.(*v1types.WebhookPullRequestPayload), slack)
+		payload = getSlackPullRequestPayload(externalURL, p.(*v1types.WebhookPullRequestPayload), slack)
 	case HookEventTypeRelease:
 		payload = getSlackReleasePayload(p.(*v1types.WebhookReleasePayload))
 	default:

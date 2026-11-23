@@ -10,7 +10,6 @@ import (
 
 	"github.com/cockroachdb/errors"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/osx"
 )
@@ -27,7 +26,9 @@ func (archiveNotExistError) NotFound() bool {
 // "master.zip" or "v1.0.tar.gz", alongside the file name to serve it as. The
 // archive is created when it does not exist yet. It returns an error that
 // satisfies errx.IsNotFound when the archive format or the reference is unknown.
-func PrepareArchive(ctx stdctx.Context, gitRepo *git.Repository, repoName, uri string) (archivePath, name string, _ error) {
+// Archives are generated in a temporary directory under the application data
+// path.
+func PrepareArchive(ctx stdctx.Context, appDataPath string, gitRepo *git.Repository, repoName, uri string) (archivePath, name string, _ error) {
 	var (
 		ext           string
 		archiveFormat git.ArchiveFormat
@@ -82,7 +83,7 @@ func PrepareArchive(ctx stdctx.Context, gitRepo *git.Repository, repoName, uri s
 		// or concurrent generation never leaves a partial archive at the path that
 		// gets served for all later requests. Leftovers are removed on startup along
 		// with the rest of the temporary data.
-		tmpDir := filepath.Join(conf.Server.AppDataPath, "tmp", "archives")
+		tmpDir := filepath.Join(appDataPath, "tmp", "archives")
 		if err := os.MkdirAll(tmpDir, os.ModePerm); err != nil {
 			return "", "", errors.Wrap(err, "create temporary archive directory")
 		}

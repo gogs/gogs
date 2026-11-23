@@ -14,7 +14,7 @@ import (
 const mediaApplicationSHA = "application/vnd.gogs.sha"
 
 // getAllCommits returns a slice of commits starting from HEAD.
-func getAllCommits(c *apiContext) {
+func getAllCommits(c *apiContext, repository conf.RepositoryOpts, links database.LinkOptions) {
 	// Get pagesize, set default if it is not specified.
 	pageSize := c.QueryInt("pageSize")
 	if pageSize == 0 {
@@ -23,14 +23,14 @@ func getAllCommits(c *apiContext) {
 
 	// The response object returned as JSON
 	result := make([]*v1types.Commit, 0, pageSize)
-	commits, err := git.RepoLog(c.Request().Context(), c.Repo.Repository.RepoPath(), "HEAD", git.LogOptions{MaxCount: pageSize})
+	commits, err := git.RepoLog(c.Request().Context(), c.Repo.Repository.RepoPath(repository.Root), "HEAD", git.LogOptions{MaxCount: pageSize})
 	if err != nil {
 		c.Error(err, "git log")
 		return
 	}
 
 	for _, commit := range commits {
-		apiCommit, err := gitCommitToAPICommit(commit, c)
+		apiCommit, err := gitCommitToAPICommit(c, links, commit)
 		if err != nil {
 			c.Error(err, "convert git commit to api commit")
 			return
@@ -42,31 +42,31 @@ func getAllCommits(c *apiContext) {
 }
 
 // getSingleCommit will return a single Commit object based on the specified SHA.
-func getSingleCommit(c *apiContext) {
+func getSingleCommit(c *apiContext, repository conf.RepositoryOpts, links database.LinkOptions) {
 	if strings.Contains(c.Request().Header.Get("Accept"), mediaApplicationSHA) {
-		serveReferenceSHA(c, c.Param("sha"))
+		serveReferenceSHA(c, repository.Root, c.Param("sha"))
 		return
 	}
 
-	commit, err := git.RepoCatFileCommit(c.Request().Context(), c.Repo.Repository.RepoPath(), c.Param("sha"))
+	commit, err := git.RepoCatFileCommit(c.Request().Context(), c.Repo.Repository.RepoPath(repository.Root), c.Param("sha"))
 	if err != nil {
 		c.NotFoundOrError(git.NewError(err), "get commit")
 		return
 	}
 
-	apiCommit, err := gitCommitToAPICommit(commit, c)
+	apiCommit, err := gitCommitToAPICommit(c, links, commit)
 	if err != nil {
 		c.Error(err, "convert git commit to api commit")
 	}
 	c.JSONSuccess(apiCommit)
 }
 
-func getReferenceSHA(c *apiContext) {
-	serveReferenceSHA(c, c.Param("**"))
+func getReferenceSHA(c *apiContext, repository conf.RepositoryOpts) {
+	serveReferenceSHA(c, repository.Root, c.Param("**"))
 }
 
-func serveReferenceSHA(c *apiContext, ref string) {
-	gitRepo, err := git.Open(c.Repo.Repository.RepoPath())
+func serveReferenceSHA(c *apiContext, repositoryRoot, ref string) {
+	gitRepo, err := git.Open(c.Repo.Repository.RepoPath(repositoryRoot))
 	if err != nil {
 		c.Error(err, "open repository")
 		return
@@ -105,14 +105,14 @@ func serveReferenceSHA(c *apiContext, ref string) {
 }
 
 // gitCommitToAPICommit converts a Git commit to an API commit.
-func gitCommitToAPICommit(commit *git.Commit, c *apiContext) (*v1types.Commit, error) {
+func gitCommitToAPICommit(c *apiContext, links database.LinkOptions, commit *git.Commit) (*v1types.Commit, error) {
 	// Retrieve author and committer information
 	var apiAuthor, apiCommitter *v1types.User
 	author, err := database.Handle.Users().GetByEmail(c.Request().Context(), commit.Author.Email)
 	if err != nil && !database.IsErrUserNotExist(err) {
 		return nil, err
 	} else if err == nil {
-		apiAuthor = toUser(author)
+		apiAuthor = toUser(links, author)
 	}
 
 	// Save one query if the author is also the committer
@@ -123,7 +123,7 @@ func gitCommitToAPICommit(commit *git.Commit, c *apiContext) (*v1types.Commit, e
 		if err != nil && !database.IsErrUserNotExist(err) {
 			return nil, err
 		} else if err == nil {
-			apiCommitter = toUser(committer)
+			apiCommitter = toUser(links, committer)
 		}
 	}
 
@@ -139,12 +139,12 @@ func gitCommitToAPICommit(commit *git.Commit, c *apiContext) (*v1types.Commit, e
 
 	return &v1types.Commit{
 		CommitMeta: &v1types.CommitMeta{
-			URL: conf.Server.ExternalURL + c.Link[1:],
+			URL: links.ExternalURL + c.Link[1:],
 			SHA: commit.ID.String(),
 		},
-		HTMLURL: c.Repo.Repository.HTMLURL() + "/commits/" + commit.ID.String(),
+		HTMLURL: c.Repo.Repository.HTMLURL(links.ExternalURL) + "/commits/" + commit.ID.String(),
 		RepoCommit: &v1types.RepoCommit{
-			URL: conf.Server.ExternalURL + c.Link[1:],
+			URL: links.ExternalURL + c.Link[1:],
 			Author: &v1types.CommitUser{
 				Name:  commit.Author.Name,
 				Email: commit.Author.Email,

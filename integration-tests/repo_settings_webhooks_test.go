@@ -452,16 +452,21 @@ func TestRepoSettingsWebhooksOfDeletedRepository(t *testing.T) {
 		}, 30*time.Second, 200*time.Millisecond, "delivery not recorded")
 	}
 
+	deleteOpts := database.DeleteRepoOptions{
+		RepositoryRoot: cfg.Repository.Root,
+		AttachmentPath: cfg.Attachment.Path,
+		AuthorizedKeys: authorizedKeysOptions(cfg),
+	}
 	// A repository is deleted only with its own owner and ID.
 	for _, ids := range [][2]int64{{owner.ID, repo.ID}, {0, repo.ID}, {org.ID, 0}} {
-		assert.True(t, database.IsErrRepoNotExist(database.Handle.Repositories().Delete(t.Context(), logger, ids[0], ids[1])), "owner %d, repository %d", ids[0], ids[1])
+		assert.True(t, database.IsErrRepoNotExist(database.Handle.Repositories().Delete(t.Context(), logger, deleteOpts, ids[0], ids[1])), "owner %d, repository %d", ids[0], ids[1])
 	}
 	for _, r := range []*Repository{repo, other} {
 		_, err := database.Handle.Repositories().GetByID(t.Context(), r.ID)
 		require.NoError(t, err)
 	}
 
-	require.NoError(t, database.Handle.Repositories().Delete(t.Context(), logger, org.ID, repo.ID))
+	require.NoError(t, database.Handle.Repositories().Delete(t.Context(), logger, deleteOpts, org.ID, repo.ID))
 	_, err := database.Handle.Webhooks().GetOfRepo(t.Context(), repo.ID, hookIDs[repo.ID])
 	assert.True(t, database.IsErrWebhookNotExist(err), "webhook not deleted: %v", err)
 	tasks, err := database.Handle.HookTasks().ListByWebhook(t.Context(), hookIDs[repo.ID], 1, 10)

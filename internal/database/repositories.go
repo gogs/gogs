@@ -63,7 +63,9 @@ var (
 	ItemsPerPage = 40
 )
 
-func LoadRepoConfig(logger *logx.Logger) {
+// LoadRepoConfig loads the names of the templates of new repositories, and puts
+// the preferred licenses first.
+func LoadRepoConfig(logger *logx.Logger, preferredLicenses []string) {
 	// Load .gitignore, license, readme and label template files.
 	types := []string{"gitignore", "license", "readme", "label"}
 	typeFiles := make([][]string, 4)
@@ -101,32 +103,34 @@ func LoadRepoConfig(logger *logx.Logger) {
 
 	// Filter out invalid names and promote preferred licenses.
 	sortedLicenses := make([]string, 0, len(Licenses))
-	for _, name := range conf.Repository.PreferredLicenses {
+	for _, name := range preferredLicenses {
 		if slices.Contains(Licenses, name) {
 			sortedLicenses = append(sortedLicenses, name)
 		}
 	}
 	for _, name := range Licenses {
-		if !slices.Contains(conf.Repository.PreferredLicenses, name) {
+		if !slices.Contains(preferredLicenses, name) {
 			sortedLicenses = append(sortedLicenses, name)
 		}
 	}
 	Licenses = sortedLicenses
 }
 
-func NewRepoContext(logger *logx.Logger) {
+// NewRepoContext checks the Git installation, sets the global Git
+// configuration that Gogs needs, and cleans up the temporary data under
+// appDataPath and lfsObjectsTempPath. It returns the version of Git.
+func NewRepoContext(logger *logx.Logger, appDataPath, lfsObjectsTempPath string) (gitVersion string) {
 	zip.Verbose = false
 
 	// Check Git installation and version.
-	var err error
-	conf.Git.Version, err = git.BinVersion(context.TODO())
+	gitVersion, err := git.BinVersion(context.TODO())
 	if err != nil {
 		logger.FatalContext(context.Background(), "Failed to get Git version", "error", err)
 	}
 
-	logger.Debug("Git version", "version", conf.Git.Version)
-	if semverx.Compare(conf.Git.Version, "<", "2.43.1") {
-		logger.FatalContext(context.Background(), "Gogs requires Git version 2.43.1 or later", "version", conf.Git.Version)
+	logger.Debug("Git version", "version", gitVersion)
+	if semverx.Compare(gitVersion, "<", "2.43.1") {
+		logger.FatalContext(context.Background(), "Gogs requires Git version 2.43.1 or later", "version", gitVersion)
 	}
 
 	// Git requires setting user.name and user.email in order to commit changes.
@@ -149,8 +153,9 @@ func NewRepoContext(logger *logx.Logger) {
 		logger.FatalContext(context.Background(), "Failed to set Git config", "configKey", "core.quotepath", "error", err)
 	}
 
-	RemoveAllWithNotice(logger, "Clean up repository temporary data", filepath.Join(conf.Server.AppDataPath, "tmp"))
-	RemoveAllWithNotice(logger, "Clean up LFS temporary data", conf.LFS.ObjectsTempPath)
+	RemoveAllWithNotice(logger, "Clean up repository temporary data", filepath.Join(appDataPath, "tmp"))
+	RemoveAllWithNotice(logger, "Clean up LFS temporary data", lfsObjectsTempPath)
+	return gitVersion
 }
 
 // Repository contains information of a repository.
@@ -273,45 +278,47 @@ func (r *Repository) FullName() string {
 }
 
 // Deprecated: Use repox.HTMLURL instead.
-func (r *Repository) HTMLURL() string {
-	return conf.Server.ExternalURL + r.FullName()
+func (r *Repository) HTMLURL(externalURL string) string {
+	return externalURL + r.FullName()
 }
 
-// CustomAvatarPath returns repository custom avatar file path.
-func (r *Repository) CustomAvatarPath() string {
-	return filepath.Join(conf.Picture.RepositoryAvatarUploadPath, strconv.FormatInt(r.ID, 10))
+// CustomAvatarPath returns repository custom avatar file path under the
+// repository avatar upload path.
+func (r *Repository) CustomAvatarPath(avatarUploadPath string) string {
+	return filepath.Join(avatarUploadPath, strconv.FormatInt(r.ID, 10))
 }
 
 // RelAvatarLink returns relative avatar link to the site domain,
 // which includes app sub-url as prefix, or an empty string when the
-// repository has no custom avatar.
-func (r *Repository) RelAvatarLink() string {
+// repository has no custom avatar under the repository avatar upload path.
+func (r *Repository) RelAvatarLink(subpath, avatarUploadPath string) string {
 	defaultImgURL := ""
-	if !osx.Exist(r.CustomAvatarPath()) {
+	if !osx.Exist(r.CustomAvatarPath(avatarUploadPath)) {
 		return defaultImgURL
 	}
-	return fmt.Sprintf("%s/%s/%d", conf.Server.Subpath, RepoAvatarURLPrefix, r.ID)
+	return fmt.Sprintf("%s/%s/%d", subpath, RepoAvatarURLPrefix, r.ID)
 }
 
 // AvatarLink returns repository avatar absolute link.
-func (r *Repository) AvatarLink() string {
-	link := r.RelAvatarLink()
+func (r *Repository) AvatarLink(links LinkOptions, avatarUploadPath string) string {
+	link := r.RelAvatarLink(links.Subpath, avatarUploadPath)
 	if len(link) > 2 && link[0] == '/' && link[1] != '/' {
-		return conf.Server.ExternalURL + strings.TrimPrefix(link, conf.Server.Subpath)[1:]
+		return links.ExternalURL + strings.TrimPrefix(link, links.Subpath)[1:]
 	}
 	return link
 }
 
-// UploadAvatar saves custom avatar for repository.
+// UploadAvatar saves custom avatar for repository under the repository avatar
+// upload path.
 // FIXME: split uploads to different subdirs in case we have massive number of repositories.
-func (r *Repository) UploadAvatar(data []byte) error {
+func (r *Repository) UploadAvatar(avatarUploadPath string, data []byte) error {
 	img, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
 		return errors.Newf("decode image: %v", err)
 	}
 
-	_ = os.MkdirAll(conf.Picture.RepositoryAvatarUploadPath, os.ModePerm)
-	fw, err := os.Create(r.CustomAvatarPath())
+	_ = os.MkdirAll(avatarUploadPath, os.ModePerm)
+	fw, err := os.Create(r.CustomAvatarPath(avatarUploadPath))
 	if err != nil {
 		return errors.Newf("create custom avatar directory: %v", err)
 	}
@@ -326,15 +333,17 @@ func (r *Repository) UploadAvatar(data []byte) error {
 	return nil
 }
 
-// DeleteAvatar deletes the repository custom avatar.
-func (r *Repository) DeleteAvatar(logger *logx.Logger) error {
-	logger.Debug("Deleting repository avatar", "repoID", r.ID, "avatarPath", r.CustomAvatarPath())
-	if err := os.Remove(r.CustomAvatarPath()); err != nil {
+// DeleteAvatar deletes the repository custom avatar under the repository avatar
+// upload path, and saves the repository as Update does with root and
+// forcePrivate.
+func (r *Repository) DeleteAvatar(logger *logx.Logger, avatarUploadPath, root string, forcePrivate bool) error {
+	logger.Debug("Deleting repository avatar", "repoID", r.ID, "avatarPath", r.CustomAvatarPath(avatarUploadPath))
+	if err := os.Remove(r.CustomAvatarPath(avatarUploadPath)); err != nil {
 		return err
 	}
 
 	r.UseCustomAvatar = false
-	return Handle.Repositories().Update(context.TODO(), logger, r, false)
+	return Handle.Repositories().Update(context.TODO(), logger, root, forcePrivate, r, false)
 }
 
 // APIFormatLegacy returns the API format of the repository, with its base
@@ -342,8 +351,8 @@ func (r *Repository) DeleteAvatar(logger *logx.Logger) error {
 // nil.
 //
 // Deprecated: Use APIFormat instead.
-func (r *Repository) APIFormatLegacy(logger *logx.Logger, permission *v1types.RepositoryPermission) *v1types.Repository {
-	apiRepo := r.apiFormatLegacyWithoutParent(permission)
+func (r *Repository) APIFormatLegacy(logger *logx.Logger, links LinkOptions, permission *v1types.RepositoryPermission) *v1types.Repository {
+	apiRepo := r.apiFormatLegacyWithoutParent(links, permission)
 	if !r.IsFork {
 		return apiRepo
 	}
@@ -368,15 +377,15 @@ func (r *Repository) APIFormatLegacy(logger *logx.Logger, permission *v1types.Re
 		return apiRepo
 	}
 	// The parent does not include its own parent.
-	apiRepo.Parent = base.apiFormatLegacyWithoutParent(&v1types.RepositoryPermission{Pull: true})
+	apiRepo.Parent = base.apiFormatLegacyWithoutParent(links, &v1types.RepositoryPermission{Pull: true})
 	return apiRepo
 }
 
-func (r *Repository) apiFormatLegacyWithoutParent(permission *v1types.RepositoryPermission) *v1types.Repository {
-	cloneLink := r.CloneLink()
+func (r *Repository) apiFormatLegacyWithoutParent(links LinkOptions, permission *v1types.RepositoryPermission) *v1types.Repository {
+	cloneLink := r.CloneLink(links)
 	return &v1types.Repository{
 		ID:            r.ID,
-		Owner:         r.Owner.APIFormat(),
+		Owner:         r.Owner.APIFormat(links),
 		Name:          r.Name,
 		FullName:      r.FullName(),
 		Description:   r.Description,
@@ -385,7 +394,7 @@ func (r *Repository) apiFormatLegacyWithoutParent(permission *v1types.Repository
 		Empty:         r.IsEmpty,
 		Mirror:        r.IsMirror,
 		Size:          r.Size,
-		HTMLURL:       r.HTMLURL(),
+		HTMLURL:       r.HTMLURL(links.ExternalURL),
 		SSHURL:        cloneLink.SSH,
 		CloneURL:      cloneLink.HTTPS,
 		Website:       r.Website,
@@ -429,15 +438,17 @@ func (r *Repository) mustOwner(tx *gorm.DB) *User {
 	return r.Owner
 }
 
-// ComposeMetas composes a map of metas for rendering commit URL and external issue tracker URL.
-func (r *Repository) ComposeMetas() map[string]string {
+// ComposeMetas composes a map of metas for rendering commit URL and external
+// issue tracker URL, with the subpath of the server and the root of the
+// repositories.
+func (r *Repository) ComposeMetas(subpath, root string) map[string]string {
 	if r.ExternalMetas != nil {
 		return r.ExternalMetas
 	}
 
 	r.ExternalMetas = map[string]string{
-		"repoLink": r.Link(),
-		"repoPath": r.RepoPath(),
+		"repoLink": r.Link(subpath),
+		"repoPath": r.RepoPath(root),
 	}
 
 	if r.EnableExternalTracker {
@@ -457,29 +468,32 @@ func (r *Repository) ComposeMetas() map[string]string {
 }
 
 // DeleteWiki removes the repository wiki.
-func (r *Repository) DeleteWiki(logger *logx.Logger) {
-	RemoveAllWithNotice(logger, "Delete repository wiki", r.WikiPath())
+func (r *Repository) DeleteWiki(logger *logx.Logger, root string) {
+	RemoveAllWithNotice(logger, "Delete repository wiki", r.WikiPath(root))
 }
 
-func (r *Repository) repoPath(tx *gorm.DB) string {
-	return RepoPath(r.mustOwner(tx).Name, r.Name)
+func (r *Repository) repoPath(tx *gorm.DB, root string) string {
+	return RepoPath(root, r.mustOwner(tx).Name, r.Name)
 }
 
+// RepoPath returns the path of the repository under the root of the
+// repositories.
+//
 // Deprecated: Use repox.RepositoryPath instead.
-func (r *Repository) RepoPath() string {
-	return RepoPath(r.MustOwner().Name, r.Name)
+func (r *Repository) RepoPath(root string) string {
+	return RepoPath(root, r.MustOwner().Name, r.Name)
 }
 
-func (r *Repository) GitConfigPath() string {
-	return filepath.Join(r.RepoPath(), "config")
+func (r *Repository) GitConfigPath(root string) string {
+	return filepath.Join(r.RepoPath(root), "config")
 }
 
 func (r *Repository) RelLink() string {
 	return "/" + r.FullName()
 }
 
-func (r *Repository) Link() string {
-	return conf.Server.Subpath + "/" + r.FullName()
+func (r *Repository) Link(subpath string) string {
+	return subpath + "/" + r.FullName()
 }
 
 // Deprecated: Use repox.ComparePath instead.
@@ -521,17 +535,17 @@ func (r *Repository) CanEnableEditor() bool {
 }
 
 // PatchPath returns corresponding patch file path of repository by given issue index.
-func (r *Repository) PatchPath(index int64) (string, error) {
+func (r *Repository) PatchPath(root string, index int64) (string, error) {
 	if err := r.GetOwner(); err != nil {
 		return "", err
 	}
 
-	return filepath.Join(RepoPath(r.Owner.Name, r.Name), "pulls", strconv.FormatInt(index, 10)+".patch"), nil
+	return filepath.Join(RepoPath(root, r.Owner.Name, r.Name), "pulls", strconv.FormatInt(index, 10)+".patch"), nil
 }
 
 // SavePatch saves patch data to corresponding location by given issue index.
-func (r *Repository) SavePatch(index int64, patch []byte) error {
-	patchPath, err := r.PatchPath(index)
+func (r *Repository) SavePatch(root string, index int64, patch []byte) error {
+	patchPath, err := r.PatchPath(root, index)
 	if err != nil {
 		return errors.Newf("PatchPath: %v", err)
 	}
@@ -547,28 +561,16 @@ func (r *Repository) SavePatch(index int64, patch []byte) error {
 }
 
 // Deprecated: Use repox.NewCloneLink instead.
-func (r *Repository) cloneLink(isWiki bool) *repox.CloneLink {
-	repoName := r.Name
-	if isWiki {
-		repoName += ".wiki"
-	}
-
+func (r *Repository) cloneLink(links LinkOptions, isWiki bool) *repox.CloneLink {
 	r.Owner = r.MustOwner()
-	cl := new(repox.CloneLink)
-	if conf.SSH.Port != 22 {
-		cl.SSH = fmt.Sprintf("ssh://%s@%s:%d/%s/%s.git", conf.App.RunUser, conf.SSH.Domain, conf.SSH.Port, r.Owner.Name, repoName)
-	} else {
-		cl.SSH = fmt.Sprintf("%s@%s:%s/%s.git", conf.App.RunUser, conf.SSH.Domain, r.Owner.Name, repoName)
-	}
-	cl.HTTPS = repox.HTTPSCloneURL(r.Owner.Name, repoName)
-	return cl
+	return repox.NewCloneLink(links.CloneLinkOptions(), r.Owner.Name, r.Name, isWiki)
 }
 
 // CloneLink returns clone URLs of repository.
 //
 // Deprecated: Use repox.NewCloneLink instead.
-func (r *Repository) CloneLink() (cl *repox.CloneLink) {
-	return r.cloneLink(false)
+func (r *Repository) CloneLink(links LinkOptions) (cl *repox.CloneLink) {
+	return r.cloneLink(links, false)
 }
 
 // ForksMayAllowPublicWiki reports whether a private fork of the repository may
@@ -632,16 +634,16 @@ type RepositoryAPIFormatOptions struct {
 }
 
 // APIFormat returns the API format of a repository.
-func (r *Repository) APIFormat(owner *User, opts ...RepositoryAPIFormatOptions) *v1types.Repository {
+func (r *Repository) APIFormat(links LinkOptions, owner *User, opts ...RepositoryAPIFormatOptions) *v1types.Repository {
 	var opt RepositoryAPIFormatOptions
 	if len(opts) > 0 {
 		opt = opts[0]
 	}
 
-	cloneLink := repox.NewCloneLink(owner.Name, r.Name, false)
+	cloneLink := repox.NewCloneLink(links.CloneLinkOptions(), owner.Name, r.Name, false)
 	return &v1types.Repository{
 		ID:            r.ID,
-		Owner:         owner.APIFormat(),
+		Owner:         owner.APIFormat(links),
 		Name:          r.Name,
 		FullName:      owner.Name + "/" + r.Name,
 		Description:   r.Description,
@@ -651,7 +653,7 @@ func (r *Repository) APIFormat(owner *User, opts ...RepositoryAPIFormatOptions) 
 		Empty:         r.IsEmpty,
 		Mirror:        r.IsMirror,
 		Size:          r.Size,
-		HTMLURL:       repox.HTMLURL(owner.Name, r.Name),
+		HTMLURL:       repox.HTMLURL(links.ExternalURL, owner.Name, r.Name),
 		SSHURL:        cloneLink.SSH,
 		CloneURL:      cloneLink.HTTPS,
 		Website:       r.Website,
@@ -1124,17 +1126,17 @@ func (s *RepositoriesStore) HasForkedBy(ctx context.Context, repoID, userID int6
 // repository, which is initialized with the files of given options unless it
 // is a mirror. It returns ErrReachLimitOfRepo when the owner cannot create
 // more repositories.
-func (s *RepositoriesStore) Create(ctx context.Context, logger *logx.Logger, doer, owner *User, opts CreateRepoOptionsLegacy) (_ *Repository, err error) {
+func (s *RepositoriesStore) Create(ctx context.Context, logger *logx.Logger, create RepoCreationOptions, doer, owner *User, opts CreateRepoOptionsLegacy) (_ *Repository, err error) {
 	// Stopping midway, e.g., when the client disconnects, would leave a
 	// partial change behind.
 	ctx = context.WithoutCancel(ctx)
 
-	repoPath := RepoPath(owner.Name, opts.Name)
+	repoPath := RepoPath(create.Root, owner.Name, opts.Name)
 	if osx.Exist(repoPath) {
 		return nil, errors.Errorf("repository directory already exists: %s", repoPath)
 	}
-	if !owner.canCreateRepo() {
-		return nil, ErrReachLimitOfRepo{Limit: owner.maxNumRepos()}
+	if !owner.canCreateRepo(create.MaxCreationLimit) {
+		return nil, ErrReachLimitOfRepo{Limit: owner.maxNumRepos(create.MaxCreationLimit)}
 	}
 
 	repo := &Repository{
@@ -1152,7 +1154,7 @@ func (s *RepositoriesStore) Create(ctx context.Context, logger *logx.Logger, doe
 	}
 
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := newReposStore(tx).insert(ctx, doer, owner, repo); err != nil {
+		if err := newReposStore(tx).insert(ctx, create.Root, doer, owner, repo); err != nil {
 			return err
 		}
 
@@ -1160,7 +1162,7 @@ func (s *RepositoriesStore) Create(ctx context.Context, logger *logx.Logger, doe
 		if opts.IsMirror {
 			return nil
 		}
-		if err := initRepository(ctx, logger, tx, repoPath, doer, repo, opts); err != nil {
+		if err := initRepository(ctx, logger, create, tx, repoPath, doer, repo, opts); err != nil {
 			RemoveAllWithNotice(logger, "Delete repository for initialization failure", repoPath)
 			return errors.Newf("initRepository: %v", err)
 		}
@@ -1182,12 +1184,12 @@ func (s *RepositoriesStore) Create(ctx context.Context, logger *logx.Logger, doe
 // insert saves the repository of the owner, created by the doer, and gives
 // access to it, makes the owner watch it, and records the action. It returns
 // ErrRepoAlreadyExist when the owner has a repository of the same name.
-func (s *RepositoriesStore) insert(ctx context.Context, doer, owner *User, repo *Repository) (err error) {
+func (s *RepositoriesStore) insert(ctx context.Context, root string, doer, owner *User, repo *Repository) (err error) {
 	if err = isRepoNameAllowed(repo.Name); err != nil {
 		return err
 	}
 
-	has, err := s.Exists(ctx, owner, repo.Name)
+	has, err := s.Exists(ctx, root, owner, repo.Name)
 	if err != nil {
 		return errors.Wrap(err, "check existence")
 	} else if has {
@@ -1211,7 +1213,7 @@ func (s *RepositoriesStore) insert(ctx context.Context, doer, owner *User, repo 
 		return errors.Wrap(err, "restore feature switches")
 	}
 
-	err = db.Exec(dbx.Quote("UPDATE %s SET num_repos = num_repos + 1 WHERE id = ?", "user"), owner.ID).Error
+	err = db.Exec(dbx.Quote(db.Name(), "UPDATE %s SET num_repos = num_repos + 1 WHERE id = ?", "user"), owner.ID).Error
 	if err != nil {
 		return errors.Wrap(err, "increase owned repository count")
 	}
@@ -1244,22 +1246,22 @@ func (s *RepositoriesStore) insert(ctx context.Context, doer, owner *User, repo 
 }
 
 // Exists returns true if the owner has a repository of given name, ignoring
-// case, whose Git repository exists.
-func (s *RepositoriesStore) Exists(ctx context.Context, owner *User, name string) (bool, error) {
+// case, whose Git repository exists under root.
+func (s *RepositoriesStore) Exists(ctx context.Context, root string, owner *User, name string) (bool, error) {
 	var count int64
 	err := s.db.WithContext(ctx).Model(new(Repository)).Where("owner_id = ? AND lower_name = ?", owner.ID, strings.ToLower(name)).Count(&count).Error
-	return count > 0 && osx.IsDir(RepoPath(owner.Name, name)), err
+	return count > 0 && osx.IsDir(RepoPath(root, owner.Name, name)), err
 }
 
 // Migrate creates a repository of the owner, created by the doer, from the
 // Git repository of given remote address, and its wiki when the remote has
 // one. The repository keeps pulling from the remote when it is a mirror.
-func (s *RepositoriesStore) Migrate(ctx context.Context, logger *logx.Logger, doer, owner *User, opts MigrateRepoOptions) (*Repository, error) {
+func (s *RepositoriesStore) Migrate(ctx context.Context, logger *logx.Logger, create RepoCreationOptions, doer, owner *User, opts MigrateRepoOptions) (*Repository, error) {
 	// Stopping midway, e.g., when the client disconnects, would leave a
 	// partial change behind.
 	ctx = context.WithoutCancel(ctx)
 
-	repo, err := s.Create(ctx, logger, doer, owner, CreateRepoOptionsLegacy{
+	repo, err := s.Create(ctx, logger, create, doer, owner, CreateRepoOptionsLegacy{
 		Name:        opts.Name,
 		Description: opts.Description,
 		IsPrivate:   opts.IsPrivate,
@@ -1270,8 +1272,8 @@ func (s *RepositoriesStore) Migrate(ctx context.Context, logger *logx.Logger, do
 		return nil, err
 	}
 
-	repoPath := RepoPath(owner.Name, opts.Name)
-	wikiPath := WikiPath(owner.Name, opts.Name)
+	repoPath := RepoPath(create.Root, owner.Name, opts.Name)
+	wikiPath := WikiPath(create.Root, owner.Name, opts.Name)
 
 	if owner.IsOrganization() {
 		t, err := newTeamsStore(s.db).GetOwnerTeam(ctx, owner.ID)
@@ -1283,10 +1285,8 @@ func (s *RepositoriesStore) Migrate(ctx context.Context, logger *logx.Logger, do
 		repo.NumWatches = 1
 	}
 
-	migrateTimeout := time.Duration(conf.Git.Timeout.Migrate) * time.Second
-
 	mirrorClone := func(url, dst string) error {
-		ctx, cancel := git.WithTimeout(ctx, migrateTimeout)
+		ctx, cancel := git.WithTimeout(ctx, opts.Timeout)
 		defer cancel()
 		return git.Clone(ctx, url, dst, git.CloneOptions{
 			Mirror: true,
@@ -1343,7 +1343,7 @@ func (s *RepositoriesStore) Migrate(ctx context.Context, logger *logx.Logger, do
 	}
 
 	if !repo.IsEmpty {
-		if err = s.UpdateSize(ctx, repo); err != nil {
+		if err = s.UpdateSize(ctx, create.Root, repo); err != nil {
 			logger.Error("Failed to update repository size", "repoID", repo.ID, "error", err)
 		}
 	}
@@ -1351,45 +1351,46 @@ func (s *RepositoriesStore) Migrate(ctx context.Context, logger *logx.Logger, do
 	if opts.IsMirror {
 		if err = s.db.WithContext(ctx).Create(&Mirror{
 			RepoID:      repo.ID,
-			Interval:    conf.Mirror.DefaultInterval,
+			Interval:    opts.MirrorInterval,
 			EnablePrune: true,
-			NextSync:    time.Now().Add(time.Duration(conf.Mirror.DefaultInterval) * time.Hour),
+			NextSync:    time.Now().Add(time.Duration(opts.MirrorInterval) * time.Hour),
 		}).Error; err != nil {
 			return repo, errors.Wrap(err, "create mirror")
 		}
 
 		repo.IsMirror = true
-		return repo, s.Update(ctx, logger, repo, false)
+		return repo, s.Update(ctx, logger, create.Root, create.ForcePrivate, repo, false)
 	}
 
-	return repo, s.CleanUpMigrateInfo(ctx, logger, repo)
+	return repo, s.CleanUpMigrateInfo(ctx, logger, create.Root, create.ForcePrivate, repo)
 }
 
 // CleanUpMigrateInfo removes the remote of the repository and its wiki, which
-// was migrated from the remote, and saves the repository.
-func (s *RepositoriesStore) CleanUpMigrateInfo(ctx context.Context, logger *logx.Logger, repo *Repository) error {
-	if err := cleanUpMigrateGitConfig(repo.GitConfigPath()); err != nil {
+// was migrated from the remote, and saves the repository as Update does with
+// root and forcePrivate.
+func (s *RepositoriesStore) CleanUpMigrateInfo(ctx context.Context, logger *logx.Logger, root string, forcePrivate bool, repo *Repository) error {
+	if err := cleanUpMigrateGitConfig(repo.GitConfigPath(root)); err != nil {
 		return errors.Newf("cleanUpMigrateGitConfig: %v", err)
 	}
-	if repo.HasWiki() {
-		if err := cleanUpMigrateGitConfig(path.Join(repo.WikiPath(), "config")); err != nil {
+	if repo.HasWiki(root) {
+		if err := cleanUpMigrateGitConfig(path.Join(repo.WikiPath(root), "config")); err != nil {
 			return errors.Newf("cleanUpMigrateGitConfig.(wiki): %v", err)
 		}
 	}
 
-	return s.Update(ctx, logger, repo, false)
+	return s.Update(ctx, logger, root, forcePrivate, repo, false)
 }
 
 // Fork creates a fork of the base repository with given name and description
 // for the owner, created by the doer. It returns ErrReachLimitOfRepo when the
 // owner cannot create more repositories.
-func (s *RepositoriesStore) Fork(ctx context.Context, logger *logx.Logger, doer, owner *User, baseRepo *Repository, name, desc string) (_ *Repository, err error) {
+func (s *RepositoriesStore) Fork(ctx context.Context, logger *logx.Logger, create RepoCreationOptions, doer, owner *User, baseRepo *Repository, name, desc string) (_ *Repository, err error) {
 	// Stopping midway, e.g., when the client disconnects, would leave a
 	// partial change behind.
 	ctx = context.WithoutCancel(ctx)
 
-	if !owner.canCreateRepo() {
-		return nil, ErrReachLimitOfRepo{Limit: owner.maxNumRepos()}
+	if !owner.canCreateRepo(create.MaxCreationLimit) {
+		return nil, ErrReachLimitOfRepo{Limit: owner.maxNumRepos(create.MaxCreationLimit)}
 	}
 
 	repo := &Repository{
@@ -1399,7 +1400,7 @@ func (s *RepositoriesStore) Fork(ctx context.Context, logger *logx.Logger, doer,
 		LowerName:       strings.ToLower(name),
 		Description:     desc,
 		DefaultBranch:   baseRepo.DefaultBranch,
-		IsPrivate:       baseRepo.IsPrivate || conf.Repository.ForcePrivate,
+		IsPrivate:       baseRepo.IsPrivate || create.ForcePrivate,
 		IsUnlisted:      baseRepo.IsUnlisted,
 		IsFork:          true,
 		ForkID:          baseRepo.ID,
@@ -1411,16 +1412,16 @@ func (s *RepositoriesStore) Fork(ctx context.Context, logger *logx.Logger, doer,
 		// its forks locks it in, so the two cannot deadlock.
 		if err := tx.Exec("UPDATE repository SET num_forks = num_forks + 1 WHERE id = ?", baseRepo.ID).Error; err != nil {
 			return err
-		} else if err = newReposStore(tx).insert(ctx, doer, owner, repo); err != nil {
+		} else if err = newReposStore(tx).insert(ctx, create.Root, doer, owner, repo); err != nil {
 			return err
 		}
 
-		repoPath := repo.repoPath(tx)
+		repoPath := repo.repoPath(tx, create.Root)
 		RemoveAllWithNotice(logger, "Repository path erase before creation", repoPath)
 
 		cloneCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 		defer cancel()
-		if err := git.Clone(cloneCtx, baseRepo.RepoPath(), repoPath, git.CloneOptions{Bare: true}); err != nil {
+		if err := git.Clone(cloneCtx, baseRepo.RepoPath(create.Root), repoPath, git.CloneOptions{Bare: true}); err != nil {
 			RemoveAllWithNotice(logger, "Delete fork repository for clone failure", repoPath)
 			return errors.Newf("git clone: %v", err)
 		}
@@ -1437,13 +1438,14 @@ func (s *RepositoriesStore) Fork(ctx context.Context, logger *logx.Logger, doer,
 		return nil, errors.Wrap(err, "update user")
 	}
 
-	if err = s.UpdateSize(ctx, repo); err != nil {
+	if err = s.UpdateSize(ctx, create.Root, repo); err != nil {
 		logger.Error("Failed to update repository size", "repoID", repo.ID, "error", err)
 	}
-	if err = newWebhooksStore(s.db).Prepare(ctx, logger, baseRepo, HookEventTypeFork, &v1types.WebhookForkPayload{
-		Forkee: repo.APIFormatLegacy(logger, nil),
-		Repo:   baseRepo.APIFormatLegacy(logger, nil),
-		Sender: doer.APIFormat(),
+	links := create.Links
+	if err = newWebhooksStore(s.db).Prepare(ctx, logger, links.ExternalURL, baseRepo, HookEventTypeFork, &v1types.WebhookForkPayload{
+		Forkee: repo.APIFormatLegacy(logger, links, nil),
+		Repo:   baseRepo.APIFormatLegacy(logger, links, nil),
+		Sender: doer.APIFormat(links),
 	}); err != nil {
 		logger.Error("Failed to prepare webhooks", "repoID", baseRepo.ID, "error", err)
 	}
@@ -1482,7 +1484,7 @@ func (s *RepositoriesStore) ListForks(ctx context.Context, repo *Repository) ([]
 // Transfer gives the repository to the user or organization of given name,
 // on behalf of the doer. It returns ErrRepoAlreadyExist when the new owner
 // has a repository of the same name.
-func (s *RepositoriesStore) Transfer(ctx context.Context, doer *User, newOwnerName string, repo *Repository) error {
+func (s *RepositoriesStore) Transfer(ctx context.Context, root string, doer *User, newOwnerName string, repo *Repository) error {
 	// Stopping midway, e.g., when the client disconnects, would roll back the
 	// database after the repository moved on disk.
 	ctx = context.WithoutCancel(ctx)
@@ -1493,7 +1495,7 @@ func (s *RepositoriesStore) Transfer(ctx context.Context, doer *User, newOwnerNa
 	}
 
 	// Check if new owner has repository with same name.
-	has, err := s.Exists(ctx, newOwner, repo.Name)
+	has, err := s.Exists(ctx, root, newOwner, repo.Name)
 	if err != nil {
 		return errors.Wrap(err, "check existence")
 	} else if has {
@@ -1572,9 +1574,9 @@ func (s *RepositoriesStore) Transfer(ctx context.Context, doer *User, newOwnerNa
 		}
 
 		// Update repository count.
-		if err = tx.Exec(dbx.Quote("UPDATE %s SET num_repos = num_repos + 1 WHERE id = ?", "user"), newOwner.ID).Error; err != nil {
+		if err = tx.Exec(dbx.Quote(tx.Name(), "UPDATE %s SET num_repos = num_repos + 1 WHERE id = ?", "user"), newOwner.ID).Error; err != nil {
 			return errors.Newf("increase new owner repository count: %v", err)
-		} else if err = tx.Exec(dbx.Quote("UPDATE %s SET num_repos = num_repos - 1 WHERE id = ?", "user"), owner.ID).Error; err != nil {
+		} else if err = tx.Exec(dbx.Quote(tx.Name(), "UPDATE %s SET num_repos = num_repos - 1 WHERE id = ?", "user"), owner.ID).Error; err != nil {
 			return errors.Newf("decrease old owner repository count: %v", err)
 		}
 
@@ -1595,17 +1597,17 @@ func (s *RepositoriesStore) Transfer(ctx context.Context, doer *User, newOwnerNa
 		}
 
 		// Move repository to new path.
-		if err = os.MkdirAll(repox.UserPath(newOwner.Name), os.ModePerm); err != nil {
+		if err = os.MkdirAll(repox.UserPath(root, newOwner.Name), os.ModePerm); err != nil {
 			return err
 		}
-		if err = os.Rename(RepoPath(owner.Name, repo.Name), RepoPath(newOwner.Name, repo.Name)); err != nil {
+		if err = os.Rename(RepoPath(root, owner.Name, repo.Name), RepoPath(root, newOwner.Name, repo.Name)); err != nil {
 			return errors.Newf("rename repository directory: %v", err)
 		}
 
 		// Move wiki repository to new path.
-		wikiPath := WikiPath(owner.Name, repo.Name)
+		wikiPath := WikiPath(root, owner.Name, repo.Name)
 		if osx.Exist(wikiPath) {
-			if err = os.Rename(wikiPath, WikiPath(newOwner.Name, repo.Name)); err != nil {
+			if err = os.Rename(wikiPath, WikiPath(root, newOwner.Name, repo.Name)); err != nil {
 				return errors.Newf("rename repository wiki: %v", err)
 			}
 		}
@@ -1617,14 +1619,14 @@ func (s *RepositoriesStore) Transfer(ctx context.Context, doer *User, newOwnerNa
 // from the old name to the new name. The caller saves the new name. It
 // returns ErrRepoAlreadyExist when the owner has a repository of the new
 // name.
-func (s *RepositoriesStore) Rename(ctx context.Context, owner *User, oldName, newName string) (err error) {
+func (s *RepositoriesStore) Rename(ctx context.Context, root string, owner *User, oldName, newName string) (err error) {
 	oldName = strings.ToLower(oldName)
 	newName = strings.ToLower(newName)
 	if err = isRepoNameAllowed(newName); err != nil {
 		return err
 	}
 
-	has, err := s.Exists(ctx, owner, newName)
+	has, err := s.Exists(ctx, root, owner, newName)
 	if err != nil {
 		return errors.Wrap(err, "check existence")
 	} else if has {
@@ -1638,13 +1640,13 @@ func (s *RepositoriesStore) Rename(ctx context.Context, owner *User, oldName, ne
 	repo.Owner = owner
 
 	// Change repository directory name.
-	if err = os.Rename(repo.RepoPath(), RepoPath(owner.Name, newName)); err != nil {
+	if err = os.Rename(repo.RepoPath(root), RepoPath(root, owner.Name, newName)); err != nil {
 		return errors.Newf("rename repository directory: %v", err)
 	}
 
-	wikiPath := repo.WikiPath()
+	wikiPath := repo.WikiPath(root)
 	if osx.Exist(wikiPath) {
-		if err = os.Rename(wikiPath, WikiPath(owner.Name, newName)); err != nil {
+		if err = os.Rename(wikiPath, WikiPath(root, owner.Name, newName)); err != nil {
 			return errors.Newf("rename repository wiki: %v", err)
 		}
 	}
@@ -1652,16 +1654,18 @@ func (s *RepositoriesStore) Rename(ctx context.Context, owner *User, oldName, ne
 }
 
 // Update saves the repository. When its visibility changed, it also changes
-// the visibility of its forks and actions, and recalculates the accesses of
-// organization repositories. Descriptions longer than 512 bytes and websites
-// longer than 255 bytes are cut.
-func (s *RepositoriesStore) Update(ctx context.Context, logger *logx.Logger, repo *Repository, visibilityChanged bool) error {
+// the visibility of its forks and actions, the Git daemon export file of its
+// Git repository under root, and recalculates the accesses of organization
+// repositories. Forks keep their visibility when forcePrivate is true.
+// Descriptions longer than 512 bytes and websites longer than 255 bytes are
+// cut.
+func (s *RepositoriesStore) Update(ctx context.Context, logger *logx.Logger, root string, forcePrivate bool, repo *Repository, visibilityChanged bool) error {
 	// Stopping midway, e.g., when the client disconnects, would roll back the
 	// database but keep the changed Git daemon export file.
 	ctx = context.WithoutCancel(ctx)
 
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := newReposStore(tx).update(ctx, logger, repo, visibilityChanged); err != nil {
+		if err := newReposStore(tx).update(ctx, logger, root, forcePrivate, repo, visibilityChanged); err != nil {
 			return errors.Newf("updateRepository: %v", err)
 		}
 		return nil
@@ -1669,7 +1673,7 @@ func (s *RepositoriesStore) Update(ctx context.Context, logger *logx.Logger, rep
 }
 
 // update is Update without a transaction of its own.
-func (s *RepositoriesStore) update(ctx context.Context, logger *logx.Logger, repo *Repository, visibilityChanged bool) (err error) {
+func (s *RepositoriesStore) update(ctx context.Context, logger *logx.Logger, root string, forcePrivate bool, repo *Repository, visibilityChanged bool) (err error) {
 	repo.LowerName = strings.ToLower(repo.Name)
 
 	db := s.db.WithContext(ctx)
@@ -1718,7 +1722,7 @@ func (s *RepositoriesStore) update(ctx context.Context, logger *logx.Logger, rep
 		}
 
 		// Create/Remove git-daemon-export-ok for git-daemon.
-		daemonExportFile := path.Join(repo.RepoPath(), "git-daemon-export-ok")
+		daemonExportFile := path.Join(repo.RepoPath(root), "git-daemon-export-ok")
 		if repo.IsPrivate && osx.Exist(daemonExportFile) {
 			if err = os.Remove(daemonExportFile); err != nil {
 				logger.Error("Failed to remove Git daemon export file", "path", daemonExportFile, "error", err)
@@ -1748,11 +1752,11 @@ func (s *RepositoriesStore) update(ctx context.Context, logger *logx.Logger, rep
 			// Forks follow their base repository, unless the site forces private
 			// repositories and forks keep the visibility they have, as far as their
 			// base allows.
-			if visibilityChanged && !conf.Repository.ForcePrivate {
+			if visibilityChanged && !forcePrivate {
 				forkRepos[i].IsPrivate = repo.IsPrivate
 				forkRepos[i].IsUnlisted = repo.IsUnlisted
 			}
-			if err = s.update(ctx, logger, forkRepos[i], visibilityChanged); err != nil {
+			if err = s.update(ctx, logger, root, forcePrivate, forkRepos[i], visibilityChanged); err != nil {
 				return errors.Newf("updateRepository[%d]: %v", forkRepos[i].ID, err)
 			}
 		}
@@ -1764,7 +1768,7 @@ func (s *RepositoriesStore) update(ctx context.Context, logger *logx.Logger, rep
 // Delete deletes the repository with given ID of the owner with given ID,
 // with everything in it, and its Git repository, wiki, and attachments. It
 // returns ErrRepoNotExist when not found.
-func (s *RepositoriesStore) Delete(ctx context.Context, logger *logx.Logger, ownerID, repoID int64) error {
+func (s *RepositoriesStore) Delete(ctx context.Context, logger *logx.Logger, opts DeleteRepoOptions, ownerID, repoID int64) error {
 	// Stopping midway, e.g., when the client disconnects, would leave a
 	// partial change behind, and cleanups after a failed creation run after
 	// the client may have left.
@@ -1803,7 +1807,7 @@ func (s *RepositoriesStore) Delete(ctx context.Context, logger *logx.Logger, own
 		// releases are deleted.
 		var releaseIDs []int64
 		listReleases := tx.Model(new(Release)).Where("repo_id = ?", repoID)
-		if !conf.UseSQLite3 {
+		if tx.Name() != "sqlite" {
 			listReleases = listReleases.Clauses(clause.Locking{Strength: "UPDATE"})
 		}
 		if err := listReleases.Pluck("id", &releaseIDs).Error; err != nil {
@@ -1856,7 +1860,7 @@ func (s *RepositoriesStore) Delete(ctx context.Context, logger *logx.Logger, own
 		// Users are locked before the rows of the repository in other tables, the
 		// order creating and transferring repositories lock them in, so they
 		// cannot deadlock.
-		if err := tx.Exec(dbx.Quote("UPDATE %s SET num_repos = num_repos - 1 WHERE id = ?", "user"), ownerID).Error; err != nil {
+		if err := tx.Exec(dbx.Quote(tx.Name(), "UPDATE %s SET num_repos = num_repos - 1 WHERE id = ?", "user"), ownerID).Error; err != nil {
 			return errors.Wrap(err, "decrease repository count of owner")
 		}
 
@@ -1890,7 +1894,7 @@ func (s *RepositoriesStore) Delete(ctx context.Context, logger *logx.Logger, own
 				return errors.Wrap(err, "list attachments of releases")
 			}
 			for _, uuid := range uuids {
-				attachmentPaths = append(attachmentPaths, AttachmentLocalPath(uuid))
+				attachmentPaths = append(attachmentPaths, AttachmentLocalPath(opts.AttachmentPath, uuid))
 			}
 			if err := tx.Where("release_id IN ?", ids).Delete(new(Attachment)).Error; err != nil {
 				return errors.Wrap(err, "delete attachments of releases")
@@ -1908,7 +1912,7 @@ func (s *RepositoriesStore) Delete(ctx context.Context, logger *logx.Logger, own
 				return errors.Wrap(err, "list attachments")
 			}
 			for _, uuid := range uuids {
-				attachmentPaths = append(attachmentPaths, AttachmentLocalPath(uuid))
+				attachmentPaths = append(attachmentPaths, AttachmentLocalPath(opts.AttachmentPath, uuid))
 			}
 			if err := deleteByColumn(tx, "issue_id", issueID, "comment", "attachment", "issue_label"); err != nil {
 				return err
@@ -1941,10 +1945,10 @@ func (s *RepositoriesStore) Delete(ctx context.Context, logger *logx.Logger, own
 	}
 
 	// Remove repository files.
-	repoPath := repo.RepoPath()
+	repoPath := repo.RepoPath(opts.RepositoryRoot)
 	RemoveAllWithNotice(logger, "Delete repository files", repoPath)
 
-	repo.DeleteWiki(logger)
+	repo.DeleteWiki(logger, opts.RepositoryRoot)
 
 	// Remove attachment files.
 	for i := range attachmentPaths {
@@ -1952,7 +1956,7 @@ func (s *RepositoriesStore) Delete(ctx context.Context, logger *logx.Logger, own
 	}
 
 	if publicKeyDeleted {
-		if err = newPublicKeysStore(s.db).RewriteAuthorizedKeys(); err != nil {
+		if err = newPublicKeysStore(s.db).RewriteAuthorizedKeys(opts.AuthorizedKeys); err != nil {
 			return errors.Wrap(err, "rewrite authorized keys")
 		}
 	}
@@ -2096,7 +2100,7 @@ type SearchRepoOptions struct {
 	OrderBy  string
 	Private  bool // Include private repositories in results.
 	Page     int
-	PageSize int // Can be smaller than or equal to conf.UI.ExplorePagingNum.
+	PageSize int // Can be smaller than or equal to the [ui] EXPLORE_PAGING_NUM.
 }
 
 // listedRepositoryCond matches repositories that anyone may see in listings:
@@ -2191,9 +2195,10 @@ func (s *RepositoriesStore) ListWriters(ctx context.Context, repo *Repository) (
 	return s.listUsersWithAccess(ctx, repo, AccessModeWrite)
 }
 
-// UpdateSize saves the size of the Git repository of the repository.
-func (s *RepositoriesStore) UpdateSize(ctx context.Context, repo *Repository) error {
-	countObject, err := git.RepoCountObjects(ctx, repo.RepoPath())
+// UpdateSize saves the size of the Git repository of the repository, which is
+// under root.
+func (s *RepositoriesStore) UpdateSize(ctx context.Context, root string, repo *Repository) error {
+	countObject, err := git.RepoCountObjects(ctx, repo.RepoPath(root))
 	if err != nil {
 		return errors.Newf("count repository objects: %v", err)
 	}
@@ -2212,7 +2217,7 @@ func (s *RepositoriesStore) UpdateSize(ctx context.Context, repo *Repository) er
 // deadlock.
 func lockRepository(tx *gorm.DB, id int64) (bool, error) {
 	query := tx.Model(new(Repository)).Where("id = ?", id)
-	if !conf.UseSQLite3 {
+	if tx.Name() != "sqlite" {
 		query = query.Clauses(clause.Locking{Strength: "UPDATE"})
 	}
 	var ids []int64
@@ -2229,6 +2234,37 @@ type MigrateRepoOptions struct {
 	IsUnlisted  bool
 	IsMirror    bool
 	RemoteAddr  string
+	// Timeout is how long cloning from the remote may take.
+	Timeout time.Duration
+	// MirrorInterval is the number of hours between syncs of a mirror.
+	MirrorInterval int
+}
+
+// RepoCreationOptions are the settings that creating repositories reads.
+type RepoCreationOptions struct {
+	// Root is where repositories are stored.
+	Root string
+	// ForcePrivate makes every new repository private, and keeps forks as private
+	// as they are when their base repository becomes public.
+	ForcePrivate bool
+	// MaxCreationLimit is the most repositories that users without a limit of
+	// their own can own, or -1 for no limit.
+	MaxCreationLimit int
+	// DefaultBranch is the default branch of new repositories.
+	DefaultBranch string
+	// AppDataPath is where the temporary repositories that initial commits are
+	// made in are created.
+	AppDataPath string
+	Links       LinkOptions
+}
+
+// DeleteRepoOptions are the settings that deleting repositories reads.
+type DeleteRepoOptions struct {
+	// RepositoryRoot is where repositories are stored.
+	RepositoryRoot string
+	// AttachmentPath is where attachments of issues and releases are stored.
+	AttachmentPath string
+	AuthorizedKeys AuthorizedKeysOptions
 }
 
 /*
@@ -2254,8 +2290,8 @@ func wikiRemoteURL(remote string) string {
 // exist, e.g., when the first push to an empty repository uses a different
 // branch name than the one set at creation, or when no default branch was saved.
 // See resolveMissingDefaultBranch for which branch replaces it.
-func (r *Repository) setDefaultBranchIfMissing(ctx context.Context, candidate string) error {
-	branch, err := resolveMissingDefaultBranch(ctx, r.RepoPath(), r.DefaultBranch, candidate)
+func (r *Repository) setDefaultBranchIfMissing(ctx context.Context, root, candidate string) error {
+	branch, err := resolveMissingDefaultBranch(ctx, r.RepoPath(root), r.DefaultBranch, candidate)
 	if err != nil || branch == "" || branch == r.DefaultBranch {
 		return err
 	}
@@ -2323,10 +2359,22 @@ var hooksTpls = map[git.HookName]string{
 	"post-receive": "#!/usr/bin/env %s\nGOGC=off \"%s\" hook --config='%s' post-receive\n",
 }
 
-func writeDelegateHook(repoPath string, name git.HookName) error {
+// DelegateHooksOptions are the settings that the delegate hooks of repositories
+// are written with.
+type DelegateHooksOptions struct {
+	// RepositoryRoot is where repositories are stored.
+	RepositoryRoot string
+	// ScriptType is the interpreter that runs the hooks, e.g., "bash".
+	ScriptType string
+	// CustomConf is the path of the custom configuration file that the hooks run
+	// "gogs hook" with.
+	CustomConf string
+}
+
+func writeDelegateHook(hooks DelegateHooksOptions, repoPath string, name git.HookName) error {
 	hookPath := filepath.Join(repoPath, "hooks", string(name))
 	err := os.WriteFile(hookPath,
-		fmt.Appendf(nil, hooksTpls[name], conf.Repository.ScriptType, conf.AppPath(), conf.CustomConf),
+		fmt.Appendf(nil, hooksTpls[name], hooks.ScriptType, conf.AppPath(), hooks.CustomConf),
 		os.ModePerm)
 	if err != nil {
 		return errors.Wrapf(err, "write delegate hook %q", hookPath)
@@ -2346,7 +2394,7 @@ func writeDelegateHook(repoPath string, name git.HookName) error {
 // at the same time never leaves a protected branch without the hook, the
 // protection is checked again after the hook was removed, and the hook is put
 // back when a branch has been protected in the meantime.
-func syncDelegateHooks(repoPath string, hasProtectedBranch func() (bool, error)) error {
+func syncDelegateHooks(hooks DelegateHooksOptions, repoPath string, hasProtectedBranch func() (bool, error)) error {
 	for _, name := range git.ServerSideHooks {
 		needed := osx.IsFile(filepath.Join(repoPath, "custom_hooks", string(name)))
 		if !needed && name == git.HookPreReceive {
@@ -2357,7 +2405,7 @@ func syncDelegateHooks(repoPath string, hasProtectedBranch func() (bool, error))
 			needed = protected
 		}
 		if needed {
-			if err := writeDelegateHook(repoPath, name); err != nil {
+			if err := writeDelegateHook(hooks, repoPath, name); err != nil {
 				return err
 			}
 			continue
@@ -2375,7 +2423,7 @@ func syncDelegateHooks(repoPath string, hasProtectedBranch func() (bool, error))
 			return err
 		}
 		if protected {
-			if err = writeDelegateHook(repoPath, name); err != nil {
+			if err = writeDelegateHook(hooks, repoPath, name); err != nil {
 				return err
 			}
 		}
@@ -2386,11 +2434,11 @@ func syncDelegateHooks(repoPath string, hasProtectedBranch func() (bool, error))
 // SyncDelegateHooks installs the delegate hooks that the repository and its
 // wiki need, and removes the others. It must be called whenever their custom
 // hooks or the protection of the branches of the repository change.
-func (r *Repository) SyncDelegateHooks() error {
-	return syncRepoDelegateHooks(Handle.db, r)
+func (r *Repository) SyncDelegateHooks(hooks DelegateHooksOptions) error {
+	return syncRepoDelegateHooks(Handle.db, hooks, r)
 }
 
-func syncRepoDelegateHooks(db *gorm.DB, r *Repository) error {
+func syncRepoDelegateHooks(db *gorm.DB, hooks DelegateHooksOptions, r *Repository) error {
 	hasProtectedBranch := func() (bool, error) {
 		var count int64
 		err := db.Model(new(ProtectBranch)).Where("repo_id = ? AND protected = ?", r.ID, true).Count(&count).Error
@@ -2399,19 +2447,20 @@ func syncRepoDelegateHooks(db *gorm.DB, r *Repository) error {
 		}
 		return count > 0, nil
 	}
-	if err := syncDelegateHooks(r.RepoPath(), hasProtectedBranch); err != nil {
+	root := hooks.RepositoryRoot
+	if err := syncDelegateHooks(hooks, r.RepoPath(root), hasProtectedBranch); err != nil {
 		return err
 	}
-	if r.HasWiki() {
-		return syncDelegateHooks(r.WikiPath(), func() (bool, error) { return false, nil })
+	if r.HasWiki(root) {
+		return syncDelegateHooks(hooks, r.WikiPath(root), func() (bool, error) { return false, nil })
 	}
 	return nil
 }
 
 // initRepoCommit commits the files to the default branch of the empty
 // repository at repoPath.
-func initRepoCommit(ctx context.Context, repoPath string, files map[string][]byte, author *git.Signature) error {
-	_, err := commitAndPush(ctx, repoPath, nil, conf.Repository.DefaultBranch, "Initial commit", author, author, git.PushOptions{}, func(tmpRepo *git.Repository) error {
+func initRepoCommit(ctx context.Context, create RepoCreationOptions, repoPath string, files map[string][]byte, author *git.Signature) error {
+	_, err := commitAndPush(ctx, create.AppDataPath, repoPath, nil, create.DefaultBranch, "Initial commit", author, author, git.PushOptions{}, func(tmpRepo *git.Repository) error {
 		indexFiles := make([]git.IndexFile, 0, len(files))
 		for name, data := range files {
 			indexFiles = append(indexFiles, git.IndexFile{Path: name, Content: bytes.NewReader(data)})
@@ -2465,7 +2514,7 @@ func getRepoInitFile(tp, name string) ([]byte, error) {
 }
 
 // prepareRepoCommit returns the files of the initial commit by their names.
-func prepareRepoCommit(repo *Repository, opts CreateRepoOptionsLegacy) (map[string][]byte, error) {
+func prepareRepoCommit(links LinkOptions, repo *Repository, opts CreateRepoOptionsLegacy) (map[string][]byte, error) {
 	files := make(map[string][]byte, 3)
 
 	// README
@@ -2474,7 +2523,7 @@ func prepareRepoCommit(repo *Repository, opts CreateRepoOptionsLegacy) (map[stri
 		return nil, errors.Newf("getRepoInitFile[%s]: %v", opts.Readme, err)
 	}
 
-	cloneLink := repo.CloneLink()
+	cloneLink := repo.CloneLink(links)
 	match := map[string]string{
 		"Name":           repo.Name,
 		"Description":    repo.Description,
@@ -2515,7 +2564,7 @@ func prepareRepoCommit(repo *Repository, opts CreateRepoOptionsLegacy) (map[stri
 }
 
 // initRepository performs initial commit with chosen setup files on behalf of doer.
-func initRepository(ctx context.Context, logger *logx.Logger, tx *gorm.DB, repoPath string, doer *User, repo *Repository, opts CreateRepoOptionsLegacy) (err error) {
+func initRepository(ctx context.Context, logger *logx.Logger, create RepoCreationOptions, tx *gorm.DB, repoPath string, doer *User, repo *Repository, opts CreateRepoOptionsLegacy) (err error) {
 	if err = git.Init(ctx, repoPath, git.InitOptions{Bare: true, ObjectFormat: opts.ObjectFormat}); err != nil {
 		return errors.Newf("init repository: %v", err)
 	}
@@ -2526,7 +2575,7 @@ func initRepository(ctx context.Context, logger *logx.Logger, tx *gorm.DB, repoP
 		repoPath,
 		git.SymbolicRefOptions{
 			Name: "HEAD",
-			Ref:  git.RefsHeads + conf.Repository.DefaultBranch,
+			Ref:  git.RefsHeads + create.DefaultBranch,
 		},
 	)
 	if err != nil {
@@ -2535,13 +2584,14 @@ func initRepository(ctx context.Context, logger *logx.Logger, tx *gorm.DB, repoP
 
 	// Initialize repository according to user's choice.
 	if opts.AutoInit {
-		files, err := prepareRepoCommit(repo, opts)
+		files, err := prepareRepoCommit(create.Links, repo, opts)
 		if err != nil {
 			return errors.Newf("prepareRepoCommit: %v", err)
 		}
 
 		err = initRepoCommit(
 			ctx,
+			create,
 			repoPath,
 			files,
 			&git.Signature{
@@ -2566,8 +2616,8 @@ func initRepository(ctx context.Context, logger *logx.Logger, tx *gorm.DB, repoP
 		saved.IsEmpty = true
 	}
 
-	saved.DefaultBranch = conf.Repository.DefaultBranch
-	if err = newReposStore(tx).update(ctx, logger, saved, false); err != nil {
+	saved.DefaultBranch = create.DefaultBranch
+	if err = newReposStore(tx).update(ctx, logger, create.Root, create.ForcePrivate, saved, false); err != nil {
 		return errors.Newf("updateRepository: %v", err)
 	}
 
@@ -2608,8 +2658,8 @@ func (err ErrReachLimitOfRepo) Error() string {
 // RepoPath returns repository path by given user and repository name.
 //
 // Deprecated: Use repox.RepositoryPath instead.
-func RepoPath(userName, repoName string) string {
-	return repox.RepositoryPath(userName, repoName)
+func RepoPath(root, userName, repoName string) string {
+	return repox.RepositoryPath(root, userName, repoName)
 }
 
 // iterateRepositories calls fn for every repository in batches, and stops at the
@@ -2626,7 +2676,9 @@ func iterateRepositories(fn func(repo *Repository) error) error {
 	}).Error
 }
 
-func DeleteOldRepositoryArchives(logger *logx.Logger) {
+// DeleteOldRepositoryArchives deletes the archives of the repositories under
+// root that are older than olderThan.
+func DeleteOldRepositoryArchives(logger *logx.Logger, root string, olderThan time.Duration) {
 	if taskStatusTable.IsRunning(taskNameCleanOldArchives) {
 		return
 	}
@@ -2636,9 +2688,9 @@ func DeleteOldRepositoryArchives(logger *logx.Logger) {
 	logger.Debug("Deleting old repository archives")
 
 	formats := []string{"zip", "targz"}
-	oldestTime := time.Now().Add(-conf.Cron.RepoArchiveCleanup.OlderThan)
+	oldestTime := time.Now().Add(-olderThan)
 	if err := iterateRepositories(func(repo *Repository) error {
-		basePath := filepath.Join(repo.RepoPath(), "archives")
+		basePath := filepath.Join(repo.RepoPath(root), "archives")
 		for _, format := range formats {
 			dirPath := filepath.Join(basePath, format)
 			if !osx.IsDir(dirPath) {
@@ -2683,8 +2735,8 @@ func DeleteOldRepositoryArchives(logger *logx.Logger) {
 	}
 }
 
-// DeleteRepositoryArchives deletes all repositories' archives.
-func DeleteRepositoryArchives() error {
+// DeleteRepositoryArchives deletes all archives of the repositories under root.
+func DeleteRepositoryArchives(root string) error {
 	if taskStatusTable.IsRunning(taskNameCleanOldArchives) {
 		return nil
 	}
@@ -2692,14 +2744,14 @@ func DeleteRepositoryArchives() error {
 	defer taskStatusTable.Stop(taskNameCleanOldArchives)
 
 	return iterateRepositories(func(repo *Repository) error {
-		return os.RemoveAll(filepath.Join(repo.RepoPath(), "archives"))
+		return os.RemoveAll(filepath.Join(repo.RepoPath(root), "archives"))
 	})
 }
 
-func gatherMissingRepoRecords() ([]*Repository, error) {
+func gatherMissingRepoRecords(root string) ([]*Repository, error) {
 	repos := make([]*Repository, 0, 10)
 	if err := iterateRepositories(func(repo *Repository) error {
-		if !osx.IsDir(repo.RepoPath()) {
+		if !osx.IsDir(repo.RepoPath(root)) {
 			repos = append(repos, repo)
 		}
 		return nil
@@ -2712,8 +2764,8 @@ func gatherMissingRepoRecords() ([]*Repository, error) {
 }
 
 // DeleteMissingRepositories deletes all repository records that lost Git files.
-func DeleteMissingRepositories(logger *logx.Logger) error {
-	repos, err := gatherMissingRepoRecords()
+func DeleteMissingRepositories(logger *logx.Logger, opts DeleteRepoOptions) error {
+	repos, err := gatherMissingRepoRecords(opts.RepositoryRoot)
 	if err != nil {
 		return errors.Newf("gatherMissingRepoRecords: %v", err)
 	}
@@ -2724,7 +2776,7 @@ func DeleteMissingRepositories(logger *logx.Logger) error {
 
 	for _, repo := range repos {
 		logger.Debug("Deleting missing repository", "ownerID", repo.OwnerID, "repoID", repo.ID)
-		if err := Handle.Repositories().Delete(context.TODO(), logger, repo.OwnerID, repo.ID); err != nil {
+		if err := Handle.Repositories().Delete(context.TODO(), logger, opts, repo.OwnerID, repo.ID); err != nil {
 			if err2 := Handle.Notices().Create(context.TODO(), NoticeTypeRepository, fmt.Sprintf("DeleteRepository [%d]: %v", repo.ID, err)); err2 != nil {
 				return errors.Newf("CreateRepositoryNotice: %v", err)
 			}
@@ -2733,9 +2785,10 @@ func DeleteMissingRepositories(logger *logx.Logger) error {
 	return nil
 }
 
-// ReinitMissingRepositories reinitializes all repository records that lost Git files.
-func ReinitMissingRepositories(logger *logx.Logger) error {
-	repos, err := gatherMissingRepoRecords()
+// ReinitMissingRepositories reinitializes all repository records that lost Git
+// files under root.
+func ReinitMissingRepositories(logger *logx.Logger, root string) error {
+	repos, err := gatherMissingRepoRecords(root)
 	if err != nil {
 		return errors.Newf("gatherMissingRepoRecords: %v", err)
 	}
@@ -2746,7 +2799,7 @@ func ReinitMissingRepositories(logger *logx.Logger) error {
 
 	for _, repo := range repos {
 		logger.Debug("Reinitializing missing repository", "ownerID", repo.OwnerID, "repoID", repo.ID)
-		if err := git.Init(context.TODO(), repo.RepoPath(), git.InitOptions{Bare: true}); err != nil {
+		if err := git.Init(context.TODO(), repo.RepoPath(root), git.InitOptions{Bare: true}); err != nil {
 			if err2 := Handle.Notices().Create(context.TODO(), NoticeTypeRepository, fmt.Sprintf("init repository [repo_id: %d]: %v", repo.ID, err)); err2 != nil {
 				return errors.Newf("create repository notice: %v", err)
 			}
@@ -2758,9 +2811,9 @@ func ReinitMissingRepositories(logger *logx.Logger) error {
 // SyncRepositoryHooks rewrites the delegate hooks of all repositories to make
 // sure the binary and custom conf path are up-to-date, and that every repository
 // has only the delegate hooks it needs.
-func SyncRepositoryHooks() error {
+func SyncRepositoryHooks(hooks DelegateHooksOptions) error {
 	return iterateRepositories(func(repo *Repository) error {
-		return repo.SyncDelegateHooks()
+		return repo.SyncDelegateHooks(hooks)
 	})
 }
 
@@ -2774,8 +2827,9 @@ const (
 	taskNameCleanOldArchives = "clean_old_archives"
 )
 
-// GitFsck calls 'git fsck' to check repository health.
-func GitFsck(logger *logx.Logger) {
+// GitFsck calls 'git fsck' with given arguments to check the health of the
+// repositories under root, each within the timeout.
+func GitFsck(logger *logx.Logger, root string, timeout time.Duration, args []string) {
 	if taskStatusTable.IsRunning(taskNameGitFSCK) {
 		return
 	}
@@ -2785,10 +2839,10 @@ func GitFsck(logger *logx.Logger) {
 	logger.Debug("Running health checks on repositories")
 
 	if err := iterateRepositories(func(repo *Repository) error {
-		repoPath := repo.RepoPath()
-		ctx, cancel := git.WithTimeout(context.TODO(), conf.Cron.RepoHealthCheck.Timeout)
+		repoPath := repo.RepoPath(root)
+		ctx, cancel := git.WithTimeout(context.TODO(), timeout)
 		err := git.RepoFsck(ctx, repoPath, git.FsckOptions{
-			Args: conf.Cron.RepoHealthCheck.Args,
+			Args: args,
 		})
 		cancel()
 		if err != nil {
@@ -2807,14 +2861,16 @@ func GitFsck(logger *logx.Logger) {
 	}
 }
 
-func GitGcRepos() error {
+// GitGcRepos calls 'git gc' with given arguments on the repositories under root,
+// each within the timeout.
+func GitGcRepos(root string, timeout time.Duration, args []string) error {
 	return iterateRepositories(func(repo *Repository) error {
 		if err := repo.GetOwner(); err != nil {
 			return err
 		}
-		ctx, cancel := git.WithTimeout(context.TODO(), time.Duration(conf.Git.Timeout.GC)*time.Second)
+		ctx, cancel := git.WithTimeout(context.TODO(), timeout)
 		defer cancel()
-		return git.RepoGC(ctx, RepoPath(repo.Owner.Name, repo.Name), git.GCOptions{Args: conf.Git.GCArgs})
+		return git.RepoGC(ctx, RepoPath(root, repo.Owner.Name, repo.Name), git.GCOptions{Args: args})
 	})
 }
 
@@ -2837,7 +2893,10 @@ func repoStatsCheck(logger *logx.Logger, checker *repoChecker) {
 	}
 }
 
-func CheckRepoStats(logger *logx.Logger) {
+// CheckRepoStats corrects the counts that repositories, users, labels and issues
+// keep. Repositories whose forks are recounted are saved as Update does with
+// root and forcePrivate.
+func CheckRepoStats(logger *logx.Logger, root string, forcePrivate bool) {
 	if taskStatusTable.IsRunning(taskNameCheckRepoStats) {
 		return
 	}
@@ -2867,8 +2926,8 @@ func CheckRepoStats(logger *logx.Logger) {
 		},
 		// User.NumRepos
 		{
-			dbx.Quote("SELECT %[1]s.id FROM %[1]s WHERE %[1]s.num_repos != (SELECT COUNT(*) FROM repository WHERE owner_id = %[1]s.id)", "user"),
-			dbx.Quote("UPDATE %s SET num_repos = (SELECT COUNT(*) FROM repository WHERE owner_id = ?) WHERE id = ?", "user"),
+			dbx.Quote(Handle.db.Name(), "SELECT %[1]s.id FROM %[1]s WHERE %[1]s.num_repos != (SELECT COUNT(*) FROM repository WHERE owner_id = %[1]s.id)", "user"),
+			dbx.Quote(Handle.db.Name(), "UPDATE %s SET num_repos = (SELECT COUNT(*) FROM repository WHERE owner_id = ?) WHERE id = ?", "user"),
 			"user count 'num_repos'",
 		},
 		// Issue.NumComments
@@ -2922,7 +2981,7 @@ func CheckRepoStats(logger *logx.Logger) {
 			}
 			repo.NumForks = int(numForks)
 
-			if err = Handle.Repositories().Update(context.TODO(), logger, repo, false); err != nil {
+			if err = Handle.Repositories().Update(context.TODO(), logger, root, forcePrivate, repo, false); err != nil {
 				logger.Error("Failed to update repository", "repoID", id, "error", err)
 				continue
 			}

@@ -13,6 +13,7 @@ import (
 	"github.com/flamego/flamego"
 	"unknwon.dev/x/logx"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
 )
@@ -165,10 +166,10 @@ type repoSearchResponse struct {
 // "matchCase=true", letter case must match. With "exhaustive=true", it lists
 // every matching line of a file rather than the first few, and gets higher
 // limits.
-func getRepoSearch(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoSearchResponse, err error) {
+func getRepoSearch(c flamego.Context, repoOpts conf.RepositoryOpts, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoSearchResponse, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
-	gitRepo, err := openRepoGit(repoCtx)
+	gitRepo, err := openRepoGit(repoOpts.Root, repoCtx)
 	if err != nil {
 		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
@@ -257,7 +258,7 @@ type codeSearchResponse struct {
 // getCodeSearch searches the default branches of the repositories the viewer
 // can read for lines that contain the "q" query, narrowed down by its
 // qualifiers. With "matchCase=true", letter case must match.
-func getCodeSearch(c flamego.Context, logger *logx.Logger, viewer *database.User) (statusCode int, resp *codeSearchResponse, err error) {
+func getCodeSearch(c flamego.Context, auth conf.AuthOpts, repoOpts conf.RepositoryOpts, logger *logx.Logger, viewer *database.User) (statusCode int, resp *codeSearchResponse, err error) {
 	ctx := c.Request().Context()
 	query := parseCodeQuery(c.Query("q"))
 	resp = &codeSearchResponse{
@@ -270,7 +271,7 @@ func getCodeSearch(c flamego.Context, logger *logx.Logger, viewer *database.User
 		return http.StatusOK, resp, nil
 	}
 
-	repos, err := codeSearchRepos(ctx, logger, viewer, query)
+	repos, err := codeSearchRepos(ctx, logger, auth.RequireEmailConfirmation, viewer, query)
 	if err != nil {
 		logger.Error("Failed to list repositories to search", "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list repositories")
@@ -295,7 +296,7 @@ func getCodeSearch(c flamego.Context, logger *logx.Logger, viewer *database.User
 			resp.Truncated = true
 			break
 		}
-		gitRepo, err := git.Open(repo.RepoPath())
+		gitRepo, err := git.Open(repo.RepoPath(repoOpts.Root))
 		if err != nil {
 			logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 			continue
@@ -334,7 +335,7 @@ func getCodeSearch(c flamego.Context, logger *logx.Logger, viewer *database.User
 
 // codeSearchRepos returns the repositories with code that the user can read
 // and that match the qualifiers of the query, most recently updated first.
-func codeSearchRepos(ctx context.Context, logger *logx.Logger, viewer *database.User, query codeQuery) ([]*database.Repository, error) {
+func codeSearchRepos(ctx context.Context, logger *logx.Logger, requireEmailConfirmation bool, viewer *database.User, query codeQuery) ([]*database.Repository, error) {
 	var candidates []*database.Repository
 	if query.Repo != "" {
 		repo, err := repoByFullName(ctx, query.Repo)
@@ -365,7 +366,7 @@ func codeSearchRepos(ctx context.Context, logger *logx.Logger, viewer *database.
 	// or issues are public, so check that the code can be read.
 	repos := make([]*database.Repository, 0, len(candidates))
 	for _, repo := range candidates {
-		if repo.IsEmpty || !newViewer(ctx, logger, viewer, repo.Owner, repo).CanRead() {
+		if repo.IsEmpty || !newViewer(ctx, logger, requireEmailConfirmation, viewer, repo.Owner, repo).CanRead() {
 			continue
 		}
 		repos = append(repos, repo)
@@ -413,7 +414,7 @@ type issueSearchResponse struct {
 // getIssueSearch finds the issues and the pull requests whose titles contain
 // the "q" query, or whose number it is, in the repositories the viewer can
 // see them in, or only in the "owner/name" of the "repo" query.
-func getIssueSearch(c flamego.Context, logger *logx.Logger, viewer *database.User) (statusCode int, resp *issueSearchResponse, err error) {
+func getIssueSearch(c flamego.Context, auth conf.AuthOpts, logger *logx.Logger, viewer *database.User) (statusCode int, resp *issueSearchResponse, err error) {
 	ctx := c.Request().Context()
 	resp = &issueSearchResponse{Items: []issueSearchItem{}}
 	keyword := strings.TrimSpace(c.Query("q"))
@@ -441,7 +442,7 @@ func getIssueSearch(c flamego.Context, logger *logx.Logger, viewer *database.Use
 	opts := database.SearchIssuesOptions{Keyword: keyword, Limit: issueSearchLimit}
 	repos := make(map[int64]*database.Repository, len(candidates))
 	for _, repo := range candidates {
-		access := newViewer(ctx, logger, viewer, repo.Owner, repo)
+		access := newViewer(ctx, logger, auth.RequireEmailConfirmation, viewer, repo.Owner, repo)
 		if repo.EnableIssues && !repo.EnableExternalTracker && (access.CanRead() || repo.CanGuestViewIssues()) {
 			opts.IssueRepoIDs = append(opts.IssueRepoIDs, repo.ID)
 			repos[repo.ID] = repo

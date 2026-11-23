@@ -19,7 +19,7 @@ func TestToRepository(t *testing.T) {
 		fork1 := &database.Repository{ID: 2, OwnerID: bob.ID, Owner: bob, Name: "fork1", IsFork: true, ForkID: 1}
 		fork2 := &database.Repository{ID: 3, OwnerID: alice.ID, Owner: alice, Name: "fork2", IsFork: true, ForkID: 2, BaseRepo: fork1}
 
-		got := toRepository(fork2, nil, &v1types.RepositoryPermission{Pull: true})
+		got := toRepository(database.LinkOptions{}, fork2, nil, &v1types.RepositoryPermission{Pull: true})
 		require.NotNil(t, got.Parent)
 		assert.Equal(t, "bob/fork1", got.Parent.FullName)
 		assert.True(t, got.Parent.Fork)

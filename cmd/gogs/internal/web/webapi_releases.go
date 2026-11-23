@@ -22,8 +22,14 @@ import (
 // releasesPageSize is how many tags a page of releases lists.
 const releasesPageSize = 10
 
-func releaseAttachmentLimits() attachmentLimits {
-	return attachmentLimits(conf.Release.Attachment)
+func releaseAttachmentLimits(release conf.ReleaseOpts) attachmentLimits {
+	return attachmentLimits(release.Attachment)
+}
+
+// limitReleaseAttachmentUpload caps the size of an attachment uploaded for a
+// release.
+func limitReleaseAttachmentUpload(c flamego.Context, release conf.ReleaseOpts) {
+	limitAttachmentUpload(c, releaseAttachmentLimits(release))
 }
 
 // withRepoCode lets through the viewers who can read the code of a repository
@@ -57,8 +63,10 @@ func withRepoRelease(c flamego.Context, logger *logx.Logger, repoCtx *repoContex
 	c.Map(rel)
 }
 
-func openRepoGit(repoCtx *repoContext) (*git.Repository, error) {
-	return git.Open(repox.RepositoryPath(repoCtx.Owner.Name, repoCtx.Repo.Name))
+// openRepoGit opens the Git repository of the repository context, which is
+// stored under root.
+func openRepoGit(root string, repoCtx *repoContext) (*git.Repository, error) {
+	return git.Open(repox.RepositoryPath(root, repoCtx.Owner.Name, repoCtx.Repo.Name))
 }
 
 type repoReleaseAttachment struct {
@@ -68,14 +76,14 @@ type repoReleaseAttachment struct {
 }
 
 // toReleaseAttachments returns the files of the release its note does not
-// link to, i.e., its downloads.
-func toReleaseAttachments(attachments []*database.Attachment, note string) []repoReleaseAttachment {
+// link to, i.e., its downloads. Their URLs are under subpath.
+func toReleaseAttachments(subpath string, attachments []*database.Attachment, note string) []repoReleaseAttachment {
 	list := make([]repoReleaseAttachment, 0, len(attachments))
 	for _, a := range attachments {
 		if linksAttachment(note, a.UUID) {
 			continue
 		}
-		list = append(list, repoReleaseAttachment{UUID: a.UUID, Name: a.Name, URL: conf.Server.Subpath + "/attachments/" + a.UUID})
+		list = append(list, repoReleaseAttachment{UUID: a.UUID, Name: a.Name, URL: subpath + "/attachments/" + a.UUID})
 	}
 	return list
 }
@@ -110,10 +118,10 @@ type repoReleasesResponse struct {
 	IsMirror       bool   `json:"isMirror"`
 }
 
-func getRepoReleases(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoReleasesResponse, err error) {
+func getRepoReleases(c flamego.Context, links database.LinkOptions, markupOpts markup.Options, repoOpts conf.RepositoryOpts, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoReleasesResponse, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
-	gitRepo, err := openRepoGit(repoCtx)
+	gitRepo, err := openRepoGit(repoOpts.Root, repoCtx)
 	if err != nil {
 		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
@@ -179,12 +187,12 @@ func getRepoReleases(c flamego.Context, logger *logx.Logger, repoCtx *repoContex
 		ViewerCanWrite: viewerCanWrite,
 		IsMirror:       repo.IsMirror,
 	}
-	metas := repo.ComposeMetas()
+	metas := repo.ComposeMetas(markupOpts.Subpath, repoOpts.Root)
 	notes := make([]string, 0, len(releases))
 	for _, r := range releases {
 		notes = append(notes, r.Note)
 	}
-	commits := markup.ResolveCommits(metas, notes...)
+	commits := markup.ResolveCommits(markupOpts, metas, notes...)
 	for _, r := range releases {
 		item := repoRelease{TagName: r.TagName, Sha: r.Sha1}
 		if r.ID > 0 {
@@ -192,14 +200,14 @@ func getRepoReleases(c flamego.Context, logger *logx.Logger, repoCtx *repoContex
 				logger.Error("Failed to load release attributes", "releaseID", r.ID, "error", err)
 				return http.StatusInternalServerError, nil, errors.Wrap(err, "load release")
 			}
-			publisher := toIssueUser(r.Publisher)
+			publisher := toIssueUser(links, r.Publisher)
 			item.Title = r.Title
 			item.Target = r.Target
 			item.IsDraft = r.IsDraft
 			item.IsPrerelease = r.IsPrerelease
 			item.Publisher = &publisher
-			item.NoteHTML = markAppLinks(markup.MarkdownWithCommits(r.Note, repo.Link(), metas, commits), repo)
-			item.Attachments = toReleaseAttachments(r.Attachments, r.Note)
+			item.NoteHTML = markAppLinks(markupOpts, markup.MarkdownWithCommits(markupOpts, r.Note, repo.Link(markupOpts.Subpath), metas, commits), repo)
+			item.Attachments = toReleaseAttachments(markupOpts.Subpath, r.Attachments, r.Note)
 			if r.CreatedUnix > 0 {
 				item.CreatedAt = &r.Created
 			}
@@ -251,8 +259,8 @@ type repoReleaseFormOptions struct {
 	Attachment    *issueAttachmentSettings `json:"attachment,omitempty"`
 }
 
-func getRepoNewRelease(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoReleaseFormOptions, err error) {
-	gitRepo, err := openRepoGit(repoCtx)
+func getRepoNewRelease(c flamego.Context, release conf.ReleaseOpts, repoOpts conf.RepositoryOpts, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoReleaseFormOptions, err error) {
+	gitRepo, err := openRepoGit(repoOpts.Root, repoCtx)
 	if err != nil {
 		logger.Error("Failed to open repository", "repoID", repoCtx.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
@@ -265,7 +273,7 @@ func getRepoNewRelease(c flamego.Context, logger *logx.Logger, repoCtx *repoCont
 	return http.StatusOK, &repoReleaseFormOptions{
 		Branches:      branches,
 		DefaultBranch: repoCtx.Repo.DefaultBranch,
-		Attachment:    attachmentSettings(releaseAttachmentLimits()),
+		Attachment:    attachmentSettings(releaseAttachmentLimits(release)),
 	}, nil
 }
 
@@ -284,7 +292,7 @@ type repoReleaseRequest struct {
 	RemovedAttachments []string `json:"removedAttachments"`
 }
 
-func postRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, req repoReleaseRequest) (statusCode int, resp any, err error) {
+func postRepoRelease(c flamego.Context, links database.LinkOptions, release conf.ReleaseOpts, repoOpts conf.RepositoryOpts, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, req repoReleaseRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
 	if strings.TrimSpace(req.TagName) == "" {
@@ -294,14 +302,14 @@ func postRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, view
 	if resp := textFieldError(l, "title", "repo::release.title", req.Title, 255); resp != nil {
 		return http.StatusBadRequest, resp, nil
 	}
-	if statusCode, err = checkNewAttachments(ctx, releaseAttachmentLimits(), req.Attachments); err != nil {
+	if statusCode, err = checkNewAttachments(ctx, releaseAttachmentLimits(release), req.Attachments); err != nil {
 		if statusCode == http.StatusInternalServerError {
 			logger.Error("Failed to check attachments", "error", err)
 		}
 		return statusCode, nil, err
 	}
 
-	gitRepo, err := openRepoGit(repoCtx)
+	gitRepo, err := openRepoGit(repoOpts.Root, repoCtx)
 	if err != nil {
 		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
@@ -342,7 +350,7 @@ func postRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, view
 		IsPrerelease: req.IsPrerelease,
 		CreatedUnix:  tagCreatedUnix,
 	}
-	if err = database.Handle.Releases().Create(ctx, logger, gitRepo, rel, req.Attachments); err != nil {
+	if err = database.Handle.Releases().Create(ctx, logger, links, gitRepo, rel, req.Attachments); err != nil {
 		var msg string
 		switch {
 		case database.IsErrReleaseAlreadyExist(err):
@@ -370,7 +378,7 @@ type repoReleaseEdit struct {
 	Attachment   *issueAttachmentSettings `json:"attachment,omitempty"`
 }
 
-func getRepoRelease(rel *database.Release) (statusCode int, resp *repoReleaseEdit, err error) {
+func getRepoRelease(server conf.ServerOpts, release conf.ReleaseOpts, rel *database.Release) (statusCode int, resp *repoReleaseEdit, err error) {
 	return http.StatusOK, &repoReleaseEdit{
 		TagName:      rel.TagName,
 		Target:       rel.Target,
@@ -378,12 +386,12 @@ func getRepoRelease(rel *database.Release) (statusCode int, resp *repoReleaseEdi
 		Content:      rel.Note,
 		IsDraft:      rel.IsDraft,
 		IsPrerelease: rel.IsPrerelease,
-		Attachments:  toReleaseAttachments(rel.Attachments, rel.Note),
-		Attachment:   attachmentSettings(releaseAttachmentLimits()),
+		Attachments:  toReleaseAttachments(server.Subpath, rel.Attachments, rel.Note),
+		Attachment:   attachmentSettings(releaseAttachmentLimits(release)),
 	}, nil
 }
 
-func patchRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, rel *database.Release, req repoReleaseRequest) (statusCode int, resp any, err error) {
+func patchRepoRelease(c flamego.Context, att conf.AttachmentOpts, links database.LinkOptions, release conf.ReleaseOpts, repoOpts conf.RepositoryOpts, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, rel *database.Release, req repoReleaseRequest) (statusCode int, resp any, err error) {
 	if resp := textFieldError(l, "title", "repo::release.title", req.Title, 255); resp != nil {
 		return http.StatusBadRequest, resp, nil
 	}
@@ -411,7 +419,7 @@ func patchRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, vie
 			added = append(added, uuid)
 		}
 	}
-	lim := releaseAttachmentLimits()
+	lim := releaseAttachmentLimits(release)
 	if len(req.Attachments) > lim.MaxFiles && len(added) > 0 {
 		return http.StatusBadRequest, nil, errors.Newf("at most %d files can be attached", lim.MaxFiles)
 	}
@@ -424,7 +432,7 @@ func patchRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, vie
 
 	req.Attachments = append(req.Attachments, noteLinked...)
 
-	gitRepo, err := openRepoGit(repoCtx)
+	gitRepo, err := openRepoGit(repoOpts.Root, repoCtx)
 	if err != nil {
 		logger.Error("Failed to open repository", "repoID", repoCtx.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
@@ -436,7 +444,7 @@ func patchRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, vie
 	rel.Note = req.Content
 	rel.IsDraft = rel.IsDraft && req.IsDraft
 	rel.IsPrerelease = req.IsPrerelease
-	if err = database.Handle.Releases().Update(c.Request().Context(), logger, viewer, gitRepo, rel, isPublish, req.Attachments); err != nil {
+	if err = database.Handle.Releases().Update(c.Request().Context(), logger, links, viewer, gitRepo, rel, isPublish, req.Attachments); err != nil {
 		switch {
 		case database.IsErrInvalidTagName(err):
 			// The tag name cannot be edited, so it is not a field error.
@@ -449,15 +457,15 @@ func patchRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, vie
 	}
 	// The release is already saved without the files, so they have to go even
 	// when the client goes away.
-	if err = database.Handle.Attachments().Delete(context.WithoutCancel(c.Request().Context()), true, unlinked...); err != nil {
+	if err = database.Handle.Attachments().Delete(context.WithoutCancel(c.Request().Context()), att.Path, true, unlinked...); err != nil {
 		logger.Error("Failed to delete unlinked files", "releaseID", rel.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete unlinked files")
 	}
 	return http.StatusNoContent, nil, nil
 }
 
-func deleteRepoRelease(c flamego.Context, logger *logx.Logger, repoCtx *repoContext, rel *database.Release) (statusCode int, resp any, err error) {
-	if err = database.Handle.Releases().DeleteByID(c.Request().Context(), logger, repoCtx.Repo.ID, rel.ID); err != nil {
+func deleteRepoRelease(c flamego.Context, att conf.AttachmentOpts, repoOpts conf.RepositoryOpts, logger *logx.Logger, repoCtx *repoContext, rel *database.Release) (statusCode int, resp any, err error) {
+	if err = database.Handle.Releases().DeleteByID(c.Request().Context(), logger, repoOpts.Root, att.Path, repoCtx.Repo.ID, rel.ID); err != nil {
 		logger.Error("Failed to delete release", "releaseID", rel.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete release")
 	}
@@ -465,8 +473,8 @@ func deleteRepoRelease(c flamego.Context, logger *logx.Logger, repoCtx *repoCont
 }
 
 // postRepoReleaseAttachment stores a file to attach to a release.
-func postRepoReleaseAttachment(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User) (statusCode int, resp any, err error) {
-	statusCode, resp, err = storeAttachment(c, l, viewer, releaseAttachmentLimits())
+func postRepoReleaseAttachment(c flamego.Context, server conf.ServerOpts, att conf.AttachmentOpts, release conf.ReleaseOpts, logger *logx.Logger, l i18n.Locale, viewer *database.User) (statusCode int, resp any, err error) {
+	statusCode, resp, err = storeAttachment(c, l, att.Path, server.ExternalURL, viewer, releaseAttachmentLimits(release))
 	if statusCode == http.StatusInternalServerError {
 		logger.Error("Failed to store attachment", "error", err)
 	}

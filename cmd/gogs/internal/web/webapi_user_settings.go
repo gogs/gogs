@@ -9,6 +9,7 @@ import (
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/auth"
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/i18n"
 	"gogs.io/gogs/internal/osx"
@@ -30,15 +31,15 @@ type userSettings struct {
 	HasCustomAvatar bool `json:"hasCustomAvatar"`
 }
 
-func getUserSettings(viewer *database.User) (statusCode int, resp *userSettings, err error) {
+func getUserSettings(picture conf.PictureOpts, links database.LinkOptions, viewer *database.User) (statusCode int, resp *userSettings, err error) {
 	settings := &userSettings{
 		Name:            viewer.Name,
 		FullName:        viewer.FullName,
 		Website:         viewer.Website,
 		Location:        viewer.Location,
 		IsLocal:         viewer.IsLocal(),
-		AvatarURL:       viewer.AvatarURLPath(),
-		HasCustomAvatar: osx.IsFile(userx.CustomAvatarPath(viewer.ID)),
+		AvatarURL:       viewer.AvatarURLPath(links),
+		HasCustomAvatar: osx.IsFile(userx.CustomAvatarPath(picture.AvatarUploadPath, viewer.ID)),
 	}
 	return http.StatusOK, settings, nil
 }
@@ -56,12 +57,12 @@ type userNameResponse struct {
 
 // patchUserSettings changes the profile of the authenticated user, and the
 // username of local users.
-func patchUserSettings(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, req userSettingsRequest) (statusCode int, resp any, err error) {
+func patchUserSettings(c flamego.Context, repoOpts conf.RepositoryOpts, logger *logx.Logger, l i18n.Locale, viewer *database.User, req userSettingsRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	name := viewer.Name
 	// Users from an external authentication source keep the name it gives them.
 	if viewer.IsLocal() && viewer.Name != req.UserName {
-		if err = database.Handle.Users().ChangeUsername(ctx, viewer.ID, req.UserName); err != nil {
+		if err = database.Handle.Users().ChangeUsername(ctx, repoOpts.Root, viewer.ID, req.UserName); err != nil {
 			var msg string
 			switch {
 			case database.IsErrUserAlreadyExist(err):
@@ -89,7 +90,7 @@ func patchUserSettings(c flamego.Context, logger *logx.Logger, l i18n.Locale, vi
 	return http.StatusOK, &userNameResponse{Name: name}, nil
 }
 
-func putUserAvatar(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User) (statusCode int, resp any, err error) {
+func putUserAvatar(c flamego.Context, picture conf.PictureOpts, logger *logx.Logger, l i18n.Locale, viewer *database.User) (statusCode int, resp any, err error) {
 	r := c.Request().Request
 	data, code, err := readAvatarUpload(r, l)
 	if err != nil {
@@ -98,15 +99,15 @@ func putUserAvatar(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer
 		}
 		return code, nil, err
 	}
-	if err = database.Handle.Users().UseCustomAvatar(r.Context(), viewer.ID, data); err != nil {
+	if err = database.Handle.Users().UseCustomAvatar(r.Context(), picture.AvatarUploadPath, viewer.ID, data); err != nil {
 		logger.Error("Failed to save avatar", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "save avatar")
 	}
 	return http.StatusNoContent, nil, nil
 }
 
-func deleteUserAvatar(c flamego.Context, logger *logx.Logger, viewer *database.User) (statusCode int, resp any, err error) {
-	if err = database.Handle.Users().DeleteCustomAvatar(c.Request().Context(), viewer.ID); err != nil {
+func deleteUserAvatar(c flamego.Context, picture conf.PictureOpts, logger *logx.Logger, viewer *database.User) (statusCode int, resp any, err error) {
+	if err = database.Handle.Users().DeleteCustomAvatar(c.Request().Context(), picture.AvatarUploadPath, viewer.ID); err != nil {
 		logger.Error("Failed to delete avatar", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete avatar")
 	}
@@ -224,7 +225,7 @@ type userSettingsOrgs struct {
 
 // getUserSettingsOrgs lists every organization the authenticated user is a
 // member of, including the ones their membership is private in.
-func getUserSettingsOrgs(c flamego.Context, logger *logx.Logger, viewer *database.User) (statusCode int, resp *userSettingsOrgs, err error) {
+func getUserSettingsOrgs(c flamego.Context, links database.LinkOptions, logger *logx.Logger, viewer *database.User) (statusCode int, resp *userSettingsOrgs, err error) {
 	ctx := c.Request().Context()
 	orgs, err := database.Handle.Organizations().List(ctx, database.ListOrgsOptions{MemberID: viewer.ID, IncludePrivateMembers: true})
 	if err != nil {
@@ -233,7 +234,7 @@ func getUserSettingsOrgs(c flamego.Context, logger *logx.Logger, viewer *databas
 	}
 	items := make([]userSettingsOrg, 0, len(orgs))
 	for _, org := range orgs {
-		items = append(items, userSettingsOrg{Name: org.Name, AvatarURL: org.AvatarURLPath()})
+		items = append(items, userSettingsOrg{Name: org.Name, AvatarURL: org.AvatarURLPath(links)})
 	}
 	return http.StatusOK, &userSettingsOrgs{Items: items}, nil
 }
@@ -245,7 +246,7 @@ type userDeleteRequest struct {
 // deleteUser deletes the account of the authenticated user once they confirm
 // their password. Users who still own repositories or belong to
 // organizations cannot be deleted.
-func deleteUser(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, req userDeleteRequest) (statusCode int, resp any, err error) {
+func deleteUser(c flamego.Context, userDeletion database.DeleteUserOptions, logger *logx.Logger, l i18n.Locale, viewer *database.User, req userDeleteRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	_, err = database.Handle.Users().Authenticate(ctx, logger, viewer.Name, req.Password, viewer.LoginSource)
 	if err != nil {
@@ -256,7 +257,7 @@ func deleteUser(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *d
 		logger.Error("Failed to authenticate user", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "authenticate user")
 	}
-	if err = database.Handle.Users().DeleteByID(ctx, viewer.ID, false); err != nil {
+	if err = database.Handle.Users().DeleteByID(ctx, userDeletion, viewer.ID, false); err != nil {
 		switch {
 		case database.IsErrUserOwnRepos(err):
 			return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("form::still_own_repo")}, nil

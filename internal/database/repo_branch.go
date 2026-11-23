@@ -53,18 +53,18 @@ func (ErrBranchNotExist) NotFound() bool {
 	return true
 }
 
-func (r *Repository) GetBranch(ctx context.Context, name string) (*Branch, error) {
-	if !git.RepoHasBranch(ctx, r.RepoPath(), name) {
+func (r *Repository) GetBranch(ctx context.Context, root, name string) (*Branch, error) {
+	if !git.RepoHasBranch(ctx, r.RepoPath(root), name) {
 		return nil, ErrBranchNotExist{args: map[string]any{"name": name}}
 	}
 	return &Branch{
-		RepoPath: r.RepoPath(),
+		RepoPath: r.RepoPath(root),
 		Name:     name,
 	}, nil
 }
 
-func (r *Repository) GetBranches(ctx context.Context) ([]*Branch, error) {
-	return GetBranchesByPath(ctx, r.RepoPath())
+func (r *Repository) GetBranches(ctx context.Context, root string) ([]*Branch, error) {
+	return GetBranchesByPath(ctx, r.RepoPath(root))
 }
 
 func (br *Branch) GetCommit(ctx context.Context) (*git.Commit, error) {

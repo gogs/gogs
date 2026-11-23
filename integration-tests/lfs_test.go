@@ -313,7 +313,7 @@ func TestLFSGitClient(t *testing.T) {
 	gitRun(t, dir, "push", "origin", "main")
 
 	// The repository stores a pointer and the server stores the object.
-	pointer := gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(repo.Owner, repo.Name), "show", "main:large.bin")
+	pointer := gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(cfg.Repository.Root, repo.Owner, repo.Name), "show", "main:large.bin")
 	assert.Contains(t, pointer, "oid sha256:"+oid)
 	status, _, body := lfsClient(t, owner).doRaw(http.MethodGet, lfsBasePath(repo)+"/basic/"+oid, "", nil)
 	require.Equal(t, http.StatusOK, status)

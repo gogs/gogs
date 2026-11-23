@@ -14,9 +14,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 )
 
-func init() {
-	conf.App.Version = "0.15.0+dev"
-}
+const version = "0.15.0+dev"
 
 var webCommand = cli.Command{
 	Name:        "web",
@@ -27,7 +25,7 @@ var webCommand = cli.Command{
 		if cmd.IsSet("port") {
 			portOverride = cmd.Int("port")
 		}
-		return web.Run(ctx, conf.NewConsoleLogger(os.Stdout), configFromLineage(cmd), portOverride)
+		return web.Run(ctx, conf.NewConsoleLogger(os.Stdout), version, configFromLineage(cmd), portOverride)
 	},
 	Flags: []cli.Flag{
 		intFlag("port, p", 3000, "Alternative listening port to use"),
@@ -39,7 +37,7 @@ func main() {
 	cmd := &cli.Command{
 		Name:    "Gogs",
 		Usage:   "The painless way to host your own Git service",
-		Version: conf.App.Version,
+		Version: version,
 		Commands: []*cli.Command{
 			&webCommand,
 			&servCommand,

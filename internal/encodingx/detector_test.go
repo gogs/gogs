@@ -326,7 +326,7 @@ func TestDetect(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			require.Equal(t, test.want, Detect(logx.NewNoopLogger(), test.content))
+			require.Equal(t, test.want, Detect(logx.NewNoopLogger(), test.content, ""))
 		})
 	}
 }

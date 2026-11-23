@@ -16,7 +16,7 @@ import (
 
 // POST /{owner}/{repo}.git/info/lfs/objects/batch
 func serveBatch(logger *logx.Logger, store Store) flamego.Handler {
-	return func(c flamego.Context, owner *database.User, repo *database.Repository) {
+	return func(c flamego.Context, server conf.ServerOpts, owner *database.User, repo *database.Repository) {
 		var request batchRequest
 		defer func() { _ = c.Request().Request.Body.Close() }()
 		err := json.NewDecoder(c.Request().Request.Body).Decode(&request)
@@ -30,7 +30,7 @@ func serveBatch(logger *logx.Logger, store Store) flamego.Handler {
 		// NOTE: Only the basic transfer is supported.
 		transfer := transferBasic
 		// Example: https://try.gogs.io/gogs/gogs.git/info/lfs/objects/basic
-		baseHref := fmt.Sprintf("%s%s/%s.git/info/lfs/objects/basic", conf.Server.ExternalURL, owner.Name, repo.Name)
+		baseHref := fmt.Sprintf("%s%s/%s.git/info/lfs/objects/basic", server.ExternalURL, owner.Name, repo.Name)
 
 		objects := make([]batchObject, 0, len(request.Objects))
 		switch request.Operation {
