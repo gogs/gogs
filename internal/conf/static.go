@@ -195,6 +195,7 @@ var (
 	// Tracing settings
 	Tracing struct {
 		Enabled                  bool
+		EnableAdminCollector     bool
 		MaxMemoryMiB             int64 `ini:"MAX_MEMORY_MIB"`
 		MaxAge                   time.Duration
 		SlowThreshold            time.Duration

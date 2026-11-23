@@ -138,12 +138,13 @@ function TracesLayout({
   );
 }
 
-// TracingDisabledNote tells how to turn tracing on.
+// TracingDisabledNote tells how to keep recent traces, which needs both tracing
+// and the admin collector turned on.
 export function TracingDisabledNote() {
   return (
     <Trans
-      i18nKey="admin.traces.disabled"
-      values={{ setting: "ENABLED = true", section: "[tracing]" }}
+      i18nKey="admin.traces.collector_disabled"
+      values={{ tracing: "ENABLED = true", collector: "ENABLE_ADMIN_COLLECTOR = true", section: "[tracing]" }}
       components={{ code: <InlineCode /> }}
     />
   );

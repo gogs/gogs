@@ -349,6 +349,8 @@ func Init(logger *logx.Logger, customConf string) error {
 		return errors.Wrap(err, "mapping [prometheus] section")
 	} else if err = File.Section("tracing").MapTo(&Tracing); err != nil {
 		return errors.Wrap(err, "mapping [tracing] section")
+	} else if Tracing.EnableAdminCollector && !Tracing.Enabled {
+		return errors.New("[tracing] ENABLE_ADMIN_COLLECTOR requires ENABLED = true")
 	}
 
 	HasRobotsTxt = osx.IsFile(filepath.Join(CustomDir(), "robots.txt"))
