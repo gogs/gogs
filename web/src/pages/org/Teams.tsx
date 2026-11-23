@@ -110,7 +110,7 @@ export function TeamCounts({
         className="hover:text-(--color-primary) hover:underline"
       >
         <strong className="font-semibold text-(--color-foreground) tabular-nums">{team.memberCount}</strong>{" "}
-        {t("org.lower_members")}
+        {t("org.lower_members", { count: team.memberCount })}
       </Link>
       {" · "}
       <Link
@@ -119,7 +119,7 @@ export function TeamCounts({
         className="hover:text-(--color-primary) hover:underline"
       >
         <strong className="font-semibold text-(--color-foreground) tabular-nums">{team.repoCount}</strong>{" "}
-        {t("org.lower_repositories")}
+        {t("org.lower_repositories", { count: team.repoCount })}
       </Link>
     </p>
   );

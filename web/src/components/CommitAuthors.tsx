@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { tCount } from "@/lib/i18n";
 import type { RepoCommitAuthor } from "@/lib/queries/repo";
 import { routePath } from "@/lib/url";
 import { cn } from "@/lib/utils";
@@ -45,9 +46,7 @@ export function CommitAuthors({
             <span className="font-normal text-(--color-muted-foreground)">{t("repo.authors_and")}</span>
             <Popover>
               <PopoverTrigger className="cursor-pointer font-semibold whitespace-nowrap hover:underline">
-                {coAuthors.length === 1
-                  ? t("repo.authors_one_other")
-                  : t("repo.authors_others", { count: coAuthors.length })}
+                {tCount("repo.authors_others", coAuthors.length, ["repo.authors_one_other"])}
               </PopoverTrigger>
               <PopoverContent
                 align="start"

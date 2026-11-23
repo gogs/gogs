@@ -160,7 +160,11 @@ export function RepoCommit() {
             {parents.length > 0 ? (
               <span className="inline-flex items-center gap-1">
                 <span aria-hidden>·</span>
-                <span>{parents.length > 1 ? `${parents.length} ${t("repo.parents")}` : t("repo.commit_parent")}</span>
+                <span>
+                  {parents.length > 1
+                    ? `${parents.length} ${t("repo.parents", { count: parents.length })}`
+                    : t("repo.commit_parent")}
+                </span>
                 {parents.map((p) => (
                   <Link
                     activeOptions={{ exact: true }}

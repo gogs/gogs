@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { DiffWorkspace } from "@/components/DiffWorkspace";
 import { RepoHeader } from "@/components/RepoHeader";
 import { Button } from "@/components/ui/button";
+import { tCount } from "@/lib/i18n";
 import { usePageTitle } from "@/lib/page-title";
 import { type RepoCompareData, repoHeaderQuery } from "@/lib/queries/repo";
 import { subUrl } from "@/lib/url";
@@ -57,7 +58,7 @@ export function RepoCompare({
         <div className="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <h2 className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xl font-semibold text-(--color-foreground)">
             <span>
-              {t(totalCommits === 1 ? "repo.commits.n_commit" : "repo.commits.n_commits", {
+              {tCount("repo.commits.n_commits", totalCommits, ["repo.commits.n_commit"], {
                 count: totalCommits.toLocaleString(),
               })}
             </span>
@@ -80,9 +81,7 @@ export function RepoCompare({
             <CommitList owner={owner} name={name} commits={commits.slice(0, commits.length - hiddenCommits)} compact />
             {hiddenCommits > 0 ? (
               <Button variant="outline" size="sm" className="mt-4" onClick={() => setShowAll(true)}>
-                {t(hiddenCommits === 1 ? "repo.commits.show_more_commit" : "repo.commits.show_more_commits", {
-                  count: hiddenCommits,
-                })}
+                {tCount("repo.commits.show_more_commits", hiddenCommits, ["repo.commits.show_more_commit"])}
               </Button>
             ) : null}
             {showAll && totalCommits > commits.length ? (

@@ -170,7 +170,11 @@ function DashboardLists({ data }: { data: DashboardData }) {
                 <Link to="/$username" params={{ username: org.name }} className={ROW_CLASS}>
                   <img src={org.avatarURL} alt="" className="size-5 shrink-0 rounded-sm object-cover" />
                   <span className="min-w-0 flex-1 truncate font-semibold">{org.name}</span>
-                  <Count value={org.repoCount} icon={BookMarked} label={t("org.lower_repositories")} />
+                  <Count
+                    value={org.repoCount}
+                    icon={BookMarked}
+                    label={t("org.lower_repositories", { count: org.repoCount })}
+                  />
                 </Link>
               </li>
             ))}

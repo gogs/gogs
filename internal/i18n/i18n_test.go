@@ -57,6 +57,30 @@ func TestLocalizer(t *testing.T) {
 		require.EqualError(t, err, "no languages in [i18n] LANGS")
 	})
 
+	t.Run("plurals", func(t *testing.T) {
+		h, err := Localizer(Options{
+			Files: map[string][]byte{
+				"locale_en-US.ini": []byte("[repo]\nfiles = {count} ${file, count}\n[plurals]\nfile.one = file\nfile.other = files\n"),
+				"locale_ja-JP.ini": []byte("[repo]\nfork = フォーク\n"),
+			},
+			Langs:       []string{"en-US", "ja-JP"},
+			Names:       []string{"English", "日本語"},
+			DefaultLang: "en-US",
+		})
+		require.NoError(t, err)
+
+		f := flamego.New()
+		f.Use(h)
+		f.Get("/", func(l Locale) string { return l.Tr("repo::files", "count", 1) + ", " + l.Tr("repo::files", "count", 2) })
+		for _, lang := range []string{"en-US", "ja-JP"} {
+			resp := httptest.NewRecorder()
+			req := httptest.NewRequest("GET", "/", nil)
+			req.Header.Set("Accept-Language", lang)
+			f.ServeHTTP(resp, req)
+			assert.Equal(t, "1 file, 2 files", resp.Body.String(), "messages falling back to en-US use its plural rules in %s", lang)
+		}
+	})
+
 	t.Run("default language not listed", func(t *testing.T) {
 		h, err := Localizer(Options{
 			Files: map[string][]byte{

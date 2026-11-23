@@ -10,6 +10,7 @@ import { RepoHeader } from "@/components/RepoHeader";
 import { RichText } from "@/components/RichText";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { tCount } from "@/lib/i18n";
 import { usePageTitle } from "@/lib/page-title";
 import { type RepoNewPullData, createRepoPull, repoHeaderQuery } from "@/lib/queries/repo";
 import { cn } from "@/lib/utils";
@@ -121,9 +122,7 @@ export function RepoNewPull({
         {data.commits.length ? (
           <section className="glass-section mt-8">
             <h2 className="mb-3 text-lg font-semibold">
-              {t(data.commits.length === 1 ? "repo.commits.n_commit" : "repo.commits.n_commits", {
-                count: data.commits.length,
-              })}
+              {tCount("repo.commits.n_commits", data.commits.length, ["repo.commits.n_commit"])}
             </h2>
             <CommitList owner={data.headOwner} name={data.headName} commits={data.commits} />
           </section>

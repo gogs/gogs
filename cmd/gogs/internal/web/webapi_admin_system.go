@@ -65,10 +65,11 @@ func (r adminReport) code(key string, value any) adminReportRow {
 	return adminReportRow{Label: r.l.Tr(key), Kind: "code", Value: fmt.Sprint(value)}
 }
 
-// codeUnit is a code value followed by its unit, e.g., minutes.
-func (r adminReport) codeUnit(key string, value any, unit string) adminReportRow {
+// codeUnit is a code value followed by the unit of unitKey in its plural form
+// for the value, e.g., minutes.
+func (r adminReport) codeUnit(key string, value any, unitKey string) adminReportRow {
 	row := r.code(key, value)
-	row.Unit = unit
+	row.Unit = r.l.Tr(unitKey, "count", value)
 	return row
 }
 
@@ -409,8 +410,8 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 	auth := conf.Auth
 	sections = append(sections, r.section("auth", "admin::config.auth_config",
 		rows(
-			r.codeUnit("admin::config.auth.activate_code_lives", auth.ActivateCodeLives, l.Tr("tool::raw_minutes")),
-			r.codeUnit("admin::config.auth.reset_password_code_lives", auth.ResetPasswordCodeLives, l.Tr("tool::raw_minutes")),
+			r.codeUnit("admin::config.auth.activate_code_lives", auth.ActivateCodeLives, "tool::raw_minutes"),
+			r.codeUnit("admin::config.auth.reset_password_code_lives", auth.ResetPasswordCodeLives, "tool::raw_minutes"),
 			r.flag("admin::config.auth.require_email_confirm", auth.RequireEmailConfirmation),
 			r.flag("admin::config.auth.require_sign_in_view", auth.RequireSigninView),
 			r.flag("admin::config.auth.disable_registration", auth.DisableRegistration),
@@ -435,15 +436,15 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 		r.code("admin::config.session.provider_config", sess.ProviderConfig),
 		r.code("admin::config.session.cookie_name", sess.CookieName),
 		r.flag("admin::config.session.https_only", sess.CookieSecure),
-		r.codeUnit("admin::config.session.gc_interval", sess.GCInterval, l.Tr("tool::raw_seconds")),
-		r.codeUnit("admin::config.session.max_life_time", sess.MaxLifeTime, l.Tr("tool::raw_seconds")),
+		r.codeUnit("admin::config.session.gc_interval", sess.GCInterval, "tool::raw_seconds"),
+		r.codeUnit("admin::config.session.max_life_time", sess.MaxLifeTime, "tool::raw_seconds"),
 	)))
 
 	// The cache host is left out because it can hold credentials, e.g., a
 	// Redis password.
 	sections = append(sections, r.section("cache", "admin::config.cache_config", rows(
 		r.code("admin::config.cache.adapter", conf.Cache.Adapter),
-		r.codeUnit("admin::config.cache.interval", conf.Cache.Interval, l.Tr("tool::raw_seconds")),
+		r.codeUnit("admin::config.cache.interval", conf.Cache.Interval, "tool::raw_seconds"),
 	)))
 
 	att := conf.Attachment
@@ -474,11 +475,11 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 			r.optional("admin::config.http.access_control_allow_origin", conf.HTTP.AccessControlAllowOrigin),
 		)),
 		r.section("mirror", "admin::config.mirror_config", rows(
-			r.codeUnit("admin::config.mirror.default_interval", conf.Mirror.DefaultInterval, l.Tr("tool::raw_hours")),
+			r.codeUnit("admin::config.mirror.default_interval", conf.Mirror.DefaultInterval, "tool::raw_hours"),
 		)),
 		r.section("webhook", "admin::config.webhook_config", rows(
 			r.list("admin::config.webhook.types", conf.Webhook.Types),
-			r.codeUnit("admin::config.webhook.deliver_timeout", conf.Webhook.DeliverTimeout, l.Tr("tool::raw_seconds")),
+			r.codeUnit("admin::config.webhook.deliver_timeout", conf.Webhook.DeliverTimeout, "tool::raw_seconds"),
 			r.flag("admin::config.webhook.skip_tls_verify", conf.Webhook.SkipTLSVerify),
 		)),
 	)
@@ -489,9 +490,9 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 			r.optional("admin::config.git.gc_args", strings.Join(git.GCArgs, " ")),
 		),
 		rows(
-			r.codeUnit("admin::config.git.migrate_timeout", git.Timeout.Migrate, l.Tr("tool::raw_seconds")),
-			r.codeUnit("admin::config.git.mirror_timeout", git.Timeout.Mirror, l.Tr("tool::raw_seconds")),
-			r.codeUnit("admin::config.git.gc_timeout", git.Timeout.GC, l.Tr("tool::raw_seconds")),
+			r.codeUnit("admin::config.git.migrate_timeout", git.Timeout.Migrate, "tool::raw_seconds"),
+			r.codeUnit("admin::config.git.mirror_timeout", git.Timeout.Mirror, "tool::raw_seconds"),
+			r.codeUnit("admin::config.git.gc_timeout", git.Timeout.GC, "tool::raw_seconds"),
 		),
 	))
 
