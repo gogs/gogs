@@ -95,18 +95,18 @@ func (c *Comment) AfterFind(_ *gorm.DB) error {
 	return nil
 }
 
-func (c *Comment) HTMLURL() string {
-	return fmt.Sprintf("%s#issuecomment-%d", c.Issue.HTMLURL(), c.ID)
+func (c *Comment) HTMLURL(externalURL string) string {
+	return fmt.Sprintf("%s#issuecomment-%d", c.Issue.HTMLURL(externalURL), c.ID)
 }
 
 // APIFormat returns the API format of the comment. It assumes the following
 // fields have been assigned with valid values:
 // Required - Poster, Issue
-func (c *Comment) APIFormat() *v1types.IssueComment {
+func (c *Comment) APIFormat(links LinkOptions) *v1types.IssueComment {
 	return &v1types.IssueComment{
 		ID:      c.ID,
-		HTMLURL: c.HTMLURL(),
-		Poster:  c.Poster.APIFormat(),
+		HTMLURL: c.HTMLURL(links.ExternalURL),
+		Poster:  c.Poster.APIFormat(links),
 		Body:    c.Content,
 		Created: c.Created,
 		Updated: c.Updated,
@@ -172,7 +172,7 @@ func newCommentsStore(db *gorm.DB) *CommentsStore {
 // create creates the comment of given options, updates the numbers that
 // depend on its type, notifies the watchers of the repository and mails the
 // participants of the issue.
-func (s *CommentsStore) create(ctx context.Context, logger *logx.Logger, opts *CreateCommentOptions) (*Comment, error) {
+func (s *CommentsStore) create(ctx context.Context, logger *logx.Logger, notify NotifyOptions, opts *CreateCommentOptions) (*Comment, error) {
 	db := s.db.WithContext(ctx)
 	comment := &Comment{
 		Type:      opts.Type,
@@ -246,7 +246,7 @@ func (s *CommentsStore) create(ctx context.Context, logger *logx.Logger, opts *C
 		if err = newActionsStore(s.db).notifyWatchers(ctx, act); err != nil {
 			logger.Error("Failed to notify watchers", "error", err)
 		}
-		if err = s.mailParticipants(ctx, logger, comment, act.OpType, opts.Issue); err != nil {
+		if err = s.mailParticipants(ctx, logger, notify, comment, act.OpType, opts.Issue); err != nil {
 			logger.Error("Failed to mail participants", "error", err)
 		}
 	}
@@ -256,8 +256,8 @@ func (s *CommentsStore) create(ctx context.Context, logger *logx.Logger, opts *C
 // mailParticipants marks the users the comment mentions as mentioned, and
 // sends emails about the comment to them and to the participants of the
 // issue.
-func (s *CommentsStore) mailParticipants(ctx context.Context, logger *logx.Logger, c *Comment, opType ActionType, issue *Issue) error {
-	mentions := findLowerMentions(c.Content)
+func (s *CommentsStore) mailParticipants(ctx context.Context, logger *logx.Logger, notify NotifyOptions, c *Comment, opType ActionType, issue *Issue) error {
+	mentions := findLowerMentions(notify.Markup, c.Content)
 	err := newIssuesStore(s.db).updateMentions(ctx, issue, mentions)
 	if err != nil {
 		return errors.Wrap(err, "update mentions")
@@ -271,19 +271,19 @@ func (s *CommentsStore) mailParticipants(ctx context.Context, logger *logx.Logge
 	case ActionReopenIssue:
 		issue.Content = fmt.Sprintf("Reopened #%d", issue.Index)
 	}
-	if err = mailIssueCommentToParticipants(logger, s.db.WithContext(ctx), issue, c.Poster, mentions); err != nil {
+	if err = mailIssueCommentToParticipants(logger, notify, s.db.WithContext(ctx), issue, c.Poster, mentions); err != nil {
 		logger.Error("Failed to mail participants", "error", err)
 	}
 	return nil
 }
 
 // createStatus creates the comment that the issue is closed or reopened.
-func (s *CommentsStore) createStatus(ctx context.Context, logger *logx.Logger, doer *User, repo *Repository, issue *Issue) (*Comment, error) {
+func (s *CommentsStore) createStatus(ctx context.Context, logger *logx.Logger, notify NotifyOptions, doer *User, repo *Repository, issue *Issue) (*Comment, error) {
 	typ := CommentTypeClose
 	if !issue.IsClosed {
 		typ = CommentTypeReopen
 	}
-	return s.create(ctx, logger, &CreateCommentOptions{
+	return s.create(ctx, logger, notify, &CreateCommentOptions{
 		Type:  typ,
 		Doer:  doer,
 		Repo:  repo,
@@ -294,13 +294,13 @@ func (s *CommentsStore) createStatus(ctx context.Context, logger *logx.Logger, d
 // Create creates a comment of given content on the issue of given repository
 // as the doer, attaches the unattached attachments with given UUIDs to it, and
 // prepares webhooks.
-func (s *CommentsStore) Create(ctx context.Context, logger *logx.Logger, doer *User, repo *Repository, issue *Issue, content string, uuids []string) (*Comment, error) {
+func (s *CommentsStore) Create(ctx context.Context, logger *logx.Logger, notify NotifyOptions, doer *User, repo *Repository, issue *Issue, content string, uuids []string) (*Comment, error) {
 	// Stopping midway, e.g., when the client disconnects, would leave a partial
 	// change behind.
 	ctx = context.WithoutCancel(ctx)
 	var comment *Comment
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) (err error) {
-		comment, err = newCommentsStore(tx).create(ctx, logger, &CreateCommentOptions{
+		comment, err = newCommentsStore(tx).create(ctx, logger, notify, &CreateCommentOptions{
 			Type:        CommentTypeComment,
 			Doer:        doer,
 			Repo:        repo,
@@ -315,12 +315,13 @@ func (s *CommentsStore) Create(ctx context.Context, logger *logx.Logger, doer *U
 	}
 
 	comment.Issue = issue
-	err = newWebhooksStore(s.db).Prepare(ctx, logger, repo, HookEventTypeIssueComment, &v1types.WebhookIssueCommentPayload{
+	links := notify.Links
+	err = newWebhooksStore(s.db).Prepare(ctx, logger, links.ExternalURL, repo, HookEventTypeIssueComment, &v1types.WebhookIssueCommentPayload{
 		Action:     v1types.WebhookIssueCommentCreated,
-		Issue:      issue.APIFormat(),
-		Comment:    comment.APIFormat(),
-		Repository: repo.APIFormatLegacy(logger, nil),
-		Sender:     doer.APIFormat(),
+		Issue:      issue.APIFormat(links),
+		Comment:    comment.APIFormat(links),
+		Repository: repo.APIFormatLegacy(logger, links, nil),
+		Sender:     doer.APIFormat(links),
 	})
 	if err != nil {
 		logger.Error("Failed to prepare webhooks", "commentID", comment.ID, "error", err)
@@ -330,7 +331,7 @@ func (s *CommentsStore) Create(ctx context.Context, logger *logx.Logger, doer *U
 
 // createRef creates a comment on the issue that the commit with given SHA
 // references it, unless the commit already did.
-func (s *CommentsStore) createRef(ctx context.Context, logger *logx.Logger, doer *User, repo *Repository, issue *Issue, content, commitSHA string) error {
+func (s *CommentsStore) createRef(ctx context.Context, logger *logx.Logger, notify NotifyOptions, doer *User, repo *Repository, issue *Issue, content, commitSHA string) error {
 	if commitSHA == "" {
 		return errors.New("cannot create reference with empty commit SHA")
 	}
@@ -346,7 +347,7 @@ func (s *CommentsStore) createRef(ctx context.Context, logger *logx.Logger, doer
 	}
 
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		_, err := newCommentsStore(tx).create(ctx, logger, &CreateCommentOptions{
+		_, err := newCommentsStore(tx).create(ctx, logger, notify, &CreateCommentOptions{
 			Type:      CommentTypeCommitRef,
 			Doer:      doer,
 			Repo:      repo,
@@ -446,7 +447,7 @@ func (s *CommentsStore) ListByRepoID(ctx context.Context, repoID, since int64) (
 
 // Update saves all fields of the comment edited by the doer, whose content was
 // oldContent, and prepares webhooks.
-func (s *CommentsStore) Update(ctx context.Context, logger *logx.Logger, doer *User, c *Comment, oldContent string) error {
+func (s *CommentsStore) Update(ctx context.Context, logger *logx.Logger, links LinkOptions, doer *User, c *Comment, oldContent string) error {
 	// Stopping midway, e.g., when the client disconnects, would leave a partial
 	// change behind.
 	ctx = context.WithoutCancel(ctx)
@@ -459,15 +460,15 @@ func (s *CommentsStore) Update(ctx context.Context, logger *logx.Logger, doer *U
 		logger.Error("Failed to load issue attributes", "issueID", c.IssueID, "error", err)
 		return nil
 	}
-	err = newWebhooksStore(s.db).Prepare(ctx, logger, c.Issue.Repo, HookEventTypeIssueComment, &v1types.WebhookIssueCommentPayload{
+	err = newWebhooksStore(s.db).Prepare(ctx, logger, links.ExternalURL, c.Issue.Repo, HookEventTypeIssueComment, &v1types.WebhookIssueCommentPayload{
 		Action:  v1types.WebhookIssueCommentEdited,
-		Issue:   c.Issue.APIFormat(),
-		Comment: c.APIFormat(),
+		Issue:   c.Issue.APIFormat(links),
+		Comment: c.APIFormat(links),
 		Changes: &v1types.WebhookChangesPayload{
 			Body: &v1types.WebhookChangesFromPayload{From: oldContent},
 		},
-		Repository: c.Issue.Repo.APIFormatLegacy(logger, nil),
-		Sender:     doer.APIFormat(),
+		Repository: c.Issue.Repo.APIFormatLegacy(logger, links, nil),
+		Sender:     doer.APIFormat(links),
 	})
 	if err != nil {
 		logger.Error("Failed to prepare webhooks", "commentID", c.ID, "error", err)
@@ -476,9 +477,9 @@ func (s *CommentsStore) Update(ctx context.Context, logger *logx.Logger, doer *U
 }
 
 // DeleteByID deletes the comment with given ID and its attachments as the
-// doer, and prepares webhooks. Deleting a comment that does not exist is not
-// an error.
-func (s *CommentsStore) DeleteByID(ctx context.Context, logger *logx.Logger, doer *User, id int64) error {
+// doer, and prepares webhooks. The files of the attachments are under the
+// attachment path. Deleting a comment that does not exist is not an error.
+func (s *CommentsStore) DeleteByID(ctx context.Context, logger *logx.Logger, links LinkOptions, attachmentPath string, doer *User, id int64) error {
 	// Stopping midway, e.g., when the client disconnects, would leave a partial
 	// change behind.
 	ctx = context.WithoutCancel(ctx)
@@ -504,7 +505,7 @@ func (s *CommentsStore) DeleteByID(ctx context.Context, logger *logx.Logger, doe
 		return err
 	}
 
-	err = newAttachmentsStore(s.db).DeleteByCommentID(ctx, comment.ID, true)
+	err = newAttachmentsStore(s.db).DeleteByCommentID(ctx, attachmentPath, comment.ID, true)
 	if err != nil {
 		logger.Error("Failed to delete attachments of comment", "commentID", comment.ID, "error", err)
 	}
@@ -513,12 +514,12 @@ func (s *CommentsStore) DeleteByID(ctx context.Context, logger *logx.Logger, doe
 		logger.Error("Failed to load issue attributes", "issueID", comment.IssueID, "error", err)
 		return nil
 	}
-	err = newWebhooksStore(s.db).Prepare(ctx, logger, comment.Issue.Repo, HookEventTypeIssueComment, &v1types.WebhookIssueCommentPayload{
+	err = newWebhooksStore(s.db).Prepare(ctx, logger, links.ExternalURL, comment.Issue.Repo, HookEventTypeIssueComment, &v1types.WebhookIssueCommentPayload{
 		Action:     v1types.WebhookIssueCommentDeleted,
-		Issue:      comment.Issue.APIFormat(),
-		Comment:    comment.APIFormat(),
-		Repository: comment.Issue.Repo.APIFormatLegacy(logger, nil),
-		Sender:     doer.APIFormat(),
+		Issue:      comment.Issue.APIFormat(links),
+		Comment:    comment.APIFormat(links),
+		Repository: comment.Issue.Repo.APIFormatLegacy(logger, links, nil),
+		Sender:     doer.APIFormat(links),
 	})
 	if err != nil {
 		logger.Error("Failed to prepare webhooks", "commentID", comment.ID, "error", err)

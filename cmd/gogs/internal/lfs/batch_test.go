@@ -18,10 +18,6 @@ import (
 )
 
 func TestServeBatch(t *testing.T) {
-	conf.SetMockServer(t, conf.ServerOpts{
-		ExternalURL: "https://gogs.example.com/",
-	})
-
 	tests := []struct {
 		name          string
 		body          string
@@ -120,6 +116,7 @@ func TestServeBatch(t *testing.T) {
 			}
 
 			m := flamego.New()
+			m.Map(conf.ServerOpts{ExternalURL: "https://gogs.example.com/"})
 			m.Use(func(c flamego.Context) {
 				c.Map(&database.User{Name: "owner"})
 				c.Map(&database.Repository{Name: "repo"})

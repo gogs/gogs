@@ -9,54 +9,54 @@ import (
 	"gogs.io/gogs/internal/database"
 )
 
-func responseAPIUsers(c *apiContext, users []*database.User) {
+func responseAPIUsers(c *apiContext, links database.LinkOptions, users []*database.User) {
 	apiUsers := make([]*v1types.User, len(users))
 	for i := range users {
-		apiUsers[i] = toUser(users[i])
+		apiUsers[i] = toUser(links, users[i])
 	}
 	c.JSONSuccess(&apiUsers)
 }
 
-func listUserFollowers(c *apiContext, u *database.User) {
+func listUserFollowers(c *apiContext, links database.LinkOptions, u *database.User) {
 	users, err := database.Handle.Users().ListFollowers(c.Request().Context(), u.ID, c.queryPage(database.ItemsPerPage), database.ItemsPerPage)
 	if err != nil {
 		c.Error(err, "list followers")
 		return
 	}
-	responseAPIUsers(c, users)
+	responseAPIUsers(c, links, users)
 }
 
-func listMyFollowers(c *apiContext) {
-	listUserFollowers(c, c.User)
+func listMyFollowers(c *apiContext, links database.LinkOptions) {
+	listUserFollowers(c, links, c.User)
 }
 
-func listFollowers(c *apiContext) {
+func listFollowers(c *apiContext, links database.LinkOptions) {
 	u := getUserByParams(c)
 	if c.Written() {
 		return
 	}
-	listUserFollowers(c, u)
+	listUserFollowers(c, links, u)
 }
 
-func listUserFollowing(c *apiContext, u *database.User) {
+func listUserFollowing(c *apiContext, links database.LinkOptions, u *database.User) {
 	users, err := database.Handle.Users().ListFollowings(c.Request().Context(), u.ID, c.queryPage(database.ItemsPerPage), database.ItemsPerPage)
 	if err != nil {
 		c.Error(err, "list followings")
 		return
 	}
-	responseAPIUsers(c, users)
+	responseAPIUsers(c, links, users)
 }
 
-func listMyFollowing(c *apiContext) {
-	listUserFollowing(c, c.User)
+func listMyFollowing(c *apiContext, links database.LinkOptions) {
+	listUserFollowing(c, links, c.User)
 }
 
-func listFollowing(c *apiContext) {
+func listFollowing(c *apiContext, links database.LinkOptions) {
 	u := getUserByParams(c)
 	if c.Written() {
 		return
 	}
-	listUserFollowing(c, u)
+	listUserFollowing(c, links, u)
 }
 
 func checkUserFollowing(c *apiContext, u *database.User, followID int64) {

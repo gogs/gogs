@@ -30,189 +30,176 @@ var (
 	BuildCommit string
 )
 
-// CustomConf returns the absolute path of custom configuration file that is used.
-var CustomConf string
+// SecurityOpts are the Security settings.
+type SecurityOpts struct {
+	SecretKey               string
+	LoginRememberDays       int
+	EnableLoginStatusCookie bool
+	LoginStatusCookieName   string
+	LocalNetworkAllowlist   []string `delim:","`
+}
 
-var (
-	// Security settings
-	Security struct {
-		SecretKey               string
-		LoginRememberDays       int
-		EnableLoginStatusCookie bool
-		LoginStatusCookieName   string
-		LocalNetworkAllowlist   []string `delim:","`
-	}
+// EmailOpts are the Email settings.
+type EmailOpts struct {
+	Enabled       bool
+	SubjectPrefix string
+	Host          string
+	From          string
+	User          string
+	Password      string
 
-	// Email settings
-	Email struct {
-		Enabled       bool
-		SubjectPrefix string
-		Host          string
-		From          string
-		User          string
-		Password      string
+	HELOHostname string `ini:"HELO_HOSTNAME"`
 
-		HELOHostname string `ini:"HELO_HOSTNAME"`
+	SkipVerify     bool
+	UseCertificate bool
+	CertFile       string
+	KeyFile        string
 
-		SkipVerify     bool
-		UseCertificate bool
-		CertFile       string
-		KeyFile        string
+	UsePlainText    bool
+	AddPlainTextAlt bool
 
-		UsePlainText    bool
-		AddPlainTextAlt bool
+	// Derived from other static values
+	FromEmail string `ini:"-"` // Parsed email address of From without person's name.
+}
 
-		// Derived from other static values
-		FromEmail string `ini:"-"` // Parsed email address of From without person's name.
-	}
+// UserOpts are the User settings.
+type UserOpts struct {
+	EnableEmailNotification bool
+}
 
-	// User settings
-	User struct {
-		EnableEmailNotification bool
-	}
+// SessionOpts are the Session settings.
+type SessionOpts struct {
+	Provider       string
+	ProviderConfig string
+	CookieName     string
+	CookieSecure   bool
+	GCInterval     int64 `ini:"GC_INTERVAL"`
+	MaxLifeTime    int64
+}
 
-	// Session settings
-	Session struct {
-		Provider       string
-		ProviderConfig string
-		CookieName     string
-		CookieSecure   bool
-		GCInterval     int64 `ini:"GC_INTERVAL"`
-		MaxLifeTime    int64
-	}
+// HTTPOpts are the HTTP settings.
+type HTTPOpts struct {
+	AccessControlAllowOrigin string
+}
 
-	// HTTP settings
-	HTTP struct {
-		AccessControlAllowOrigin string
-	}
+// AttachmentOpts are the Attachment settings.
+type AttachmentOpts struct {
+	Enabled      bool
+	Path         string
+	AllowedTypes []string `delim:"|"`
+	MaxSize      int64
+	MaxFiles     int
+}
 
-	// Attachment settings
+// ReleaseOpts are the Release settings.
+type ReleaseOpts struct {
 	Attachment struct {
 		Enabled      bool
-		Path         string
 		AllowedTypes []string `delim:"|"`
 		MaxSize      int64
 		MaxFiles     int
-	}
+	} `ini:"release.attachment"`
+}
 
-	// Release settings
-	Release struct {
-		Attachment struct {
-			Enabled      bool
-			AllowedTypes []string `delim:"|"`
-			MaxSize      int64
-			MaxFiles     int
-		} `ini:"release.attachment"`
-	}
+// MirrorOpts are the Mirror settings.
+type MirrorOpts struct {
+	DefaultInterval int
+}
 
-	// Mirror settings
-	Mirror struct {
-		DefaultInterval int
-	}
+// WebhookOpts are the Webhook settings.
+type WebhookOpts struct {
+	Types          []string
+	DeliverTimeout int
+	SkipTLSVerify  bool `ini:"SKIP_TLS_VERIFY"`
+	PagingNum      int
+}
 
-	// Webhook settings
-	Webhook struct {
-		Types          []string
-		DeliverTimeout int
-		SkipTLSVerify  bool `ini:"SKIP_TLS_VERIFY"`
-		PagingNum      int
-	}
+// MarkdownOpts are the Markdown settings.
+type MarkdownOpts struct {
+	EnableHardLineBreak bool
+	CustomURLSchemes    []string `ini:"CUSTOM_URL_SCHEMES"`
+	FileExtensions      []string
+}
 
-	// Markdown settings
-	Markdown struct {
-		EnableHardLineBreak bool
-		CustomURLSchemes    []string `ini:"CUSTOM_URL_SCHEMES"`
-		FileExtensions      []string
-	}
+// SmartypantsOpts are the Smartypants settings.
+type SmartypantsOpts struct {
+	Enabled      bool
+	Fractions    bool
+	Dashes       bool
+	LatexDashes  bool
+	AngledQuotes bool
+}
 
-	// Smartypants settings
-	Smartypants struct {
-		Enabled      bool
-		Fractions    bool
-		Dashes       bool
-		LatexDashes  bool
-		AngledQuotes bool
-	}
+// AdminOpts are the Admin settings.
+type AdminOpts struct {
+	DisableRegularOrgCreation bool
+}
 
-	// Admin settings
-	Admin struct {
-		DisableRegularOrgCreation bool
-	}
+// CronOpts are the Cron tasks.
+type CronOpts struct {
+	UpdateMirror struct {
+		Enabled    bool
+		RunAtStart bool
+		Schedule   string
+	} `ini:"cron.update_mirrors"`
+	RepoHealthCheck struct {
+		Enabled    bool
+		RunAtStart bool
+		Schedule   string
+		Timeout    time.Duration
+		Args       []string `delim:" "`
+	} `ini:"cron.repo_health_check"`
+	CheckRepoStats struct {
+		Enabled    bool
+		RunAtStart bool
+		Schedule   string
+	} `ini:"cron.check_repo_stats"`
+	RepoArchiveCleanup struct {
+		Enabled    bool
+		RunAtStart bool
+		Schedule   string
+		OlderThan  time.Duration
+	} `ini:"cron.repo_archive_cleanup"`
+}
 
-	// Cron tasks
-	Cron struct {
-		UpdateMirror struct {
-			Enabled    bool
-			RunAtStart bool
-			Schedule   string
-		} `ini:"cron.update_mirrors"`
-		RepoHealthCheck struct {
-			Enabled    bool
-			RunAtStart bool
-			Schedule   string
-			Timeout    time.Duration
-			Args       []string `delim:" "`
-		} `ini:"cron.repo_health_check"`
-		CheckRepoStats struct {
-			Enabled    bool
-			RunAtStart bool
-			Schedule   string
-		} `ini:"cron.check_repo_stats"`
-		RepoArchiveCleanup struct {
-			Enabled    bool
-			RunAtStart bool
-			Schedule   string
-			OlderThan  time.Duration
-		} `ini:"cron.repo_archive_cleanup"`
-	}
+// GitOpts are the Git settings.
+type GitOpts struct {
+	GCArgs  []string `ini:"GC_ARGS" delim:" "`
+	Timeout struct {
+		Migrate int
+		Mirror  int
+		GC      int `ini:"GC"`
+	} `ini:"git.timeout"`
+}
 
-	// Git settings
-	Git struct {
-		// ⚠️ WARNING: Should only be set by "internal/database/repositories.go".
-		Version string `ini:"-"`
+// APIOpts are the API settings.
+type APIOpts struct {
+	MaxResponseItems int
+}
 
-		GCArgs  []string `ini:"GC_ARGS" delim:" "`
-		Timeout struct {
-			Migrate int
-			Mirror  int
-			GC      int `ini:"GC"`
-		} `ini:"git.timeout"`
-	}
+// PrometheusOpts are the Prometheus settings.
+type PrometheusOpts struct {
+	Enabled           bool
+	EnableBasicAuth   bool
+	BasicAuthUsername string
+	BasicAuthPassword string
+}
 
-	// API settings
-	API struct {
-		MaxResponseItems int
-	}
-
-	// Prometheus settings
-	Prometheus struct {
-		Enabled           bool
-		EnableBasicAuth   bool
-		BasicAuthUsername string
-		BasicAuthPassword string
-	}
-
-	// Tracing settings
-	Tracing struct {
-		Enabled                  bool
-		EnableAdminCollector     bool
-		MaxMemoryMiB             int64 `ini:"MAX_MEMORY_MIB"`
-		MaxAge                   time.Duration
-		SlowThreshold            time.Duration
-		SamplesPerRoutePerMinute int
-	}
-
-	// Global setting
-	HasRobotsTxt bool
-)
+// TracingOpts are the Tracing settings.
+type TracingOpts struct {
+	Enabled                  bool
+	EnableAdminCollector     bool
+	MaxMemoryMiB             int64 `ini:"MAX_MEMORY_MIB"`
+	MaxAge                   time.Duration
+	SlowThreshold            time.Duration
+	SamplesPerRoutePerMinute int
+}
 
 type CacheOptions struct {
 	Adapter  string
 	Interval int
 	Host     string
 }
-
-var Cache CacheOptions
 
 type AppOpts struct {
 	// ⚠️ WARNING: Should only be set by the main package (i.e., "cmd/gogs/main.go").
@@ -222,9 +209,6 @@ type AppOpts struct {
 	RunUser   string
 	RunMode   string
 }
-
-// Application settings
-var App AppOpts
 
 type AuthOpts struct {
 	ActivateCodeLives        int
@@ -243,9 +227,6 @@ type AuthOpts struct {
 	// Derived from other static values
 	TrustedProxyCIDRs []*net.IPNet `ini:"-"` // Parsed CIDR form of TrustedProxyIPs.
 }
-
-// Authentication settings
-var Auth AuthOpts
 
 // Values of [auth] ANTI_BOT_VERIFICATION.
 const (
@@ -283,9 +264,6 @@ type ServerOpts struct {
 	UnixSocketMode os.FileMode `ini:"-"` // Parsed file mode of UnixSocketPermission.
 }
 
-// Server settings
-var Server ServerOpts
-
 type SSHOpts struct {
 	Disabled                     bool   `ini:"DISABLE_SSH"`
 	Domain                       string `ini:"SSH_DOMAIN"`
@@ -304,9 +282,6 @@ type SSHOpts struct {
 	ServerMACs         []string `ini:"SSH_SERVER_MACS"`
 	ServerAlgorithms   []string `ini:"SSH_SERVER_ALGORITHMS"`
 }
-
-// SSH settings
-var SSH SSHOpts
 
 type RepositoryOpts struct {
 	Root                     string
@@ -337,9 +312,6 @@ type RepositoryOpts struct {
 	} `ini:"repository.upload"`
 }
 
-// Repository settings
-var Repository RepositoryOpts
-
 type DatabaseOpts struct {
 	Type         string
 	Host         string
@@ -353,17 +325,11 @@ type DatabaseOpts struct {
 	MaxIdleConns int
 }
 
-// Database settings
-var Database DatabaseOpts
-
 type LFSOpts struct {
 	Storage         string
 	ObjectsPath     string
 	ObjectsTempPath string
 }
-
-// LFS settings
-var LFS LFSOpts
 
 type UIUserOpts struct {
 	RepoPagingNum     int
@@ -386,36 +352,28 @@ type UIOpts struct {
 	User UIUserOpts `ini:"ui.user"`
 }
 
-// UI settings
-var UI UIOpts
-
 type PictureOpts struct {
 	AvatarUploadPath           string
 	RepositoryAvatarUploadPath string
 }
 
-// Picture settings
-var Picture PictureOpts
-
-type i18nConf struct {
+type I18nOpts struct {
 	Langs []string `delim:","`
 	Names []string `delim:","`
 }
 
-// I18n settings
-var I18n *i18nConf
-
-// handleDeprecated transfers deprecated values to the new ones when set.
-func handleDeprecated() {
+// handleDeprecated transfers deprecated values in the file to the new options
+// of auth when set.
+func handleDeprecated(file *ini.File, auth *AuthOpts) {
 	// [auth] ENABLE_REGISTRATION_CAPTCHA only switches between the default
 	// altcha and no verification, so an explicit "captcha" is kept.
-	if key, err := File.Section("auth").GetKey("ENABLE_REGISTRATION_CAPTCHA"); err == nil {
+	if key, err := file.Section("auth").GetKey("ENABLE_REGISTRATION_CAPTCHA"); err == nil {
 		if key.MustBool() {
-			if Auth.AntiBotVerification == "" {
-				Auth.AntiBotVerification = AntiBotVerificationAltcha
+			if auth.AntiBotVerification == "" {
+				auth.AntiBotVerification = AntiBotVerificationAltcha
 			}
-		} else if Auth.AntiBotVerification == AntiBotVerificationAltcha {
-			Auth.AntiBotVerification = ""
+		} else if auth.AntiBotVerification == AntiBotVerificationAltcha {
+			auth.AntiBotVerification = ""
 		}
 	}
 }
@@ -499,19 +457,6 @@ func checkInvalidOptions(config *ini.File) (warnings []string) {
 
 	return warnings
 }
-
-// HookMode indicates whether program starts as Git server-side hook callback.
-// All operations should be done synchronously to prevent the program from exiting before finishing.
-//
-// ⚠️ WARNING: Should only be set by "cmd/gogs/serv.go".
-var HookMode bool
-
-// Indicates which database backend is currently being used.
-var (
-	UseSQLite3    bool
-	UseMySQL      bool
-	UsePostgreSQL bool
-)
 
 // UsersAvatarPathPrefix is the path prefix to user avatars. It is under "-",
 // a reserved username, so it never shadows the pages of a user.

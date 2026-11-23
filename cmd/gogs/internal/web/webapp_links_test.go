@@ -7,14 +7,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/markup"
 )
 
 func TestMarkAppLinks(t *testing.T) {
-	markup.NewSanitizer()
-	conf.SetMockServer(t, conf.ServerOpts{ExternalURL: "https://example.com/gogs/", Subpath: "/gogs", SubpathDepth: 1})
+	markup.NewSanitizer(nil)
+	markupOpts := markup.Options{ExternalURL: "https://example.com/gogs/", Subpath: "/gogs", SubpathDepth: 1}
 	repo := &database.Repository{
 		Name:               "demo",
 		Owner:              &database.User{Name: "alice"},
@@ -64,13 +63,13 @@ func TestMarkAppLinks(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.href, func(t *testing.T) {
-			got := markAppLinks(markup.Markdown(fmt.Sprintf(`<a href="%s">link</a>`, test.href), repo.Link(), nil), repo)
+			got := markAppLinks(markupOpts, markup.Markdown(markupOpts, fmt.Sprintf(`<a href="%s">link</a>`, test.href), repo.Link(markupOpts.Subpath), nil), repo)
 			assert.Equal(t, test.want, strings.Contains(got, "data-app-link"), got)
 		})
 	}
 
 	t.Run("raw HTML", func(t *testing.T) {
-		got := markAppLinks(markup.Markdown(`<a title="Issue" href="/gogs/alice/demo/issues/1">#1</a> <a data-app-link href="/gogs/attachments/1">file</a> @bob`, repo.Link(), nil), repo)
+		got := markAppLinks(markupOpts, markup.Markdown(markupOpts, `<a title="Issue" href="/gogs/alice/demo/issues/1">#1</a> <a data-app-link href="/gogs/attachments/1">file</a> @bob`, repo.Link(markupOpts.Subpath), nil), repo)
 		assert.Equal(t, `<p><a data-app-link title="Issue" href="/gogs/alice/demo/issues/1" rel="nofollow">#1</a> <a href="/gogs/attachments/1" rel="nofollow">file</a> <a data-app-link href="/gogs/bob" rel="nofollow">@bob</a></p>`+"\n", got)
 	})
 }

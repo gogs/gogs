@@ -76,9 +76,9 @@ type repoForkOptions struct {
 	ForcePrivate bool `json:"forcePrivate"`
 }
 
-func getRepoFork(c flamego.Context, logger *logx.Logger, viewer *database.User, base *forkBase) (statusCode int, resp any, err error) {
+func getRepoFork(c flamego.Context, links database.LinkOptions, repoOpts conf.RepositoryOpts, logger *logx.Logger, viewer *database.User, base *forkBase) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
-	owners, err := repoNewOwners(ctx, viewer, viewer)
+	owners, err := repoNewOwners(ctx, links, viewer, viewer)
 	if err != nil {
 		logger.Error("Failed to list owners", "userID", viewer.ID, "error", err)
 		return http.StatusInternalServerError, nil, err
@@ -92,7 +92,7 @@ func getRepoFork(c flamego.Context, logger *logx.Logger, viewer *database.User, 
 			IsUnlisted:  base.IsUnlisted,
 		},
 		Owners:       owners,
-		ForcePrivate: conf.Repository.ForcePrivate,
+		ForcePrivate: repoOpts.ForcePrivate,
 	}, nil
 }
 
@@ -102,7 +102,7 @@ type repoForkRequest struct {
 	Description string `json:"description" validate:"max=512"`
 }
 
-func postRepoFork(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, base *forkBase, req repoForkRequest) (statusCode int, resp any, err error) {
+func postRepoFork(c flamego.Context, repoCreation database.RepoCreationOptions, logger *logx.Logger, l i18n.Locale, viewer *database.User, base *forkBase, req repoForkRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	owner, err := repoOwner(c.Request().Context(), viewer, req.OwnerID)
 	// Unlike creating a repository, forking to an organization takes owning
@@ -127,7 +127,7 @@ func postRepoFork(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer 
 		return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"ownerID": &msg}}, nil
 	}
 
-	fork, err = database.Handle.Repositories().Fork(c.Request().Context(), logger, viewer, owner, base.Repository, req.RepoName, req.Description)
+	fork, err = database.Handle.Repositories().Fork(c.Request().Context(), logger, repoCreation, viewer, owner, base.Repository, req.RepoName, req.Description)
 	if err != nil {
 		if database.IsErrRepoAlreadyExist(err) {
 			msg := l.Tr("repo::settings.new_owner_has_same_repo")

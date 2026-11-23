@@ -11,11 +11,6 @@ import (
 )
 
 func TestIsProdMode(t *testing.T) {
-	before := App.RunMode
-	defer func() {
-		App.RunMode = before
-	}()
-
 	tests := []struct {
 		mode string
 		want bool
@@ -29,8 +24,7 @@ func TestIsProdMode(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			App.RunMode = test.mode
-			assert.Equal(t, test.want, IsProdMode())
+			assert.Equal(t, test.want, AppOpts{RunMode: test.mode}.IsProdMode())
 		})
 	}
 }

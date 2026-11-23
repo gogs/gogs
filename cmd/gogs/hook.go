@@ -67,8 +67,9 @@ func runHookPreReceive(ctx context.Context, cmd *cli.Command) error {
 	if os.Getenv("SSH_ORIGINAL_COMMAND") == "" {
 		return nil
 	}
-	logger = setup(logger, cmd, "pre-receive.log", true)
-	ctx = startProcessSpan(ctx, logger, "hook pre-receive", time.Second)
+	logger, cfg := setup(logger, cmd, "pre-receive.log", true)
+	prodMode := cfg.App.IsProdMode()
+	ctx = startProcessSpan(ctx, logger, cfg.Tracing.Enabled, "hook pre-receive", time.Second)
 	defer endProcessSpan()
 
 	isWiki := strings.Contains(os.Getenv(database.EnvRepoCustomHooksPath), ".wiki.git/")
@@ -107,7 +108,7 @@ func runHookPreReceive(ctx context.Context, cmd *cli.Command) error {
 			if database.IsErrBranchNotExist(err) {
 				continue
 			}
-			fail(logger, "Internal error", "Get protected branch [repo_id: %d, branch: %s]: %v", repoID, branchName, err)
+			fail(logger, prodMode, "Internal error", "Get protected branch [repo_id: %d, branch: %s]: %v", repoID, branchName, err)
 		}
 		if !protectBranch.Protected {
 			continue
@@ -116,17 +117,17 @@ func runHookPreReceive(ctx context.Context, cmd *cli.Command) error {
 		userID, _ := strconv.ParseInt(os.Getenv(database.EnvAuthUserID), 10, 64)
 		denial, err := database.Handle.ProtectBranches().CheckPush(ctx, protectBranch, userID, false)
 		if err != nil {
-			fail(logger, "Internal error", "Check push [repo_id: %d, branch: %s, user_id: %d]: %v", repoID, branchName, userID, err)
+			fail(logger, prodMode, "Internal error", "Check push [repo_id: %d, branch: %s, user_id: %d]: %v", repoID, branchName, userID, err)
 		}
 		switch denial {
 		case database.PushDeniedNotInAllowlist:
-			fail(logger, fmt.Sprintf("Branch '%s' is protected and you are not in the push allowlist", branchName), "")
+			fail(logger, prodMode, fmt.Sprintf("Branch '%s' is protected and you are not in the push allowlist", branchName), "")
 		case database.PushDeniedRequiresPullRequest:
-			fail(logger, fmt.Sprintf("Branch '%s' is protected and commits must be merged through pull request", branchName), "")
+			fail(logger, prodMode, fmt.Sprintf("Branch '%s' is protected and commits must be merged through pull request", branchName), "")
 		}
 
 		if git.IsEmptyID(newCommitID) {
-			fail(logger, fmt.Sprintf("Branch '%s' is protected from deletion", branchName), "")
+			fail(logger, prodMode, fmt.Sprintf("Branch '%s' is protected from deletion", branchName), "")
 		}
 		// A branch being created, e.g., again after it was deleted, has no
 		// commits to lose.
@@ -135,12 +136,12 @@ func runHookPreReceive(ctx context.Context, cmd *cli.Command) error {
 		}
 
 		// A push that removes commits from the branch is a force push.
-		repoPath := database.RepoPath(os.Getenv(database.EnvRepoOwnerName), os.Getenv(database.EnvRepoName))
+		repoPath := database.RepoPath(cfg.Repository.Root, os.Getenv(database.EnvRepoOwnerName), os.Getenv(database.EnvRepoName))
 		removedCommits, err := git.RepoRevListCount(ctx, repoPath, []string{oldCommitID, "^" + newCommitID})
 		if err != nil {
-			fail(logger, "Internal error", "Failed to detect force push: %v", err)
+			fail(logger, prodMode, "Internal error", "Failed to detect force push: %v", err)
 		} else if removedCommits > 0 {
-			fail(logger, fmt.Sprintf("Branch '%s' is protected from force push", branchName), "")
+			fail(logger, prodMode, fmt.Sprintf("Branch '%s' is protected from force push", branchName), "")
 		}
 	}
 
@@ -155,12 +156,12 @@ func runHookPreReceive(ctx context.Context, cmd *cli.Command) error {
 	} else {
 		hookCmd = exec.Command(customHooksPath)
 	}
-	hookCmd.Dir = database.RepoPath(os.Getenv(database.EnvRepoOwnerName), os.Getenv(database.EnvRepoName))
+	hookCmd.Dir = database.RepoPath(cfg.Repository.Root, os.Getenv(database.EnvRepoOwnerName), os.Getenv(database.EnvRepoName))
 	hookCmd.Stdout = os.Stdout
 	hookCmd.Stdin = buf
 	hookCmd.Stderr = os.Stderr
 	if err := hookCmd.Run(); err != nil {
-		fail(logger, "Internal error", "Failed to execute custom pre-receive hook: %v", err)
+		fail(logger, prodMode, "Internal error", "Failed to execute custom pre-receive hook: %v", err)
 	}
 	return nil
 }
@@ -170,13 +171,14 @@ func runHookUpdate(ctx context.Context, cmd *cli.Command) error {
 	if os.Getenv("SSH_ORIGINAL_COMMAND") == "" {
 		return nil
 	}
-	logger = setup(logger, cmd, "update.log", false)
+	logger, cfg := setup(logger, cmd, "update.log", false)
+	prodMode := cfg.App.IsProdMode()
 
 	args := cmd.Args().Slice()
 	if len(args) != 3 {
-		fail(logger, "Arguments received are not equal to three", "Arguments received are not equal to three")
+		fail(logger, prodMode, "Arguments received are not equal to three", "Arguments received are not equal to three")
 	} else if args[0] == "" {
-		fail(logger, "First argument 'refName' is empty", "First argument 'refName' is empty")
+		fail(logger, prodMode, "First argument 'refName' is empty", "First argument 'refName' is empty")
 	}
 
 	customHooksPath := filepath.Join(os.Getenv(database.EnvRepoCustomHooksPath), "update")
@@ -187,7 +189,7 @@ func runHookUpdate(ctx context.Context, cmd *cli.Command) error {
 	// Git runs the hook for every ref it updates, so it is only traced when it
 	// runs a custom hook, and gives up exporting sooner, to keep exporting spans
 	// from slowing down every push.
-	_ = startProcessSpan(ctx, logger, "hook update", 300*time.Millisecond)
+	_ = startProcessSpan(ctx, logger, cfg.Tracing.Enabled, "hook update", 300*time.Millisecond)
 	defer endProcessSpan()
 
 	var hookCmd *exec.Cmd
@@ -196,12 +198,12 @@ func runHookUpdate(ctx context.Context, cmd *cli.Command) error {
 	} else {
 		hookCmd = exec.Command(customHooksPath, args...)
 	}
-	hookCmd.Dir = database.RepoPath(os.Getenv(database.EnvRepoOwnerName), os.Getenv(database.EnvRepoName))
+	hookCmd.Dir = database.RepoPath(cfg.Repository.Root, os.Getenv(database.EnvRepoOwnerName), os.Getenv(database.EnvRepoName))
 	hookCmd.Stdout = os.Stdout
 	hookCmd.Stdin = os.Stdin
 	hookCmd.Stderr = os.Stderr
 	if err := hookCmd.Run(); err != nil {
-		fail(logger, "Internal error", "Failed to execute custom pre-receive hook: %v", err)
+		fail(logger, prodMode, "Internal error", "Failed to execute custom pre-receive hook: %v", err)
 	}
 	return nil
 }
@@ -218,8 +220,9 @@ func runHookPostReceive(ctx context.Context, cmd *cli.Command) error {
 	if !osx.IsFile(customHooksPath) {
 		return nil
 	}
-	logger = setup(logger, cmd, "post-receive.log", false)
-	_ = startProcessSpan(ctx, logger, "hook post-receive", time.Second)
+	logger, cfg := setup(logger, cmd, "post-receive.log", false)
+	prodMode := cfg.App.IsProdMode()
+	_ = startProcessSpan(ctx, logger, cfg.Tracing.Enabled, "hook post-receive", time.Second)
 	defer endProcessSpan()
 
 	var hookCmd *exec.Cmd
@@ -228,12 +231,12 @@ func runHookPostReceive(ctx context.Context, cmd *cli.Command) error {
 	} else {
 		hookCmd = exec.Command(customHooksPath)
 	}
-	hookCmd.Dir = database.RepoPath(os.Getenv(database.EnvRepoOwnerName), os.Getenv(database.EnvRepoName))
+	hookCmd.Dir = database.RepoPath(cfg.Repository.Root, os.Getenv(database.EnvRepoOwnerName), os.Getenv(database.EnvRepoName))
 	hookCmd.Stdout = os.Stdout
 	hookCmd.Stdin = os.Stdin
 	hookCmd.Stderr = os.Stderr
 	if err := hookCmd.Run(); err != nil {
-		fail(logger, "Internal error", "Failed to execute custom post-receive hook: %v", err)
+		fail(logger, prodMode, "Internal error", "Failed to execute custom post-receive hook: %v", err)
 	}
 	return nil
 }
@@ -251,8 +254,8 @@ var (
 // Git client waits for the process to exit, so exporting its spans gives up
 // after the timeout to not hold up the push for long on a collector that is
 // down.
-func startProcessSpan(ctx context.Context, logger *logx.Logger, name string, exportTimeout time.Duration) context.Context {
-	shutdown, err := tracing.Init(ctx, logger)
+func startProcessSpan(ctx context.Context, logger *logx.Logger, tracingEnabled bool, name string, exportTimeout time.Duration) context.Context {
+	shutdown, err := tracing.Init(ctx, logger, tracingEnabled)
 	if err != nil {
 		logger.Error("Failed to initialize tracing", "error", err)
 		return ctx

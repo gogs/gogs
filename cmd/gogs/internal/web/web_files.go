@@ -33,6 +33,11 @@ import (
 // webAppPages is the web app, which renders the pages of the site.
 type webAppPages struct {
 	http.Handler
+	// isProdMode hides the errors of the error page from viewers who are not
+	// site admins.
+	isProdMode bool
+	// version is the version of Gogs that site admins see on the error page.
+	version string
 }
 
 // NotFound renders the page that is not found, with a 404 status, like
@@ -51,18 +56,18 @@ func (p webAppPages) Error(w http.ResponseWriter, r *http.Request, viewer *datab
 	wc.StatusCode = http.StatusInternalServerError
 	wc.Page = context.WebPageServerError
 	isAdmin := viewer != nil && viewer.IsAdmin
-	if !conf.IsProdMode() || isAdmin {
+	if !p.isProdMode || isAdmin {
 		wc.Error = err.Error()
 	}
 	if isAdmin {
-		wc.Version = conf.App.Version
+		wc.Version = p.version
 	}
 	p.ServeHTTP(w, r.WithContext(stdctx.WithValue(r.Context(), context.WebContextKey{}, wc)))
 }
 
 // getAttachment serves an attachment of an issue, a comment or a release to
 // viewers who can read the repository.
-func getAttachment(c flamego.Context, logger *logx.Logger, viewer *database.User, pages webAppPages) {
+func getAttachment(c flamego.Context, att conf.AttachmentOpts, logger *logx.Logger, viewer *database.User, pages webAppPages) {
 	w := c.ResponseWriter()
 	ctx := c.Request().Context()
 	attach, err := database.Handle.Attachments().GetByUUID(ctx, c.Param("uuid"))
@@ -118,12 +123,12 @@ func getAttachment(c flamego.Context, logger *logx.Logger, viewer *database.User
 	// earlier edit. Only its uploader can download it.
 	if (repo == nil && (viewerID == 0 || attach.UploaderID != viewerID)) ||
 		(repo != nil && !repo.HasAccess(logger, viewerID)) ||
-		!osx.IsFile(attach.LocalPath()) {
+		!osx.IsFile(attach.LocalPath(att.Path)) {
 		pages.NotFound(c)
 		return
 	}
 
-	fr, err := os.Open(attach.LocalPath())
+	fr, err := os.Open(attach.LocalPath(att.Path))
 	if err != nil {
 		logger.Error("Failed to open attachment file", "attachmentID", attach.ID, "error", err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "open attachment"))
@@ -143,20 +148,20 @@ func getAttachment(c flamego.Context, logger *logx.Logger, viewer *database.User
 // organization. Unlike the pages, it does not turn away viewers who cannot sign
 // in or have not activated their account, because the pages that tell them so
 // show the avatar of the viewer.
-func getUserAvatar(c flamego.Context, logger *logx.Logger, viewer *database.User, pages webAppPages) {
-	if viewer == nil && conf.Auth.RequireSigninView {
+func getUserAvatar(c flamego.Context, server conf.ServerOpts, picture conf.PictureOpts, auth conf.AuthOpts, logger *logx.Logger, viewer *database.User, pages webAppPages) {
+	if viewer == nil && auth.RequireSigninView {
 		pages.NotFound(c)
 		return
 	}
 
 	id := c.ParamInt64("id")
 	// The uploaded avatar file also holds identicons saved by earlier versions.
-	avatarPath := userx.CustomAvatarPath(id)
+	avatarPath := userx.CustomAvatarPath(picture.AvatarUploadPath, id)
 	if !osx.IsFile(avatarPath) {
-		avatarPath = userx.GeneratedAvatarPath(id, avatar.Person)
+		avatarPath = userx.GeneratedAvatarPath(server.AppDataPath, id, avatar.Person)
 	}
 	if !osx.IsFile(avatarPath) {
-		avatarPath = userx.GeneratedAvatarPath(id, avatar.Organization)
+		avatarPath = userx.GeneratedAvatarPath(server.AppDataPath, id, avatar.Organization)
 	}
 	if !osx.IsFile(avatarPath) {
 		u, err := database.Handle.Users().GetByID(c.Request().Context(), id)
@@ -173,8 +178,8 @@ func getUserAvatar(c flamego.Context, logger *logx.Logger, viewer *database.User
 		if u.IsOrganization() {
 			kind = avatar.Organization
 		}
-		avatarPath = userx.GeneratedAvatarPath(id, kind)
-		if err = userx.SaveGeneratedAvatar(id, kind); err != nil {
+		avatarPath = userx.GeneratedAvatarPath(server.AppDataPath, id, kind)
+		if err = userx.SaveGeneratedAvatar(server.AppDataPath, id, kind); err != nil {
 			logger.Error("Failed to save generated user avatar", "userID", id, "error", err)
 			writeErrorResponse(c.ResponseWriter(), http.StatusInternalServerError, err)
 			return
@@ -189,8 +194,8 @@ func getUserAvatar(c flamego.Context, logger *logx.Logger, viewer *database.User
 // getGeneratedAvatar serves the avatar generated from a seed, which is used for
 // people who have no user, e.g., commit authors. It is not saved, because
 // anyone can request any seed.
-func getGeneratedAvatar(c flamego.Context, logger *logx.Logger, viewer *database.User, pages webAppPages) {
-	if viewer == nil && conf.Auth.RequireSigninView {
+func getGeneratedAvatar(c flamego.Context, app conf.AppOpts, auth conf.AuthOpts, logger *logx.Logger, viewer *database.User, pages webAppPages) {
+	if viewer == nil && auth.RequireSigninView {
 		pages.NotFound(c)
 		return
 	}
@@ -199,16 +204,16 @@ func getGeneratedAvatar(c flamego.Context, logger *logx.Logger, viewer *database
 		pages.NotFound(c)
 		return
 	}
-	if err := serveGeneratedAvatar(c, seed); err != nil {
+	if err := serveGeneratedAvatar(c, app.Version, seed); err != nil {
 		logger.Error("Failed to generate avatar", "seed", seed, "error", err)
 		writeErrorResponse(c.ResponseWriter(), http.StatusInternalServerError, err)
 	}
 }
 
-func serveGeneratedAvatar(c flamego.Context, seed string) error {
+func serveGeneratedAvatar(c flamego.Context, version, seed string) error {
 	// The avatar depends only on the seed and the version that draws it, so a
 	// revalidation is answered without drawing it again.
-	etag := fmt.Sprintf(`"%x"`, sha256.Sum256([]byte(conf.App.Version+"\x00"+seed)))
+	etag := fmt.Sprintf(`"%x"`, sha256.Sum256([]byte(version+"\x00"+seed)))
 	h := c.ResponseWriter().Header()
 	h.Set("Cache-Control", "private, max-age=86400")
 	h.Set("ETag", etag)
@@ -228,8 +233,8 @@ func serveGeneratedAvatar(c flamego.Context, seed string) error {
 
 // getRepoAvatar serves the uploaded avatar of a repository to the viewers who
 // can read the repository.
-func getRepoAvatar(c flamego.Context, logger *logx.Logger, viewer *database.User, pages webAppPages) {
-	if viewer == nil && conf.Auth.RequireSigninView {
+func getRepoAvatar(c flamego.Context, picture conf.PictureOpts, auth conf.AuthOpts, logger *logx.Logger, viewer *database.User, pages webAppPages) {
+	if viewer == nil && auth.RequireSigninView {
 		pages.NotFound(c)
 		return
 	}
@@ -252,11 +257,11 @@ func getRepoAvatar(c flamego.Context, logger *logx.Logger, viewer *database.User
 		writeErrorResponse(c.ResponseWriter(), http.StatusInternalServerError, errors.Wrap(err, "get owner"))
 		return
 	}
-	if !newViewer(ctx, logger, viewer, owner, repo).CanRead() {
+	if !newViewer(ctx, logger, auth.RequireEmailConfirmation, viewer, owner, repo).CanRead() {
 		pages.NotFound(c)
 		return
 	}
-	if err := serveAvatar(c, pages, repo.CustomAvatarPath()); err != nil {
+	if err := serveAvatar(c, pages, repo.CustomAvatarPath(picture.RepositoryAvatarUploadPath)); err != nil {
 		logger.Error("Failed to serve repository avatar", "repoID", id, "error", err)
 		writeErrorResponse(c.ResponseWriter(), http.StatusInternalServerError, err)
 	}
@@ -318,26 +323,27 @@ func getUserPublicKeys(c flamego.Context, logger *logx.Logger, pages webAppPages
 
 // activateEmail activates the email address of an activation link, and sends
 // the user to their email settings, which confirm it.
-func activateEmail(c flamego.Context, logger *logx.Logger) {
+func activateEmail(c flamego.Context, sec conf.SecurityOpts, auth conf.AuthOpts, server conf.ServerOpts, logger *logx.Logger) {
 	ctx := c.Request().Context()
-	if email := verifyActivateEmailCode(ctx, logger, c.Query("code"), c.Query("email")); email != nil {
+	if email := verifyActivateEmailCode(ctx, logger, sec.SecretKey, auth.ActivateCodeLives, c.Query("code"), c.Query("email")); email != nil {
 		if err := database.Handle.Users().MarkEmailActivated(ctx, email.UserID, email.Email); err != nil {
 			logger.Error("Failed to mark email activated", "userID", email.UserID, "email", email.Email, "error", err)
 			writeErrorResponse(c.ResponseWriter(), http.StatusInternalServerError, errors.Wrap(err, "mark email activated"))
 			return
 		}
 		logger.Debug("Email activated", "email", email.Email)
-		c.Redirect(conf.Server.Subpath + "/user/settings/email?activated=1")
+		c.Redirect(server.Subpath + "/user/settings/email?activated=1")
 		return
 	}
-	c.Redirect(conf.Server.Subpath + "/user/settings/email")
+	c.Redirect(server.Subpath + "/user/settings/email")
 }
 
 // verifyActivateEmailCode returns the email address the code activates, or nil
-// when the code is not valid for it.
-func verifyActivateEmailCode(ctx stdctx.Context, logger *logx.Logger, code, email string) *database.EmailAddress {
+// when the code is not valid for it, i.e., not signed with secretKey or older
+// than minutes.
+func verifyActivateEmailCode(ctx stdctx.Context, logger *logx.Logger, secretKey string, minutes int, code, email string) *database.EmailAddress {
 	user := parseUserFromCode(ctx, logger, code)
-	if user == nil || !userx.VerifyConfirmEmailCode(code, user.ID, email, user.LowerName, user.Password, user.Rands) {
+	if user == nil || !userx.VerifyConfirmEmailCode(secretKey, minutes, code, user.ID, email, user.LowerName, user.Password, user.Rands) {
 		return nil
 	}
 	emailAddress, err := database.Handle.Users().GetEmail(ctx, user.ID, email, false)
@@ -349,7 +355,7 @@ func verifyActivateEmailCode(ctx stdctx.Context, logger *logx.Logger, code, emai
 
 // email2User sends the viewer to the profile of the user with the email
 // address in the query.
-func email2User(c flamego.Context, logger *logx.Logger, pages webAppPages) {
+func email2User(c flamego.Context, server conf.ServerOpts, logger *logx.Logger, pages webAppPages) {
 	u, err := database.Handle.Users().GetByEmail(c.Request().Context(), c.Query("email"))
 	if err != nil {
 		if errx.IsNotFound(err) {
@@ -360,12 +366,12 @@ func email2User(c flamego.Context, logger *logx.Logger, pages webAppPages) {
 		writeErrorResponse(c.ResponseWriter(), http.StatusInternalServerError, errors.Wrap(err, "get user"))
 		return
 	}
-	c.Redirect(u.HomeURLPath())
+	c.Redirect(u.HomeURLPath(server.Subpath))
 }
 
 // getRepoArchive serves the archive of a branch, a tag or a commit, e.g.,
 // "master.zip".
-func getRepoArchive(c flamego.Context, logger *logx.Logger, repoCtx *repoContext, pages webAppPages) {
+func getRepoArchive(c flamego.Context, server conf.ServerOpts, repoOpts conf.RepositoryOpts, logger *logx.Logger, repoCtx *repoContext, pages webAppPages) {
 	w := c.ResponseWriter()
 	repo := repoCtx.Repo
 	if !repoCtx.Viewer.CanRead() || repo.IsEmpty {
@@ -373,14 +379,14 @@ func getRepoArchive(c flamego.Context, logger *logx.Logger, repoCtx *repoContext
 		return
 	}
 
-	gitRepo, err := git.Open(repo.RepoPath())
+	gitRepo, err := git.Open(repo.RepoPath(repoOpts.Root))
 	if err != nil {
 		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "open repository"))
 		return
 	}
 
-	archivePath, name, err := repox.PrepareArchive(c.Request().Context(), gitRepo, repo.Name, c.Param("**"))
+	archivePath, name, err := repox.PrepareArchive(c.Request().Context(), server.AppDataPath, gitRepo, repo.Name, c.Param("**"))
 	if err != nil {
 		if errx.IsNotFound(err) {
 			pages.NotFound(c)
@@ -403,16 +409,16 @@ func isWikiPageName(name string) bool {
 // getRepoWikiFile serves a file of the wiki that is not a page, e.g., an image
 // that a page links to relatively. It writes nothing when the wiki has no such
 // file, so the web app renders the page of that name.
-func getRepoWikiFile(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) {
+func getRepoWikiFile(c flamego.Context, repoOpts conf.RepositoryOpts, logger *logx.Logger, repoCtx *repoContext) {
 	w := c.ResponseWriter()
 	repo := repoCtx.Repo
 	name := c.Param("page")
-	if !repo.HasWikiPages(c.Request().Context()) {
+	if !repo.HasWikiPages(c.Request().Context(), repoOpts.Root) {
 		return
 	}
 
 	ctx := c.Request().Context()
-	wikiPath := repo.WikiPath()
+	wikiPath := repo.WikiPath(repoOpts.Root)
 	wikiRepo, err := git.Open(wikiPath)
 	if err != nil {
 		logger.Error("Failed to open wiki repository", "repoID", repo.ID, "error", err)
@@ -448,7 +454,7 @@ func getRepoWikiFile(c flamego.Context, logger *logx.Logger, repoCtx *repoContex
 			w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": name}))
 			w.Header().Set("Content-Transfer-Encoding", "binary")
 		}
-	} else if !conf.Repository.EnableRawFileRenderMode || !c.QueryBool("render") {
+	} else if !repoOpts.EnableRawFileRenderMode || !c.QueryBool("render") {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	}
 	w.WriteHeader(http.StatusOK)
@@ -459,7 +465,7 @@ func getRepoWikiFile(c flamego.Context, logger *logx.Logger, repoCtx *repoContex
 // meta, whether or not the viewer may see the repository, or the repository
 // exists at all, because "go get" does not send credentials from ".netrc". It
 // writes nothing for other requests.
-func serveGoGet(c flamego.Context) {
+func serveGoGet(c flamego.Context, server conf.ServerOpts) {
 	if c.Query("go-get") != "1" {
 		return
 	}
@@ -475,9 +481,9 @@ func serveGoGet(c flamego.Context) {
 		}
 	}
 
-	prefix := conf.Server.ExternalURL + path.Join(ownerName, repoName, "src", branchName)
+	prefix := server.ExternalURL + path.Join(ownerName, repoName, "src", branchName)
 	insecureFlag := ""
-	if !strings.HasPrefix(conf.Server.ExternalURL, "https://") {
+	if !strings.HasPrefix(server.ExternalURL, "https://") {
 		insecureFlag = "--insecure "
 	}
 	w := c.ResponseWriter()
@@ -495,8 +501,8 @@ func serveGoGet(c flamego.Context) {
 </html>
 `,
 		map[string]string{
-			"GoGetImport":    path.Join(conf.Server.URL.Host, conf.Server.Subpath, ownerName, repoName),
-			"CloneLink":      repox.HTTPSCloneURL(ownerName, repoName),
+			"GoGetImport":    path.Join(server.URL.Host, server.Subpath, ownerName, repoName),
+			"CloneLink":      repox.HTTPSCloneURL(server.ExternalURL, ownerName, repoName),
 			"GoDocDirectory": prefix + "{/dir}",
 			"GoDocFile":      prefix + "{/dir}/{file}#L{line}",
 			"InsecureFlag":   insecureFlag,

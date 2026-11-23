@@ -11,6 +11,7 @@ import (
 	"github.com/urfave/cli/v3"
 	"unknwon.dev/ini/v2"
 
+	"gogs.io/gogs/cmd/gogs/internal/options"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/osx"
@@ -74,8 +75,8 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 		logger.FatalContext(ctx, "Failed to load metadata", "metadataPath", metaFile, "error", err)
 	}
 	backupVersion := metadata.Section("").Key("GOGS_VERSION").MustString("999.0")
-	if semverx.Compare(conf.App.Version, "<", backupVersion) {
-		logger.FatalContext(ctx, "Current Gogs version is lower than backup version", "currentVersion", conf.App.Version, "backupVersion", backupVersion)
+	if semverx.Compare(version, "<", backupVersion) {
+		logger.FatalContext(ctx, "Current Gogs version is lower than backup version", "currentVersion", version, "backupVersion", backupVersion)
 	}
 	formatVersion := metadata.Section("").Key("VERSION").MustInt()
 	if formatVersion == 0 {
@@ -97,15 +98,15 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 		customConf = configFile
 	}
 
-	err = conf.Init(logger, customConf)
+	cfg, err := conf.Init(logger, customConf, false)
 	if err != nil {
 		return errors.Wrap(err, "init configuration")
 	}
-	if _, err = conf.InitLogging(logger, true); err != nil {
+	if _, err = conf.InitLogging(logger, cfg, true); err != nil {
 		return errors.Wrap(err, "init logging")
 	}
 
-	conn, err := database.SetEngine(logger.Scoped("db"), false)
+	conn, err := database.SetEngine(logger.Scoped("db"), cfg.Database, false)
 	if err != nil {
 		return errors.Wrap(err, "set engine")
 	}
@@ -124,7 +125,7 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 		}
 
 		// Data files
-		_ = os.MkdirAll(conf.Server.AppDataPath, os.ModePerm)
+		_ = os.MkdirAll(cfg.Server.AppDataPath, os.ModePerm)
 		for _, dir := range backupDataDirs {
 			// Skip if the backup archive does not have the corresponding data.
 			srcPath := filepath.Join(archivePath, "data", dir)
@@ -132,7 +133,7 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 				continue
 			}
 
-			dirPath := filepath.Join(conf.Server.AppDataPath, dir)
+			dirPath := filepath.Join(cfg.Server.AppDataPath, dir)
 			if osx.IsDir(dirPath) {
 				if err = moveAside(dirPath); err != nil {
 					logger.FatalContext(ctx, "Failed to backup current 'data'", "error", err)
@@ -146,14 +147,14 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 
 	// Database
 	dbDir := path.Join(archivePath, "db")
-	if err = database.ImportDatabase(ctx, logger.Scoped("db"), conn, dbDir, cmd.Bool("verbose")); err != nil {
+	if err = database.ImportDatabase(ctx, logger.Scoped("db"), options.AuthorizedKeys(cfg).Path, conn, dbDir, cmd.Bool("verbose")); err != nil {
 		logger.FatalContext(ctx, "Failed to import database", "error", err)
 	}
 
 	// Repositories
 	reposPath := filepath.Join(archivePath, "repositories.zip")
 	if !cmd.Bool("exclude-repos") && !cmd.Bool("database-only") && osx.IsFile(reposPath) {
-		if err := zip.ExtractTo(reposPath, filepath.Dir(conf.Repository.Root)); err != nil {
+		if err := zip.ExtractTo(reposPath, filepath.Dir(cfg.Repository.Root)); err != nil {
 			logger.FatalContext(ctx, "Failed to extract 'repositories.zip'", "error", err)
 		}
 	}

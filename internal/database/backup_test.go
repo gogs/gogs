@@ -58,7 +58,7 @@ func TestImportDatabase(t *testing.T) {
 	row := `{"ID":1,"RepoID":1,"Index":1,"Title":"Big","Content":"` + strings.Repeat(`\u003cbr\u003e`, 10_000) + `"}` + "\n"
 	dir := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "Issue.json"), []byte(row), 0o600))
-	err := ImportDatabase(context.Background(), logx.NewNoopLogger(), db, dir, false)
+	err := ImportDatabase(context.Background(), logx.NewNoopLogger(), "", db, dir, false)
 	require.NoError(t, err)
 
 	var issue Issue

@@ -188,7 +188,7 @@ func (ErrHookTaskNotExist) NotFound() bool {
 	return true
 }
 
-func (t *HookTask) deliver(ctx context.Context, logger *logx.Logger, webhooks *WebhooksStore) {
+func (t *HookTask) deliver(ctx context.Context, logger *logx.Logger, opts DeliverHooksOptions, webhooks *WebhooksStore) {
 	// A redelivery succeeds only when this attempt does.
 	t.IsSucceed = false
 	// An attempt that fails before sending the request is recorded as a failed
@@ -223,7 +223,7 @@ func (t *HookTask) deliver(ctx context.Context, logger *logx.Logger, webhooks *W
 		t.ResponseInfo.Body = fmt.Sprintf("Cannot parse payload URL: %v", err)
 		return
 	}
-	if netx.IsBlockedLocalHostname(payloadURL.Hostname(), conf.Security.LocalNetworkAllowlist) {
+	if netx.IsBlockedLocalHostname(payloadURL.Hostname(), opts.LocalNetworkAllowlist) {
 		t.ResponseInfo.Body = "Payload URL resolved to a local network address that is implicitly blocked."
 		return
 	}
@@ -255,9 +255,9 @@ func (t *HookTask) deliver(ctx context.Context, logger *logx.Logger, webhooks *W
 	}
 
 	client := &http.Client{
-		Timeout: time.Duration(conf.Webhook.DeliverTimeout) * time.Second,
+		Timeout: time.Duration(opts.Webhook.DeliverTimeout) * time.Second,
 		Transport: &http.Transport{
-			TLSClientConfig:   &tls.Config{InsecureSkipVerify: conf.Webhook.SkipTLSVerify},
+			TLSClientConfig:   &tls.Config{InsecureSkipVerify: opts.Webhook.SkipTLSVerify},
 			DisableKeepAlives: true,
 		},
 		CheckRedirect: func(req *http.Request, _ []*http.Request) error {
@@ -289,11 +289,19 @@ func (t *HookTask) deliver(ctx context.Context, logger *logx.Logger, webhooks *W
 	t.ResponseInfo.Body = string(p)
 }
 
+// DeliverHooksOptions are the settings that delivering webhooks reads.
+type DeliverHooksOptions struct {
+	Webhook conf.WebhookOpts
+	// LocalNetworkAllowlist lists the local hostnames that payload URLs may
+	// resolve to.
+	LocalNetworkAllowlist []string
+}
+
 // DeliverHooks delivers the deliveries that have not been made, and then
 // those of each repository that is queued.
 //
 // TODO: shoot more hooks at same time.
-func DeliverHooks(logger *logx.Logger) {
+func DeliverHooks(logger *logx.Logger, opts DeliverHooksOptions) {
 	ctx := context.Background()
 	webhooks, hookTasks := Handle.Webhooks(), Handle.HookTasks()
 	deliver := func(repoID int64) {
@@ -303,7 +311,7 @@ func DeliverHooks(logger *logx.Logger) {
 			return
 		}
 		for _, t := range tasks {
-			t.deliver(ctx, logger, webhooks)
+			t.deliver(ctx, logger, opts, webhooks)
 			if err = hookTasks.Update(ctx, t); err != nil {
 				logger.Error("Failed to update hook task", "hookTaskID", t.ID, "error", err)
 			}
@@ -325,8 +333,8 @@ func DeliverHooks(logger *logx.Logger) {
 	}
 }
 
-func InitDeliverHooks(logger *logx.Logger) {
-	go DeliverHooks(logger)
+func InitDeliverHooks(logger *logx.Logger, opts DeliverHooksOptions) {
+	go DeliverHooks(logger, opts)
 }
 
 // HookTasksStore is the storage layer for deliveries of webhooks.
@@ -385,25 +393,27 @@ func (s *HookTasksStore) listUndelivered(ctx context.Context, repoID int64) ([]*
 
 // Prepare creates a delivery of given event for each active webhook of the
 // repository and of its owner, when the owner is an organization, that is
-// subscribed to the event, and queues them.
-func (s *WebhooksStore) Prepare(ctx context.Context, logger *logx.Logger, repo *Repository, event HookEventType, p v1types.WebhookPayloader) error {
+// subscribed to the event, and queues them. Links to users in payloads of Slack
+// and Discord start with the external URL.
+func (s *WebhooksStore) Prepare(ctx context.Context, logger *logx.Logger, externalURL string, repo *Repository, event HookEventType, p v1types.WebhookPayloader) error {
 	webhooks, err := s.listActive(ctx, repo)
 	if err != nil {
 		return err
 	}
-	return s.prepareHookTasks(ctx, logger, repo, event, p, webhooks)
+	return s.prepareHookTasks(ctx, logger, externalURL, repo, event, p, webhooks)
 }
 
 // Test creates a delivery of given event for the webhook with given ID of the
 // repository when it is subscribed to the event, even if it is not active, and
 // queues it. It returns ErrWebhookNotExist when the repository has no such
-// webhook.
-func (s *WebhooksStore) Test(ctx context.Context, logger *logx.Logger, repo *Repository, event HookEventType, p v1types.WebhookPayloader, webhookID int64) error {
+// webhook. Links to users in payloads of Slack and Discord start with the
+// external URL.
+func (s *WebhooksStore) Test(ctx context.Context, logger *logx.Logger, externalURL string, repo *Repository, event HookEventType, p v1types.WebhookPayloader, webhookID int64) error {
 	webhook, err := s.GetOfRepo(ctx, repo.ID, webhookID)
 	if err != nil {
 		return err
 	}
-	return s.prepareHookTasks(ctx, logger, repo, event, p, []*Webhook{webhook})
+	return s.prepareHookTasks(ctx, logger, externalURL, repo, event, p, []*Webhook{webhook})
 }
 
 // hasEvent returns true if the webhook is subscribed to given event.
@@ -431,7 +441,7 @@ func (w *Webhook) hasEvent(event HookEventType) bool {
 
 // prepareHookTasks creates a delivery of given event for each of given
 // webhooks that is subscribed to the event, and queues them.
-func (s *WebhooksStore) prepareHookTasks(ctx context.Context, logger *logx.Logger, repo *Repository, event HookEventType, p v1types.WebhookPayloader, webhooks []*Webhook) (err error) {
+func (s *WebhooksStore) prepareHookTasks(ctx context.Context, logger *logx.Logger, externalURL string, repo *Repository, event HookEventType, p v1types.WebhookPayloader, webhooks []*Webhook) (err error) {
 	if len(webhooks) == 0 {
 		return nil
 	}
@@ -447,12 +457,12 @@ func (s *WebhooksStore) prepareHookTasks(ctx context.Context, logger *logx.Logge
 		var payloader v1types.WebhookPayloader
 		switch w.HookTaskType {
 		case SLACK:
-			payloader, err = GetSlackPayload(p, event, w.Meta)
+			payloader, err = GetSlackPayload(externalURL, p, event, w.Meta)
 			if err != nil {
 				return errors.Wrap(err, "get Slack payload")
 			}
 		case DISCORD:
-			payloader, err = GetDiscordPayload(p, event, w.Meta)
+			payloader, err = GetDiscordPayload(externalURL, p, event, w.Meta)
 			if err != nil {
 				return errors.Wrap(err, "get Discord payload")
 			}

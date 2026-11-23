@@ -22,7 +22,7 @@ type repoMentionSuggestions struct {
 
 // getRepoMentionSuggestions lists the users to suggest when mentioning someone
 // in the Markdown of the repository, i.e., the users who can read it.
-func getRepoMentionSuggestions(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoMentionSuggestions, err error) {
+func getRepoMentionSuggestions(c flamego.Context, links database.LinkOptions, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoMentionSuggestions, err error) {
 	ctx := c.Request().Context()
 	users, err := database.Handle.Repositories().ListAssignees(ctx, repoCtx.Repo)
 	if err != nil {
@@ -31,7 +31,7 @@ func getRepoMentionSuggestions(c flamego.Context, logger *logx.Logger, repoCtx *
 	}
 	resp = &repoMentionSuggestions{Items: make([]repoMentionSuggestion, 0, len(users))}
 	for _, u := range users {
-		resp.Items = append(resp.Items, repoMentionSuggestion{Name: u.Name, FullName: u.FullName, AvatarURL: u.AvatarURLPath()})
+		resp.Items = append(resp.Items, repoMentionSuggestion{Name: u.Name, FullName: u.FullName, AvatarURL: u.AvatarURLPath(links)})
 	}
 	return http.StatusOK, resp, nil
 }

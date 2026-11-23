@@ -17,7 +17,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ssh"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 )
 
@@ -50,7 +49,7 @@ func sshUserKey(t *testing.T, userID int64) *sshKey {
 	t.Helper()
 
 	key, content := sshNewKey(t)
-	added, err := database.Handle.PublicKeys().Add(t.Context(), logger, userID, UniqueName("key-"), content)
+	added, err := database.Handle.PublicKeys().Add(t.Context(), logger, authorizedKeysOptions(cfg), userID, UniqueName("key-"), content)
 	require.NoError(t, err)
 	key.id = added.ID
 	return key
@@ -61,7 +60,7 @@ func sshDeployKey(t *testing.T, repo *Repository) *sshKey {
 	t.Helper()
 
 	key, content := sshNewKey(t)
-	_, err := database.Handle.DeployKeys().Add(t.Context(), logger, repo.ID, UniqueName("deploy-"), content)
+	_, err := database.Handle.DeployKeys().Add(t.Context(), logger, authorizedKeysOptions(cfg), repo.ID, UniqueName("deploy-"), content)
 	require.NoError(t, err)
 	return key
 }
@@ -310,9 +309,9 @@ func TestSSHDeleteDeployKey(t *testing.T) {
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
 	otherRepo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
 	_, content := sshNewKey(t)
-	key, err := database.Handle.DeployKeys().Add(t.Context(), logger, repo.ID, UniqueName("deploy-"), content)
+	key, err := database.Handle.DeployKeys().Add(t.Context(), logger, authorizedKeysOptions(cfg), repo.ID, UniqueName("deploy-"), content)
 	require.NoError(t, err)
-	otherKey, err := database.Handle.DeployKeys().Add(t.Context(), logger, otherRepo.ID, UniqueName("deploy-"), content)
+	otherKey, err := database.Handle.DeployKeys().Add(t.Context(), logger, authorizedKeysOptions(cfg), otherRepo.ID, UniqueName("deploy-"), content)
 	require.NoError(t, err)
 
 	c := authenticatedClient(t, owner)
@@ -343,12 +342,12 @@ func TestSSHDeleteRepositoryWithDeployKeys(t *testing.T) {
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
 	otherRepo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
 	_, ownContent := sshNewKey(t)
-	ownKey, err := database.Handle.DeployKeys().Add(t.Context(), logger, repo.ID, UniqueName("deploy-"), ownContent)
+	ownKey, err := database.Handle.DeployKeys().Add(t.Context(), logger, authorizedKeysOptions(cfg), repo.ID, UniqueName("deploy-"), ownContent)
 	require.NoError(t, err)
 	_, sharedContent := sshNewKey(t)
-	sharedKey, err := database.Handle.DeployKeys().Add(t.Context(), logger, repo.ID, UniqueName("deploy-"), sharedContent)
+	sharedKey, err := database.Handle.DeployKeys().Add(t.Context(), logger, authorizedKeysOptions(cfg), repo.ID, UniqueName("deploy-"), sharedContent)
 	require.NoError(t, err)
-	_, err = database.Handle.DeployKeys().Add(t.Context(), logger, otherRepo.ID, UniqueName("deploy-"), sharedContent)
+	_, err = database.Handle.DeployKeys().Add(t.Context(), logger, authorizedKeysOptions(cfg), otherRepo.ID, UniqueName("deploy-"), sharedContent)
 	require.NoError(t, err)
 
 	status, body := apiV1Client(t, owner).do(http.MethodDelete, apiV1RepoPath(repo, ""), nil)
@@ -377,7 +376,7 @@ func servProgram(t *testing.T, keyID int64) string {
 
 	path := filepath.Join(t.TempDir(), "ssh")
 	script := fmt.Sprintf("#!/bin/sh\n# The command for the server is the last argument.\nfor command; do :; done\nSSH_ORIGINAL_COMMAND=\"$command\" exec '%s' serv key-%d --config='%s'\n",
-		os.Args[0], keyID, conf.CustomConf)
+		os.Args[0], keyID, cfg.CustomConf)
 	require.NoError(t, os.WriteFile(path, []byte(script), 0o700))
 	return path
 }

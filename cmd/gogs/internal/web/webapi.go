@@ -38,8 +38,8 @@ type authMethod struct {
 // request, from the session, the access token, the reverse proxy
 // authentication header, or HTTP Basic Authentication.
 func authenticator(store context.Store) flamego.Handler {
-	return func(c flamego.Context, logger *logx.Logger, sess session.Session) {
-		user, isBasicAuth, tokenID := context.AuthenticatedUser(logger, store, c.Request().Request, sess)
+	return func(c flamego.Context, logger *logx.Logger, auth conf.AuthOpts, sess session.Session) {
+		user, isBasicAuth, tokenID := context.AuthenticatedUser(logger, auth, store, c.Request().Request, sess)
 		if user != nil {
 			telemetry.SetUser(c.Request().Context(), user.ID)
 		}
@@ -47,11 +47,11 @@ func authenticator(store context.Store) flamego.Handler {
 	}
 }
 
-func corsHeaders(w http.ResponseWriter) {
-	if conf.HTTP.AccessControlAllowOrigin == "" {
+func corsHeaders(w http.ResponseWriter, httpOpts conf.HTTPOpts) {
+	if httpOpts.AccessControlAllowOrigin == "" {
 		return
 	}
-	w.Header().Set("Access-Control-Allow-Origin", conf.HTTP.AccessControlAllowOrigin)
+	w.Header().Set("Access-Control-Allow-Origin", httpOpts.AccessControlAllowOrigin)
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	w.Header().Set("Access-Control-Max-Age", "3600")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With")
@@ -60,17 +60,17 @@ func corsHeaders(w http.ResponseWriter) {
 // withWebContext attaches the WebContext of the request, so the web app renders
 // pages in the viewer's language. The request is changed in place, so the route
 // that apiV1Bridger copies to it reaches the tracing handler, which holds it.
-func withWebContext(r *http.Request, l i18n.Locale) {
+func withWebContext(r *http.Request, l i18n.Locale, server conf.ServerOpts) {
 	*r = *r.WithContext(stdctx.WithValue(r.Context(), context.WebContextKey{}, context.WebContext{
 		Lang:   l.Language(),
-		SubURL: conf.Server.Subpath,
+		SubURL: server.Subpath,
 	}))
 }
 
 // apiV1Access turns away the API v1 requests of users prohibited from signing
 // in, users who have not confirmed their email when that is required, and,
 // when the site requires signing in to view content, anonymous visitors.
-func apiV1Access(c flamego.Context, viewer *database.User, pages webAppPages) {
+func apiV1Access(c flamego.Context, auth conf.AuthOpts, viewer *database.User, pages webAppPages) {
 	writeJSON := func(message string) {
 		w := c.ResponseWriter()
 		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
@@ -84,9 +84,9 @@ func apiV1Access(c flamego.Context, viewer *database.User, pages webAppPages) {
 		wc := context.WebContextFrom(r)
 		wc.Page = context.WebPageProhibitLogin
 		pages.ServeHTTP(c.ResponseWriter(), r.WithContext(stdctx.WithValue(r.Context(), context.WebContextKey{}, wc)))
-	case viewer != nil && !viewer.IsActive && conf.Auth.RequireEmailConfirmation:
+	case viewer != nil && !viewer.IsActive && auth.RequireEmailConfirmation:
 		writeJSON("User account is not activated.")
-	case viewer == nil && conf.Auth.RequireSigninView:
+	case viewer == nil && auth.RequireSigninView:
 		writeJSON("Only authenticated user is allowed to call APIs.")
 	}
 }
@@ -155,14 +155,14 @@ func apiV1Injector(c flamego.Context) {
 // signing in to view any content (`[auth] REQUIRE_SIGNIN_VIEW`), anonymous
 // visitors. Mount it on every route that serves site content, but not on the
 // routes visitors need to sign in.
-func requireViewAccess(c flamego.Context, viewer *database.User) {
+func requireViewAccess(c flamego.Context, auth conf.AuthOpts, viewer *database.User) {
 	w := c.ResponseWriter()
 	switch {
 	case viewer != nil && viewer.ProhibitLogin:
 		writeErrorResponse(w, http.StatusForbidden, errors.New("login prohibited"))
-	case viewer != nil && viewer.IsDisabled():
+	case viewer != nil && viewer.IsDisabled(auth.RequireEmailConfirmation):
 		writeErrorResponse(w, http.StatusForbidden, errors.New("account not activated"))
-	case viewer == nil && conf.Auth.RequireSigninView:
+	case viewer == nil && auth.RequireSigninView:
 		writeErrorResponse(w, http.StatusUnauthorized, errors.New("authentication required"))
 	}
 }
@@ -170,12 +170,12 @@ func requireViewAccess(c flamego.Context, viewer *database.User) {
 // requireAuthenticated is requireViewAccess for routes that also turn away
 // unauthenticated viewers on sites that do not require signing in to view
 // content.
-func requireAuthenticated(c flamego.Context, viewer *database.User) {
+func requireAuthenticated(c flamego.Context, auth conf.AuthOpts, viewer *database.User) {
 	if viewer == nil {
 		writeErrorResponse(c.ResponseWriter(), http.StatusUnauthorized, errors.New("authentication required"))
 		return
 	}
-	requireViewAccess(c, viewer)
+	requireViewAccess(c, auth, viewer)
 }
 
 // requireJSON turns away requests that change something unless they are sent
@@ -514,17 +514,17 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			Post(bindJSON(repoWikiPageRequest{}), postRepoWikiPage).
 			Patch(bindJSON(repoWikiPageRequest{}), patchRepoWikiPage)
 	}, requireJSON, limitIssueContent, requireAuthenticated, withRepoContext)
-	f.Post("/api/web/{owner}/{repo}/issues/attachments", limitAttachmentUpload(issueAttachmentLimits()), requireAuthenticated, withRepoContext, withRepoIssuesOrPulls, postRepoIssueAttachment)
+	f.Post("/api/web/{owner}/{repo}/issues/attachments", limitIssueAttachmentUpload, requireAuthenticated, withRepoContext, withRepoIssuesOrPulls, postRepoIssueAttachment)
 	f.Group("/api/web/{owner}/{repo}/editor", func() {
 		f.Get("/{path: **}", getRepoEditorTarget)
 		f.Post("/files", requireJSON, limitEditorContent, bindJSON(repoEditorFileRequest{}), postRepoEditorFile)
 		f.Post("/delete", requireJSON, limitEditorContent, bindJSON(repoEditorDeleteRequest{}), postRepoEditorDelete)
 		f.Post("/upload", requireJSON, limitEditorContent, bindJSON(repoEditorUploadRequest{}), postRepoEditorUpload)
-		f.Post("/uploads", limitAttachmentUpload(repoUploadLimits()), postRepoEditorUploadFile)
+		f.Post("/uploads", limitRepoUpload, postRepoEditorUploadFile)
 		f.Delete("/uploads/{uuid}", deleteRepoEditorUploadFile)
 	}, requireAuthenticated, withRepoContext, withRepoEditor)
 	f.Get("/api/web/{owner}/{repo}/editor-indent", requireAuthenticated, withRepoContext, withRepoEditor, getRepoEditorIndent)
-	f.Post("/api/web/{owner}/{repo}/releases/attachments", limitAttachmentUpload(releaseAttachmentLimits()), requireAuthenticated, withRepoContext, withRepoWriter, withRepoCode, postRepoReleaseAttachment)
+	f.Post("/api/web/{owner}/{repo}/releases/attachments", limitReleaseAttachmentUpload, requireAuthenticated, withRepoContext, withRepoWriter, withRepoCode, postRepoReleaseAttachment)
 	f.Combo("/api/web/user/settings/avatar", limitAvatarUpload, requireAuthenticated).
 		Put(putUserAvatar).
 		Delete(deleteUserAvatar)

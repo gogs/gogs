@@ -9,6 +9,7 @@ import (
 	"github.com/flamego/flamego"
 	"unknwon.dev/x/logx"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/i18n"
@@ -20,13 +21,13 @@ const gitHooksDir = "custom_hooks"
 
 // withRepoGitHooks lets through the users who may edit Git hooks, which run
 // arbitrary code on the server: site admins and the users they allow.
-func withRepoGitHooks(c flamego.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext) {
+func withRepoGitHooks(c flamego.Context, repoOpts conf.RepositoryOpts, logger *logx.Logger, viewer *database.User, repoCtx *repoContext) {
 	w := c.ResponseWriter()
 	if !viewer.CanEditGitHook() {
 		writeErrorResponse(w, http.StatusNotFound, errors.New("page does not exist"))
 		return
 	}
-	gitRepo, err := openRepoGit(repoCtx)
+	gitRepo, err := openRepoGit(repoOpts.Root, repoCtx)
 	if err != nil {
 		logger.Error("Failed to open repository", "repoID", repoCtx.Repo.ID, "error", err)
 		writeErrorResponse(w, http.StatusInternalServerError, errors.Wrap(err, "open repository"))
@@ -91,7 +92,7 @@ type repoGitHookRequest struct {
 
 // putRepoGitHook saves the content of the hook. Empty content is refused,
 // because an empty executable fails to run and would reject every push.
-func putRepoGitHook(logger *logx.Logger, l i18n.Locale, repoCtx *repoContext, hook *git.Hook, req repoGitHookRequest) (statusCode int, resp any, err error) {
+func putRepoGitHook(logger *logx.Logger, hooks database.DelegateHooksOptions, l i18n.Locale, repoCtx *repoContext, hook *git.Hook, req repoGitHookRequest) (statusCode int, resp any, err error) {
 	if strings.TrimSpace(req.Content) == "" {
 		msg := l.Tr("repo::settings.githook_content_required")
 		return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
@@ -100,7 +101,7 @@ func putRepoGitHook(logger *logx.Logger, l i18n.Locale, repoCtx *repoContext, ho
 		logger.Error("Failed to update hook", "hookPath", hook.Path(), "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update hook")
 	}
-	if err = repoCtx.Repo.SyncDelegateHooks(); err != nil {
+	if err = repoCtx.Repo.SyncDelegateHooks(hooks); err != nil {
 		logger.Error("Failed to sync delegate hooks", "repoID", repoCtx.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "sync delegate hooks")
 	}
@@ -108,12 +109,12 @@ func putRepoGitHook(logger *logx.Logger, l i18n.Locale, repoCtx *repoContext, ho
 }
 
 // deleteRepoGitHook removes the hook, which makes it inactive again.
-func deleteRepoGitHook(logger *logx.Logger, repoCtx *repoContext, hook *git.Hook) (statusCode int, resp any, err error) {
+func deleteRepoGitHook(logger *logx.Logger, hooks database.DelegateHooksOptions, repoCtx *repoContext, hook *git.Hook) (statusCode int, resp any, err error) {
 	if err = hook.Delete(); err != nil {
 		logger.Error("Failed to delete hook", "hookPath", hook.Path(), "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete hook")
 	}
-	if err = repoCtx.Repo.SyncDelegateHooks(); err != nil {
+	if err = repoCtx.Repo.SyncDelegateHooks(hooks); err != nil {
 		logger.Error("Failed to sync delegate hooks", "repoID", repoCtx.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "sync delegate hooks")
 	}

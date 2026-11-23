@@ -158,7 +158,7 @@ func (s *UsersStore) Authenticate(ctx context.Context, logger *logx.Logger, logi
 // references to the old username. It returns ErrNameNotAllowed if the given
 // name or pattern of the name is not allowed as a username, or
 // ErrUserAlreadyExist when another user with same name already exists.
-func (s *UsersStore) ChangeUsername(ctx context.Context, userID int64, newUsername string) error {
+func (s *UsersStore) ChangeUsername(ctx context.Context, repositoryRoot string, userID int64, newUsername string) error {
 	err := isUsernameAllowed(newUsername)
 	if err != nil {
 		return err
@@ -204,9 +204,9 @@ func (s *UsersStore) ChangeUsername(ctx context.Context, userID int64, newUserna
 		}
 
 		// Rename user directory if it exists.
-		userPath := repox.UserPath(user.Name)
+		userPath := repox.UserPath(repositoryRoot, user.Name)
 		if osx.Exist(userPath) {
-			newUserPath := repox.UserPath(newUsername)
+			newUserPath := repox.UserPath(repositoryRoot, newUsername)
 			err = os.Rename(userPath, newUserPath)
 			if err != nil {
 				return errors.Wrap(err, "rename user directory")
@@ -328,10 +328,10 @@ func (s *UsersStore) Create(ctx context.Context, username, email string, opts Cr
 	return user, s.db.WithContext(ctx).Create(user).Error
 }
 
-// DeleteCustomAvatar deletes the current user custom avatar and falls back to
-// the generated avatar.
-func (s *UsersStore) DeleteCustomAvatar(ctx context.Context, userID int64) error {
-	_ = os.Remove(userx.CustomAvatarPath(userID))
+// DeleteCustomAvatar deletes the current user custom avatar under the avatar
+// upload path and falls back to the generated avatar.
+func (s *UsersStore) DeleteCustomAvatar(ctx context.Context, avatarUploadPath string, userID int64) error {
+	_ = os.Remove(userx.CustomAvatarPath(avatarUploadPath, userID))
 	return s.db.WithContext(ctx).
 		Model(&User{}).
 		Where("id = ?", userID).
@@ -370,12 +370,23 @@ func (err ErrUserHasOrgs) Error() string {
 	return fmt.Sprintf("user still has organization membership: %v", err.args)
 }
 
+// DeleteUserOptions are the settings that deleting the files of users reads.
+type DeleteUserOptions struct {
+	// RepositoryRoot is where the repositories of users are stored.
+	RepositoryRoot string
+	// AvatarUploadPath is where custom avatars of users are stored.
+	AvatarUploadPath string
+	// AppDataPath is where generated avatars of users are stored.
+	AppDataPath    string
+	AuthorizedKeys AuthorizedKeysOptions
+}
+
 // DeleteByID deletes the given user and all their resources. It returns
 // ErrUserOwnRepos when the user still has repository ownership, or returns
 // ErrUserHasOrgs when the user still has organization membership. It is more
 // performant to skip rewriting the "authorized_keys" file for individual
 // deletion in a batch operation.
-func (s *UsersStore) DeleteByID(ctx context.Context, userID int64, skipRewriteAuthorizedKeys bool) error {
+func (s *UsersStore) DeleteByID(ctx context.Context, opts DeleteUserOptions, userID int64, skipRewriteAuthorizedKeys bool) error {
 	user, err := s.GetByID(ctx, userID)
 	if err != nil {
 		if IsErrUserNotExist(err) {
@@ -526,13 +537,13 @@ func (s *UsersStore) DeleteByID(ctx context.Context, userID int64, skipRewriteAu
 		return err
 	}
 
-	_ = os.RemoveAll(repox.UserPath(user.Name))
-	_ = os.Remove(userx.CustomAvatarPath(userID))
-	_ = os.Remove(userx.GeneratedAvatarPath(userID, avatar.Person))
-	_ = os.Remove(userx.GeneratedAvatarPath(userID, avatar.Organization))
+	_ = os.RemoveAll(repox.UserPath(opts.RepositoryRoot, user.Name))
+	_ = os.Remove(userx.CustomAvatarPath(opts.AvatarUploadPath, userID))
+	_ = os.Remove(userx.GeneratedAvatarPath(opts.AppDataPath, userID, avatar.Person))
+	_ = os.Remove(userx.GeneratedAvatarPath(opts.AppDataPath, userID, avatar.Organization))
 
 	if needsRewriteAuthorizedKeys {
-		err = newPublicKeysStore(s.db).RewriteAuthorizedKeys()
+		err = newPublicKeysStore(s.db).RewriteAuthorizedKeys(opts.AuthorizedKeys)
 		if err != nil {
 			return errors.Wrap(err, `rewrite "authorized_keys" file`)
 		}
@@ -544,7 +555,7 @@ func (s *UsersStore) DeleteByID(ctx context.Context, userID int64, skipRewriteAu
 //
 // NOTE: We do not take context.Context here because this operation in practice
 // could take much longer than the general request timeout (e.g., one minute).
-func (s *UsersStore) DeleteInactivated() error {
+func (s *UsersStore) DeleteInactivated(opts DeleteUserOptions) error {
 	var userIDs []int64
 	err := s.db.Model(&User{}).Where("is_active = ?", false).Pluck("id", &userIDs).Error
 	if err != nil {
@@ -552,7 +563,7 @@ func (s *UsersStore) DeleteInactivated() error {
 	}
 
 	for _, userID := range userIDs {
-		err = s.DeleteByID(context.Background(), userID, true)
+		err = s.DeleteByID(context.Background(), opts, userID, true)
 		if err != nil {
 			// Skip users that may have been set to inactivated by admins.
 			if IsErrUserOwnRepos(err) || IsErrUserHasOrgs(err) {
@@ -561,7 +572,7 @@ func (s *UsersStore) DeleteInactivated() error {
 			return errors.Wrapf(err, "delete user with ID %d", userID)
 		}
 	}
-	err = newPublicKeysStore(s.db).RewriteAuthorizedKeys()
+	err = newPublicKeysStore(s.db).RewriteAuthorizedKeys(opts.AuthorizedKeys)
 	if err != nil {
 		return errors.Wrap(err, `rewrite "authorized_keys" file`)
 	}
@@ -696,10 +707,10 @@ func (s *UsersStore) GetByEmail(ctx context.Context, email string) (*User, error
 	*/
 	user := new(User)
 	err := s.db.WithContext(ctx).
-		Joins(dbx.Quote("LEFT JOIN email_address ON email_address.uid = %s.id", "user"), true).
-		Where(dbx.Quote("%s.type = ?", "user"), UserTypeIndividual).
+		Joins(dbx.Quote(s.db.Name(), "LEFT JOIN email_address ON email_address.uid = %s.id", "user"), true).
+		Where(dbx.Quote(s.db.Name(), "%s.type = ?", "user"), UserTypeIndividual).
 		Where(s.db.
-			Where(dbx.Quote("%[1]s.email = ? AND %[1]s.is_active = ?", "user"), email, true).
+			Where(dbx.Quote(s.db.Name(), "%[1]s.email = ? AND %[1]s.is_active = ?", "user"), email, true).
 			Or("email_address.email = ? AND email_address.is_activated = ?", email, true),
 		).
 		First(&user).
@@ -746,7 +757,7 @@ func (s *UsersStore) GetByUsername(ctx context.Context, username string) (*User,
 func (s *UsersStore) GetByKeyID(ctx context.Context, keyID int64) (*User, error) {
 	user := new(User)
 	err := s.db.WithContext(ctx).
-		Joins(dbx.Quote("JOIN public_key ON public_key.owner_id = %s.id", "user")).
+		Joins(dbx.Quote(s.db.Name(), "JOIN public_key ON public_key.owner_id = %s.id", "user")).
 		Where("public_key.id = ?", keyID).
 		First(user).
 		Error
@@ -812,7 +823,7 @@ func (s *UsersStore) ListFollowers(ctx context.Context, userID int64, page, page
 	*/
 	users := make([]*User, 0, pageSize)
 	return users, s.db.WithContext(ctx).
-		Joins(dbx.Quote("LEFT JOIN follow ON follow.user_id = %s.id", "user")).
+		Joins(dbx.Quote(s.db.Name(), "LEFT JOIN follow ON follow.user_id = %s.id", "user")).
 		Where("follow.follow_id = ?", userID).
 		Limit(pageSize).Offset((page - 1) * pageSize).
 		Order("follow.id DESC").
@@ -835,7 +846,7 @@ func (s *UsersStore) ListFollowings(ctx context.Context, userID int64, page, pag
 	*/
 	users := make([]*User, 0, pageSize)
 	return users, s.db.WithContext(ctx).
-		Joins(dbx.Quote("LEFT JOIN follow ON follow.follow_id = %s.id", "user")).
+		Joins(dbx.Quote(s.db.Name(), "LEFT JOIN follow ON follow.follow_id = %s.id", "user")).
 		Where("follow.user_id = ?", userID).
 		Limit(pageSize).Offset((page - 1) * pageSize).
 		Order("follow.id DESC").
@@ -976,9 +987,10 @@ func (s *UsersStore) Update(ctx context.Context, userID int64, opts UpdateUserOp
 	return s.db.WithContext(ctx).Model(&User{}).Where("id = ?", userID).Updates(updates).Error
 }
 
-// UseCustomAvatar uses the given avatar as the user custom avatar.
-func (s *UsersStore) UseCustomAvatar(ctx context.Context, userID int64, avatar []byte) error {
-	err := userx.SaveAvatar(userID, avatar)
+// UseCustomAvatar saves the given avatar under the avatar upload path and uses
+// it as the user custom avatar.
+func (s *UsersStore) UseCustomAvatar(ctx context.Context, avatarUploadPath string, userID int64, avatar []byte) error {
+	err := userx.SaveAvatar(avatarUploadPath, userID, avatar)
 	if err != nil {
 		return errors.Wrap(err, "save avatar")
 	}
@@ -1266,40 +1278,41 @@ func (u *User) IsOrganization() bool {
 }
 
 // APIFormat returns the API format of a user.
-func (u *User) APIFormat() *v1types.User {
+func (u *User) APIFormat(links LinkOptions) *v1types.User {
 	return &v1types.User{
 		ID:        u.ID,
 		UserName:  u.Name,
 		Login:     u.Name,
 		FullName:  u.FullName,
 		Email:     u.Email,
-		AvatarURL: u.AvatarURL(),
+		AvatarURL: u.AvatarURL(links),
 	}
 }
 
 // maxNumRepos returns the maximum number of repositories that the user can own
-// directly.
-func (u *User) maxNumRepos() int {
+// directly, which is maxCreationLimit unless the user has a limit of their own.
+func (u *User) maxNumRepos(maxCreationLimit int) int {
 	if u.MaxRepoCreation <= -1 {
-		return conf.Repository.MaxCreationLimit
+		return maxCreationLimit
 	}
 	return u.MaxRepoCreation
 }
 
 // canCreateRepo returns true if the user can create a repository.
-func (u *User) canCreateRepo() bool {
-	return u.maxNumRepos() <= -1 || u.NumRepos < u.maxNumRepos()
+func (u *User) canCreateRepo(maxCreationLimit int) bool {
+	return u.maxNumRepos(maxCreationLimit) <= -1 || u.NumRepos < u.maxNumRepos(maxCreationLimit)
 }
 
 // CanCreateOrganization returns true if user can create organizations.
-func (u *User) CanCreateOrganization() bool {
-	return !conf.Admin.DisableRegularOrgCreation || u.IsAdmin
+func (u *User) CanCreateOrganization(disableRegularOrgCreation bool) bool {
+	return !disableRegularOrgCreation || u.IsAdmin
 }
 
 // IsDisabled returns true if the user is not allowed to sign in or access
-// anything with their credentials.
-func (u *User) IsDisabled() bool {
-	return u.ProhibitLogin || (!u.IsActive && conf.Auth.RequireEmailConfirmation)
+// anything with their credentials. Inactive users are only disabled when
+// requireEmailConfirmation is true.
+func (u *User) IsDisabled(requireEmailConfirmation bool) bool {
+	return u.ProhibitLogin || (!u.IsActive && requireEmailConfirmation)
 }
 
 // CanEditGitHook returns true if user can edit Git hooks.
@@ -1308,8 +1321,8 @@ func (u *User) CanEditGitHook() bool {
 }
 
 // CanImportLocal returns true if user can migrate repositories by local path.
-func (u *User) CanImportLocal() bool {
-	return conf.Repository.EnableLocalPathMigration && (u.IsAdmin || u.AllowImportLocal)
+func (u *User) CanImportLocal(enableLocalPathMigration bool) bool {
+	return enableLocalPathMigration && (u.IsAdmin || u.AllowImportLocal)
 }
 
 // DisplayName returns the full name of the user if it's not empty, returns the
@@ -1326,8 +1339,8 @@ func (u *User) DisplayName() string {
 // TODO(unknwon): This is also used in templates, which should be fixed by
 // having a dedicated type `template.User` and move this to the "userx"
 // package.
-func (u *User) HomeURLPath() string {
-	return conf.Server.Subpath + "/" + u.Name
+func (u *User) HomeURLPath(subpath string) string {
+	return subpath + "/" + u.Name
 }
 
 // HTMLURL returns the full URL to the user or organization home page.
@@ -1335,8 +1348,8 @@ func (u *User) HomeURLPath() string {
 // TODO(unknwon): This is also used in templates, which should be fixed by
 // having a dedicated type `template.User` and move this to the "userx"
 // package.
-func (u *User) HTMLURL() string {
-	return conf.Server.ExternalURL + u.Name
+func (u *User) HTMLURL(externalURL string) string {
+	return externalURL + u.Name
 }
 
 // AvatarURLPath returns the URL path to the user or organization avatar, which
@@ -1347,11 +1360,11 @@ func (u *User) HTMLURL() string {
 // TODO(unknwon): This is also used in templates, which should be fixed by
 // having a dedicated type `template.User` and move this to the "userx"
 // package.
-func (u *User) AvatarURLPath() string {
+func (u *User) AvatarURLPath(links LinkOptions) string {
 	if u.ID <= 0 {
-		return userx.GeneratedAvatarURLPath(u.Name)
+		return userx.GeneratedAvatarURLPath(links.SecretKey, links.Subpath, u.Name)
 	}
-	return fmt.Sprintf("%s/%s/%d?v=%d", conf.Server.Subpath, conf.UsersAvatarPathPrefix, u.ID, u.UpdatedUnix)
+	return fmt.Sprintf("%s/%s/%d?v=%d", links.Subpath, conf.UsersAvatarPathPrefix, u.ID, u.UpdatedUnix)
 }
 
 // AvatarURL returns the full URL to the user or organization avatar.
@@ -1359,10 +1372,10 @@ func (u *User) AvatarURLPath() string {
 // TODO(unknwon): This is also used in templates, which should be fixed by
 // having a dedicated type `template.User` and move this to the "userx"
 // package.
-func (u *User) AvatarURL() string {
-	link := u.AvatarURLPath()
+func (u *User) AvatarURL(links LinkOptions) string {
+	link := u.AvatarURLPath(links)
 	if link[0] == '/' && link[1] != '/' {
-		return conf.Server.ExternalURL + strings.TrimPrefix(link, conf.Server.Subpath)[1:]
+		return links.ExternalURL + strings.TrimPrefix(link, links.Subpath)[1:]
 	}
 	return link
 }

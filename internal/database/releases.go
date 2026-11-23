@@ -58,7 +58,7 @@ func (r *Release) AfterFind(_ *gorm.DB) error {
 // APIFormat returns the API format of the release. It assumes some fields have
 // been assigned with values:
 // Required - Publisher
-func (r *Release) APIFormat() *v1types.RepositoryRelease {
+func (r *Release) APIFormat(links LinkOptions) *v1types.RepositoryRelease {
 	return &v1types.RepositoryRelease{
 		ID:              r.ID,
 		TagName:         r.TagName,
@@ -67,7 +67,7 @@ func (r *Release) APIFormat() *v1types.RepositoryRelease {
 		Body:            r.Note,
 		Draft:           r.IsDraft,
 		Prerelease:      r.IsPrerelease,
-		Author:          r.Publisher.APIFormat(),
+		Author:          r.Publisher.APIFormat(links),
 		Created:         r.Created,
 	}
 }
@@ -181,7 +181,7 @@ func (s *ReleasesStore) exists(ctx context.Context, repoID int64, tagName string
 // not exist yet, and attaches the unattached attachments with given UUIDs to
 // it. It returns ErrReleaseAlreadyExist when the repository has a release of
 // the same tag name, regardless of its case.
-func (s *ReleasesStore) Create(ctx context.Context, logger *logx.Logger, gitRepo *git.Repository, r *Release, uuids []string) error {
+func (s *ReleasesStore) Create(ctx context.Context, logger *logx.Logger, links LinkOptions, gitRepo *git.Repository, r *Release, uuids []string) error {
 	// Stopping midway, e.g., when the client disconnects, would leave the tag
 	// without its release.
 	ctx = context.WithoutCancel(ctx)
@@ -216,20 +216,20 @@ func (s *ReleasesStore) Create(ctx context.Context, logger *logx.Logger, gitRepo
 	if err != nil {
 		return errors.Wrap(err, "get created release")
 	}
-	s.preparePublishWebhooks(ctx, logger, created)
+	s.preparePublishWebhooks(ctx, logger, links, created)
 	return nil
 }
 
 // preparePublishWebhooks prepares the deliveries of the event that the release
 // is published. Failing to prepare them does not fail publishing.
-func (s *ReleasesStore) preparePublishWebhooks(ctx context.Context, logger *logx.Logger, r *Release) {
+func (s *ReleasesStore) preparePublishWebhooks(ctx context.Context, logger *logx.Logger, links LinkOptions, r *Release) {
 	err := s.LoadAttributes(ctx, r)
 	if err == nil {
-		err = newWebhooksStore(s.db).Prepare(ctx, logger, r.Repo, HookEventTypeRelease, &v1types.WebhookReleasePayload{
+		err = newWebhooksStore(s.db).Prepare(ctx, logger, links.ExternalURL, r.Repo, HookEventTypeRelease, &v1types.WebhookReleasePayload{
 			Action:     v1types.WebhookReleasePublished,
-			Release:    r.APIFormat(),
-			Repository: r.Repo.APIFormatLegacy(logger, nil),
-			Sender:     r.Publisher.APIFormat(),
+			Release:    r.APIFormat(links),
+			Repository: r.Repo.APIFormatLegacy(logger, links, nil),
+			Sender:     r.Publisher.APIFormat(links),
 		})
 	}
 	if err != nil {
@@ -333,7 +333,7 @@ func (s *ReleasesStore) LoadAttributes(ctx context.Context, releases ...*Release
 // not exist yet. The release keeps only the attachments with given UUIDs that
 // it had or that are not attached to anything else, and the others are
 // detached from it.
-func (s *ReleasesStore) Update(ctx context.Context, logger *logx.Logger, doer *User, gitRepo *git.Repository, r *Release, isPublish bool, uuids []string) error {
+func (s *ReleasesStore) Update(ctx context.Context, logger *logx.Logger, links LinkOptions, doer *User, gitRepo *git.Repository, r *Release, isPublish bool, uuids []string) error {
 	// Stopping midway, e.g., when the client disconnects, would leave the tag
 	// without its release being published.
 	ctx = context.WithoutCancel(ctx)
@@ -374,14 +374,16 @@ func (s *ReleasesStore) Update(ctx context.Context, logger *logx.Logger, doer *U
 		return nil
 	}
 	r.Publisher = doer
-	s.preparePublishWebhooks(ctx, logger, r)
+	s.preparePublishWebhooks(ctx, logger, links, r)
 	return nil
 }
 
 // DeleteByID deletes the release with given ID, its tag and its attachments
 // when it belongs to the repository with given ID. It returns
-// ErrReleaseNotExist when the release does not exist.
-func (s *ReleasesStore) DeleteByID(ctx context.Context, logger *logx.Logger, repoID, id int64) error {
+// ErrReleaseNotExist when the release does not exist. The tag is deleted from the
+// Git repository under root, and the files of the attachments are under the
+// attachment path.
+func (s *ReleasesStore) DeleteByID(ctx context.Context, logger *logx.Logger, root, attachmentPath string, repoID, id int64) error {
 	// Stopping midway, e.g., when the client disconnects, would leave the
 	// release without its tag.
 	ctx = context.WithoutCancel(ctx)
@@ -397,7 +399,7 @@ func (s *ReleasesStore) DeleteByID(ctx context.Context, logger *logx.Logger, rep
 		return errors.Wrap(err, "load attributes")
 	}
 
-	err = git.RepoDeleteTag(ctx, r.Repo.RepoPath(), r.TagName)
+	err = git.RepoDeleteTag(ctx, r.Repo.RepoPath(root), r.TagName)
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		return errors.Wrap(err, "delete tag")
 	}
@@ -428,7 +430,7 @@ func (s *ReleasesStore) DeleteByID(ctx context.Context, logger *logx.Logger, rep
 	// rows whose files are missing. The release is gone by then, so failing to
 	// remove a file does not fail the deletion.
 	for _, a := range attachments {
-		if err = os.Remove(a.LocalPath()); err != nil && !os.IsNotExist(err) {
+		if err = os.Remove(a.LocalPath(attachmentPath)); err != nil && !os.IsNotExist(err) {
 			logger.Error("Failed to remove file of attachment", "attachmentID", a.ID, "error", err)
 		}
 	}

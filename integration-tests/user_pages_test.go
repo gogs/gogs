@@ -46,7 +46,7 @@ func TestUserActivateEmail(t *testing.T) {
 	address := UniqueName("confirm-") + "@example.com"
 	require.NoError(t, database.Handle.Users().AddEmail(t.Context(), u.ID, address, false))
 	stored := userGet(t, u.ID)
-	code := userx.GenerateConfirmEmailCode(stored.ID, address, stored.LowerName, stored.Password, stored.Rands)
+	code := userx.GenerateConfirmEmailCode(cfg.Security.SecretKey, cfg.Auth.ActivateCodeLives, stored.ID, address, stored.LowerName, stored.Password, stored.Rands)
 	activated := func() bool {
 		e, err := database.Handle.Users().GetEmail(t.Context(), u.ID, address, false)
 		require.NoError(t, err)
@@ -63,7 +63,7 @@ func TestUserActivateEmail(t *testing.T) {
 	userAssertRedirect(t, c, activatePath(code, otherAddress), http.StatusFound, "/user/settings/email")
 	userAssertRedirect(t, c, activatePath(code+"0", address), http.StatusFound, "/user/settings/email")
 	// Nor can a code that activates an account confirm an address.
-	activateAccountCode := userx.GenerateActivateCode(stored.ID, address, stored.LowerName, stored.Password, stored.Rands)
+	activateAccountCode := userx.GenerateActivateCode(cfg.Security.SecretKey, cfg.Auth.ActivateCodeLives, stored.ID, address, stored.LowerName, stored.Password, stored.Rands)
 	userAssertRedirect(t, c, activatePath(activateAccountCode, address), http.StatusFound, "/user/settings/email")
 	assert.False(t, activated())
 
@@ -89,7 +89,7 @@ func TestUserActivateEmailSeveral(t *testing.T) {
 	codes := make([]string, len(addresses))
 	for i, address := range addresses {
 		require.NoError(t, database.Handle.Users().AddEmail(t.Context(), u.ID, address, false))
-		codes[i] = userx.GenerateConfirmEmailCode(stored.ID, address, stored.LowerName, stored.Password, stored.Rands)
+		codes[i] = userx.GenerateConfirmEmailCode(cfg.Security.SecretKey, cfg.Auth.ActivateCodeLives, stored.ID, address, stored.LowerName, stored.Password, stored.Rands)
 	}
 
 	c := newClient(t)

@@ -46,7 +46,7 @@ func cleanCommand(cmd string) string {
 	return cmd[i:]
 }
 
-func handleServerConn(logger *logx.Logger, keyID string, chans <-chan ssh.NewChannel) {
+func handleServerConn(logger *logx.Logger, srv builtinServer, keyID string, chans <-chan ssh.NewChannel) {
 	for newChan := range chans {
 		if newChan.ChannelType() != "session" {
 			_ = newChan.Reject(ssh.UnknownChannelType, "unknown channel type")
@@ -87,7 +87,7 @@ func handleServerConn(logger *logx.Logger, keyID string, chans <-chan ssh.NewCha
 					logger.Debug("Received exec request", "command", cmdName)
 
 					_ = req.Reply(true, nil)
-					status := serve(logger, keyID, cmdName, gitProtocol, ch)
+					status := serve(logger, srv, keyID, cmdName, gitProtocol, ch)
 					_, _ = ch.SendRequest("exit-status", false, ssh.Marshal(struct{ Status uint32 }{status}))
 					return
 				default:
@@ -110,7 +110,7 @@ func spanName(command string) string {
 
 // serve runs the command for the client on the channel, and returns the exit
 // status of the command.
-func serve(logger *logx.Logger, keyID, command, protocol string, ch ssh.Channel) (status uint32) {
+func serve(logger *logx.Logger, srv builtinServer, keyID, command, protocol string, ch ssh.Channel) (status uint32) {
 	defer func() {
 		if r := recover(); r != nil {
 			logger.Error("Panic while serving SSH command", "command", command, "panic", r, "stack", string(debug.Stack()))
@@ -134,8 +134,9 @@ func serve(logger *logx.Logger, keyID, command, protocol string, ch ssh.Channel)
 		Stdin:    ch,
 		Stdout:   ch,
 		Stderr:   ch.Stderr(),
+		Settings: srv.settings,
 		TriggerPushTasks: func(pusher *database.User, repo *database.Repository, branch string) {
-			database.TriggerPushTasks(logger, pusher, repo.ID, branch)
+			database.TriggerPushTasks(logger, srv.links, srv.settings.RepositoryRoot, pusher, repo.ID, branch)
 		},
 	})
 	if err == nil {
@@ -151,7 +152,7 @@ func serve(logger *logx.Logger, keyID, command, protocol string, ch ssh.Channel)
 	}
 	_, _ = fmt.Fprintln(ch.Stderr(), "Gogs:", userMessage)
 	if err != nil {
-		if !conf.IsProdMode() {
+		if !srv.prodMode {
 			_, _ = fmt.Fprintln(ch.Stderr(), err)
 		}
 		logger.Error("Failed to serve SSH command", "command", command, "error", err)
@@ -159,7 +160,7 @@ func serve(logger *logx.Logger, keyID, command, protocol string, ch ssh.Channel)
 	return 1
 }
 
-func listen(logger *logx.Logger, config *ssh.ServerConfig, host string, port int) {
+func listen(logger *logx.Logger, srv builtinServer, config *ssh.ServerConfig, host string, port int) {
 	listener, err := net.Listen("tcp", host+":"+strconv.Itoa(port))
 	if err != nil {
 		logger.FatalContext(context.Background(), "Failed to start SSH server", "error", err)
@@ -205,14 +206,24 @@ func listen(logger *logx.Logger, config *ssh.ServerConfig, host string, port int
 			go func() {
 				defer connections.Add(-1)
 				// It returns once the client disconnected.
-				handleServerConn(logger, sConn.Permissions.Extensions["key-id"], chans)
+				handleServerConn(logger, srv, sConn.Permissions.Extensions["key-id"], chans)
 			}()
 		}()
 	}
 }
 
-// Listen starts an SSH server listening on the given host and port.
-func Listen(logger *logx.Logger, opts conf.SSHOpts, appDataPath string) {
+// builtinServer is what the builtin SSH server needs to serve commands.
+type builtinServer struct {
+	// prodMode keeps errors from the clients.
+	prodMode bool
+	// links make the links of push webhooks.
+	links    database.LinkOptions
+	settings ServeSettings
+}
+
+// Listen starts an SSH server listening on the host and port of the SSH
+// settings. Clients see errors outside of production mode.
+func Listen(logger *logx.Logger, opts conf.SSHOpts, appDataPath string, prodMode bool, links database.LinkOptions, settings ServeSettings) {
 	config := &ssh.ServerConfig{
 		Ciphers: opts.ServerCiphers,
 		MACs:    opts.ServerMACs,
@@ -228,7 +239,7 @@ func Listen(logger *logx.Logger, opts conf.SSHOpts, appDataPath string) {
 		},
 	}
 
-	keys, err := setupHostKeys(logger, appDataPath, opts.ServerAlgorithms)
+	keys, err := setupHostKeys(logger, opts.KeygenPath, appDataPath, opts.ServerAlgorithms)
 	if err != nil {
 		logger.FatalContext(context.Background(), "Failed to set up host keys", "error", err)
 	}
@@ -236,10 +247,10 @@ func Listen(logger *logx.Logger, opts conf.SSHOpts, appDataPath string) {
 		config.AddHostKey(key)
 	}
 
-	go listen(logger, config, opts.ListenHost, opts.ListenPort)
+	go listen(logger, builtinServer{prodMode: prodMode, links: links, settings: settings}, config, opts.ListenHost, opts.ListenPort)
 }
 
-func setupHostKeys(logger *logx.Logger, appDataPath string, algorithms []string) ([]ssh.Signer, error) {
+func setupHostKeys(logger *logx.Logger, keygenPath, appDataPath string, algorithms []string) ([]ssh.Signer, error) {
 	dir := filepath.Join(appDataPath, "ssh")
 	err := os.MkdirAll(dir, os.ModePerm)
 	if err != nil {
@@ -251,7 +262,7 @@ func setupHostKeys(logger *logx.Logger, appDataPath string, algorithms []string)
 		keyPath := filepath.Join(dir, "gogs."+algo)
 		if !osx.Exist(keyPath) {
 			args := []string{
-				conf.SSH.KeygenPath,
+				keygenPath,
 				"-t", algo,
 				"-f", keyPath,
 				"-N", run.Arg(""),

@@ -169,7 +169,7 @@ func hookTasksDeliver(t *testing.T, ctx context.Context, s *HookTasksStore) {
 			require.NoError(t, err)
 			task.IsDelivered = false
 
-			task.deliver(ctx, logx.NewNoopLogger(), webhooks)
+			task.deliver(ctx, logx.NewNoopLogger(), DeliverHooksOptions{}, webhooks)
 			require.NoError(t, s.Update(ctx, task))
 
 			got, err := s.GetByUUID(ctx, w.ID, task.UUID)

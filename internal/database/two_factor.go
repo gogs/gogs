@@ -8,7 +8,6 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/pquerna/otp/totp"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cryptox"
 )
 
@@ -22,13 +21,14 @@ type TwoFactor struct {
 }
 
 // ValidateTOTP returns true if given passcode is valid for two-factor authentication token.
-// It also returns possible validation error.
-func (t *TwoFactor) ValidateTOTP(passcode string) (bool, error) {
+// It also returns possible validation error. The token is encrypted with the
+// secret key.
+func (t *TwoFactor) ValidateTOTP(secretKey, passcode string) (bool, error) {
 	secret, err := base64.StdEncoding.DecodeString(t.Secret)
 	if err != nil {
 		return false, errors.Newf("DecodeString: %v", err)
 	}
-	decryptSecret, err := cryptox.AESGCMDecrypt(cryptox.MD5Bytes(conf.Security.SecretKey), secret)
+	decryptSecret, err := cryptox.AESGCMDecrypt(cryptox.MD5Bytes(secretKey), secret)
 	if err != nil {
 		return false, errors.Newf("AESGCMDecrypt: %v", err)
 	}

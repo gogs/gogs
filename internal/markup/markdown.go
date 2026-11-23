@@ -7,16 +7,15 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/markup/dariomark"
 )
 
-// IsMarkdownFile reports whether name looks like a Markdown file based on its extension.
-func IsMarkdownFile(name string) bool {
+// IsMarkdownFile reports whether name has one of the Markdown file extensions.
+func IsMarkdownFile(extensions []string, name string) bool {
 	extension := strings.ToLower(filepath.Ext(name))
-	for _, ext := range conf.Markdown.FileExtensions {
+	for _, ext := range extensions {
 		if strings.ToLower(ext) == extension {
 			return true
 		}
@@ -75,8 +74,8 @@ func isURLPathChar(c byte) bool {
 
 // shortenAutoLink renders links to commits and issues on this instance in a
 // short form, e.g., "d8a994ef24" and "#12".
-func shortenAutoLink(link []byte, urlPrefix string) ([]byte, bool) {
-	if !bytes.HasPrefix(link, []byte(conf.Server.ExternalURL)) {
+func shortenAutoLink(o Options, link []byte, urlPrefix string) ([]byte, bool) {
+	if !bytes.HasPrefix(link, []byte(o.ExternalURL)) {
 		return nil, false
 	}
 
@@ -110,19 +109,19 @@ func shortenAutoLink(link []byte, urlPrefix string) ([]byte, bool) {
 		}
 
 		index := m[i+7 : j]
-		fullRepoURL := conf.Server.ExternalURL + strings.TrimPrefix(urlPrefix, "/")
+		fullRepoURL := o.ExternalURL + strings.TrimPrefix(urlPrefix, "/")
 		html := append([]byte(`<a href="`), dariomark.AppendEscaped(nil, m)...)
 		if bytes.HasPrefix(m, []byte(fullRepoURL)) {
 			// Use a short issue reference if the URL refers to this repository.
 			html = append(html, `">#`...)
 		} else {
 			// Use a cross-repository issue reference if the URL refers to a different repository.
-			if i-1 < len(conf.Server.ExternalURL) {
+			if i-1 < len(o.ExternalURL) {
 				// There is no repository path, e.g., "/issues/1".
 				return nil, false
 			}
 			html = append(html, `">`...)
-			html = dariomark.AppendEscaped(html, m[len(conf.Server.ExternalURL):i-1])
+			html = dariomark.AppendEscaped(html, m[len(o.ExternalURL):i-1])
 			html = append(html, '#')
 		}
 		html = append(html, index...)
@@ -174,7 +173,7 @@ func isASCIIAlnum(c byte) bool {
 
 // markdownOptions returns the rendering options for Markdown without
 // post-processing. hardWraps renders every line break as written.
-func markdownOptions(urlPrefix string, hardWraps bool) *dariomark.Options {
+func markdownOptions(o Options, urlPrefix string, hardWraps bool) *dariomark.Options {
 	opts := &dariomark.Options{
 		Tables:                    true,
 		Strikethrough:             true,
@@ -192,16 +191,16 @@ func markdownOptions(urlPrefix string, hardWraps bool) *dariomark.Options {
 		IsLink:                    isLink,
 		TextAutoLinksInRawAnchors: true,
 		ShortenAutoLink: func(link []byte) ([]byte, bool) {
-			return shortenAutoLink(link, urlPrefix)
+			return shortenAutoLink(o, link, urlPrefix)
 		},
 	}
-	if conf.Smartypants.Enabled {
+	if o.Smartypants.Enabled {
 		opts.Typographer = dariomark.Typographer{
 			Enabled:      true,
-			Dashes:       conf.Smartypants.Dashes,
-			LatexDashes:  conf.Smartypants.LatexDashes,
-			AngledQuotes: conf.Smartypants.AngledQuotes,
-			Fractions:    conf.Smartypants.Fractions,
+			Dashes:       o.Smartypants.Dashes,
+			LatexDashes:  o.Smartypants.LatexDashes,
+			AngledQuotes: o.Smartypants.AngledQuotes,
+			Fractions:    o.Smartypants.Fractions,
 		}
 	}
 	return opts
@@ -219,12 +218,12 @@ func footnoteIDPrefix(body []byte) string {
 
 // RawMarkdown renders content in Markdown syntax to HTML without handling special links.
 // The output is not sanitized. Like MarkdownFile, it keeps line breaks only
-// with [markdown] ENABLE_HARD_LINE_BREAK, and shows a document larger than
-// [ui] MAX_DISPLAY_FILE_SIZE as escaped plain text.
-func RawMarkdown(body []byte, urlPrefix string) []byte {
+// with Options.FileHardLineBreak, and shows a document larger than
+// Options.MaxDisplayFileSize as escaped plain text.
+func RawMarkdown(o Options, body []byte, urlPrefix string) []byte {
 	body = bytes.TrimPrefix(body, utf8BOM)
-	return guardRender(body, func() []byte {
-		opts := markdownOptions(urlPrefix, conf.Markdown.EnableHardLineBreak)
+	return guardRender(o, body, func() []byte {
+		opts := markdownOptions(o, urlPrefix, o.FileHardLineBreak)
 		opts.FootnoteIDPrefix = footnoteIDPrefix(body)
 		return dariomark.HTML(body, opts)
 	})
@@ -234,23 +233,23 @@ func RawMarkdown(body []byte, urlPrefix string) []byte {
 // links, see dariomark.Render. file renders YAML front matter as a table, for
 // Markdown files. commits, when not nil, are the commits that the hex strings
 // in body name, see ResolveCommits.
-func renderMarkdown(body []byte, urlPrefix string, metas, commits map[string]string, hardWraps, file bool) dariomark.Result {
-	opts := markdownRenderOptions(body, urlPrefix, hardWraps, file)
+func renderMarkdown(o Options, body []byte, urlPrefix string, metas, commits map[string]string, hardWraps, file bool) dariomark.Result {
+	opts := markdownRenderOptions(o, body, urlPrefix, hardWraps, file)
 	if commits == nil {
 		commits = resolveLinkableCommits(metas, func(specialText func(text []byte)) {
 			renderLinkableText(body, opts, specialText)
 		})
 	}
 	opts.SpecialLinks = func(text []byte) []dariomark.SpecialLink {
-		return findSpecialLinks(text, urlPrefix, metas, commits)
+		return findSpecialLinks(o, text, urlPrefix, metas, commits)
 	}
 	return dariomark.Render(body, opts)
 }
 
 // markdownRenderOptions returns the options of renderMarkdown, without special
 // links.
-func markdownRenderOptions(body []byte, urlPrefix string, hardWraps, file bool) *dariomark.Options {
-	opts := markdownOptions(urlPrefix, hardWraps)
+func markdownRenderOptions(o Options, body []byte, urlPrefix string, hardWraps, file bool) *dariomark.Options {
+	opts := markdownOptions(o, urlPrefix, hardWraps)
 	opts.FootnoteIDPrefix = footnoteIDPrefix(body)
 	opts.PostProcess = true
 	opts.Emoji = emoji
@@ -281,12 +280,12 @@ func renderLinkableText(body []byte, opts *dariomark.Options, specialText func(t
 // e.g., the comments of an issue, name in the repository of metas, with one
 // Git command for all of them. Rendering each document with
 // MarkdownWithCommits and the result then runs no Git command.
-func ResolveCommits(metas map[string]string, docs ...string) map[string]string {
+func ResolveCommits(o Options, metas map[string]string, docs ...string) map[string]string {
 	commits := resolveLinkableCommits(metas, func(specialText func(text []byte)) {
 		for _, doc := range docs {
 			body := bytes.TrimPrefix([]byte(doc), utf8BOM)
-			guardRender(body, func() []byte {
-				renderLinkableText(body, markdownRenderOptions(body, "", true, false), specialText)
+			guardRender(o, body, func() []byte {
+				renderLinkableText(body, markdownRenderOptions(o, body, "", true, false), specialText)
 				return nil
 			})
 		}
@@ -376,19 +375,19 @@ func isMentionChar(c byte) bool {
 // Markdown takes a string or []byte of Markdown that is not a file, e.g., an
 // issue, a comment or a release note, and renders it to HTML with special
 // links. It renders every line break as written.
-func Markdown(input any, urlPrefix string, metas map[string]string) []byte {
-	return renderInput(TypeMarkdown, input, urlPrefix, metas, nil, true, false)
+func Markdown(o Options, input any, urlPrefix string, metas map[string]string) []byte {
+	return renderInput(o, TypeMarkdown, input, urlPrefix, metas, nil, true, false)
 }
 
 // MarkdownWithCommits is Markdown with the commits that ResolveCommits
 // returned for input, among other documents.
-func MarkdownWithCommits(input any, urlPrefix string, metas, commits map[string]string) []byte {
-	return renderInput(TypeMarkdown, input, urlPrefix, metas, commits, true, false)
+func MarkdownWithCommits(o Options, input any, urlPrefix string, metas, commits map[string]string) []byte {
+	return renderInput(o, TypeMarkdown, input, urlPrefix, metas, commits, true, false)
 }
 
 // MarkdownFile is Markdown for Markdown files, e.g., READMEs and wiki pages.
-// It joins the lines of a paragraph, unless [markdown] ENABLE_HARD_LINE_BREAK
-// is set, and renders YAML front matter as a table above the document.
-func MarkdownFile(input any, urlPrefix string, metas map[string]string) []byte {
-	return Render(TypeMarkdown, input, urlPrefix, metas)
+// It joins the lines of a paragraph, unless Options.FileHardLineBreak is set,
+// and renders YAML front matter as a table above the document.
+func MarkdownFile(o Options, input any, urlPrefix string, metas map[string]string) []byte {
+	return Render(o, TypeMarkdown, input, urlPrefix, metas)
 }

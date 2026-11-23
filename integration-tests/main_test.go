@@ -232,8 +232,8 @@ func run(m *testing.M, dir string) (int, error) {
 	}
 	sessions, err = session.FileIniter()(context.Background(),
 		session.FileConfig{
-			RootDir:  conf.Session.ProviderConfig,
-			Lifetime: time.Duration(conf.Session.MaxLifeTime) * time.Second,
+			RootDir:  cfg.Session.ProviderConfig,
+			Lifetime: time.Duration(cfg.Session.MaxLifeTime) * time.Second,
 		},
 		// Tests only read sessions, which never writes their IDs.
 		session.IDWriter(func(http.ResponseWriter, *http.Request, string) {}),

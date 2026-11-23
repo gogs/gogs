@@ -6,7 +6,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/markup/dariomark"
 )
 
@@ -28,11 +27,11 @@ var sanitizer = func() *Sanitizer {
 }()
 
 // NewSanitizer extends the policy of the sanitizer with the rules for rendered
-// Markdown and the custom URL schemes of the settings. Multiple calls to this
-// function will only extend it once during entire application lifecycle.
-func NewSanitizer() {
+// Markdown and the custom URL schemes. Multiple calls to this function will
+// only extend it once during entire application lifecycle.
+func NewSanitizer(customURLSchemes []string) {
 	sanitizer.init.Do(func() {
-		p := dariomark.NewPolicy(true, conf.Markdown.CustomURLSchemes)
+		p := dariomark.NewPolicy(true, customURLSchemes)
 		sanitizer.policy.Store(p)
 		sanitizer.markdown = p.Sanitizer()
 		sanitizer.ready.Store(true)

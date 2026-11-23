@@ -11,7 +11,6 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/pathx"
 )
@@ -23,14 +22,16 @@ type Upload struct {
 	Name string `gorm:"size:255"`
 }
 
-// UploadLocalPath returns where the upload is stored in local file system based on given UUID.
-func UploadLocalPath(uuid string) string {
-	return path.Join(conf.Repository.Upload.TempPath, uuid[0:1], uuid[1:2], uuid)
+// UploadLocalPath returns where the upload is stored in local file system under
+// the temporary path of uploads based on given UUID.
+func UploadLocalPath(tempPath, uuid string) string {
+	return path.Join(tempPath, uuid[0:1], uuid[1:2], uuid)
 }
 
-// LocalPath returns where uploads are temporarily stored in local file system.
-func (upload *Upload) LocalPath() string {
-	return UploadLocalPath(upload.UUID)
+// LocalPath returns where uploads are temporarily stored in local file system
+// under the temporary path of uploads.
+func (upload *Upload) LocalPath(tempPath string) string {
+	return UploadLocalPath(tempPath, upload.UUID)
 }
 
 // UploadsStore is the storage layer for files uploaded to be committed later.
@@ -42,8 +43,9 @@ func newUploadsStore(db *gorm.DB) *UploadsStore {
 	return &UploadsStore{db: db}
 }
 
-// New stores the content of given reader as an upload with given file name.
-func (s *UploadsStore) New(ctx context.Context, name string, r io.Reader) (*Upload, error) {
+// New stores the content of given reader as an upload with given file name
+// under the temporary path of uploads.
+func (s *UploadsStore) New(ctx context.Context, tempPath, name string, r io.Reader) (*Upload, error) {
 	// 🚨 SECURITY: Prevent path traversal.
 	name = pathx.Clean(name)
 	if name == "" {
@@ -55,7 +57,7 @@ func (s *UploadsStore) New(ctx context.Context, name string, r io.Reader) (*Uplo
 		Name: name,
 	}
 
-	localPath := upload.LocalPath()
+	localPath := upload.LocalPath(tempPath)
 	err := os.MkdirAll(path.Dir(localPath), os.ModePerm)
 	if err != nil {
 		return nil, errors.Wrap(err, "create directory")
@@ -118,8 +120,9 @@ func (s *UploadsStore) ListByUUIDs(ctx context.Context, uuids []string) ([]*Uplo
 	return uploads, s.db.WithContext(ctx).Where("uuid IN ?", uuids).Find(&uploads).Error
 }
 
-// Delete deletes given uploads and their files.
-func (s *UploadsStore) Delete(ctx context.Context, uploads ...*Upload) error {
+// Delete deletes given uploads and their files under the temporary path of
+// uploads.
+func (s *UploadsStore) Delete(ctx context.Context, tempPath string, uploads ...*Upload) error {
 	if len(uploads) == 0 {
 		return nil
 	}
@@ -135,7 +138,7 @@ func (s *UploadsStore) Delete(ctx context.Context, uploads ...*Upload) error {
 		}
 
 		for _, upload := range uploads {
-			localPath := upload.LocalPath()
+			localPath := upload.LocalPath(tempPath)
 			if !osx.IsFile(localPath) {
 				continue
 			}
@@ -150,8 +153,9 @@ func (s *UploadsStore) Delete(ctx context.Context, uploads ...*Upload) error {
 }
 
 // DeleteByUUID deletes the upload with given UUID and its file. Deleting an
-// upload that does not exist is not an error.
-func (s *UploadsStore) DeleteByUUID(ctx context.Context, uuid string) error {
+// upload that does not exist is not an error. The file is under the temporary
+// path of uploads.
+func (s *UploadsStore) DeleteByUUID(ctx context.Context, tempPath, uuid string) error {
 	upload, err := s.GetByUUID(ctx, uuid)
 	if err != nil {
 		if IsErrUploadNotExist(err) {
@@ -159,5 +163,5 @@ func (s *UploadsStore) DeleteByUUID(ctx context.Context, uuid string) error {
 		}
 		return errors.Wrap(err, "get upload")
 	}
-	return s.Delete(ctx, upload)
+	return s.Delete(ctx, tempPath, upload)
 }

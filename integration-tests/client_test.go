@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/dbx"
 )
 
@@ -100,7 +99,7 @@ func (c *client) sessionID() string {
 	u, err := url.Parse(c.baseURL)
 	require.NoError(c.t, err)
 	for _, cookie := range c.http.Jar.Cookies(u) {
-		if cookie.Name == conf.Session.CookieName {
+		if cookie.Name == cfg.Session.CookieName {
 			return cookie.Value
 		}
 	}
@@ -242,7 +241,7 @@ func (c *client) doBothWhileLocked(lockQuery string, lockArg any, first, second 
 func (c *client) whileLocked(lockQuery string, lockArg any, method, path string, body any, whileWaiting func(tx *gorm.DB, cancel context.CancelFunc)) (int, []byte) {
 	c.t.Helper()
 
-	db, err := dbx.OpenDB(conf.Database, &gorm.Config{})
+	db, err := dbx.OpenDB(cfg.Database, &gorm.Config{})
 	require.NoError(c.t, err)
 	sqlDB, err := db.DB()
 	require.NoError(c.t, err)

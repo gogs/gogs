@@ -16,7 +16,6 @@ import (
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/api/v1types"
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/repox"
@@ -34,7 +33,7 @@ func newActionsStore(db *gorm.DB) *ActionsStore {
 	return &ActionsStore{db: db}
 }
 
-func (s *ActionsStore) listByOrganization(ctx context.Context, orgID, actorID, afterID int64) *gorm.DB {
+func (s *ActionsStore) listByOrganization(ctx context.Context, orgID, actorID, afterID int64, pageSize int) *gorm.DB {
 	/*
 		Equivalent SQL for PostgreSQL:
 
@@ -72,18 +71,18 @@ func (s *ActionsStore) listByOrganization(ctx context.Context, orgID, actorID, a
 			).
 			Or("repository.is_private = ? AND repository.is_unlisted = ?", false, false),
 		).
-		Limit(conf.UI.User.NewsFeedPagingNum).
+		Limit(pageSize).
 		Order("id DESC")
 }
 
-// ListByOrganization returns actions of the organization viewable by the actor.
-// Results are paginated if `afterID` is given.
-func (s *ActionsStore) ListByOrganization(ctx context.Context, orgID, actorID, afterID int64) ([]*Action, error) {
-	actions := make([]*Action, 0, conf.UI.User.NewsFeedPagingNum)
-	return actions, s.listByOrganization(ctx, orgID, actorID, afterID).Find(&actions).Error
+// ListByOrganization returns at most `pageSize` actions of the organization
+// viewable by the actor. Results are paginated if `afterID` is given.
+func (s *ActionsStore) ListByOrganization(ctx context.Context, orgID, actorID, afterID int64, pageSize int) ([]*Action, error) {
+	actions := make([]*Action, 0, pageSize)
+	return actions, s.listByOrganization(ctx, orgID, actorID, afterID, pageSize).Find(&actions).Error
 }
 
-func (s *ActionsStore) listByUser(ctx context.Context, userID, actorID, afterID int64, isProfile bool) *gorm.DB {
+func (s *ActionsStore) listByUser(ctx context.Context, userID, actorID, afterID int64, isProfile bool, pageSize int) *gorm.DB {
 	/*
 		Equivalent SQL for PostgreSQL:
 
@@ -108,16 +107,16 @@ func (s *ActionsStore) listByUser(ctx context.Context, userID, actorID, afterID 
 			Where("?", !isProfile || actorID == userID).
 			Or("is_private = ? AND act_user_id = ?", false, userID),
 		).
-		Limit(conf.UI.User.NewsFeedPagingNum).
+		Limit(pageSize).
 		Order("id DESC")
 }
 
-// ListByUser returns actions of the user viewable by the actor. Results are
-// paginated if `afterID` is given. The `isProfile` indicates whether repository
-// permissions should be considered.
-func (s *ActionsStore) ListByUser(ctx context.Context, userID, actorID, afterID int64, isProfile bool) ([]*Action, error) {
-	actions := make([]*Action, 0, conf.UI.User.NewsFeedPagingNum)
-	return actions, s.listByUser(ctx, userID, actorID, afterID, isProfile).Find(&actions).Error
+// ListByUser returns at most `pageSize` actions of the user viewable by the
+// actor. Results are paginated if `afterID` is given. The `isProfile` indicates
+// whether repository permissions should be considered.
+func (s *ActionsStore) ListByUser(ctx context.Context, userID, actorID, afterID int64, isProfile bool, pageSize int) ([]*Action, error) {
+	actions := make([]*Action, 0, pageSize)
+	return actions, s.listByUser(ctx, userID, actorID, afterID, isProfile, pageSize).Find(&actions).Error
 }
 
 // notifyWatchers creates rows in action table for watchers who are able to see the action.
@@ -209,36 +208,41 @@ type MirrorSyncPushOptions struct {
 	OldCommitID string
 	NewCommitID string
 	Commits     *PushCommits
+	// FeedMaxCommitNum is the most commits kept in the action, or 0 for no limit.
+	FeedMaxCommitNum int
+	// RepositoryRoot is where repositories are stored.
+	RepositoryRoot string
+	Links          LinkOptions
 }
 
 // MirrorSyncPush creates an action for mirror synchronization of pushed
 // commits.
 func (s *ActionsStore) MirrorSyncPush(ctx context.Context, logger *logx.Logger, opts MirrorSyncPushOptions) error {
-	if conf.UI.FeedMaxCommitNum > 0 && len(opts.Commits.Commits) > conf.UI.FeedMaxCommitNum {
-		opts.Commits.Commits = opts.Commits.Commits[:conf.UI.FeedMaxCommitNum]
+	if opts.FeedMaxCommitNum > 0 && len(opts.Commits.Commits) > opts.FeedMaxCommitNum {
+		opts.Commits.Commits = opts.Commits.Commits[:opts.FeedMaxCommitNum]
 	}
 
 	apiCommits, err := opts.Commits.APIFormat(ctx,
 		newUsersStore(s.db),
-		repox.RepositoryPath(opts.Owner.Name, opts.Repo.Name),
-		repox.HTMLURL(opts.Owner.Name, opts.Repo.Name),
+		repox.RepositoryPath(opts.RepositoryRoot, opts.Owner.Name, opts.Repo.Name),
+		repox.HTMLURL(opts.Links.ExternalURL, opts.Owner.Name, opts.Repo.Name),
 	)
 	if err != nil {
 		return errors.Wrap(err, "convert commits to API format")
 	}
 
 	opts.Commits.CompareURL = repox.CompareCommitsPath(opts.Owner.Name, opts.Repo.Name, opts.OldCommitID, opts.NewCommitID)
-	apiPusher := opts.Owner.APIFormat()
-	err = newWebhooksStore(s.db).Prepare(ctx, logger,
+	apiPusher := opts.Owner.APIFormat(opts.Links)
+	err = newWebhooksStore(s.db).Prepare(ctx, logger, opts.Links.ExternalURL,
 		opts.Repo,
 		HookEventTypePush,
 		&v1types.WebhookPushPayload{
 			Ref:        opts.RefName,
 			Before:     opts.OldCommitID,
 			After:      opts.NewCommitID,
-			CompareURL: conf.Server.ExternalURL + opts.Commits.CompareURL,
+			CompareURL: opts.Links.ExternalURL + opts.Commits.CompareURL,
 			Commits:    apiCommits,
-			Repo:       opts.Repo.APIFormat(opts.Owner),
+			Repo:       opts.Repo.APIFormat(opts.Links, opts.Owner),
 			Pusher:     apiPusher,
 			Sender:     apiPusher,
 		},
@@ -314,7 +318,7 @@ func assembleKeywordsPattern(words []string) string {
 }
 
 // updateCommitReferencesToIssues checks if issues are manipulated by commit message.
-func (s *ActionsStore) updateCommitReferencesToIssues(ctx context.Context, logger *logx.Logger, doer *User, repo *Repository, commits []*PushCommit) error {
+func (s *ActionsStore) updateCommitReferencesToIssues(ctx context.Context, logger *logx.Logger, notify NotifyOptions, doer *User, repo *Repository, commits []*PushCommit) error {
 	issues := newIssuesStore(s.db)
 	trimRightNonDigits := func(c rune) bool {
 		return !unicode.IsDigit(c)
@@ -363,8 +367,8 @@ func (s *ActionsStore) updateCommitReferencesToIssues(ctx context.Context, logge
 			if len(msgLines) > 2 {
 				shortMsg += "..."
 			}
-			message := fmt.Sprintf(`<a href="%s/commit/%s">%s</a>`, repo.Link(), c.Sha1, shortMsg)
-			if err = newCommentsStore(s.db).createRef(ctx, logger, doer, repo, issue, message, c.Sha1); err != nil {
+			message := fmt.Sprintf(`<a href="%s/commit/%s">%s</a>`, repo.Link(notify.Links.Subpath), c.Sha1, shortMsg)
+			if err = newCommentsStore(s.db).createRef(ctx, logger, notify, doer, repo, issue, message, c.Sha1); err != nil {
 				return err
 			}
 		}
@@ -404,7 +408,7 @@ func (s *ActionsStore) updateCommitReferencesToIssues(ctx context.Context, logge
 				continue
 			}
 
-			if err = issues.ChangeStatus(ctx, logger, doer, repo, issue, true); err != nil {
+			if err = issues.ChangeStatus(ctx, logger, notify, doer, repo, issue, true); err != nil {
 				return err
 			}
 		}
@@ -444,7 +448,7 @@ func (s *ActionsStore) updateCommitReferencesToIssues(ctx context.Context, logge
 				continue
 			}
 
-			if err = issues.ChangeStatus(ctx, logger, doer, repo, issue, false); err != nil {
+			if err = issues.ChangeStatus(ctx, logger, notify, doer, repo, issue, false); err != nil {
 				return err
 			}
 		}
@@ -460,6 +464,11 @@ type CommitRepoOptions struct {
 	OldCommitID string
 	NewCommitID string
 	Commits     *PushCommits
+	// FeedMaxCommitNum is the most commits kept in the action, or 0 for no limit.
+	FeedMaxCommitNum int
+	// Notify tells about the issues that the commits close or reopen, and makes
+	// the webhook payloads.
+	Notify NotifyOptions
 }
 
 // CommitRepo creates actions for pushing commits to the repository. An action
@@ -497,10 +506,11 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, logger *logx.Logger, opts
 		IsPrivate:    opts.Repo.IsPrivate || opts.Repo.IsUnlisted,
 	}
 
-	apiRepo := opts.Repo.APIFormat(opts.Owner)
-	apiPusher := pusher.APIFormat()
+	links := opts.Notify.Links
+	apiRepo := opts.Repo.APIFormat(links, opts.Owner)
+	apiPusher := pusher.APIFormat(links)
 	if isDelRef {
-		err = newWebhooksStore(s.db).Prepare(ctx, logger,
+		err = newWebhooksStore(s.db).Prepare(ctx, logger, links.ExternalURL,
 			opts.Repo,
 			HookEventTypeDelete,
 			&v1types.WebhookDeletePayload{
@@ -527,13 +537,13 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, logger *logx.Logger, opts
 
 	// Only update issues via commits when internal issue tracker is enabled.
 	if opts.Repo.EnableIssues && !opts.Repo.EnableExternalTracker {
-		if err = s.updateCommitReferencesToIssues(ctx, logger, pusher, opts.Repo, opts.Commits.Commits); err != nil {
+		if err = s.updateCommitReferencesToIssues(ctx, logger, opts.Notify, pusher, opts.Repo, opts.Commits.Commits); err != nil {
 			logger.Error("Failed to update commit references to issues", "error", err)
 		}
 	}
 
-	if conf.UI.FeedMaxCommitNum > 0 && len(opts.Commits.Commits) > conf.UI.FeedMaxCommitNum {
-		opts.Commits.Commits = opts.Commits.Commits[:conf.UI.FeedMaxCommitNum]
+	if opts.FeedMaxCommitNum > 0 && len(opts.Commits.Commits) > opts.FeedMaxCommitNum {
+		opts.Commits.Commits = opts.Commits.Commits[:opts.FeedMaxCommitNum]
 	}
 
 	data, err := json.Marshal(opts.Commits)
@@ -544,7 +554,7 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, logger *logx.Logger, opts
 
 	var compareURL string
 	if isNewRef {
-		err = newWebhooksStore(s.db).Prepare(ctx, logger,
+		err = newWebhooksStore(s.db).Prepare(ctx, logger, links.ExternalURL,
 			opts.Repo,
 			HookEventTypeCreate,
 			&v1types.WebhookCreatePayload{
@@ -565,19 +575,19 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, logger *logx.Logger, opts
 			return errors.Wrap(err, "notify watchers")
 		}
 	} else {
-		compareURL = conf.Server.ExternalURL + opts.Commits.CompareURL
+		compareURL = links.ExternalURL + opts.Commits.CompareURL
 	}
 
 	commits, err := opts.Commits.APIFormat(ctx,
 		newUsersStore(s.db),
-		repox.RepositoryPath(opts.Owner.Name, opts.Repo.Name),
-		repox.HTMLURL(opts.Owner.Name, opts.Repo.Name),
+		repox.RepositoryPath(opts.Notify.RepositoryRoot, opts.Owner.Name, opts.Repo.Name),
+		repox.HTMLURL(links.ExternalURL, opts.Owner.Name, opts.Repo.Name),
 	)
 	if err != nil {
 		return errors.Wrap(err, "convert commits to API format")
 	}
 
-	err = newWebhooksStore(s.db).Prepare(ctx, logger,
+	err = newWebhooksStore(s.db).Prepare(ctx, logger, links.ExternalURL,
 		opts.Repo,
 		HookEventTypePush,
 		&v1types.WebhookPushPayload{
@@ -609,6 +619,7 @@ type PushTagOptions struct {
 	PusherName  string
 	RefFullName string
 	NewCommitID string
+	Links       LinkOptions
 }
 
 // PushTag creates an action for pushing tags to the repository. An action with
@@ -636,10 +647,10 @@ func (s *ActionsStore) PushTag(ctx context.Context, logger *logx.Logger, opts Pu
 		IsPrivate:    opts.Repo.IsPrivate || opts.Repo.IsUnlisted,
 	}
 
-	apiRepo := opts.Repo.APIFormat(opts.Owner)
-	apiPusher := pusher.APIFormat()
+	apiRepo := opts.Repo.APIFormat(opts.Links, opts.Owner)
+	apiPusher := pusher.APIFormat(opts.Links)
 	if git.IsEmptyID(opts.NewCommitID) {
-		err = newWebhooksStore(s.db).Prepare(ctx, logger,
+		err = newWebhooksStore(s.db).Prepare(ctx, logger, opts.Links.ExternalURL,
 			opts.Repo,
 			HookEventTypeDelete,
 			&v1types.WebhookDeletePayload{
@@ -662,7 +673,7 @@ func (s *ActionsStore) PushTag(ctx context.Context, logger *logx.Logger, opts Pu
 		return nil
 	}
 
-	err = newWebhooksStore(s.db).Prepare(ctx, logger,
+	err = newWebhooksStore(s.db).Prepare(ctx, logger, opts.Links.ExternalURL,
 		opts.Repo,
 		HookEventTypeCreate,
 		&v1types.WebhookCreatePayload{
@@ -785,9 +796,11 @@ func (a *Action) ShortRepoPath() string {
 	return path.Join(a.ShortRepoUserName(), a.ShortRepoName())
 }
 
-func (a *Action) GetRepoLink() string {
-	if conf.Server.Subpath != "" {
-		return path.Join(conf.Server.Subpath, a.GetRepoPath())
+// GetRepoLink returns the link to the repository of the action, which starts
+// with the subpath of the server.
+func (a *Action) GetRepoLink(subpath string) string {
+	if subpath != "" {
+		return path.Join(subpath, a.GetRepoPath())
 	}
 	return "/" + a.GetRepoPath()
 }
@@ -925,17 +938,17 @@ func (pcs *PushCommits) APIFormat(ctx context.Context, usersStore *UsersStore, r
 //
 // FIXME: This method does not belong to PushCommits, should be a pure template
 // function.
-func (pcs *PushCommits) AvatarLink(email string) string {
+func (pcs *PushCommits) AvatarLink(links LinkOptions, email string) string {
 	_, ok := pcs.avatars[email]
 	if !ok {
 		u, err := Handle.Users().GetByEmail(context.Background(), email)
 		if err != nil {
-			pcs.avatars[email] = userx.GeneratedAvatarURLPath(email)
+			pcs.avatars[email] = userx.GeneratedAvatarURLPath(links.SecretKey, links.Subpath, email)
 			if !IsErrUserNotExist(err) {
 				handleLogger().Error("Failed to get user", "email", email, "error", err)
 			}
 		} else {
-			pcs.avatars[email] = u.AvatarURLPath()
+			pcs.avatars[email] = u.AvatarURLPath(links)
 		}
 	}
 

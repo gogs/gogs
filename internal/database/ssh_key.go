@@ -83,9 +83,10 @@ func (k *PublicKey) OmitEmail() string {
 	return strings.Join(strings.Split(k.Content, " ")[:2], " ")
 }
 
-// AuthorizedString returns formatted public key string for authorized_keys file.
-func (k *PublicKey) AuthorizedString() string {
-	return fmt.Sprintf(tplPublicKey, conf.AppPath(), k.ID, conf.CustomConf, k.Content)
+// AuthorizedString returns formatted public key string for authorized_keys
+// file, which runs "gogs serv" with the custom configuration file at customConf.
+func (k *PublicKey) AuthorizedString(customConf string) string {
+	return fmt.Sprintf(tplPublicKey, conf.AppPath(), k.ID, customConf, k.Content)
 }
 
 // IsDeployKey returns true if the public key is used as deploy key.
@@ -289,10 +290,11 @@ func SSHNativeParsePublicKey(keyLine string) (string, int, error) {
 	return "", 0, errors.Newf("unsupported key length detection for type: %s", pkey.Type())
 }
 
-// CheckPublicKeyString checks if the given public key string is recognized by SSH.
-// It returns the actual public key line on success.
-func CheckPublicKeyString(logger *logx.Logger, content string) (_ string, err error) {
-	if conf.SSH.Disabled {
+// CheckPublicKeyString checks if the given public key string is recognized by SSH
+// and allowed by the SSH options. It returns the actual public key line on
+// success.
+func CheckPublicKeyString(logger *logx.Logger, sshOpts conf.SSHOpts, content string) (_ string, err error) {
+	if sshOpts.Disabled {
 		return "", ErrSSHDisabled
 	}
 
@@ -309,7 +311,7 @@ func CheckPublicKeyString(logger *logx.Logger, content string) (_ string, err er
 	// Remove any unnecessary whitespace.
 	content = strings.TrimSpace(content)
 
-	if !conf.SSH.MinimumKeySizeCheck {
+	if !sshOpts.MinimumKeySizeCheck {
 		return content, nil
 	}
 
@@ -318,19 +320,19 @@ func CheckPublicKeyString(logger *logx.Logger, content string) (_ string, err er
 		keyType string
 		length  int
 	)
-	if conf.SSH.StartBuiltinServer {
+	if sshOpts.StartBuiltinServer {
 		fnName = "SSHNativeParsePublicKey"
 		keyType, length, err = SSHNativeParsePublicKey(content)
 	} else {
 		fnName = "SSHKeygenParsePublicKey"
-		keyType, length, err = SSHKeygenParsePublicKey(content, conf.SSH.KeyTestPath, conf.SSH.KeygenPath)
+		keyType, length, err = SSHKeygenParsePublicKey(content, sshOpts.KeyTestPath, sshOpts.KeygenPath)
 	}
 	if err != nil {
 		return "", errors.Wrap(err, fnName)
 	}
-	logger.Debug("Parsed public key", "builtinServer", conf.SSH.StartBuiltinServer, "keyType", keyType, "length", length)
+	logger.Debug("Parsed public key", "builtinServer", sshOpts.StartBuiltinServer, "keyType", keyType, "length", length)
 
-	if minLen, found := conf.SSH.MinimumKeySizes[keyType]; found && length >= minLen {
+	if minLen, found := sshOpts.MinimumKeySizes[keyType]; found && length >= minLen {
 		return content, nil
 	} else if found && length < minLen {
 		return "", errors.Newf("key length is not enough: got %d, needs %d", length, minLen)
@@ -341,17 +343,15 @@ func CheckPublicKeyString(logger *logx.Logger, content string) (_ string, err er
 // appendAuthorizedKeysToFile appends new SSH keys' content to authorized_keys
 // file. Callers append keys once the transactions that add them commit, so that
 // a key rolled back leaves no line whose key ID a later key may get.
-func appendAuthorizedKeysToFile(logger *logx.Logger, keys ...*PublicKey) error {
-	// The builtin SSH server does not read the file.
-	if conf.SSH.StartBuiltinServer {
+func appendAuthorizedKeysToFile(logger *logx.Logger, authorizedKeys AuthorizedKeysOptions, keys ...*PublicKey) error {
+	if authorizedKeys.Path == "" {
 		return nil
 	}
 
 	sshOpLocker.Lock()
 	defer sshOpLocker.Unlock()
 
-	fpath := filepath.Join(conf.SSH.RootPath, "authorized_keys")
-	f, err := os.OpenFile(fpath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+	f, err := os.OpenFile(authorizedKeys.Path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 	if err != nil {
 		return err
 	}
@@ -374,7 +374,7 @@ func appendAuthorizedKeysToFile(logger *logx.Logger, keys ...*PublicKey) error {
 	}
 
 	for _, key := range keys {
-		if _, err = f.WriteString(key.AuthorizedString()); err != nil {
+		if _, err = f.WriteString(key.AuthorizedString(authorizedKeys.CustomConf)); err != nil {
 			return err
 		}
 	}

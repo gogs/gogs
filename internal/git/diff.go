@@ -572,7 +572,7 @@ func (p *diffParser) parse() (*Diff, error) {
 // parse-on-read to minimize the time spent on huge diffs. It accepts a channel
 // to notify and send error (if any) to the caller when the process is done.
 // Therefore, this function should be called in a goroutine asynchronously.
-func streamParseDiff(logger *logx.Logger, r io.Reader, done chan<- streamParseDiffResult, maxFiles, maxFileLines, maxLineChars int) {
+func streamParseDiff(logger *logx.Logger, r io.Reader, done chan<- streamParseDiffResult, maxFiles, maxFileLines, maxLineChars int, ansiCharset string) {
 	p := &diffParser{
 		Reader:       bufio.NewReader(r),
 		maxFiles:     maxFiles,
@@ -581,7 +581,7 @@ func streamParseDiff(logger *logx.Logger, r io.Reader, done chan<- streamParseDi
 	}
 	diff, err := p.parse()
 	if err == nil {
-		decodeCharsets(logger, diff)
+		decodeCharsets(logger, diff, ansiCharset)
 	}
 	done <- streamParseDiffResult{
 		Diff: diff,
@@ -591,7 +591,7 @@ func streamParseDiff(logger *logx.Logger, r io.Reader, done chan<- streamParseDi
 
 // decodeCharsets converts the content of each file in the diff to UTF-8 when
 // the file is detected to be in another encoding.
-func decodeCharsets(logger *logx.Logger, diff *Diff) {
+func decodeCharsets(logger *logx.Logger, diff *Diff, ansiCharset string) {
 	var buf bytes.Buffer
 	for _, file := range diff.Files {
 		buf.Reset()
@@ -602,7 +602,7 @@ func decodeCharsets(logger *logx.Logger, diff *Diff) {
 			}
 		}
 
-		charsetLabel := encodingx.Detect(logger, buf.Bytes())
+		charsetLabel := encodingx.Detect(logger, buf.Bytes(), ansiCharset)
 		if charsetLabel == "UTF-8" {
 			continue
 		}

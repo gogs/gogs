@@ -14,8 +14,10 @@ import (
 	"gogs.io/gogs/internal/encodingx"
 )
 
-func ToUTF8WithErr(logger *logx.Logger, content []byte) (string, error) {
-	charsetLabel := encodingx.Detect(logger, content)
+// ToUTF8WithErr converts the content to UTF-8 from its detected encoding, see
+// encodingx.Detect for ansiCharset.
+func ToUTF8WithErr(logger *logx.Logger, content []byte, ansiCharset string) (string, error) {
+	charsetLabel := encodingx.Detect(logger, content, ansiCharset)
 	if charsetLabel == "UTF-8" {
 		return string(content), nil
 	}
@@ -41,7 +43,7 @@ type Actioner interface {
 	GetRepoUserName() string
 	GetRepoName() string
 	GetRepoPath() string
-	GetRepoLink() string
+	GetRepoLink(subpath string) string
 	GetBranch() string
 	GetContent() string
 	GetCreate() time.Time

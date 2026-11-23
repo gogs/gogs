@@ -11,9 +11,11 @@ import (
 	"gogs.io/gogs/internal/markup/dariomark"
 )
 
+// testOptions are the options of rendering in tests.
+var testOptions = Options{ExternalURL: "http://localhost:3000/"}
+
 func TestIsMarkdownFile(t *testing.T) {
-	// TODO: Refactor to accept a list of extensions
-	conf.Markdown.FileExtensions = strings.Split(".md,.markdown,.mdown,.mkd", ",")
+	extensions := []string{".md", ".markdown", ".mdown", ".mkd"}
 	tests := []struct {
 		ext    string
 		expVal bool
@@ -27,13 +29,11 @@ func TestIsMarkdownFile(t *testing.T) {
 		{ext: ".asciidoc", expVal: false},
 	}
 	for _, test := range tests {
-		assert.Equal(t, test.expVal, IsMarkdownFile(test.ext))
+		assert.Equal(t, test.expVal, IsMarkdownFile(extensions, test.ext))
 	}
 }
 
 func TestMarkdown(t *testing.T) {
-	// TODO: Refactor to accept URL
-	conf.Server.ExternalURL = "http://localhost:3000/"
 
 	tests := []struct {
 		input  string
@@ -63,7 +63,7 @@ func TestMarkdown(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			assert.Equal(t, "<p>"+test.expVal+"</p>\n", string(RawMarkdown([]byte(test.input), "")))
+			assert.Equal(t, "<p>"+test.expVal+"</p>\n", string(RawMarkdown(testOptions, []byte(test.input), "")))
 		})
 	}
 }
@@ -90,7 +90,7 @@ func TestRawMarkdown_RelativeLinks(t *testing.T) {
 			if prefix == "" {
 				prefix = "/user/repo/src/main"
 			}
-			assert.Equal(t, "<p>"+test.expVal+"</p>\n", string(RawMarkdown([]byte(test.input), prefix)))
+			assert.Equal(t, "<p>"+test.expVal+"</p>\n", string(RawMarkdown(testOptions, []byte(test.input), prefix)))
 		})
 	}
 }
@@ -106,8 +106,7 @@ func trackerMetas() map[string]string {
 }
 
 func TestMarkdown_SpecialLinks(t *testing.T) {
-	conf.Server.ExternalURL = "http://localhost:3000/"
-	NewSanitizer()
+	NewSanitizer(nil)
 
 	tests := []struct {
 		name  string
@@ -192,33 +191,30 @@ func TestMarkdown_SpecialLinks(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			assert.Equal(t, test.want, string(Markdown(test.input, "/user/repo", trackerMetas())))
+			assert.Equal(t, test.want, string(Markdown(testOptions, test.input, "/user/repo", trackerMetas())))
 		})
 	}
 }
 
 // TestMarkdown_LineBreaks checks that Markdown other than files keeps its line
-// breaks, and files keep them only with [markdown] ENABLE_HARD_LINE_BREAK.
+// breaks, and files keep them only with Options.FileHardLineBreak.
 func TestMarkdown_LineBreaks(t *testing.T) {
-	NewSanitizer()
-	defer func(old bool) { conf.Markdown.EnableHardLineBreak = old }(conf.Markdown.EnableHardLineBreak)
+	NewSanitizer(nil)
 
 	const input = "Fixed it\n:tada: thanks"
-	conf.Markdown.EnableHardLineBreak = false
-	assert.Equal(t, "<p>Fixed it<br>\n🎉 thanks</p>\n", string(Markdown(input, "/user/repo", nil)))
-	assert.Equal(t, "<p>Fixed it\n:tada: thanks</p>\n", string(MarkdownFile(input, "/user/repo", nil)))
-	assert.Equal(t, "<p>Fixed it\n:tada: thanks</p>\n", string(RawMarkdown([]byte(input), "")))
+	assert.Equal(t, "<p>Fixed it<br>\n🎉 thanks</p>\n", string(Markdown(testOptions, input, "/user/repo", nil)))
+	assert.Equal(t, "<p>Fixed it\n:tada: thanks</p>\n", string(MarkdownFile(testOptions, input, "/user/repo", nil)))
+	assert.Equal(t, "<p>Fixed it\n:tada: thanks</p>\n", string(RawMarkdown(testOptions, []byte(input), "")))
 
-	conf.Markdown.EnableHardLineBreak = true
-	assert.Equal(t, "<p>Fixed it<br>\n🎉 thanks</p>\n", string(MarkdownFile(input, "/user/repo", nil)))
+	hardLineBreak := Options{FileHardLineBreak: true}
+	assert.Equal(t, "<p>Fixed it<br>\n🎉 thanks</p>\n", string(MarkdownFile(hardLineBreak, input, "/user/repo", nil)))
 }
 
 // TestMarkdown_Emoji checks that emoji shortcodes render as on GitHub, with
 // and without raw HTML in the document. It renders files, whose line endings
 // do not split text.
 func TestMarkdown_Emoji(t *testing.T) {
-	conf.Server.ExternalURL = "http://localhost:3000/"
-	NewSanitizer()
+	NewSanitizer(nil)
 
 	// Text this long is passed to SpecialLinks in pieces, here split at the
 	// line ending.
@@ -286,12 +282,12 @@ func TestMarkdown_Emoji(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			res := renderMarkdown([]byte(test.input), "/user/repo", nil, nil, false, false)
+			res := renderMarkdown(testOptions, []byte(test.input), "/user/repo", nil, nil, false, false)
 			require.True(t, res.Sanitized, "takes the fast path")
-			assert.Equal(t, test.want, string(MarkdownFile(test.input, "/user/repo", nil)))
+			assert.Equal(t, test.want, string(MarkdownFile(testOptions, test.input, "/user/repo", nil)))
 			// A raw HTML comment, which renders as a line ending, takes the
 			// path that tokenizes the HTML.
-			assert.Equal(t, test.want+"\n", string(MarkdownFile(test.input+"\n\n<!-- -->", "/user/repo", nil)))
+			assert.Equal(t, test.want+"\n", string(MarkdownFile(testOptions, test.input+"\n\n<!-- -->", "/user/repo", nil)))
 		})
 	}
 
@@ -318,14 +314,13 @@ func TestMarkdown_Emoji(t *testing.T) {
 	}
 	for _, test := range rawTests {
 		t.Run(test.name, func(t *testing.T) {
-			assert.Equal(t, test.want, string(MarkdownFile(test.input, "/user/repo", nil)))
+			assert.Equal(t, test.want, string(MarkdownFile(testOptions, test.input, "/user/repo", nil)))
 		})
 	}
 }
 
 func TestMarkdown_FastPathXSS(t *testing.T) {
-	conf.Server.ExternalURL = "http://localhost:3000/"
-	NewSanitizer()
+	NewSanitizer(nil)
 
 	tests := []struct {
 		input string
@@ -358,9 +353,9 @@ func TestMarkdown_FastPathXSS(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.input, func(t *testing.T) {
-			res := renderMarkdown([]byte(test.input), "/user/repo", trackerMetas(), nil, true, false)
+			res := renderMarkdown(testOptions, []byte(test.input), "/user/repo", trackerMetas(), nil, true, false)
 			assert.True(t, res.Sanitized, "takes the fast path")
-			assert.Equal(t, test.want, string(Markdown(test.input, "/user/repo", trackerMetas())))
+			assert.Equal(t, test.want, string(Markdown(testOptions, test.input, "/user/repo", trackerMetas())))
 		})
 	}
 }
@@ -368,8 +363,7 @@ func TestMarkdown_FastPathXSS(t *testing.T) {
 // TestMarkdown_ShortenAutoLink checks that links whose commit or issue path
 // follows a "#" are not shortened.
 func TestMarkdown_ShortenAutoLink(t *testing.T) {
-	conf.Server.ExternalURL = "http://localhost:3000/"
-	NewSanitizer()
+	NewSanitizer(nil)
 
 	for _, link := range []string{
 		"http://localhost:3000/#issues/00",
@@ -377,44 +371,41 @@ func TestMarkdown_ShortenAutoLink(t *testing.T) {
 	} {
 		t.Run(link, func(t *testing.T) {
 			want := "<p><a href=\"" + link + "\" rel=\"nofollow\">" + link + "</a></p>\n"
-			assert.Equal(t, want, string(Markdown("<"+link+">", "/user/repo", nil)))
+			assert.Equal(t, want, string(Markdown(testOptions, "<"+link+">", "/user/repo", nil)))
 		})
 	}
 }
 
 func TestMarkdown_Limits(t *testing.T) {
-	conf.Server.ExternalURL = "http://localhost:3000/"
-	NewSanitizer()
+	NewSanitizer(nil)
 
 	t.Run("mentions render in linear output size", func(t *testing.T) {
 		input := strings.Repeat("@a ", 10000)
-		got := Markdown(input, "/user/repo", nil)
+		got := Markdown(testOptions, input, "/user/repo", nil)
 		assert.Less(t, len(got), 40*len(input))
-		assert.Equal(t, `<p><a href="/a" rel="nofollow">@a</a> <a href="/ab" rel="nofollow">@ab</a></p>`+"\n", string(Markdown("@a @ab", "/user/repo", nil)))
+		assert.Equal(t, `<p><a href="/a" rel="nofollow">@a</a> <a href="/ab" rel="nofollow">@ab</a></p>`+"\n", string(Markdown(testOptions, "@a @ab", "/user/repo", nil)))
 	})
 
 	t.Run("oversized document is shown as text", func(t *testing.T) {
-		before := conf.UI.MaxDisplayFileSize
-		conf.UI.MaxDisplayFileSize = 16
-		defer func() { conf.UI.MaxDisplayFileSize = before }()
-
-		assert.Equal(t, "<pre># Title &lt;b&gt; *emphasis*</pre>", string(Markdown("# Title <b> *emphasis*", "/user/repo", nil)))
-		assert.Equal(t, "<h1 id=\"user-content-title\">Title</h1>\n", string(Markdown("# Title", "/user/repo", nil)))
-		assert.Equal(t, "<pre># Title &lt;b&gt; *emphasis*</pre>", string(RawMarkdown([]byte("# Title <b> *emphasis*"), "")))
+		limited := testOptions
+		limited.MaxDisplayFileSize = 16
+		assert.Equal(t, "<pre># Title &lt;b&gt; *emphasis*</pre>", string(Markdown(limited, "# Title <b> *emphasis*", "/user/repo", nil)))
+		assert.Equal(t, "<h1 id=\"user-content-title\">Title</h1>\n", string(Markdown(limited, "# Title", "/user/repo", nil)))
+		assert.Equal(t, "<pre># Title &lt;b&gt; *emphasis*</pre>", string(RawMarkdown(limited, []byte("# Title <b> *emphasis*"), "")))
 	})
 
 	t.Run("byte order mark is ignored", func(t *testing.T) {
-		assert.Equal(t, "<h1 id=\"user-content-title\">Title</h1>\n", string(Markdown("\ufeff# Title", "/user/repo", nil)))
-		assert.Equal(t, "<h1 id=\"user-content-title\">Title</h1>\n", string(RawMarkdown([]byte("\ufeff# Title"), "")))
+		assert.Equal(t, "<h1 id=\"user-content-title\">Title</h1>\n", string(Markdown(testOptions, "\ufeff# Title", "/user/repo", nil)))
+		assert.Equal(t, "<h1 id=\"user-content-title\">Title</h1>\n", string(RawMarkdown(testOptions, []byte("\ufeff# Title"), "")))
 	})
 
 	t.Run("fenced code keeps languages with symbols", func(t *testing.T) {
-		assert.Equal(t, "<pre><code class=\"language-c++\">x\n</code></pre>\n", string(Markdown("```c++\nx\n```", "/user/repo", nil)))
+		assert.Equal(t, "<pre><code class=\"language-c++\">x\n</code></pre>\n", string(Markdown(testOptions, "```c++\nx\n```", "/user/repo", nil)))
 	})
 
 	t.Run("footnote ids differ between documents", func(t *testing.T) {
-		a := string(Markdown("a[^1]\n\n[^1]: one", "/user/repo", nil))
-		b := string(Markdown("b[^1]\n\n[^1]: two", "/user/repo", nil))
+		a := string(Markdown(testOptions, "a[^1]\n\n[^1]: one", "/user/repo", nil))
+		b := string(Markdown(testOptions, "b[^1]\n\n[^1]: two", "/user/repo", nil))
 		assert.Contains(t, a, `id="user-content-`)
 		assert.NotEqual(t, footnoteIDPrefix([]byte("a[^1]\n\n[^1]: one")), footnoteIDPrefix([]byte("b[^1]\n\n[^1]: two")))
 		assert.Contains(t, b, footnoteIDPrefix([]byte("b[^1]\n\n[^1]: two"))+"fn:1")
@@ -422,26 +413,24 @@ func TestMarkdown_Limits(t *testing.T) {
 }
 
 func TestMarkdown_Fractions(t *testing.T) {
-	NewSanitizer()
-	before := conf.Smartypants
-	defer func() { conf.Smartypants = before }()
-	conf.Smartypants.Enabled = true
+	NewSanitizer(nil)
+	opts := Options{Smartypants: conf.SmartypantsOpts{Enabled: true}}
 
 	t.Run("only common fractions without FRACTIONS", func(t *testing.T) {
-		conf.Smartypants.Fractions = false
-		assert.Equal(t, "<p>½ cup, ¼th, ¾ths, 2/3, 1/2th, a1/2, <code>1/2</code></p>\n", string(Markdown("1/2 cup, 1/4th, 3/4ths, 2/3, 1/2th, a1/2, `1/2`", "/user/repo", nil)))
+		assert.Equal(t, "<p>½ cup, ¼th, ¾ths, 2/3, 1/2th, a1/2, <code>1/2</code></p>\n", string(Markdown(opts, "1/2 cup, 1/4th, 3/4ths, 2/3, 1/2th, a1/2, `1/2`", "/user/repo", nil)))
 	})
 
 	t.Run("any fraction with FRACTIONS", func(t *testing.T) {
-		conf.Smartypants.Fractions = true
-		assert.Equal(t, "<p><sup>2</sup>⁄<sub>3</sub>, <sup>12</sup>⁄<sub>345</sub>, 1/4th, 1/2/2020, 01/2</p>\n", string(Markdown("2/3, 12/345, 1/4th, 1/2/2020, 01/2", "/user/repo", nil)))
+		opts := opts
+		opts.Smartypants.Fractions = true
+		assert.Equal(t, "<p><sup>2</sup>⁄<sub>3</sub>, <sup>12</sup>⁄<sub>345</sub>, 1/4th, 1/2/2020, 01/2</p>\n", string(Markdown(opts, "2/3, 12/345, 1/4th, 1/2/2020, 01/2", "/user/repo", nil)))
 		// Documents with raw HTML are sanitized by SanitizeBytes instead.
-		assert.Equal(t, "<p><b>x</b> <sup>2</sup>⁄<sub>3</sub></p>\n", string(Markdown("<b>x</b> 2/3", "/user/repo", nil)))
+		assert.Equal(t, "<p><b>x</b> <sup>2</sup>⁄<sub>3</sub></p>\n", string(Markdown(opts, "<b>x</b> 2/3", "/user/repo", nil)))
 	})
 }
 
 func TestMarkdown_HeadingIDs(t *testing.T) {
-	NewSanitizer()
+	NewSanitizer(nil)
 	input := "# Hello, World!\n\n## Setup *fast*\n\n## Setup fast\n\n### setup-fast-1\n\n## 中文 标题\n\n## !!!\n"
 	want := `<h1 id="user-content-hello-world">Hello, World!</h1>
 <h2 id="user-content-setup-fast">Setup <em>fast</em></h2>
@@ -450,11 +439,11 @@ func TestMarkdown_HeadingIDs(t *testing.T) {
 <h2 id="user-content-中文-标题">中文 标题</h2>
 <h2>!!!</h2>
 `
-	assert.Equal(t, want, string(Markdown(input, "/user/repo", nil)))
+	assert.Equal(t, want, string(Markdown(testOptions, input, "/user/repo", nil)))
 	// Documents with raw HTML are sanitized by SanitizeBytes instead.
-	assert.Equal(t, want+"<p><b>x</b></p>\n", string(Markdown(input+"\n<b>x</b>\n", "/user/repo", nil)))
+	assert.Equal(t, want+"<p><b>x</b></p>\n", string(Markdown(testOptions, input+"\n<b>x</b>\n", "/user/repo", nil)))
 
-	got := dariomark.Render([]byte(input), markdownOptions("", true)).Headings
+	got := dariomark.Render([]byte(input), markdownOptions(testOptions, "", true)).Headings
 	assert.Equal(t, []dariomark.Heading{
 		{Level: 1, Text: "Hello, World!", ID: "user-content-hello-world"},
 		{Level: 2, Text: "Setup fast", ID: "user-content-setup-fast"},
@@ -466,7 +455,7 @@ func TestMarkdown_HeadingIDs(t *testing.T) {
 }
 
 func TestMarkdown_TaskLists(t *testing.T) {
-	NewSanitizer()
+	NewSanitizer(nil)
 	input := "- [ ] write\n- [x] review\n  details\n  - [ ] sub\n- plain\n\n3. [x] ship\n"
 	want := `<ul class="contains-task-list">
 <li class="task-list-item" data-source-lines="1-1"><input disabled="" type="checkbox"> write</li>
@@ -482,17 +471,17 @@ details
 <li class="task-list-item" data-source-lines="7-7"><input checked="" disabled="" type="checkbox"> ship</li>
 </ol>
 `
-	res := renderMarkdown([]byte(input), "/user/repo", nil, nil, true, false)
+	res := renderMarkdown(testOptions, []byte(input), "/user/repo", nil, nil, true, false)
 	assert.True(t, res.Sanitized, "takes the fast path")
-	assert.Equal(t, want, string(Markdown(input, "/user/repo", nil)))
+	assert.Equal(t, want, string(Markdown(testOptions, input, "/user/repo", nil)))
 	// Documents with raw HTML are sanitized by SanitizeBytes instead.
-	assert.Equal(t, want+"<p><b>x</b></p>\n", string(Markdown(input+"\n<b>x</b>\n", "/user/repo", nil)))
+	assert.Equal(t, want+"<p><b>x</b></p>\n", string(Markdown(testOptions, input+"\n<b>x</b>\n", "/user/repo", nil)))
 }
 
 // TestMarkdown_CodeInListItems checks code blocks inside list items. The
 // expected block structure is what GitHub renders for the same input.
 func TestMarkdown_CodeInListItems(t *testing.T) {
-	NewSanitizer()
+	NewSanitizer(nil)
 	tests := []struct {
 		name  string
 		input string
@@ -536,7 +525,7 @@ func TestMarkdown_CodeInListItems(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			assert.Equal(t, test.want, string(MarkdownFile(test.input, "/user/repo", nil)))
+			assert.Equal(t, test.want, string(MarkdownFile(testOptions, test.input, "/user/repo", nil)))
 		})
 	}
 }
@@ -545,8 +534,7 @@ func TestMarkdown_CodeInListItems(t *testing.T) {
 // rendering them without sanitizing and then sanitizing them with
 // SanitizeBytes would, and that SanitizeBytes leaves them unchanged.
 func FuzzMarkdown(f *testing.F) {
-	conf.Server.ExternalURL = "http://localhost:3000/"
-	NewSanitizer()
+	NewSanitizer(nil)
 	for _, s := range []string{
 		"# Title\n\n*a* **b** `c` [d](e \"f\") ![g](h.png)\n",
 		"> [!NOTE]\n> x\n\n- [ ] a\n- [x] b\n\n| a | b |\n|:-|-:|\n| c | d |\n",
@@ -566,18 +554,18 @@ func FuzzMarkdown(f *testing.F) {
 		// Both line break modes, comments and files, chosen by the input.
 		hardWraps := len(s)%2 == 0
 		file := !hardWraps
-		res := renderMarkdown(body, urlPrefix, trackerMetas(), nil, hardWraps, file)
+		res := renderMarkdown(testOptions, body, urlPrefix, trackerMetas(), nil, hardWraps, file)
 		got := res.HTML
 		if !res.Sanitized {
 			SanitizeBytes(got)
 			return
 		}
 
-		opts := markdownOptions(urlPrefix, hardWraps)
+		opts := markdownOptions(testOptions, urlPrefix, hardWraps)
 		opts.FootnoteIDPrefix = footnoteIDPrefix(body)
 		opts.PostProcess = true
 		opts.SpecialLinks = func(text []byte) []dariomark.SpecialLink {
-			return findSpecialLinks(text, urlPrefix, trackerMetas(), nil)
+			return findSpecialLinks(testOptions, text, urlPrefix, trackerMetas(), nil)
 		}
 		opts.Emoji = emoji
 		if file {
@@ -594,8 +582,7 @@ func FuzzMarkdown(f *testing.F) {
 }
 
 func TestMarkdownFile_FrontMatter(t *testing.T) {
-	conf.Server.ExternalURL = "http://localhost:3000/"
-	NewSanitizer()
+	NewSanitizer(nil)
 
 	const table = "<table>\n<tbody>\n" +
 		"<tr>\n<th>title</th>\n<td>Hello &lt;script&gt;</td>\n</tr>\n" +
@@ -660,18 +647,18 @@ func TestMarkdownFile_FrontMatter(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := MarkdownFile(test.input, "/user/repo", nil)
+			got := MarkdownFile(testOptions, test.input, "/user/repo", nil)
 			assert.Equal(t, test.want, string(got))
 			assert.Equal(t, string(got), string(SanitizeBytes(got)), "survives sanitizing")
 		})
 	}
 
 	t.Run("task lists keep their source lines", func(t *testing.T) {
-		got := string(MarkdownFile("---\r\na: 1\r\n---\r\n- [ ] x\r\n- [x] y\r\n", "/user/repo", nil))
+		got := string(MarkdownFile(testOptions, "---\r\na: 1\r\n---\r\n- [ ] x\r\n- [x] y\r\n", "/user/repo", nil))
 		assert.Contains(t, got, `<li class="task-list-item" data-source-lines="4-4">`)
 		assert.Contains(t, got, `<li class="task-list-item" data-source-lines="5-5">`)
 	})
 	t.Run("comments", func(t *testing.T) {
-		assert.Equal(t, "<hr>\n<h2 id=\"user-content-a-1\">a: 1</h2>\n", string(Markdown("---\na: 1\n---\n", "/user/repo", nil)))
+		assert.Equal(t, "<hr>\n<h2 id=\"user-content-a-1\">a: 1</h2>\n", string(Markdown(testOptions, "---\na: 1\n---\n", "/user/repo", nil)))
 	})
 }

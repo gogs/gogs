@@ -30,22 +30,59 @@ import (
 // time in the past or future.
 var gormDB *gorm.DB
 
+// cfg is the configuration of the server under test that Init loads. Tests only
+// read it.
+var cfg *conf.Config
+
 // Init loads the configuration of the server under test from the given file and
 // connects to its database. The server must have started once to migrate the
 // database.
 func Init(logger *logx.Logger, configPath string) error {
-	err := conf.Init(logger, configPath)
+	var err error
+	cfg, err = conf.Init(logger, configPath, false)
 	if err != nil {
 		return errors.Wrap(err, "init configuration")
 	}
-	gormDB, err = database.SetEngine(logger, false)
+	gormDB, err = database.SetEngine(logger, cfg.Database, false)
 	if err != nil {
 		return errors.Wrap(err, "set engine")
 	}
 	// The README template of auto-initialized repositories is looked up from
 	// the loaded list.
-	database.LoadRepoConfig(logger)
+	database.LoadRepoConfig(logger, cfg.Repository.PreferredLicenses)
 	return nil
+}
+
+// linkOptions returns the settings that the server under test makes links of
+// users and repositories with.
+func linkOptions(cfg *conf.Config) database.LinkOptions {
+	return database.LinkOptions{
+		ExternalURL: cfg.Server.ExternalURL,
+		Subpath:     cfg.Server.Subpath,
+		SecretKey:   cfg.Security.SecretKey,
+		RunUser:     cfg.App.RunUser,
+		SSHDomain:   cfg.SSH.Domain,
+		SSHPort:     cfg.SSH.Port,
+	}
+}
+
+// repoCreationOptions returns the settings that the server under test creates
+// repositories with.
+func repoCreationOptions(cfg *conf.Config) database.RepoCreationOptions {
+	return database.RepoCreationOptions{
+		Root:             cfg.Repository.Root,
+		ForcePrivate:     cfg.Repository.ForcePrivate,
+		MaxCreationLimit: cfg.Repository.MaxCreationLimit,
+		DefaultBranch:    cfg.Repository.DefaultBranch,
+		AppDataPath:      cfg.Server.AppDataPath,
+		Links:            linkOptions(cfg),
+	}
+}
+
+// authorizedKeysOptions returns the settings of the authorized_keys file of the
+// server under test.
+func authorizedKeysOptions(cfg *conf.Config) database.AuthorizedKeysOptions {
+	return database.NewAuthorizedKeysOptions(cfg.SSH, cfg.CustomConf)
 }
 
 // UniqueName returns the prefix followed by random characters, so that data
@@ -93,7 +130,7 @@ func CreateUser(ctx context.Context, opts CreateUserOptions) (*User, error) {
 		Password: password,
 	}
 	if opts.Inactive {
-		user.ActivationCode = userx.GenerateActivateCode(u.ID, u.Email, u.Name, u.Password, u.Rands)
+		user.ActivationCode = userx.GenerateActivateCode(cfg.Security.SecretKey, cfg.Auth.ActivateCodeLives, u.ID, u.Email, u.Name, u.Password, u.Rands)
 	}
 	return user, nil
 }
@@ -118,13 +155,13 @@ type TwoFactor struct {
 // EnableTwoFactor enables two-factor authentication for the user.
 func EnableTwoFactor(ctx context.Context, userID int64) (*TwoFactor, error) {
 	key, err := totp.Generate(totp.GenerateOpts{
-		Issuer:      conf.App.BrandName,
+		Issuer:      cfg.App.BrandName,
 		AccountName: UniqueName("account-"),
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "generate TOTP key")
 	}
-	err = database.Handle.TwoFactors().Create(ctx, userID, conf.Security.SecretKey, key.Secret())
+	err = database.Handle.TwoFactors().Create(ctx, userID, cfg.Security.SecretKey, key.Secret())
 	if err != nil {
 		return nil, errors.Wrap(err, "create two factor")
 	}
@@ -163,7 +200,7 @@ func CreateRepository(ctx context.Context, logger *logx.Logger, ownerID int64, o
 	if opts.AutoInit {
 		readme = "Default"
 	}
-	repo, err := database.Handle.Repositories().Create(ctx, logger, owner, owner, database.CreateRepoOptionsLegacy{
+	repo, err := database.Handle.Repositories().Create(ctx, logger, repoCreationOptions(cfg), owner, owner, database.CreateRepoOptionsLegacy{
 		Name:      UniqueName("repo-"),
 		IsPrivate: opts.Private,
 		AutoInit:  opts.AutoInit,

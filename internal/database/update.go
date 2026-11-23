@@ -35,20 +35,35 @@ func CommitsToPushCommits(commits []*git.Commit) *PushCommits {
 	return &PushCommits{len(pcs), pcs, "", nil}
 }
 
+// PushOptions are the settings that pushing to repositories and recording the
+// pushes read.
+type PushOptions struct {
+	// FeedMaxCommitNum is the most commits kept in the action, or 0 for no limit.
+	FeedMaxCommitNum int
+	// AppDataPath is where the temporary repositories that pushes are made from
+	// are created.
+	AppDataPath string
+	// Notify tells about the issues that the commits close or reopen, and makes
+	// the webhook payloads.
+	Notify NotifyOptions
+}
+
 // PushUpdates calls PushUpdate for each reference update of a push by the
 // pusher to the repository, and then calls trigger with the short name of the
 // reference, e.g., TriggerPushTasks. Failures are logged, because the push has
 // already happened.
-func PushUpdates(ctx context.Context, logger *logx.Logger, pusher *User, ownerName, repoName string, updates []git.RefUpdate, trigger func(refName string)) {
+func PushUpdates(ctx context.Context, logger *logx.Logger, push PushOptions, pusher *User, ownerName, repoName string, updates []git.RefUpdate, trigger func(refName string)) {
 	for _, update := range updates {
 		err := PushUpdate(ctx, logger, PushUpdateOptions{
-			OldCommitID:  update.OldID,
-			NewCommitID:  update.NewID,
-			FullRefspec:  update.RefName,
-			PusherID:     pusher.ID,
-			PusherName:   pusher.Name,
-			RepoUserName: ownerName,
-			RepoName:     repoName,
+			OldCommitID:      update.OldID,
+			NewCommitID:      update.NewID,
+			FullRefspec:      update.RefName,
+			PusherID:         pusher.ID,
+			PusherName:       pusher.Name,
+			RepoUserName:     ownerName,
+			RepoName:         repoName,
+			FeedMaxCommitNum: push.FeedMaxCommitNum,
+			Notify:           push.Notify,
 		})
 		if err != nil {
 			logger.Error("Failed to update for push", "ownerName", ownerName, "repoName", repoName, "refName", update.RefName, "error", err)
@@ -58,10 +73,11 @@ func PushUpdates(ctx context.Context, logger *logx.Logger, pusher *User, ownerNa
 }
 
 // TriggerPushTasks queues the webhook deliveries of the repository and the
-// tests of pull requests affected by the push to the branch.
-func TriggerPushTasks(logger *logx.Logger, pusher *User, repoID int64, branch string) {
+// tests of pull requests affected by the push to the branch. The repositories
+// are under root.
+func TriggerPushTasks(logger *logx.Logger, links LinkOptions, root string, pusher *User, repoID int64, branch string) {
 	go HookQueue.Add(repoID)
-	go AddTestPullRequestTask(logger, pusher, repoID, branch, true)
+	go AddTestPullRequestTask(logger, links, root, pusher, repoID, branch, true)
 }
 
 type PushUpdateOptions struct {
@@ -72,6 +88,11 @@ type PushUpdateOptions struct {
 	PusherName   string
 	RepoUserName string
 	RepoName     string
+	// FeedMaxCommitNum is the most commits kept in the action, or 0 for no limit.
+	FeedMaxCommitNum int
+	// Notify tells about the issues that the commits close or reopen, and makes
+	// the webhook payloads.
+	Notify NotifyOptions
 }
 
 // PushUpdate must be called for any push actions in order to generate necessary
@@ -83,7 +104,7 @@ func PushUpdate(ctx context.Context, logger *logx.Logger, opts PushUpdateOptions
 		return errors.New("both old and new revisions are empty")
 	}
 
-	repoPath := RepoPath(opts.RepoUserName, opts.RepoName)
+	repoPath := RepoPath(opts.Notify.RepositoryRoot, opts.RepoUserName, opts.RepoName)
 
 	owner, err := Handle.Users().GetByUsername(ctx, opts.RepoUserName)
 	if err != nil {
@@ -100,7 +121,7 @@ func PushUpdate(ctx context.Context, logger *logx.Logger, opts PushUpdateOptions
 		return errors.Wrap(err, "load repository attributes")
 	}
 
-	if err = repos.UpdateSize(ctx, repo); err != nil {
+	if err = repos.UpdateSize(ctx, opts.Notify.RepositoryRoot, repo); err != nil {
 		return errors.Newf("UpdateSize: %v", err)
 	}
 
@@ -112,6 +133,7 @@ func PushUpdate(ctx context.Context, logger *logx.Logger, opts PushUpdateOptions
 				PusherName:  opts.PusherName,
 				RefFullName: opts.FullRefspec,
 				NewCommitID: opts.NewCommitID,
+				Links:       opts.Notify.Links,
 			},
 		)
 		if err != nil {
@@ -121,7 +143,7 @@ func PushUpdate(ctx context.Context, logger *logx.Logger, opts PushUpdateOptions
 	}
 
 	if !isDelRef && strings.HasPrefix(opts.FullRefspec, git.RefsHeads) {
-		err = repo.setDefaultBranchIfMissing(ctx, git.RefShortName(opts.FullRefspec))
+		err = repo.setDefaultBranchIfMissing(ctx, opts.Notify.RepositoryRoot, git.RefShortName(opts.FullRefspec))
 		if err != nil {
 			return errors.Wrap(err, "set default branch")
 		}
@@ -151,13 +173,15 @@ func PushUpdate(ctx context.Context, logger *logx.Logger, opts PushUpdateOptions
 
 	err = Handle.Actions().CommitRepo(ctx, logger,
 		CommitRepoOptions{
-			Owner:       owner,
-			Repo:        repo,
-			PusherName:  opts.PusherName,
-			RefFullName: opts.FullRefspec,
-			OldCommitID: opts.OldCommitID,
-			NewCommitID: opts.NewCommitID,
-			Commits:     CommitsToPushCommits(commits),
+			Owner:            owner,
+			Repo:             repo,
+			PusherName:       opts.PusherName,
+			RefFullName:      opts.FullRefspec,
+			OldCommitID:      opts.OldCommitID,
+			NewCommitID:      opts.NewCommitID,
+			Commits:          CommitsToPushCommits(commits),
+			FeedMaxCommitNum: opts.FeedMaxCommitNum,
+			Notify:           opts.Notify,
 		},
 	)
 	if err != nil {

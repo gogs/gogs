@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/fcgi"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -33,6 +34,7 @@ import (
 
 	apiv1 "gogs.io/gogs/cmd/gogs/internal/api/v1"
 	"gogs.io/gogs/cmd/gogs/internal/lfs"
+	"gogs.io/gogs/cmd/gogs/internal/options"
 	"gogs.io/gogs/cmd/gogs/internal/tracing"
 	embedconf "gogs.io/gogs/conf"
 	"gogs.io/gogs/internal/app"
@@ -53,11 +55,12 @@ import (
 	"gogs.io/gogs/templates"
 )
 
-// Run starts the web server with the given configuration path and port
-// override, and stops it when the context is done. Once logging is configured,
-// it reports a failure through the configured logger and exits.
-func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOverride int) (err error) {
-	configured, err := initServices(logger, configPath)
+// Run starts the web server of the application version with the given
+// configuration path and port override, and stops it when the context is
+// done. Once logging is configured, it reports a failure through the
+// configured logger and exits.
+func Run(ctx gocontext.Context, logger *logx.Logger, appVersion, configPath string, portOverride int) (err error) {
+	cfg, gitVer, configured, err := initServices(logger, appVersion, configPath, portOverride)
 	if configured == nil {
 		return errors.Wrap(err, "initialize application")
 	}
@@ -74,16 +77,16 @@ func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOver
 	}
 	var traceStore *telemetry.Store
 	var spanProcessors []sdktrace.SpanProcessor
-	if conf.Tracing.EnableAdminCollector {
+	if cfg.Tracing.EnableAdminCollector {
 		traceStore = telemetry.NewStore(telemetry.Options{
-			MaxMemory:                conf.Tracing.MaxMemoryMiB << 20,
-			MaxAge:                   conf.Tracing.MaxAge,
-			SlowThreshold:            conf.Tracing.SlowThreshold,
-			SamplesPerRoutePerMinute: conf.Tracing.SamplesPerRoutePerMinute,
+			MaxMemory:                cfg.Tracing.MaxMemoryMiB << 20,
+			MaxAge:                   cfg.Tracing.MaxAge,
+			SlowThreshold:            cfg.Tracing.SlowThreshold,
+			SamplesPerRoutePerMinute: cfg.Tracing.SamplesPerRoutePerMinute,
 		})
 		spanProcessors = append(spanProcessors, traceStore)
 	}
-	shutdownTracing, err := tracing.Init(ctx, logger, spanProcessors...)
+	shutdownTracing, err := tracing.Init(ctx, logger, cfg.Tracing.Enabled, spanProcessors...)
 	if err != nil {
 		return errors.Wrap(err, "initialize tracing")
 	}
@@ -91,38 +94,32 @@ func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOver
 		// Stopping Gogs must not wait long on a collector that is down.
 		defer shutdownTracing(5 * time.Second)
 	}
-	health := newHealth(traceStore)
+	health := newHealth(cfg, traceStore)
 	go health.Run(ctx)
 
-	// The port override works around a port conflict on the first run. Apply it
-	// before anything reads the external URL.
-	if portOverride > 0 {
-		overrideHTTPPort(portOverride)
-	}
-
-	sessionOpts, err := parseSessionOptions(logger)
+	sessionOpts, err := parseSessionOptions(logger, cfg.Session, cfg.Server.Subpath, cfg.Security.LoginRememberDays)
 	if err != nil {
 		return errors.Wrap(err, "parse session options")
 	}
-	localizer, err := newLocalizer()
+	localizer, err := newLocalizer(cfg.Server.Subpath, cfg.I18n)
 	if err != nil {
 		return errors.Wrap(err, "initialize localizer")
 	}
-	f, err := newRoutingHandler(logger, localizer, session.Sessioner(sessionOpts), authenticator(context.NewStore(logger)), traceStore, health)
+	f, err := newRoutingHandler(logger, cfg, gitVer, localizer, session.Sessioner(sessionOpts), authenticator(context.NewStore(logger)), traceStore, health)
 	if err != nil {
 		return errors.Wrap(err, "initialize web handler")
 	}
 
 	var listenAddr string
-	if conf.Server.Protocol == "unix" {
-		listenAddr = conf.Server.HTTPAddr
+	if cfg.Server.Protocol == "unix" {
+		listenAddr = cfg.Server.HTTPAddr
 	} else {
-		listenAddr = fmt.Sprintf("%s:%d", conf.Server.HTTPAddr, conf.Server.HTTPPort)
+		listenAddr = fmt.Sprintf("%s:%d", cfg.Server.HTTPAddr, cfg.Server.HTTPPort)
 	}
-	logger.Info("Server is available", "externalURL", conf.Server.ExternalURL)
+	logger.Info("Server is available", "externalURL", cfg.Server.ExternalURL)
 
 	var handler http.Handler = f
-	if conf.Server.EnableGzip {
+	if cfg.Server.EnableGzip {
 		handler = gzhttp.GzipHandler(handler)
 	}
 	if shutdownTracing != nil {
@@ -132,12 +129,12 @@ func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOver
 	server := &http.Server{Addr: listenAddr, Handler: handler}
 	serve := server.ListenAndServe
 	stop := server.Close
-	switch conf.Server.Protocol {
+	switch cfg.Server.Protocol {
 	case "http":
 
 	case "https":
 		tlsMinVersion := tls.VersionTLS12
-		switch conf.Server.TLSMinVersion {
+		switch cfg.Server.TLSMinVersion {
 		case "TLS13":
 			tlsMinVersion = tls.VersionTLS13
 		case "TLS12":
@@ -161,7 +158,7 @@ func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOver
 			},
 		}
 		serve = func() error {
-			return server.ListenAndServeTLS(conf.Server.CertFile, conf.Server.KeyFile)
+			return server.ListenAndServeTLS(cfg.Server.CertFile, cfg.Server.KeyFile)
 		}
 
 	case "fcgi":
@@ -188,13 +185,13 @@ func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOver
 			return errors.Wrap(err, "listen on Unix network")
 		}
 
-		if err = os.Chmod(listenAddr, conf.Server.UnixSocketMode); err != nil {
+		if err = os.Chmod(listenAddr, cfg.Server.UnixSocketMode); err != nil {
 			return errors.Wrap(err, "change permission of Unix domain socket")
 		}
 		serve = func() error { return server.Serve(listener) }
 
 	default:
-		return errors.Newf("unexpected server protocol: %s", conf.Server.Protocol)
+		return errors.Newf("unexpected server protocol: %s", cfg.Server.Protocol)
 	}
 
 	served := make(chan error, 1)
@@ -218,12 +215,12 @@ func Run(ctx gocontext.Context, logger *logx.Logger, configPath string, portOver
 // the Sec-Fetch-Site header, or the Origin header in older browsers. API v1 is
 // exempt, because the site can allow other origins to call it
 // (`[http] ACCESS_CONTROL_ALLOW_ORIGIN`).
-func newCrossOriginProtection() (flamego.Handler, error) {
+func newCrossOriginProtection(externalURL *url.URL) (flamego.Handler, error) {
 	p := http.NewCrossOriginProtection()
 	// A reverse proxy may pass its own address as the Host header, which older
 	// browsers without Sec-Fetch-Site are checked against.
-	if conf.Server.URL.Host != "" {
-		err := p.AddTrustedOrigin(conf.Server.URL.Scheme + "://" + conf.Server.URL.Host)
+	if externalURL.Host != "" {
+		err := p.AddTrustedOrigin(externalURL.Scheme + "://" + externalURL.Host)
 		if err != nil {
 			return nil, errors.Wrap(err, "trust external URL")
 		}
@@ -238,7 +235,7 @@ func newCrossOriginProtection() (flamego.Handler, error) {
 
 // newHealth returns the measurements of the server that the admin panel shows,
 // including the requests the store records when it is not nil.
-func newHealth(traceStore *telemetry.Store) *telemetry.Health {
+func newHealth(cfg *conf.Config, traceStore *telemetry.Store) *telemetry.Health {
 	count := func(key string, read func() int64) telemetry.Gauge {
 		return telemetry.Gauge{Key: key, Read: func() (float64, bool) { return float64(read()), true }}
 	}
@@ -274,43 +271,43 @@ func newHealth(traceStore *telemetry.Store) *telemetry.Health {
 		perMinute("failedHookDeliveries", database.FailedHookDeliveries),
 		perMinute("notices", database.NoticesCreated),
 	}
-	if conf.SSH.StartBuiltinServer {
+	if cfg.SSH.StartBuiltinServer {
 		gauges = append(gauges, count("sshConnections", ssh.Connections))
 	}
-	if conf.Email.Enabled {
+	if cfg.Email.Enabled {
 		gauges = append(gauges, count("mailQueue", email.QueueLen))
 	}
 	disks := []telemetry.Disk{
-		{Key: "diskRepositories", Path: conf.Repository.Root},
-		{Key: "diskData", Path: conf.Server.AppDataPath},
+		{Key: "diskRepositories", Path: cfg.Repository.Root},
+		{Key: "diskData", Path: cfg.Server.AppDataPath},
 	}
-	if lfsx.Storage(conf.LFS.Storage) == lfsx.StorageLocal {
-		disks = append(disks, telemetry.Disk{Key: "diskLFS", Path: conf.LFS.ObjectsPath})
+	if lfsx.Storage(cfg.LFS.Storage) == lfsx.StorageLocal {
+		disks = append(disks, telemetry.Disk{Key: "diskLFS", Path: cfg.LFS.ObjectsPath})
 	}
 	gauges = append(gauges, telemetry.DiskGauges(disks...)...)
 	return telemetry.NewHealth(traceStore, gauges...)
 }
 
-// overrideHTTPPort makes the server listen on the given port instead of
-// HTTP_PORT, e.g., when HTTP_PORT is taken on the first run.
+// overrideHTTPPort makes the server of the options listen on the given port
+// instead of HTTP_PORT, e.g., when HTTP_PORT is taken on the first run.
 //
 // When the external URL points to HTTP_PORT, users reach Gogs directly, so the
 // external URL moves to the given port too. When it points to another port,
 // users reach Gogs through a reverse proxy or a port mapping, so the external
 // URL stays as it is. A URL without a port points to the default port of its
 // scheme, i.e., 80 for HTTP and 443 for HTTPS.
-func overrideHTTPPort(port int) {
-	externalPort := conf.Server.URL.Port()
+func overrideHTTPPort(server *conf.ServerOpts, port int) {
+	externalPort := server.URL.Port()
 	if externalPort == "" {
-		externalPort = map[string]string{"http": "80", "https": "443"}[conf.Server.URL.Scheme]
+		externalPort = map[string]string{"http": "80", "https": "443"}[server.URL.Scheme]
 	}
-	reachedDirectly := externalPort == strconv.Itoa(conf.Server.HTTPPort)
+	reachedDirectly := externalPort == strconv.Itoa(server.HTTPPort)
 	// Rewriting the URL for the same port would only add its default port to it.
-	if reachedDirectly && port != conf.Server.HTTPPort {
-		conf.Server.URL.Host = net.JoinHostPort(conf.Server.URL.Hostname(), strconv.Itoa(port))
-		conf.Server.ExternalURL = conf.Server.URL.String()
+	if reachedDirectly && port != server.HTTPPort {
+		server.URL.Host = net.JoinHostPort(server.URL.Hostname(), strconv.Itoa(port))
+		server.ExternalURL = server.URL.String()
 	}
-	conf.Server.HTTPPort = port
+	server.HTTPPort = port
 }
 
 // newTracingHandler returns a handler that records a span for every request, so
@@ -340,25 +337,27 @@ func newTracingHandler(h http.Handler) http.Handler {
 	)
 }
 
-// newRoutingHandler returns the handler of all routes. The localizer maps the
+// newRoutingHandler returns the handler of all routes, which are given the
+// values of the configuration that handlers declare. The localizer maps the
 // i18n.Locale of each request. Except for the health check, metrics, Git over
 // HTTP and LFS, which authenticate requests on their own, the routes have
 // sessions started by sessioner, and authenticate maps the authenticated user
 // (*database.User, nil for anonymous visitors) and the authMethod. The admin
 // panel shows the traces of the store and the measurements of health, either of
 // which may be nil.
-func newRoutingHandler(logger *logx.Logger, localizer, sessioner, authenticate flamego.Handler, traceStore *telemetry.Store, health *telemetry.Health) (*flamego.Flame, error) {
+func newRoutingHandler(logger *logx.Logger, cfg *conf.Config, gitVersion gitVersion, localizer, sessioner, authenticate flamego.Handler, traceStore *telemetry.Store, health *telemetry.Health) (*flamego.Flame, error) {
 	f := flamego.New()
 	f.Map(logger)
+	f.Map(injected(cfg, gitVersion)...)
 	f.Map(traceStore, health)
 	f.AutoHead(true)
-	if conf.Server.Protocol == "fcgi" && conf.Server.Subpath != "" {
+	if cfg.Server.Protocol == "fcgi" && cfg.Server.Subpath != "" {
 		f.Before(func(_ http.ResponseWriter, r *http.Request) bool {
-			r.URL.Path = strings.TrimPrefix(r.URL.Path, conf.Server.Subpath)
+			r.URL.Path = strings.TrimPrefix(r.URL.Path, cfg.Server.Subpath)
 			return false
 		})
 	}
-	if !conf.Server.DisableRouterLog {
+	if !cfg.Server.DisableRouterLog {
 		f.Use(flamego.Logger())
 	}
 	f.Use(flamego.Recovery(flamego.RecoveryOptions{PlainText: true}))
@@ -373,22 +372,22 @@ func newRoutingHandler(logger *logx.Logger, localizer, sessioner, authenticate f
 	// override files under "public".
 	f.Use(flamego.Static(flamego.StaticOptions{
 		Directory:     filepath.Join(conf.CustomDir(), "public"),
-		EnableLogging: !conf.Server.DisableRouterLog,
+		EnableLogging: !cfg.Server.DisableRouterLog,
 	}))
 	var publicFS http.FileSystem
-	if !conf.Server.LoadAssetsFromDisk {
+	if !cfg.Server.LoadAssetsFromDisk {
 		publicFS = http.FS(public.Files)
 	}
 	f.Use(flamego.Static(flamego.StaticOptions{
 		Directory:     filepath.Join(conf.WorkDir(), "public"),
 		FileSystem:    publicFS,
 		SetETag:       true,
-		EnableLogging: !conf.Server.DisableRouterLog,
+		EnableLogging: !cfg.Server.DisableRouterLog,
 	}))
 
 	f.Use(localizer)
 
-	cacherOpts, err := parseCacheOptions(conf.Cache)
+	cacherOpts, err := parseCacheOptions(cfg.Cache)
 	if err != nil {
 		return nil, errors.Wrap(err, "parse cache options")
 	}
@@ -402,7 +401,7 @@ func newRoutingHandler(logger *logx.Logger, localizer, sessioner, authenticate f
 				telemetry.RecordFailure(c.Request().Context(), err)
 			}
 			msg := err.Error()
-			if statusCode >= http.StatusInternalServerError && conf.IsProdMode() {
+			if statusCode >= http.StatusInternalServerError && cfg.App.IsProdMode() {
 				msg = "Internal server error"
 			}
 			resp = map[string]any{"error": msg}
@@ -416,28 +415,28 @@ func newRoutingHandler(logger *logx.Logger, localizer, sessioner, authenticate f
 		_ = json.NewEncoder(w).Encode(resp)
 	})
 
-	crossOrigin, err := newCrossOriginProtection()
+	crossOrigin, err := newCrossOriginProtection(cfg.Server.URL)
 	if err != nil {
 		return nil, errors.Wrap(err, "initialize cross-origin protection")
 	}
 
-	antiBot, err := antiBotMiddlewares()
+	antiBot, err := antiBotMiddlewares(cfg.Auth.AntiBotVerification, cfg.Security.SecretKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "initialize anti-bot verification")
 	}
 
 	f.Get("/healthcheck", healthCheck)
-	f.Get("/-/metrics", app.MetricsFilter, promhttp.Handler().ServeHTTP)
+	f.Get("/-/metrics", app.MetricsFilter(cfg.Prometheus), promhttp.Handler().ServeHTTP)
 	mountGitHTTPRoutes(logger, f)
 
 	var webApp http.Handler
 	f.Group("", func() {
 		f.Get("/redirect", getRedirect)
-		f.Get("/robots.txt", getRobotsTxt)
+		f.Get("/robots.txt", getRobotsTxt(cfg.HasRobotsTxt))
 
 		// The anti-bot middlewares write the responses. These routes exist so the
 		// requests reach them.
-		switch conf.Auth.AntiBotVerification {
+		switch cfg.Auth.AntiBotVerification {
 		case conf.AntiBotVerificationAltcha:
 			f.Get(altchaURLPrefix+"challenge.json", func() {})
 			f.Get(altchaURLPrefix+"worker.js", func() {})
@@ -454,16 +453,20 @@ func newRoutingHandler(logger *logx.Logger, localizer, sessioner, authenticate f
 
 		mountWebLocaleRoutes(f)
 		mountWebAPIRoutes(f)
-		webApp, err = mountWebAppRoutes(logger, f)
+		webApp, err = mountWebAppRoutes(logger, f, options.Markup(cfg), indexOptions{
+			landingURL:                 cfg.Server.LandingURL,
+			externalURL:                cfg.Server.ExternalURL,
+			requireAuthenticatedViewer: cfg.Auth.RequireSigninView,
+		})
 		if err != nil {
 			return
 		}
 
 		// The web app renders every other path and asks the web API what the viewer
 		// may see. These routes serve the files and redirects next to its pages.
-		f.Map(webAppPages{webApp})
+		f.Map(webAppPages{Handler: webApp, isProdMode: cfg.App.IsProdMode(), version: cfg.App.Version})
 		f.Get("/explore", func(c flamego.Context) {
-			c.Redirect(conf.Server.Subpath + "/explore/repos")
+			c.Redirect(cfg.Server.Subpath + "/explore/repos")
 		})
 		f.Get("/attachments/{uuid}", requireViewAccess, getAttachment)
 		f.Get("/-/avatars/{id}", getUserAvatar)
@@ -489,7 +492,7 @@ func newRoutingHandler(logger *logx.Logger, localizer, sessioner, authenticate f
 			)
 			f.Get("/wiki/{page}/_edit", maybeRedirectToExternalWiki, webApp.ServeHTTP)
 		})
-		f.Any("/api/v1/{**}", apiV1Access, apiV1Bridger(newAPIV1Handler(logger)))
+		f.Any("/api/v1/{**}", apiV1Access, apiV1Bridger(newAPIV1Handler(logger, cfg, gitVersion)))
 	}, append([]flamego.Handler{crossOrigin, sessioner, authenticate, corsHeaders, withWebContext}, antiBot...)...)
 	if err != nil {
 		return nil, errors.Wrap(err, "mount web app routes")
@@ -510,9 +513,10 @@ type antiBotVerifier func(payload string) bool
 
 // antiBotMiddlewares returns the middlewares of [auth] ANTI_BOT_VERIFICATION
 // that serve what the sign-up page needs and map an antiBotVerifier. Only the
-// configured one is mounted, and none when it is empty.
-func antiBotMiddlewares() ([]flamego.Handler, error) {
-	switch conf.Auth.AntiBotVerification {
+// configured one, i.e., verification, is mounted, and none when it is empty.
+// The altcha secret is derived from secretKey.
+func antiBotMiddlewares(verification, secretKey string) ([]flamego.Handler, error) {
+	switch verification {
 	case "":
 		return []flamego.Handler{func(c flamego.Context) {
 			c.Map(antiBotVerifier(func(string) bool { return true }))
@@ -520,7 +524,7 @@ func antiBotMiddlewares() ([]flamego.Handler, error) {
 	case conf.AntiBotVerificationAltcha:
 		// The middleware requires a secret of at least 16 bytes, which the secret
 		// key may be shorter than, so it gets a key derived from the secret key.
-		secret, err := hkdf.Key(sha256.New, []byte(conf.Security.SecretKey), nil, "altcha secret", 32)
+		secret, err := hkdf.Key(sha256.New, []byte(secretKey), nil, "altcha secret", 32)
 		if err != nil {
 			return nil, errors.Wrap(err, "derive altcha secret")
 		}
@@ -538,7 +542,7 @@ func antiBotMiddlewares() ([]flamego.Handler, error) {
 			},
 		}, nil
 	default:
-		return nil, errors.Newf("unknown anti-bot verification %q", conf.Auth.AntiBotVerification)
+		return nil, errors.Newf("unknown anti-bot verification %q", verification)
 	}
 }
 
@@ -561,34 +565,41 @@ func mountGitHTTPRoutes(logger *logx.Logger, f *flamego.Flame) {
 
 // newAPIV1Handler returns the handler of API v1 routes. It is separate from the
 // routing handler so that apiV1Bridger can normalize the request path before
-// the routes are matched.
-func newAPIV1Handler(logger *logx.Logger) http.Handler {
+// the routes are matched. Its handlers are given the same values of the
+// configuration as the routing handler.
+func newAPIV1Handler(logger *logx.Logger, cfg *conf.Config, gitVersion gitVersion) http.Handler {
 	f := flamego.New()
 	f.Map(logger)
+	f.Map(injected(cfg, gitVersion)...)
 	f.Use(flamego.Recovery(flamego.RecoveryOptions{PlainText: true}))
 	f.Use(apiV1Injector)
 	apiv1.RegisterRoutes(f)
 	return f
 }
 
-func getRedirect(c flamego.Context) {
+func getRedirect(c flamego.Context, server conf.ServerOpts) {
 	to := c.Request().URL.Query().Get("to")
 	if !urlx.IsSameSite(to) {
-		to = conf.Server.Subpath + "/"
+		to = server.Subpath + "/"
 	}
 	c.Redirect(to, http.StatusSeeOther)
 }
 
-func getRobotsTxt(w http.ResponseWriter, r *http.Request) {
-	if !conf.HasRobotsTxt {
-		w.WriteHeader(http.StatusNotFound)
-		return
+// getRobotsTxt returns the handler that serves the "robots.txt" of the custom
+// directory, which is found when hasRobotsTxt is true.
+func getRobotsTxt(hasRobotsTxt bool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !hasRobotsTxt {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		http.ServeFile(w, r, filepath.Join(conf.CustomDir(), "robots.txt"))
 	}
-	http.ServeFile(w, r, filepath.Join(conf.CustomDir(), "robots.txt"))
 }
 
-// newLocalizer returns the middleware that maps the i18n.Locale of each request.
-func newLocalizer() (flamego.Handler, error) {
+// newLocalizer returns the middleware that maps the i18n.Locale of each request
+// to a site under subpath.
+func newLocalizer(subpath string, i18nOpts conf.I18nOpts) (flamego.Handler, error) {
 	localeNames, err := embedconf.FileNames("locale")
 	if err != nil {
 		return nil, errors.Wrap(err, "list locale files")
@@ -601,16 +612,16 @@ func newLocalizer() (flamego.Handler, error) {
 		}
 	}
 	customLocaleDir := filepath.Join(conf.CustomDir(), "conf", "locale")
-	webLocales, err = loadWebLocales(customLocaleDir, conf.I18n.Langs)
+	webLocales, err = loadWebLocales(customLocaleDir, i18nOpts.Langs)
 	if err != nil {
 		return nil, errors.Wrap(err, "load web locales")
 	}
 	return i18n.Localizer(i18n.Options{
-		SubURL:          conf.Server.Subpath,
+		SubURL:          subpath,
 		Files:           localeFiles,
 		CustomDirectory: customLocaleDir,
-		Langs:           conf.I18n.Langs,
-		Names:           conf.I18n.Names,
+		Langs:           i18nOpts.Langs,
+		Names:           i18nOpts.Names,
 		DefaultLang:     "en-US",
 	})
 }
@@ -636,13 +647,25 @@ func readInjectContent(customDir string) (injectContent, error) {
 	return injectContent{head: string(head), footer: string(footer)}, nil
 }
 
+// indexOptions are the settings of the site that the index.html shell passes
+// to the web app.
+type indexOptions struct {
+	// landingURL is where the web app sends unauthenticated viewers who open the
+	// home page.
+	landingURL string
+	// externalURL is the external URL of the server, ending with "/".
+	externalURL string
+	// requireAuthenticatedViewer sends unauthenticated viewers to sign in.
+	requireAuthenticatedViewer bool
+}
+
 // renderIndex returns the index.html shell with per-request substitutions
 // applied for the given WebContext. The inject argument supplies the custom
 // head and footer content to splice into the shell.
-func renderIndex(index []byte, wc context.WebContext, inject injectContent) ([]byte, error) {
+func renderIndex(index []byte, wc context.WebContext, inject injectContent, opts indexOptions) ([]byte, error) {
 	var landingURL string
-	if conf.Server.LandingURL != "/" {
-		landingURL = conf.Server.LandingURL
+	if opts.landingURL != "/" {
+		landingURL = opts.landingURL
 	}
 	// json.Marshal escapes <, >, and &, so the payload cannot break out of the surrounding <script>.
 	payload, err := json.Marshal(struct {
@@ -666,9 +689,9 @@ func renderIndex(index []byte, wc context.WebContext, inject injectContent) ([]b
 		Version:   wc.Version,
 
 		LandingURL:                 landingURL,
-		RequireAuthenticatedViewer: conf.Auth.RequireSigninView,
+		RequireAuthenticatedViewer: opts.requireAuthenticatedViewer,
 		Notice:                     wc.Notice,
-		ExternalURL:                conf.Server.ExternalURL,
+		ExternalURL:                opts.externalURL,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "marshal web context")
@@ -716,28 +739,50 @@ func healthCheck(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte("* Database connection: OK\n"))
 }
 
-// initServices returns the logger built from the loaded configuration, which
-// replaces the given console logger. It also returns that logger with errors
-// that happen after logging is configured.
-func initServices(logger *logx.Logger, customConf string) (*logx.Logger, error) {
-	err := conf.Init(logger, customConf)
+// gitVersion is the version of the Git found on startup, which the admin panel
+// shows.
+type gitVersion string
+
+// injected returns the values that handlers declare as parameters, for mapping
+// into each flamego.Flame of the package. On top of options.Injected, the admin
+// panel shows the sections that only startup reads otherwise.
+func injected(cfg *conf.Config, gitVersion gitVersion) []any {
+	return append(options.Injected(cfg),
+		cfg.Database, cfg.Cache, cfg.Log, gitVersion,
+		newSignInCookies(cfg.Session, cfg.Security, cfg.Server.Subpath),
+	)
+}
+
+// initServices loads the configuration from customConf, applies the HTTP port
+// override when it is positive, and starts the services that it configures. It
+// returns the configuration, the version of Git, and the logger built from the
+// configuration, which replaces the given console logger. It also returns that
+// logger with errors that happen after logging is configured.
+func initServices(logger *logx.Logger, appVersion, customConf string, portOverride int) (_ *conf.Config, _ gitVersion, configured *logx.Logger, _ error) {
+	cfg, err := conf.Init(logger, customConf, false)
 	if err != nil {
-		return nil, errors.Wrap(err, "init configuration")
+		return nil, "", nil, errors.Wrap(err, "init configuration")
+	}
+	cfg.App.Version = appVersion
+	// The port override works around a port conflict on the first run. Apply it
+	// before anything reads the external URL.
+	if portOverride > 0 {
+		overrideHTTPPort(&cfg.Server, portOverride)
 	}
 
-	logger, err = conf.InitLogging(logger, false)
+	logger, err = conf.InitLogging(logger, cfg, false)
 	if err != nil {
-		return nil, errors.Wrap(err, "init logging")
+		return nil, "", nil, errors.Wrap(err, "init logging")
 	}
-	logger.Info("Starting application", "brandName", conf.App.BrandName, "version", conf.App.Version)
+	logger.Info("Starting application", "brandName", cfg.App.BrandName, "version", cfg.App.Version)
 	logger.Debug("Work directory", "workDir", conf.WorkDir())
 	logger.Debug("Custom path", "customDir", conf.CustomDir())
-	logger.Debug("Custom config", "customConf", conf.CustomConf)
-	logger.Debug("Log path", "logPath", conf.Log.RootPath)
+	logger.Debug("Custom config", "customConf", cfg.CustomConf)
+	logger.Debug("Log path", "logPath", cfg.Log.RootPath)
 	logger.Debug("Build time", "buildTime", conf.BuildTime)
 	logger.Debug("Build commit", "buildCommit", conf.BuildCommit)
 
-	if conf.IsProdMode() {
+	if cfg.App.IsProdMode() {
 		flamego.SetEnv(flamego.EnvTypeProd)
 		git.SetOutput(nil)
 	} else {
@@ -745,45 +790,46 @@ func initServices(logger *logx.Logger, customConf string) (*logx.Logger, error) 
 	}
 	logger.Info("Run mode", "runMode", strings.Title(string(flamego.Env())))
 
-	if conf.Email.Enabled {
+	if cfg.Email.Enabled {
 		logger.Debug("Email service is enabled")
 	}
 
-	email.NewContext(logger)
+	email.NewContext(logger, cfg.Email)
 
-	markup.NewSanitizer()
-	if err := database.NewEngine(logger.Scoped("db")); err != nil {
-		return logger, errors.Wrap(err, "initialize ORM engine")
+	markup.NewSanitizer(cfg.Markdown.CustomURLSchemes)
+	authorizedKeys := options.AuthorizedKeys(cfg)
+	if err := database.NewEngine(logger.Scoped("db"), cfg.Database, cfg.App.IsProdMode(), authorizedKeys.Path); err != nil {
+		return cfg, "", logger, errors.Wrap(err, "initialize ORM engine")
 	}
 
-	database.LoadRepoConfig(logger)
-	database.NewRepoContext(logger)
+	database.LoadRepoConfig(logger, cfg.Repository.PreferredLicenses)
+	version := gitVersion(database.NewRepoContext(logger, cfg.Server.AppDataPath, cfg.LFS.ObjectsTempPath))
 
-	cron.NewContext(logger)
-	database.InitSyncMirrors(logger)
-	database.InitDeliverHooks(logger)
-	database.InitTestPullRequests(logger)
+	cron.NewContext(logger, cfg.Cron, cfg.Repository.Root, cfg.Repository.ForcePrivate)
+	database.InitSyncMirrors(logger, options.SyncMirrors(cfg))
+	database.InitDeliverHooks(logger, options.DeliverHooks(cfg))
+	database.InitTestPullRequests(logger, cfg.Repository.Root, cfg.Server.AppDataPath)
 
 	if conf.HasMinWinSvc {
 		logger.Info("Builtin Windows Service is supported")
 	}
-	if conf.Server.LoadAssetsFromDisk {
+	if cfg.Server.LoadAssetsFromDisk {
 		logger.Debug("Assets are loaded from disk")
 	}
 
-	if conf.SSH.StartBuiltinServer {
-		ssh.Listen(logger, conf.SSH, conf.Server.AppDataPath)
-		logger.Info("Builtin SSH server started", "listenHost", conf.SSH.ListenHost, "listenPort", conf.SSH.ListenPort)
-		logger.Debug("SSH server cipher list", "serverCiphers", conf.SSH.ServerCiphers)
-		logger.Debug("SSH server MAC list", "serverMACs", conf.SSH.ServerMACs)
-		logger.Debug("SSH server algorithms", "serverAlgorithms", conf.SSH.ServerAlgorithms)
+	if cfg.SSH.StartBuiltinServer {
+		ssh.Listen(logger, cfg.SSH, cfg.Server.AppDataPath, cfg.App.IsProdMode(), options.Links(cfg), options.SSHServe(cfg, false))
+		logger.Info("Builtin SSH server started", "listenHost", cfg.SSH.ListenHost, "listenPort", cfg.SSH.ListenPort)
+		logger.Debug("SSH server cipher list", "serverCiphers", cfg.SSH.ServerCiphers)
+		logger.Debug("SSH server MAC list", "serverMACs", cfg.SSH.ServerMACs)
+		logger.Debug("SSH server algorithms", "serverAlgorithms", cfg.SSH.ServerAlgorithms)
 	}
 
-	if conf.SSH.RewriteAuthorizedKeysAtStart {
-		if err := database.Handle.PublicKeys().RewriteAuthorizedKeys(); err != nil {
+	if cfg.SSH.RewriteAuthorizedKeysAtStart {
+		if err := database.Handle.PublicKeys().RewriteAuthorizedKeys(authorizedKeys); err != nil {
 			logger.Warn("Failed to rewrite authorized_keys file", "error", err)
 		}
 	}
 
-	return logger, nil
+	return cfg, version, logger, nil
 }

@@ -29,7 +29,8 @@ func TestInitHelper(_ *testing.T) {
 		return
 	}
 
-	if err := Init(logx.NewNoopLogger(), filepath.Join("testdata", "custom.ini")); err != nil {
+	c, err := Init(logx.NewNoopLogger(), filepath.Join("testdata", "custom.ini"), false)
+	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
@@ -40,20 +41,20 @@ func TestInitHelper(_ *testing.T) {
 		section string
 		config  any
 	}{
-		{"", &App},
-		{"server", &Server},
-		{"server", &SSH},
-		{"repository", &Repository},
-		{"database", &Database},
-		{"security", &Security},
-		{"email", &Email},
-		{"auth", &Auth},
-		{"user", &User},
-		{"session", &Session},
-		{"attachment", &Attachment},
-		{"picture", &Picture},
-		{"mirror", &Mirror},
-		{"i18n", &I18n},
+		{"", &c.App},
+		{"server", &c.Server},
+		{"server", &c.SSH},
+		{"repository", &c.Repository},
+		{"database", &c.Database},
+		{"security", &c.Security},
+		{"email", &c.Email},
+		{"auth", &c.Auth},
+		{"user", &c.User},
+		{"session", &c.Session},
+		{"attachment", &c.Attachment},
+		{"picture", &c.Picture},
+		{"mirror", &c.Mirror},
+		{"i18n", &c.I18n},
 	} {
 		err := cfg.Section(v.section).ReflectFrom(v.config)
 		if err != nil {

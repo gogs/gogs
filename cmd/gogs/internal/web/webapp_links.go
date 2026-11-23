@@ -13,6 +13,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/public"
 )
 
@@ -20,8 +21,8 @@ import (
 // of the web app a "data-app-link" attribute, so the web app follows them
 // without reloading the document. The sanitizer drops data attributes, so
 // content cannot mark a link itself. repo is the repository the HTML was
-// rendered for.
-func markAppLinks(rendered []byte, repo *database.Repository) string {
+// rendered for, and o has the external URL and the subpath of the site.
+func markAppLinks(o markup.Options, rendered []byte, repo *database.Repository) string {
 	var b strings.Builder
 	b.Grow(len(rendered))
 	rest := rendered
@@ -40,7 +41,7 @@ func markAppLinks(rendered []byte, repo *database.Repository) string {
 		tag := rest[i : i+end]
 		if start := bytes.Index(tag, []byte(` href="`)); start >= 0 {
 			href := tag[start+len(` href="`):]
-			if n := bytes.IndexByte(href, '"'); n >= 0 && isAppLink(html.UnescapeString(string(href[:n])), repo) {
+			if n := bytes.IndexByte(href, '"'); n >= 0 && isAppLink(o, html.UnescapeString(string(href[:n])), repo) {
 				b.WriteString(" data-app-link")
 			}
 		}
@@ -50,10 +51,11 @@ func markAppLinks(rendered []byte, repo *database.Repository) string {
 	return b.String()
 }
 
-// isAppLink reports whether href leads to a page of the web app on this site.
-func isAppLink(href string, repo *database.Repository) bool {
-	if rest, ok := strings.CutPrefix(href, conf.Server.ExternalURL); ok {
-		href = conf.Server.Subpath + "/" + rest
+// isAppLink reports whether href leads to a page of the web app on the site of
+// o.
+func isAppLink(o markup.Options, href string, repo *database.Repository) bool {
+	if rest, ok := strings.CutPrefix(href, o.ExternalURL); ok {
+		href = o.Subpath + "/" + rest
 	}
 	if !strings.HasPrefix(href, "/") || strings.HasPrefix(href, "//") {
 		return false
@@ -64,7 +66,7 @@ func isAppLink(href string, repo *database.Repository) bool {
 	}
 	// Browsers resolve dot segments of the whole path, which may leave the
 	// subpath, before requesting it.
-	p, ok := strings.CutPrefix(path.Clean(u.Path), conf.Server.Subpath)
+	p, ok := strings.CutPrefix(path.Clean(u.Path), o.Subpath)
 	if !ok || p != "" && p[0] != '/' {
 		return false
 	}
@@ -101,7 +103,7 @@ func isWebAppPage(p, rawQuery string, repo *database.Repository) bool {
 		return query.Get("go-get") != "1"
 	}
 	last := sub[len(sub)-1]
-	sameRepo := repo != nil && strings.EqualFold("/"+segs[0]+"/"+segs[1], strings.TrimPrefix(repo.Link(), conf.Server.Subpath))
+	sameRepo := repo != nil && strings.EqualFold("/"+segs[0]+"/"+segs[1], repo.RelLink())
 	switch sub[0] {
 	case "archive", "git-receive-pack", "git-upload-pack", "info", "raw", "tasks":
 		return false

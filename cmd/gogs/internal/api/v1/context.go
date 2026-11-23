@@ -91,6 +91,11 @@ type apiContext struct {
 
 	// path is the unescaped request path.
 	path string
+	// externalURL is the external URL of the server, ending with "/".
+	externalURL string
+	// indentJSON is whether JSON responses are indented for reading, i.e.,
+	// outside the production mode.
+	indentJSON bool
 
 	webNotFound func()
 	webError    func(err error, msg string)
@@ -99,7 +104,7 @@ type apiContext struct {
 	Org  *apiOrganization
 }
 
-func apiContexter(c flamego.Context, logger *logx.Logger, viewer *database.User, info RequestInfo) {
+func apiContexter(c flamego.Context, logger *logx.Logger, app conf.AppOpts, server conf.ServerOpts, viewer *database.User, info RequestInfo) {
 	c.Map(&apiContext{
 		Context:       c,
 		Logger:        logger,
@@ -108,9 +113,11 @@ func apiContexter(c flamego.Context, logger *logx.Logger, viewer *database.User,
 		IsBasicAuth:   info.IsBasicAuth,
 		IsTokenAuth:   info.IsTokenAuth,
 		AccessTokenID: info.AccessTokenID,
-		BaseURL:       conf.Server.ExternalURL + "api/v1",
-		Link:          conf.Server.Subpath + strings.TrimSuffix(info.Path, "/"),
+		BaseURL:       server.ExternalURL + "api/v1",
+		Link:          server.Subpath + strings.TrimSuffix(info.Path, "/"),
 		path:          info.Path,
+		externalURL:   server.ExternalURL,
+		indentJSON:    !app.IsProdMode(),
 		webNotFound:   info.WebNotFound,
 		webError:      info.WebError,
 		Repo:          &apiRepository{},
@@ -142,10 +149,10 @@ func (c *apiContext) JSON(status int, v any) {
 		body []byte
 		err  error
 	)
-	if conf.IsProdMode() {
-		body, err = json.Marshal(v)
-	} else {
+	if c.indentJSON {
 		body, err = json.MarshalIndent(v, "", "  ")
+	} else {
+		body, err = json.Marshal(v)
 	}
 	if err != nil {
 		http.Error(c.ResponseWriter(), err.Error(), http.StatusInternalServerError)
@@ -245,7 +252,7 @@ func (c *apiContext) SetLinkHeader(total, pageSize int) {
 	query := c.Request().URL.Query()
 	link := func(n int, rel string) string {
 		query.Set("page", strconv.Itoa(n))
-		return fmt.Sprintf("<%s%s?%s>; rel=%q", conf.Server.ExternalURL, c.path[1:], query.Encode(), rel)
+		return fmt.Sprintf("<%s%s?%s>; rel=%q", c.externalURL, c.path[1:], query.Encode(), rel)
 	}
 	links := make([]string, 0, 4)
 	if page.HasNext() {

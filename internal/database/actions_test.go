@@ -11,7 +11,6 @@ import (
 	"gorm.io/gorm"
 	"unknwon.dev/x/logx"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/git"
 )
 
@@ -143,19 +142,6 @@ func actionsCommitRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
 
 	now := time.Unix(1588568886, 0).UTC()
 
-	// Webhook payloads of pushes have links, which read the server and SSH
-	// settings that other suites mock.
-	conf.SetMockServer(t, conf.ServerOpts{})
-	conf.SetMockSSH(t, conf.SSHOpts{})
-	// NOTE: We set a noop mock here to avoid data race with other tests that write
-	// to the mock repository because this function holds a lock.
-	conf.SetMockRepository(t, conf.RepositoryOpts{})
-	conf.SetMockUI(t, conf.UIOpts{
-		User: conf.UIUserOpts{
-			NewsFeedPagingNum: 20,
-		},
-	})
-
 	t.Run("new commit", func(t *testing.T) {
 		t.Cleanup(func() {
 			err := s.db.Session(&gorm.Session{AllowGlobalUpdate: true}).WithContext(ctx).Delete(new(Action)).Error
@@ -192,7 +178,7 @@ func actionsCommitRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
 		)
 		require.NoError(t, err)
 
-		got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+		got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false, 20)
 		require.NoError(t, err)
 		require.Len(t, got, 1)
 		got[0].ID = 0
@@ -252,7 +238,7 @@ func actionsCommitRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
 		)
 		require.NoError(t, err)
 
-		got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+		got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false, 20)
 		require.NoError(t, err)
 		require.Len(t, got, 2)
 		got[0].ID = 0
@@ -309,7 +295,7 @@ func actionsCommitRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
 		)
 		require.NoError(t, err)
 
-		got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+		got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false, 20)
 		require.NoError(t, err)
 		require.Len(t, got, 1)
 		got[0].ID = 0
@@ -339,14 +325,6 @@ func actionsListByOrganization(t *testing.T, ctx context.Context, s *ActionsStor
 		return
 	}
 
-	conf.SetMockUI(t,
-		conf.UIOpts{
-			User: conf.UIUserOpts{
-				NewsFeedPagingNum: 20,
-			},
-		},
-	)
-
 	tests := []struct {
 		name    string
 		orgID   int64
@@ -372,7 +350,7 @@ func actionsListByOrganization(t *testing.T, ctx context.Context, s *ActionsStor
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got := s.db.ToSQL(func(tx *gorm.DB) *gorm.DB {
-				return newActionsStore(tx).listByOrganization(ctx, test.orgID, test.actorID, test.afterID).Find(new(Action))
+				return newActionsStore(tx).listByOrganization(ctx, test.orgID, test.actorID, test.afterID, 20).Find(new(Action))
 			})
 			assert.Equal(t, test.want, got)
 		})
@@ -384,14 +362,6 @@ func actionsListByUser(t *testing.T, ctx context.Context, s *ActionsStore) {
 		t.Skip("Skipping testing with not using PostgreSQL")
 		return
 	}
-
-	conf.SetMockUI(t,
-		conf.UIOpts{
-			User: conf.UIUserOpts{
-				NewsFeedPagingNum: 20,
-			},
-		},
-	)
 
 	tests := []struct {
 		name      string
@@ -437,7 +407,7 @@ func actionsListByUser(t *testing.T, ctx context.Context, s *ActionsStore) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got := s.db.ToSQL(func(tx *gorm.DB) *gorm.DB {
-				return newActionsStore(tx).listByUser(ctx, test.userID, test.actorID, test.afterID, test.isProfile).Find(new(Action))
+				return newActionsStore(tx).listByUser(ctx, test.userID, test.actorID, test.afterID, test.isProfile, 20).Find(new(Action))
 			})
 			assert.Equal(t, test.want, got)
 		})
@@ -445,11 +415,6 @@ func actionsListByUser(t *testing.T, ctx context.Context, s *ActionsStore) {
 }
 
 func actionsMergePullRequest(t *testing.T, ctx context.Context, s *ActionsStore) {
-	conf.SetMockUI(t, conf.UIOpts{
-		User: conf.UIUserOpts{
-			NewsFeedPagingNum: 20,
-		},
-	})
 
 	alice, err := newUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
@@ -472,7 +437,7 @@ func actionsMergePullRequest(t *testing.T, ctx context.Context, s *ActionsStore)
 	)
 	require.NoError(t, err)
 
-	got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+	got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false, 20)
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	got[0].ID = 0
@@ -496,11 +461,6 @@ func actionsMergePullRequest(t *testing.T, ctx context.Context, s *ActionsStore)
 }
 
 func actionsMirrorSyncCreate(t *testing.T, ctx context.Context, s *ActionsStore) {
-	conf.SetMockUI(t, conf.UIOpts{
-		User: conf.UIUserOpts{
-			NewsFeedPagingNum: 20,
-		},
-	})
 
 	alice, err := newUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
@@ -519,7 +479,7 @@ func actionsMirrorSyncCreate(t *testing.T, ctx context.Context, s *ActionsStore)
 	)
 	require.NoError(t, err)
 
-	got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+	got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false, 20)
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	got[0].ID = 0
@@ -543,11 +503,6 @@ func actionsMirrorSyncCreate(t *testing.T, ctx context.Context, s *ActionsStore)
 }
 
 func actionsMirrorSyncDelete(t *testing.T, ctx context.Context, s *ActionsStore) {
-	conf.SetMockUI(t, conf.UIOpts{
-		User: conf.UIUserOpts{
-			NewsFeedPagingNum: 20,
-		},
-	})
 
 	alice, err := newUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
@@ -566,7 +521,7 @@ func actionsMirrorSyncDelete(t *testing.T, ctx context.Context, s *ActionsStore)
 	)
 	require.NoError(t, err)
 
-	got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+	got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false, 20)
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	got[0].ID = 0
@@ -590,19 +545,6 @@ func actionsMirrorSyncDelete(t *testing.T, ctx context.Context, s *ActionsStore)
 }
 
 func actionsMirrorSyncPush(t *testing.T, ctx context.Context, s *ActionsStore) {
-	// Webhook payloads of pushes have links, which read the server and SSH
-	// settings that other suites mock.
-	conf.SetMockServer(t, conf.ServerOpts{})
-	conf.SetMockSSH(t, conf.SSHOpts{})
-	// NOTE: We set a noop mock here to avoid data race with other tests that writes
-	// to the mock repository because this function holds a lock.
-	conf.SetMockRepository(t, conf.RepositoryOpts{})
-	conf.SetMockUI(t, conf.UIOpts{
-		User: conf.UIUserOpts{
-			NewsFeedPagingNum: 20,
-		},
-	})
-
 	alice, err := newUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	repo, err := newReposStore(s.db).create(ctx,
@@ -643,7 +585,7 @@ func actionsMirrorSyncPush(t *testing.T, ctx context.Context, s *ActionsStore) {
 	)
 	require.NoError(t, err)
 
-	got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+	got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false, 20)
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	got[0].ID = 0
@@ -668,11 +610,6 @@ func actionsMirrorSyncPush(t *testing.T, ctx context.Context, s *ActionsStore) {
 }
 
 func actionsNewRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
-	conf.SetMockUI(t, conf.UIOpts{
-		User: conf.UIUserOpts{
-			NewsFeedPagingNum: 20,
-		},
-	})
 
 	alice, err := newUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
@@ -693,7 +630,7 @@ func actionsNewRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
 		err = s.NewRepo(ctx, alice, alice, repo)
 		require.NoError(t, err)
 
-		got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+		got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false, 20)
 		require.NoError(t, err)
 		require.Len(t, got, 1)
 		got[0].ID = 0
@@ -725,7 +662,7 @@ func actionsNewRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
 		err = s.NewRepo(ctx, alice, alice, repo)
 		require.NoError(t, err)
 
-		got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+		got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false, 20)
 		require.NoError(t, err)
 		require.Len(t, got, 1)
 		got[0].ID = 0
@@ -749,16 +686,6 @@ func actionsNewRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
 }
 
 func actionsPushTag(t *testing.T, ctx context.Context, s *ActionsStore) {
-	// NOTE: We set a noop mock here to avoid data race with other tests that write
-	// to the mock server because this function holds a lock.
-	conf.SetMockServer(t, conf.ServerOpts{})
-	conf.SetMockSSH(t, conf.SSHOpts{})
-	conf.SetMockUI(t, conf.UIOpts{
-		User: conf.UIUserOpts{
-			NewsFeedPagingNum: 20,
-		},
-	})
-
 	alice, err := newUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	repo, err := newReposStore(s.db).create(ctx,
@@ -786,7 +713,7 @@ func actionsPushTag(t *testing.T, ctx context.Context, s *ActionsStore) {
 		)
 		require.NoError(t, err)
 
-		got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+		got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false, 20)
 		require.NoError(t, err)
 		require.Len(t, got, 1)
 		got[0].ID = 0
@@ -826,7 +753,7 @@ func actionsPushTag(t *testing.T, ctx context.Context, s *ActionsStore) {
 		)
 		require.NoError(t, err)
 
-		got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+		got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false, 20)
 		require.NoError(t, err)
 		require.Len(t, got, 1)
 		got[0].ID = 0
@@ -851,11 +778,6 @@ func actionsPushTag(t *testing.T, ctx context.Context, s *ActionsStore) {
 }
 
 func actionsRenameRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
-	conf.SetMockUI(t, conf.UIOpts{
-		User: conf.UIUserOpts{
-			NewsFeedPagingNum: 20,
-		},
-	})
 
 	alice, err := newUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
@@ -870,7 +792,7 @@ func actionsRenameRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
 	err = s.RenameRepo(ctx, alice, alice, "oldExample", repo)
 	require.NoError(t, err)
 
-	got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+	got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false, 20)
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	got[0].ID = 0
@@ -894,11 +816,6 @@ func actionsRenameRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
 }
 
 func actionsTransferRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
-	conf.SetMockUI(t, conf.UIOpts{
-		User: conf.UIUserOpts{
-			NewsFeedPagingNum: 20,
-		},
-	})
 
 	alice, err := newUsersStore(s.db).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
@@ -915,7 +832,7 @@ func actionsTransferRepo(t *testing.T, ctx context.Context, s *ActionsStore) {
 	err = s.TransferRepo(ctx, alice, alice, bob, repo)
 	require.NoError(t, err)
 
-	got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+	got, err := s.ListByUser(ctx, alice.ID, alice.ID, 0, false, 20)
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	got[0].ID = 0

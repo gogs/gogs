@@ -12,7 +12,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"unknwon.dev/x/logx"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/telemetry"
@@ -59,6 +58,18 @@ type ServeOptions struct {
 	// TriggerPushTasks is called for every reference that a push updates, with
 	// its short name, e.g., to queue webhook deliveries.
 	TriggerPushTasks func(pusher *database.User, repo *database.Repository, branch string)
+	Settings         ServeSettings
+}
+
+// ServeSettings are the settings that serving Git commands over SSH reads.
+type ServeSettings struct {
+	// Disabled refuses every command.
+	Disabled                 bool
+	RequireSigninView        bool
+	RequireEmailConfirmation bool
+	RepositoryRoot           string
+	// Push records what pushes change.
+	Push database.PushOptions
 }
 
 var allowedCommands = map[string]database.AccessMode{
@@ -71,7 +82,7 @@ var allowedCommands = map[string]database.AccessMode{
 // After a push, it records the updated references and calls TriggerPushTasks.
 // Errors are of type *ServeError.
 func Serve(ctx context.Context, logger *logx.Logger, opts ServeOptions) error {
-	if conf.SSH.Disabled {
+	if opts.Settings.Disabled {
 		return serveError("SSH has been disabled", "")
 	}
 	if opts.Command == "" {
@@ -144,7 +155,7 @@ func Serve(ctx context.Context, logger *logx.Logger, opts ServeOptions) error {
 				return serveError("Internal error", "Failed to get user by key ID '%d': %v", key.ID, err)
 			}
 			telemetry.SetUser(ctx, user.ID)
-			if user.IsDisabled() || user.IsOrganization() {
+			if user.IsDisabled(opts.Settings.RequireEmailConfirmation) || user.IsOrganization() {
 				return serveError(accessDeniedMessage, "User '%s' is disabled or an organization", user.Name)
 			}
 
@@ -170,7 +181,7 @@ func Serve(ctx context.Context, logger *logx.Logger, opts ServeOptions) error {
 		// where it is in use, and a user key must belong to a user who is not
 		// disabled. Otherwise, a server or system using an active deploy key can get
 		// read access to all public repositories on a Gogs instance.
-		if conf.Auth.RequireSigninView {
+		if opts.Settings.RequireSigninView {
 			if key.IsDeployKey() {
 				if err = checkDeployKey(ctx, key, repo); err != nil {
 					return err
@@ -180,7 +191,7 @@ func Serve(ctx context.Context, logger *logx.Logger, opts ServeOptions) error {
 				if err != nil {
 					return serveError("Internal error", "Failed to get user by key ID '%d': %v", key.ID, err)
 				}
-				if keyOwner.IsDisabled() || keyOwner.IsOrganization() {
+				if keyOwner.IsDisabled(opts.Settings.RequireEmailConfirmation) || keyOwner.IsOrganization() {
 					return serveError(accessDeniedMessage, "User '%s' is disabled or an organization", keyOwner.Name)
 				}
 			}
@@ -194,14 +205,14 @@ func Serve(ctx context.Context, logger *logx.Logger, opts ServeOptions) error {
 	}
 
 	if requestMode == database.AccessModeWrite && isWiki {
-		if err = repo.InitWikiForPush(ctx); err != nil {
+		if err = repo.InitWikiForPush(ctx, opts.Settings.RepositoryRoot); err != nil {
 			return serveError("Internal error", "Failed to initialize wiki: %v", err)
 		}
 	}
 
 	// Git finds the repository without the suffix, but recording a push runs other
 	// Git commands in the directory of the repository.
-	repoPath := filepath.Join(conf.Repository.Root, repoFullName)
+	repoPath := filepath.Join(opts.Settings.RepositoryRoot, repoFullName)
 	if !strings.HasSuffix(repoPath, ".git") {
 		repoPath += ".git"
 	}
@@ -225,7 +236,7 @@ func Serve(ctx context.Context, logger *logx.Logger, opts ServeOptions) error {
 		OwnerSalt: owner.Salt,
 		RepoID:    repo.ID,
 		RepoName:  repo.Name,
-		RepoPath:  repo.RepoPath(),
+		RepoPath:  repo.RepoPath(opts.Settings.RepositoryRoot),
 	})
 	// The client going away must not stop Git midway through a push, nor the
 	// recording of what it pushed.
@@ -233,7 +244,7 @@ func Serve(ctx context.Context, logger *logx.Logger, opts ServeOptions) error {
 	updates, err := git.RunReceivePack(ctx, repoPath, serviceOpts)
 	// TODO: support news feeds for wiki
 	if !isWiki {
-		database.PushUpdates(ctx, logger, user, owner.Name, repo.Name, updates, func(branch string) {
+		database.PushUpdates(ctx, logger, opts.Settings.Push, user, owner.Name, repo.Name, updates, func(branch string) {
 			opts.TriggerPushTasks(user, repo, branch)
 		})
 	} else if err := database.UpdateWikiHEAD(ctx, repoPath); err != nil {

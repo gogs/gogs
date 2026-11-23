@@ -28,6 +28,23 @@ func IsIPythonNotebook(name string) bool {
 	return strings.HasSuffix(name, ".ipynb")
 }
 
+// Options are the settings that rendering reads.
+type Options struct {
+	// ExternalURL is the external URL of the server, ending with "/".
+	ExternalURL string
+	// Subpath is the path of ExternalURL without the trailing "/", and
+	// SubpathDepth is the number of "/" in it.
+	Subpath      string
+	SubpathDepth int
+	// FileHardLineBreak renders every line break of Markdown files as written.
+	// Other Markdown, e.g., issues and comments, always does.
+	FileHardLineBreak bool
+	Smartypants       conf.SmartypantsOpts
+	// MaxDisplayFileSize is the size in bytes from which documents are shown as
+	// escaped plain text instead of being rendered, or 0 for no limit.
+	MaxDisplayFileSize int64
+}
+
 const (
 	IssueNameStyleNumeric      = "numeric"
 	IssueNameStyleAlphanumeric = "alphanumeric"
@@ -64,15 +81,15 @@ var (
 // FindAllMentions returns the user names, without "@", of the mentions that
 // render as links in content, which is Markdown. Mentions in code and links
 // are not included.
-func FindAllMentions(content string) []string {
+func FindAllMentions(o Options, content string) []string {
 	body := bytes.TrimPrefix([]byte(content), utf8BOM)
 	var names []string
-	guardRender(body, func() []byte {
-		opts := markdownOptions("", true)
+	guardRender(o, body, func() []byte {
+		opts := markdownOptions(o, "", true)
 		opts.PostProcess = true
 		opts.SpecialLinks = func(text []byte) []dariomark.SpecialLink {
 			if bytes.IndexByte(text, '@') >= 0 {
-				for _, m := range findMentions(text) {
+				for _, m := range findMentions(o, text) {
 					names = append(names, string(m.Text[1:]))
 				}
 			}
@@ -85,21 +102,21 @@ func FindAllMentions(content string) []string {
 }
 
 // findMentions returns the mentions in text.
-func findMentions(text []byte) []linkSpan {
+func findMentions(o Options, text []byte) []linkSpan {
 	var spans []linkSpan
 	for _, loc := range MentionPattern.Regexp().FindAllSubmatchIndex(text, -1) {
 		// The pattern requires a character before the "@", which is not part
 		// of the mention.
 		start := loc[3]
 		m := text[start:loc[1]]
-		spans = append(spans, linkSpan{Start: start, End: loc[1], Href: fmt.Appendf(nil, "%s/%s", html.EscapeString(conf.Server.Subpath), m[1:]), Text: m})
+		spans = append(spans, linkSpan{Start: start, End: loc[1], Href: fmt.Appendf(nil, "%s/%s", html.EscapeString(o.Subpath), m[1:]), Text: m})
 	}
 	return spans
 }
 
 // cutoutVerbosePrefix cuts out the URL prefix including the subpath to return
 // a clean unified string of request URL path.
-func cutoutVerbosePrefix(prefix string) string {
+func cutoutVerbosePrefix(o Options, prefix string) string {
 	if prefix == "" || prefix[0] != '/' {
 		return prefix
 	}
@@ -108,7 +125,7 @@ func cutoutVerbosePrefix(prefix string) string {
 		if prefix[i] == '/' {
 			count++
 		}
-		if count >= 3+conf.Server.SubpathDepth {
+		if count >= 3+o.SubpathDepth {
 			return prefix[:i]
 		}
 	}
@@ -160,8 +177,8 @@ type linkSpan = dariomark.SpecialLink
 
 // findIssueIndexes returns the spans of skip merged with the issue references
 // in text that do not overlap them.
-func findIssueIndexes(text []byte, urlPrefix string, metas map[string]string, skip []linkSpan) []linkSpan {
-	urlPrefix = cutoutVerbosePrefix(urlPrefix)
+func findIssueIndexes(o Options, text []byte, urlPrefix string, metas map[string]string, skip []linkSpan) []linkSpan {
+	urlPrefix = cutoutVerbosePrefix(o, urlPrefix)
 
 	pattern := IssueNumericPattern
 	alphanumeric := metas["style"] == IssueNameStyleAlphanumeric
@@ -233,27 +250,27 @@ func replaceSpans(text []byte, spans []linkSpan) []byte {
 
 // RenderCommitMessage escapes msg and links the mentions and issue references
 // in it.
-func RenderCommitMessage(msg, urlPrefix string, metas map[string]string) string {
+func RenderCommitMessage(o Options, msg, urlPrefix string, metas map[string]string) string {
 	text := []byte(html.EscapeString(msg))
 	// Unlike Markdown, plain text does not link URLs first, which would keep
 	// mentions out of them.
 	urls := urlPattern.FindAllIndex(text, -1)
-	mentions := slices.DeleteFunc(findMentions(text), func(m linkSpan) bool {
+	mentions := slices.DeleteFunc(findMentions(o, text), func(m linkSpan) bool {
 		return slices.ContainsFunc(urls, func(u []int) bool { return u[0] <= m.Start && m.Start < u[1] })
 	})
 	// Repository admins set the external issue tracker format the links are
 	// made of, which can be any URL, e.g., a "javascript:" URL.
-	return string(SanitizeBytes(replaceSpans(text, findIssueIndexes(text, urlPrefix, metas, mentions))))
+	return string(SanitizeBytes(replaceSpans(text, findIssueIndexes(o, text, urlPrefix, metas, mentions))))
 }
 
 // RenderIssueIndexPattern renders issue indexes to corresponding links.
-func RenderIssueIndexPattern(rawBytes []byte, urlPrefix string, metas map[string]string) []byte {
-	return replaceSpans(rawBytes, findIssueIndexes(rawBytes, urlPrefix, metas, nil))
+func RenderIssueIndexPattern(o Options, rawBytes []byte, urlPrefix string, metas map[string]string) []byte {
+	return replaceSpans(rawBytes, findIssueIndexes(o, rawBytes, urlPrefix, metas, nil))
 }
 
 // findCrossReferences returns the spans of skip merged with the references to
 // issues of other repositories in text that do not overlap them.
-func findCrossReferences(text []byte, skip []linkSpan) []linkSpan {
+func findCrossReferences(o Options, text []byte, skip []linkSpan) []linkSpan {
 	var spans []linkSpan
 	for _, loc := range CrossReferenceIssueNumericPattern.FindAllIndex(text, -1) {
 		start := loc[0]
@@ -262,7 +279,7 @@ func findCrossReferences(text []byte, skip []linkSpan) []linkSpan {
 		}
 		m := text[start:loc[1]]
 		delim := bytes.IndexByte(m, '#')
-		href := fmt.Appendf(nil, "%s%s/issues/%s", html.EscapeString(conf.Server.ExternalURL), m[:delim], m[delim+1:])
+		href := fmt.Appendf(nil, "%s%s/issues/%s", html.EscapeString(o.ExternalURL), m[:delim], m[delim+1:])
 		spans = append(spans, linkSpan{Start: start, End: loc[1], Href: href, Text: m})
 	}
 	return mergeSpans(skip, spans)
@@ -333,27 +350,27 @@ func findSha1s(text []byte, metas, commits map[string]string, skip []linkSpan) [
 // RenderSpecialLink renders mentions, indexes and commit IDs to corresponding links.
 // It replaces each reference where it is found, in a single pass, and a
 // reference that overlaps an earlier kind of reference is left as text.
-func RenderSpecialLink(rawBytes []byte, urlPrefix string, metas map[string]string) []byte {
-	return replaceSpans(rawBytes, findSpecialLinks(rawBytes, urlPrefix, metas, resolveCommits(rawBytes, metas)))
+func RenderSpecialLink(o Options, rawBytes []byte, urlPrefix string, metas map[string]string) []byte {
+	return replaceSpans(rawBytes, findSpecialLinks(o, rawBytes, urlPrefix, metas, resolveCommits(rawBytes, metas)))
 }
 
 // findSpecialLinks returns the mentions, issue references, cross-references
 // and commit IDs in text, see RenderSpecialLink. Commit IDs are linked only
 // when they are in commits, see resolveCommits.
-func findSpecialLinks(rawBytes []byte, urlPrefix string, metas, commits map[string]string) []linkSpan {
+func findSpecialLinks(o Options, rawBytes []byte, urlPrefix string, metas, commits map[string]string) []linkSpan {
 	kinds := specialLinkKinds(rawBytes, metas)
 	if kinds == 0 {
 		return nil
 	}
 	var spans []linkSpan
 	if kinds&linkMention != 0 {
-		spans = findMentions(rawBytes)
+		spans = findMentions(o, rawBytes)
 	}
 	if kinds&linkIssue != 0 {
-		spans = findIssueIndexes(rawBytes, urlPrefix, metas, spans)
+		spans = findIssueIndexes(o, rawBytes, urlPrefix, metas, spans)
 	}
 	if kinds&linkCrossReference != 0 {
-		spans = findCrossReferences(rawBytes, spans)
+		spans = findCrossReferences(o, rawBytes, spans)
 	}
 	if kinds&linkCommit != 0 {
 		spans = findSha1s(rawBytes, metas, commits, spans)
@@ -431,7 +448,7 @@ func wrapImgWithLink(urlPrefix string, buf *bytes.Buffer, token html.Token) {
 
 // postProcessHTML treats different types of HTML differently,
 // and only renders special links for plain text blocks.
-func postProcessHTML(rawHTML []byte, urlPrefix string, metas map[string]string) []byte {
+func postProcessHTML(o Options, rawHTML []byte, urlPrefix string, metas map[string]string) []byte {
 	commits := resolveLinkableCommits(metas, func(specialText func(text []byte)) {
 		if !Sha1CurrentPattern.Match(rawHTML) {
 			return
@@ -442,7 +459,7 @@ func postProcessHTML(rawHTML []byte, urlPrefix string, metas map[string]string) 
 		})
 	})
 	return processHTMLText(rawHTML, urlPrefix, func(text []byte) []byte {
-		return replaceSpans(text, findSpecialLinks(text, urlPrefix, metas, commits))
+		return replaceSpans(text, findSpecialLinks(o, text, urlPrefix, metas, commits))
 	})
 }
 
@@ -531,9 +548,9 @@ const (
 )
 
 // Detect returns best guess of a markup type based on file name.
-func Detect(filename string) Type {
+func Detect(markdownExtensions []string, filename string) Type {
 	switch {
-	case IsMarkdownFile(filename):
+	case IsMarkdownFile(markdownExtensions, filename):
 		return TypeMarkdown
 	case IsOrgModeFile(filename):
 		return TypeOrgMode
@@ -563,19 +580,19 @@ var renderSemaphore = semaphore.NewWeighted(renderBudget)
 var utf8BOM = []byte("\ufeff")
 
 // Render takes a string or []byte and renders to sanitized HTML in given type of syntax with special links.
-// It renders files: Markdown keeps line breaks only with [markdown]
-// ENABLE_HARD_LINE_BREAK, and its YAML front matter renders as a table.
+// It renders files: Markdown keeps line breaks only with
+// Options.FileHardLineBreak, and its YAML front matter renders as a table.
 //
-// A document larger than [ui] MAX_DISPLAY_FILE_SIZE is shown as escaped plain
+// A document larger than Options.MaxDisplayFileSize is shown as escaped plain
 // text instead of being rendered.
-func Render(typ Type, input any, urlPrefix string, metas map[string]string) []byte {
-	return renderInput(typ, input, urlPrefix, metas, nil, conf.Markdown.EnableHardLineBreak, true)
+func Render(o Options, typ Type, input any, urlPrefix string, metas map[string]string) []byte {
+	return renderInput(o, typ, input, urlPrefix, metas, nil, o.FileHardLineBreak, true)
 }
 
 // renderInput is Render, with commits resolved for Markdown, see
 // ResolveCommits, hardWraps rendering every line break of Markdown as written,
 // and file rendering front matter of Markdown files.
-func renderInput(typ Type, input any, urlPrefix string, metas, commits map[string]string, hardWraps, file bool) []byte {
+func renderInput(o Options, typ Type, input any, urlPrefix string, metas, commits map[string]string, hardWraps, file bool) []byte {
 	var rawBytes []byte
 	switch v := input.(type) {
 	case []byte:
@@ -590,15 +607,15 @@ func renderInput(typ Type, input any, urlPrefix string, metas, commits map[strin
 		return rawBytes // Do nothing if syntax type is not recognized.
 	}
 	rawBytes = bytes.TrimPrefix(rawBytes, utf8BOM)
-	return guardRender(rawBytes, func() []byte {
-		return render(typ, rawBytes, urlPrefix, metas, commits, hardWraps, file)
+	return guardRender(o, rawBytes, func() []byte {
+		return render(o, typ, rawBytes, urlPrefix, metas, commits, hardWraps, file)
 	})
 }
 
-// guardRender returns body as escaped plain text when it is larger than [ui]
-// MAX_DISPLAY_FILE_SIZE, and otherwise calls render within renderBudget.
-func guardRender(body []byte, render func() []byte) []byte {
-	if conf.UI.MaxDisplayFileSize > 0 && int64(len(body)) > conf.UI.MaxDisplayFileSize {
+// guardRender returns body as escaped plain text when it is larger than
+// Options.MaxDisplayFileSize, and otherwise calls render within renderBudget.
+func guardRender(o Options, body []byte, render func() []byte) []byte {
+	if o.MaxDisplayFileSize > 0 && int64(len(body)) > o.MaxDisplayFileSize {
 		return []byte("<pre>" + html.EscapeString(string(body)) + "</pre>")
 	}
 	if len(body) >= largeRenderSize {
@@ -610,12 +627,12 @@ func guardRender(body []byte, render func() []byte) []byte {
 	return render()
 }
 
-func render(typ Type, rawBytes []byte, urlPrefix string, metas, commits map[string]string, hardWraps, file bool) []byte {
+func render(o Options, typ Type, rawBytes []byte, urlPrefix string, metas, commits map[string]string, hardWraps, file bool) []byte {
 	urlPrefix = strings.TrimRight(strings.ReplaceAll(urlPrefix, " ", "%20"), "/")
 	var rawHTML []byte
 	switch typ {
 	case TypeMarkdown:
-		res := renderMarkdown(rawBytes, urlPrefix, metas, commits, hardWraps, file)
+		res := renderMarkdown(o, rawBytes, urlPrefix, metas, commits, hardWraps, file)
 		if res.Sanitized {
 			return res.HTML
 		}
@@ -627,7 +644,7 @@ func render(typ Type, rawBytes []byte, urlPrefix string, metas, commits map[stri
 		rawHTML = res.HTML
 	case TypeOrgMode:
 		rawHTML = RawOrgMode(rawBytes, urlPrefix)
-		rawHTML = postProcessHTML(rawHTML, urlPrefix, metas)
+		rawHTML = postProcessHTML(o, rawHTML, urlPrefix, metas)
 	}
 	return SanitizeBytes(rawHTML)
 }

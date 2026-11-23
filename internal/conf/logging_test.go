@@ -31,7 +31,7 @@ MODE = console
 `))
 		require.NoError(t, err)
 
-		got, hasConsole, err := initLogConf(f, false)
+		got, hasConsole, err := initLogConf(f, false, false)
 		assert.EqualError(t, err, `missing configuration section [log.console] for "console" logger`)
 		assert.False(t, hasConsole)
 		assert.Nil(t, got)
@@ -46,7 +46,7 @@ MODE = file
 `))
 		require.NoError(t, err)
 
-		got, hasConsole, err := initLogConf(f, false)
+		got, hasConsole, err := initLogConf(f, false, false)
 		require.NoError(t, err)
 
 		assert.False(t, hasConsole)
@@ -63,7 +63,7 @@ LEVEL = error
 `))
 		require.NoError(t, err)
 
-		got, hasConsole, err := initLogConf(f, false)
+		got, hasConsole, err := initLogConf(f, false, false)
 		require.NoError(t, err)
 
 		assert.True(t, hasConsole)
@@ -80,16 +80,13 @@ MODE = file, console, File
 `))
 		require.NoError(t, err)
 
-		got, _, err := initLogConf(f, false)
+		got, _, err := initLogConf(f, false, false)
 		require.NoError(t, err)
 		assert.Equal(t, []string{ModeFile, ModeConsole}, got.Modes)
 		assert.Len(t, got.Configs, 2)
 	})
 
 	t.Run("format", func(t *testing.T) {
-		before := App.RunMode
-		defer func() { App.RunMode = before }()
-
 		tests := []struct {
 			runMode  string
 			format   string
@@ -101,18 +98,17 @@ MODE = file, console, File
 			{runMode: "dev", format: " JSON ", wantJSON: true},
 		}
 		for _, test := range tests {
-			App.RunMode = test.runMode
 			f, err := ini.Load([]byte("[log]\nFORMAT = " + test.format + "\n[log.console]\n"))
 			require.NoError(t, err)
 
-			got, _, err := initLogConf(f, false)
+			got, _, err := initLogConf(f, false, test.runMode == "prod")
 			require.NoError(t, err)
 			assert.Equal(t, test.wantJSON, got.JSON, "run mode %q, format %q", test.runMode, test.format)
 		}
 
 		f, err := ini.Load([]byte("[log]\nFORMAT = xml\n[log.console]\n"))
 		require.NoError(t, err)
-		_, _, err = initLogConf(f, false)
+		_, _, err = initLogConf(f, false, false)
 		assert.EqualError(t, err, `unknown [log] FORMAT "xml", want "text" or "json"`)
 	})
 
@@ -127,7 +123,7 @@ URL = https://slack.com
 `))
 		require.NoError(t, err)
 
-		got, _, err := initLogConf(f, false)
+		got, _, err := initLogConf(f, false, false)
 		require.NoError(t, err)
 		assert.Equal(t, int64(0), got.Configs[0].Buffer)
 	})
@@ -142,7 +138,7 @@ MODE = console, discord
 `))
 		require.NoError(t, err)
 
-		got, _, err := initLogConf(f, false)
+		got, _, err := initLogConf(f, false, false)
 		assert.EqualError(t, err, `missing URL in configuration section [log.discord] for "discord" logger`)
 		assert.Nil(t, got)
 	})
@@ -176,10 +172,10 @@ USERNAME = yoyo
 `))
 	require.NoError(t, err)
 
-	got, hasConsole, err := initLogConf(f, false)
+	got, hasConsole, err := initLogConf(f, false, false)
 	require.NoError(t, err)
 
-	want := &logConf{
+	want := &LogOpts{
 		RootPath: filepath.Join(WorkDir(), "log"),
 		Modes:    []string{ModeConsole, ModeFile, ModeSlack, ModeDiscord},
 		Configs: []*loggerConf{
@@ -221,9 +217,6 @@ USERNAME = yoyo
 }
 
 func TestInitLogging(t *testing.T) {
-	beforeFile, beforeLog := File, Log
-	t.Cleanup(func() { File, Log = beforeFile, beforeLog })
-
 	initLogging := func(t *testing.T, modes string) string {
 		// The file logger keeps gogs.log open until the process exits, which
 		// stops Windows from removing a t.TempDir, so cleanup is best-effort.
@@ -241,9 +234,7 @@ ROOT_PATH = ` + rootPath + `
 [log.file]
 `))
 		require.NoError(t, err)
-		File = f
-
-		logger, err := InitLogging(nil, false)
+		logger, err := InitLogging(nil, &Config{File: f}, false)
 		require.NoError(t, err)
 		logger.Info("Hello")
 		return rootPath

@@ -6,13 +6,14 @@ import (
 	"github.com/cockroachdb/errors"
 
 	"gogs.io/gogs/internal/api/v1types"
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
 )
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories#get-branch
-func getBranch(c *apiContext) {
-	branch, err := c.Repo.Repository.GetBranch(c.Request().Context(), c.Param("**"))
+func getBranch(c *apiContext, repository conf.RepositoryOpts) {
+	branch, err := c.Repo.Repository.GetBranch(c.Request().Context(), repository.Root, c.Param("**"))
 	if err != nil {
 		c.NotFoundOrError(err, "get branch")
 		return
@@ -28,8 +29,8 @@ func getBranch(c *apiContext) {
 }
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories#list-branches
-func listBranches(c *apiContext) {
-	branches, err := c.Repo.Repository.GetBranches(c.Request().Context())
+func listBranches(c *apiContext, repository conf.RepositoryOpts) {
+	branches, err := c.Repo.Repository.GetBranches(c.Request().Context(), repository.Root)
 	if err != nil {
 		c.Error(err, "get branches")
 		return
@@ -55,22 +56,22 @@ type createReferenceRequest struct {
 }
 
 // POST /repos/:username/:reponame/branches
-func createBranch(c *apiContext, r createReferenceRequest) {
-	commit, err := createReference(c, git.RefsHeads, r)
+func createBranch(c *apiContext, repository conf.RepositoryOpts, push database.PushOptions, r createReferenceRequest) {
+	commit, err := createReference(c, repository.Root, push, git.RefsHeads, r)
 	if err != nil {
 		c.Error(err, "create branch")
 		return
 	} else if commit == nil {
 		return
 	}
-	branch := &database.Branch{RepoPath: c.Repo.Repository.RepoPath(), Name: r.Name}
+	branch := &database.Branch{RepoPath: c.Repo.Repository.RepoPath(repository.Root), Name: r.Name}
 	c.JSON(http.StatusCreated, toBranch(branch, commit))
 }
 
 // createReference creates the branch or tag, by the prefix of its reference,
 // and returns the commit it points at. It returns a nil commit when it has
 // written a client error response, and an error for the caller to report.
-func createReference(c *apiContext, prefix string, r createReferenceRequest) (*git.Commit, error) {
+func createReference(c *apiContext, repositoryRoot string, push database.PushOptions, prefix string, r createReferenceRequest) (*git.Commit, error) {
 	repo := c.Repo.Repository
 	if repo.IsMirror {
 		c.ErrorStatus(http.StatusForbidden, errors.New("Mirror repository is read-only."))
@@ -78,7 +79,7 @@ func createReference(c *apiContext, prefix string, r createReferenceRequest) (*g
 	}
 
 	ctx := c.Request().Context()
-	gitRepo, err := git.Open(repo.RepoPath())
+	gitRepo, err := git.Open(repo.RepoPath(repositoryRoot))
 	if err != nil {
 		return nil, errors.Wrap(err, "open repository")
 	}
@@ -125,7 +126,7 @@ func createReference(c *apiContext, prefix string, r createReferenceRequest) (*g
 		}
 	}
 
-	err = repo.CreateReference(ctx, c.Logger, c.User, prefix+r.Name, commit.ID.String())
+	err = repo.CreateReference(ctx, c.Logger, push, c.User, prefix+r.Name, commit.ID.String())
 	if errors.Is(err, git.ErrReferenceConflict) {
 		c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("The %s name %q is already taken.", kind, r.Name))
 		return nil, nil

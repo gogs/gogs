@@ -68,24 +68,24 @@ func TestSSHParsePublicKey(t *testing.T) {
 }
 
 func TestCheckPublicKeyStringUnknownAlgorithm(t *testing.T) {
-	conf.SetMockSSH(t, conf.SSHOpts{
+	sshOpts := conf.SSHOpts{
 		StartBuiltinServer:  true,
 		MinimumKeySizeCheck: true,
-	})
+	}
 
 	// A well-formed key line whose algorithm the SSH library does not know.
 	key := base64.StdEncoding.EncodeToString(ssh.Marshal(struct{ Name string }{"ssh-unknown"}))
-	_, err := CheckPublicKeyString(logx.NewNoopLogger(), "ssh-unknown "+key)
+	_, err := CheckPublicKeyString(logx.NewNoopLogger(), sshOpts, "ssh-unknown "+key)
 	assert.True(t, IsErrKeyUnableVerify(err), "error: %v", err)
 }
 
 func TestCheckPublicKeyStringWithSSHKeygen(t *testing.T) {
 	keyTestPath := t.TempDir()
-	conf.SetMockSSH(t, conf.SSHOpts{
+	sshOpts := conf.SSHOpts{
 		KeygenPath:          "ssh-keygen",
 		KeyTestPath:         keyTestPath,
 		MinimumKeySizeCheck: true,
-	})
+	}
 	// A key line whose type matches but whose key data ssh-keygen cannot read.
 	truncated := "ssh-ed25519 " + base64.StdEncoding.EncodeToString(ssh.Marshal(struct{ Name string }{"ssh-ed25519"}))
 
@@ -95,7 +95,7 @@ func TestCheckPublicKeyStringWithSSHKeygen(t *testing.T) {
 			// ssh-keygen reads it as a private key and answers "is not a key file".
 			truncated + " PRIVATE KEY",
 		} {
-			_, err := CheckPublicKeyString(logx.NewNoopLogger(), content)
+			_, err := CheckPublicKeyString(logx.NewNoopLogger(), sshOpts, content)
 			require.Error(t, err)
 			assert.True(t, IsErrKeyUnableVerify(err), "error: %v", err)
 			assert.Regexp(t, `\[result: key is not a (public )?key file\.\]$`, err.Error())
@@ -107,8 +107,7 @@ func TestCheckPublicKeyStringWithSSHKeygen(t *testing.T) {
 			"missing ssh-keygen":    {KeygenPath: filepath.Join(keyTestPath, "missing"), KeyTestPath: keyTestPath, MinimumKeySizeCheck: true},
 			"missing key test path": {KeygenPath: "ssh-keygen", KeyTestPath: filepath.Join(keyTestPath, "missing"), MinimumKeySizeCheck: true},
 		} {
-			conf.SSH = opts
-			_, err := CheckPublicKeyString(logx.NewNoopLogger(), truncated)
+			_, err := CheckPublicKeyString(logx.NewNoopLogger(), opts, truncated)
 			assert.True(t, IsErrKeyCheckFailed(err), "%s, error: %v", name, err)
 			assert.False(t, IsErrKeyUnableVerify(err), "%s, error: %v", name, err)
 		}

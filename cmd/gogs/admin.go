@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/cockroachdb/errors"
 	"github.com/urfave/cli/v3"
 	"unknwon.dev/x/logx"
 
+	"gogs.io/gogs/cmd/gogs/internal/options"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 )
@@ -48,7 +50,9 @@ to make automatic initialization process more smoothly`,
 		Name:  "delete-inactive-users",
 		Usage: "Delete all inactive accounts",
 		Action: adminDashboardOperation(
-			func(*logx.Logger) error { return database.Handle.Users().DeleteInactivated() },
+			func(_ *logx.Logger, cfg *conf.Config) error {
+				return database.Handle.Users().DeleteInactivated(options.DeleteUser(cfg))
+			},
 			"All inactivated accounts have been deleted successfully",
 		),
 		Flags: []cli.Flag{
@@ -60,7 +64,9 @@ to make automatic initialization process more smoothly`,
 		Name:  "delete-repository-archives",
 		Usage: "Delete all repositories archives",
 		Action: adminDashboardOperation(
-			func(*logx.Logger) error { return database.DeleteRepositoryArchives() },
+			func(_ *logx.Logger, cfg *conf.Config) error {
+				return database.DeleteRepositoryArchives(cfg.Repository.Root)
+			},
 			"All repositories archives have been deleted successfully",
 		),
 		Flags: []cli.Flag{
@@ -72,7 +78,9 @@ to make automatic initialization process more smoothly`,
 		Name:  "delete-missing-repositories",
 		Usage: "Delete all repository records that lost Git files",
 		Action: adminDashboardOperation(
-			database.DeleteMissingRepositories,
+			func(logger *logx.Logger, cfg *conf.Config) error {
+				return database.DeleteMissingRepositories(logger, options.DeleteRepo(cfg))
+			},
 			"All repositories archives have been deleted successfully",
 		),
 		Flags: []cli.Flag{
@@ -84,7 +92,9 @@ to make automatic initialization process more smoothly`,
 		Name:  "collect-garbage",
 		Usage: "Do garbage collection on repositories",
 		Action: adminDashboardOperation(
-			func(*logx.Logger) error { return database.GitGcRepos() },
+			func(_ *logx.Logger, cfg *conf.Config) error {
+				return database.GitGcRepos(cfg.Repository.Root, time.Duration(cfg.Git.Timeout.GC)*time.Second, cfg.Git.GCArgs)
+			},
 			"All repositories have done garbage collection successfully",
 		),
 		Flags: []cli.Flag{
@@ -96,7 +106,9 @@ to make automatic initialization process more smoothly`,
 		Name:  "rewrite-authorized-keys",
 		Usage: "Rewrite '.ssh/authorized_keys' file (caution: non-Gogs keys will be lost)",
 		Action: adminDashboardOperation(
-			func(*logx.Logger) error { return database.Handle.PublicKeys().RewriteAuthorizedKeys() },
+			func(_ *logx.Logger, cfg *conf.Config) error {
+				return database.Handle.PublicKeys().RewriteAuthorizedKeys(options.AuthorizedKeys(cfg))
+			},
 			"All public keys have been rewritten successfully",
 		),
 		Flags: []cli.Flag{
@@ -108,7 +120,9 @@ to make automatic initialization process more smoothly`,
 		Name:  "resync-hooks",
 		Usage: "Resync pre-receive, update and post-receive hooks",
 		Action: adminDashboardOperation(
-			func(*logx.Logger) error { return database.SyncRepositoryHooks() },
+			func(_ *logx.Logger, cfg *conf.Config) error {
+				return database.SyncRepositoryHooks(options.DelegateHooks(cfg))
+			},
 			"All repositories' pre-receive, update and post-receive hooks have been resynced successfully",
 		),
 		Flags: []cli.Flag{
@@ -120,7 +134,9 @@ to make automatic initialization process more smoothly`,
 		Name:  "reinit-missing-repositories",
 		Usage: "Reinitialize all repository records that lost Git files",
 		Action: adminDashboardOperation(
-			database.ReinitMissingRepositories,
+			func(logger *logx.Logger, cfg *conf.Config) error {
+				return database.ReinitMissingRepositories(logger, cfg.Repository.Root)
+			},
 			"All repository records that lost Git files have been reinitialized successfully",
 		),
 		Flags: []cli.Flag{
@@ -139,15 +155,15 @@ func runCreateUser(ctx context.Context, cmd *cli.Command) error {
 		return errors.New("Email is not specified")
 	}
 
-	err := conf.Init(logger, configFromLineage(cmd))
+	cfg, err := conf.Init(logger, configFromLineage(cmd), false)
 	if err != nil {
 		return errors.Wrap(err, "init configuration")
 	}
-	if _, err = conf.InitLogging(logger, true); err != nil {
+	if _, err = conf.InitLogging(logger, cfg, true); err != nil {
 		return errors.Wrap(err, "init logging")
 	}
 
-	if _, err = database.SetEngine(logger.Scoped("db"), false); err != nil {
+	if _, err = database.SetEngine(logger.Scoped("db"), cfg.Database, false); err != nil {
 		return errors.Wrap(err, "set engine")
 	}
 
@@ -169,22 +185,22 @@ func runCreateUser(ctx context.Context, cmd *cli.Command) error {
 	return nil
 }
 
-func adminDashboardOperation(operation func(*logx.Logger) error, successMessage string) func(context.Context, *cli.Command) error {
+func adminDashboardOperation(operation func(*logx.Logger, *conf.Config) error, successMessage string) func(context.Context, *cli.Command) error {
 	return func(_ context.Context, cmd *cli.Command) error {
 		logger := conf.NewConsoleLogger(os.Stdout)
-		err := conf.Init(logger, configFromLineage(cmd))
+		cfg, err := conf.Init(logger, configFromLineage(cmd), false)
 		if err != nil {
 			return errors.Wrap(err, "init configuration")
 		}
-		if _, err = conf.InitLogging(logger, true); err != nil {
+		if _, err = conf.InitLogging(logger, cfg, true); err != nil {
 			return errors.Wrap(err, "init logging")
 		}
 
-		if _, err = database.SetEngine(logger.Scoped("db"), false); err != nil {
+		if _, err = database.SetEngine(logger.Scoped("db"), cfg.Database, false); err != nil {
 			return errors.Wrap(err, "set engine")
 		}
 
-		if err := operation(logger); err != nil {
+		if err := operation(logger, cfg); err != nil {
 			return errors.Wrap(err, cmd.Name)
 		}
 

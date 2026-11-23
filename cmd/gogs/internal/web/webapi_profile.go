@@ -66,10 +66,10 @@ type userProfile struct {
 
 // getUserProfile returns the profile of a user, or the home page of an
 // organization.
-func getUserProfile(logger *logx.Logger, c flamego.Context, viewer *database.User, puser *profileUser) (statusCode int, resp any, err error) {
+func getUserProfile(logger *logx.Logger, c flamego.Context, links database.LinkOptions, viewer *database.User, puser *profileUser) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	if puser.IsOrganization() {
-		return getOrgProfile(ctx, logger, viewer, puser)
+		return getOrgProfile(ctx, logger, links, viewer, puser)
 	}
 
 	orgs, err := database.Handle.Organizations().List(ctx, database.ListOrgsOptions{MemberID: puser.ID, IncludePrivateMembers: puser.canSeePrivate(viewer)})
@@ -80,17 +80,17 @@ func getUserProfile(logger *logx.Logger, c flamego.Context, viewer *database.Use
 
 	profile := &userProfile{
 		Kind:           "user",
-		exploreUser:    toExploreUser(puser.User),
+		exploreUser:    toExploreUser(links, puser.User),
 		FollowerCount:  puser.NumFollowers,
 		FollowingCount: puser.NumFollowing,
 		Organizations:  make([]userProfileOrg, 0, len(orgs)),
 	}
-	profile.AvatarURL = puser.AvatarURLPath()
+	profile.AvatarURL = puser.AvatarURLPath(links)
 	profile.Website = puser.Website
 	for _, org := range orgs {
 		profile.Organizations = append(profile.Organizations, userProfileOrg{
 			Name:      org.Name,
-			AvatarURL: org.AvatarURLPath(),
+			AvatarURL: org.AvatarURLPath(links),
 		})
 	}
 	if viewer != nil {
@@ -102,7 +102,7 @@ func getUserProfile(logger *logx.Logger, c flamego.Context, viewer *database.Use
 	return http.StatusOK, profile, nil
 }
 
-func getUserProfileRepos(logger *logx.Logger, c flamego.Context, viewer *database.User, puser *profileUser) (statusCode int, resp *listPage[exploreRepo], err error) {
+func getUserProfileRepos(logger *logx.Logger, c flamego.Context, picture conf.PictureOpts, server conf.ServerOpts, ui conf.UIOpts, viewer *database.User, puser *profileUser) (statusCode int, resp *listPage[exploreRepo], err error) {
 	ctx := c.Request().Context()
 	page := pageParam(c)
 	var (
@@ -112,14 +112,14 @@ func getUserProfileRepos(logger *logx.Logger, c flamego.Context, viewer *databas
 	if puser.IsOrganization() && viewer != nil && !viewer.IsAdmin {
 		// Authenticated users see the public repositories of the organization and
 		// those of their teams.
-		repos, total, err = database.Handle.Organizations().ListAccessibleRepos(ctx, puser.ID, viewer.ID, page, conf.UI.User.RepoPagingNum)
+		repos, total, err = database.Handle.Organizations().ListAccessibleRepos(ctx, puser.ID, viewer.ID, page, ui.User.RepoPagingNum)
 	} else {
 		showPrivate := puser.canSeePrivate(viewer)
 		repos, err = database.Handle.Repositories().ListByOwner(ctx, database.UserRepoOptions{
 			UserID:   puser.ID,
 			Private:  showPrivate,
 			Page:     page,
-			PageSize: conf.UI.User.RepoPagingNum,
+			PageSize: ui.User.RepoPagingNum,
 		})
 		if err == nil {
 			total, err = database.Handle.Repositories().Count(ctx, puser.ID, showPrivate)
@@ -132,7 +132,7 @@ func getUserProfileRepos(logger *logx.Logger, c flamego.Context, viewer *databas
 	for _, repo := range repos {
 		repo.Owner = puser.User
 	}
-	return http.StatusOK, newListPage(toExploreRepos(repos), page, total, conf.UI.User.RepoPagingNum), nil
+	return http.StatusOK, newListPage(toExploreRepos(server.Subpath, picture.RepositoryAvatarUploadPath, repos), page, total, ui.User.RepoPagingNum), nil
 }
 
 type activityCommit struct {
@@ -169,10 +169,10 @@ type activityFeed struct {
 }
 
 // activityHeadline returns the localized sentence that follows the actor's
-// name.
-func activityHeadline(l i18n.Locale, act *database.Action) string {
+// name, with links under subpath.
+func activityHeadline(l i18n.Locale, subpath string, act *database.Action) string {
 	esc := html.EscapeString
-	repoLink := esc(act.GetRepoLink())
+	repoLink := esc(act.GetRepoLink(subpath))
 	repoPath := esc(act.ShortRepoPath())
 	ref := esc(act.GetBranch())
 	refLink := esc(template.EscapePound(act.GetBranch()))
@@ -225,12 +225,12 @@ func activityHeadline(l i18n.Locale, act *database.Action) string {
 	return markup.Sanitize(headline)
 }
 
-// toActivityFeed converts a page of actions as listed from the database. It
-// leaves out actions of users that no longer exist.
-func toActivityFeed(ctx context.Context, logger *logx.Logger, l i18n.Locale, actions []*database.Action) (*activityFeed, error) {
+// toActivityFeed converts a page of actions as listed from the database, with
+// pages of pageSize. It leaves out actions of users that no longer exist.
+func toActivityFeed(ctx context.Context, logger *logx.Logger, l i18n.Locale, links database.LinkOptions, pageSize int, actions []*database.Action) (*activityFeed, error) {
 	feed := &activityFeed{Items: make([]activityItem, 0, len(actions))}
 	// A shorter page than requested is the last one.
-	if len(actions) > 0 && len(actions) >= conf.UI.User.NewsFeedPagingNum {
+	if len(actions) > 0 && len(actions) >= pageSize {
 		feed.NextAfterID = actions[len(actions)-1].ID
 	}
 
@@ -246,7 +246,7 @@ func toActivityFeed(ctx context.Context, logger *logx.Logger, l i18n.Locale, act
 				}
 				return nil, errors.Wrap(err, "get actor")
 			}
-			avatarURL = actor.AvatarURLPath()
+			avatarURL = actor.AvatarURLPath(links)
 			actorAvatars[act.ActUserName] = avatarURL
 		}
 		if avatarURL == "" {
@@ -258,8 +258,8 @@ func toActivityFeed(ctx context.Context, logger *logx.Logger, l i18n.Locale, act
 			OpType:         int(act.OpType),
 			ActorName:      act.ActUserName,
 			ActorAvatarURL: avatarURL,
-			HeadlineHTML:   activityHeadline(l, act),
-			RepoURL:        act.GetRepoLink(),
+			HeadlineHTML:   activityHeadline(l, links.Subpath, act),
+			RepoURL:        act.GetRepoLink(links.Subpath),
 			CreatedAt:      time.Unix(act.CreatedUnix, 0).UTC(),
 		}
 		switch act.OpType {
@@ -269,12 +269,12 @@ func toActivityFeed(ctx context.Context, logger *logx.Logger, l i18n.Locale, act
 				item.Commits = append(item.Commits, activityCommit{
 					SHA:       commit.Sha1,
 					Message:   commit.Message,
-					AvatarURL: push.AvatarLink(commit.AuthorEmail),
+					AvatarURL: push.AvatarLink(links, commit.AuthorEmail),
 				})
 			}
 			item.CommitCount = push.Len
 			if push.Len > 1 && push.CompareURL != "" {
-				item.CompareURL = conf.Server.Subpath + "/" + push.CompareURL
+				item.CompareURL = links.Subpath + "/" + push.CompareURL
 			}
 		case database.ActionCreateIssue, database.ActionCreatePullRequest:
 			item.Title = issueInfo(act)
@@ -301,7 +301,7 @@ func issueInfo(act *database.Action) string {
 	return infos[1]
 }
 
-func getUserProfileActivity(logger *logx.Logger, c flamego.Context, l i18n.Locale, viewer *database.User, puser *profileUser) (statusCode int, resp *activityFeed, err error) {
+func getUserProfileActivity(logger *logx.Logger, c flamego.Context, links database.LinkOptions, ui conf.UIOpts, l i18n.Locale, viewer *database.User, puser *profileUser) (statusCode int, resp *activityFeed, err error) {
 	// Organizations have no activity tab.
 	if puser.IsOrganization() {
 		return http.StatusNotFound, nil, errors.New("user does not exist")
@@ -309,12 +309,12 @@ func getUserProfileActivity(logger *logx.Logger, c flamego.Context, l i18n.Local
 
 	ctx := c.Request().Context()
 	afterID, _ := strconv.ParseInt(c.Query("afterID"), 10, 64)
-	actions, err := database.Handle.Actions().ListByUser(ctx, puser.ID, cmp.Or(viewer, &database.User{}).ID, afterID, true)
+	actions, err := database.Handle.Actions().ListByUser(ctx, puser.ID, cmp.Or(viewer, &database.User{}).ID, afterID, true, ui.User.NewsFeedPagingNum)
 	if err != nil {
 		logger.Error("Failed to list actions of user", "userID", puser.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list actions")
 	}
-	feed, err := toActivityFeed(ctx, logger, l, actions)
+	feed, err := toActivityFeed(ctx, logger, l, links, ui.User.NewsFeedPagingNum, actions)
 	if err != nil {
 		logger.Error("Failed to convert actions of user", "userID", puser.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "convert actions")
@@ -326,7 +326,7 @@ type userFollowResponse struct {
 	FollowerCount int `json:"followerCount"`
 }
 
-func userFollowAction(ctx context.Context, logger *logx.Logger, viewer *database.User, puser *profileUser, following bool) (statusCode int, resp *userFollowResponse, err error) {
+func userFollowAction(ctx context.Context, logger *logx.Logger, requireEmailConfirmation bool, viewer *database.User, puser *profileUser, following bool) (statusCode int, resp *userFollowResponse, err error) {
 	// Organizations cannot be followed. Existing follows of an organization can
 	// still be removed.
 	if following && puser.IsOrganization() {
@@ -335,7 +335,7 @@ func userFollowAction(ctx context.Context, logger *logx.Logger, viewer *database
 	if viewer == nil {
 		return http.StatusUnauthorized, nil, errors.New("authentication required")
 	}
-	if !viewer.IsActive && conf.Auth.RequireEmailConfirmation {
+	if !viewer.IsActive && requireEmailConfirmation {
 		return http.StatusForbidden, nil, errors.New("account not activated")
 	}
 
@@ -357,12 +357,12 @@ func userFollowAction(ctx context.Context, logger *logx.Logger, viewer *database
 	return http.StatusOK, &userFollowResponse{FollowerCount: updated.NumFollowers}, nil
 }
 
-func postUserFollow(logger *logx.Logger, c flamego.Context, viewer *database.User, puser *profileUser) (statusCode int, resp *userFollowResponse, err error) {
-	return userFollowAction(c.Request().Context(), logger, viewer, puser, true)
+func postUserFollow(logger *logx.Logger, c flamego.Context, auth conf.AuthOpts, viewer *database.User, puser *profileUser) (statusCode int, resp *userFollowResponse, err error) {
+	return userFollowAction(c.Request().Context(), logger, auth.RequireEmailConfirmation, viewer, puser, true)
 }
 
-func deleteUserFollow(logger *logx.Logger, c flamego.Context, viewer *database.User, puser *profileUser) (statusCode int, resp *userFollowResponse, err error) {
-	return userFollowAction(c.Request().Context(), logger, viewer, puser, false)
+func deleteUserFollow(logger *logx.Logger, c flamego.Context, auth conf.AuthOpts, viewer *database.User, puser *profileUser) (statusCode int, resp *userFollowResponse, err error) {
+	return userFollowAction(c.Request().Context(), logger, auth.RequireEmailConfirmation, viewer, puser, false)
 }
 
 type orgProfileMember struct {
@@ -396,15 +396,15 @@ type orgProfile struct {
 // organization.
 const orgMembersShown = 12
 
-func getOrgProfile(ctx context.Context, logger *logx.Logger, viewer *database.User, org *profileUser) (statusCode int, resp *orgProfile, err error) {
+func getOrgProfile(ctx context.Context, logger *logx.Logger, links database.LinkOptions, viewer *database.User, org *profileUser) (statusCode int, resp *orgProfile, err error) {
 	profile := &orgProfile{
 		Kind:        "organization",
-		exploreUser: toExploreUser(org.User),
+		exploreUser: toExploreUser(links, org.User),
 		ID:          org.ID,
 		Members:     []orgProfileMember{},
 	}
 	profile.Description = org.Description
-	profile.AvatarURL = org.AvatarURLPath()
+	profile.AvatarURL = org.AvatarURLPath(links)
 	profile.Website = org.Website
 	if viewer != nil {
 		// Admins have the access of owners.
@@ -422,7 +422,7 @@ func getOrgProfile(ctx context.Context, logger *logx.Logger, viewer *database.Us
 		if !profile.ViewerIsMember && !database.Handle.Organizations().IsPublicMember(ctx, org.ID, m.ID) {
 			continue
 		}
-		member := toExploreUser(m)
+		member := toExploreUser(links, m)
 		profile.Members = append(profile.Members, orgProfileMember{
 			Name:      member.Name,
 			FullName:  member.FullName,

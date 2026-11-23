@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"gogs.io/gogs/internal/api/v1types"
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 )
 
@@ -15,7 +16,7 @@ type createOrgRequest struct {
 	Location    string `json:"location"`
 }
 
-func createOrgForUser(c *apiContext, apiForm createOrgRequest, user *database.User) {
+func createOrgForUser(c *apiContext, links database.LinkOptions, repositoryRoot string, apiForm createOrgRequest, user *database.User) {
 	if c.Written() {
 		return
 	}
@@ -29,7 +30,7 @@ func createOrgForUser(c *apiContext, apiForm createOrgRequest, user *database.Us
 		IsActive:    true,
 		Type:        database.UserTypeOrganization,
 	}
-	if err := database.Handle.Organizations().Create(c.Request().Context(), org, user); err != nil {
+	if err := database.Handle.Organizations().Create(c.Request().Context(), repositoryRoot, org, user); err != nil {
 		if database.IsErrUserAlreadyExist(err) ||
 			database.IsErrNameNotAllowed(err) ||
 			database.IsErrOrgOwnerIsOrganization(err) {
@@ -40,10 +41,10 @@ func createOrgForUser(c *apiContext, apiForm createOrgRequest, user *database.Us
 		return
 	}
 
-	c.JSON(201, toOrganization(org))
+	c.JSON(201, toOrganization(links, org))
 }
 
-func listOrgsOfUser(c *apiContext, u *database.User, all bool) {
+func listOrgsOfUser(c *apiContext, links database.LinkOptions, u *database.User, all bool) {
 	orgs, err := database.Handle.Organizations().List(
 		c.Request().Context(),
 		database.ListOrgsOptions{
@@ -58,29 +59,29 @@ func listOrgsOfUser(c *apiContext, u *database.User, all bool) {
 
 	apiOrgs := make([]*v1types.Organization, len(orgs))
 	for i := range orgs {
-		apiOrgs[i] = toOrganization(orgs[i])
+		apiOrgs[i] = toOrganization(links, orgs[i])
 	}
 	c.JSONSuccess(&apiOrgs)
 }
 
-func listMyOrgs(c *apiContext) {
-	listOrgsOfUser(c, c.User, true)
+func listMyOrgs(c *apiContext, links database.LinkOptions) {
+	listOrgsOfUser(c, links, c.User, true)
 }
 
-func createMyOrg(c *apiContext, apiForm createOrgRequest) {
-	createOrgForUser(c, apiForm, c.User)
+func createMyOrg(c *apiContext, links database.LinkOptions, repository conf.RepositoryOpts, apiForm createOrgRequest) {
+	createOrgForUser(c, links, repository.Root, apiForm, c.User)
 }
 
-func listUserOrgs(c *apiContext) {
+func listUserOrgs(c *apiContext, links database.LinkOptions) {
 	u := getUserByParams(c)
 	if c.Written() {
 		return
 	}
-	listOrgsOfUser(c, u, false)
+	listOrgsOfUser(c, links, u, false)
 }
 
-func getOrg(c *apiContext) {
-	c.JSONSuccess(toOrganization(c.Org.Organization))
+func getOrg(c *apiContext, links database.LinkOptions) {
+	c.JSONSuccess(toOrganization(links, c.Org.Organization))
 }
 
 type editOrgRequest struct {
@@ -90,7 +91,7 @@ type editOrgRequest struct {
 	Location    string `json:"location"`
 }
 
-func editOrg(c *apiContext, form editOrgRequest) {
+func editOrg(c *apiContext, links database.LinkOptions, form editOrgRequest) {
 	org := c.Org.Organization
 	if !database.Handle.Organizations().IsOwner(c.Request().Context(), org.ID, c.User.ID) {
 		c.Status(http.StatusForbidden)
@@ -117,5 +118,5 @@ func editOrg(c *apiContext, form editOrgRequest) {
 		c.Error(err, "get organization")
 		return
 	}
-	c.JSONSuccess(toOrganization(org))
+	c.JSONSuccess(toOrganization(links, org))
 }

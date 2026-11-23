@@ -17,7 +17,7 @@ const maxNoticeBannerSize = 1024
 // readNoticeBanner returns the HTML of the notice banner that every page shows,
 // rendered from the Markdown in "notice/banner.md" under the custom directory.
 // It returns an empty string when there is no banner to show.
-func readNoticeBanner(logger *logx.Logger, customDir string) string {
+func readNoticeBanner(logger *logx.Logger, markupOpts markup.Options, customDir string) string {
 	fpath := filepath.Join(customDir, "notice", "banner.md")
 	fi, err := os.Stat(fpath)
 	if err != nil {
@@ -40,5 +40,5 @@ func readNoticeBanner(logger *logx.Logger, customDir string) string {
 		logger.Warn("Notice banner file is not a text file", "path", fpath)
 		return ""
 	}
-	return markup.Sanitize(string(markup.RawMarkdown(data, "")))
+	return markup.Sanitize(string(markup.RawMarkdown(markupOpts, data, "")))
 }

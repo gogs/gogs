@@ -11,12 +11,13 @@ import (
 	"github.com/stretchr/testify/require"
 	"unknwon.dev/x/logx"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 )
 
 func TestBind(t *testing.T) {
 	f := flamego.New()
-	f.Map(logx.NewNoopLogger())
+	f.Map(logx.NewNoopLogger(), conf.AppOpts{}, conf.ServerOpts{})
 	f.Use(func(c flamego.Context) {
 		c.Map((*database.User)(nil), RequestInfo{Path: "/"})
 	})

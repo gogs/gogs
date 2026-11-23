@@ -5,20 +5,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 )
 
 func TestParseRemoteAddr(t *testing.T) {
-	before := conf.Repository.EnableLocalPathMigration
-	conf.Repository.EnableLocalPathMigration = true
-	beforeAllowlist := conf.Security.LocalNetworkAllowlist
-	conf.Security.LocalNetworkAllowlist = []string{"gitlab.example.com"}
-	t.Cleanup(func() {
-		conf.Repository.EnableLocalPathMigration = before
-		conf.Security.LocalNetworkAllowlist = beforeAllowlist
-	})
-
 	admin := &database.User{IsAdmin: true}
 	regular := &database.User{}
 	localDir := t.TempDir()
@@ -45,7 +35,12 @@ func TestParseRemoteAddr(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := ParseRemoteAddr(ParseRemoteAddrOptions{CloneAddr: test.addr, User: test.user})
+			got, err := ParseRemoteAddr(ParseRemoteAddrOptions{
+				CloneAddr:                test.addr,
+				User:                     test.user,
+				LocalNetworkAllowlist:    []string{"gitlab.example.com"},
+				EnableLocalPathMigration: true,
+			})
 			assert.Equal(t, test.wantErr, err)
 			assert.Equal(t, test.wantAddr, got)
 		})

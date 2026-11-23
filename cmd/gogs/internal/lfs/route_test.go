@@ -170,12 +170,12 @@ func TestAuthenticate(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			conf.SetMockAuth(t, conf.AuthOpts{RequireSigninView: test.requireSigninView})
 			if test.mockStore == nil {
 				test.mockStore = NewMockStore
 			}
 
 			m := flamego.New()
+			m.Map(conf.AuthOpts{RequireSigninView: test.requireSigninView})
 			m.Get("/", authenticate(logx.NewNoopLogger(), test.mockStore()), func(w http.ResponseWriter, user *database.User) {
 				_, _ = fmt.Fprintf(w, "ID: %d, Name: %s", user.ID, user.Name)
 			})
@@ -252,13 +252,6 @@ func TestAuthenticate_reverseProxy(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			conf.SetMockAuth(t, conf.AuthOpts{
-				EnableReverseProxyAuthentication: true,
-				ReverseProxyAuthenticationHeader: "X-WEBAUTH-USER",
-				TrustedProxyCIDRs:                []*net.IPNet{trusted},
-				RequireSigninView:                test.requireSigninView,
-			})
-
 			mockStore := NewMockStore()
 			mockStore.GetUserByUsernameFunc.SetDefaultHook(func(_ context.Context, username string) (*database.User, error) {
 				if username == "unknwon" {
@@ -276,6 +269,12 @@ func TestAuthenticate_reverseProxy(t *testing.T) {
 			})
 
 			m := flamego.New()
+			m.Map(conf.AuthOpts{
+				EnableReverseProxyAuthentication: true,
+				ReverseProxyAuthenticationHeader: "X-WEBAUTH-USER",
+				TrustedProxyCIDRs:                []*net.IPNet{trusted},
+				RequireSigninView:                test.requireSigninView,
+			})
 			m.Get("/", authenticate(logx.NewNoopLogger(), mockStore), func(w http.ResponseWriter, user *database.User) {
 				_, _ = fmt.Fprintf(w, "ID: %d, Name: %s", user.ID, user.Name)
 			})
@@ -417,7 +416,19 @@ func TestAuthorize(t *testing.T) {
 				mockStore = test.mockStore()
 			}
 
+			var authOpts conf.AuthOpts
+			if test.proxyUser != "" {
+				_, trusted, err := net.ParseCIDR("10.0.0.0/8")
+				require.NoError(t, err)
+				authOpts = conf.AuthOpts{
+					EnableReverseProxyAuthentication: true,
+					ReverseProxyAuthenticationHeader: "X-WEBAUTH-USER",
+					TrustedProxyCIDRs:                []*net.IPNet{trusted},
+				}
+			}
+
 			m := flamego.New()
+			m.Map(authOpts)
 			m.Use(func(c flamego.Context) {
 				if test.anonymous {
 					c.Map(&database.User{})
@@ -439,13 +450,6 @@ func TestAuthorize(t *testing.T) {
 			}
 
 			if test.proxyUser != "" {
-				_, trusted, err := net.ParseCIDR("10.0.0.0/8")
-				require.NoError(t, err)
-				conf.SetMockAuth(t, conf.AuthOpts{
-					EnableReverseProxyAuthentication: true,
-					ReverseProxyAuthenticationHeader: "X-WEBAUTH-USER",
-					TrustedProxyCIDRs:                []*net.IPNet{trusted},
-				})
 				r.RemoteAddr = "10.0.0.1:1234"
 				r.Header.Set("X-WEBAUTH-USER", test.proxyUser)
 			}

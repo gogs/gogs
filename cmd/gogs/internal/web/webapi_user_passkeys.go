@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -34,11 +35,11 @@ const passkeySignInTimeout = time.Minute
 // newWebAuthn returns the WebAuthn relying party of the site, which is
 // identified by the host of the external URL. Passkeys therefore only work on
 // the external URL, and stop working when its host changes.
-func newWebAuthn() (*webauthn.WebAuthn, error) {
+func newWebAuthn(externalURL *url.URL, brandName string) (*webauthn.WebAuthn, error) {
 	return webauthn.New(&webauthn.Config{
-		RPID:          conf.Server.URL.Hostname(),
-		RPDisplayName: conf.App.BrandName,
-		RPOrigins:     []string{conf.Server.URL.Scheme + "://" + conf.Server.URL.Host},
+		RPID:          externalURL.Hostname(),
+		RPDisplayName: brandName,
+		RPOrigins:     []string{externalURL.Scheme + "://" + externalURL.Host},
 		Timeouts: webauthn.TimeoutsConfig{
 			Login: webauthn.TimeoutConfig{
 				Enforce: true,
@@ -160,8 +161,8 @@ type userPasskeyRegistrationRequest struct {
 // and returns the options to create it with in the browser. It takes the name
 // of the passkey only to reject an invalid one before the browser asks for
 // the passkey.
-func postUserPasskeyRegistration(c flamego.Context, logger *logx.Logger, sess session.Session, viewer *database.User, _ userPasskeyRegistrationRequest) (statusCode int, resp any, err error) {
-	wa, err := newWebAuthn()
+func postUserPasskeyRegistration(c flamego.Context, app conf.AppOpts, server conf.ServerOpts, logger *logx.Logger, sess session.Session, viewer *database.User, _ userPasskeyRegistrationRequest) (statusCode int, resp any, err error) {
+	wa, err := newWebAuthn(server.URL, app.BrandName)
 	if err != nil {
 		logger.Error("Failed to create WebAuthn relying party", "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "create WebAuthn relying party")
@@ -200,7 +201,7 @@ type userPasskeyRequest struct {
 
 // postUserPasskey adds the passkey the browser created for the registration
 // in progress to the authenticated user.
-func postUserPasskey(c flamego.Context, logger *logx.Logger, sess session.Session, l i18n.Locale, viewer *database.User, req userPasskeyRequest) (statusCode int, resp any, err error) {
+func postUserPasskey(c flamego.Context, app conf.AppOpts, server conf.ServerOpts, logger *logx.Logger, sess session.Session, l i18n.Locale, viewer *database.User, req userPasskeyRequest) (statusCode int, resp any, err error) {
 	data, ok := takePasskeySession(sess, passkeyRegistrationSessionKey)
 	if !ok {
 		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("settings::passkey_add_failed")}, nil
@@ -210,7 +211,7 @@ func postUserPasskey(c flamego.Context, logger *logx.Logger, sess session.Sessio
 		return http.StatusBadRequest, &bindingErrorResponse{Error: l.Tr("settings::passkey_add_failed")}, nil
 	}
 
-	wa, err := newWebAuthn()
+	wa, err := newWebAuthn(server.URL, app.BrandName)
 	if err != nil {
 		logger.Error("Failed to create WebAuthn relying party", "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "create WebAuthn relying party")
@@ -244,8 +245,8 @@ func deleteUserPasskey(c flamego.Context, logger *logx.Logger, viewer *database.
 // postUserSignInPasskeyChallenge starts signing in with a passkey, and returns
 // the options to ask the browser for one with. Any passkey of the site can
 // answer, so the visitor does not enter a username.
-func postUserSignInPasskeyChallenge(logger *logx.Logger, sess session.Session) (statusCode int, resp any, err error) {
-	wa, err := newWebAuthn()
+func postUserSignInPasskeyChallenge(logger *logx.Logger, app conf.AppOpts, server conf.ServerOpts, sess session.Session) (statusCode int, resp any, err error) {
+	wa, err := newWebAuthn(server.URL, app.BrandName)
 	if err != nil {
 		logger.Error("Failed to create WebAuthn relying party", "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "create WebAuthn relying party")
@@ -265,7 +266,7 @@ func postUserSignInPasskeyChallenge(logger *logx.Logger, sess session.Session) (
 // postUserSignInPasskey signs in the owner of the passkey that answered the
 // challenge in progress. The passkey verified the user, so neither a password
 // nor a second factor is asked for.
-func postUserSignInPasskey(c flamego.Context, logger *logx.Logger, store session.Store, sess session.Session, l i18n.Locale) (statusCode int, resp any, err error) {
+func postUserSignInPasskey(c flamego.Context, cookies signInCookies, app conf.AppOpts, server conf.ServerOpts, logger *logx.Logger, store session.Store, sess session.Session, l i18n.Locale) (statusCode int, resp any, err error) {
 	failed := &bindingErrorResponse{Error: l.Tr("auth::passkey_sign_in_failed")}
 	data, ok := takePasskeySession(sess, passkeySignInSessionKey)
 	if !ok {
@@ -276,7 +277,7 @@ func postUserSignInPasskey(c flamego.Context, logger *logx.Logger, store session
 		return http.StatusUnauthorized, failed, nil
 	}
 
-	wa, err := newWebAuthn()
+	wa, err := newWebAuthn(server.URL, app.BrandName)
 	if err != nil {
 		logger.Error("Failed to create WebAuthn relying party", "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "create WebAuthn relying party")
@@ -333,7 +334,7 @@ func postUserSignInPasskey(c flamego.Context, logger *logx.Logger, store session
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "mark passkey used")
 	}
 
-	if err = completeSignIn(c.ResponseWriter(), c.Request().Request, store, sess, owner.User); err != nil {
+	if err = completeSignIn(c.ResponseWriter(), c.Request().Request, cookies, store, sess, owner.User); err != nil {
 		logger.Error("Failed to complete sign-in", "userID", owner.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "complete sign-in")
 	}

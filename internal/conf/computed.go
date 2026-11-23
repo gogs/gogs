@@ -17,8 +17,8 @@ func IsWindowsRuntime() bool {
 }
 
 // IsProdMode returns true if the application is running in production mode.
-func IsProdMode() bool {
-	return strings.EqualFold(App.RunMode, "prod")
+func (o AppOpts) IsProdMode() bool {
+	return strings.EqualFold(o.RunMode, "prod")
 }
 
 var (

@@ -12,12 +12,13 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/public"
 )
 
 // mountWebAppRoutes mounts the assets and the catch-all route of the web app,
 // and returns the handler that renders its pages.
-func mountWebAppRoutes(logger *logx.Logger, f *flamego.Flame) (http.Handler, error) {
+func mountWebAppRoutes(logger *logx.Logger, f *flamego.Flame, markupOpts markup.Options, indexOpts indexOptions) (http.Handler, error) {
 	webFS, err := fs.Sub(public.WebAssets, "dist")
 	if err != nil {
 		return nil, errors.Wrap(err, "load embedded web assets")
@@ -43,8 +44,8 @@ func mountWebAppRoutes(logger *logx.Logger, f *flamego.Flame) (http.Handler, err
 
 	webApp := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		wc := context.WebContextFrom(r)
-		wc.Notice = readNoticeBanner(logger, conf.CustomDir())
-		body, err := renderIndex(index, wc, inject)
+		wc.Notice = readNoticeBanner(logger, markupOpts, conf.CustomDir())
+		body, err := renderIndex(index, wc, inject, indexOpts)
 		if err != nil {
 			logger.Error("Failed to render index", "error", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)

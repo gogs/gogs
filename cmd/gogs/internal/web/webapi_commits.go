@@ -100,6 +100,7 @@ func resolveRepoRef(ctx context.Context, repo *database.Repository, gitRepo *git
 type commitAuthors struct {
 	ctx    context.Context
 	logger *logx.Logger
+	links  database.LinkOptions
 	users  map[string]*database.User
 }
 
@@ -113,11 +114,11 @@ func (a *commitAuthors) signature(s *git.Signature) repoCommitSignature {
 		Name:      s.Name,
 		Email:     s.Email,
 		When:      s.When.UTC(),
-		AvatarURL: userx.GeneratedAvatarURLPath(s.Email),
+		AvatarURL: userx.GeneratedAvatarURLPath(a.links.SecretKey, a.links.Subpath, s.Email),
 	}
 	if u != nil {
-		sig.AvatarURL = u.AvatarURLPath()
-		sig.ProfileURL = conf.Server.Subpath + "/" + u.Name
+		sig.AvatarURL = u.AvatarURLPath(a.links)
+		sig.ProfileURL = u.HomeURLPath(a.links.Subpath)
 	}
 	return sig
 }
@@ -156,14 +157,16 @@ func coAuthorsOf(message string, author *git.Signature) []*git.Signature {
 	return coAuthors
 }
 
-func toCommitListItems(ctx context.Context, logger *logx.Logger, repo *database.Repository, commits []*git.Commit) []repoCommitListItem {
-	authors := &commitAuthors{ctx: ctx, logger: logger, users: map[string]*database.User{}}
-	metas := repo.ComposeMetas()
+// toCommitListItems returns the list items of the commits of the repository,
+// which is stored under repositoryRoot.
+func toCommitListItems(ctx context.Context, logger *logx.Logger, links database.LinkOptions, markupOpts markup.Options, repositoryRoot string, repo *database.Repository, commits []*git.Commit) []repoCommitListItem {
+	authors := &commitAuthors{ctx: ctx, logger: logger, links: links, users: map[string]*database.User{}}
+	metas := repo.ComposeMetas(markupOpts.Subpath, repositoryRoot)
 	items := make([]repoCommitListItem, 0, len(commits))
 	for _, commit := range commits {
 		item := repoCommitListItem{
 			SHA:         commit.ID.String(),
-			SubjectHTML: markup.RenderCommitMessage(commit.Summary(), repo.Link(), metas),
+			SubjectHTML: markup.RenderCommitMessage(markupOpts, commit.Summary(), repo.Link(markupOpts.Subpath), metas),
 			IsMerge:     commit.ParentsCount() > 1,
 			Author:      authors.signature(commit.Author),
 		}
@@ -197,10 +200,10 @@ type repoCommitsResponse struct {
 // getRepoCommits lists the commits of the ref in the route, newest first:
 // those that changed the path after the ref, or those whose messages match
 // the "q" query when the path is "search".
-func getRepoCommits(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoCommitsResponse, err error) {
+func getRepoCommits(c flamego.Context, ui conf.UIOpts, links database.LinkOptions, markupOpts markup.Options, repoOpts conf.RepositoryOpts, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoCommitsResponse, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
-	gitRepo, err := openRepoGit(repoCtx)
+	gitRepo, err := openRepoGit(repoOpts.Root, repoCtx)
 	if err != nil {
 		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
@@ -217,7 +220,7 @@ func getRepoCommits(c flamego.Context, logger *logx.Logger, repoCtx *repoContext
 		Ref:      ref.Name,
 		RefType:  ref.Type,
 		Page:     1,
-		PageSize: conf.UI.User.CommitsPagingNum,
+		PageSize: ui.User.CommitsPagingNum,
 	}
 	var commits []*git.Commit
 	if ref.Path == "search" {
@@ -247,7 +250,7 @@ func getRepoCommits(c flamego.Context, logger *logx.Logger, repoCtx *repoContext
 		resp.HasNext = len(commits) == resp.PageSize
 	}
 
-	resp.Commits = toCommitListItems(ctx, logger, repo, commits)
+	resp.Commits = toCommitListItems(ctx, logger, links, markupOpts, repoOpts.Root, repo, commits)
 
 	if resp.Branches, err = gitRepo.Branches(ctx); err != nil {
 		logger.Error("Failed to list branches", "repoID", repo.ID, "error", err)
@@ -342,10 +345,10 @@ func resolveCompareRange(ctx context.Context, gitRepo *git.Repository, defaultBr
 
 // getRepoCompare describes the changes from one commit to another, e.g., of a
 // push. The diff itself is served as text by getRepoCompareRaw.
-func getRepoCompare(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoCompareResponse, err error) {
+func getRepoCompare(c flamego.Context, markdown conf.MarkdownOpts, links database.LinkOptions, markupOpts markup.Options, repoOpts conf.RepositoryOpts, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoCompareResponse, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
-	gitRepo, err := openRepoGit(repoCtx)
+	gitRepo, err := openRepoGit(repoOpts.Root, repoCtx)
 	if err != nil {
 		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
@@ -369,8 +372,8 @@ func getRepoCompare(c flamego.Context, logger *logx.Logger, repoCtx *repoContext
 		After:              after,
 		Base:               r.base,
 		BaseIsEmptyTree:    r.baseIsEmptyTree,
-		Commits:            toCommitListItems(ctx, logger, repo, commits),
+		Commits:            toCommitListItems(ctx, logger, links, markupOpts, repoOpts.Root, repo, commits),
 		TotalCommits:       total,
-		MarkdownExtensions: conf.Markdown.FileExtensions,
+		MarkdownExtensions: markdown.FileExtensions,
 	}, nil
 }

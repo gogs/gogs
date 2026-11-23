@@ -4,12 +4,13 @@ import (
 	"encoding/base64"
 	"fmt"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/repox"
 )
 
-func repoGitBlob(c *apiContext) {
-	repoPath := repox.RepositoryPath(c.Param("username"), c.Param("reponame"))
+func repoGitBlob(c *apiContext, repository conf.RepositoryOpts) {
+	repoPath := repox.RepositoryPath(repository.Root, c.Param("username"), c.Param("reponame"))
 	sha := c.Param("sha")
 	blob, err := git.RepoCatFileBlob(c.Request().Context(), repoPath, sha)
 	if err != nil {

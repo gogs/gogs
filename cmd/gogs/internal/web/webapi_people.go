@@ -12,17 +12,17 @@ import (
 
 // toPeople converts a page of users listed as followers, stargazers or
 // watchers, with their website, location and join date.
-func toPeople(users []*database.User) []exploreUser {
+func toPeople(links database.LinkOptions, users []*database.User) []exploreUser {
 	items := make([]exploreUser, 0, len(users))
 	for _, u := range users {
-		item := toExploreUser(u)
+		item := toExploreUser(links, u)
 		item.Website = u.Website
 		items = append(items, item)
 	}
 	return items
 }
 
-func getUserFollowers(logger *logx.Logger, c flamego.Context, puser *profileUser) (statusCode int, resp *listPage[exploreUser], err error) {
+func getUserFollowers(logger *logx.Logger, c flamego.Context, links database.LinkOptions, puser *profileUser) (statusCode int, resp *listPage[exploreUser], err error) {
 	// Organizations have no followers.
 	if puser.IsOrganization() {
 		return http.StatusNotFound, nil, errors.New("user does not exist")
@@ -34,10 +34,10 @@ func getUserFollowers(logger *logx.Logger, c flamego.Context, puser *profileUser
 		logger.Error("Failed to list followers of user", "userID", puser.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list followers")
 	}
-	return http.StatusOK, newListPage(toPeople(users), page, int64(puser.NumFollowers), database.ItemsPerPage), nil
+	return http.StatusOK, newListPage(toPeople(links, users), page, int64(puser.NumFollowers), database.ItemsPerPage), nil
 }
 
-func getUserFollowing(logger *logx.Logger, c flamego.Context, puser *profileUser) (statusCode int, resp *listPage[exploreUser], err error) {
+func getUserFollowing(logger *logx.Logger, c flamego.Context, links database.LinkOptions, puser *profileUser) (statusCode int, resp *listPage[exploreUser], err error) {
 	// Organizations have no followers.
 	if puser.IsOrganization() {
 		return http.StatusNotFound, nil, errors.New("user does not exist")
@@ -49,10 +49,10 @@ func getUserFollowing(logger *logx.Logger, c flamego.Context, puser *profileUser
 		logger.Error("Failed to list followings of user", "userID", puser.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list followings")
 	}
-	return http.StatusOK, newListPage(toPeople(users), page, int64(puser.NumFollowing), database.ItemsPerPage), nil
+	return http.StatusOK, newListPage(toPeople(links, users), page, int64(puser.NumFollowing), database.ItemsPerPage), nil
 }
 
-func getRepoStargazers(logger *logx.Logger, c flamego.Context, repoCtx *repoContext) (statusCode int, resp *listPage[exploreUser], err error) {
+func getRepoStargazers(logger *logx.Logger, c flamego.Context, links database.LinkOptions, repoCtx *repoContext) (statusCode int, resp *listPage[exploreUser], err error) {
 	if !repoCtx.Viewer.CanRead() {
 		return http.StatusNotFound, nil, errors.New("repository does not exist")
 	}
@@ -63,10 +63,10 @@ func getRepoStargazers(logger *logx.Logger, c flamego.Context, repoCtx *repoCont
 		logger.Error("Failed to list stargazers of repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list stargazers")
 	}
-	return http.StatusOK, newListPage(toPeople(users), page, int64(repo.NumStars), database.ItemsPerPage), nil
+	return http.StatusOK, newListPage(toPeople(links, users), page, int64(repo.NumStars), database.ItemsPerPage), nil
 }
 
-func getRepoWatchers(logger *logx.Logger, c flamego.Context, repoCtx *repoContext) (statusCode int, resp *listPage[exploreUser], err error) {
+func getRepoWatchers(logger *logx.Logger, c flamego.Context, links database.LinkOptions, repoCtx *repoContext) (statusCode int, resp *listPage[exploreUser], err error) {
 	if !repoCtx.Viewer.CanRead() {
 		return http.StatusNotFound, nil, errors.New("repository does not exist")
 	}
@@ -77,7 +77,7 @@ func getRepoWatchers(logger *logx.Logger, c flamego.Context, repoCtx *repoContex
 		logger.Error("Failed to list watchers of repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list watchers")
 	}
-	return http.StatusOK, newListPage(toPeople(users), page, int64(repo.NumWatches), database.ItemsPerPage), nil
+	return http.StatusOK, newListPage(toPeople(links, users), page, int64(repo.NumWatches), database.ItemsPerPage), nil
 }
 
 // deleteRepoWatcher lets site admins make another user stop watching the

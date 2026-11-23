@@ -12,6 +12,7 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/i18n"
+	"gogs.io/gogs/internal/markup"
 	"unknwon.dev/x/logx"
 )
 
@@ -45,11 +46,11 @@ func (p *pullCompare) head(repo *database.Repository) string {
 // comparePull compares the head branch, written as "[<owner>:]<branch>", with
 // the base branch of the repository. The head branch is of the repository or
 // of the fork its owner has, and only those who can write to it, or site
-// admins, can compare it.
-func comparePull(ctx context.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, base, head string) (_ *pullCompare, statusCode int, err error) {
+// admins, can compare it. The repositories are stored under repositoryRoot.
+func comparePull(ctx context.Context, logger *logx.Logger, repositoryRoot string, viewer *database.User, repoCtx *repoContext, base, head string) (_ *pullCompare, statusCode int, err error) {
 	repo := repoCtx.Repo
 	errNotExist := errors.New("branch does not exist")
-	baseGitRepo, err := openRepoGit(repoCtx)
+	baseGitRepo, err := openRepoGit(repositoryRoot, repoCtx)
 	if err != nil {
 		return nil, http.StatusInternalServerError, errors.Wrap(err, "open repository")
 	}
@@ -73,7 +74,7 @@ func comparePull(ctx context.Context, logger *logx.Logger, viewer *database.User
 				}
 				return nil, http.StatusInternalServerError, errors.Wrap(err, "get fork")
 			}
-			if p.HeadGitRepo, err = git.Open(p.HeadRepo.RepoPath()); err != nil {
+			if p.HeadGitRepo, err = git.Open(p.HeadRepo.RepoPath(repositoryRoot)); err != nil {
 				return nil, http.StatusInternalServerError, errors.Wrap(err, "open head repository")
 			}
 		}
@@ -86,7 +87,7 @@ func comparePull(ctx context.Context, logger *logx.Logger, viewer *database.User
 		return nil, http.StatusNotFound, errNotExist
 	}
 
-	p.Meta, err = p.HeadGitRepo.PullRequestMeta(ctx, database.RepoPath(repoCtx.Owner.Name, repo.Name), p.HeadBranch, base)
+	p.Meta, err = p.HeadGitRepo.PullRequestMeta(ctx, database.RepoPath(repositoryRoot, repoCtx.Owner.Name, repo.Name), p.HeadBranch, base)
 	if err != nil {
 		if git.IsErrNoMergeBase(err) {
 			return p, 0, nil
@@ -178,7 +179,7 @@ type repoNewPullBase struct {
 
 // newPullBaseRepos returns the repositories the head branch of p can be
 // merged into and the viewer can read, see repoNewPull.BaseRepos.
-func newPullBaseRepos(ctx context.Context, logger *logx.Logger, viewer *database.User, p *pullCompare) ([]repoNewPullBase, error) {
+func newPullBaseRepos(ctx context.Context, logger *logx.Logger, links database.LinkOptions, viewer *database.User, p *pullCompare) ([]repoNewPullBase, error) {
 	head := p.HeadRepo
 	if err := database.Handle.Repositories().LoadAttributes(ctx, head); err != nil {
 		return nil, errors.Wrap(err, "load base repository")
@@ -201,7 +202,7 @@ func newPullBaseRepos(ctx context.Context, logger *logx.Logger, viewer *database
 		}
 		bases = append(bases, repoNewPullBase{
 			Owner:               repo.Owner.Name,
-			OwnerAvatarURL:      repo.Owner.AvatarURLPath(),
+			OwnerAvatarURL:      repo.Owner.AvatarURLPath(links),
 			OwnerIsOrganization: repo.Owner.IsOrganization(),
 			Name:                repo.Name,
 			DefaultBranch:       repo.DefaultBranch,
@@ -212,14 +213,14 @@ func newPullBaseRepos(ctx context.Context, logger *logx.Logger, viewer *database
 
 // getRepoNewPull compares the branches in the route, written as
 // "<base>...[<owner>:]<head>", to open a pull request from them.
-func getRepoNewPull(c flamego.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext) (statusCode int, resp *repoNewPull, err error) {
+func getRepoNewPull(c flamego.Context, att conf.AttachmentOpts, markdown conf.MarkdownOpts, markupOpts markup.Options, links database.LinkOptions, repoOpts conf.RepositoryOpts, logger *logx.Logger, viewer *database.User, repoCtx *repoContext) (statusCode int, resp *repoNewPull, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
 	base, head, ok := strings.Cut(c.Param("range"), "...")
 	if !ok {
 		return http.StatusNotFound, nil, errors.New("branch does not exist")
 	}
-	p, statusCode, err := comparePull(ctx, logger, viewer, repoCtx, base, head)
+	p, statusCode, err := comparePull(ctx, logger, repoOpts.Root, viewer, repoCtx, base, head)
 	if err != nil {
 		if statusCode == http.StatusInternalServerError {
 			logger.Error("Failed to compare branches", "range", c.Param("range"), "repoID", repo.ID, "error", err)
@@ -236,11 +237,11 @@ func getRepoNewPull(c flamego.Context, logger *logx.Logger, viewer *database.Use
 		Commits:        []repoCommitListItem{},
 		ViewerCanWrite: repoCtx.Viewer.CanWrite(),
 	}
-	if resp.BaseRepos, err = newPullBaseRepos(ctx, logger, viewer, p); err != nil {
+	if resp.BaseRepos, err = newPullBaseRepos(ctx, logger, links, viewer, p); err != nil {
 		logger.Error("Failed to list repositories to merge into", "repoID", p.HeadRepo.ID, "error", err)
 		return http.StatusInternalServerError, nil, err
 	}
-	baseGitRepo, err := openRepoGit(repoCtx)
+	baseGitRepo, err := openRepoGit(repoOpts.Root, repoCtx)
 	if err == nil {
 		resp.Branches, err = baseGitRepo.Branches(ctx)
 	}
@@ -260,13 +261,13 @@ func getRepoNewPull(c flamego.Context, logger *logx.Logger, viewer *database.Use
 		resp.State = "even"
 		return http.StatusOK, resp, nil
 	}
-	resp.Commits = toCommitListItems(ctx, logger, repo, p.Meta.Commits)
+	resp.Commits = toCommitListItems(ctx, logger, links, markupOpts, repoOpts.Root, repo, p.Meta.Commits)
 	resp.Diff = &pullDiff{
 		Base:               p.Meta.MergeBase,
 		Head:               p.HeadCommitID,
 		Owner:              p.HeadOwner.Name,
 		Name:               p.HeadRepo.Name,
-		MarkdownExtensions: conf.Markdown.FileExtensions,
+		MarkdownExtensions: markdown.FileExtensions,
 	}
 	if resp.PullIndex, err = p.openPullIndex(ctx, repo); err != nil {
 		logger.Error("Failed to find open pull request", "repoID", repo.ID, "error", err)
@@ -277,9 +278,9 @@ func getRepoNewPull(c flamego.Context, logger *logx.Logger, viewer *database.Use
 	}
 
 	resp.State = "ready"
-	resp.Attachment = attachmentSettings(issueAttachmentLimits())
+	resp.Attachment = attachmentSettings(issueAttachmentLimits(att))
 	if resp.ViewerCanWrite {
-		if resp.issueMetaOptions, err = listIssueMetaOptions(ctx, repo); err != nil {
+		if resp.issueMetaOptions, err = listIssueMetaOptions(ctx, links, repo); err != nil {
 			logger.Error("Failed to list pull request metadata options", "repoID", repo.ID, "error", err)
 			return http.StatusInternalServerError, nil, err
 		}
@@ -310,10 +311,10 @@ type repoNewPullRequest struct {
 
 // postRepoPull opens a pull request to merge the head branch into the base
 // branch.
-func postRepoPull(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, req repoNewPullRequest) (statusCode int, resp any, err error) {
+func postRepoPull(c flamego.Context, att conf.AttachmentOpts, server conf.ServerOpts, repoOpts conf.RepositoryOpts, notify database.NotifyOptions, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, req repoNewPullRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
-	p, statusCode, err := comparePull(ctx, logger, viewer, repoCtx, req.Base, req.Head)
+	p, statusCode, err := comparePull(ctx, logger, repoOpts.Root, viewer, repoCtx, req.Base, req.Head)
 	if err != nil {
 		if statusCode == http.StatusInternalServerError {
 			logger.Error("Failed to compare branches", "base", req.Base, "head", req.Head, "repoID", repo.ID, "error", err)
@@ -333,7 +334,7 @@ func postRepoPull(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer 
 		return http.StatusConflict, nil, errors.Newf("pull request #%d has the same branches", index)
 	}
 
-	issue, labelIDs, statusCode, resp, err := newIssueFromRequest(c.Request().Context(), l, viewer, repoCtx, req.repoNewIssueRequest)
+	issue, labelIDs, statusCode, resp, err := newIssueFromRequest(c.Request().Context(), l, att, viewer, repoCtx, req.repoNewIssueRequest)
 	if resp != nil || err != nil {
 		if statusCode == http.StatusInternalServerError {
 			logger.Error("Failed to check new pull request", "repoID", repo.ID, "error", err)
@@ -365,11 +366,11 @@ func postRepoPull(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer 
 		logger.Error("Failed to load base repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "load base repository")
 	}
-	if err = database.Handle.PullRequests().Create(ctx, logger, repo, issue, labelIDs, req.Attachments, pull, patch); err != nil {
+	if err = database.Handle.PullRequests().Create(ctx, logger, notify, server.AppDataPath, repo, issue, labelIDs, req.Attachments, pull, patch); err != nil {
 		logger.Error("Failed to create pull request", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "create pull request")
 	}
-	if err = pull.PushToBaseRepo(ctx, logger); err != nil {
+	if err = pull.PushToBaseRepo(ctx, logger, repoOpts.Root); err != nil {
 		logger.Error("Failed to push pull request to base repository", "pullID", pull.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "push to base repository")
 	}

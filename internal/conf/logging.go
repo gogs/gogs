@@ -50,7 +50,8 @@ type loggerConf struct {
 	Rotation *FileRotation `json:",omitempty"`
 }
 
-type logConf struct {
+// LogOpts are the logging settings.
+type LogOpts struct {
 	RootPath string
 	// JSON is true when console and file sinks write JSON instead of text.
 	JSON    bool
@@ -58,29 +59,27 @@ type logConf struct {
 	Configs []*loggerConf
 }
 
-// Log settings.
-var Log *logConf
-
 // initLogConf returns parsed logging configuration from the given INI file.
 // When hookMode is true, it only initializes the root path for log files.
-func initLogConf(cfg *ini.File, hookMode bool) (_ *logConf, hasConsole bool, _ error) {
+// prodMode decides the default format.
+func initLogConf(cfg *ini.File, hookMode, prodMode bool) (_ *LogOpts, hasConsole bool, _ error) {
 	rootPath := cfg.Section("log").Key("ROOT_PATH").MustString(filepath.Join(WorkDir(), "log"))
 	if hookMode {
-		return &logConf{
+		return &LogOpts{
 			RootPath: ensureAbs(rootPath),
 		}, false, nil
 	}
 
 	modes := strings.Split(cfg.Section("log").Key("MODE").MustString("console"), ",")
 	parentLevel := cfg.Section("log").Key("LEVEL").MustString("debug")
-	lc := &logConf{
+	lc := &LogOpts{
 		RootPath: ensureAbs(rootPath),
 		Modes:    make([]string, 0, len(modes)),
 		Configs:  make([]*loggerConf, 0, len(modes)),
 	}
 	switch format := strings.ToLower(strings.TrimSpace(cfg.Section("log").Key("FORMAT").String())); format {
 	case "":
-		lc.JSON = IsProdMode()
+		lc.JSON = prodMode
 	case "json":
 		lc.JSON = true
 	case "text":
@@ -135,16 +134,16 @@ func initLogConf(cfg *ini.File, hookMode bool) (_ *logConf, hasConsole bool, _ e
 	return lc, hasConsole, nil
 }
 
-// InitLogging builds the process logger from the loaded configuration. When
-// hookMode is true, it only stores the root path and returns the given logger,
-// so SSH clients do not receive server logs until the caller installs a hook
-// file logger.
-func InitLogging(logger *logx.Logger, hookMode bool) (*logx.Logger, error) {
-	logConf, _, err := initLogConf(File, hookMode)
+// InitLogging builds the process logger from the configuration and sets its
+// Log. When hookMode is true, it only sets the root path and returns the given
+// logger, so SSH clients do not receive server logs until the caller installs a
+// hook file logger.
+func InitLogging(logger *logx.Logger, cfg *Config, hookMode bool) (*logx.Logger, error) {
+	logConf, _, err := initLogConf(cfg.File, hookMode, cfg.App.IsProdMode())
 	if err != nil {
 		return nil, errors.Wrap(err, "init logging configuration")
 	}
-	Log = logConf
+	cfg.Log = logConf
 	if hookMode {
 		return logger, nil
 	}
@@ -292,10 +291,11 @@ func parseLevel(s string) slog.Level {
 }
 
 // InitHookLogging returns a rotating file logger for an SSH hook command. It
-// has no console sink, so the Git client does not see server logs.
-func InitHookLogging(filename string) (*logx.Logger, error) {
+// has no console sink, so the Git client does not see server logs. In
+// production mode, it only logs errors.
+func InitHookLogging(filename string, prodMode bool) (*logx.Logger, error) {
 	level := slog.LevelDebug
-	if IsProdMode() {
+	if prodMode {
 		level = slog.LevelError
 	}
 	w, err := newRotatingWriter(filename, FileRotation{

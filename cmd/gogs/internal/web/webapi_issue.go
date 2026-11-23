@@ -86,8 +86,8 @@ type issueUser struct {
 	IsGhost bool `json:"isGhost,omitempty"`
 }
 
-func toIssueUser(u *database.User) issueUser {
-	return issueUser{Name: u.Name, AvatarURL: u.AvatarURLPath(), IsGhost: u.ID <= 0}
+func toIssueUser(links database.LinkOptions, u *database.User) issueUser {
+	return issueUser{Name: u.Name, AvatarURL: u.AvatarURLPath(links), IsGhost: u.ID <= 0}
 }
 
 type issueAttachment struct {
@@ -98,8 +98,8 @@ type issueAttachment struct {
 
 // attachmentURL is the absolute URL of an attachment, which content links to
 // so it works wherever the content is shown, e.g., in email notifications.
-func attachmentURL(uuid string) string {
-	return conf.Server.ExternalURL + "attachments/" + uuid
+func attachmentURL(externalURL, uuid string) string {
+	return externalURL + "attachments/" + uuid
 }
 
 // linksAttachment reports whether the content links to the attachment, i.e.,
@@ -114,8 +114,8 @@ func isImageName(name string) bool {
 
 // toIssueAttachments returns the attachments the content does not link to,
 // e.g., files attached before they were linked in place, which are listed
-// after the content.
-func toIssueAttachments(attachments []*database.Attachment, content string) []issueAttachment {
+// after the content. Their URLs are under subpath.
+func toIssueAttachments(subpath string, attachments []*database.Attachment, content string) []issueAttachment {
 	items := make([]issueAttachment, 0, len(attachments))
 	for _, a := range attachments {
 		if linksAttachment(content, a.UUID) {
@@ -123,7 +123,7 @@ func toIssueAttachments(attachments []*database.Attachment, content string) []is
 		}
 		items = append(items, issueAttachment{
 			Name:    a.Name,
-			URL:     conf.Server.Subpath + "/attachments/" + a.UUID,
+			URL:     subpath + "/attachments/" + a.UUID,
 			IsImage: isImageName(a.Name),
 		})
 	}
@@ -134,8 +134,8 @@ func toIssueAttachments(attachments []*database.Attachment, content string) []is
 // deletes the attached files the content no longer links to. Files that were
 // never linked, e.g., attached before files were linked in place, are kept.
 // The comment is the one with given commentID, or the issue itself when it is
-// 0.
-func updateLinkedAttachments(ctx context.Context, issueID, commentID int64, oldContent, newContent string, uuids []string) error {
+// 0. Files are stored under attachmentPath.
+func updateLinkedAttachments(ctx context.Context, attachmentPath string, issueID, commentID int64, oldContent, newContent string, uuids []string) error {
 	var attached []*database.Attachment
 	var err error
 	if commentID > 0 {
@@ -156,7 +156,7 @@ func updateLinkedAttachments(ctx context.Context, issueID, commentID int64, oldC
 			unlinked = append(unlinked, a)
 		}
 	}
-	if err = database.Handle.Attachments().Delete(ctx, true, unlinked...); err != nil {
+	if err = database.Handle.Attachments().Delete(ctx, attachmentPath, true, unlinked...); err != nil {
 		return errors.Wrap(err, "delete unlinked files")
 	}
 	return nil
@@ -213,7 +213,7 @@ type issueMetaOptions struct {
 	AssigneeOptions  []repoIssueAssignee        `json:"assigneeOptions,omitempty"`
 }
 
-func listIssueMetaOptions(ctx context.Context, repo *database.Repository) (opts issueMetaOptions, err error) {
+func listIssueMetaOptions(ctx context.Context, links database.LinkOptions, repo *database.Repository) (opts issueMetaOptions, err error) {
 	labels, err := database.Handle.Labels().ListByRepoID(ctx, repo.ID)
 	if err != nil {
 		return opts, errors.Wrap(err, "list labels")
@@ -241,7 +241,7 @@ func listIssueMetaOptions(ctx context.Context, repo *database.Repository) (opts 
 	}
 	opts.AssigneeOptions = make([]repoIssueAssignee, 0, len(assignees))
 	for _, u := range assignees {
-		opts.AssigneeOptions = append(opts.AssigneeOptions, repoIssueAssignee{ID: u.ID, Name: u.Name, AvatarURL: u.AvatarURLPath()})
+		opts.AssigneeOptions = append(opts.AssigneeOptions, repoIssueAssignee{ID: u.ID, Name: u.Name, AvatarURL: u.AvatarURLPath(links)})
 	}
 	return opts, nil
 }
@@ -256,12 +256,12 @@ type attachmentLimits struct {
 	MaxFiles int
 }
 
-func issueAttachmentLimits() attachmentLimits {
+func issueAttachmentLimits(att conf.AttachmentOpts) attachmentLimits {
 	return attachmentLimits{
-		Enabled:      conf.Attachment.Enabled,
-		AllowedTypes: conf.Attachment.AllowedTypes,
-		MaxSize:      conf.Attachment.MaxSize,
-		MaxFiles:     conf.Attachment.MaxFiles,
+		Enabled:      att.Enabled,
+		AllowedTypes: att.AllowedTypes,
+		MaxSize:      att.MaxSize,
+		MaxFiles:     att.MaxFiles,
 	}
 }
 
@@ -308,8 +308,8 @@ type repoIssueView struct {
 	ViewerCanWrite bool `json:"viewerCanWrite"`
 }
 
-func getRepoIssue(c flamego.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, issue *database.Issue) (statusCode int, resp *repoIssueView, err error) {
-	resp, err = toRepoIssueView(c.Request().Context(), logger, viewer, repoCtx, issue)
+func getRepoIssue(c flamego.Context, att conf.AttachmentOpts, repoOpts conf.RepositoryOpts, markupOpts markup.Options, links database.LinkOptions, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, issue *database.Issue) (statusCode int, resp *repoIssueView, err error) {
+	resp, err = toRepoIssueView(c.Request().Context(), logger, links, markupOpts, repoOpts.Root, att, viewer, repoCtx, issue)
 	if err != nil {
 		logger.Error("Failed to describe issue", "issueID", issue.ID, "repoID", repoCtx.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, err
@@ -318,27 +318,28 @@ func getRepoIssue(c flamego.Context, logger *logx.Logger, viewer *database.User,
 }
 
 // toRepoIssueView describes the issue or the pull request with its comments,
-// and marks it read by the viewer.
-func toRepoIssueView(ctx context.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, issue *database.Issue) (resp *repoIssueView, err error) {
+// and marks it read by the viewer. The repository is stored under
+// repositoryRoot.
+func toRepoIssueView(ctx context.Context, logger *logx.Logger, links database.LinkOptions, markupOpts markup.Options, repositoryRoot string, att conf.AttachmentOpts, viewer *database.User, repoCtx *repoContext, issue *database.Issue) (resp *repoIssueView, err error) {
 	repo := repoCtx.Repo
-	metas := repoCtx.metas()
+	metas := repoCtx.metas(markupOpts.Subpath, repositoryRoot)
 	docs := []string{issue.Content}
 	for _, comment := range issue.Comments {
 		if comment.Type == database.CommentTypeComment {
 			docs = append(docs, comment.Content)
 		}
 	}
-	commits := markup.ResolveCommits(metas, docs...)
+	commits := markup.ResolveCommits(markupOpts, metas, docs...)
 	resp = &repoIssueView{
 		Index:       issue.Index,
 		Title:       issue.Title,
 		IsClosed:    issue.IsClosed,
-		Poster:      toIssueUser(issue.Poster),
+		Poster:      toIssueUser(links, issue.Poster),
 		CreatedAt:   issue.Created.UTC(),
-		ContentHTML: markAppLinks(markup.MarkdownWithCommits(issue.Content, repo.Link(), metas, commits), repo),
+		ContentHTML: markAppLinks(markupOpts, markup.MarkdownWithCommits(markupOpts, issue.Content, repo.Link(markupOpts.Subpath), metas, commits), repo),
 		Content:     issue.Content,
 		ContentHash: cryptox.SHA256(issue.Content),
-		Attachments: toIssueAttachments(issue.Attachments, issue.Content),
+		Attachments: toIssueAttachments(links.Subpath, issue.Attachments, issue.Content),
 		Comments:    make([]issueComment, 0, len(issue.Comments)),
 		Labels:      make([]dashboardIssueLabel, 0, len(issue.Labels)),
 
@@ -356,7 +357,7 @@ func toRepoIssueView(ctx context.Context, logger *logx.Logger, viewer *database.
 		}
 	}
 	if issue.Assignee != nil {
-		resp.Assignee = &repoIssueAssignee{ID: issue.Assignee.ID, Name: issue.Assignee.Name, AvatarURL: issue.Assignee.AvatarURLPath()}
+		resp.Assignee = &repoIssueAssignee{ID: issue.Assignee.ID, Name: issue.Assignee.Name, AvatarURL: issue.Assignee.AvatarURLPath(links)}
 	}
 
 	tags := make(map[int64]string)
@@ -370,15 +371,15 @@ func toRepoIssueView(ctx context.Context, logger *logx.Logger, viewer *database.
 		item := issueComment{
 			ID:        comment.ID,
 			Type:      typ,
-			Poster:    toIssueUser(comment.Poster),
+			Poster:    toIssueUser(links, comment.Poster),
 			CreatedAt: comment.Created.UTC(),
 		}
 		switch comment.Type {
 		case database.CommentTypeCommitRef:
 			item.ContentHTML = markup.Sanitize(comment.Content)
 		case database.CommentTypeComment:
-			item.ContentHTML = markAppLinks(markup.MarkdownWithCommits(comment.Content, repo.Link(), metas, commits), repo)
-			item.Attachments = toIssueAttachments(comment.Attachments, comment.Content)
+			item.ContentHTML = markAppLinks(markupOpts, markup.MarkdownWithCommits(markupOpts, comment.Content, repo.Link(markupOpts.Subpath), metas, commits), repo)
+			item.Attachments = toIssueAttachments(links.Subpath, comment.Attachments, comment.Content)
 			// The poster and admins can change a comment.
 			if viewer != nil && (comment.PosterID == viewer.ID || repoCtx.Viewer.CanAdminister()) {
 				item.ViewerCanEdit = true
@@ -409,17 +410,17 @@ func toRepoIssueView(ctx context.Context, logger *logx.Logger, viewer *database.
 	}
 	resp.Participants = make([]issueUser, 0, len(participants))
 	for _, u := range participants {
-		resp.Participants = append(resp.Participants, toIssueUser(u))
+		resp.Participants = append(resp.Participants, toIssueUser(links, u))
 	}
 
 	if resp.ViewerCanWrite {
-		if resp.issueMetaOptions, err = listIssueMetaOptions(ctx, repo); err != nil {
+		if resp.issueMetaOptions, err = listIssueMetaOptions(ctx, links, repo); err != nil {
 			return nil, errors.Wrap(err, "list what can be set on issues")
 		}
 	}
 
 	if viewer != nil {
-		resp.Attachment = attachmentSettings(issueAttachmentLimits())
+		resp.Attachment = attachmentSettings(issueAttachmentLimits(att))
 		if err = database.Handle.Issues().MarkRead(ctx, viewer.ID, issue.ID); err != nil {
 			return nil, errors.Wrap(err, "mark as read")
 		}
@@ -454,7 +455,7 @@ type repoIssueRequest struct {
 	PreviousContentHash *string `json:"previousContentHash"`
 }
 
-func patchRepoIssue(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, issue *database.Issue, req repoIssueRequest) (statusCode int, resp any, err error) {
+func patchRepoIssue(c flamego.Context, att conf.AttachmentOpts, links database.LinkOptions, logger *logx.Logger, l i18n.Locale, viewer *database.User, issue *database.Issue, req repoIssueRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	if req.Content != nil && req.PreviousContentHash != nil && *req.PreviousContentHash != cryptox.SHA256(issue.Content) {
 		return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("repo::issues.content_changed")}, nil
@@ -465,14 +466,14 @@ func patchRepoIssue(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewe
 			return http.StatusBadRequest, resp, nil
 		}
 		if title != issue.Title {
-			if err = database.Handle.Issues().ChangeTitle(ctx, logger, viewer, issue, title); err != nil {
+			if err = database.Handle.Issues().ChangeTitle(ctx, logger, links, viewer, issue, title); err != nil {
 				logger.Error("Failed to change issue title", "issueID", issue.ID, "error", err)
 				return http.StatusInternalServerError, nil, errors.Wrap(err, "change title")
 			}
 		}
 	}
 	if req.Content != nil && *req.Content != issue.Content {
-		if statusCode, err = checkNewAttachments(ctx, issueAttachmentLimits(), req.Attachments); err != nil {
+		if statusCode, err = checkNewAttachments(ctx, issueAttachmentLimits(att), req.Attachments); err != nil {
 			if statusCode == http.StatusInternalServerError {
 				logger.Error("Failed to check new attachments", "error", err)
 			}
@@ -482,11 +483,11 @@ func patchRepoIssue(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewe
 		// with the saved content.
 		ctx := context.WithoutCancel(ctx)
 		oldContent := issue.Content
-		if err = database.Handle.Issues().ChangeContent(ctx, logger, viewer, issue, *req.Content); err != nil {
+		if err = database.Handle.Issues().ChangeContent(ctx, logger, links, viewer, issue, *req.Content); err != nil {
 			logger.Error("Failed to change issue content", "issueID", issue.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "change content")
 		}
-		if err = updateLinkedAttachments(ctx, issue.ID, 0, oldContent, issue.Content, req.Attachments); err != nil {
+		if err = updateLinkedAttachments(ctx, att.Path, issue.ID, 0, oldContent, issue.Content, req.Attachments); err != nil {
 			logger.Error("Failed to update issue attachments", "issueID", issue.ID, "error", err)
 			return http.StatusInternalServerError, nil, err
 		}
@@ -494,7 +495,7 @@ func patchRepoIssue(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewe
 	return http.StatusNoContent, nil, nil
 }
 
-func setRepoIssueClosed(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, issue *database.Issue, closed bool) (statusCode int, resp any, err error) {
+func setRepoIssueClosed(c flamego.Context, logger *logx.Logger, l i18n.Locale, notify database.NotifyOptions, repositoryRoot string, viewer *database.User, repoCtx *repoContext, issue *database.Issue, closed bool) (statusCode int, resp any, err error) {
 	if issue.IsPull {
 		pull := issue.PullRequest
 		if pull.HasMerged {
@@ -510,26 +511,26 @@ func setRepoIssueClosed(c flamego.Context, logger *logx.Logger, l i18n.Locale, v
 			} else if other != nil {
 				return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("repo::pulls.open_unmerged_pull_exists", "index", other.Index)}, nil
 			}
-			if err = database.Handle.PullRequests().UpdatePatch(c.Request().Context(), logger, pull); err != nil {
+			if err = database.Handle.PullRequests().UpdatePatch(c.Request().Context(), logger, repositoryRoot, pull); err != nil {
 				logger.Error("Failed to update pull request patch", "pullID", pull.ID, "error", err)
 				return http.StatusInternalServerError, nil, errors.Wrap(err, "update patch")
 			}
 			database.Handle.PullRequests().AddToTaskQueue(c.Request().Context(), logger, pull)
 		}
 	}
-	if err = database.Handle.Issues().ChangeStatus(c.Request().Context(), logger, viewer, repoCtx.Repo, issue, closed); err != nil {
+	if err = database.Handle.Issues().ChangeStatus(c.Request().Context(), logger, notify, viewer, repoCtx.Repo, issue, closed); err != nil {
 		logger.Error("Failed to change issue state", "issueID", issue.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "change state")
 	}
 	return http.StatusNoContent, nil, nil
 }
 
-func putRepoIssueClosed(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, issue *database.Issue) (statusCode int, resp any, err error) {
-	return setRepoIssueClosed(c, logger, l, viewer, repoCtx, issue, true)
+func putRepoIssueClosed(c flamego.Context, repoOpts conf.RepositoryOpts, notify database.NotifyOptions, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, issue *database.Issue) (statusCode int, resp any, err error) {
+	return setRepoIssueClosed(c, logger, l, notify, repoOpts.Root, viewer, repoCtx, issue, true)
 }
 
-func deleteRepoIssueClosed(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, issue *database.Issue) (statusCode int, resp any, err error) {
-	return setRepoIssueClosed(c, logger, l, viewer, repoCtx, issue, false)
+func deleteRepoIssueClosed(c flamego.Context, repoOpts conf.RepositoryOpts, notify database.NotifyOptions, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, issue *database.Issue) (statusCode int, resp any, err error) {
+	return setRepoIssueClosed(c, logger, l, notify, repoOpts.Root, viewer, repoCtx, issue, false)
 }
 
 type repoIssueLabelsRequest struct {
@@ -537,7 +538,7 @@ type repoIssueLabelsRequest struct {
 }
 
 // putRepoIssueLabels replaces the labels of the issue.
-func putRepoIssueLabels(c flamego.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, issue *database.Issue, req repoIssueLabelsRequest) (statusCode int, resp any, err error) {
+func putRepoIssueLabels(c flamego.Context, links database.LinkOptions, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, issue *database.Issue, req repoIssueLabelsRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	labels := make([]*database.Label, 0, len(req.IDs))
 	for _, id := range req.IDs {
@@ -556,7 +557,7 @@ func putRepoIssueLabels(c flamego.Context, logger *logx.Logger, viewer *database
 		if slices.ContainsFunc(labels, func(l *database.Label) bool { return l.ID == label.ID }) {
 			continue
 		}
-		if err = database.Handle.Issues().RemoveLabel(ctx, logger, viewer, issue, label); err != nil {
+		if err = database.Handle.Issues().RemoveLabel(ctx, logger, links, viewer, issue, label); err != nil {
 			logger.Error("Failed to remove label from issue", "labelID", label.ID, "issueID", issue.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "remove label")
 		}
@@ -565,7 +566,7 @@ func putRepoIssueLabels(c flamego.Context, logger *logx.Logger, viewer *database
 		if slices.ContainsFunc(issue.Labels, func(l *database.Label) bool { return l.ID == label.ID }) {
 			continue
 		}
-		if err = database.Handle.Issues().AddLabels(ctx, logger, viewer, issue, label); err != nil {
+		if err = database.Handle.Issues().AddLabels(ctx, logger, links, viewer, issue, label); err != nil {
 			logger.Error("Failed to add label to issue", "labelID", label.ID, "issueID", issue.ID, "error", err)
 			return http.StatusInternalServerError, nil, errors.Wrap(err, "add label")
 		}
@@ -609,7 +610,7 @@ func checkIssueAssignee(ctx context.Context, repo *database.Repository, id int64
 	return 0, nil
 }
 
-func putRepoIssueMilestone(c flamego.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, issue *database.Issue, req repoIssueIDRequest) (statusCode int, resp any, err error) {
+func putRepoIssueMilestone(c flamego.Context, links database.LinkOptions, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, issue *database.Issue, req repoIssueIDRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	if req.ID == issue.MilestoneID {
 		return http.StatusNoContent, nil, nil
@@ -621,7 +622,7 @@ func putRepoIssueMilestone(c flamego.Context, logger *logx.Logger, viewer *datab
 		return statusCode, nil, err
 	}
 	issue.MilestoneID = req.ID
-	if err = database.Handle.Milestones().AssignIssue(ctx, logger, viewer, issue); err != nil {
+	if err = database.Handle.Milestones().AssignIssue(ctx, logger, links, viewer, issue); err != nil {
 		if database.IsErrMilestoneNotExist(err) {
 			return http.StatusBadRequest, nil, errors.New("milestone does not exist")
 		}
@@ -631,7 +632,7 @@ func putRepoIssueMilestone(c flamego.Context, logger *logx.Logger, viewer *datab
 	return http.StatusNoContent, nil, nil
 }
 
-func putRepoIssueAssignee(c flamego.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, issue *database.Issue, req repoIssueIDRequest) (statusCode int, resp any, err error) {
+func putRepoIssueAssignee(c flamego.Context, links database.LinkOptions, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, issue *database.Issue, req repoIssueIDRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	if req.ID == issue.AssigneeID {
 		return http.StatusNoContent, nil, nil
@@ -642,7 +643,7 @@ func putRepoIssueAssignee(c flamego.Context, logger *logx.Logger, viewer *databa
 		}
 		return statusCode, nil, err
 	}
-	if err = database.Handle.Issues().ChangeAssignee(c.Request().Context(), logger, viewer, issue, req.ID); err != nil {
+	if err = database.Handle.Issues().ChangeAssignee(c.Request().Context(), logger, links, viewer, issue, req.ID); err != nil {
 		logger.Error("Failed to change issue assignee", "issueID", issue.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "change assignee")
 	}
@@ -687,21 +688,21 @@ func checkNewAttachments(ctx context.Context, lim attachmentLimits, uuids []stri
 	return 0, nil
 }
 
-func postRepoIssueComment(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, issue *database.Issue, req repoIssueCommentRequest) (statusCode int, resp any, err error) {
+func postRepoIssueComment(c flamego.Context, att conf.AttachmentOpts, notify database.NotifyOptions, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, issue *database.Issue, req repoIssueCommentRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	// A comment can be only attachments.
 	if strings.TrimSpace(req.Content) == "" && len(req.Attachments) == 0 {
 		msg := l.Tr("form::Content") + l.Tr("form::require_error")
 		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"content": &msg}}, nil
 	}
-	if statusCode, err = checkNewAttachments(ctx, issueAttachmentLimits(), req.Attachments); err != nil {
+	if statusCode, err = checkNewAttachments(ctx, issueAttachmentLimits(att), req.Attachments); err != nil {
 		if statusCode == http.StatusInternalServerError {
 			logger.Error("Failed to check new attachments", "error", err)
 		}
 		return statusCode, nil, err
 	}
 
-	comment, err := database.Handle.Comments().Create(ctx, logger, viewer, repoCtx.Repo, issue, req.Content, req.Attachments)
+	comment, err := database.Handle.Comments().Create(ctx, logger, notify, viewer, repoCtx.Repo, issue, req.Content, req.Attachments)
 	if err != nil {
 		logger.Error("Failed to create issue comment", "issueID", issue.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "create comment")
@@ -731,7 +732,7 @@ func withIssueComment(c flamego.Context, logger *logx.Logger, repoCtx *repoConte
 	c.Map(comment)
 }
 
-func patchRepoIssueComment(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, comment *database.Comment, req repoIssueCommentRequest) (statusCode int, resp any, err error) {
+func patchRepoIssueComment(c flamego.Context, att conf.AttachmentOpts, links database.LinkOptions, logger *logx.Logger, l i18n.Locale, viewer *database.User, comment *database.Comment, req repoIssueCommentRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	if strings.TrimSpace(req.Content) == "" {
 		msg := l.Tr("form::Content") + l.Tr("form::require_error")
@@ -740,7 +741,7 @@ func patchRepoIssueComment(c flamego.Context, logger *logx.Logger, l i18n.Locale
 	if req.PreviousContentHash != nil && *req.PreviousContentHash != cryptox.SHA256(comment.Content) {
 		return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("repo::issues.content_changed")}, nil
 	}
-	if statusCode, err = checkNewAttachments(ctx, issueAttachmentLimits(), req.Attachments); err != nil {
+	if statusCode, err = checkNewAttachments(ctx, issueAttachmentLimits(att), req.Attachments); err != nil {
 		if statusCode == http.StatusInternalServerError {
 			logger.Error("Failed to check new attachments", "error", err)
 		}
@@ -751,19 +752,19 @@ func patchRepoIssueComment(c flamego.Context, logger *logx.Logger, l i18n.Locale
 	ctx = context.WithoutCancel(ctx)
 	oldContent := comment.Content
 	comment.Content = req.Content
-	if err = database.Handle.Comments().Update(ctx, logger, viewer, comment, oldContent); err != nil {
+	if err = database.Handle.Comments().Update(ctx, logger, links, viewer, comment, oldContent); err != nil {
 		logger.Error("Failed to update comment", "commentID", comment.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update comment")
 	}
-	if err = updateLinkedAttachments(ctx, comment.IssueID, comment.ID, oldContent, comment.Content, req.Attachments); err != nil {
+	if err = updateLinkedAttachments(ctx, att.Path, comment.IssueID, comment.ID, oldContent, comment.Content, req.Attachments); err != nil {
 		logger.Error("Failed to update comment attachments", "commentID", comment.ID, "error", err)
 		return http.StatusInternalServerError, nil, err
 	}
 	return http.StatusNoContent, nil, nil
 }
 
-func deleteRepoIssueComment(c flamego.Context, logger *logx.Logger, viewer *database.User, comment *database.Comment) (statusCode int, resp any, err error) {
-	if err = database.Handle.Comments().DeleteByID(c.Request().Context(), logger, viewer, comment.ID); err != nil {
+func deleteRepoIssueComment(c flamego.Context, att conf.AttachmentOpts, links database.LinkOptions, logger *logx.Logger, viewer *database.User, comment *database.Comment) (statusCode int, resp any, err error) {
+	if err = database.Handle.Comments().DeleteByID(c.Request().Context(), logger, links, att.Path, viewer, comment.ID); err != nil {
 		logger.Error("Failed to delete comment", "commentID", comment.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete comment")
 	}
@@ -783,27 +784,31 @@ type markdownRequest struct {
 
 // postRepoMarkdown renders Markdown the way the issues of the repository are,
 // the way its wiki pages are, or the way one of its files is.
-func postRepoMarkdown(repoCtx *repoContext, req markdownRequest) (statusCode int, resp any, err error) {
+func postRepoMarkdown(repoOpts conf.RepositoryOpts, markupOpts markup.Options, repoCtx *repoContext, req markdownRequest) (statusCode int, resp any, err error) {
 	repo := repoCtx.Repo
 	var html []byte
 	switch {
 	case req.Wiki:
-		html = markup.MarkdownFile(req.Text, repo.Link()+"/wiki", repoCtx.metas())
+		html = markup.MarkdownFile(markupOpts, req.Text, repo.Link(markupOpts.Subpath)+"/wiki", repoCtx.metas(markupOpts.Subpath, repoOpts.Root))
 	case req.Path != "":
-		fileLink := repo.Link() + "/src/" + escapePath(req.Branch) + "/" + escapePath(pathx.Clean(req.Path))
-		html = markup.MarkdownFile(req.Text, path.Dir(fileLink), repoCtx.metas())
+		fileLink := repo.Link(markupOpts.Subpath) + "/src/" + escapePath(req.Branch) + "/" + escapePath(pathx.Clean(req.Path))
+		html = markup.MarkdownFile(markupOpts, req.Text, path.Dir(fileLink), repoCtx.metas(markupOpts.Subpath, repoOpts.Root))
 	default:
-		html = markup.Markdown(req.Text, repo.Link(), repoCtx.metas())
+		html = markup.Markdown(markupOpts, req.Text, repo.Link(markupOpts.Subpath), repoCtx.metas(markupOpts.Subpath, repoOpts.Root))
 	}
-	return http.StatusOK, map[string]string{"html": markAppLinks(html, repo)}, nil
+	return http.StatusOK, map[string]string{"html": markAppLinks(markupOpts, html, repo)}, nil
 }
 
 // limitAttachmentUpload caps the size of an uploaded attachment.
-func limitAttachmentUpload(lim attachmentLimits) flamego.Handler {
-	return func(c flamego.Context) {
-		r := c.Request().Request
-		r.Body = http.MaxBytesReader(c.ResponseWriter(), r.Body, lim.MaxSize<<20+64<<10) // Room for the multipart framing.
-	}
+func limitAttachmentUpload(c flamego.Context, lim attachmentLimits) {
+	r := c.Request().Request
+	r.Body = http.MaxBytesReader(c.ResponseWriter(), r.Body, lim.MaxSize<<20+64<<10) // Room for the multipart framing.
+}
+
+// limitIssueAttachmentUpload caps the size of an attachment uploaded for an
+// issue or a comment.
+func limitIssueAttachmentUpload(c flamego.Context, att conf.AttachmentOpts) {
+	limitAttachmentUpload(c, issueAttachmentLimits(att))
 }
 
 // uploadedFile is a file uploaded as the "file" form field that passed the
@@ -851,25 +856,25 @@ func readUploadedFile(c flamego.Context, l i18n.Locale, lim attachmentLimits) (_
 	return &uploadedFile{File: file, Header: header, Head: buf}, http.StatusOK, nil
 }
 
-// storeAttachment stores the file uploaded as the "file" form field, and
-// returns its UUID.
-func storeAttachment(c flamego.Context, l i18n.Locale, viewer *database.User, lim attachmentLimits) (statusCode int, resp any, err error) {
+// storeAttachment stores the file uploaded as the "file" form field under
+// attachmentPath, and returns its UUID and its URL on the site of externalURL.
+func storeAttachment(c flamego.Context, l i18n.Locale, attachmentPath, externalURL string, viewer *database.User, lim attachmentLimits) (statusCode int, resp any, err error) {
 	f, statusCode, err := readUploadedFile(c, l, lim)
 	if err != nil {
 		return statusCode, nil, err
 	}
 	defer func() { _ = f.File.Close() }()
 
-	attachment, err := database.Handle.Attachments().Create(c.Request().Context(), viewer.ID, f.Header.Filename, io.MultiReader(bytes.NewReader(f.Head), f.File))
+	attachment, err := database.Handle.Attachments().Create(c.Request().Context(), attachmentPath, viewer.ID, f.Header.Filename, io.MultiReader(bytes.NewReader(f.Head), f.File))
 	if err != nil {
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "store attachment")
 	}
-	return http.StatusCreated, map[string]string{"uuid": attachment.UUID, "url": attachmentURL(attachment.UUID)}, nil
+	return http.StatusCreated, map[string]string{"uuid": attachment.UUID, "url": attachmentURL(externalURL, attachment.UUID)}, nil
 }
 
 // postRepoIssueAttachment stores a file to attach to an issue or a comment.
-func postRepoIssueAttachment(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User) (statusCode int, resp any, err error) {
-	statusCode, resp, err = storeAttachment(c, l, viewer, issueAttachmentLimits())
+func postRepoIssueAttachment(c flamego.Context, server conf.ServerOpts, att conf.AttachmentOpts, logger *logx.Logger, l i18n.Locale, viewer *database.User) (statusCode int, resp any, err error) {
+	statusCode, resp, err = storeAttachment(c, l, att.Path, server.ExternalURL, viewer, issueAttachmentLimits(att))
 	if statusCode == http.StatusInternalServerError {
 		logger.Error("Failed to store attachment", "error", err)
 	}
@@ -942,13 +947,13 @@ type repoNewIssueOptions struct {
 }
 
 // loadIssueTemplates returns the issue templates on the default branch of the
-// repository, if the viewer can read it.
-func loadIssueTemplates(ctx context.Context, repoCtx *repoContext) (*issuetemplate.IssueTemplates, error) {
+// repository, if the viewer can read it. The repository is stored under root.
+func loadIssueTemplates(ctx context.Context, root string, repoCtx *repoContext) (*issuetemplate.IssueTemplates, error) {
 	none := &issuetemplate.IssueTemplates{Config: issuetemplate.Config{BlankIssuesEnabled: true}}
 	if !repoCtx.Viewer.CanRead() || repoCtx.Repo.IsEmpty {
 		return none, nil
 	}
-	gitRepo, err := openRepoGit(repoCtx)
+	gitRepo, err := openRepoGit(root, repoCtx)
 	if err != nil {
 		return nil, errors.Wrap(err, "open repository")
 	}
@@ -964,12 +969,12 @@ func loadIssueTemplates(ctx context.Context, repoCtx *repoContext) (*issuetempla
 	return ts, nil
 }
 
-func toIssueTemplate(repoCtx *repoContext, t *issuetemplate.Template) *issueTemplate {
+func toIssueTemplate(markupOpts markup.Options, repositoryRoot string, repoCtx *repoContext, t *issuetemplate.Template) *issueTemplate {
 	markdown := func(text string) string {
 		if strings.TrimSpace(text) == "" {
 			return ""
 		}
-		return markAppLinks(markup.Markdown(text, repoCtx.Repo.Link(), repoCtx.metas()), repoCtx.Repo)
+		return markAppLinks(markupOpts, markup.Markdown(markupOpts, text, repoCtx.Repo.Link(markupOpts.Subpath), repoCtx.metas(markupOpts.Subpath, repositoryRoot)), repoCtx.Repo)
 	}
 	resp := &issueTemplate{
 		issueTemplateSummary: issueTemplateSummary{File: t.File, Name: t.Name, About: t.About},
@@ -1009,10 +1014,10 @@ func toIssueTemplate(repoCtx *repoContext, t *issuetemplate.Template) *issueTemp
 	return resp
 }
 
-func getRepoNewIssue(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoNewIssueOptions, err error) {
+func getRepoNewIssue(c flamego.Context, links database.LinkOptions, markupOpts markup.Options, att conf.AttachmentOpts, repoOpts conf.RepositoryOpts, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoNewIssueOptions, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
-	ts, err := loadIssueTemplates(ctx, repoCtx)
+	ts, err := loadIssueTemplates(ctx, repoOpts.Root, repoCtx)
 	if err != nil {
 		logger.Error("Failed to load issue templates", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, err
@@ -1022,7 +1027,7 @@ func getRepoNewIssue(c flamego.Context, logger *logx.Logger, repoCtx *repoContex
 		ContactLinks:       make([]issueContactLink, 0, len(ts.Config.ContactLinks)),
 		BlankIssuesEnabled: ts.Config.BlankIssuesEnabled,
 		Content:            ts.Default,
-		Attachment:         attachmentSettings(issueAttachmentLimits()),
+		Attachment:         attachmentSettings(issueAttachmentLimits(att)),
 		ViewerCanWrite:     repoCtx.Viewer.CanWrite(),
 	}
 	for _, t := range ts.Templates {
@@ -1032,10 +1037,10 @@ func getRepoNewIssue(c flamego.Context, logger *logx.Logger, repoCtx *repoContex
 		resp.ContactLinks = append(resp.ContactLinks, issueContactLink(link))
 	}
 	if t := ts.Find(c.Query("template")); t != nil {
-		resp.Template = toIssueTemplate(repoCtx, t)
+		resp.Template = toIssueTemplate(markupOpts, repoOpts.Root, repoCtx, t)
 	}
 	if resp.ViewerCanWrite {
-		if resp.issueMetaOptions, err = listIssueMetaOptions(ctx, repo); err != nil {
+		if resp.issueMetaOptions, err = listIssueMetaOptions(ctx, links, repo); err != nil {
 			logger.Error("Failed to list issue metadata options", "repoID", repo.ID, "error", err)
 			return http.StatusInternalServerError, nil, err
 		}
@@ -1093,13 +1098,13 @@ func templateLabelsAndAssignee(ctx context.Context, repo *database.Repository, t
 // newIssueFromRequest checks the form to open an issue or a pull request, and
 // returns the issue to create with its labels. A non-nil resp or err is what to
 // answer with instead.
-func newIssueFromRequest(ctx context.Context, l i18n.Locale, viewer *database.User, repoCtx *repoContext, req repoNewIssueRequest) (issue *database.Issue, labelIDs []int64, statusCode int, resp any, err error) {
+func newIssueFromRequest(ctx context.Context, l i18n.Locale, att conf.AttachmentOpts, viewer *database.User, repoCtx *repoContext, req repoNewIssueRequest) (issue *database.Issue, labelIDs []int64, statusCode int, resp any, err error) {
 	repo := repoCtx.Repo
 	title := strings.TrimSpace(req.Title)
 	if resp := textFieldError(l, "title", "repo::milestones.title", title, 255); resp != nil {
 		return nil, nil, http.StatusBadRequest, resp, nil
 	}
-	if statusCode, err = checkNewAttachments(ctx, issueAttachmentLimits(), req.Attachments); err != nil {
+	if statusCode, err = checkNewAttachments(ctx, issueAttachmentLimits(att), req.Attachments); err != nil {
 		return nil, nil, statusCode, nil, err
 	}
 
@@ -1133,7 +1138,7 @@ func newIssueFromRequest(ctx context.Context, l i18n.Locale, viewer *database.Us
 	return issue, labelIDs, 0, nil, nil
 }
 
-func postRepoIssue(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, req repoNewIssueRequest) (statusCode int, resp any, err error) {
+func postRepoIssue(c flamego.Context, server conf.ServerOpts, repoOpts conf.RepositoryOpts, att conf.AttachmentOpts, notify database.NotifyOptions, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, req repoNewIssueRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
 	// The title is checked before the fields of an issue form, so its error
@@ -1144,7 +1149,7 @@ func postRepoIssue(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer
 
 	var tmpl *issuetemplate.Template
 	if req.Template != "" {
-		ts, err := loadIssueTemplates(c.Request().Context(), repoCtx)
+		ts, err := loadIssueTemplates(c.Request().Context(), repoOpts.Root, repoCtx)
 		if err != nil {
 			logger.Error("Failed to load issue templates", "repoID", repo.ID, "error", err)
 			return http.StatusInternalServerError, nil, err
@@ -1155,13 +1160,13 @@ func postRepoIssue(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer
 		if tmpl.IsForm() {
 			// The files of upload elements are uploaded but not attached yet.
 			var files func(id string) (issuetemplate.File, bool)
-			if issueAttachmentLimits().Enabled {
+			if issueAttachmentLimits(att).Enabled {
 				files = func(id string) (issuetemplate.File, bool) {
 					a, err := database.Handle.Attachments().GetByUUID(ctx, id)
 					if err != nil || a.IssueID > 0 || a.CommentID > 0 || a.ReleaseID > 0 {
 						return issuetemplate.File{}, false
 					}
-					return issuetemplate.File{Name: a.Name, URL: attachmentURL(a.UUID), IsImage: isImageName(a.Name)}, true
+					return issuetemplate.File{Name: a.Name, URL: attachmentURL(server.ExternalURL, a.UUID), IsImage: isImageName(a.Name)}, true
 				}
 			}
 			req.Content, err = tmpl.RenderForm(req.Fields, files)
@@ -1185,7 +1190,7 @@ func postRepoIssue(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer
 			}
 		}
 	}
-	issue, labelIDs, statusCode, resp, err := newIssueFromRequest(ctx, l, viewer, repoCtx, req)
+	issue, labelIDs, statusCode, resp, err := newIssueFromRequest(ctx, l, att, viewer, repoCtx, req)
 	if resp != nil || err != nil {
 		if statusCode == http.StatusInternalServerError {
 			logger.Error("Failed to check new issue", "repoID", repo.ID, "error", err)
@@ -1204,7 +1209,7 @@ func postRepoIssue(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer
 	// Creating the issue notifies watchers and webhooks about the repository
 	// and its owner.
 	repo.Owner = repoCtx.Owner
-	if err = database.Handle.Issues().Create(ctx, logger, repo, issue, labelIDs, req.Attachments); err != nil {
+	if err = database.Handle.Issues().Create(ctx, logger, notify, repo, issue, labelIDs, req.Attachments); err != nil {
 		logger.Error("Failed to create issue", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "create issue")
 	}

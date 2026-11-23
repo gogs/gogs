@@ -19,7 +19,6 @@ import (
 	"gorm.io/gorm/clause"
 	"unknwon.dev/x/logx"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/osx"
@@ -616,7 +615,7 @@ func reposConcurrentCounts(t *testing.T, ctx context.Context, s *RepositoriesSto
 	assertCounts(repo)
 
 	// SQLite lets only one transaction write, and watching reads first.
-	if conf.UseSQLite3 {
+	if s.db.Name() == "sqlite" {
 		return
 	}
 	concurrently(func(i int) error { return s.Watch(ctx, users[i].ID, repos[i].ID) })
@@ -876,15 +875,12 @@ func TestReposLifecycle(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	// NOTE: The suite does not run in parallel because it mocks global
-	// configuration that other suites read without locks.
+	t.Parallel()
 
 	ctx := context.Background()
 	s := &RepositoriesStore{
 		db: newTestDB(t, "reposLifecycle"),
 	}
-	conf.SetMockRepository(t, conf.RepositoryOpts{Root: t.TempDir(), DefaultBranch: "main", MaxCreationLimit: -1})
-	conf.SetMockPicture(t, conf.PictureOpts{AvatarUploadPath: t.TempDir()})
 
 	for _, tc := range []struct {
 		name string
@@ -911,12 +907,25 @@ func TestReposLifecycle(t *testing.T) {
 	}
 }
 
-// newTestGitRepo creates a repository of given name for the owner with its
-// Git repository.
-func newTestGitRepo(t *testing.T, ctx context.Context, s *RepositoriesStore, owner *User, opts CreateRepoOptionsLegacy) *Repository {
+// newTestRepoCreation returns the settings of creating repositories in a new
+// temporary root.
+func newTestRepoCreation(t *testing.T) RepoCreationOptions {
 	t.Helper()
 
-	repo, err := s.Create(ctx, logx.NewNoopLogger(), owner, owner, opts)
+	return RepoCreationOptions{
+		Root:             t.TempDir(),
+		MaxCreationLimit: -1,
+		DefaultBranch:    "main",
+		AppDataPath:      t.TempDir(),
+	}
+}
+
+// newTestGitRepo creates a repository of given name for the owner with its
+// Git repository.
+func newTestGitRepo(t *testing.T, ctx context.Context, s *RepositoriesStore, create RepoCreationOptions, owner *User, opts CreateRepoOptionsLegacy) *Repository {
+	t.Helper()
+
+	repo, err := s.Create(ctx, logx.NewNoopLogger(), create, owner, owner, opts)
 	require.NoError(t, err)
 	return repo
 }
@@ -932,10 +941,11 @@ func countActions(t *testing.T, db *gorm.DB, userID, repoID int64, opType Action
 }
 
 func reposLifecycleCreate(t *testing.T, ctx context.Context, s *RepositoriesStore) {
+	create := newTestRepoCreation(t)
 	logger := logx.NewNoopLogger()
 	alice := newTestIssueUser(t, ctx, s.db, "lc-alice")
 
-	repo, err := s.Create(ctx, logger, alice, alice, CreateRepoOptionsLegacy{Name: "Repo1", Description: "The repo", IsPrivate: true})
+	repo, err := s.Create(ctx, logger, create, alice, alice, CreateRepoOptionsLegacy{Name: "Repo1", Description: "The repo", IsPrivate: true})
 	require.NoError(t, err)
 	got, err := s.GetByID(ctx, repo.ID)
 	require.NoError(t, err)
@@ -951,14 +961,14 @@ func reposLifecycleCreate(t *testing.T, ctx context.Context, s *RepositoriesStor
 	returned := *repo
 	returned.Owner = nil
 	assert.Equal(t, *got, returned, "the returned repository matches what was saved")
-	assert.True(t, osx.IsDir(RepoPath(alice.Name, "Repo1")))
+	assert.True(t, osx.IsDir(RepoPath(create.Root, alice.Name, "Repo1")))
 	assert.True(t, s.IsWatching(ctx, alice.ID, repo.ID))
 	assert.Equal(t, int64(1), countActions(t, s.db, alice.ID, repo.ID, ActionCreateRepo))
 	u := reloadUser(t, ctx, s.db, alice.ID)
 	assert.Equal(t, 1, u.NumRepos)
 	assert.True(t, u.LastRepoVisibility)
 
-	mirror, err := s.Create(ctx, logger, alice, alice, CreateRepoOptionsLegacy{Name: "Mirror1", IsMirror: true})
+	mirror, err := s.Create(ctx, logger, create, alice, alice, CreateRepoOptionsLegacy{Name: "Mirror1", IsMirror: true})
 	require.NoError(t, err)
 	got, err = s.GetByID(ctx, mirror.ID)
 	require.NoError(t, err)
@@ -966,43 +976,43 @@ func reposLifecycleCreate(t *testing.T, ctx context.Context, s *RepositoriesStor
 
 	// The size is saved from the objects of the Git repository.
 	cmd := exec.Command("git", "hash-object", "-w", "--stdin")
-	cmd.Dir = RepoPath(alice.Name, "Repo1")
+	cmd.Dir = RepoPath(create.Root, alice.Name, "Repo1")
 	// Random content does not compress, so the object takes some KiB.
 	content := make([]byte, 64<<10)
 	_, _ = rand.Read(content)
 	cmd.Stdin = bytes.NewReader(content)
 	out, err := cmd.CombinedOutput()
 	require.NoError(t, err, "output: %s", out)
-	require.NoError(t, s.UpdateSize(ctx, repo))
+	require.NoError(t, s.UpdateSize(ctx, create.Root, repo))
 	got, err = s.GetByID(ctx, repo.ID)
 	require.NoError(t, err)
 	assert.Positive(t, got.Size)
 
-	has, err := s.Exists(ctx, alice, "REPO1")
+	has, err := s.Exists(ctx, create.Root, alice, "REPO1")
 	require.NoError(t, err)
 	assert.True(t, has)
-	has, err = s.Exists(ctx, alice, "repo2")
+	has, err = s.Exists(ctx, create.Root, alice, "repo2")
 	require.NoError(t, err)
 	assert.False(t, has)
 	_ = newTestRepoOf(t, ctx, s, alice, "nodisk", nil)
-	has, err = s.Exists(ctx, alice, "nodisk")
+	has, err = s.Exists(ctx, create.Root, alice, "nodisk")
 	require.NoError(t, err)
 	assert.False(t, has, "a repository without its Git repository does not exist")
 
-	_, err = s.Create(ctx, logger, alice, alice, CreateRepoOptionsLegacy{Name: "repo1"})
+	_, err = s.Create(ctx, logger, create, alice, alice, CreateRepoOptionsLegacy{Name: "repo1"})
 	assert.ErrorContains(t, err, "repository directory already exists")
-	_, err = s.Create(ctx, logger, alice, alice, CreateRepoOptionsLegacy{Name: "repo2.wiki"})
+	_, err = s.Create(ctx, logger, create, alice, alice, CreateRepoOptionsLegacy{Name: "repo2.wiki"})
 	assert.True(t, IsErrNameNotAllowed(err), "got %v", err)
-	assert.False(t, osx.Exist(RepoPath(alice.Name, "repo2.wiki")))
+	assert.False(t, osx.Exist(RepoPath(create.Root, alice.Name, "repo2.wiki")))
 
 	limited := newTestIssueUser(t, ctx, s.db, "lc-limited")
 	limited.MaxRepoCreation = 0
-	_, err = s.Create(ctx, logger, limited, limited, CreateRepoOptionsLegacy{Name: "repo1"})
+	_, err = s.Create(ctx, logger, create, limited, limited, CreateRepoOptionsLegacy{Name: "repo1"})
 	assert.True(t, IsErrReachLimitOfRepo(err), "got %v", err)
 
 	// Members of the owners team get access to repositories of the organization.
 	org, owner := newTestOrg(t, ctx, s.db, "lc-org")
-	orgRepo, err := s.Create(ctx, logger, owner, org, CreateRepoOptionsLegacy{Name: "repo1", IsPrivate: true})
+	orgRepo, err := s.Create(ctx, logger, create, owner, org, CreateRepoOptionsLegacy{Name: "repo1", IsPrivate: true})
 	require.NoError(t, err)
 	teams := newTeamsStore(s.db)
 	owners, err := teams.GetOwnerTeam(ctx, org.ID)
@@ -1013,12 +1023,13 @@ func reposLifecycleCreate(t *testing.T, ctx context.Context, s *RepositoriesStor
 }
 
 func reposLifecycleFork(t *testing.T, ctx context.Context, s *RepositoriesStore) {
+	create := newTestRepoCreation(t)
 	logger := logx.NewNoopLogger()
 	alice := newTestIssueUser(t, ctx, s.db, "lf-alice")
 	bob := newTestIssueUser(t, ctx, s.db, "lf-bob")
-	base := newTestGitRepo(t, ctx, s, alice, CreateRepoOptionsLegacy{Name: "base", IsPrivate: true})
+	base := newTestGitRepo(t, ctx, s, create, alice, CreateRepoOptionsLegacy{Name: "base", IsPrivate: true})
 
-	fork, err := s.Fork(ctx, logger, bob, bob, base, "MyFork", "Forked")
+	fork, err := s.Fork(ctx, logger, create, bob, bob, base, "MyFork", "Forked")
 	require.NoError(t, err)
 	assert.False(t, fork.EnableWiki || fork.EnableIssues || fork.EnablePulls, "the returned fork has the feature switches it was created with")
 	got, err := s.GetForkBy(ctx, base.ID, bob.ID)
@@ -1032,7 +1043,7 @@ func reposLifecycleFork(t *testing.T, ctx context.Context, s *RepositoriesStore)
 	assert.False(t, got.EnableWiki)
 	assert.False(t, got.EnableIssues)
 	assert.False(t, got.EnablePulls)
-	assert.True(t, osx.IsDir(RepoPath(bob.Name, "MyFork")))
+	assert.True(t, osx.IsDir(RepoPath(create.Root, bob.Name, "MyFork")))
 	assert.True(t, s.IsWatching(ctx, bob.ID, fork.ID))
 	assert.Equal(t, int64(1), countActions(t, s.db, bob.ID, fork.ID, ActionForkRepo))
 	assert.Equal(t, 1, reloadUser(t, ctx, s.db, bob.ID).NumRepos)
@@ -1042,30 +1053,31 @@ func reposLifecycleFork(t *testing.T, ctx context.Context, s *RepositoriesStore)
 
 	limited := newTestIssueUser(t, ctx, s.db, "lf-limited")
 	limited.MaxRepoCreation = 0
-	_, err = s.Fork(ctx, logger, limited, limited, base, "fork", "")
+	_, err = s.Fork(ctx, logger, create, limited, limited, base, "fork", "")
 	assert.True(t, IsErrReachLimitOfRepo(err), "got %v", err)
-	_, err = s.Fork(ctx, logger, bob, bob, base, "myfork", "")
+	_, err = s.Fork(ctx, logger, create, bob, bob, base, "myfork", "")
 	assert.True(t, IsErrRepoAlreadyExist(err), "got %v", err)
 }
 
 func reposLifecycleTransfer(t *testing.T, ctx context.Context, s *RepositoriesStore) {
+	create := newTestRepoCreation(t)
 	org, alice := newTestOrg(t, ctx, s.db, "lt-org")
 	carol := newTestIssueUser(t, ctx, s.db, "lt-carol")
 	dave := newTestIssueUser(t, ctx, s.db, "lt-dave")
 	require.NoError(t, newOrganizationsStore(s.db).AddMember(ctx, org.ID, dave.ID))
-	repo := newTestGitRepo(t, ctx, s, alice, CreateRepoOptionsLegacy{Name: "Moving"})
-	require.NoError(t, os.MkdirAll(WikiPath(alice.Name, repo.Name), os.ModePerm))
+	repo := newTestGitRepo(t, ctx, s, create, alice, CreateRepoOptionsLegacy{Name: "Moving"})
+	require.NoError(t, os.MkdirAll(WikiPath(create.Root, alice.Name, repo.Name), os.ModePerm))
 	collaborations := newCollaborationsStore(s.db)
 	require.NoError(t, collaborations.Add(ctx, repo, carol.ID))
 	require.NoError(t, collaborations.Add(ctx, repo, dave.ID))
 
-	require.NoError(t, s.Transfer(ctx, alice, "LT-Org", repo))
+	require.NoError(t, s.Transfer(ctx, create.Root, alice, "LT-Org", repo))
 	got, err := s.GetByID(ctx, repo.ID)
 	require.NoError(t, err)
 	assert.Equal(t, org.ID, got.OwnerID)
-	assert.False(t, osx.Exist(RepoPath(alice.Name, repo.Name)))
-	assert.True(t, osx.IsDir(RepoPath(org.Name, repo.Name)))
-	assert.True(t, osx.IsDir(WikiPath(org.Name, repo.Name)))
+	assert.False(t, osx.Exist(RepoPath(create.Root, alice.Name, repo.Name)))
+	assert.True(t, osx.IsDir(RepoPath(create.Root, org.Name, repo.Name)))
+	assert.True(t, osx.IsDir(WikiPath(create.Root, org.Name, repo.Name)))
 	collaborators, err := collaborations.List(ctx, repo.ID)
 	require.NoError(t, err)
 	require.Len(t, collaborators, 1)
@@ -1081,44 +1093,46 @@ func reposLifecycleTransfer(t *testing.T, ctx context.Context, s *RepositoriesSt
 
 	// A transfer back removes the repository from the teams.
 	got.Owner = org
-	require.NoError(t, s.Transfer(ctx, alice, alice.Name, got))
+	require.NoError(t, s.Transfer(ctx, create.Root, alice, alice.Name, got))
 	assert.False(t, teams.HasRepo(ctx, org.ID, owners.ID, repo.ID))
 	assert.Equal(t, 0, reloadTeam(t, ctx, teams, owners.ID).NumRepos)
 	assert.False(t, s.IsWatching(ctx, org.ID, repo.ID))
 	assert.Equal(t, 0, reloadUser(t, ctx, s.db, org.ID).NumRepos)
-	assert.True(t, osx.IsDir(RepoPath(alice.Name, repo.Name)))
+	assert.True(t, osx.IsDir(RepoPath(create.Root, alice.Name, repo.Name)))
 
-	_ = newTestGitRepo(t, ctx, s, org, CreateRepoOptionsLegacy{Name: "moving"})
-	err = s.Transfer(ctx, alice, org.Name, got)
+	_ = newTestGitRepo(t, ctx, s, create, org, CreateRepoOptionsLegacy{Name: "moving"})
+	err = s.Transfer(ctx, create.Root, alice, org.Name, got)
 	assert.True(t, IsErrRepoAlreadyExist(err), "got %v", err)
 }
 
 func reposLifecycleRename(t *testing.T, ctx context.Context, s *RepositoriesStore) {
+	create := newTestRepoCreation(t)
 	alice := newTestIssueUser(t, ctx, s.db, "lr-alice")
-	_ = newTestGitRepo(t, ctx, s, alice, CreateRepoOptionsLegacy{Name: "before"})
-	require.NoError(t, os.MkdirAll(WikiPath(alice.Name, "before"), os.ModePerm))
-	_ = newTestGitRepo(t, ctx, s, alice, CreateRepoOptionsLegacy{Name: "taken"})
+	_ = newTestGitRepo(t, ctx, s, create, alice, CreateRepoOptionsLegacy{Name: "before"})
+	require.NoError(t, os.MkdirAll(WikiPath(create.Root, alice.Name, "before"), os.ModePerm))
+	_ = newTestGitRepo(t, ctx, s, create, alice, CreateRepoOptionsLegacy{Name: "taken"})
 
-	require.NoError(t, s.Rename(ctx, alice, "Before", "After"))
-	assert.False(t, osx.Exist(RepoPath(alice.Name, "before")))
-	assert.True(t, osx.IsDir(RepoPath(alice.Name, "after")))
-	assert.True(t, osx.IsDir(WikiPath(alice.Name, "after")))
+	require.NoError(t, s.Rename(ctx, create.Root, alice, "Before", "After"))
+	assert.False(t, osx.Exist(RepoPath(create.Root, alice.Name, "before")))
+	assert.True(t, osx.IsDir(RepoPath(create.Root, alice.Name, "after")))
+	assert.True(t, osx.IsDir(WikiPath(create.Root, alice.Name, "after")))
 
-	err := s.Rename(ctx, alice, "after", "TAKEN")
+	err := s.Rename(ctx, create.Root, alice, "after", "TAKEN")
 	assert.True(t, IsErrRepoAlreadyExist(err), "got %v", err)
-	err = s.Rename(ctx, alice, "after", "after.git")
+	err = s.Rename(ctx, create.Root, alice, "after", "after.git")
 	assert.True(t, IsErrNameNotAllowed(err), "got %v", err)
-	assert.True(t, osx.IsDir(RepoPath(alice.Name, "after")))
+	assert.True(t, osx.IsDir(RepoPath(create.Root, alice.Name, "after")))
 }
 
 func reposLifecycleUpdate(t *testing.T, ctx context.Context, s *RepositoriesStore) {
+	create := newTestRepoCreation(t)
 	logger := logx.NewNoopLogger()
 	alice := newTestIssueUser(t, ctx, s.db, "lu-alice")
 	bob := newTestIssueUser(t, ctx, s.db, "lu-bob")
-	repo := newTestGitRepo(t, ctx, s, alice, CreateRepoOptionsLegacy{Name: "repo1"})
-	fork, err := s.Fork(ctx, logger, bob, bob, repo, "fork", "")
+	repo := newTestGitRepo(t, ctx, s, create, alice, CreateRepoOptionsLegacy{Name: "repo1"})
+	fork, err := s.Fork(ctx, logger, create, bob, bob, repo, "fork", "")
 	require.NoError(t, err)
-	daemonExportFile := filepath.Join(repo.RepoPath(), "git-daemon-export-ok")
+	daemonExportFile := filepath.Join(repo.RepoPath(create.Root), "git-daemon-export-ok")
 
 	// The lower name is derived from the name on every save.
 	repo.Name = "REPO1"
@@ -1126,7 +1140,7 @@ func reposLifecycleUpdate(t *testing.T, ctx context.Context, s *RepositoriesStor
 	repo.Description = strings.Repeat("d", 600)
 	repo.Website = strings.Repeat("w", 300)
 	repo.IsPrivate = true
-	require.NoError(t, s.Update(ctx, logger, repo, false))
+	require.NoError(t, s.Update(ctx, logger, create.Root, false, repo, false))
 	got, err := s.GetByID(ctx, repo.ID)
 	require.NoError(t, err)
 	assert.Equal(t, "repo1", got.LowerName)
@@ -1138,7 +1152,7 @@ func reposLifecycleUpdate(t *testing.T, ctx context.Context, s *RepositoriesStor
 	assert.True(t, got.IsPrivate, "forks follow a change of visibility that the caller does not report")
 
 	require.NoError(t, os.WriteFile(daemonExportFile, nil, 0o644))
-	require.NoError(t, s.Update(ctx, logger, repo, true))
+	require.NoError(t, s.Update(ctx, logger, create.Root, false, repo, true))
 	got, err = s.GetByID(ctx, fork.ID)
 	require.NoError(t, err)
 	assert.True(t, got.IsPrivate)
@@ -1149,7 +1163,7 @@ func reposLifecycleUpdate(t *testing.T, ctx context.Context, s *RepositoriesStor
 
 	repo.IsPrivate = false
 	repo.IsUnlisted = true
-	require.NoError(t, s.Update(ctx, logger, repo, true))
+	require.NoError(t, s.Update(ctx, logger, create.Root, false, repo, true))
 	got, err = s.GetByID(ctx, fork.ID)
 	require.NoError(t, err)
 	assert.False(t, got.IsPrivate)
@@ -1160,13 +1174,14 @@ func reposLifecycleUpdate(t *testing.T, ctx context.Context, s *RepositoriesStor
 }
 
 func reposLifecycleDelete(t *testing.T, ctx context.Context, s *RepositoriesStore) {
+	create := newTestRepoCreation(t)
 	logger := logx.NewNoopLogger()
-	setMockAttachmentPath(t)
+	attachmentPath := t.TempDir()
 	org, alice := newTestOrg(t, ctx, s.db, "ld-org")
 	bob := newTestIssueUser(t, ctx, s.db, "ld-bob")
-	repo := newTestGitRepo(t, ctx, s, org, CreateRepoOptionsLegacy{Name: "doomed"})
-	kept := newTestGitRepo(t, ctx, s, org, CreateRepoOptionsLegacy{Name: "kept"})
-	fork, err := s.Fork(ctx, logger, bob, bob, repo, "doomed-fork", "")
+	repo := newTestGitRepo(t, ctx, s, create, org, CreateRepoOptionsLegacy{Name: "doomed"})
+	kept := newTestGitRepo(t, ctx, s, create, org, CreateRepoOptionsLegacy{Name: "kept"})
+	fork, err := s.Fork(ctx, logger, create, bob, bob, repo, "doomed-fork", "")
 	require.NoError(t, err)
 	require.NoError(t, s.Star(ctx, bob.ID, repo.ID))
 	require.NoError(t, newCollaborationsStore(s.db).Add(ctx, repo, bob.ID))
@@ -1175,22 +1190,22 @@ func reposLifecycleDelete(t *testing.T, ctx context.Context, s *RepositoriesStor
 		issue := &Issue{RepoID: r.ID, Index: 1}
 		require.NoError(t, s.db.Create(issue).Error)
 		require.NoError(t, s.db.Create(&Comment{IssueID: issue.ID}).Error)
-		_ = newTestAttachment(t, ctx, attachments, "file.txt", issue.ID, 0, 0)
+		_ = newTestAttachment(t, ctx, attachmentPath, attachments, "file.txt", issue.ID, 0, 0)
 	}
 	var doomedIssueIDs []int64
 	require.NoError(t, s.db.Model(new(Issue)).Where("repo_id = ?", repo.ID).Pluck("id", &doomedIssueIDs).Error)
 	var doomedAttachment Attachment
 	require.NoError(t, s.db.Joins("JOIN issue ON issue.id = attachment.issue_id").Where("issue.repo_id = ?", repo.ID).First(&doomedAttachment).Error)
-	require.True(t, osx.IsFile(doomedAttachment.LocalPath()))
+	require.True(t, osx.IsFile(doomedAttachment.LocalPath(attachmentPath)))
 
-	err = s.Delete(ctx, logger, alice.ID, repo.ID)
+	err = s.Delete(ctx, logger, DeleteRepoOptions{RepositoryRoot: create.Root, AttachmentPath: attachmentPath}, alice.ID, repo.ID)
 	assert.True(t, IsErrRepoNotExist(err), "got %v", err)
 
-	require.NoError(t, s.Delete(ctx, logger, org.ID, repo.ID))
+	require.NoError(t, s.Delete(ctx, logger, DeleteRepoOptions{RepositoryRoot: create.Root, AttachmentPath: attachmentPath}, org.ID, repo.ID))
 	_, err = s.GetByID(ctx, repo.ID)
 	assert.True(t, IsErrRepoNotExist(err), "got %v", err)
-	assert.False(t, osx.Exist(RepoPath(org.Name, repo.Name)))
-	assert.False(t, osx.Exist(doomedAttachment.LocalPath()))
+	assert.False(t, osx.Exist(RepoPath(create.Root, org.Name, repo.Name)))
+	assert.False(t, osx.Exist(doomedAttachment.LocalPath(attachmentPath)))
 	countOf := func(table any, query string, repoID int64) int64 {
 		var count int64
 		require.NoError(t, s.db.Model(table).Where(query, repoID).Count(&count).Error)
@@ -1231,17 +1246,18 @@ func reposLifecycleDelete(t *testing.T, ctx context.Context, s *RepositoriesStor
 	assert.Zero(t, got.ForkID)
 
 	// Deleting a fork decreases the number of forks of its base.
-	fork2, err := s.Fork(ctx, logger, bob, bob, kept, "kept-fork", "")
+	fork2, err := s.Fork(ctx, logger, create, bob, bob, kept, "kept-fork", "")
 	require.NoError(t, err)
-	require.NoError(t, s.Delete(ctx, logger, bob.ID, fork2.ID))
+	require.NoError(t, s.Delete(ctx, logger, DeleteRepoOptions{RepositoryRoot: create.Root, AttachmentPath: attachmentPath}, bob.ID, fork2.ID))
 	kept, err = s.GetByID(ctx, kept.ID)
 	require.NoError(t, err)
 	assert.Zero(t, kept.NumForks)
 }
 
 func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *RepositoriesStore) {
+	create := newTestRepoCreation(t)
 	// SQLite lets only one transaction write, so the two cannot interleave.
-	if conf.UseSQLite3 {
+	if s.db.Name() == "sqlite" {
 		t.Skip()
 	}
 	logger := logx.NewNoopLogger()
@@ -1260,14 +1276,16 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 		return fmt.Sprintf("%s%d", prefix, n)
 	}
 	fork := func(owner *User, base *Repository) (*Repository, error) {
-		return s.Fork(ctx, logger, owner, owner, base, name("fork"), "")
+		return s.Fork(ctx, logger, create, owner, owner, base, name("fork"), "")
 	}
 	update := func(repo *Repository) error {
 		repo.IsPrivate = true
-		return s.Update(ctx, logger, repo, true)
+		return s.Update(ctx, logger, create.Root, false, repo, true)
 	}
-	deleteRepo := func(repo *Repository) error { return s.Delete(ctx, logger, repo.OwnerID, repo.ID) }
-	transfer := func(repo *Repository, to *User) error { return s.Transfer(ctx, repo.Owner, to.Name, repo) }
+	deleteRepo := func(repo *Repository) error {
+		return s.Delete(ctx, logger, DeleteRepoOptions{RepositoryRoot: create.Root}, repo.OwnerID, repo.ID)
+	}
+	transfer := func(repo *Repository, to *User) error { return s.Transfer(ctx, create.Root, repo.Owner, to.Name, repo) }
 	// mergePull makes the changes to the database that merging the pull request
 	// makes before any Git work.
 	pulls := &PullRequestsStore{db: s.db}
@@ -1281,7 +1299,7 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 			if err := tx.Where("id = ?", pull.IssueID).First(issue).Error; err != nil {
 				return err
 			}
-			return newIssuesStore(tx).changeStatus(ctx, logger, alice, base, issue, true)
+			return newIssuesStore(tx).changeStatus(ctx, logger, NotifyOptions{}, alice, base, issue, true)
 		})
 	}
 	newcomer := newTestIssueUser(t, ctx, s.db, "cf-newcomer")
@@ -1388,7 +1406,7 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 			name:      "transfer older repository to its collaborator while deleting the newer one",
 			baseOwner: alice,
 			before: func() {
-				older = newTestGitRepo(t, ctx, s, alice, CreateRepoOptionsLegacy{Name: name("older")})
+				older = newTestGitRepo(t, ctx, s, create, alice, CreateRepoOptionsLegacy{Name: name("older")})
 				older.Owner = alice
 				require.NoError(t, newCollaborationsStore(s.db).Add(ctx, older, carol.ID))
 			},
@@ -1400,7 +1418,7 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 		if tc.before != nil {
 			tc.before()
 		}
-		base := newTestGitRepo(t, ctx, s, tc.baseOwner, CreateRepoOptionsLegacy{Name: name("base"), IsPrivate: tc.private})
+		base := newTestGitRepo(t, ctx, s, create, tc.baseOwner, CreateRepoOptionsLegacy{Name: name("base"), IsPrivate: tc.private})
 		forkOwner := tc.forkOwner
 		if forkOwner == nil {
 			forkOwner = bob
@@ -1454,8 +1472,8 @@ func TestRepository_ComposeMetas(t *testing.T) {
 	t.Run("no external tracker is configured", func(t *testing.T) {
 		repo.EnableExternalTracker = false
 
-		metas := repo.ComposeMetas()
-		assert.Equal(t, metas["repoLink"], repo.Link())
+		metas := repo.ComposeMetas("", "")
+		assert.Equal(t, metas["repoLink"], repo.Link(""))
 
 		// Should not have format and style if no external tracker is configured.
 		_, ok := metas["format"]
@@ -1469,18 +1487,18 @@ func TestRepository_ComposeMetas(t *testing.T) {
 		repo.EnableExternalTracker = true
 
 		// Default to numeric issue style.
-		assert.Equal(t, markup.IssueNameStyleNumeric, repo.ComposeMetas()["style"])
+		assert.Equal(t, markup.IssueNameStyleNumeric, repo.ComposeMetas("", "")["style"])
 		repo.ExternalMetas = nil
 
 		repo.ExternalTrackerStyle = markup.IssueNameStyleNumeric
-		assert.Equal(t, markup.IssueNameStyleNumeric, repo.ComposeMetas()["style"])
+		assert.Equal(t, markup.IssueNameStyleNumeric, repo.ComposeMetas("", "")["style"])
 		repo.ExternalMetas = nil
 
 		repo.ExternalTrackerStyle = markup.IssueNameStyleAlphanumeric
-		assert.Equal(t, markup.IssueNameStyleAlphanumeric, repo.ComposeMetas()["style"])
+		assert.Equal(t, markup.IssueNameStyleAlphanumeric, repo.ComposeMetas("", "")["style"])
 		repo.ExternalMetas = nil
 
-		metas := repo.ComposeMetas()
+		metas := repo.ComposeMetas("", "")
 		assert.Equal(t, "testuser", metas["user"])
 		assert.Equal(t, "testrepo", metas["repo"])
 		assert.Equal(t, "https://someurl.com/{user}/{repo}/{issue}", metas["format"])
@@ -1488,27 +1506,18 @@ func TestRepository_ComposeMetas(t *testing.T) {
 }
 
 func Test_CreateRepository_PreventDeletion(t *testing.T) {
-	tempRepositoryRoot := filepath.Join(os.TempDir(), "createRepository-tempRepositoryRoot")
-	conf.SetMockRepository(
-		t,
-		conf.RepositoryOpts{
-			Root: tempRepositoryRoot,
-		},
-	)
-	err := os.RemoveAll(tempRepositoryRoot)
-	require.NoError(t, err)
-	defer func() { _ = os.RemoveAll(tempRepositoryRoot) }()
+	create := RepoCreationOptions{Root: t.TempDir()}
 
 	owner := &User{Name: "testuser"}
 	opts := CreateRepoOptionsLegacy{Name: "safety-test"}
-	repoPath := RepoPath(owner.Name, opts.Name)
+	repoPath := RepoPath(create.Root, owner.Name, opts.Name)
 	require.NoError(t, os.MkdirAll(repoPath, os.ModePerm))
 
 	canary := filepath.Join(repoPath, "canary.txt")
 	require.NoError(t, os.WriteFile(canary, []byte("should survive"), 0o644))
 
 	// No database is needed, because the existing directory stops creation first.
-	_, err = newReposStore(nil).Create(context.Background(), logx.NewNoopLogger(), owner, owner, opts)
+	_, err := newReposStore(nil).Create(context.Background(), logx.NewNoopLogger(), create, owner, owner, opts)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "repository directory already exists")
 	assert.True(t, osx.Exist(canary))
@@ -1686,7 +1695,7 @@ func TestSyncDelegateHooks(t *testing.T) {
 				require.NoError(t, os.WriteFile(filepath.Join(repoPath, "custom_hooks", name), nil, 0o755))
 			}
 
-			require.NoError(t, syncDelegateHooks(repoPath, func() (bool, error) { return test.hasProtectedBranch, nil }))
+			require.NoError(t, syncDelegateHooks(DelegateHooksOptions{}, repoPath, func() (bool, error) { return test.hasProtectedBranch, nil }))
 			assert.Equal(t, test.want, hookNames(repoPath))
 		})
 	}
@@ -1705,7 +1714,7 @@ func TestSyncDelegateHooks_ProtectedMeanwhile(t *testing.T) {
 		checks++
 		return checks > 1, nil
 	}
-	require.NoError(t, syncDelegateHooks(repoPath, hasProtectedBranch))
+	require.NoError(t, syncDelegateHooks(DelegateHooksOptions{}, repoPath, hasProtectedBranch))
 	assert.True(t, osx.IsFile(hookPath), "pre-receive hook must stay installed")
 }
 

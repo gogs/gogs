@@ -12,7 +12,6 @@ import (
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/api/v1types"
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
 )
 
@@ -154,12 +153,12 @@ func (s *MilestonesStore) ListByRepoID(ctx context.Context, repoID int64) ([]*Mi
 }
 
 // List returns the open or closed milestones of the repository with given ID
-// on given page, or all of them when page is 0.
-func (s *MilestonesStore) List(ctx context.Context, repoID int64, isClosed bool, page int) ([]*Milestone, error) {
-	milestones := make([]*Milestone, 0, conf.UI.IssuePagingNum)
+// on given page of `pageSize`, or all of them when page is 0.
+func (s *MilestonesStore) List(ctx context.Context, repoID int64, isClosed bool, page, pageSize int) ([]*Milestone, error) {
+	milestones := make([]*Milestone, 0, pageSize)
 	db := s.db.WithContext(ctx).Where("repo_id = ? AND is_closed = ?", repoID, isClosed).Order("id ASC")
 	if page > 0 {
-		db = db.Limit(conf.UI.IssuePagingNum).Offset((page - 1) * conf.UI.IssuePagingNum)
+		db = db.Limit(pageSize).Offset((page - 1) * pageSize)
 	}
 	return milestones, db.Find(&milestones).Error
 }
@@ -445,7 +444,7 @@ func (s *MilestonesStore) assignIssue(ctx context.Context, issue *Issue) error {
 
 // AssignIssue moves the issue from the milestone it has in the database, if
 // any, to its milestone, if any, as the doer.
-func (s *MilestonesStore) AssignIssue(ctx context.Context, logger *logx.Logger, doer *User, issue *Issue) error {
+func (s *MilestonesStore) AssignIssue(ctx context.Context, logger *logx.Logger, links LinkOptions, doer *User, issue *Issue) error {
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		return newMilestonesStore(tx).assignIssue(ctx, issue)
 	})
@@ -461,20 +460,20 @@ func (s *MilestonesStore) AssignIssue(ctx context.Context, logger *logx.Logger, 
 	webhooks := newWebhooksStore(s.db)
 	if issue.IsPull {
 		issue.PullRequest.Issue = issue
-		err = webhooks.Prepare(ctx, logger, issue.Repo, HookEventTypePullRequest, &v1types.WebhookPullRequestPayload{
+		err = webhooks.Prepare(ctx, logger, links.ExternalURL, issue.Repo, HookEventTypePullRequest, &v1types.WebhookPullRequestPayload{
 			Action:      hookAction,
 			Index:       issue.Index,
-			PullRequest: issue.PullRequest.APIFormat(logger),
-			Repository:  issue.Repo.APIFormatLegacy(logger, nil),
-			Sender:      doer.APIFormat(),
+			PullRequest: issue.PullRequest.APIFormat(logger, links),
+			Repository:  issue.Repo.APIFormatLegacy(logger, links, nil),
+			Sender:      doer.APIFormat(links),
 		})
 	} else {
-		err = webhooks.Prepare(ctx, logger, issue.Repo, HookEventTypeIssues, &v1types.WebhookIssuesPayload{
+		err = webhooks.Prepare(ctx, logger, links.ExternalURL, issue.Repo, HookEventTypeIssues, &v1types.WebhookIssuesPayload{
 			Action:     hookAction,
 			Index:      issue.Index,
-			Issue:      issue.APIFormat(),
-			Repository: issue.Repo.APIFormatLegacy(logger, nil),
-			Sender:     doer.APIFormat(),
+			Issue:      issue.APIFormat(links),
+			Repository: issue.Repo.APIFormatLegacy(logger, links, nil),
+			Sender:     doer.APIFormat(links),
 		})
 	}
 	if err != nil {

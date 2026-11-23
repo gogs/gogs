@@ -9,8 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"unknwon.dev/x/logx"
-
-	"gogs.io/gogs/internal/conf"
 )
 
 func TestComments(t *testing.T) {
@@ -41,13 +39,6 @@ func TestComments(t *testing.T) {
 				err := clearTables(t, s.db)
 				require.NoError(t, err)
 			})
-			// Issue webhook payloads and API formats build links from the
-			// server and SSH settings, which other suites mock.
-			conf.SetMockServer(t, conf.ServerOpts{})
-			conf.SetMockSSH(t, conf.SSHOpts{})
-			// Finding mentions in issues and comments reads the UI settings,
-			// which other suites mock.
-			conf.SetMockUI(t, conf.UIOpts{})
 			tc.test(t, ctx, s)
 		})
 		if t.Failed() {
@@ -57,7 +48,7 @@ func TestComments(t *testing.T) {
 }
 
 func commentsCreate(t *testing.T, ctx context.Context, s *CommentsStore) {
-	setMockAttachmentPath(t)
+	attachmentPath := t.TempDir()
 	logger := logx.NewNoopLogger()
 	repo := newTestIssueRepo(t, ctx, s.db, "cm-create")
 	mentioned := newTestIssueUser(t, ctx, s.db, "cm-create-mentioned")
@@ -65,10 +56,10 @@ func commentsCreate(t *testing.T, ctx context.Context, s *CommentsStore) {
 	issue := newTestIssue(t, ctx, newIssuesStore(s.db), repo, "Crash")
 	other := newTestIssue(t, ctx, newIssuesStore(s.db), repo, "Other")
 	attachments := newAttachmentsStore(s.db)
-	unbound, err := attachments.Create(ctx, 1, "a.txt", strings.NewReader("a"))
+	unbound, err := attachments.Create(ctx, attachmentPath, 1, "a.txt", strings.NewReader("a"))
 	require.NoError(t, err)
 
-	comment, err := s.Create(ctx, logger, repo.Owner, repo, issue, "Hi @cm-create-mentioned", []string{unbound.UUID})
+	comment, err := s.Create(ctx, logger, NotifyOptions{}, repo.Owner, repo, issue, "Hi @cm-create-mentioned", []string{unbound.UUID})
 	require.NoError(t, err)
 	assert.Equal(t, CommentTypeComment, comment.Type)
 	assert.Equal(t, repo.OwnerID, comment.Poster.ID)
@@ -119,19 +110,19 @@ func commentsCreateStatus(t *testing.T, ctx context.Context, s *CommentsStore) {
 	}
 
 	issue.IsClosed = true
-	c, err := s.createStatus(ctx, logger, repo.Owner, repo, issue)
+	c, err := s.createStatus(ctx, logger, NotifyOptions{}, repo.Owner, repo, issue)
 	require.NoError(t, err)
 	assert.Equal(t, CommentTypeClose, c.Type)
 	assert.Equal(t, []int{1, 0}, closed())
 
 	pull.IsClosed = true
-	c, err = s.createStatus(ctx, logger, repo.Owner, repo, pull)
+	c, err = s.createStatus(ctx, logger, NotifyOptions{}, repo.Owner, repo, pull)
 	require.NoError(t, err)
 	assert.Equal(t, CommentTypeClose, c.Type)
 	assert.Equal(t, []int{1, 1}, closed())
 
 	issue.IsClosed = false
-	c, err = s.createStatus(ctx, logger, repo.Owner, repo, issue)
+	c, err = s.createStatus(ctx, logger, NotifyOptions{}, repo.Owner, repo, issue)
 	require.NoError(t, err)
 	assert.Equal(t, CommentTypeReopen, c.Type)
 	assert.Equal(t, []int{0, 1}, closed())
@@ -157,15 +148,15 @@ func commentsCreateRef(t *testing.T, ctx context.Context, s *CommentsStore) {
 	}
 
 	for _, sha := range []string{"abc", "abc", "def"} {
-		err := s.createRef(ctx, logger, repo.Owner, repo, issue, "Fix it", sha)
+		err := s.createRef(ctx, logger, NotifyOptions{}, repo.Owner, repo, issue, "Fix it", sha)
 		require.NoError(t, err)
 	}
-	err := s.createRef(ctx, logger, repo.Owner, repo, other, "Fix it", "abc")
+	err := s.createRef(ctx, logger, NotifyOptions{}, repo.Owner, repo, other, "Fix it", "abc")
 	require.NoError(t, err)
 	assert.Equal(t, []string{"abc", "def"}, refs(issue.ID))
 	assert.Equal(t, []string{"abc"}, refs(other.ID))
 
-	err = s.createRef(ctx, logger, repo.Owner, repo, issue, "Fix it", "")
+	err = s.createRef(ctx, logger, NotifyOptions{}, repo.Owner, repo, issue, "Fix it", "")
 	require.Error(t, err)
 }
 
@@ -252,13 +243,13 @@ func commentsUpdate(t *testing.T, ctx context.Context, s *CommentsStore) {
 	repo := newTestIssueRepo(t, ctx, s.db, "cm-update")
 	newTestWebhook(t, ctx, newWebhooksStore(s.db), repo.ID, 0, HookEvents{IssueComment: true})
 	issue := newTestIssue(t, ctx, newIssuesStore(s.db), repo, "Crash")
-	comment, err := s.Create(ctx, logger, repo.Owner, repo, issue, "Old", nil)
+	comment, err := s.Create(ctx, logger, NotifyOptions{}, repo.Owner, repo, issue, "Old", nil)
 	require.NoError(t, err)
 	comment, err = s.GetByID(ctx, comment.ID)
 	require.NoError(t, err)
 
 	comment.Content = "New"
-	err = s.Update(ctx, logger, repo.Owner, comment, "Old")
+	err = s.Update(ctx, logger, LinkOptions{}, repo.Owner, comment, "Old")
 	require.NoError(t, err)
 
 	got, err := s.GetByID(ctx, comment.ID)
@@ -273,23 +264,23 @@ func commentsUpdate(t *testing.T, ctx context.Context, s *CommentsStore) {
 }
 
 func commentsDeleteByID(t *testing.T, ctx context.Context, s *CommentsStore) {
-	setMockAttachmentPath(t)
+	attachmentPath := t.TempDir()
 	logger := logx.NewNoopLogger()
 	repo := newTestIssueRepo(t, ctx, s.db, "cm-delete")
 	newTestWebhook(t, ctx, newWebhooksStore(s.db), repo.ID, 0, HookEvents{IssueComment: true})
 	issue := newTestIssue(t, ctx, newIssuesStore(s.db), repo, "Crash")
 	attachments := newAttachmentsStore(s.db)
-	a, err := attachments.Create(ctx, 1, "a.txt", strings.NewReader("a"))
+	a, err := attachments.Create(ctx, attachmentPath, 1, "a.txt", strings.NewReader("a"))
 	require.NoError(t, err)
-	kept, err := attachments.Create(ctx, 1, "b.txt", strings.NewReader("b"))
+	kept, err := attachments.Create(ctx, attachmentPath, 1, "b.txt", strings.NewReader("b"))
 	require.NoError(t, err)
 
-	comment, err := s.Create(ctx, logger, repo.Owner, repo, issue, "Bye", []string{a.UUID})
+	comment, err := s.Create(ctx, logger, NotifyOptions{}, repo.Owner, repo, issue, "Bye", []string{a.UUID})
 	require.NoError(t, err)
-	keptComment, err := s.Create(ctx, logger, repo.Owner, repo, issue, "Stay", []string{kept.UUID})
+	keptComment, err := s.Create(ctx, logger, NotifyOptions{}, repo.Owner, repo, issue, "Stay", []string{kept.UUID})
 	require.NoError(t, err)
 	issue.IsClosed = true
-	status, err := s.createStatus(ctx, logger, repo.Owner, repo, issue)
+	status, err := s.createStatus(ctx, logger, NotifyOptions{}, repo.Owner, repo, issue)
 	require.NoError(t, err)
 
 	numComments := func() int {
@@ -300,27 +291,27 @@ func commentsDeleteByID(t *testing.T, ctx context.Context, s *CommentsStore) {
 	}
 	require.Equal(t, 2, numComments())
 
-	err = s.DeleteByID(ctx, logger, repo.Owner, comment.ID)
+	err = s.DeleteByID(ctx, logger, LinkOptions{}, attachmentPath, repo.Owner, comment.ID)
 	require.NoError(t, err)
 	_, err = s.GetByID(ctx, comment.ID)
 	assert.True(t, IsErrCommentNotExist(err), "got %v", err)
 	assert.Equal(t, 1, numComments())
 	_, err = attachments.GetByUUID(ctx, a.UUID)
 	assert.True(t, IsErrAttachmentNotExist(err), "got %v", err)
-	_, err = os.Stat(a.LocalPath())
+	_, err = os.Stat(a.LocalPath(attachmentPath))
 	assert.True(t, os.IsNotExist(err), "got %v", err)
 	_, err = attachments.GetByUUID(ctx, kept.UUID)
 	require.NoError(t, err)
-	_, err = os.Stat(kept.LocalPath())
+	_, err = os.Stat(kept.LocalPath(attachmentPath))
 	require.NoError(t, err)
 
 	// Deleting a comment of another type does not change the number of
 	// comments.
-	err = s.DeleteByID(ctx, logger, repo.Owner, status.ID)
+	err = s.DeleteByID(ctx, logger, LinkOptions{}, attachmentPath, repo.Owner, status.ID)
 	require.NoError(t, err)
 	assert.Equal(t, 1, numComments())
 
-	err = s.DeleteByID(ctx, logger, repo.Owner, 9999)
+	err = s.DeleteByID(ctx, logger, LinkOptions{}, attachmentPath, repo.Owner, 9999)
 	require.NoError(t, err)
 	_, err = s.GetByID(ctx, keptComment.ID)
 	require.NoError(t, err)

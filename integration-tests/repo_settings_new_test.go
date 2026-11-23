@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 )
 
@@ -47,7 +46,7 @@ func repoSettingsMigrate(t *testing.T, c *client, u *User, source *Repository, m
 // on disk.
 func repoSettingsHead(t *testing.T, repo *Repository, branch string) string {
 	t.Helper()
-	return repoSettingsGit(t, database.RepoPath(repo.Owner, repo.Name), "rev-parse", "refs/heads/"+branch)
+	return repoSettingsGit(t, database.RepoPath(cfg.Repository.Root, repo.Owner, repo.Name), "rev-parse", "refs/heads/"+branch)
 }
 
 func TestRepoSettingsNewRepository(t *testing.T) {
@@ -115,7 +114,7 @@ func TestRepoSettingsCreateRepository(t *testing.T) {
 	assert.Equal(t, "Created through the web API", got.Description)
 	assert.True(t, got.IsPrivate)
 	assert.False(t, got.IsEmpty)
-	files := repoSettingsGit(t, database.RepoPath(u.Name, name), "ls-tree", "--name-only", "HEAD")
+	files := repoSettingsGit(t, database.RepoPath(cfg.Repository.Root, u.Name, name), "ls-tree", "--name-only", "HEAD")
 	assert.ElementsMatch(t, []string{".gitignore", "LICENSE", "README.md"}, strings.Split(files, "\n"))
 
 	status, body = c.do(http.MethodPost, "/api/web/repo/create", request)
@@ -151,7 +150,7 @@ func TestRepoSettingsMigrateRepository(t *testing.T) {
 	// have.
 	name := UniqueName("migrated-")
 	status, body := c.do(http.MethodPost, "/api/web/repo/migrate", map[string]any{
-		"cloneAddr": database.RepoPath(source.Owner, source.Name),
+		"cloneAddr": database.RepoPath(cfg.Repository.Root, source.Owner, source.Name),
 		"name":      name,
 	})
 	require.Equal(t, http.StatusForbidden, status, "response: %s", body)
@@ -193,7 +192,7 @@ func TestRepoSettingsMirror(t *testing.T) {
 	c.doJSON(http.MethodGet, repoSettingsAPIPath(mirror, "/settings"), nil, http.StatusOK, &settings)
 	require.NotNil(t, settings.Mirror)
 	assert.Equal(t, cloneAddr, settings.Mirror.Address)
-	assert.Equal(t, conf.Mirror.DefaultInterval, settings.Mirror.Interval)
+	assert.Equal(t, cfg.Mirror.DefaultInterval, settings.Mirror.Interval)
 	assert.False(t, settings.CanEnablePulls)
 
 	// Mirrors follow the branches of their source.
@@ -227,8 +226,8 @@ func TestRepoSettingsMirror(t *testing.T) {
 	require.NotNil(t, settings.Mirror)
 	assert.Equal(t, cloneAddr, settings.Mirror.Address)
 
-	mirrorPath := database.RepoPath(mirror.Owner, mirror.Name)
-	sourcePath := database.RepoPath(source.Owner, source.Name)
+	mirrorPath := database.RepoPath(cfg.Repository.Root, mirror.Owner, mirror.Name)
+	sourcePath := database.RepoPath(cfg.Repository.Root, source.Owner, source.Name)
 	// sync adds a commit to the source and waits for the mirror to fetch it,
 	// along with any other change made to the source before.
 	sync := func(message string) {

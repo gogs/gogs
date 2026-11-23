@@ -56,9 +56,6 @@ func TestCheckInvalidOptions(t *testing.T) {
 }
 
 func TestHandleDeprecatedRegistrationCaptcha(t *testing.T) {
-	oldFile, oldAuth := File, Auth
-	t.Cleanup(func() { File, Auth = oldFile, oldAuth })
-
 	tests := []struct {
 		name    string
 		enabled string // Value of ENABLE_REGISTRATION_CAPTCHA, empty when not set.
@@ -75,13 +72,13 @@ func TestHandleDeprecatedRegistrationCaptcha(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			File = ini.Empty()
+			file := ini.Empty()
 			if test.enabled != "" {
-				_, _ = File.Section("auth").NewKey("ENABLE_REGISTRATION_CAPTCHA", test.enabled)
+				_, _ = file.Section("auth").NewKey("ENABLE_REGISTRATION_CAPTCHA", test.enabled)
 			}
-			Auth = AuthOpts{AntiBotVerification: test.current}
-			handleDeprecated()
-			assert.Equal(t, test.want, Auth.AntiBotVerification)
+			auth := AuthOpts{AntiBotVerification: test.current}
+			handleDeprecated(file, &auth)
+			assert.Equal(t, test.want, auth.AntiBotVerification)
 		})
 	}
 }

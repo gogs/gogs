@@ -98,7 +98,7 @@ func webhookLastStatus(s database.HookStatus) string {
 	return "none"
 }
 
-func getWebhooks(c flamego.Context, logger *logx.Logger, scope *webhookScope) (statusCode int, resp any, err error) {
+func getWebhooks(c flamego.Context, webhook conf.WebhookOpts, logger *logx.Logger, scope *webhookScope) (statusCode int, resp any, err error) {
 	var ws []*database.Webhook
 	if scope.RepoID > 0 {
 		ws, err = database.Handle.Webhooks().ListByRepo(c.Request().Context(), scope.RepoID)
@@ -119,7 +119,7 @@ func getWebhooks(c flamego.Context, logger *logx.Logger, scope *webhookScope) (s
 			Active:     w.IsActive,
 		})
 	}
-	return http.StatusOK, &webhookList{Items: items, Types: conf.Webhook.Types}, nil
+	return http.StatusOK, &webhookList{Items: items, Types: webhook.Types}, nil
 }
 
 type webhookEvents struct {
@@ -178,7 +178,7 @@ type webhookDetail struct {
 	Deliveries []webhookDelivery `json:"deliveries"`
 }
 
-func getWebhook(c flamego.Context, logger *logx.Logger, w *database.Webhook) (statusCode int, resp any, err error) {
+func getWebhook(c flamego.Context, webhook conf.WebhookOpts, logger *logx.Logger, w *database.Webhook) (statusCode int, resp any, err error) {
 	settings := webhookRequest{
 		Type:       w.HookTaskType.Name(),
 		PayloadURL: w.URL,
@@ -215,7 +215,7 @@ func getWebhook(c flamego.Context, logger *logx.Logger, w *database.Webhook) (st
 		}
 	}
 
-	tasks, err := database.Handle.HookTasks().ListByWebhook(c.Request().Context(), w.ID, 1, conf.Webhook.PagingNum)
+	tasks, err := database.Handle.HookTasks().ListByWebhook(c.Request().Context(), w.ID, 1, webhook.PagingNum)
 	if err != nil {
 		logger.Error("Failed to list deliveries", "webhookID", w.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list deliveries")
@@ -239,15 +239,16 @@ func getWebhook(c flamego.Context, logger *logx.Logger, w *database.Webhook) (st
 }
 
 // validateWebhookURL returns the status code and the message for a payload
-// URL that cannot be used, or http.StatusOK.
-func validateWebhookURL(l i18n.Locale, rawURL string) (statusCode int, msg string) {
+// URL that cannot be used, or http.StatusOK. Local addresses are only allowed
+// when localNetworkAllowlist has them.
+func validateWebhookURL(l i18n.Locale, localNetworkAllowlist []string, rawURL string) (statusCode int, msg string) {
 	// 🚨 SECURITY: Local addresses must not be allowed by non-admins to prevent SSRF,
 	// see https://github.com/gogs/gogs/issues/5366 for details.
 	payloadURL, err := url.Parse(rawURL)
 	if err != nil {
 		return http.StatusBadRequest, l.Tr("repo::settings.webhook.err_cannot_parse_payload_url", "error", err)
 	}
-	if netx.IsBlockedLocalHostname(payloadURL.Hostname(), conf.Security.LocalNetworkAllowlist) {
+	if netx.IsBlockedLocalHostname(payloadURL.Hostname(), localNetworkAllowlist) {
 		return http.StatusForbidden, l.Tr("repo::settings.webhook.url_resolved_to_blocked_local_address")
 	}
 	return http.StatusOK, ""
@@ -256,7 +257,7 @@ func validateWebhookURL(l i18n.Locale, rawURL string) (statusCode int, msg strin
 // applyWebhookRequest copies the settings that apply to the type of the
 // webhook from the request, or returns the status code and the response for
 // settings that cannot be used.
-func applyWebhookRequest(l i18n.Locale, w *database.Webhook, req webhookRequest) (statusCode int, resp *bindingErrorResponse, err error) {
+func applyWebhookRequest(l i18n.Locale, localNetworkAllowlist []string, w *database.Webhook, req webhookRequest) (statusCode int, resp *bindingErrorResponse, err error) {
 	// The fields are named after their labels on the page, which the shared
 	// validation messages cannot do.
 	fieldError := func(code int, field, msg string) (int, *bindingErrorResponse, error) {
@@ -270,7 +271,7 @@ func applyWebhookRequest(l i18n.Locale, w *database.Webhook, req webhookRequest)
 	case w.HookTaskType == database.SLACK && strings.TrimSpace(req.Channel) == "":
 		return fieldError(http.StatusBadRequest, "channel", l.Tr("repo::settings.slack_channel")+l.Tr("form::require_error"))
 	}
-	if code, msg := validateWebhookURL(l, req.PayloadURL); code != http.StatusOK {
+	if code, msg := validateWebhookURL(l, localNetworkAllowlist, req.PayloadURL); code != http.StatusOK {
 		return fieldError(code, "url", msg)
 	}
 
@@ -319,13 +320,13 @@ type webhookIDResponse struct {
 	ID int64 `json:"id"`
 }
 
-func postWebhook(c flamego.Context, logger *logx.Logger, l i18n.Locale, scope *webhookScope, req webhookRequest) (statusCode int, resp any, err error) {
+func postWebhook(c flamego.Context, sec conf.SecurityOpts, webhook conf.WebhookOpts, logger *logx.Logger, l i18n.Locale, scope *webhookScope, req webhookRequest) (statusCode int, resp any, err error) {
 	hookType := database.ToHookTaskType(req.Type)
-	if hookType == 0 || !slices.Contains(conf.Webhook.Types, req.Type) {
+	if hookType == 0 || !slices.Contains(webhook.Types, req.Type) {
 		return http.StatusBadRequest, nil, errors.Newf("webhook type %q is not allowed", req.Type)
 	}
 	w := &database.Webhook{RepoID: scope.RepoID, OrgID: scope.OrgID, HookTaskType: hookType, ContentType: database.JSON}
-	code, errResp, err := applyWebhookRequest(l, w, req)
+	code, errResp, err := applyWebhookRequest(l, sec.LocalNetworkAllowlist, w, req)
 	if err != nil {
 		logger.Error("Failed to apply webhook settings", "repoID", scope.RepoID, "orgID", scope.OrgID, "error", err)
 		return http.StatusInternalServerError, nil, err
@@ -339,8 +340,8 @@ func postWebhook(c flamego.Context, logger *logx.Logger, l i18n.Locale, scope *w
 	return http.StatusCreated, &webhookIDResponse{ID: w.ID}, nil
 }
 
-func patchWebhook(c flamego.Context, logger *logx.Logger, l i18n.Locale, w *database.Webhook, req webhookRequest) (statusCode int, resp any, err error) {
-	code, errResp, err := applyWebhookRequest(l, w, req)
+func patchWebhook(c flamego.Context, sec conf.SecurityOpts, logger *logx.Logger, l i18n.Locale, w *database.Webhook, req webhookRequest) (statusCode int, resp any, err error) {
+	code, errResp, err := applyWebhookRequest(l, sec.LocalNetworkAllowlist, w, req)
 	if err != nil {
 		logger.Error("Failed to apply webhook settings", "webhookID", w.ID, "error", err)
 		return http.StatusInternalServerError, nil, err
@@ -382,8 +383,8 @@ func usernameByEmail(ctx context.Context, email string) (string, error) {
 
 // testPushPayload returns a push event for the latest commit on the default
 // branch of the repository, or for a fake commit when the repository is
-// empty.
-func testPushPayload(ctx context.Context, logger *logx.Logger, viewer *database.User, rc *repoAdminContext) (*v1types.WebhookPushPayload, error) {
+// empty. The repository is stored under repositoryRoot.
+func testPushPayload(ctx context.Context, logger *logx.Logger, links database.LinkOptions, repositoryRoot string, viewer *database.User, rc *repoAdminContext) (*v1types.WebhookPushPayload, error) {
 	repo := rc.Repo
 	ghost := database.NewGhostUser()
 	commit := &git.Commit{
@@ -394,7 +395,7 @@ func testPushPayload(ctx context.Context, logger *logx.Logger, viewer *database.
 	authorUsername, committerUsername := ghost.Name, ghost.Name
 	nameStatus := &git.NameStatus{}
 
-	repoPath := repox.RepositoryPath(rc.Owner.Name, repo.Name)
+	repoPath := repox.RepositoryPath(repositoryRoot, rc.Owner.Name, repo.Name)
 	var commitID string
 	if repo.IsEmpty {
 		objectFormat, err := git.RepoObjectFormat(ctx, repoPath)
@@ -422,7 +423,7 @@ func testPushPayload(ctx context.Context, logger *logx.Logger, viewer *database.
 		}
 	}
 
-	apiUser := viewer.APIFormat()
+	apiUser := viewer.APIFormat(links)
 	return &v1types.WebhookPushPayload{
 		Ref:    git.RefsHeads + repo.DefaultBranch,
 		Before: commitID,
@@ -431,7 +432,7 @@ func testPushPayload(ctx context.Context, logger *logx.Logger, viewer *database.
 			{
 				ID:      commitID,
 				Message: commit.Message,
-				URL:     repo.HTMLURL() + "/commit/" + commitID,
+				URL:     repo.HTMLURL(links.ExternalURL) + "/commit/" + commitID,
 				Author: &v1types.WebhookPayloadUser{
 					Name:     commit.Author.Name,
 					Email:    commit.Author.Email,
@@ -448,20 +449,20 @@ func testPushPayload(ctx context.Context, logger *logx.Logger, viewer *database.
 				Timestamp: commit.Committer.When,
 			},
 		},
-		Repo:   repo.APIFormatLegacy(logger, nil),
+		Repo:   repo.APIFormatLegacy(logger, links, nil),
 		Pusher: apiUser,
 		Sender: apiUser,
 	}, nil
 }
 
 // postRepoWebhookTest queues a push event to the webhook of a repository.
-func postRepoWebhookTest(c flamego.Context, logger *logx.Logger, viewer *database.User, rc *repoAdminContext, w *database.Webhook) (statusCode int, resp any, err error) {
-	p, err := testPushPayload(c.Request().Context(), logger, viewer, rc)
+func postRepoWebhookTest(c flamego.Context, repoOpts conf.RepositoryOpts, links database.LinkOptions, logger *logx.Logger, viewer *database.User, rc *repoAdminContext, w *database.Webhook) (statusCode int, resp any, err error) {
+	p, err := testPushPayload(c.Request().Context(), logger, links, repoOpts.Root, viewer, rc)
 	if err != nil {
 		logger.Error("Failed to build test payload", "repoID", rc.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, err
 	}
-	if err = database.Handle.Webhooks().Test(c.Request().Context(), logger, rc.Repo, database.HookEventTypePush, p, w.ID); err != nil {
+	if err = database.Handle.Webhooks().Test(c.Request().Context(), logger, links.ExternalURL, rc.Repo, database.HookEventTypePush, p, w.ID); err != nil {
 		logger.Error("Failed to queue test delivery", "webhookID", w.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "test webhook")
 	}

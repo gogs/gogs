@@ -7,7 +7,7 @@ import (
 	"gogs.io/gogs/internal/database"
 )
 
-func searchUsers(c *apiContext) {
+func searchUsers(c *apiContext, links database.LinkOptions) {
 	pageSize := c.QueryInt("limit")
 	if pageSize <= 0 {
 		pageSize = 10
@@ -23,7 +23,7 @@ func searchUsers(c *apiContext) {
 
 	results := make([]*v1types.User, len(users))
 	for i := range users {
-		results[i] = toUser(users[i])
+		results[i] = toUser(links, users[i])
 		if !c.IsLogged {
 			results[i].Email = ""
 		}
@@ -35,7 +35,7 @@ func searchUsers(c *apiContext) {
 	})
 }
 
-func getUserProfile(c *apiContext) {
+func getUserProfile(c *apiContext, links database.LinkOptions) {
 	u, err := database.Handle.Users().GetByUsername(c.Request().Context(), c.Param("username"))
 	if err != nil {
 		c.NotFoundOrError(err, "get user by name")
@@ -46,9 +46,9 @@ func getUserProfile(c *apiContext) {
 	if !c.IsLogged {
 		u.Email = ""
 	}
-	c.JSONSuccess(toUser(u))
+	c.JSONSuccess(toUser(links, u))
 }
 
-func getAuthenticatedUser(c *apiContext) {
-	c.JSONSuccess(toUser(c.User))
+func getAuthenticatedUser(c *apiContext, links database.LinkOptions) {
+	c.JSONSuccess(toUser(links, c.User))
 }

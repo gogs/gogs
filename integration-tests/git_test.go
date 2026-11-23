@@ -82,7 +82,7 @@ func gitCommitFile(t *testing.T, dir, name string) string {
 func gitMainOnDisk(t *testing.T, repo *Repository) string {
 	t.Helper()
 
-	return gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(repo.Owner, repo.Name), "rev-parse", "refs/heads/main")
+	return gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(cfg.Repository.Root, repo.Owner, repo.Name), "rev-parse", "refs/heads/main")
 }
 
 func TestGitInfoRefs(t *testing.T) {
@@ -308,7 +308,7 @@ func TestGitPush(t *testing.T) {
 func gitRepoActions(t *testing.T, ownerID, repoID int64) []*database.Action {
 	t.Helper()
 
-	actions, err := database.Handle.Actions().ListByUser(t.Context(), ownerID, ownerID, 0, false)
+	actions, err := database.Handle.Actions().ListByUser(t.Context(), ownerID, ownerID, 0, false, cfg.UI.User.NewsFeedPagingNum)
 	require.NoError(t, err)
 	var repoActions []*database.Action
 	for _, a := range actions {
@@ -419,7 +419,7 @@ func TestGitPushRecordsRefUpdates(t *testing.T) {
 				{OpType: database.ActionPushTag, RefName: "v1"},
 				{OpType: database.ActionDeleteBranch, RefName: "gone"},
 			}, gitNewRefActions(t, owner.ID, repo.ID, before))
-			assert.Equal(t, want, gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(repo.Owner, repo.Name), "rev-parse", "refs/heads/feature"))
+			assert.Equal(t, want, gitRun(t, t.TempDir(), "--git-dir", database.RepoPath(cfg.Repository.Root, repo.Owner, repo.Name), "rev-parse", "refs/heads/feature"))
 		})
 	}
 }
@@ -430,7 +430,7 @@ func TestGitPushProtectedBranch(t *testing.T) {
 	owner := seedUser(t, CreateUserOptions{})
 	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
 	branch := repoSettingsDefaultBranch(t, repo)
-	hooksDir := filepath.Join(database.RepoPath(repo.Owner, repo.Name), "hooks")
+	hooksDir := filepath.Join(database.RepoPath(cfg.Repository.Root, repo.Owner, repo.Name), "hooks")
 	path := repoSettingsAPIPath(repo, "/settings/branches/"+branch)
 	c := authenticatedClient(t, owner)
 
@@ -515,7 +515,7 @@ func TestGitPushWiki(t *testing.T) {
 		return &Repository{ID: repo.ID, Owner: repo.Owner, Name: repo.Name + ".wiki"}
 	}
 	wikiPath := func(repo *Repository) string {
-		return database.WikiPath(repo.Owner, repo.Name)
+		return database.WikiPath(cfg.Repository.Root, repo.Owner, repo.Name)
 	}
 	// newWikiCheckout returns a new checkout with a commit of the home page on
 	// the branch "main", whose remote "origin" is the URL.

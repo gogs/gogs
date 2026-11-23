@@ -126,9 +126,6 @@ func TestUsers(t *testing.T) {
 				err := clearTables(t, s.db)
 				require.NoError(t, err)
 			})
-			// Deleting a user removes the generated avatar, whose path comes
-			// from the server settings, which other suites mock.
-			conf.SetMockServer(t, conf.ServerOpts{AppDataPath: t.TempDir()})
 			tc.test(t, ctx, s)
 		})
 		if t.Failed() {
@@ -317,6 +314,7 @@ func usersAuthenticate(t *testing.T, ctx context.Context, s *UsersStore) {
 }
 
 func usersChangeUsername(t *testing.T, ctx context.Context, s *UsersStore) {
+	tempRepositoryRoot := t.TempDir()
 	alice, err := s.Create(
 		ctx,
 		"alice",
@@ -328,7 +326,7 @@ func usersChangeUsername(t *testing.T, ctx context.Context, s *UsersStore) {
 	require.NoError(t, err)
 
 	t.Run("name not allowed", func(t *testing.T) {
-		err := s.ChangeUsername(ctx, alice.ID, "-")
+		err := s.ChangeUsername(ctx, tempRepositoryRoot, alice.ID, "-")
 		wantErr := ErrNameNotAllowed{
 			args: errx.Args{
 				"reason": "reserved",
@@ -349,7 +347,7 @@ func usersChangeUsername(t *testing.T, ctx context.Context, s *UsersStore) {
 		)
 		require.NoError(t, err)
 
-		err = s.ChangeUsername(ctx, alice.ID, bob.Name)
+		err = s.ChangeUsername(ctx, tempRepositoryRoot, alice.ID, bob.Name)
 		wantErr := ErrUserAlreadyExist{
 			args: errx.Args{
 				"name": bob.Name,
@@ -358,17 +356,6 @@ func usersChangeUsername(t *testing.T, ctx context.Context, s *UsersStore) {
 		assert.Equal(t, wantErr, err)
 	})
 
-	tempRepositoryRoot := filepath.Join(os.TempDir(), "usersChangeUsername-tempRepositoryRoot")
-	conf.SetMockRepository(
-		t,
-		conf.RepositoryOpts{
-			Root: tempRepositoryRoot,
-		},
-	)
-	err = os.RemoveAll(tempRepositoryRoot)
-	require.NoError(t, err)
-	defer func() { _ = os.RemoveAll(tempRepositoryRoot) }()
-
 	// TODO: Use PullRequests.Create to replace SQL hack when the method is available.
 	err = s.db.Exec(`INSERT INTO pull_request (head_user_name) VALUES (?)`, alice.Name).Error
 	require.NoError(t, err)
@@ -376,7 +363,7 @@ func usersChangeUsername(t *testing.T, ctx context.Context, s *UsersStore) {
 	err = s.db.Model(&User{}).Where("id = ?", alice.ID).Update("updated_unix", 0).Error
 	require.NoError(t, err)
 
-	err = os.MkdirAll(repox.UserPath(alice.Name), os.ModePerm)
+	err = os.MkdirAll(repox.UserPath(tempRepositoryRoot, alice.Name), os.ModePerm)
 	require.NoError(t, err)
 
 	// Make sure mock data is set up correctly.
@@ -391,10 +378,10 @@ func usersChangeUsername(t *testing.T, ctx context.Context, s *UsersStore) {
 	require.NoError(t, err)
 	assert.Equal(t, int64(0), updatedUnix)
 
-	assert.True(t, osx.Exist(repox.UserPath(alice.Name)))
+	assert.True(t, osx.Exist(repox.UserPath(tempRepositoryRoot, alice.Name)))
 
 	const newUsername = "alice-new"
-	err = s.ChangeUsername(ctx, alice.ID, newUsername)
+	err = s.ChangeUsername(ctx, tempRepositoryRoot, alice.ID, newUsername)
 	require.NoError(t, err)
 
 	// TODO: Use PullRequests.GetByID to replace SQL hack when the method is available.
@@ -402,8 +389,8 @@ func usersChangeUsername(t *testing.T, ctx context.Context, s *UsersStore) {
 	require.NoError(t, err)
 	assert.Equal(t, headUserName, newUsername)
 
-	assert.True(t, osx.Exist(repox.UserPath(newUsername)))
-	assert.False(t, osx.Exist(repox.UserPath(alice.Name)))
+	assert.True(t, osx.Exist(repox.UserPath(tempRepositoryRoot, newUsername)))
+	assert.False(t, osx.Exist(repox.UserPath(tempRepositoryRoot, alice.Name)))
 
 	alice, err = s.GetByID(ctx, alice.ID)
 	require.NoError(t, err)
@@ -411,7 +398,7 @@ func usersChangeUsername(t *testing.T, ctx context.Context, s *UsersStore) {
 	assert.Equal(t, s.db.NowFunc().Unix(), alice.UpdatedUnix)
 
 	// Changing the cases of the username should just be fine.
-	err = s.ChangeUsername(ctx, alice.ID, strings.ToUpper(newUsername))
+	err = s.ChangeUsername(ctx, tempRepositoryRoot, alice.ID, strings.ToUpper(newUsername))
 	require.NoError(t, err)
 	alice, err = s.GetByID(ctx, alice.ID)
 	require.NoError(t, err)
@@ -433,7 +420,7 @@ func usersCount(t *testing.T, ctx context.Context, s *UsersStore) {
 	org1, err := s.Create(ctx, "org1", "org1@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	err = s.db.Exec(
-		dbx.Quote("UPDATE %s SET type = ? WHERE id = ?", "user"),
+		dbx.Quote(s.db.Name(), "UPDATE %s SET type = ? WHERE id = ?", "user"),
 		UserTypeOrganization, org1.ID,
 	).Error
 	require.NoError(t, err)
@@ -512,6 +499,7 @@ func usersCreate(t *testing.T, ctx context.Context, s *UsersStore) {
 }
 
 func usersDeleteCustomAvatar(t *testing.T, ctx context.Context, s *UsersStore) {
+	avatarUploadPath := t.TempDir()
 	alice, err := s.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 
@@ -519,11 +507,9 @@ func usersDeleteCustomAvatar(t *testing.T, ctx context.Context, s *UsersStore) {
 	require.NoError(t, png.Encode(&img, image.NewRGBA(image.Rect(0, 0, 1, 1))))
 	avatar := img.Bytes()
 
-	avatarPath := userx.CustomAvatarPath(alice.ID)
-	_ = os.Remove(avatarPath)
-	defer func() { _ = os.Remove(avatarPath) }()
+	avatarPath := userx.CustomAvatarPath(avatarUploadPath, alice.ID)
 
-	err = s.UseCustomAvatar(ctx, alice.ID, avatar)
+	err = s.UseCustomAvatar(ctx, avatarUploadPath, alice.ID, avatar)
 	require.NoError(t, err)
 
 	// Make sure avatar is saved and the user flag is updated.
@@ -535,7 +521,7 @@ func usersDeleteCustomAvatar(t *testing.T, ctx context.Context, s *UsersStore) {
 	assert.True(t, alice.UseCustomAvatar)
 
 	// Delete avatar should remove the file and revert the user flag.
-	err = s.DeleteCustomAvatar(ctx, alice.ID)
+	err = s.DeleteCustomAvatar(ctx, avatarUploadPath, alice.ID)
 	require.NoError(t, err)
 
 	got = osx.IsFile(avatarPath)
@@ -547,6 +533,12 @@ func usersDeleteCustomAvatar(t *testing.T, ctx context.Context, s *UsersStore) {
 }
 
 func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
+	opts := DeleteUserOptions{
+		RepositoryRoot:   t.TempDir(),
+		AvatarUploadPath: t.TempDir(),
+		AppDataPath:      t.TempDir(),
+		AuthorizedKeys:   NewAuthorizedKeysOptions(conf.SSHOpts{RootPath: t.TempDir()}, ""),
+	}
 	reposStore := newReposStore(s.db)
 
 	t.Run("user still has repository ownership", func(t *testing.T) {
@@ -556,7 +548,7 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 		_, err = reposStore.create(ctx, alice.ID, CreateRepoOptions{Name: "repo1"})
 		require.NoError(t, err)
 
-		err = s.DeleteByID(ctx, alice.ID, false)
+		err = s.DeleteByID(ctx, opts, alice.ID, false)
 		wantErr := ErrUserOwnRepos{errx.Args{"userID": alice.ID}}
 		assert.Equal(t, wantErr, err)
 	})
@@ -569,7 +561,7 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 		org1, err := s.Create(ctx, "org1", "org1@example.com", CreateUserOptions{})
 		require.NoError(t, err)
 		err = s.db.Exec(
-			dbx.Quote("UPDATE %s SET type = ? WHERE id IN (?)", "user"),
+			dbx.Quote(s.db.Name(), "UPDATE %s SET type = ? WHERE id IN (?)", "user"),
 			UserTypeOrganization, org1.ID,
 		).Error
 		require.NoError(t, err)
@@ -578,7 +570,7 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 		err = s.db.Exec(`INSERT INTO org_user (uid, org_id) VALUES (?, ?)`, bob.ID, org1.ID).Error
 		require.NoError(t, err)
 
-		err = s.DeleteByID(ctx, bob.ID, false)
+		err = s.DeleteByID(ctx, opts, bob.ID, false)
 		wantErr := ErrUserHasOrgs{errx.Args{"userID": bob.ID}}
 		assert.Equal(t, wantErr, err)
 	})
@@ -613,9 +605,7 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 	}
 	err = s.db.Create(publicKey).Error
 	require.NoError(t, err)
-	tempSSHRootPath := filepath.Join(os.TempDir(), "usersDeleteByID-tempSSHRootPath")
-	conf.SetMockSSH(t, conf.SSHOpts{RootPath: tempSSHRootPath})
-	err = newPublicKeysStore(s.db).RewriteAuthorizedKeys()
+	err = newPublicKeysStore(s.db).RewriteAuthorizedKeys(opts.AuthorizedKeys)
 	require.NoError(t, err)
 
 	// Mock issue assignee.
@@ -645,25 +635,19 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 	}
 
 	// Mock user directory.
-	tempRepositoryRoot := filepath.Join(os.TempDir(), "usersDeleteByID-tempRepositoryRoot")
-	conf.SetMockRepository(t, conf.RepositoryOpts{Root: tempRepositoryRoot})
-	tempUserPath := repox.UserPath(testUser.Name)
+	tempUserPath := repox.UserPath(opts.RepositoryRoot, testUser.Name)
 	err = os.MkdirAll(tempUserPath, os.ModePerm)
 	require.NoError(t, err)
 
 	// Mock user custom avatar.
-	tempPictureAvatarUploadPath := filepath.Join(os.TempDir(), "usersDeleteByID-tempPictureAvatarUploadPath")
-	conf.SetMockPicture(t, conf.PictureOpts{AvatarUploadPath: tempPictureAvatarUploadPath})
-	err = os.MkdirAll(tempPictureAvatarUploadPath, os.ModePerm)
-	require.NoError(t, err)
-	tempCustomAvatarPath := userx.CustomAvatarPath(testUser.ID)
+	tempCustomAvatarPath := userx.CustomAvatarPath(opts.AvatarUploadPath, testUser.ID)
 	err = os.WriteFile(tempCustomAvatarPath, []byte("test"), 0o600)
 	require.NoError(t, err)
 	// Both kinds are written, because deleting an organization goes through
 	// the same path.
 	var tempGeneratedAvatarPaths []string
 	for _, kind := range []avatar.Kind{avatar.Person, avatar.Organization} {
-		p := userx.GeneratedAvatarPath(testUser.ID, kind)
+		p := userx.GeneratedAvatarPath(opts.AppDataPath, testUser.ID, kind)
 		err = os.MkdirAll(filepath.Dir(p), os.ModePerm)
 		require.NoError(t, err)
 		err = os.WriteFile(p, []byte("test"), 0o600)
@@ -684,7 +668,7 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 	require.NoError(t, err)
 	assert.Equal(t, 1, frank.NumFollowing)
 
-	authorizedKeys, err := os.ReadFile(authorizedKeysPath())
+	authorizedKeys, err := os.ReadFile(opts.AuthorizedKeys.Path)
 	require.NoError(t, err)
 	assert.Contains(t, string(authorizedKeys), fmt.Sprintf("key-%d", publicKey.ID))
 	assert.Contains(t, string(authorizedKeys), publicKey.Content)
@@ -720,7 +704,7 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 		assert.True(t, osx.Exist(p))
 	}
 
-	err = s.DeleteByID(ctx, testUser.ID, false)
+	err = s.DeleteByID(ctx, opts, testUser.ID, false)
 	require.NoError(t, err)
 
 	// Verify after-the-fact data.
@@ -736,7 +720,7 @@ func usersDeleteByID(t *testing.T, ctx context.Context, s *UsersStore) {
 	require.NoError(t, err)
 	assert.Equal(t, 0, frank.NumFollowing)
 
-	authorizedKeys, err = os.ReadFile(authorizedKeysPath())
+	authorizedKeys, err = os.ReadFile(opts.AuthorizedKeys.Path)
 	require.NoError(t, err)
 	assert.Empty(t, authorizedKeys)
 
@@ -790,7 +774,7 @@ func usersDeleteInactivated(t *testing.T, ctx context.Context, s *UsersStore) {
 	org1, err := s.Create(ctx, "org1", "org1@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	err = s.db.Exec(
-		dbx.Quote("UPDATE %s SET type = ? WHERE id IN (?)", "user"),
+		dbx.Quote(s.db.Name(), "UPDATE %s SET type = ? WHERE id IN (?)", "user"),
 		UserTypeOrganization, org1.ID,
 	).Error
 	require.NoError(t, err)
@@ -806,10 +790,12 @@ func usersDeleteInactivated(t *testing.T, ctx context.Context, s *UsersStore) {
 	david, err := s.Create(ctx, "david", "david@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 
-	tempSSHRootPath := filepath.Join(os.TempDir(), "usersDeleteInactivated-tempSSHRootPath")
-	conf.SetMockSSH(t, conf.SSHOpts{RootPath: tempSSHRootPath})
-
-	err = s.DeleteInactivated()
+	err = s.DeleteInactivated(DeleteUserOptions{
+		RepositoryRoot:   t.TempDir(),
+		AvatarUploadPath: t.TempDir(),
+		AppDataPath:      t.TempDir(),
+		AuthorizedKeys:   NewAuthorizedKeysOptions(conf.SSHOpts{RootPath: t.TempDir()}, ""),
+	})
 	require.NoError(t, err)
 
 	_, err = s.GetByID(ctx, david.ID)
@@ -1011,7 +997,7 @@ func usersList(t *testing.T, ctx context.Context, s *UsersStore) {
 	org1, err := s.Create(ctx, "org1", "org1@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	err = s.db.Exec(
-		dbx.Quote("UPDATE %s SET type = ? WHERE id = ?", "user"),
+		dbx.Quote(s.db.Name(), "UPDATE %s SET type = ? WHERE id = ?", "user"),
 		UserTypeOrganization, org1.ID,
 	).Error
 	require.NoError(t, err)
@@ -1241,6 +1227,7 @@ func usersUpdate(t *testing.T, ctx context.Context, s *UsersStore) {
 }
 
 func usersUseCustomAvatar(t *testing.T, ctx context.Context, s *UsersStore) {
+	avatarUploadPath := t.TempDir()
 	alice, err := s.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 
@@ -1248,11 +1235,9 @@ func usersUseCustomAvatar(t *testing.T, ctx context.Context, s *UsersStore) {
 	require.NoError(t, png.Encode(&img, image.NewRGBA(image.Rect(0, 0, 1, 1))))
 	avatar := img.Bytes()
 
-	avatarPath := userx.CustomAvatarPath(alice.ID)
-	_ = os.Remove(avatarPath)
-	defer func() { _ = os.Remove(avatarPath) }()
+	avatarPath := userx.CustomAvatarPath(avatarUploadPath, alice.ID)
 
-	err = s.UseCustomAvatar(ctx, alice.ID, avatar)
+	err = s.UseCustomAvatar(ctx, avatarUploadPath, alice.ID, avatar)
 	require.NoError(t, err)
 
 	// Make sure avatar is saved and the user flag is updated.

@@ -9,6 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"unknwon.dev/x/logx"
+
+	"gogs.io/gogs/internal/markup"
 )
 
 func TestReadNoticeBanner(t *testing.T) {
@@ -21,21 +23,21 @@ func TestReadNoticeBanner(t *testing.T) {
 	}
 
 	t.Run("no banner file", func(t *testing.T) {
-		assert.Empty(t, readNoticeBanner(logx.NewNoopLogger(), t.TempDir()))
+		assert.Empty(t, readNoticeBanner(logx.NewNoopLogger(), markup.Options{}, t.TempDir()))
 	})
 
 	t.Run("renders Markdown without scripts", func(t *testing.T) {
-		got := readNoticeBanner(logx.NewNoopLogger(), writeBanner(t, "Maintenance on **Sunday**, see [status](https://status.example.com).<script>alert(1)</script>"))
+		got := readNoticeBanner(logx.NewNoopLogger(), markup.Options{}, writeBanner(t, "Maintenance on **Sunday**, see [status](https://status.example.com).<script>alert(1)</script>"))
 		assert.Contains(t, got, "<strong>Sunday</strong>")
 		assert.Contains(t, got, `href="https://status.example.com"`)
 		assert.NotContains(t, got, "<script")
 	})
 
 	t.Run("largest file shown", func(t *testing.T) {
-		assert.NotEmpty(t, readNoticeBanner(logx.NewNoopLogger(), writeBanner(t, strings.Repeat("a", maxNoticeBannerSize))))
+		assert.NotEmpty(t, readNoticeBanner(logx.NewNoopLogger(), markup.Options{}, writeBanner(t, strings.Repeat("a", maxNoticeBannerSize))))
 	})
 
 	t.Run("file too large", func(t *testing.T) {
-		assert.Empty(t, readNoticeBanner(logx.NewNoopLogger(), writeBanner(t, strings.Repeat("a", maxNoticeBannerSize+1))))
+		assert.Empty(t, readNoticeBanner(logx.NewNoopLogger(), markup.Options{}, writeBanner(t, strings.Repeat("a", maxNoticeBannerSize+1))))
 	})
 }

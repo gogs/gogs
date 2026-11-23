@@ -44,13 +44,36 @@ var (
 	tplSetErr  error
 )
 
-func funcMap() template.FuncMap {
+// Options are the settings that sending mail reads.
+type Options struct {
+	Email conf.EmailOpts
+	// BrandName and ExternalURL are what the templates show as the name and the
+	// URL of the application.
+	BrandName   string
+	ExternalURL string
+	// LoadAssetsFromDisk loads the templates from the work directory on every
+	// render instead of the embedded ones.
+	LoadAssetsFromDisk bool
+	// ActivateCodeLives and ResetPasswordCodeLives are the lifetimes of codes in
+	// minutes.
+	ActivateCodeLives      int
+	ResetPasswordCodeLives int
+	// Markup renders the content of issues.
+	Markup markup.Options
+	// HookMode blocks sending until the message is sent, so that the process
+	// does not exit before.
+	HookMode bool
+}
+
+// funcMap returns the template functions that show the brand name and the
+// external URL.
+func funcMap(brandName, externalURL string) template.FuncMap {
 	return template.FuncMap{
 		"AppName": func() string {
-			return conf.App.BrandName
+			return brandName
 		},
 		"AppURL": func() string {
-			return conf.Server.ExternalURL
+			return externalURL
 		},
 		"Year": func() int {
 			return time.Now().Year()
@@ -66,16 +89,17 @@ func funcMap() template.FuncMap {
 var mailTemplateExts = []string{".tmpl", ".html"}
 
 // loadMailTemplates parses every mail template under the embedded "mail" tree
-// (or "<work>/templates/mail" when LoadAssetsFromDisk is set), then overlays
-// files from "<custom>/templates/mail" so an admin can override any builtin.
-func loadMailTemplates() (*template.Template, error) {
-	root := template.New("").Funcs(funcMap())
+// (or "<work>/templates/mail" when fromDisk is set), then overlays files from
+// "<custom>/templates/mail" so an admin can override any builtin. The template
+// functions are bound when rendering, see render.
+func loadMailTemplates(fromDisk bool) (*template.Template, error) {
+	root := template.New("").Funcs(funcMap("", ""))
 	parse := func(name string, data []byte) error {
 		_, err := root.New(name).Parse(string(data))
 		return errors.Wrapf(err, "parse %q", name)
 	}
 
-	if conf.Server.LoadAssetsFromDisk {
+	if fromDisk {
 		baseRoot := filepath.Join(conf.WorkDir(), "templates", "mail")
 		if _, err := os.Stat(baseRoot); err != nil {
 			return nil, errors.Wrapf(err, "stat base mail templates %q", baseRoot)
@@ -133,12 +157,16 @@ func overlayDiskMailTemplates(root string, parse func(name string, data []byte) 
 	})
 }
 
-func render(tpl string, data map[string]any) (string, error) {
-	set, err := mailTemplateSet()
+func render(opts Options, tpl string, data map[string]any) (string, error) {
+	set, err := mailTemplateSet(opts.LoadAssetsFromDisk)
 	if err != nil {
 		return "", errors.Wrap(err, "load mail templates")
 	}
-	t := set.Lookup(tpl)
+	set, err = set.Clone()
+	if err != nil {
+		return "", errors.Wrap(err, "clone mail templates")
+	}
+	t := set.Funcs(funcMap(opts.BrandName, opts.ExternalURL)).Lookup(tpl)
 	if t == nil {
 		return "", errors.Newf("mail template %q not found", tpl)
 	}
@@ -154,22 +182,22 @@ func render(tpl string, data map[string]any) (string, error) {
 // <work>/templates/mail or <custom>/templates/mail take effect without a
 // restart. When assets are embedded, the set is loaded once and cached for the
 // process lifetime.
-func mailTemplateSet() (*template.Template, error) {
-	if conf.Server.LoadAssetsFromDisk {
-		return loadMailTemplates()
+func mailTemplateSet(fromDisk bool) (*template.Template, error) {
+	if fromDisk {
+		return loadMailTemplates(true)
 	}
 	tplSetOnce.Do(func() {
-		tplSet, tplSetErr = loadMailTemplates()
+		tplSet, tplSetErr = loadMailTemplates(false)
 	})
 	return tplSet, tplSetErr
 }
 
-func SendTestMail(logger *logx.Logger, email string) error {
-	msg, err := newMessage(logger, []string{email}, "Gogs Test Email", "Hello 👋, greeting from Gogs!")
+func SendTestMail(logger *logx.Logger, opts conf.EmailOpts, email string) error {
+	msg, err := newMessage(logger, opts, []string{email}, "Gogs Test Email", "Hello 👋, greeting from Gogs!")
 	if err != nil {
 		return errors.Wrap(err, "new message")
 	}
-	return sendMessage(msg)
+	return sendMessage(opts, msg)
 }
 
 /*
@@ -180,9 +208,6 @@ type User interface {
 	ID() int64
 	DisplayName() string
 	Email() string
-	GenerateEmailActivateCode(string) string
-	GenerateConfirmEmailCode(string) string
-	GenerateEmailResetPasswordCode(string) string
 }
 
 type Repository interface {
@@ -197,78 +222,84 @@ type Issue interface {
 	HTMLURL() string
 }
 
-func SendUserMail(logger *logx.Logger, _ Translator, u User, tpl, code, subject, info string) error {
+func SendUserMail(logger *logx.Logger, opts Options, _ Translator, u User, tpl, code, subject, info string) error {
 	data := map[string]any{
 		"Username":          u.DisplayName(),
-		"ActiveCodeLives":   conf.Auth.ActivateCodeLives / 60,
-		"ResetPwdCodeLives": conf.Auth.ResetPasswordCodeLives / 60,
+		"ActiveCodeLives":   opts.ActivateCodeLives / 60,
+		"ResetPwdCodeLives": opts.ResetPasswordCodeLives / 60,
 		"Code":              code,
 	}
-	body, err := render(tpl, data)
+	body, err := render(opts, tpl, data)
 	if err != nil {
 		return errors.Wrap(err, "render")
 	}
 
-	msg, err := newMessage(logger, []string{u.Email()}, subject, body)
+	msg, err := newMessage(logger, opts.Email, []string{u.Email()}, subject, body)
 	if err != nil {
 		return errors.Wrap(err, "new message")
 	}
 	msg.info = fmt.Sprintf("UID: %d, %s", u.ID(), info)
 
-	send(msg)
+	send(opts, msg)
 	return nil
 }
 
-func SendActivateAccountMail(logger *logx.Logger, t Translator, u User) error {
-	return SendUserMail(logger, t, u, tmplAuthActivate, u.GenerateEmailActivateCode(u.Email()), t.Tr("mail::activate_account"), "activate account")
+// SendActivateAccountMail sends the code that activates the account of the
+// user, see userx.GenerateActivateCode.
+func SendActivateAccountMail(logger *logx.Logger, opts Options, t Translator, u User, code string) error {
+	return SendUserMail(logger, opts, t, u, tmplAuthActivate, code, t.Tr("mail::activate_account"), "activate account")
 }
 
-func SendResetPasswordMail(logger *logx.Logger, t Translator, u User) error {
-	return SendUserMail(logger, t, u, tmplAuthResetPassword, u.GenerateEmailResetPasswordCode(u.Email()), t.Tr("mail::reset_password"), "reset password")
+// SendResetPasswordMail sends the code that resets the password of the user,
+// see userx.GenerateResetPasswordCode.
+func SendResetPasswordMail(logger *logx.Logger, opts Options, t Translator, u User, code string) error {
+	return SendUserMail(logger, opts, t, u, tmplAuthResetPassword, code, t.Tr("mail::reset_password"), "reset password")
 }
 
-func SendActivateEmailMail(logger *logx.Logger, t Translator, u User, email string) error {
+// SendActivateEmailMail sends the code that confirms the email address of the
+// user, see userx.GenerateConfirmEmailCode.
+func SendActivateEmailMail(logger *logx.Logger, opts Options, t Translator, u User, email, code string) error {
 	data := map[string]any{
 		"Username":        u.DisplayName(),
-		"ActiveCodeLives": conf.Auth.ActivateCodeLives / 60,
-		"Code":            u.GenerateConfirmEmailCode(email),
+		"ActiveCodeLives": opts.ActivateCodeLives / 60,
+		"Code":            code,
 		"Email":           email,
 	}
-	body, err := render(tmplAuthActivateEmail, data)
+	body, err := render(opts, tmplAuthActivateEmail, data)
 	if err != nil {
 		return errors.Wrap(err, "render")
 	}
 
-	msg, err := newMessage(logger, []string{email}, t.Tr("mail::activate_email"), body)
+	msg, err := newMessage(logger, opts.Email, []string{email}, t.Tr("mail::activate_email"), body)
 	if err != nil {
 		return errors.Wrap(err, "new message")
 	}
 	msg.info = fmt.Sprintf("UID: %d, activate email", u.ID())
 
-	send(msg)
+	send(opts, msg)
 	return nil
 }
 
-func SendRegisterNotifyMail(logger *logx.Logger, t Translator, u User) error {
+func SendRegisterNotifyMail(logger *logx.Logger, opts Options, t Translator, u User) error {
 	data := map[string]any{
 		"Username": u.DisplayName(),
 	}
-	body, err := render(tmplAuthRegisterNotify, data)
+	body, err := render(opts, tmplAuthRegisterNotify, data)
 	if err != nil {
 		return errors.Wrap(err, "render")
 	}
 
-	msg, err := newMessage(logger, []string{u.Email()}, t.Tr("mail::register_notify"), body)
+	msg, err := newMessage(logger, opts.Email, []string{u.Email()}, t.Tr("mail::register_notify"), body)
 	if err != nil {
 		return errors.Wrap(err, "new message")
 	}
 	msg.info = fmt.Sprintf("UID: %d, registration notify", u.ID())
 
-	send(msg)
+	send(opts, msg)
 	return nil
 }
 
-func SendCollaboratorMail(logger *logx.Logger, u, doer User, repo Repository) error {
+func SendCollaboratorMail(logger *logx.Logger, opts Options, u, doer User, repo Repository) error {
 	subject := fmt.Sprintf("%s added you to %s", doer.DisplayName(), repo.FullName())
 
 	data := map[string]any{
@@ -276,18 +307,18 @@ func SendCollaboratorMail(logger *logx.Logger, u, doer User, repo Repository) er
 		"RepoName": repo.FullName(),
 		"Link":     repo.HTMLURL(),
 	}
-	body, err := render(tmplNotifyCollaborator, data)
+	body, err := render(opts, tmplNotifyCollaborator, data)
 	if err != nil {
 		return errors.Wrap(err, "render")
 	}
 
-	msg, err := newMessage(logger, []string{u.Email()}, subject, body)
+	msg, err := newMessage(logger, opts.Email, []string{u.Email()}, subject, body)
 	if err != nil {
 		return errors.Wrap(err, "new message")
 	}
 	msg.info = fmt.Sprintf("UID: %d, add collaborator", u.ID())
 
-	send(msg)
+	send(opts, msg)
 	return nil
 }
 
@@ -299,17 +330,17 @@ func composeTplData(subject, body, link string) map[string]any {
 	return data
 }
 
-func composeIssueMessage(logger *logx.Logger, issue Issue, repo Repository, doer User, tplName string, tos []string, info string) (*message, error) {
+func composeIssueMessage(logger *logx.Logger, opts Options, issue Issue, repo Repository, doer User, tplName string, tos []string, info string) (*message, error) {
 	subject := issue.MailSubject()
-	body := string(markup.Markdown([]byte(issue.Content()), repo.HTMLURL(), repo.ComposeMetas()))
+	body := string(markup.Markdown(opts.Markup, []byte(issue.Content()), repo.HTMLURL(), repo.ComposeMetas()))
 	data := composeTplData(subject, body, issue.HTMLURL())
 	data["Doer"] = doer
-	content, err := render(tplName, data)
+	content, err := render(opts, tplName, data)
 	if err != nil {
 		return nil, errors.Wrapf(err, "render %q", tplName)
 	}
-	from := (&mail.Address{Name: doer.DisplayName(), Address: conf.Email.FromEmail}).String()
-	msg, err := newMessageFrom(logger, tos, from, subject, content)
+	from := (&mail.Address{Name: doer.DisplayName(), Address: opts.Email.FromEmail}).String()
+	msg, err := newMessageFrom(logger, opts.Email, tos, from, subject, content)
 	if err != nil {
 		return nil, errors.Wrap(err, "new message")
 	}
@@ -318,28 +349,28 @@ func composeIssueMessage(logger *logx.Logger, issue Issue, repo Repository, doer
 }
 
 // SendIssueCommentMail composes and sends issue comment emails to target receivers.
-func SendIssueCommentMail(logger *logx.Logger, issue Issue, repo Repository, doer User, tos []string) error {
+func SendIssueCommentMail(logger *logx.Logger, opts Options, issue Issue, repo Repository, doer User, tos []string) error {
 	if len(tos) == 0 {
 		return nil
 	}
 
-	msg, err := composeIssueMessage(logger, issue, repo, doer, tmplIssueComment, tos, "issue comment")
+	msg, err := composeIssueMessage(logger, opts, issue, repo, doer, tmplIssueComment, tos, "issue comment")
 	if err != nil {
 		return errors.Wrap(err, "compose issue message")
 	}
-	send(msg)
+	send(opts, msg)
 	return nil
 }
 
 // SendIssueMentionMail composes and sends issue mention emails to target receivers.
-func SendIssueMentionMail(logger *logx.Logger, issue Issue, repo Repository, doer User, tos []string) error {
+func SendIssueMentionMail(logger *logx.Logger, opts Options, issue Issue, repo Repository, doer User, tos []string) error {
 	if len(tos) == 0 {
 		return nil
 	}
-	msg, err := composeIssueMessage(logger, issue, repo, doer, tmplIssueMention, tos, "issue mention")
+	msg, err := composeIssueMessage(logger, opts, issue, repo, doer, tmplIssueMention, tos, "issue mention")
 	if err != nil {
 		return errors.Wrap(err, "compose issue message")
 	}
-	send(msg)
+	send(opts, msg)
 	return nil
 }

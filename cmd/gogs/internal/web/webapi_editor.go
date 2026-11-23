@@ -32,18 +32,23 @@ func limitEditorContent(c flamego.Context) {
 	r.Body = http.MaxBytesReader(c.ResponseWriter(), r.Body, 10<<20) // 10 MiB
 }
 
-func repoUploadLimits() attachmentLimits {
-	allowedTypes := conf.Repository.Upload.AllowedTypes
+func repoUploadLimits(repoOpts conf.RepositoryOpts) attachmentLimits {
+	allowedTypes := repoOpts.Upload.AllowedTypes
 	// Unlike attachments, uploads of any type are allowed when none are listed.
 	if len(allowedTypes) == 0 {
 		allowedTypes = []string{"*/*"}
 	}
 	return attachmentLimits{
-		Enabled:      conf.Repository.Upload.Enabled,
+		Enabled:      repoOpts.Upload.Enabled,
 		AllowedTypes: allowedTypes,
-		MaxSize:      conf.Repository.Upload.FileMaxSize,
-		MaxFiles:     conf.Repository.Upload.MaxFiles,
+		MaxSize:      repoOpts.Upload.FileMaxSize,
+		MaxFiles:     repoOpts.Upload.MaxFiles,
 	}
+}
+
+// limitRepoUpload caps the size of a file uploaded to commit to a repository.
+func limitRepoUpload(c flamego.Context, repoOpts conf.RepositoryOpts) {
+	limitAttachmentUpload(c, repoUploadLimits(repoOpts))
 }
 
 // withRepoEditor lets through the writers of a repository that has commits
@@ -108,10 +113,10 @@ type repoEditorTarget struct {
 // is the branch name followed by the path, for the pages that change files.
 // Branch names can have slashes, so the shortest leading part of the route
 // that names a branch is the branch.
-func getRepoEditorTarget(c flamego.Context, logger *logx.Logger, l i18n.Locale, repoCtx *repoContext) (statusCode int, resp *repoEditorTarget, err error) {
+func getRepoEditorTarget(c flamego.Context, markdown conf.MarkdownOpts, repoOpts conf.RepositoryOpts, logger *logx.Logger, l i18n.Locale, repoCtx *repoContext) (statusCode int, resp *repoEditorTarget, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
-	gitRepo, err := openRepoGit(repoCtx)
+	gitRepo, err := openRepoGit(repoOpts.Root, repoCtx)
 	if err != nil {
 		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
@@ -145,11 +150,11 @@ func getRepoEditorTarget(c flamego.Context, logger *logx.Logger, l i18n.Locale, 
 		Path:                treePath,
 		LastCommit:          commit.ID.String(),
 		Kind:                "dir",
-		MarkdownExtensions:  conf.Markdown.FileExtensions,
-		PreviewMarkdown:     slices.Contains(conf.Repository.Editor.PreviewableFileModes, "markdown"),
-		LineWrapExtensions:  conf.Repository.Editor.LineWrapExtensions,
+		MarkdownExtensions:  markdown.FileExtensions,
+		PreviewMarkdown:     slices.Contains(repoOpts.Editor.PreviewableFileModes, "markdown"),
+		LineWrapExtensions:  repoOpts.Editor.LineWrapExtensions,
 		PullRequestsAllowed: pullRequestBase(c.Request().Context(), repoCtx) != nil,
-		Upload:              attachmentSettings(repoUploadLimits()),
+		Upload:              attachmentSettings(repoUploadLimits(repoOpts)),
 	}
 	denial, err := database.Handle.ProtectBranches().CheckPushByName(ctx, repo.ID, branch, repoCtx.Viewer.ID(), false)
 	if err != nil {
@@ -188,7 +193,7 @@ func getRepoEditorTarget(c flamego.Context, logger *logx.Logger, l i18n.Locale, 
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "read blob")
 	}
 	if mimex.IsText(p) {
-		content, err := template.ToUTF8WithErr(logger, p)
+		content, err := template.ToUTF8WithErr(logger, p, repoOpts.ANSICharset)
 		if err != nil {
 			content = string(p)
 		}
@@ -206,10 +211,10 @@ type repoEditorIndent struct {
 
 // getRepoEditorIndent returns how the ".editorconfig" of the branch indents
 // the file at the path, which need not exist yet.
-func getRepoEditorIndent(c flamego.Context, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoEditorIndent, err error) {
+func getRepoEditorIndent(c flamego.Context, repoOpts conf.RepositoryOpts, logger *logx.Logger, repoCtx *repoContext) (statusCode int, resp *repoEditorIndent, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
-	gitRepo, err := openRepoGit(repoCtx)
+	gitRepo, err := openRepoGit(repoOpts.Root, repoCtx)
 	if err != nil {
 		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
@@ -350,15 +355,15 @@ func commitMessage(req repoEditorCommitRequest, fallback string) string {
 }
 
 // commitLocation returns where to go after committing to the request, with
-// target the path that changed in the branch.
-func commitLocation(ctx context.Context, repoCtx *repoContext, req repoEditorCommitRequest, target string) string {
+// target the path that changed in the branch, and links under subpath.
+func commitLocation(ctx context.Context, subpath string, repoCtx *repoContext, req repoEditorCommitRequest, target string) string {
 	if req.NewBranch != "" {
 		if base := pullRequestBase(ctx, repoCtx); base != nil {
-			return base.Link() + "/compare/" + escapePath(req.Branch) + "..." + repoCtx.Owner.Name + ":" + escapePath(req.NewBranch)
+			return base.Link(subpath) + "/compare/" + escapePath(req.Branch) + "..." + repoCtx.Owner.Name + ":" + escapePath(req.NewBranch)
 		}
-		return repoCtx.Repo.Link() + "/src/" + escapePath(req.NewBranch) + "/" + escapePath(target)
+		return repoCtx.Repo.Link(subpath) + "/src/" + escapePath(req.NewBranch) + "/" + escapePath(target)
 	}
-	return repoCtx.Repo.Link() + "/src/" + escapePath(req.Branch) + "/" + escapePath(target)
+	return repoCtx.Repo.Link(subpath) + "/src/" + escapePath(req.Branch) + "/" + escapePath(target)
 }
 
 // escapePath escapes each name of a slash-separated path for a URL.
@@ -397,7 +402,7 @@ func pathError(msg string) *bindingErrorResponse {
 }
 
 // postRepoEditorFile creates a file, or changes and possibly renames one.
-func postRepoEditorFile(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, req repoEditorFileRequest) (statusCode int, resp any, err error) {
+func postRepoEditorFile(c flamego.Context, push database.PushOptions, repoOpts conf.RepositoryOpts, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, req repoEditorFileRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
 	isNewFile := req.OldPath == ""
@@ -411,7 +416,7 @@ func postRepoEditorFile(c flamego.Context, logger *logx.Logger, l i18n.Locale, v
 		return http.StatusBadRequest, pathError(l.Tr("repo::editor.file_path") + l.Tr("form::max_size_error", "size", 500)), nil
 	}
 
-	gitRepo, err := openRepoGit(repoCtx)
+	gitRepo, err := openRepoGit(repoOpts.Root, repoCtx)
 	if err != nil {
 		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
@@ -471,7 +476,7 @@ func postRepoEditorFile(c flamego.Context, logger *logx.Logger, l i18n.Locale, v
 				return http.StatusInternalServerError, nil, errors.Wrap(err, "list changed files")
 			}
 			if slices.Contains(files, req.OldPath) || slices.Contains(files, req.Path) {
-				compareURL := repo.Link() + "/compare/" + req.LastCommit + "..." + commit.ID.String()
+				compareURL := repo.Link(push.Notify.Links.Subpath) + "/compare/" + req.LastCommit + "..." + commit.ID.String()
 				return http.StatusConflict, &repoEditorConflict{
 					Error:      l.Tr("repo::editor.file_changed_while_editing", "link", html.EscapeString(compareURL)),
 					LastCommit: commit.ID.String(),
@@ -494,7 +499,7 @@ func postRepoEditorFile(c flamego.Context, logger *logx.Logger, l i18n.Locale, v
 	if isNewFile {
 		fallback = l.Tr("repo::editor.add", "path", req.Path)
 	}
-	err = repo.UpdateRepoFile(ctx, logger, viewer, database.UpdateRepoFileOptions{
+	err = repo.UpdateRepoFile(ctx, logger, push, viewer, database.UpdateRepoFileOptions{
 		OldBranch:   req.Branch,
 		NewBranch:   cmp.Or(req.NewBranch, req.Branch),
 		OldTreeName: req.OldPath,
@@ -514,7 +519,7 @@ func postRepoEditorFile(c flamego.Context, logger *logx.Logger, l i18n.Locale, v
 		logger.Error("Failed to update file", "treePath", req.Path, "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update file")
 	}
-	return http.StatusOK, &repoEditorCommitResult{Location: commitLocation(ctx, repoCtx, req.repoEditorCommitRequest, req.Path)}, nil
+	return http.StatusOK, &repoEditorCommitResult{Location: commitLocation(ctx, push.Notify.Links.Subpath, repoCtx, req.repoEditorCommitRequest, req.Path)}, nil
 }
 
 type repoEditorDeleteRequest struct {
@@ -522,13 +527,13 @@ type repoEditorDeleteRequest struct {
 	Path string `json:"path"`
 }
 
-func postRepoEditorDelete(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, req repoEditorDeleteRequest) (statusCode int, resp any, err error) {
+func postRepoEditorDelete(c flamego.Context, push database.PushOptions, repoOpts conf.RepositoryOpts, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, req repoEditorDeleteRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
 	// 🚨 SECURITY: Prevent path traversal.
 	req.Path = pathx.Clean(req.Path)
 
-	gitRepo, err := openRepoGit(repoCtx)
+	gitRepo, err := openRepoGit(repoOpts.Root, repoCtx)
 	if err != nil {
 		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
@@ -582,7 +587,7 @@ func postRepoEditorDelete(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 		dir = ""
 	}
 
-	err = repo.DeleteRepoFile(ctx, logger, viewer, database.DeleteRepoFileOptions{
+	err = repo.DeleteRepoFile(ctx, logger, push, viewer, database.DeleteRepoFileOptions{
 		LastCommitID: commit.ID.String(),
 		OldBranch:    req.Branch,
 		NewBranch:    cmp.Or(req.NewBranch, req.Branch),
@@ -593,7 +598,7 @@ func postRepoEditorDelete(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 		logger.Error("Failed to delete file", "treePath", req.Path, "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete file")
 	}
-	return http.StatusOK, &repoEditorCommitResult{Location: commitLocation(ctx, repoCtx, req.repoEditorCommitRequest, dir)}, nil
+	return http.StatusOK, &repoEditorCommitResult{Location: commitLocation(ctx, push.Notify.Links.Subpath, repoCtx, req.repoEditorCommitRequest, dir)}, nil
 }
 
 type repoEditorUploadRequest struct {
@@ -603,12 +608,12 @@ type repoEditorUploadRequest struct {
 	Files []string `json:"files"`
 }
 
-func postRepoEditorUpload(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, req repoEditorUploadRequest) (statusCode int, resp any, err error) {
+func postRepoEditorUpload(c flamego.Context, push database.PushOptions, repoOpts conf.RepositoryOpts, logger *logx.Logger, l i18n.Locale, viewer *database.User, repoCtx *repoContext, req repoEditorUploadRequest) (statusCode int, resp any, err error) {
 	ctx := c.Request().Context()
 	repo := repoCtx.Repo
 	// 🚨 SECURITY: Prevent path traversal.
 	req.Path = pathx.Clean(req.Path)
-	lim := repoUploadLimits()
+	lim := repoUploadLimits(repoOpts)
 	switch {
 	case !lim.Enabled:
 		return http.StatusNotFound, nil, errors.New("uploads are disabled")
@@ -619,7 +624,7 @@ func postRepoEditorUpload(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 		return http.StatusBadRequest, nil, errors.Newf("at most %d files can be uploaded at once", lim.MaxFiles)
 	}
 
-	gitRepo, err := openRepoGit(repoCtx)
+	gitRepo, err := openRepoGit(repoOpts.Root, repoCtx)
 	if err != nil {
 		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
@@ -662,13 +667,14 @@ func postRepoEditorUpload(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 		return http.StatusBadRequest, nil, errors.New("some files were not uploaded")
 	}
 
-	err = repo.UploadRepoFiles(ctx, logger, viewer, database.UploadRepoFileOptions{
-		LastCommitID: commit.ID.String(),
-		OldBranch:    req.Branch,
-		NewBranch:    cmp.Or(req.NewBranch, req.Branch),
-		TreePath:     req.Path,
-		Message:      commitMessage(req.repoEditorCommitRequest, l.Tr("repo::editor.upload_files_to_dir", "path", cmp.Or(req.Path, "/"))),
-		Files:        req.Files,
+	err = repo.UploadRepoFiles(ctx, logger, push, viewer, database.UploadRepoFileOptions{
+		LastCommitID:   commit.ID.String(),
+		OldBranch:      req.Branch,
+		NewBranch:      cmp.Or(req.NewBranch, req.Branch),
+		TreePath:       req.Path,
+		Message:        commitMessage(req.repoEditorCommitRequest, l.Tr("repo::editor.upload_files_to_dir", "path", cmp.Or(req.Path, "/"))),
+		Files:          req.Files,
+		UploadTempPath: repoOpts.Upload.TempPath,
 	})
 	if err != nil {
 		var badPath *git.BadPathError
@@ -678,18 +684,18 @@ func postRepoEditorUpload(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 		logger.Error("Failed to upload files", "treePath", req.Path, "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "upload files")
 	}
-	return http.StatusOK, &repoEditorCommitResult{Location: commitLocation(ctx, repoCtx, req.repoEditorCommitRequest, req.Path)}, nil
+	return http.StatusOK, &repoEditorCommitResult{Location: commitLocation(ctx, push.Notify.Links.Subpath, repoCtx, req.repoEditorCommitRequest, req.Path)}, nil
 }
 
 // postRepoEditorUploadFile stores a file to commit with the next upload.
-func postRepoEditorUploadFile(c flamego.Context, logger *logx.Logger, l i18n.Locale) (statusCode int, resp any, err error) {
-	f, statusCode, err := readUploadedFile(c, l, repoUploadLimits())
+func postRepoEditorUploadFile(c flamego.Context, repoOpts conf.RepositoryOpts, logger *logx.Logger, l i18n.Locale) (statusCode int, resp any, err error) {
+	f, statusCode, err := readUploadedFile(c, l, repoUploadLimits(repoOpts))
 	if err != nil {
 		return statusCode, nil, err
 	}
 	defer func() { _ = f.File.Close() }()
 
-	upload, err := database.Handle.Uploads().New(c.Request().Context(), f.Header.Filename, io.MultiReader(bytes.NewReader(f.Head), f.File))
+	upload, err := database.Handle.Uploads().New(c.Request().Context(), repoOpts.Upload.TempPath, f.Header.Filename, io.MultiReader(bytes.NewReader(f.Head), f.File))
 	if err != nil {
 		logger.Error("Failed to store upload", "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "store upload")
@@ -698,8 +704,8 @@ func postRepoEditorUploadFile(c flamego.Context, logger *logx.Logger, l i18n.Loc
 }
 
 // deleteRepoEditorUploadFile removes a stored file that will not be committed.
-func deleteRepoEditorUploadFile(c flamego.Context, logger *logx.Logger) (statusCode int, resp any, err error) {
-	if err = database.Handle.Uploads().DeleteByUUID(c.Request().Context(), c.Param("uuid")); err != nil {
+func deleteRepoEditorUploadFile(c flamego.Context, repoOpts conf.RepositoryOpts, logger *logx.Logger) (statusCode int, resp any, err error) {
+	if err = database.Handle.Uploads().DeleteByUUID(c.Request().Context(), repoOpts.Upload.TempPath, c.Param("uuid")); err != nil {
 		logger.Error("Failed to delete upload", "uploadUUID", c.Param("uuid"), "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete upload")
 	}

@@ -8,6 +8,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/pathx"
@@ -37,11 +38,11 @@ type repoContent struct {
 	Links           links  `json:"_links"`
 }
 
-func toRepoContent(c *apiContext, ref, subpath string, commit *git.Commit, entry *git.TreeEntry) (*repoContent, error) {
+func toRepoContent(c *apiContext, externalURL, ref, subpath string, commit *git.Commit, entry *git.TreeEntry) (*repoContent, error) {
 	repoURL := fmt.Sprintf("%s/repos/%s/%s", c.BaseURL, c.Param("username"), c.Param("reponame"))
 	selfURL := fmt.Sprintf("%s/contents/%s", repoURL, subpath)
-	htmlURL := fmt.Sprintf("%s/src/%s/%s", repox.HTMLURL(c.Repo.Owner.Name, c.Repo.Repository.Name), ref, entry.Name())
-	downloadURL := fmt.Sprintf("%s/raw/%s/%s", repox.HTMLURL(c.Repo.Owner.Name, c.Repo.Repository.Name), ref, entry.Name())
+	htmlURL := fmt.Sprintf("%s/src/%s/%s", repox.HTMLURL(externalURL, c.Repo.Owner.Name, c.Repo.Repository.Name), ref, entry.Name())
+	downloadURL := fmt.Sprintf("%s/raw/%s/%s", repox.HTMLURL(externalURL, c.Repo.Owner.Name, c.Repo.Repository.Name), ref, entry.Name())
 
 	content := &repoContent{
 		Size:        entry.Size(c.Request().Context()),
@@ -96,8 +97,8 @@ func toRepoContent(c *apiContext, ref, subpath string, commit *git.Commit, entry
 	return content, nil
 }
 
-func getContents(c *apiContext) {
-	repoPath := repox.RepositoryPath(c.Param("username"), c.Param("reponame"))
+func getContents(c *apiContext, server conf.ServerOpts, repository conf.RepositoryOpts) {
+	repoPath := repox.RepositoryPath(repository.Root, c.Param("username"), c.Param("reponame"))
 	gitRepo, err := git.Open(repoPath)
 	if err != nil {
 		c.Error(err, "open repository")
@@ -124,7 +125,7 @@ func getContents(c *apiContext) {
 	}
 
 	if !entry.IsTree() {
-		content, err := toRepoContent(c, ref, treePath, commit, entry)
+		content, err := toRepoContent(c, server.ExternalURL, ref, treePath, commit, entry)
 		if err != nil {
 			c.Errorf(err, "convert %q to repoContent", treePath)
 			return
@@ -155,7 +156,7 @@ func getContents(c *apiContext) {
 	contents := make([]*repoContent, 0, len(entries))
 	for _, entry := range entries {
 		subpath := path.Join(treePath, entry.Name())
-		content, err := toRepoContent(c, ref, subpath, commit, entry)
+		content, err := toRepoContent(c, server.ExternalURL, ref, subpath, commit, entry)
 		if err != nil {
 			c.Errorf(err, "convert %q to repoContent", subpath)
 			return
@@ -174,7 +175,7 @@ type putContentsRequest struct {
 }
 
 // PUT /repos/{username}/{reponame}/contents/{**}
-func putContents(c *apiContext, r putContentsRequest) {
+func putContents(c *apiContext, repository conf.RepositoryOpts, linkOpts database.LinkOptions, push database.PushOptions, r putContentsRequest) {
 	content, err := base64.StdEncoding.DecodeString(r.Content)
 	if err != nil {
 		c.Error(err, "decoding base64")
@@ -186,7 +187,7 @@ func putContents(c *apiContext, r putContentsRequest) {
 	}
 	// A branch that does not exist yet is created from the default branch.
 	oldBranch := c.Repo.Repository.DefaultBranch
-	if git.RepoHasBranch(c.Request().Context(), c.Repo.Repository.RepoPath(), r.Branch) {
+	if git.RepoHasBranch(c.Request().Context(), c.Repo.Repository.RepoPath(repository.Root), r.Branch) {
 		oldBranch = r.Branch
 	}
 
@@ -203,6 +204,7 @@ func putContents(c *apiContext, r putContentsRequest) {
 	err = c.Repo.Repository.UpdateRepoFile(
 		c.Request().Context(),
 		c.Logger,
+		push,
 		c.User,
 		database.UpdateRepoFileOptions{
 			OldBranch:   oldBranch,
@@ -223,7 +225,7 @@ func putContents(c *apiContext, r putContentsRequest) {
 		return
 	}
 
-	repoPath := repox.RepositoryPath(c.Param("username"), c.Param("reponame"))
+	repoPath := repox.RepositoryPath(repository.Root, c.Param("username"), c.Param("reponame"))
 	commit, err := git.RepoCatFileCommit(c.Request().Context(), repoPath, r.Branch)
 	if err != nil {
 		c.Error(err, "get file commit")
@@ -236,13 +238,13 @@ func putContents(c *apiContext, r putContentsRequest) {
 		return
 	}
 
-	apiContent, err := toRepoContent(c, r.Branch, treePath, commit, entry)
+	apiContent, err := toRepoContent(c, linkOpts.ExternalURL, r.Branch, treePath, commit, entry)
 	if err != nil {
 		c.Error(err, "convert to *repoContent")
 		return
 	}
 
-	apiCommit, err := gitCommitToAPICommit(commit, c)
+	apiCommit, err := gitCommitToAPICommit(c, linkOpts, commit)
 	if err != nil {
 		c.Error(err, "convert to *api.Commit")
 		return

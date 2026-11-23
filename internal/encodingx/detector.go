@@ -19,8 +19,6 @@ import (
 	"unicode/utf8"
 
 	"unknwon.dev/x/logx"
-
-	"gogs.io/gogs/internal/conf"
 )
 
 const (
@@ -338,8 +336,9 @@ func (d *Detector) Guess(allowUTF8 bool) string {
 }
 
 // Detect returns the best guess of the encoding of the content, as a WHATWG
-// encoding name.
-func Detect(logger *logx.Logger, content []byte) string {
+// encoding name. Content that is not UTF-8 is taken as ansiCharset when it is
+// not empty.
+func Detect(logger *logx.Logger, content []byte, ansiCharset string) string {
 	if utf8.Valid(content) {
 		logger.Debug("Detected encoding via fast path", "charset", "UTF-8")
 		return "UTF-8"
@@ -350,9 +349,9 @@ func Detect(logger *logx.Logger, content []byte) string {
 		return "UTF-8"
 	}
 
-	if len(conf.Repository.ANSICharset) > 0 {
-		logger.Debug("Using default ANSI charset", "charset", conf.Repository.ANSICharset)
-		return conf.Repository.ANSICharset
+	if ansiCharset != "" {
+		logger.Debug("Using default ANSI charset", "charset", ansiCharset)
+		return ansiCharset
 	}
 
 	d := New()

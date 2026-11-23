@@ -104,12 +104,13 @@ func authenticatedUserID(logger *logx.Logger, store AuthStore, r *http.Request, 
 // AuthenticatedUser returns the user object of the authenticated user, along
 // with whether the user uses HTTP Basic Authentication, and the ID of the access
 // token the user authenticated with, which is 0 when the user does not use token
-// authentication.
-func AuthenticatedUser(logger *logx.Logger, store AuthStore, r *http.Request, sess session.Session) (_ *database.User, isBasicAuth bool, tokenID int64) {
+// authentication. The auth settings decide whether the reverse proxy
+// authentication header applies.
+func AuthenticatedUser(logger *logx.Logger, authOpts conf.AuthOpts, store AuthStore, r *http.Request, sess session.Session) (_ *database.User, isBasicAuth bool, tokenID int64) {
 	uid, tokenID := authenticatedUserID(logger, store, r, sess)
 
 	if uid <= 0 {
-		user, ok, err := ReverseProxyUser(store, r)
+		user, ok, err := ReverseProxyUser(authOpts, store, r)
 		if err != nil {
 			logger.Error("Failed to authenticate by reverse proxy header", "error", err)
 			return nil, false, 0
@@ -139,7 +140,7 @@ func AuthenticatedUser(logger *logx.Logger, store AuthStore, r *http.Request, se
 				}
 				// A password alone must not stand in for a sign-in that also asks for
 				// the second factor. Such users authenticate with an access token.
-				if u.IsDisabled() || store.IsTwoFactorEnabled(r.Context(), u.ID) {
+				if u.IsDisabled(authOpts.RequireEmailConfirmation) || store.IsTwoFactorEnabled(r.Context(), u.ID) {
 					return nil, false, 0
 				}
 
@@ -156,7 +157,7 @@ func AuthenticatedUser(logger *logx.Logger, store AuthStore, r *http.Request, se
 	}
 	// Organizations cannot sign in, even with a session or an access token that
 	// belongs to one.
-	if u.IsOrganization() || (tokenID > 0 && u.IsDisabled()) {
+	if u.IsOrganization() || (tokenID > 0 && u.IsDisabled(authOpts.RequireEmailConfirmation)) {
 		return nil, false, 0
 	}
 	return u, false, tokenID
@@ -169,8 +170,8 @@ func AuthenticatedUser(logger *logx.Logger, store AuthStore, r *http.Request, se
 // trusted proxy, or the header is empty. Otherwise the header decides who the
 // viewer is, and the user is nil when it names a user that does not exist, an
 // organization or, with auto-registration, a name that is not allowed.
-func ReverseProxyUser(store AuthStore, r *http.Request) (_ *database.User, ok bool, _ error) {
-	username, ok := ReverseProxyUsername(r)
+func ReverseProxyUser(authOpts conf.AuthOpts, store AuthStore, r *http.Request) (_ *database.User, ok bool, _ error) {
+	username, ok := ReverseProxyUsername(authOpts, r)
 	if !ok {
 		return nil, false, nil
 	}
@@ -185,7 +186,7 @@ func ReverseProxyUser(store AuthStore, r *http.Request) (_ *database.User, ok bo
 		return nil, true, errors.Wrap(err, "get user by name")
 	}
 
-	if !conf.Auth.EnableReverseProxyAutoRegistration {
+	if !authOpts.EnableReverseProxyAutoRegistration {
 		return nil, true, nil
 	}
 	user, err = store.CreateUser(
@@ -216,11 +217,11 @@ func ReverseProxyUser(store AuthStore, r *http.Request) (_ *database.User, ok bo
 // ReverseProxyUsername returns the username in the reverse proxy
 // authentication header. The bool is false when the header does not apply to
 // the request, as described for ReverseProxyUser.
-func ReverseProxyUsername(r *http.Request) (string, bool) {
-	if !conf.Auth.EnableReverseProxyAuthentication || !isRequestFromTrustedProxy(r) {
+func ReverseProxyUsername(authOpts conf.AuthOpts, r *http.Request) (string, bool) {
+	if !authOpts.EnableReverseProxyAuthentication || !isRequestFromTrustedProxy(authOpts.TrustedProxyCIDRs, r) {
 		return "", false
 	}
-	username := r.Header.Get(conf.Auth.ReverseProxyAuthenticationHeader)
+	username := r.Header.Get(authOpts.ReverseProxyAuthenticationHeader)
 	return username, username != ""
 }
 
@@ -228,7 +229,7 @@ func ReverseProxyUsername(r *http.Request) (string, bool) {
 // address falls within one of the configured trusted proxy CIDR ranges. The
 // reverse proxy authentication header is only honored for such requests so an
 // attacker reaching Gogs directly cannot forge it.
-func isRequestFromTrustedProxy(req *http.Request) bool {
+func isRequestFromTrustedProxy(trustedProxyCIDRs []*net.IPNet, req *http.Request) bool {
 	host, _, err := net.SplitHostPort(req.RemoteAddr)
 	if err != nil {
 		return false
@@ -242,7 +243,7 @@ func isRequestFromTrustedProxy(req *http.Request) bool {
 	if v4 := ip.To4(); v4 != nil {
 		ip = v4
 	}
-	for _, cidr := range conf.Auth.TrustedProxyCIDRs {
+	for _, cidr := range trustedProxyCIDRs {
 		if cidr.Contains(ip) {
 			return true
 		}

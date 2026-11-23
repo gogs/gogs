@@ -8,8 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"unknwon.dev/x/logx"
-
-	"gogs.io/gogs/internal/conf"
 )
 
 func TestMilestones(t *testing.T) {
@@ -132,8 +130,6 @@ func milestonesGetByID(t *testing.T, ctx context.Context, s *MilestonesStore) {
 }
 
 func milestonesList(t *testing.T, ctx context.Context, s *MilestonesStore) {
-	conf.SetMockUI(t, conf.UIOpts{IssuePagingNum: 2})
-
 	open1 := newTestMilestone(t, ctx, s, 1, "open1", false)
 	closed1 := newTestMilestone(t, ctx, s, 1, "closed1", true)
 	open2 := newTestMilestone(t, ctx, s, 1, "open2", false)
@@ -144,16 +140,16 @@ func milestonesList(t *testing.T, ctx context.Context, s *MilestonesStore) {
 	require.NoError(t, err)
 	assert.Equal(t, []int64{open1.ID, closed1.ID, open2.ID, open3.ID}, milestoneIDs(got))
 
-	got, err = s.List(ctx, 1, false, 0)
+	got, err = s.List(ctx, 1, false, 0, 2)
 	require.NoError(t, err)
 	assert.Equal(t, []int64{open1.ID, open2.ID, open3.ID}, milestoneIDs(got))
-	got, err = s.List(ctx, 1, false, 1)
+	got, err = s.List(ctx, 1, false, 1, 2)
 	require.NoError(t, err)
 	assert.Equal(t, []int64{open1.ID, open2.ID}, milestoneIDs(got))
-	got, err = s.List(ctx, 1, false, 2)
+	got, err = s.List(ctx, 1, false, 2, 2)
 	require.NoError(t, err)
 	assert.Equal(t, []int64{open3.ID}, milestoneIDs(got))
-	got, err = s.List(ctx, 1, true, 1)
+	got, err = s.List(ctx, 1, true, 1, 2)
 	require.NoError(t, err)
 	assert.Equal(t, []int64{closed1.ID}, milestoneIDs(got))
 }
@@ -340,10 +336,6 @@ func milestonesUpdateIssueStats(t *testing.T, ctx context.Context, s *Milestones
 }
 
 func milestonesAssignIssue(t *testing.T, ctx context.Context, s *MilestonesStore) {
-	// Webhook payloads of issues have links, which read the server and SSH
-	// settings that other suites mock.
-	conf.SetMockServer(t, conf.ServerOpts{})
-	conf.SetMockSSH(t, conf.SSHOpts{})
 	logger := logx.NewNoopLogger()
 	repo := newTestMilestoneRepo(t, ctx, s, "ms-assign")
 	newTestWebhook(t, ctx, newWebhooksStore(s.db), repo.ID, 0, HookEvents{Issues: true})
@@ -383,7 +375,7 @@ func milestonesAssignIssue(t *testing.T, ctx context.Context, s *MilestonesStore
 	}
 
 	issue.MilestoneID = m2.ID
-	err = s.AssignIssue(ctx, logger, repo.Owner, issue)
+	err = s.AssignIssue(ctx, logger, LinkOptions{}, repo.Owner, issue)
 	require.NoError(t, err)
 	assert.Equal(t, []int{0, 0}, counts(m1.ID))
 	assert.Equal(t, []int{1, 1}, counts(m2.ID))
@@ -395,7 +387,7 @@ func milestonesAssignIssue(t *testing.T, ctx context.Context, s *MilestonesStore
 	assert.Contains(t, got[0], `"action": "milestoned"`)
 
 	issue.MilestoneID = 0
-	err = s.AssignIssue(ctx, logger, repo.Owner, issue)
+	err = s.AssignIssue(ctx, logger, LinkOptions{}, repo.Owner, issue)
 	require.NoError(t, err)
 	assert.Equal(t, []int{0, 0}, counts(m2.ID))
 	assert.Equal(t, []int64{0, 0}, assigned())
@@ -406,7 +398,7 @@ func milestonesAssignIssue(t *testing.T, ctx context.Context, s *MilestonesStore
 
 	// A milestone of another repository cannot be assigned.
 	issue.MilestoneID = 9999
-	err = s.AssignIssue(ctx, logger, repo.Owner, issue)
+	err = s.AssignIssue(ctx, logger, LinkOptions{}, repo.Owner, issue)
 	assert.True(t, IsErrMilestoneNotExist(err), "got %v", err)
 	assert.Equal(t, []int64{0, 0}, assigned())
 }

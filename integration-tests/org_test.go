@@ -35,7 +35,7 @@ func orgSeed(t *testing.T, ownerID int64) *database.User {
 		IsActive: true,
 		Type:     database.UserTypeOrganization,
 	}
-	require.NoError(t, database.Handle.Organizations().Create(t.Context(), org, owner))
+	require.NoError(t, database.Handle.Organizations().Create(t.Context(), cfg.Repository.Root, org, owner))
 	return org
 }
 
@@ -72,7 +72,7 @@ func TestOrgCreate(t *testing.T) {
 
 	status, _, generated := c.doRaw(http.MethodGet, "/-/avatars/"+strconv.FormatInt(org.ID, 10), "", nil)
 	require.Equal(t, http.StatusOK, status, "response: %s", generated)
-	saved, err := os.ReadFile(userx.GeneratedAvatarPath(org.ID, avatar.Organization))
+	saved, err := os.ReadFile(userx.GeneratedAvatarPath(cfg.Server.AppDataPath, org.ID, avatar.Organization))
 	require.NoError(t, err, "the generated avatar is not saved as an organization avatar")
 	assert.Equal(t, generated, saved)
 

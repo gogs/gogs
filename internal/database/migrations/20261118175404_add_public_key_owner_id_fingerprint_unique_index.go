@@ -2,15 +2,12 @@ package migrations
 
 import (
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/cockroachdb/errors"
 	"golang.org/x/crypto/ssh"
 	"gorm.io/gorm"
-
-	"gogs.io/gogs/internal/conf"
 )
 
 // ownerFingerprintIndex is the name of the unique index on the owners and
@@ -23,23 +20,26 @@ const keyTypeDeploy = 2
 // addPublicKeyOwnerIDFingerprintUniqueIndex makes each user have a key only
 // once, and repositories that add the same deploy key share one public key, as
 // they are meant to.
-func addPublicKeyOwnerIDFingerprintUniqueIndex(db *gorm.DB) error {
+func addPublicKeyOwnerIDFingerprintUniqueIndex(db *gorm.DB, authorizedKeysPath string) error {
 	if db.Migrator().HasIndex("public_key", ownerFingerprintIndex) {
 		return errMigrationSkipped
 	}
-	return MergeDuplicatePublicKeys(db)
+	return MergeDuplicatePublicKeys(db, authorizedKeysPath)
 }
 
 // MergeDuplicatePublicKeys deletes deploy keys of repositories that no longer
 // exist and public keys of deploy keys that no deploy key uses, merges the
 // public keys that have the same owner and fingerprint into the one added first,
-// removes the deleted ones from the authorized_keys file, and then adds the unique index on the owners and
-// fingerprints of public keys. Before the index, the same key with another
-// comment, or added twice at the same time, got a public key of its own. Public
-// keys of deploy keys have no owner, so they are unique by their fingerprints.
+// removes the deleted ones from the authorized_keys file at the path unless it
+// is empty, and then adds the unique index on the owners and fingerprints of
+// public keys. Before the index, the same key with another comment, or added
+// twice at the same time, got a public key of its own. Public keys of deploy
+// keys have no owner, so they are unique by their fingerprints.
 // Restoring a backup calls it after importing the public keys.
-func MergeDuplicatePublicKeys(db *gorm.DB) error {
-	err := db.Transaction(mergePublicKeys)
+func MergeDuplicatePublicKeys(db *gorm.DB, authorizedKeysPath string) error {
+	err := db.Transaction(func(tx *gorm.DB) error {
+		return mergePublicKeys(tx, authorizedKeysPath)
+	})
 	if err != nil {
 		return errors.Wrap(err, "merge public keys")
 	}
@@ -58,7 +58,7 @@ func AllowDuplicatePublicKeys(db *gorm.DB) error {
 	return db.Migrator().DropIndex("public_key", ownerFingerprintIndex)
 }
 
-func mergePublicKeys(tx *gorm.DB) error {
+func mergePublicKeys(tx *gorm.DB, authorizedKeysPath string) error {
 	removed, err := deleteOrphanDeployKeys(tx)
 	if err != nil {
 		return errors.Wrap(err, "delete orphan deploy keys")
@@ -144,7 +144,7 @@ func mergePublicKeys(tx *gorm.DB) error {
 	// back the deletions. Should the commit fail after, the keys stay without
 	// their lines until SSH keys are resynced, which is safer than lines of keys
 	// that no longer exist.
-	return errors.Wrap(removeAuthorizedKeys(removed), "remove merged keys from authorized_keys")
+	return errors.Wrap(removeAuthorizedKeys(authorizedKeysPath, removed), "remove merged keys from authorized_keys")
 }
 
 // deleteOrphanDeployKeys deletes the deploy keys of repositories that no longer
@@ -180,16 +180,15 @@ func deleteOrphanDeployKeys(tx *gorm.DB) (map[string]bool, error) {
 }
 
 // removeAuthorizedKeys removes the lines of the key IDs from the authorized_keys
-// file. The line of a deleted key would come before the line of the key it was
-// merged into when the file is in the order of its keys, and a later key may get
-// its key ID.
-func removeAuthorizedKeys(ids map[string]bool) error {
-	// The builtin SSH server does not read the file.
-	if len(ids) == 0 || conf.SSH.StartBuiltinServer {
+// file at the path, which is empty when no file is kept, e.g., the builtin SSH
+// server does not read it. The line of a deleted key would come before the line
+// of the key it was merged into when the file is in the order of its keys, and a
+// later key may get its key ID.
+func removeAuthorizedKeys(path string, ids map[string]bool) error {
+	if len(ids) == 0 || path == "" {
 		return nil
 	}
 
-	path := filepath.Join(conf.SSH.RootPath, "authorized_keys")
 	data, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
 		return nil

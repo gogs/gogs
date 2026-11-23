@@ -128,7 +128,7 @@ type adminStatistic struct {
 	Count int64  `json:"count"`
 }
 
-func getAdminDashboard(logger *logx.Logger, c flamego.Context, l i18n.Locale) (statusCode int, resp *adminDashboard, err error) {
+func getAdminDashboard(logger *logx.Logger, c flamego.Context, gitVersion gitVersion, app conf.AppOpts, l i18n.Locale) (statusCode int, resp *adminDashboard, err error) {
 	s := database.GetStatistic(c.Request().Context(), logger).Counter
 	r := adminReport{l: l}
 	// The key of a statistic also names its label in the locale files.
@@ -184,8 +184,8 @@ func getAdminDashboard(logger *logx.Logger, c flamego.Context, l i18n.Locale) (s
 	)
 
 	return http.StatusOK, &adminDashboard{
-		AppVersion:    conf.App.Version,
-		GitVersion:    conf.Git.Version,
+		AppVersion:    app.Version,
+		GitVersion:    string(gitVersion),
 		GoVersion:     runtime.Version(),
 		BuildTime:     conf.BuildTime,
 		BuildCommit:   conf.BuildCommit,
@@ -227,32 +227,68 @@ func getAdminDashboard(logger *logx.Logger, c flamego.Context, l i18n.Locale) (s
 	}, nil
 }
 
-// adminOperations are the maintenance tasks an admin can run from the
-// dashboard, by name, with the key of the message shown when one succeeds.
-var adminOperations = map[string]struct {
-	run        func(*logx.Logger) error
+// adminOperation is a maintenance task an admin can run from the dashboard,
+// with the key of the message shown when it succeeds.
+type adminOperation struct {
+	run        func() error
 	successKey string
-}{
-	"delete-inactive-users": {func(*logx.Logger) error { return database.Handle.Users().DeleteInactivated() }, "admin::dashboard.delete_inactivate_accounts_success"},
-	"delete-repo-archives":  {func(*logx.Logger) error { return database.DeleteRepositoryArchives() }, "admin::dashboard.delete_repo_archives_success"},
-	"delete-missing-repos":  {database.DeleteMissingRepositories, "admin::dashboard.delete_missing_repos_success"},
-	"git-gc-repos":          {func(*logx.Logger) error { return database.GitGcRepos() }, "admin::dashboard.git_gc_repos_success"},
-	"resync-ssh-keys":       {func(*logx.Logger) error { return database.Handle.PublicKeys().RewriteAuthorizedKeys() }, "admin::dashboard.resync_all_sshkeys_success"},
-	"resync-repo-hooks":     {func(*logx.Logger) error { return database.SyncRepositoryHooks() }, "admin::dashboard.resync_all_hooks_success"},
-	"reinit-missing-repos":  {database.ReinitMissingRepositories, "admin::dashboard.reinit_missing_repos_success"},
+}
+
+// adminOperationSettings are what the maintenance tasks run with.
+type adminOperationSettings struct {
+	repositoryRoot string
+	git            conf.GitOpts
+	userDeletion   database.DeleteUserOptions
+	repoDeletion   database.DeleteRepoOptions
+	authorizedKeys database.AuthorizedKeysOptions
+	hooks          database.DelegateHooksOptions
+}
+
+// adminOperations returns the maintenance tasks an admin can run from the
+// dashboard, by name.
+func adminOperations(logger *logx.Logger, s adminOperationSettings) map[string]adminOperation {
+	return map[string]adminOperation{
+		"delete-inactive-users": {func() error { return database.Handle.Users().DeleteInactivated(s.userDeletion) }, "admin::dashboard.delete_inactivate_accounts_success"},
+		"delete-repo-archives":  {func() error { return database.DeleteRepositoryArchives(s.repositoryRoot) }, "admin::dashboard.delete_repo_archives_success"},
+		"delete-missing-repos":  {func() error { return database.DeleteMissingRepositories(logger, s.repoDeletion) }, "admin::dashboard.delete_missing_repos_success"},
+		"git-gc-repos": {func() error {
+			return database.GitGcRepos(s.repositoryRoot, time.Duration(s.git.Timeout.GC)*time.Second, s.git.GCArgs)
+		}, "admin::dashboard.git_gc_repos_success"},
+		"resync-ssh-keys":      {func() error { return database.Handle.PublicKeys().RewriteAuthorizedKeys(s.authorizedKeys) }, "admin::dashboard.resync_all_sshkeys_success"},
+		"resync-repo-hooks":    {func() error { return database.SyncRepositoryHooks(s.hooks) }, "admin::dashboard.resync_all_hooks_success"},
+		"reinit-missing-repos": {func() error { return database.ReinitMissingRepositories(logger, s.repositoryRoot) }, "admin::dashboard.reinit_missing_repos_success"},
+	}
 }
 
 type adminMessage struct {
 	Message string `json:"message"`
 }
 
-func postAdminOperation(logger *logx.Logger, c flamego.Context, l i18n.Locale, admin *database.User) (statusCode int, resp any, err error) {
+func postAdminOperation(
+	logger *logx.Logger,
+	c flamego.Context,
+	l i18n.Locale,
+	repoOpts conf.RepositoryOpts,
+	gitOpts conf.GitOpts,
+	userDeletion database.DeleteUserOptions,
+	repoDeletion database.DeleteRepoOptions,
+	authorizedKeys database.AuthorizedKeysOptions,
+	hooks database.DelegateHooksOptions,
+	admin *database.User,
+) (statusCode int, resp any, err error) {
 	name := c.Param("name")
-	op, ok := adminOperations[name]
+	op, ok := adminOperations(logger, adminOperationSettings{
+		repositoryRoot: repoOpts.Root,
+		git:            gitOpts,
+		userDeletion:   userDeletion,
+		repoDeletion:   repoDeletion,
+		authorizedKeys: authorizedKeys,
+		hooks:          hooks,
+	})[name]
 	if !ok {
 		return http.StatusNotFound, nil, errors.New("operation not found")
 	}
-	if err = op.run(logger); err != nil {
+	if err = op.run(); err != nil {
 		logger.Error("Failed to run admin operation", "operation", name, "error", err)
 		// Admins need the reason to fix what failed, e.g., the repository that
 		// could not be collected.
@@ -268,68 +304,89 @@ type adminConfig struct {
 	EmailEnabled bool `json:"emailEnabled"`
 }
 
-func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error) {
+func getAdminConfig(
+	l i18n.Locale,
+	app conf.AppOpts,
+	server conf.ServerOpts,
+	sshOpts conf.SSHOpts,
+	repo conf.RepositoryOpts,
+	db conf.DatabaseOpts,
+	sec conf.SecurityOpts,
+	emailOpts conf.EmailOpts,
+	auth conf.AuthOpts,
+	notify database.NotifyOptions,
+	sess conf.SessionOpts,
+	cacheOpts conf.CacheOptions,
+	att conf.AttachmentOpts,
+	release conf.ReleaseOpts,
+	pic conf.PictureOpts,
+	httpOpts conf.HTTPOpts,
+	mirror conf.MirrorOpts,
+	webhook conf.WebhookOpts,
+	git conf.GitOpts,
+	lfs conf.LFSOpts,
+	logOpts *conf.LogOpts,
+) (statusCode int, resp *adminConfig, err error) {
 	r := adminReport{l: l}
 	var sections []adminReportSection
 
 	sections = append(sections, r.section("server", "admin::config.server_config",
 		rows(
-			r.code("admin::config.brand_name", conf.App.BrandName),
-			r.code("admin::config.run_user", conf.App.RunUser),
-			r.code("admin::config.run_mode", conf.App.RunMode),
+			r.code("admin::config.brand_name", app.BrandName),
+			r.code("admin::config.run_user", app.RunUser),
+			r.code("admin::config.run_mode", app.RunMode),
 		),
 		rows(
-			r.code("admin::config.server.external_url", conf.Server.ExternalURL),
-			r.code("admin::config.server.domain", conf.Server.Domain),
-			r.code("admin::config.server.protocol", conf.Server.Protocol),
-			r.code("admin::config.server.http_addr", conf.Server.HTTPAddr),
-			r.code("admin::config.server.http_port", conf.Server.HTTPPort),
-			r.code("admin::config.server.cert_file", conf.Server.CertFile),
-			r.code("admin::config.server.key_file", conf.Server.KeyFile),
-			r.code("admin::config.server.tls_min_version", conf.Server.TLSMinVersion),
-			r.code("admin::config.server.unix_socket_permission", conf.Server.UnixSocketPermission),
-			r.code("admin::config.server.local_root_url", conf.Server.LocalRootURL),
+			r.code("admin::config.server.external_url", server.ExternalURL),
+			r.code("admin::config.server.domain", server.Domain),
+			r.code("admin::config.server.protocol", server.Protocol),
+			r.code("admin::config.server.http_addr", server.HTTPAddr),
+			r.code("admin::config.server.http_port", server.HTTPPort),
+			r.code("admin::config.server.cert_file", server.CertFile),
+			r.code("admin::config.server.key_file", server.KeyFile),
+			r.code("admin::config.server.tls_min_version", server.TLSMinVersion),
+			r.code("admin::config.server.unix_socket_permission", server.UnixSocketPermission),
+			r.code("admin::config.server.local_root_url", server.LocalRootURL),
 		),
 		rows(
-			r.flag("admin::config.server.disable_router_log", conf.Server.DisableRouterLog),
-			r.flag("admin::config.server.enable_gzip", conf.Server.EnableGzip),
+			r.flag("admin::config.server.disable_router_log", server.DisableRouterLog),
+			r.flag("admin::config.server.enable_gzip", server.EnableGzip),
 		),
 		rows(
-			r.code("admin::config.server.app_data_path", conf.Server.AppDataPath),
-			r.flag("admin::config.server.load_assets_from_disk", conf.Server.LoadAssetsFromDisk),
+			r.code("admin::config.server.app_data_path", server.AppDataPath),
+			r.flag("admin::config.server.load_assets_from_disk", server.LoadAssetsFromDisk),
 		),
-		rows(r.code("admin::config.server.landing_url", conf.Server.LandingURL)),
+		rows(r.code("admin::config.server.landing_url", server.LandingURL)),
 	))
 
-	ssh := r.section("ssh", "admin::config.ssh_config", rows(r.flag("admin::config.ssh.enabled", !conf.SSH.Disabled)))
-	if !conf.SSH.Disabled {
-		keySizes := make([]string, 0, len(conf.SSH.MinimumKeySizes))
-		for typ, size := range conf.SSH.MinimumKeySizes {
+	ssh := r.section("ssh", "admin::config.ssh_config", rows(r.flag("admin::config.ssh.enabled", !sshOpts.Disabled)))
+	if !sshOpts.Disabled {
+		keySizes := make([]string, 0, len(sshOpts.MinimumKeySizes))
+		for typ, size := range sshOpts.MinimumKeySizes {
 			keySizes = append(keySizes, typ+": "+strconv.Itoa(size))
 		}
 		slices.Sort(keySizes)
 		ssh.Groups[0] = append(ssh.Groups[0],
-			r.code("admin::config.ssh.domain", conf.SSH.Domain),
-			r.code("admin::config.ssh.port", conf.SSH.Port),
-			r.code("admin::config.ssh.root_path", conf.SSH.RootPath),
-			r.code("admin::config.ssh.keygen_path", conf.SSH.KeygenPath),
-			r.code("admin::config.ssh.key_test_path", conf.SSH.KeyTestPath),
-			r.flag("admin::config.ssh.minimum_key_size_check", conf.SSH.MinimumKeySizeCheck),
+			r.code("admin::config.ssh.domain", sshOpts.Domain),
+			r.code("admin::config.ssh.port", sshOpts.Port),
+			r.code("admin::config.ssh.root_path", sshOpts.RootPath),
+			r.code("admin::config.ssh.keygen_path", sshOpts.KeygenPath),
+			r.code("admin::config.ssh.key_test_path", sshOpts.KeyTestPath),
+			r.flag("admin::config.ssh.minimum_key_size_check", sshOpts.MinimumKeySizeCheck),
 			r.list("admin::config.ssh.minimum_key_sizes", keySizes),
-			r.flag("admin::config.ssh.rewrite_authorized_keys_at_start", conf.SSH.RewriteAuthorizedKeysAtStart),
+			r.flag("admin::config.ssh.rewrite_authorized_keys_at_start", sshOpts.RewriteAuthorizedKeysAtStart),
 		)
 		ssh.Groups = append(ssh.Groups, rows(
-			r.flag("admin::config.ssh.start_builtin_server", conf.SSH.StartBuiltinServer),
-			r.code("admin::config.ssh.listen_host", conf.SSH.ListenHost),
-			r.code("admin::config.ssh.listen_port", conf.SSH.ListenPort),
-			r.list("admin::config.ssh.server_ciphers", conf.SSH.ServerCiphers),
-			r.list("admin::config.ssh.server_macs", conf.SSH.ServerMACs),
-			r.list("admin::config.ssh.server_algorithms", conf.SSH.ServerAlgorithms),
+			r.flag("admin::config.ssh.start_builtin_server", sshOpts.StartBuiltinServer),
+			r.code("admin::config.ssh.listen_host", sshOpts.ListenHost),
+			r.code("admin::config.ssh.listen_port", sshOpts.ListenPort),
+			r.list("admin::config.ssh.server_ciphers", sshOpts.ServerCiphers),
+			r.list("admin::config.ssh.server_macs", sshOpts.ServerMACs),
+			r.list("admin::config.ssh.server_algorithms", sshOpts.ServerAlgorithms),
 		))
 	}
 	sections = append(sections, ssh)
 
-	repo := conf.Repository
 	sections = append(sections, r.section("repository", "admin::config.repo_config",
 		rows(
 			r.code("admin::config.repo.root_path", repo.Root),
@@ -356,7 +413,6 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 		),
 	))
 
-	db := conf.Database
 	sections = append(sections, r.section("database", "admin::config.db_config",
 		rows(
 			r.code("admin::config.db.type", db.Type),
@@ -373,7 +429,6 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 		),
 	))
 
-	sec := conf.Security
 	sections = append(sections, r.section("security", "admin::config.security_config", rows(
 		r.code("admin::config.security.login_remember_days", sec.LoginRememberDays),
 		r.flag("admin::config.security.enable_login_status_cookie", sec.EnableLoginStatusCookie),
@@ -381,32 +436,30 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 		r.list("admin::config.security.local_network_allowlist", sec.LocalNetworkAllowlist),
 	)))
 
-	mail := r.section("email", "admin::config.email_config", rows(r.flag("admin::config.email.enabled", conf.Email.Enabled)))
-	if conf.Email.Enabled {
-		e := conf.Email
+	mail := r.section("email", "admin::config.email_config", rows(r.flag("admin::config.email.enabled", emailOpts.Enabled)))
+	if emailOpts.Enabled {
 		mail.Groups[0] = append(mail.Groups[0],
-			r.code("admin::config.email.subject_prefix", e.SubjectPrefix),
-			r.code("admin::config.email.host", e.Host),
-			r.code("admin::config.email.from", e.From),
-			r.code("admin::config.email.user", e.User),
+			r.code("admin::config.email.subject_prefix", emailOpts.SubjectPrefix),
+			r.code("admin::config.email.host", emailOpts.Host),
+			r.code("admin::config.email.from", emailOpts.From),
+			r.code("admin::config.email.user", emailOpts.User),
 		)
 		mail.Groups = append(mail.Groups,
-			rows(r.optional("admin::config.email.helo_hostname", e.HELOHostname)),
+			rows(r.optional("admin::config.email.helo_hostname", emailOpts.HELOHostname)),
 			rows(
-				r.flag("admin::config.email.skip_verify", e.SkipVerify),
-				r.flag("admin::config.email.use_certificate", e.UseCertificate),
-				r.code("admin::config.email.cert_file", e.CertFile),
-				r.code("admin::config.email.key_file", e.KeyFile),
+				r.flag("admin::config.email.skip_verify", emailOpts.SkipVerify),
+				r.flag("admin::config.email.use_certificate", emailOpts.UseCertificate),
+				r.code("admin::config.email.cert_file", emailOpts.CertFile),
+				r.code("admin::config.email.key_file", emailOpts.KeyFile),
 			),
 			rows(
-				r.flag("admin::config.email.use_plain_text", e.UsePlainText),
-				r.flag("admin::config.email.add_plain_text_alt", e.AddPlainTextAlt),
+				r.flag("admin::config.email.use_plain_text", emailOpts.UsePlainText),
+				r.flag("admin::config.email.add_plain_text_alt", emailOpts.AddPlainTextAlt),
 			),
 		)
 	}
 	sections = append(sections, mail)
 
-	auth := conf.Auth
 	sections = append(sections, r.section("auth", "admin::config.auth_config",
 		rows(
 			r.codeUnit("admin::config.auth.activate_code_lives", auth.ActivateCodeLives, l.Tr("tool::raw_minutes")),
@@ -426,10 +479,9 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 	))
 
 	sections = append(sections, r.section("user", "admin::config.user_config", rows(
-		r.flag("admin::config.user.enable_email_notify", conf.User.EnableEmailNotification),
+		r.flag("admin::config.user.enable_email_notify", notify.EnableEmailNotification),
 	)))
 
-	sess := conf.Session
 	sections = append(sections, r.section("session", "admin::config.session_config", rows(
 		r.code("admin::config.session.provider", sess.Provider),
 		r.code("admin::config.session.provider_config", sess.ProviderConfig),
@@ -442,11 +494,10 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 	// The cache host is left out because it can hold credentials, e.g., a
 	// Redis password.
 	sections = append(sections, r.section("cache", "admin::config.cache_config", rows(
-		r.code("admin::config.cache.adapter", conf.Cache.Adapter),
-		r.codeUnit("admin::config.cache.interval", conf.Cache.Interval, l.Tr("tool::raw_seconds")),
+		r.code("admin::config.cache.adapter", cacheOpts.Adapter),
+		r.codeUnit("admin::config.cache.interval", cacheOpts.Interval, l.Tr("tool::raw_seconds")),
 	)))
 
-	att := conf.Attachment
 	sections = append(sections, r.section("attachment", "admin::config.attachment_config", rows(
 		r.flag("admin::config.attachment.enabled", att.Enabled),
 		r.code("admin::config.attachment.path", att.Path),
@@ -455,7 +506,7 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 		r.code("admin::config.attachment.max_files", att.MaxFiles),
 	)))
 
-	rel := conf.Release.Attachment
+	rel := release.Attachment
 	sections = append(sections, r.section("release", "admin::config.release_config", rows(
 		r.flag("admin::config.release.attachment.enabled", rel.Enabled),
 		r.list("admin::config.release.attachment.allowed_types", rel.AllowedTypes),
@@ -463,7 +514,6 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 		r.code("admin::config.release.attachment.max_files", rel.MaxFiles),
 	)))
 
-	pic := conf.Picture
 	sections = append(sections, r.section("picture", "admin::config.picture_config", rows(
 		r.code("admin::config.picture.avatar_upload_path", pic.AvatarUploadPath),
 		r.code("admin::config.picture.repo_avatar_upload_path", pic.RepositoryAvatarUploadPath),
@@ -471,19 +521,18 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 
 	sections = append(sections,
 		r.section("http", "admin::config.http_config", rows(
-			r.optional("admin::config.http.access_control_allow_origin", conf.HTTP.AccessControlAllowOrigin),
+			r.optional("admin::config.http.access_control_allow_origin", httpOpts.AccessControlAllowOrigin),
 		)),
 		r.section("mirror", "admin::config.mirror_config", rows(
-			r.codeUnit("admin::config.mirror.default_interval", conf.Mirror.DefaultInterval, l.Tr("tool::raw_hours")),
+			r.codeUnit("admin::config.mirror.default_interval", mirror.DefaultInterval, l.Tr("tool::raw_hours")),
 		)),
 		r.section("webhook", "admin::config.webhook_config", rows(
-			r.list("admin::config.webhook.types", conf.Webhook.Types),
-			r.codeUnit("admin::config.webhook.deliver_timeout", conf.Webhook.DeliverTimeout, l.Tr("tool::raw_seconds")),
-			r.flag("admin::config.webhook.skip_tls_verify", conf.Webhook.SkipTLSVerify),
+			r.list("admin::config.webhook.types", webhook.Types),
+			r.codeUnit("admin::config.webhook.deliver_timeout", webhook.DeliverTimeout, l.Tr("tool::raw_seconds")),
+			r.flag("admin::config.webhook.skip_tls_verify", webhook.SkipTLSVerify),
 		)),
 	)
 
-	git := conf.Git
 	sections = append(sections, r.section("git", "admin::config.git_config",
 		rows(
 			r.optional("admin::config.git.gc_args", strings.Join(git.GCArgs, " ")),
@@ -496,13 +545,13 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 	))
 
 	sections = append(sections, r.section("lfs", "admin::config.lfs_config", rows(
-		r.code("admin::config.lfs.storage", conf.LFS.Storage),
-		r.code("admin::config.lfs.objects_path", conf.LFS.ObjectsPath),
+		r.code("admin::config.lfs.storage", lfs.Storage),
+		r.code("admin::config.lfs.objects_path", lfs.ObjectsPath),
 	)))
 
-	logs := r.section("log", "admin::config.log_config", rows(r.code("admin::config.log_file_root_path", conf.Log.RootPath)))
-	for i, mode := range conf.Log.Modes {
-		options, _ := json.MarshalIndent(conf.Log.Configs[i], "", "  ")
+	logs := r.section("log", "admin::config.log_config", rows(r.code("admin::config.log_file_root_path", logOpts.RootPath)))
+	for i, mode := range logOpts.Modes {
+		options, _ := json.MarshalIndent(logOpts.Configs[i], "", "  ")
 		logs.Groups = append(logs.Groups, rows(
 			r.code("admin::config.log_mode", mode),
 			adminReportRow{Label: l.Tr("admin::config.log_options"), Kind: "block", Value: string(options)},
@@ -510,18 +559,18 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 	}
 	sections = append(sections, logs)
 
-	return http.StatusOK, &adminConfig{Sections: sections, EmailEnabled: conf.Email.Enabled}, nil
+	return http.StatusOK, &adminConfig{Sections: sections, EmailEnabled: emailOpts.Enabled}, nil
 }
 
 type adminTestMailRequest struct {
 	Email string `json:"email" validate:"required,email,max=254"`
 }
 
-func postAdminTestMail(logger *logx.Logger, l i18n.Locale, req adminTestMailRequest) (statusCode int, resp any, err error) {
-	if !conf.Email.Enabled {
+func postAdminTestMail(logger *logx.Logger, emailOpts conf.EmailOpts, l i18n.Locale, req adminTestMailRequest) (statusCode int, resp any, err error) {
+	if !emailOpts.Enabled {
 		return http.StatusNotFound, nil, errors.New("email is not enabled")
 	}
-	if err = email.SendTestMail(logger, req.Email); err != nil {
+	if err = email.SendTestMail(logger, emailOpts, req.Email); err != nil {
 		logger.Error("Failed to send test mail", "email", req.Email, "error", err)
 		// The mail server refused or could not be reached, and the reason helps
 		// the admin fix the settings.

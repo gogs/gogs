@@ -11,7 +11,7 @@ import (
 	"gorm.io/gorm"
 	"unknwon.dev/x/logx"
 
-	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/markup"
 )
 
 func TestIssues(t *testing.T) {
@@ -47,13 +47,6 @@ func TestIssues(t *testing.T) {
 				err := clearTables(t, s.db)
 				require.NoError(t, err)
 			})
-			// Issue webhook payloads and API formats build links from the
-			// server and SSH settings, which other suites mock.
-			conf.SetMockServer(t, conf.ServerOpts{})
-			conf.SetMockSSH(t, conf.SSHOpts{})
-			// Finding mentions in issues reads the UI settings, which other suites
-			// mock. List pages by IssuePagingNum.
-			conf.SetMockUI(t, conf.UIOpts{IssuePagingNum: 2})
 			tc.test(t, ctx, s)
 		})
 		if t.Failed() {
@@ -93,7 +86,7 @@ func newTestIssue(t *testing.T, ctx context.Context, s *IssuesStore, repo *Repos
 
 	repo.NumIssues = int(issueCount(t, s.db, repo.ID))
 	issue := &Issue{RepoID: repo.ID, Title: title, PosterID: repo.OwnerID, Poster: repo.Owner}
-	err := s.Create(ctx, logx.NewNoopLogger(), repo, issue, nil, nil)
+	err := s.Create(ctx, logx.NewNoopLogger(), NotifyOptions{}, repo, issue, nil, nil)
 	require.NoError(t, err)
 	return issue
 }
@@ -125,7 +118,7 @@ func hookPayloads(t *testing.T, db *gorm.DB) []string {
 }
 
 func issuesCreate(t *testing.T, ctx context.Context, s *IssuesStore) {
-	setMockAttachmentPath(t)
+	attachmentPath := t.TempDir()
 	logger := logx.NewNoopLogger()
 	repo := newTestIssueRepo(t, ctx, s.db, "is-create")
 	reader := newTestIssueUser(t, ctx, s.db, "is-create-reader")
@@ -138,9 +131,9 @@ func issuesCreate(t *testing.T, ctx context.Context, s *IssuesStore) {
 	bug := newTestLabel(t, ctx, newLabelsStore(s.db), repo.ID, "bug")
 	otherLabel := newTestLabel(t, ctx, newLabelsStore(s.db), 9999, "bug")
 	attachments := newAttachmentsStore(s.db)
-	unbound, err := attachments.Create(ctx, 1, "a.txt", strings.NewReader("a"))
+	unbound, err := attachments.Create(ctx, attachmentPath, 1, "a.txt", strings.NewReader("a"))
 	require.NoError(t, err)
-	bound := newTestAttachment(t, ctx, attachments, "b.txt", 9999, 0, 0)
+	bound := newTestAttachment(t, ctx, attachmentPath, attachments, "b.txt", 9999, 0, 0)
 
 	issue := &Issue{
 		RepoID:      repo.ID,
@@ -151,7 +144,7 @@ func issuesCreate(t *testing.T, ctx context.Context, s *IssuesStore) {
 		MilestoneID: milestone.ID,
 		AssigneeID:  reader.ID,
 	}
-	err = s.Create(ctx, logger, repo, issue, []int64{bug.ID, otherLabel.ID}, []string{unbound.UUID, bound.UUID})
+	err = s.Create(ctx, logger, NotifyOptions{}, repo, issue, []int64{bug.ID, otherLabel.ID}, []string{unbound.UUID, bound.UUID})
 	require.NoError(t, err)
 
 	got, err := s.GetByID(ctx, issue.ID)
@@ -211,7 +204,7 @@ func issuesCreate(t *testing.T, ctx context.Context, s *IssuesStore) {
 	// who cannot be assigned relates to the issue as its poster only.
 	repo.NumIssues = 1
 	issue = &Issue{RepoID: repo.ID, Title: "Second", PosterID: mentioned.ID, Poster: mentioned, MilestoneID: 9999, AssigneeID: 9999}
-	err = s.Create(ctx, logger, repo, issue, nil, nil)
+	err = s.Create(ctx, logger, NotifyOptions{}, repo, issue, nil, nil)
 	require.NoError(t, err)
 	got, err = s.GetByID(ctx, issue.ID)
 	require.NoError(t, err)
@@ -289,6 +282,7 @@ func issuesList(t *testing.T, ctx context.Context, s *IssuesStore) {
 
 	list := func(opts IssuesOptions) []int64 {
 		t.Helper()
+		opts.PageSize = 2
 		got, err := s.List(ctx, &opts)
 		require.NoError(t, err)
 		for _, issue := range got {
@@ -540,7 +534,7 @@ func issuesChangeStatus(t *testing.T, ctx context.Context, s *IssuesStore) {
 
 	repo.NumIssues = 0
 	issue := &Issue{RepoID: repo.ID, Title: "Crash", PosterID: repo.OwnerID, Poster: repo.Owner, MilestoneID: milestone.ID}
-	err := s.Create(ctx, logger, repo, issue, []int64{bug.ID}, nil)
+	err := s.Create(ctx, logger, NotifyOptions{}, repo, issue, []int64{bug.ID}, nil)
 	require.NoError(t, err)
 	before := len(hookPayloads(t, s.db))
 
@@ -568,7 +562,7 @@ func issuesChangeStatus(t *testing.T, ctx context.Context, s *IssuesStore) {
 	}
 
 	issue.Labels = nil
-	err = s.ChangeStatus(ctx, logger, repo.Owner, repo, issue, true)
+	err = s.ChangeStatus(ctx, logger, NotifyOptions{}, repo.Owner, repo, issue, true)
 	require.NoError(t, err)
 	assert.Equal(t, []any{true, 1, 1, 1, int64(1)}, state())
 	assert.Equal(t, []CommentType{CommentTypeClose}, commentTypes())
@@ -577,12 +571,12 @@ func issuesChangeStatus(t *testing.T, ctx context.Context, s *IssuesStore) {
 	assert.Contains(t, payloads[before], `"action": "closed"`)
 
 	// Changing to the status the issue has is a no-op.
-	err = s.ChangeStatus(ctx, logger, repo.Owner, repo, issue, true)
+	err = s.ChangeStatus(ctx, logger, NotifyOptions{}, repo.Owner, repo, issue, true)
 	require.NoError(t, err)
 	assert.Equal(t, []any{true, 1, 1, 1, int64(1)}, state())
 	assert.Len(t, hookPayloads(t, s.db), before+1)
 
-	err = s.ChangeStatus(ctx, logger, repo.Owner, repo, issue, false)
+	err = s.ChangeStatus(ctx, logger, NotifyOptions{}, repo.Owner, repo, issue, false)
 	require.NoError(t, err)
 	assert.Equal(t, []any{false, 0, 0, 0, int64(0)}, state())
 	assert.Equal(t, []CommentType{CommentTypeClose, CommentTypeReopen}, commentTypes())
@@ -601,7 +595,7 @@ func issuesChangeTitleAndContent(t *testing.T, ctx context.Context, s *IssuesSto
 	require.NoError(t, err)
 	before := len(hookPayloads(t, s.db))
 
-	err = s.ChangeTitle(ctx, logger, repo.Owner, issue, "New title")
+	err = s.ChangeTitle(ctx, logger, LinkOptions{}, repo.Owner, issue, "New title")
 	require.NoError(t, err)
 	got, err := s.getRaw(ctx, nil, "id = ?", issue.ID)
 	require.NoError(t, err)
@@ -609,7 +603,7 @@ func issuesChangeTitleAndContent(t *testing.T, ctx context.Context, s *IssuesSto
 	assert.Equal(t, "Old body", got.Content, "only the title is saved")
 
 	issue.Title = "Unsaved"
-	err = s.ChangeContent(ctx, logger, repo.Owner, issue, "New body")
+	err = s.ChangeContent(ctx, logger, LinkOptions{}, repo.Owner, issue, "New body")
 	require.NoError(t, err)
 	got, err = s.getRaw(ctx, nil, "id = ?", issue.ID)
 	require.NoError(t, err)
@@ -623,11 +617,11 @@ func issuesChangeTitleAndContent(t *testing.T, ctx context.Context, s *IssuesSto
 	assert.Contains(t, payloads[before+1], `"from": "Unsaved"`)
 
 	assignee := newTestIssueUser(t, ctx, s.db, "is-edit-assignee")
-	err = s.ChangeAssignee(ctx, logger, repo.Owner, issue, assignee.ID)
+	err = s.ChangeAssignee(ctx, logger, LinkOptions{}, repo.Owner, issue, assignee.ID)
 	require.NoError(t, err)
 	require.NotNil(t, issue.Assignee)
 	assert.Equal(t, assignee.ID, issue.Assignee.ID)
-	err = s.ChangeAssignee(ctx, logger, repo.Owner, issue, 0)
+	err = s.ChangeAssignee(ctx, logger, LinkOptions{}, repo.Owner, issue, 0)
 	require.NoError(t, err)
 	assert.Nil(t, issue.Assignee)
 	payloads = hookPayloads(t, s.db)
@@ -664,10 +658,10 @@ func issuesLabels(t *testing.T, ctx context.Context, s *IssuesStore) {
 		return nums // bug, docs, ui
 	}
 
-	err := s.AddLabels(ctx, logger, repo.Owner, issue, bug, ui)
+	err := s.AddLabels(ctx, logger, LinkOptions{}, repo.Owner, issue, bug, ui)
 	require.NoError(t, err)
 	assert.Equal(t, []int64{bug.ID, ui.ID}, current())
-	err = s.RemoveLabel(ctx, logger, repo.Owner, issue, bug)
+	err = s.RemoveLabel(ctx, logger, LinkOptions{}, repo.Owner, issue, bug)
 	require.NoError(t, err)
 	assert.Equal(t, []int64{ui.ID}, current())
 	assert.Equal(t, []int{0, 0, 1}, numIssues())
@@ -677,7 +671,7 @@ func issuesLabels(t *testing.T, ctx context.Context, s *IssuesStore) {
 	assert.Equal(t, []int64{bug.ID, docs.ID}, current())
 	assert.Equal(t, []int{1, 1, 0}, numIssues())
 
-	err = s.ClearLabels(ctx, logger, repo.Owner, issue)
+	err = s.ClearLabels(ctx, logger, LinkOptions{}, repo.Owner, issue)
 	require.NoError(t, err)
 	assert.Empty(t, current())
 	assert.Equal(t, []int{0, 0, 0}, numIssues())
@@ -705,7 +699,7 @@ func issuesUpdateMentions(t *testing.T, ctx context.Context, s *IssuesStore) {
 	require.NoError(t, s.db.Create(&IssueUser{IssueID: issue.ID, UserID: alice.ID, IsPoster: true, IsClosed: true}).Error)
 	carol := newTestIssueUser(t, ctx, s.db, "is-mention-carol")
 
-	assert.Equal(t, []string{"is-mention-alice", "is-mention-org"}, findLowerMentions("Hi @Is-Mention-Alice and @IS-MENTION-ORG"))
+	assert.Equal(t, []string{"is-mention-alice", "is-mention-org"}, findLowerMentions(markup.Options{}, "Hi @Is-Mention-Alice and @IS-MENTION-ORG"))
 
 	// Mentions of organizations mark neither them nor their members.
 	err := s.updateMentions(ctx, issue, []string{"is-mention-alice", "is-mention-carol", "is-mention-org", "nobody"})

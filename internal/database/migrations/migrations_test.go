@@ -15,7 +15,7 @@ import (
 // latestVersion returns the version of the last migration, which every
 // migrated database is on.
 func latestVersion(db *gorm.DB) int64 {
-	migrations := newMigrations(logx.NewNoopLogger(), db)
+	migrations := newMigrations(logx.NewNoopLogger(), db, "")
 	return migrations[len(migrations)-1].Version
 }
 
@@ -39,7 +39,7 @@ func TestMigrate(t *testing.T) {
 		sqlDB.SetMaxOpenConns(1)
 
 		done := make(chan error, 1)
-		go func() { done <- Migrate(logx.NewNoopLogger(), db) }()
+		go func() { done <- Migrate(logx.NewNoopLogger(), db, "") }()
 		select {
 		case err := <-done:
 			require.Error(t, err)
@@ -55,7 +55,7 @@ func TestMigrate(t *testing.T) {
 		require.NoError(t, db.Migrator().CreateTable(new(Version)))
 		require.NoError(t, db.Create(&Version{ID: 1, Version: 18}).Error)
 
-		err := Migrate(logx.NewNoopLogger(), db)
+		err := Migrate(logx.NewNoopLogger(), db, "")
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "auto-migration from the installed version is no longer supported")
 		assert.False(t, db.Migrator().HasTable("user"))

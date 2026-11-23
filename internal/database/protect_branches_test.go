@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"unknwon.dev/x/logx"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/dbx"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/osx"
@@ -138,32 +137,29 @@ func protectBranchesCheckPush(t *testing.T, ctx context.Context, s *ProtectBranc
 }
 
 // newTestRepoOnDisk creates a repository of given owner in the database and
-// the directory of its hooks on disk, and returns it with its owner loaded.
-//
-// NOTE: Owners must have names that no other test uses, because tests that
-// delete users remove their directories under the repository root that is
-// mocked at that time.
-func newTestRepoOnDisk(t *testing.T, ctx context.Context, s *ProtectBranchesStore, owner *User, name string) *Repository {
+// the directory of its hooks on disk under root, and returns it with its owner
+// loaded.
+func newTestRepoOnDisk(t *testing.T, ctx context.Context, root string, s *ProtectBranchesStore, owner *User, name string) *Repository {
 	t.Helper()
 
 	repo, err := newReposStore(s.db).create(ctx, owner.ID, CreateRepoOptions{Name: name})
 	require.NoError(t, err)
 	repo.Owner = owner
-	err = os.MkdirAll(filepath.Join(repo.RepoPath(), "hooks"), os.ModePerm)
+	err = os.MkdirAll(filepath.Join(repo.RepoPath(root), "hooks"), os.ModePerm)
 	require.NoError(t, err)
 	return repo
 }
 
 func protectBranchesSave(t *testing.T, ctx context.Context, s *ProtectBranchesStore) {
-	conf.SetMockRepository(t, conf.RepositoryOpts{Root: t.TempDir()})
+	hooks := DelegateHooksOptions{RepositoryRoot: t.TempDir()}
 
 	alice, err := newUsersStore(s.db).Create(ctx, "pb-alice", "pb-alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
-	repo := newTestRepoOnDisk(t, ctx, s, alice, "repo1")
-	preReceive := filepath.Join(repo.RepoPath(), "hooks", string(git.HookPreReceive))
+	repo := newTestRepoOnDisk(t, ctx, hooks.RepositoryRoot, s, alice, "repo1")
+	preReceive := filepath.Join(repo.RepoPath(hooks.RepositoryRoot), "hooks", string(git.HookPreReceive))
 
 	pb := &ProtectBranch{RepoID: repo.ID, Name: "main", Protected: true, RequirePullRequest: true}
-	err = s.Save(ctx, pb)
+	err = s.Save(ctx, hooks, pb)
 	require.NoError(t, err)
 	require.NotZero(t, pb.ID)
 	assert.True(t, osx.IsFile(preReceive), "pre-receive hook not installed")
@@ -175,7 +171,7 @@ func protectBranchesSave(t *testing.T, ctx context.Context, s *ProtectBranchesSt
 	// Unprotecting the only protected branch updates the same row, and the hook
 	// is not needed anymore.
 	pb.Protected = false
-	err = s.Save(ctx, pb)
+	err = s.Save(ctx, hooks, pb)
 	require.NoError(t, err)
 	assert.False(t, osx.IsFile(preReceive), "pre-receive hook not removed")
 	got, err = s.GetByName(ctx, repo.ID, "main")
@@ -188,14 +184,14 @@ func protectBranchesSave(t *testing.T, ctx context.Context, s *ProtectBranchesSt
 	assert.Equal(t, int64(1), count)
 
 	// Nothing is saved for a repository that does not exist.
-	err = s.Save(ctx, &ProtectBranch{RepoID: 404, Name: "main", Protected: true})
+	err = s.Save(ctx, hooks, &ProtectBranch{RepoID: 404, Name: "main", Protected: true})
 	require.Error(t, err)
 	_, err = s.GetByName(ctx, 404, "main")
 	assert.True(t, IsErrBranchNotExist(err), "got %v", err)
 }
 
 func protectBranchesSaveForOrg(t *testing.T, ctx context.Context, s *ProtectBranchesStore) {
-	conf.SetMockRepository(t, conf.RepositoryOpts{Root: t.TempDir()})
+	hooks := DelegateHooksOptions{RepositoryRoot: t.TempDir()}
 
 	usersStore := newUsersStore(s.db)
 	alice, err := usersStore.Create(ctx, "pb-alice", "pb-alice@example.com", CreateUserOptions{})
@@ -205,11 +201,11 @@ func protectBranchesSaveForOrg(t *testing.T, ctx context.Context, s *ProtectBran
 	// TODO: Use Orgs.Create to replace SQL hack when the method is available.
 	org, err := usersStore.Create(ctx, "pb-org", "pb-org@example.com", CreateUserOptions{})
 	require.NoError(t, err)
-	err = s.db.Exec(dbx.Quote("UPDATE %s SET type = ? WHERE id = ?", "user"), UserTypeOrganization, org.ID).Error
+	err = s.db.Exec(dbx.Quote(s.db.Name(), "UPDATE %s SET type = ? WHERE id = ?", "user"), UserTypeOrganization, org.ID).Error
 	require.NoError(t, err)
 	org.Type = UserTypeOrganization
 
-	repo := newTestRepoOnDisk(t, ctx, s, org, "repo1")
+	repo := newTestRepoOnDisk(t, ctx, hooks.RepositoryRoot, s, org, "repo1")
 	err = s.db.Create(&Access{UserID: alice.ID, RepoID: repo.ID, Mode: AccessModeWrite}).Error
 	require.NoError(t, err)
 	err = s.db.Create(&Access{UserID: bob.ID, RepoID: repo.ID, Mode: AccessModeRead}).Error
@@ -231,7 +227,7 @@ func protectBranchesSaveForOrg(t *testing.T, ctx context.Context, s *ProtectBran
 	newTeam("unlisted", AccessModeWrite, true)
 
 	pb := &ProtectBranch{RepoID: repo.ID, Name: "main", Protected: true, EnableAllowlist: true}
-	err = s.SaveForOrg(ctx, logx.NewNoopLogger(), pb,
+	err = s.SaveForOrg(ctx, logx.NewNoopLogger(), hooks, pb,
 		[]int64{bob.ID, alice.ID, 404},
 		[]int64{readers.ID, writers.ID, elsewhere.ID},
 	)
@@ -242,11 +238,11 @@ func protectBranchesSaveForOrg(t *testing.T, ctx context.Context, s *ProtectBran
 	assert.True(t, got.EnableAllowlist)
 	assert.Equal(t, strconv.FormatInt(alice.ID, 10), got.AllowlistUserIDs)
 	assert.Equal(t, strconv.FormatInt(writers.ID, 10), got.AllowlistTeamIDs)
-	assert.True(t, osx.IsFile(filepath.Join(repo.RepoPath(), "hooks", string(git.HookPreReceive))))
+	assert.True(t, osx.IsFile(filepath.Join(repo.RepoPath(hooks.RepositoryRoot), "hooks", string(git.HookPreReceive))))
 
 	// Repositories of users have no teams.
-	userRepo := newTestRepoOnDisk(t, ctx, s, alice, "repo2")
-	err = s.SaveForOrg(ctx, logx.NewNoopLogger(), &ProtectBranch{RepoID: userRepo.ID, Name: "main"}, nil, nil)
+	userRepo := newTestRepoOnDisk(t, ctx, hooks.RepositoryRoot, s, alice, "repo2")
+	err = s.SaveForOrg(ctx, logx.NewNoopLogger(), hooks, &ProtectBranch{RepoID: userRepo.ID, Name: "main"}, nil, nil)
 	require.Error(t, err)
 	_, err = s.GetByName(ctx, userRepo.ID, "main")
 	assert.True(t, IsErrBranchNotExist(err), "got %v", err)

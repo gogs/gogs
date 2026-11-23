@@ -10,20 +10,20 @@ type markdownRequest struct {
 	Context string
 }
 
-func markdown(c *apiContext, form markdownRequest) {
+func markdown(c *apiContext, markupOpts markup.Options, form markdownRequest) {
 	if form.Text == "" {
 		_, _ = c.ResponseWriter().Write([]byte(""))
 		return
 	}
 
-	_, _ = c.ResponseWriter().Write(markup.Markdown([]byte(form.Text), form.Context, nil))
+	_, _ = c.ResponseWriter().Write(markup.Markdown(markupOpts, []byte(form.Text), form.Context, nil))
 }
 
-func markdownRaw(c *apiContext) {
+func markdownRaw(c *apiContext, markupOpts markup.Options) {
 	body, err := c.Request().Body().Bytes()
 	if err != nil {
 		c.Error(err, "read body")
 		return
 	}
-	_, _ = c.ResponseWriter().Write(markup.SanitizeBytes(markup.RawMarkdown(body, "")))
+	_, _ = c.ResponseWriter().Write(markup.SanitizeBytes(markup.RawMarkdown(markupOpts, body, "")))
 }

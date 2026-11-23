@@ -13,6 +13,9 @@ import (
 	. "gogs.io/gogs/internal/markup"
 )
 
+// testOptions are the options of rendering in tests.
+var testOptions = Options{ExternalURL: "http://localhost:3000/"}
+
 func TestIsReadmeFile(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -53,7 +56,7 @@ func TestFindAllMentions(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			assert.Equal(t, test.expMatches, FindAllMentions(test.input))
+			assert.Equal(t, test.expMatches, FindAllMentions(testOptions, test.input))
 		})
 	}
 }
@@ -105,7 +108,7 @@ func TestRenderIssueIndexPattern(t *testing.T) {
 		}
 		for _, test := range tests {
 			t.Run(test.input, func(t *testing.T) {
-				assert.Equal(t, test.expVal, string(RenderIssueIndexPattern([]byte(test.input), urlPrefix, nil)))
+				assert.Equal(t, test.expVal, string(RenderIssueIndexPattern(testOptions, []byte(test.input), urlPrefix, nil)))
 			})
 		}
 	})
@@ -152,7 +155,7 @@ func TestRenderIssueIndexPattern(t *testing.T) {
 			}
 			for _, test := range tests {
 				t.Run(test.input, func(t *testing.T) {
-					assert.Equal(t, test.expVal, string(RenderIssueIndexPattern([]byte(test.input), urlPrefix, metas)))
+					assert.Equal(t, test.expVal, string(RenderIssueIndexPattern(testOptions, []byte(test.input), urlPrefix, metas)))
 				})
 			}
 		})
@@ -167,7 +170,7 @@ func TestRenderIssueIndexPattern(t *testing.T) {
 				"style":  IssueNameStyleNumeric,
 			}
 			assert.NotPanics(t, func() {
-				RenderIssueIndexPattern([]byte("#1 test"), urlPrefix, metas)
+				RenderIssueIndexPattern(testOptions, []byte("#1 test"), urlPrefix, metas)
 			})
 		})
 
@@ -229,7 +232,7 @@ func TestRenderIssueIndexPattern(t *testing.T) {
 			}
 			for _, test := range tests {
 				t.Run(test.input, func(t *testing.T) {
-					assert.Equal(t, test.expVal, string(RenderIssueIndexPattern([]byte(test.input), urlPrefix, metas)))
+					assert.Equal(t, test.expVal, string(RenderIssueIndexPattern(testOptions, []byte(test.input), urlPrefix, metas)))
 				})
 			}
 		})
@@ -237,7 +240,7 @@ func TestRenderIssueIndexPattern(t *testing.T) {
 }
 
 func TestRenderCommitMessage(t *testing.T) {
-	NewSanitizer()
+	NewSanitizer(nil)
 
 	tests := []struct {
 		name   string
@@ -313,7 +316,7 @@ func TestRenderCommitMessage(t *testing.T) {
 				metas["format"] = test.format
 				metas["style"] = IssueNameStyleNumeric
 			}
-			assert.Equal(t, test.want, RenderCommitMessage(test.input, "/user/repo", metas))
+			assert.Equal(t, test.want, RenderCommitMessage(testOptions, test.input, "/user/repo", metas))
 		})
 	}
 }
@@ -426,7 +429,7 @@ func TestMarkdown_CommitIDs(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			assert.Equal(t, "<p>"+test.expVal+"</p>\n", string(Markdown(test.input, "/someuser/somerepo", test.metas)))
+			assert.Equal(t, "<p>"+test.expVal+"</p>\n", string(Markdown(testOptions, test.input, "/someuser/somerepo", test.metas)))
 		})
 	}
 }
@@ -439,7 +442,7 @@ func TestMarkdown_CommitLinks(t *testing.T) {
 	}
 	input := "Fixed in " + commitID[:7] + ", see " + commitID + ". UUID 123e4567-e89b-12d3-a456-426614174000.\n\n`" + commitID + "`"
 	want := `<p>Fixed in <a href="/user/repo/commit/` + commitID + `" rel="nofollow"><code>` + commitID[:7] + `</code></a>, see <a href="/user/repo/commit/` + commitID + `" rel="nofollow"><code>` + commitID[:10] + "</code></a>. UUID 123e4567-e89b-12d3-a456-426614174000.</p>\n<p><code>" + commitID + "</code></p>\n"
-	assert.Equal(t, want, string(Markdown(input, "/user/repo", metas)))
+	assert.Equal(t, want, string(Markdown(testOptions, input, "/user/repo", metas)))
 
 	// gitRuns returns how many times render runs Git to resolve commits.
 	gitRuns := func(t *testing.T, render func()) int {
@@ -450,7 +453,7 @@ func TestMarkdown_CommitLinks(t *testing.T) {
 		return strings.Count(string(out), "cat-file")
 	}
 	markdownGitRuns := func(t *testing.T, input string) int {
-		return gitRuns(t, func() { Markdown(input, "/user/repo", metas) })
+		return gitRuns(t, func() { Markdown(testOptions, input, "/user/repo", metas) })
 	}
 
 	// Hex strings that never render as links do not need Git to resolve them.
@@ -470,12 +473,12 @@ func TestMarkdown_CommitLinks(t *testing.T) {
 	t.Run("resolved for several documents", func(t *testing.T) {
 		docs := []string{"Fixed in " + commitID[:7] + ".", "No hex.", "Also " + commitID[:9] + ", not deadbeef."}
 		var commits map[string]string
-		assert.Equal(t, 1, gitRuns(t, func() { commits = ResolveCommits(metas, docs...) }), "one Git command for all documents")
+		assert.Equal(t, 1, gitRuns(t, func() { commits = ResolveCommits(testOptions, metas, docs...) }), "one Git command for all documents")
 
 		var got []string
 		assert.Zero(t, gitRuns(t, func() {
 			for _, doc := range docs {
-				got = append(got, string(MarkdownWithCommits(doc, "/user/repo", metas, commits)))
+				got = append(got, string(MarkdownWithCommits(testOptions, doc, "/user/repo", metas, commits)))
 			}
 		}), "rendering the resolved documents runs no Git command")
 		link := func(text string) string {
@@ -487,6 +490,6 @@ func TestMarkdown_CommitLinks(t *testing.T) {
 			"<p>Also " + link(commitID[:9]) + ", not deadbeef.</p>\n",
 		}, got)
 
-		assert.Zero(t, gitRuns(t, func() { ResolveCommits(metas, "No hex.", "`"+commitID+"`") }), "documents without linkable hex strings run no Git command")
+		assert.Zero(t, gitRuns(t, func() { ResolveCommits(testOptions, metas, "No hex.", "`"+commitID+"`") }), "documents without linkable hex strings run no Git command")
 	})
 }

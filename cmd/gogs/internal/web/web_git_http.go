@@ -50,11 +50,12 @@ func askCredentials(c flamego.Context, status int, text string) {
 	writeError(c.ResponseWriter(), status, text)
 }
 
-// gitHTTPAction returns the Git HTTP path suffix after /{owner}/{repo}/.
-func gitHTTPAction(c flamego.Context) string {
+// gitHTTPAction returns the Git HTTP path suffix after /{owner}/{repo}/ of a
+// site under subpath.
+func gitHTTPAction(c flamego.Context, subpath string) string {
 	return gitHTTPActionFromPath(
 		c.Request().URL.Path,
-		conf.Server.Subpath,
+		subpath,
 		c.Param("owner"),
 		c.Param("repo"),
 	)
@@ -79,9 +80,9 @@ func gitHTTPIsPull(c flamego.Context, action string) bool {
 }
 
 func gitHTTPContexter(logger *logx.Logger, store gitHTTPStore) flamego.Handler {
-	return func(c flamego.Context) {
-		if len(conf.HTTP.AccessControlAllowOrigin) > 0 {
-			c.ResponseWriter().Header().Set("Access-Control-Allow-Origin", conf.HTTP.AccessControlAllowOrigin)
+	return func(c flamego.Context, server conf.ServerOpts, httpOpts conf.HTTPOpts, authOpts conf.AuthOpts, repoOpts conf.RepositoryOpts) {
+		if len(httpOpts.AccessControlAllowOrigin) > 0 {
+			c.ResponseWriter().Header().Set("Access-Control-Allow-Origin", httpOpts.AccessControlAllowOrigin)
 			c.ResponseWriter().Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, User-Agent, Git-Protocol")
 			if c.Request().Method == "OPTIONS" {
 				c.ResponseWriter().WriteHeader(http.StatusOK)
@@ -93,7 +94,7 @@ func gitHTTPContexter(logger *logx.Logger, store gitHTTPStore) flamego.Handler {
 		repoName := strings.TrimSuffix(c.Param("repo"), ".git")
 		repoName, isWiki := strings.CutSuffix(repoName, ".wiki")
 
-		action := gitHTTPAction(c)
+		action := gitHTTPAction(c, server.Subpath)
 		isPull := gitHTTPIsPull(c, action)
 
 		owner, err := store.GetUserByUsername(c.Request().Context(), ownerName)
@@ -118,13 +119,13 @@ func gitHTTPContexter(logger *logx.Logger, store gitHTTPStore) flamego.Handler {
 			return
 		}
 
-		repoPath := database.RepoPath(owner.Name, repo.Name)
+		repoPath := database.RepoPath(repoOpts.Root, owner.Name, repo.Name)
 		if isWiki {
-			repoPath = database.WikiPath(owner.Name, repo.Name)
+			repoPath = database.WikiPath(repoOpts.Root, owner.Name, repo.Name)
 		}
 
 		// Authentication is not required for pulling from public repositories.
-		if isPull && !repo.IsPrivate && !conf.Auth.RequireSigninView {
+		if isPull && !repo.IsPrivate && !authOpts.RequireSigninView {
 			c.Map(&gitHTTPContext{
 				Context:  c,
 				RepoPath: repoPath,
@@ -144,7 +145,7 @@ func gitHTTPContexter(logger *logx.Logger, store gitHTTPStore) flamego.Handler {
 		// A trusted reverse proxy that has authenticated the user names it in a
 		// header. Proxies doing Basic authentication themselves often pass the
 		// client's "Authorization" header along, so the header goes first.
-		authUser, viaProxy, err := context.ReverseProxyUser(store, c.Request().Request)
+		authUser, viaProxy, err := context.ReverseProxyUser(authOpts, store, c.Request().Request)
 		if err != nil {
 			c.ResponseWriter().WriteHeader(http.StatusInternalServerError)
 			logger.Error("Failed to authenticate by reverse proxy header", "error", err)
@@ -200,7 +201,7 @@ Please create and use personal access token on user settings page`)
 			}
 		}
 
-		if authUser.IsDisabled() {
+		if authUser.IsDisabled(authOpts.RequireEmailConfirmation) {
 			askCredentials(c, http.StatusForbidden, "User account is disabled")
 			return
 		}
@@ -228,7 +229,7 @@ Please create and use personal access token on user settings page`)
 
 		if !isPull && isWiki {
 			repo.Owner = owner
-			if err := repo.InitWikiForPush(c.Request().Context()); err != nil {
+			if err := repo.InitWikiForPush(c.Request().Context(), repoOpts.Root); err != nil {
 				c.ResponseWriter().WriteHeader(http.StatusInternalServerError)
 				logger.Error("Failed to initialize wiki", "repoID", repo.ID, "error", err)
 				return
@@ -257,6 +258,11 @@ type serviceHandler struct {
 	ownerSalt string
 	repoID    int64
 	repoName  string
+
+	// push records what is pushed to repositories, which are stored under
+	// repositoryRoot.
+	push           database.PushOptions
+	repositoryRoot string
 }
 
 func (h *serviceHandler) setHeaderNoCache() {
@@ -320,8 +326,8 @@ func serviceRPC(logger *logx.Logger, h serviceHandler, service string) {
 		updates, err = git.RunReceivePack(ctx, h.dir, opts)
 		// TODO: support news feeds for wiki
 		if !strings.HasSuffix(h.dir, ".wiki.git") {
-			database.PushUpdates(ctx, logger, h.authUser, h.ownerName, h.repoName, updates, func(branch string) {
-				database.TriggerPushTasks(logger, h.authUser, h.repoID, branch)
+			database.PushUpdates(ctx, logger, h.push, h.authUser, h.ownerName, h.repoName, updates, func(branch string) {
+				database.TriggerPushTasks(logger, h.push.Notify.Links, h.repositoryRoot, h.authUser, h.repoID, branch)
 			})
 		} else if err := database.UpdateWikiHEAD(ctx, h.dir); err != nil {
 			logger.Error("Failed to update wiki HEAD", "repoID", h.repoID, "error", err)
@@ -401,13 +407,13 @@ var gitHTTPRoutes = []struct {
 	{lazyregexp.New("/info/refs$"), "GET", getInfoRefs},
 }
 
-func serveGitHTTP(logger *logx.Logger, c *gitHTTPContext) {
+func serveGitHTTP(logger *logx.Logger, repoOpts conf.RepositoryOpts, push database.PushOptions, c *gitHTTPContext) {
 	for _, route := range gitHTTPRoutes {
 		if !route.re.MatchString(strings.ToLower(c.Request().URL.Path)) {
 			continue
 		}
 
-		if conf.Repository.DisableHTTPGit {
+		if repoOpts.DisableHTTPGit {
 			writeError(c.ResponseWriter(), http.StatusForbidden, "Interacting with repositories by HTTP protocol is disabled")
 			return
 		}
@@ -433,6 +439,9 @@ func serveGitHTTP(logger *logx.Logger, c *gitHTTPContext) {
 			ownerSalt: c.OwnerSalt,
 			repoID:    c.RepoID,
 			repoName:  c.RepoName,
+
+			push:           push,
+			repositoryRoot: repoOpts.Root,
 		})
 		return
 	}
@@ -463,7 +472,7 @@ func (defaultGitHTTPStore) GetRepositoryByName(ctx stdctx.Context, ownerID int64
 	return database.Handle.Repositories().GetByName(ctx, ownerID, name)
 }
 
-func triggerTask(logger *logx.Logger, c flamego.Context) {
+func triggerTask(logger *logx.Logger, c flamego.Context, repoOpts conf.RepositoryOpts, links database.LinkOptions) {
 	branch := c.Query("branch")
 	pusherID := c.QueryInt64("pusher")
 	secret := c.Query("secret")
@@ -517,6 +526,6 @@ func triggerTask(logger *logx.Logger, c flamego.Context) {
 
 	logger.Debug("Task triggered", "ownerName", owner.Name, "repoName", repo.Name, "branch", branch, "pusherName", pusher.Name)
 
-	database.TriggerPushTasks(logger, pusher, repo.ID, branch)
+	database.TriggerPushTasks(logger, links, repoOpts.Root, pusher, repo.ID, branch)
 	c.ResponseWriter().WriteHeader(http.StatusAccepted)
 }

@@ -1,10 +1,12 @@
 package v1
 
-func adminCreateRepo(c *apiContext, form createRepoRequest) {
+import "gogs.io/gogs/internal/database"
+
+func adminCreateRepo(c *apiContext, repoCreation database.RepoCreationOptions, repoDeletion database.DeleteRepoOptions, form createRepoRequest) {
 	owner := getUserByParams(c)
 	if c.Written() {
 		return
 	}
 
-	createUserRepo(c, owner, form)
+	createUserRepo(c, repoCreation, repoDeletion, owner, form)
 }

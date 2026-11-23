@@ -19,7 +19,6 @@ import (
 	"gorm.io/gorm"
 	"unknwon.dev/x/logx"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/dbtest"
 )
 
@@ -37,6 +36,10 @@ type migrationScenario struct {
 	// tables without the current models, because they describe today's schema
 	// rather than the one at the starting version.
 	seed func(t *testing.T, db *gorm.DB)
+	// authorizedKeys is the content of the authorized_keys file before
+	// migrating, and wantAuthorizedKeys is its content after.
+	authorizedKeys     string
+	wantAuthorizedKeys string
 	// check verifies the data that the migrations change after migrating to the
 	// latest version.
 	check func(t *testing.T, db *gorm.DB)
@@ -56,7 +59,7 @@ func TestMigrateScenarios(t *testing.T) {
 	t.Parallel()
 
 	newDB := dbtest.NewDB(t, "migrateScenarioNew")
-	require.NoError(t, Migrate(logx.NewNoopLogger(), newDB))
+	require.NoError(t, Migrate(logx.NewNoopLogger(), newDB, ""))
 	newSchema := dumpSchema(t, newDB)
 
 	newKey := func() (string, string) {
@@ -215,14 +218,11 @@ func TestMigrateScenarios(t *testing.T) {
 				addPublicKey(14, 0, keyTypeDeploy, orphanKey+" again", "aa:bb")
 				addDeployKey(5, 13, 9, orphanFingerprint)
 				addDeployKey(6, 1, 9, sharedFingerprint)
-
-				rootPath := t.TempDir()
-				conf.SetMockSSH(t, conf.SSHOpts{RootPath: rootPath})
-				line := authorizedKeysLine
-				require.NoError(t, os.WriteFile(filepath.Join(rootPath, "authorized_keys"),
-					[]byte(line(2, sharedKey+" desktop")+line(1, sharedKey+" laptop")+line(3, otherKey)+line(5, otherKey+" alice@desktop")+line(4, otherKey+" alice@laptop")+line(6, otherKey)+line(52, otherKey)+line(13, orphanKey)+line(14, orphanKey+" again")+"ssh-ed25519 AAAA admin\n"),
-					0o600))
 			},
+			authorizedKeys: authorizedKeysLine(2, sharedKey+" desktop") + authorizedKeysLine(1, sharedKey+" laptop") + authorizedKeysLine(3, otherKey) + authorizedKeysLine(5, otherKey+" alice@desktop") + authorizedKeysLine(4, otherKey+" alice@laptop") + authorizedKeysLine(6, otherKey) + authorizedKeysLine(52, otherKey) + authorizedKeysLine(13, orphanKey) + authorizedKeysLine(14, orphanKey+" again") + "ssh-ed25519 AAAA admin\n",
+			// Only the lines of the merged and orphan keys are gone, not the one of key
+			// 52, whose ID only starts with that of key 5, or the line Gogs did not write.
+			wantAuthorizedKeys: authorizedKeysLine(1, sharedKey+" laptop") + authorizedKeysLine(3, otherKey) + authorizedKeysLine(4, otherKey+" alice@laptop") + authorizedKeysLine(6, otherKey) + authorizedKeysLine(52, otherKey) + "ssh-ed25519 AAAA admin\n",
 			check: func(t *testing.T, db *gorm.DB) {
 				assert.Equal(t, []string{sha256Hex("token")}, accessTokenSHA256s(t, db))
 
@@ -258,12 +258,6 @@ func TestMigrateScenarios(t *testing.T) {
 					{4, 3, 3, otherFingerprint},
 				}, deployKeys)
 
-				// Only the lines of the merged and orphan keys are gone, not the one of key
-				// 52, whose ID only starts with that of key 5, or the line Gogs did not write.
-				line := authorizedKeysLine
-				data, err := os.ReadFile(filepath.Join(conf.SSH.RootPath, "authorized_keys"))
-				require.NoError(t, err)
-				assert.Equal(t, line(1, sharedKey+" laptop")+line(3, otherKey)+line(4, otherKey+" alice@laptop")+line(6, otherKey)+line(52, otherKey)+"ssh-ed25519 AAAA admin\n", string(data))
 			},
 		},
 		{
@@ -296,17 +290,26 @@ func TestMigrateScenarios(t *testing.T) {
 				createLegacyDatabase(t, db, s.legacy)
 			}
 			if s.from > 0 {
-				require.NoError(t, migrateTo(logx.NewNoopLogger(), db, s.from))
+				require.NoError(t, migrateTo(logx.NewNoopLogger(), db, s.from, ""))
 				require.Equal(t, s.from, gooseVersion(t, db))
 			}
 			if s.seed != nil {
 				s.seed(t, db)
 			}
+			authorizedKeysPath := filepath.Join(t.TempDir(), "authorized_keys")
+			if s.authorizedKeys != "" {
+				require.NoError(t, os.WriteFile(authorizedKeysPath, []byte(s.authorizedKeys), 0o600))
+			}
 
-			require.NoError(t, Migrate(logx.NewNoopLogger(), db))
+			require.NoError(t, Migrate(logx.NewNoopLogger(), db, authorizedKeysPath))
 			assert.Equal(t, latestVersion(db), gooseVersion(t, db))
 			if s.check != nil {
 				s.check(t, db)
+			}
+			if s.wantAuthorizedKeys != "" {
+				data, err := os.ReadFile(authorizedKeysPath)
+				require.NoError(t, err)
+				assert.Equal(t, s.wantAuthorizedKeys, string(data))
 			}
 			assertSameSchema(t, newSchema, dumpSchema(t, db))
 		})

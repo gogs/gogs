@@ -4,7 +4,6 @@ import (
 	"net/url"
 	"strings"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/netx"
 	"gogs.io/gogs/internal/osx"
@@ -15,6 +14,10 @@ type ParseRemoteAddrOptions struct {
 	User         *database.User
 	AuthUsername string
 	AuthPassword string
+	// LocalNetworkAllowlist are the local hosts that remote addresses may use.
+	LocalNetworkAllowlist []string
+	// EnableLocalPathMigration allows local paths for users who can import them.
+	EnableLocalPathMigration bool
 }
 
 // ParseRemoteAddr checks if given remote address is valid,
@@ -33,7 +36,7 @@ func ParseRemoteAddr(options ParseRemoteAddrOptions) (string, error) {
 			return "", database.ErrInvalidCloneAddr{IsURLError: true}
 		}
 
-		if netx.IsBlockedLocalHostname(u.Hostname(), conf.Security.LocalNetworkAllowlist) {
+		if netx.IsBlockedLocalHostname(u.Hostname(), options.LocalNetworkAllowlist) {
 			return "", database.ErrInvalidCloneAddr{IsBlockedLocalAddress: true}
 		}
 
@@ -47,7 +50,7 @@ func ParseRemoteAddr(options ParseRemoteAddrOptions) (string, error) {
 		remoteAddr = u.String()
 	} else if isSSHAddr(remoteAddr) {
 		return "", database.ErrInvalidCloneAddr{IsSSHAddress: true}
-	} else if !options.User.CanImportLocal() {
+	} else if !options.User.CanImportLocal(options.EnableLocalPathMigration) {
 		return "", database.ErrInvalidCloneAddr{IsPermissionDenied: true}
 	} else if !osx.IsDir(remoteAddr) {
 		return "", database.ErrInvalidCloneAddr{IsInvalidPath: true}

@@ -65,7 +65,7 @@ func adminRemoveTeamMember(c *apiContext) {
 	c.NoContent()
 }
 
-func adminListTeamMembers(c *apiContext) {
+func adminListTeamMembers(c *apiContext, links database.LinkOptions) {
 	members, err := database.Handle.Teams().ListMembers(c.Request().Context(), c.Org.Team.ID)
 	if err != nil {
 		c.Error(err, "get team members")
@@ -74,7 +74,7 @@ func adminListTeamMembers(c *apiContext) {
 
 	apiMembers := make([]*v1types.User, len(members))
 	for i := range members {
-		apiMembers[i] = toUser(members[i])
+		apiMembers[i] = toUser(links, members[i])
 	}
 	c.JSONSuccess(apiMembers)
 }

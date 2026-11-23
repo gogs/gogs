@@ -19,7 +19,6 @@ import (
 	"gorm.io/gorm/schema"
 	"unknwon.dev/x/logx"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cryptox"
 	"gogs.io/gogs/internal/database/migrations"
 	"gogs.io/gogs/internal/osx"
@@ -105,9 +104,10 @@ func dumpTable(ctx context.Context, db *gorm.DB, table any, w io.Writer) error {
 
 // ImportDatabase migrates the database to the current schema version and
 // replaces the rows of each table with those in the backup archive in JSON Lines
-// format.
-func ImportDatabase(ctx context.Context, logger *logx.Logger, db *gorm.DB, dirPath string, verbose bool) error {
-	err := migrations.Migrate(logger, db.WithContext(ctx))
+// format. Public keys that the import merges are removed from the
+// authorized_keys file at authorizedKeysPath, unless it is empty.
+func ImportDatabase(ctx context.Context, logger *logx.Logger, authorizedKeysPath string, db *gorm.DB, dirPath string, verbose bool) error {
+	err := migrations.Migrate(logger, db.WithContext(ctx), authorizedKeysPath)
 	if err != nil {
 		return errors.Wrap(err, "migrate")
 	}
@@ -150,7 +150,7 @@ func ImportDatabase(ctx context.Context, logger *logx.Logger, db *gorm.DB, dirPa
 		}
 	}
 
-	err = migrations.MergeDuplicatePublicKeys(db.WithContext(ctx))
+	err = migrations.MergeDuplicatePublicKeys(db.WithContext(ctx), authorizedKeysPath)
 	if err != nil {
 		return errors.Wrap(err, "merge duplicate public keys")
 	}
@@ -271,7 +271,7 @@ func importTable(ctx context.Context, db *gorm.DB, table any, r io.Reader) error
 	}
 
 	// PostgreSQL needs manually reset table sequence for auto increment keys.
-	if conf.UsePostgreSQL && !skipResetIDSeq[rawTableName] {
+	if db.Name() == "postgres" && !skipResetIDSeq[rawTableName] {
 		seqName := rawTableName + "_id_seq"
 		if err = db.WithContext(ctx).Exec(fmt.Sprintf(`SELECT setval('%s', COALESCE((SELECT MAX(id)+1 FROM "%s"), 1), false)`, seqName, rawTableName)).Error; err != nil {
 			return errors.Wrapf(err, "reset table %q.%q", rawTableName, seqName)

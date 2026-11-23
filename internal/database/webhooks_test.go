@@ -12,7 +12,6 @@ import (
 	"unknwon.dev/x/logx"
 
 	"gogs.io/gogs/internal/api/v1types"
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/dbx"
 )
 
@@ -203,7 +202,7 @@ func newTestOrgRepo(t *testing.T, ctx context.Context, s *WebhooksStore) (org *U
 	// TODO: Use Orgs.Create to replace SQL hack when the method is available.
 	org, err := newUsersStore(s.db).Create(ctx, "wh-org", "wh-org@example.com", CreateUserOptions{})
 	require.NoError(t, err)
-	err = s.db.Exec(dbx.Quote("UPDATE %s SET type = ? WHERE id = ?", "user"), UserTypeOrganization, org.ID).Error
+	err = s.db.Exec(dbx.Quote(s.db.Name(), "UPDATE %s SET type = ? WHERE id = ?", "user"), UserTypeOrganization, org.ID).Error
 	require.NoError(t, err)
 	repo, err = newReposStore(s.db).create(ctx, org.ID, CreateRepoOptions{Name: "repo1"})
 	require.NoError(t, err)
@@ -235,7 +234,7 @@ func webhooksPrepare(t *testing.T, ctx context.Context, s *WebhooksStore) {
 	newTestWebhook(t, ctx, s, 0, 9999, HookEvents{})
 
 	payload := &v1types.WebhookPushPayload{Ref: "refs/heads/main"}
-	err := s.Prepare(ctx, logger, repo, HookEventTypePush, payload)
+	err := s.Prepare(ctx, logger, "", repo, HookEventTypePush, payload)
 	require.NoError(t, err)
 
 	// Only active webhooks of the repository and its organization that are
@@ -265,7 +264,7 @@ func webhooksPrepare(t *testing.T, ctx context.Context, s *WebhooksStore) {
 	userRepo.Owner = &User{ID: 404}
 	newTestWebhook(t, ctx, s, userRepo.ID, 0, HookEvents{})
 	newTestWebhook(t, ctx, s, 0, 404, HookEvents{})
-	err = s.Prepare(ctx, logger, userRepo, HookEventTypePush, payload)
+	err = s.Prepare(ctx, logger, "", userRepo, HookEventTypePush, payload)
 	require.NoError(t, err)
 	tasks = listTestHookTasks(t, s)
 	require.Len(t, tasks, 3)
@@ -284,26 +283,23 @@ func webhooksTest(t *testing.T, ctx context.Context, s *WebhooksStore) {
 	payload := &v1types.WebhookPushPayload{Ref: "refs/heads/main"}
 
 	// Inactive webhooks can be tested.
-	err := s.Test(ctx, logger, repo, HookEventTypePush, payload, inactive.ID)
+	err := s.Test(ctx, logger, "", repo, HookEventTypePush, payload, inactive.ID)
 	require.NoError(t, err)
 	tasks := listTestHookTasks(t, s)
 	require.Len(t, tasks, 1)
 	assert.Equal(t, inactive.ID, tasks[0].HookID)
 
 	// Webhooks not subscribed to the event get no delivery.
-	err = s.Test(ctx, logger, repo, HookEventTypePush, payload, issuesHook.ID)
+	err = s.Test(ctx, logger, "", repo, HookEventTypePush, payload, issuesHook.ID)
 	require.NoError(t, err)
 	assert.Len(t, listTestHookTasks(t, s), 1)
 
-	err = s.Test(ctx, logger, repo, HookEventTypePush, payload, otherHook.ID)
+	err = s.Test(ctx, logger, "", repo, HookEventTypePush, payload, otherHook.ID)
 	assert.True(t, IsErrWebhookNotExist(err), "got %v", err)
 	assert.Len(t, listTestHookTasks(t, s), 1)
 }
 
 func webhooksPrepareDiscordWithoutSettings(t *testing.T, ctx context.Context, s *WebhooksStore) {
-	// Discord payloads have links, which read the server settings that other
-	// suites mock.
-	conf.SetMockServer(t, conf.ServerOpts{})
 	_, repo := newTestOrgRepo(t, ctx, s)
 	// API v1 creates Discord webhooks without settings.
 	discord := newTestWebhook(t, ctx, s, repo.ID, 0, HookEvents{})
@@ -317,7 +313,7 @@ func webhooksPrepareDiscordWithoutSettings(t *testing.T, ctx context.Context, s 
 		Repo:   &v1types.Repository{Name: "repo", HTMLURL: "https://example.com/org/repo"},
 		Sender: &v1types.User{UserName: "alice", AvatarURL: "https://example.com/alice.png"},
 	}
-	err := s.Prepare(ctx, logx.NewNoopLogger(), repo, HookEventTypePush, payload)
+	err := s.Prepare(ctx, logx.NewNoopLogger(), "", repo, HookEventTypePush, payload)
 	require.NoError(t, err)
 
 	tasks := listTestHookTasks(t, s)

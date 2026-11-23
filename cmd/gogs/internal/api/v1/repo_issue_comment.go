@@ -5,10 +5,11 @@ import (
 	"time"
 
 	"gogs.io/gogs/internal/api/v1types"
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 )
 
-func listIssueComments(c *apiContext) {
+func listIssueComments(c *apiContext, links database.LinkOptions) {
 	var since time.Time
 	if len(c.Query("since")) > 0 {
 		var err error
@@ -34,12 +35,12 @@ func listIssueComments(c *apiContext) {
 
 	apiComments := make([]*v1types.IssueComment, len(comments))
 	for i := range comments {
-		apiComments[i] = toIssueComment(comments[i])
+		apiComments[i] = toIssueComment(links, comments[i])
 	}
 	c.JSONSuccess(&apiComments)
 }
 
-func listRepoIssueComments(c *apiContext) {
+func listRepoIssueComments(c *apiContext, links database.LinkOptions) {
 	var since time.Time
 	if len(c.Query("since")) > 0 {
 		var err error
@@ -58,7 +59,7 @@ func listRepoIssueComments(c *apiContext) {
 
 	apiComments := make([]*v1types.IssueComment, len(comments))
 	for i := range comments {
-		apiComments[i] = toIssueComment(comments[i])
+		apiComments[i] = toIssueComment(links, comments[i])
 	}
 	c.JSONSuccess(&apiComments)
 }
@@ -67,27 +68,27 @@ type createIssueCommentRequest struct {
 	Body string `json:"body" binding:"Required"`
 }
 
-func createIssueComment(c *apiContext, form createIssueCommentRequest) {
+func createIssueComment(c *apiContext, notify database.NotifyOptions, form createIssueCommentRequest) {
 	issue, err := database.Handle.Issues().GetByIndex(c.Request().Context(), c.Repo.Repository.ID, c.ParamInt64("index"))
 	if err != nil {
 		c.NotFoundOrError(err, "get issue by index")
 		return
 	}
 
-	comment, err := database.Handle.Comments().Create(c.Request().Context(), c.Logger, c.User, c.Repo.Repository, issue, form.Body, nil)
+	comment, err := database.Handle.Comments().Create(c.Request().Context(), c.Logger, notify, c.User, c.Repo.Repository, issue, form.Body, nil)
 	if err != nil {
 		c.Error(err, "create issue comment")
 		return
 	}
 
-	c.JSON(http.StatusCreated, toIssueComment(comment))
+	c.JSON(http.StatusCreated, toIssueComment(notify.Links, comment))
 }
 
 type editIssueCommentRequest struct {
 	Body string `json:"body" binding:"Required"`
 }
 
-func editIssueComment(c *apiContext, form editIssueCommentRequest) {
+func editIssueComment(c *apiContext, links database.LinkOptions, form editIssueCommentRequest) {
 	comment, err := database.Handle.Comments().GetByID(c.Request().Context(), c.ParamInt64("id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get comment by ID")
@@ -115,14 +116,14 @@ func editIssueComment(c *apiContext, form editIssueCommentRequest) {
 
 	oldContent := comment.Content
 	comment.Content = form.Body
-	if err := database.Handle.Comments().Update(c.Request().Context(), c.Logger, c.User, comment, oldContent); err != nil {
+	if err := database.Handle.Comments().Update(c.Request().Context(), c.Logger, links, c.User, comment, oldContent); err != nil {
 		c.Error(err, "update comment")
 		return
 	}
-	c.JSONSuccess(toIssueComment(comment))
+	c.JSONSuccess(toIssueComment(links, comment))
 }
 
-func deleteIssueComment(c *apiContext) {
+func deleteIssueComment(c *apiContext, links database.LinkOptions, attachment conf.AttachmentOpts) {
 	comment, err := database.Handle.Comments().GetByID(c.Request().Context(), c.ParamInt64("id"))
 	if err != nil {
 		c.NotFoundOrError(err, "get comment by ID")
@@ -148,7 +149,7 @@ func deleteIssueComment(c *apiContext) {
 		return
 	}
 
-	if err = database.Handle.Comments().DeleteByID(c.Request().Context(), c.Logger, c.User, comment.ID); err != nil {
+	if err = database.Handle.Comments().DeleteByID(c.Request().Context(), c.Logger, links, attachment.Path, c.User, comment.ID); err != nil {
 		c.Error(err, "delete comment by ID")
 		return
 	}

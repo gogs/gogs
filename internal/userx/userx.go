@@ -36,47 +36,47 @@ const (
 
 // GenerateActivateCode generates an activate code based on user information and
 // the given email.
-func GenerateActivateCode(userID int64, email, name, password, rands string) string {
-	return generateTimeLimitedUserCode(codePurposeActivate, userID, email, name, password, rands, conf.Auth.ActivateCodeLives)
+func GenerateActivateCode(secretKey string, minutes int, userID int64, email, name, password, rands string) string {
+	return generateTimeLimitedUserCode(secretKey, codePurposeActivate, userID, email, name, password, rands, minutes)
 }
 
 // VerifyActivateCode returns true if the code is an unexpired activate code for
 // the given user information and email.
-func VerifyActivateCode(code string, userID int64, email, name, password, rands string) bool {
-	return verifyTimeLimitedUserCode(codePurposeActivate, code, userID, email, name, password, rands, conf.Auth.ActivateCodeLives)
+func VerifyActivateCode(secretKey string, minutes int, code string, userID int64, email, name, password, rands string) bool {
+	return verifyTimeLimitedUserCode(secretKey, codePurposeActivate, code, userID, email, name, password, rands, minutes)
 }
 
 // GenerateConfirmEmailCode generates a code that confirms the given email
 // address of the user, which cannot be redeemed to activate the account.
-func GenerateConfirmEmailCode(userID int64, email, name, password, rands string) string {
-	return generateTimeLimitedUserCode(codePurposeConfirmEmail, userID, email, name, password, rands, conf.Auth.ActivateCodeLives)
+func GenerateConfirmEmailCode(secretKey string, minutes int, userID int64, email, name, password, rands string) string {
+	return generateTimeLimitedUserCode(secretKey, codePurposeConfirmEmail, userID, email, name, password, rands, minutes)
 }
 
 // VerifyConfirmEmailCode returns true if the code is an unexpired code that
 // confirms the given email address of the user.
-func VerifyConfirmEmailCode(code string, userID int64, email, name, password, rands string) bool {
-	return verifyTimeLimitedUserCode(codePurposeConfirmEmail, code, userID, email, name, password, rands, conf.Auth.ActivateCodeLives)
+func VerifyConfirmEmailCode(secretKey string, minutes int, code string, userID int64, email, name, password, rands string) bool {
+	return verifyTimeLimitedUserCode(secretKey, codePurposeConfirmEmail, code, userID, email, name, password, rands, minutes)
 }
 
 // GenerateResetPasswordCode generates a password-reset code based on user
-// information and the given email. The token's lifetime is bound to
-// [conf.AuthOpts.ResetPasswordCodeLives].
-func GenerateResetPasswordCode(userID int64, email, name, password, rands string) string {
-	return generateTimeLimitedUserCode(codePurposeResetPassword, userID, email, name, password, rands, conf.Auth.ResetPasswordCodeLives)
+// information and the given email, which expires after the given minutes.
+func GenerateResetPasswordCode(secretKey string, minutes int, userID int64, email, name, password, rands string) string {
+	return generateTimeLimitedUserCode(secretKey, codePurposeResetPassword, userID, email, name, password, rands, minutes)
 }
 
 // VerifyResetPasswordCode returns true if the code is an unexpired
 // password-reset code for the given user information and email.
-func VerifyResetPasswordCode(code string, userID int64, email, name, password, rands string) bool {
-	return verifyTimeLimitedUserCode(codePurposeResetPassword, code, userID, email, name, password, rands, conf.Auth.ResetPasswordCodeLives)
+func VerifyResetPasswordCode(secretKey string, minutes int, code string, userID int64, email, name, password, rands string) bool {
+	return verifyTimeLimitedUserCode(secretKey, codePurposeResetPassword, code, userID, email, name, password, rands, minutes)
 }
 
 func timeLimitedUserCodeData(purpose codePurpose, userID int64, email, name, password, rands string) string {
 	return fmt.Sprintf("%s:%d%s%s%s%s", purpose, userID, email, strings.ToLower(name), password, rands)
 }
 
-func generateTimeLimitedUserCode(purpose codePurpose, userID int64, email, name, password, rands string, minutes int) string {
+func generateTimeLimitedUserCode(secretKey string, purpose codePurpose, userID int64, email, name, password, rands string, minutes int) string {
 	code := createTimeLimitCode(
+		secretKey,
 		timeLimitedUserCodeData(purpose, userID, email, name, password, rands),
 		minutes,
 		nil,
@@ -87,20 +87,22 @@ func generateTimeLimitedUserCode(purpose codePurpose, userID int64, email, name,
 	return code
 }
 
-func verifyTimeLimitedUserCode(purpose codePurpose, code string, userID int64, email, name, password, rands string, minutes int) bool {
+func verifyTimeLimitedUserCode(secretKey string, purpose codePurpose, code string, userID int64, email, name, password, rands string, minutes int) bool {
 	if len(code) <= TimeLimitCodeLength {
 		return false
 	}
 	return verifyTimeLimitCode(
+		secretKey,
 		timeLimitedUserCodeData(purpose, userID, email, name, password, rands),
 		minutes,
 		code[:TimeLimitCodeLength],
 	)
 }
 
-// CustomAvatarPath returns the absolute path of the user custom avatar file.
-func CustomAvatarPath(userID int64) string {
-	return filepath.Join(conf.Picture.AvatarUploadPath, strconv.FormatInt(userID, 10))
+// CustomAvatarPath returns the absolute path of the user custom avatar file
+// under the avatar upload directory.
+func CustomAvatarPath(avatarUploadPath string, userID int64) string {
+	return filepath.Join(avatarUploadPath, strconv.FormatInt(userID, 10))
 }
 
 // GeneratedAvatarPath returns the absolute path of the generated avatar file of
@@ -108,26 +110,26 @@ func CustomAvatarPath(userID int64) string {
 // saving one never replaces an upload. Each kind has its own directory, so files
 // that earlier versions saved directly under generated-avatars, e.g.,
 // organizations drawn as people, are never served.
-func GeneratedAvatarPath(userID int64, kind avatar.Kind) string {
+func GeneratedAvatarPath(appDataPath string, userID int64, kind avatar.Kind) string {
 	dir := "users"
 	if kind == avatar.Organization {
 		dir = "organizations"
 	}
-	return filepath.Join(conf.Server.AppDataPath, "generated-avatars", dir, strconv.FormatInt(userID, 10))
+	return filepath.Join(appDataPath, "generated-avatars", dir, strconv.FormatInt(userID, 10))
 }
 
 // SaveGeneratedAvatar draws the avatar of the user, of the given kind, and saves
 // it as the generated avatar file of the user, so it is drawn only once. It
 // writes a temporary file and renames it, so concurrent requests never serve a
 // partly written file.
-func SaveGeneratedAvatar(userID int64, kind avatar.Kind) error {
+func SaveGeneratedAvatar(appDataPath string, userID int64, kind avatar.Kind) error {
 	// The seed is the ID so that the avatar stays the same after a rename.
 	img, err := avatar.GeneratePNG(kind, strconv.FormatInt(userID, 10), avatar.DefaultSize)
 	if err != nil {
 		return errors.Wrap(err, "generate avatar")
 	}
 
-	avatarPath := GeneratedAvatarPath(userID, kind)
+	avatarPath := GeneratedAvatarPath(appDataPath, userID, kind)
 	if err = os.MkdirAll(filepath.Dir(avatarPath), os.ModePerm); err != nil {
 		return errors.Wrap(err, "create avatar directory")
 	}
@@ -148,21 +150,23 @@ func SaveGeneratedAvatar(userID int64, kind avatar.Kind) error {
 
 // GeneratedAvatarURLPath returns the URL path to the avatar generated for the
 // given key, e.g., the email of a commit author. The key is hashed with the
-// secret key so that the URL does not reveal it.
-func GeneratedAvatarURLPath(key string) string {
-	mac := hmac.New(sha256.New, []byte(conf.Security.SecretKey))
+// secret key so that the URL does not reveal it. The path starts with the
+// subpath of the server.
+func GeneratedAvatarURLPath(secretKey, subpath, key string) string {
+	mac := hmac.New(sha256.New, []byte(secretKey))
 	_, _ = mac.Write([]byte(strings.ToLower(strings.TrimSpace(key))))
-	return fmt.Sprintf("%s/%s/%x", conf.Server.Subpath, conf.GeneratedAvatarsPathPrefix, mac.Sum(nil)[:16])
+	return fmt.Sprintf("%s/%s/%x", subpath, conf.GeneratedAvatarsPathPrefix, mac.Sum(nil)[:16])
 }
 
-// SaveAvatar saves the given avatar for the user.
-func SaveAvatar(userID int64, data []byte) error {
+// SaveAvatar saves the given avatar for the user under the avatar upload
+// directory.
+func SaveAvatar(avatarUploadPath string, userID int64, data []byte) error {
 	img, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
 		return errors.Wrap(err, "decode image")
 	}
 
-	avatarPath := CustomAvatarPath(userID)
+	avatarPath := CustomAvatarPath(avatarUploadPath, userID)
 	err = os.MkdirAll(filepath.Dir(avatarPath), os.ModePerm)
 	if err != nil {
 		return errors.Wrap(err, "create avatar directory")
@@ -219,7 +223,7 @@ const TimeLimitCodeLength = 12 + 6 + 64
 // Format: 12-character date time string + 6-digit minutes string + 64-character
 // hex-encoded HMAC-SHA256 string. A nil startInf starts the code now, otherwise
 // it is the date time string to start the code from.
-func createTimeLimitCode(data string, minutes int, startInf any) string {
+func createTimeLimitCode(secretKey, data string, minutes int, startInf any) string {
 	format := "200601021504"
 
 	var start, end time.Time
@@ -237,7 +241,7 @@ func createTimeLimitCode(data string, minutes int, startInf any) string {
 	end = start.Add(time.Minute * time.Duration(minutes))
 	endStr = end.Format(format)
 
-	mac := hmac.New(sha256.New, []byte(conf.Security.SecretKey))
+	mac := hmac.New(sha256.New, []byte(secretKey))
 	_, _ = mac.Write([]byte(data + startStr + endStr + strconv.Itoa(minutes)))
 	encoded := hex.EncodeToString(mac.Sum(nil))
 
@@ -247,7 +251,7 @@ func createTimeLimitCode(data string, minutes int, startInf any) string {
 
 // verifyTimeLimitCode returns true if the code is a valid time limit code for
 // the given data that has not expired.
-func verifyTimeLimitCode(data string, minutes int, code string) bool {
+func verifyTimeLimitCode(secretKey, data string, minutes int, code string) bool {
 	if len(code) <= 18 {
 		return false
 	}
@@ -258,7 +262,7 @@ func verifyTimeLimitCode(data string, minutes int, code string) bool {
 		return false
 	}
 
-	retCode := createTimeLimitCode(data, lives, start)
+	retCode := createTimeLimitCode(secretKey, data, lives, start)
 	if !hmac.Equal([]byte(retCode), []byte(code)) {
 		return false
 	}

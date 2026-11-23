@@ -108,7 +108,7 @@ func TestRestoreScenarios(t *testing.T) {
 		t.Run(s.version, func(t *testing.T) {
 			db := dbtest.NewDB(t, "restoreScenario"+s.version)
 
-			err := ImportDatabase(context.Background(), logx.NewNoopLogger(), db, filepath.Join("testdata", "backup", s.version), false)
+			err := ImportDatabase(context.Background(), logx.NewNoopLogger(), "", db, filepath.Join("testdata", "backup", s.version), false)
 			require.NoError(t, err)
 			s.check(t, db)
 		})

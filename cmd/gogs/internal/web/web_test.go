@@ -108,12 +108,12 @@ func TestOverrideHTTPPort(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			u, err := url.Parse(test.externalURL)
 			require.NoError(t, err)
-			conf.SetMockServer(t, conf.ServerOpts{ExternalURL: test.externalURL, URL: u, HTTPPort: test.httpPort})
+			server := conf.ServerOpts{ExternalURL: test.externalURL, URL: u, HTTPPort: test.httpPort}
 
-			overrideHTTPPort(test.port)
-			assert.Equal(t, test.want, conf.Server.ExternalURL)
-			assert.Equal(t, test.want, conf.Server.URL.String())
-			assert.Equal(t, test.port, conf.Server.HTTPPort)
+			overrideHTTPPort(&server, test.port)
+			assert.Equal(t, test.want, server.ExternalURL)
+			assert.Equal(t, test.want, server.URL.String())
+			assert.Equal(t, test.port, server.HTTPPort)
 		})
 	}
 }

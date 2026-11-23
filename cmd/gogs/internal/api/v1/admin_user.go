@@ -42,7 +42,7 @@ type adminCreateUserRequest struct {
 	SendNotify bool   `json:"send_notify"`
 }
 
-func adminCreateUser(c *apiContext, l i18n.Locale, form adminCreateUserRequest) {
+func adminCreateUser(c *apiContext, links database.LinkOptions, mailOpts email.Options, l i18n.Locale, form adminCreateUserRequest) {
 	parseLoginSource(c, form.SourceID, form.LoginName)
 	if c.Written() {
 		return
@@ -73,13 +73,13 @@ func adminCreateUser(c *apiContext, l i18n.Locale, form adminCreateUserRequest) 
 	c.Logger.Debug("Account created by admin", "userName", u.Name, "adminName", c.User.Name)
 
 	// Send email notification.
-	if form.SendNotify && conf.Email.Enabled {
-		if err := email.SendRegisterNotifyMail(c.Logger, l, database.NewMailerUser(u)); err != nil {
+	if form.SendNotify && mailOpts.Email.Enabled {
+		if err := email.SendRegisterNotifyMail(c.Logger, mailOpts, l, database.NewMailerUser(u)); err != nil {
 			c.Logger.Error("Failed to send register notify mail", "error", err)
 		}
 	}
 
-	c.JSON(http.StatusCreated, toUser(u))
+	c.JSON(http.StatusCreated, toUser(links, u))
 }
 
 type adminEditUserRequest struct {
@@ -97,7 +97,7 @@ type adminEditUserRequest struct {
 	MaxRepoCreation  *int   `json:"max_repo_creation"`
 }
 
-func adminEditUser(c *apiContext, form adminEditUserRequest) {
+func adminEditUser(c *apiContext, links database.LinkOptions, form adminEditUserRequest) {
 	u := getUserByParams(c)
 	if c.Written() {
 		return
@@ -150,10 +150,10 @@ func adminEditUser(c *apiContext, form adminEditUserRequest) {
 		c.Error(err, "get user")
 		return
 	}
-	c.JSONSuccess(toUser(u))
+	c.JSONSuccess(toUser(links, u))
 }
 
-func adminDeleteUser(c *apiContext) {
+func adminDeleteUser(c *apiContext, userDeletion database.DeleteUserOptions) {
 	u := getUserByParams(c)
 	if c.Written() {
 		return
@@ -163,7 +163,7 @@ func adminDeleteUser(c *apiContext) {
 		return
 	}
 
-	if err := database.Handle.Users().DeleteByID(c.Request().Context(), u.ID, false); err != nil {
+	if err := database.Handle.Users().DeleteByID(c.Request().Context(), userDeletion, u.ID, false); err != nil {
 		if database.IsErrUserOwnRepos(err) ||
 			database.IsErrUserHasOrgs(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
@@ -177,7 +177,7 @@ func adminDeleteUser(c *apiContext) {
 	c.NoContent()
 }
 
-func adminCreatePublicKey(c *apiContext, form createPublicKeyRequest) {
+func adminCreatePublicKey(c *apiContext, sshOpts conf.SSHOpts, authorizedKeys database.AuthorizedKeysOptions, form createPublicKeyRequest) {
 	u := getUserByParams(c)
 	if c.Written() {
 		return
@@ -186,5 +186,5 @@ func adminCreatePublicKey(c *apiContext, form createPublicKeyRequest) {
 		c.ErrorStatus(http.StatusUnprocessableEntity, errors.Newf("%s is an organization, not a user", u.Name))
 		return
 	}
-	createUserPublicKey(c, form, u.ID)
+	createUserPublicKey(c, sshOpts, authorizedKeys, form, u.ID)
 }
