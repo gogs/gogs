@@ -192,10 +192,10 @@ func (d *ldapDirectory) newSource(typ auth.Type, cfg ldap.Config) *database.Logi
 	return source
 }
 
-// ldapSignIn signs in with the login and the password through the
+// signInWithSource signs in with the login and the password through the
 // authentication source, and returns the client with the status code and the
 // response body.
-func ldapSignIn(t *testing.T, source *database.LoginSource, login, password string) (*client, int, []byte) {
+func signInWithSource(t *testing.T, source *database.LoginSource, login, password string) (*client, int, []byte) {
 	t.Helper()
 
 	c := newClient(t)
@@ -244,24 +244,24 @@ func TestLDAPBindDN(t *testing.T) {
 	admin := d.addUser("admin")
 
 	t.Run("first sign-in creates the account", func(t *testing.T) {
-		c, status, body := ldapSignIn(t, source, person.uid, person.password)
+		c, status, body := signInWithSource(t, source, person.uid, person.password)
 		require.Equal(t, http.StatusOK, status, "response: %s", body)
 		assert.Equal(t, person.uid, c.username())
 		assertLDAPAccount(t, source, person, false)
 
-		c, status, body = ldapSignIn(t, source, admin.uid, admin.password)
+		c, status, body = signInWithSource(t, source, admin.uid, admin.password)
 		require.Equal(t, http.StatusOK, status, "response: %s", body)
 		assert.Equal(t, admin.uid, c.username())
 		assertLDAPAccount(t, source, admin, true)
 	})
 
 	t.Run("wrong password or unknown person", func(t *testing.T) {
-		c, status, body := ldapSignIn(t, source, person.uid, "wrong-"+person.password)
+		c, status, body := signInWithSource(t, source, person.uid, "wrong-"+person.password)
 		assert.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
 		assert.Empty(t, c.username())
 
 		name := UniqueName("ldap-")
-		_, status, body = ldapSignIn(t, source, name, person.password)
+		_, status, body = signInWithSource(t, source, name, person.password)
 		assert.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
 		assertNoAccount(t, name)
 	})
@@ -270,9 +270,9 @@ func TestLDAPBindDN(t *testing.T) {
 		oldPassword := person.password
 		d.setPassword(t, person, UniqueName("password-"))
 
-		_, status, body := ldapSignIn(t, source, person.uid, oldPassword)
+		_, status, body := signInWithSource(t, source, person.uid, oldPassword)
 		assert.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
-		c, status, body := ldapSignIn(t, source, person.uid, person.password)
+		c, status, body := signInWithSource(t, source, person.uid, person.password)
 		require.Equal(t, http.StatusOK, status, "response: %s", body)
 		assert.Equal(t, person.uid, c.username())
 
@@ -299,20 +299,20 @@ func TestLDAPSimpleAuth(t *testing.T) {
 	admin := d.addUser("admin")
 	blocked := d.addUser("blocked")
 
-	c, status, body := ldapSignIn(t, source, person.uid, person.password)
+	c, status, body := signInWithSource(t, source, person.uid, person.password)
 	require.Equal(t, http.StatusOK, status, "response: %s", body)
 	assert.Equal(t, person.uid, c.username())
 	assertLDAPAccount(t, source, person, false)
 
-	_, status, body = ldapSignIn(t, source, admin.uid, admin.password)
+	_, status, body = signInWithSource(t, source, admin.uid, admin.password)
 	require.Equal(t, http.StatusOK, status, "response: %s", body)
 	assertLDAPAccount(t, source, admin, true)
 
-	_, status, body = ldapSignIn(t, source, person.uid, "wrong-"+person.password)
+	_, status, body = signInWithSource(t, source, person.uid, "wrong-"+person.password)
 	assert.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
 
 	// The person binds with the right password, but the filter rules them out.
-	_, status, body = ldapSignIn(t, source, blocked.uid, blocked.password)
+	_, status, body = signInWithSource(t, source, blocked.uid, blocked.password)
 	assert.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
 	assertNoAccount(t, blocked.uid)
 }
@@ -343,17 +343,17 @@ func TestLDAPGroupMembership(t *testing.T) {
 		UserUID:          "uid",
 	})
 
-	c, status, body := ldapSignIn(t, source, member.uid, member.password)
+	c, status, body := signInWithSource(t, source, member.uid, member.password)
 	require.Equal(t, http.StatusOK, status, "response: %s", body)
 	assert.Equal(t, member.uid, c.username())
 	assertLDAPAccount(t, source, member, false)
 
-	_, status, body = ldapSignIn(t, source, nonMember.uid, nonMember.password)
+	_, status, body = signInWithSource(t, source, nonMember.uid, nonMember.password)
 	assert.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
 	assertNoAccount(t, nonMember.uid)
 
 	// The password is still checked after the attributes are read as the bind
 	// DN.
-	_, status, body = ldapSignIn(t, source, member.uid, "wrong-"+member.password)
+	_, status, body = signInWithSource(t, source, member.uid, "wrong-"+member.password)
 	assert.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
 }
