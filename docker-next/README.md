@@ -144,6 +144,34 @@ Directory layout inside Docker container:
     |-- log
 ```
 
+### Health check
+
+The image checks `http://localhost:3000/healthcheck` and reports the container unhealthy when it fails or returns an error. Change the URL with `GOGS_HEALTHCHECK_URL` when `[server]` listens elsewhere:
+
+- Another port:
+
+  ```zsh
+  $ docker run -e GOGS_HEALTHCHECK_URL=http://localhost:8080/healthcheck ...
+  ```
+
+- HTTPS (the certificate is not verified):
+
+  ```zsh
+  $ docker run -e GOGS_HEALTHCHECK_URL=https://localhost:3000/healthcheck ...
+  ```
+
+- Unix socket: replace the whole command.
+
+  ```zsh
+  $ docker run \
+      --health-cmd 'curl -fsS -o /dev/null \
+        --unix-socket /data/gogs/gogs.sock \
+        http://localhost/healthcheck || exit 1' \
+      ...
+  ```
+
+Kubernetes ignores the health check of the image. Use an `httpGet` liveness or readiness probe on `/healthcheck` instead.
+
 ## First start
 
 Open `https://gogs.example.com/` and sign up. Whoever signs up while there are no other users becomes the admin.

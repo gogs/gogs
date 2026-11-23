@@ -65,6 +65,7 @@ All notable changes to Gogs are documented in this file.
 - External wiki and issue tracker URLs must start with `http://` or `https://`. Saving another URL, e.g., `javascript:alert(1)`, fails with a message, and repositories that already have one no longer send visitors to it. [#8638](https://github.com/gogs/gogs/pull/8638)
 - The API repository search matches `q` as given. A query such as `owner/name` no longer matches repositories named `name` from any owner. [#8587](https://github.com/gogs/gogs/pull/8587)
 - The admin panel is revamped as a console that uses the whole window width, with its pages in a sidebar. [#8685](https://github.com/gogs/gogs/pull/8685)
+- The Docker image health check fails for a server with `[server] PROTOCOL = https` until `GOGS_HEALTHCHECK_URL` is set to an `https://` URL, e.g., `https://localhost:3000/healthcheck`. Before, the error response to plain HTTP counted as healthy. [#8603](https://github.com/gogs/gogs/pull/8603)
 
 ### Fixed
 
@@ -171,6 +172,7 @@ All notable changes to Gogs are documented in this file.
 - Creating, commenting on, or closing an issue in a fork no longer fails with a server error. [#8626](https://github.com/gogs/gogs/pull/8626)
 - The API no longer shows the parent of a fork to those who cannot read it, e.g., after the owner of the fork is removed as a collaborator of a private base repository, and the parent shows the permissions of the user on it instead of always read access. Webhook payloads no longer show a private parent. Listing the forks of a repository through the API no longer includes private forks the user cannot read. [#8626](https://github.com/gogs/gogs/pull/8626)
 - Starting Gogs with `gogs web --port` no longer replaces the port of `[server] EXTERNAL_URL` when it differs from `HTTP_PORT`, e.g., behind a reverse proxy, so clone URLs and links keep the configured port. [#8605](https://github.com/gogs/gogs/pull/8605)
+- The Docker image health check counted any response as healthy, e.g., when the database is unreachable, and could only check `http://localhost:3000`. It now fails on an error response, and the `GOGS_HEALTHCHECK_URL` environment variable sets the URL to check when `[server]` sets another `HTTP_ADDR` or `HTTP_PORT`. [#8603](https://github.com/gogs/gogs/pull/8603)
 
 ### Removed
 

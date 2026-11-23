@@ -53,6 +53,7 @@ RUN ./docker/build/finalize.sh
 # Configure Docker Container
 VOLUME ["/data", "/backup"]
 EXPOSE 22 3000
-HEALTHCHECK CMD (curl --noproxy localhost -o /dev/null -sS http://localhost:3000/healthcheck) || exit 1
+ENV GOGS_HEALTHCHECK_URL=http://localhost:3000/healthcheck
+HEALTHCHECK CMD curl -fksS -o /dev/null --noproxy '*' -- "$GOGS_HEALTHCHECK_URL" || exit 1
 ENTRYPOINT ["/app/gogs/docker/start.sh"]
 CMD ["/usr/bin/s6-svscan", "/app/gogs/docker/s6/"]
