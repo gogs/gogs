@@ -95,7 +95,29 @@ Directory layout inside Docker container:
 
 ### Health check
 
-The image reports the container healthy while `GOGS_HEALTHCHECK_URL` responds without an error, which defaults to `http://localhost:3000/healthcheck`. When `[server]` sets another `PROTOCOL`, `HTTP_ADDR` or `HTTP_PORT`, set it to the address Gogs listens on, e.g., `docker run -e GOGS_HEALTHCHECK_URL=http://localhost:8080/healthcheck`, or `https://localhost:3000/healthcheck` for HTTPS, whose certificate is not verified. For a Unix socket, replace the whole command with `--health-cmd`, e.g., `--health-cmd 'curl -fsS -o /dev/null --unix-socket /data/gogs/gogs.sock http://localhost/healthcheck || exit 1'`.
+The image checks `http://localhost:3000/healthcheck` and reports the container unhealthy when it fails or returns an error. Change the URL with `GOGS_HEALTHCHECK_URL` when `[server]` listens elsewhere:
+
+- Another port:
+
+  ```zsh
+  $ docker run -e GOGS_HEALTHCHECK_URL=http://localhost:8080/healthcheck ...
+  ```
+
+- HTTPS (the certificate is not verified):
+
+  ```zsh
+  $ docker run -e GOGS_HEALTHCHECK_URL=https://localhost:3000/healthcheck ...
+  ```
+
+- Unix socket: replace the whole command.
+
+  ```zsh
+  $ docker run \
+      --health-cmd 'curl -fsS -o /dev/null \
+        --unix-socket /data/gogs/gogs.sock \
+        http://localhost/healthcheck || exit 1' \
+      ...
+  ```
 
 ## First start
 
