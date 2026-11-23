@@ -58,6 +58,6 @@ EXPOSE 22 3000
 # certificate is issued for the external domain rather than localhost, and the
 # check sends no credentials, so it is not verified.
 ENV GOGS_HEALTHCHECK_URL=http://localhost:3000/healthcheck
-HEALTHCHECK CMD curl -fksS -o /dev/null --noproxy '*' "$GOGS_HEALTHCHECK_URL" || exit 1
+HEALTHCHECK CMD curl -fksS -o /dev/null --noproxy '*' -- "$GOGS_HEALTHCHECK_URL" || exit 1
 ENTRYPOINT ["/app/gogs/docker/start.sh"]
 CMD ["/usr/bin/s6-svscan", "/app/gogs/docker/s6/"]
