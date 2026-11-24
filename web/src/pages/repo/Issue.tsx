@@ -392,18 +392,16 @@ export function EventSentence({
   );
 }
 
+// HEADER_ACCENTS tint the header of a comment card by its outcome, e.g., of a
+// review.
+const HEADER_ACCENTS = {
+  success: "border-(--color-success)/30 bg-(--color-success)/10",
+  destructive: "border-(--color-destructive)/30 bg-(--color-destructive)/10",
+};
+
 // CommentCard shows the content of the issue or one of its comments, and lets
 // those who can change it edit or delete it. The footer shows below the
 // content, e.g., the replies to the comment.
-// CARD_ACCENTS color the edge of a comment card by its outcome, e.g., of a
-// review, and its ring when the card is linked to. The "!" outranks the edge of
-// the glass look.
-const CARD_ACCENTS = {
-  primary: "!border-(--color-primary) ring-(--color-primary)/30",
-  success: "!border-(--color-success) ring-(--color-success)/30",
-  destructive: "!border-(--color-destructive) ring-(--color-destructive)/30",
-};
-
 export function CommentCard({
   issueRef,
   anchor,
@@ -447,7 +445,7 @@ export function CommentCard({
   sentence?: string;
   // badge shows before the tag, e.g., the outcome of a review.
   badge?: ReactNode;
-  // accent colors the edge of the card, e.g., green for an approval.
+  // accent tints the header, e.g., green for an approval.
   accent?: "success" | "destructive";
   footer?: ReactNode;
 }) {
@@ -469,11 +467,15 @@ export function CommentCard({
       <div
         className={cn(
           "glass min-w-0 flex-1 rounded-md border",
-          accent || linked ? CARD_ACCENTS[accent ?? "primary"] : "border-(--color-border)",
-          linked && "ring-2",
+          linked ? "!border-(--color-primary) ring-2 ring-(--color-primary)/30" : "border-(--color-border)",
         )}
       >
-        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 rounded-t-[inherit] border-b border-(--color-border) bg-(--color-surface) py-1 pr-1 pl-3 text-sm">
+        <div
+          className={cn(
+            "flex flex-wrap items-center justify-between gap-x-2 gap-y-1 rounded-t-[inherit] border-b py-1 pr-1 pl-3 text-sm",
+            accent ? HEADER_ACCENTS[accent] : "border-(--color-border) bg-(--color-surface)",
+          )}
+        >
           <p className="min-w-0 py-1 text-(--color-muted-foreground) wrap-anywhere">
             <UserLink user={poster} className="font-semibold text-(--color-foreground) hover:underline">
               {poster.name}
