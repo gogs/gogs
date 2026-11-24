@@ -63,6 +63,7 @@ func TestHandleDeprecatedRegistrationCaptcha(t *testing.T) {
 		name       string
 		enabled    string // Value of ENABLE_REGISTRATION_CAPTCHA, empty when not set.
 		current    string // ANTI_BOT_VERIFICATION after mapping the configuration.
+		signUpOff  bool   // Whether ENABLE_SIGN_UP_ANTI_BOT_VERIFICATION is false after mapping the configuration.
 		want       string
 		wantSignUp bool
 	}{
@@ -70,6 +71,7 @@ func TestHandleDeprecatedRegistrationCaptcha(t *testing.T) {
 		{name: "true keeps sign-up on", enabled: "true", current: "altcha", want: "altcha", wantSignUp: true},
 		{name: "true turns empty to altcha", enabled: "true", current: "", want: "altcha", wantSignUp: true},
 		{name: "true keeps captcha", enabled: "true", current: "captcha", want: "captcha", wantSignUp: true},
+		{name: "true turns sign-up on", enabled: "true", current: "altcha", signUpOff: true, want: "altcha", wantSignUp: true},
 		{name: "false turns sign-up off", enabled: "false", current: "altcha", want: "altcha", wantSignUp: false},
 		{name: "false keeps captcha", enabled: "false", current: "captcha", want: "captcha", wantSignUp: false},
 	}
@@ -79,8 +81,7 @@ func TestHandleDeprecatedRegistrationCaptcha(t *testing.T) {
 			if test.enabled != "" {
 				_, _ = File.Section("auth").NewKey("ENABLE_REGISTRATION_CAPTCHA", test.enabled)
 			}
-			// The default of ENABLE_SIGN_UP_ANTI_BOT_VERIFICATION after mapping.
-			Auth = AuthOpts{AntiBotVerification: test.current, EnableSignUpAntiBotVerification: true}
+			Auth = AuthOpts{AntiBotVerification: test.current, EnableSignUpAntiBotVerification: !test.signUpOff}
 			handleDeprecated()
 			assert.Equal(t, test.want, Auth.AntiBotVerification)
 			assert.Equal(t, test.wantSignUp, Auth.EnableSignUpAntiBotVerification)
