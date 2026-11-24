@@ -510,8 +510,8 @@ type antiBotVerifier func(payload string) bool
 
 // antiBotMiddlewares returns the middlewares of [auth] ANTI_BOT_VERIFICATION
 // that serve what the sign-up and sign-in pages need and map an
-// antiBotVerifier. Only the configured one is mounted, and none when it is
-// empty.
+// antiBotVerifier. Only the configured one is mounted, and when it is empty,
+// one that accepts every payload.
 func antiBotMiddlewares() ([]flamego.Handler, error) {
 	switch conf.Auth.AntiBotVerification {
 	case "":

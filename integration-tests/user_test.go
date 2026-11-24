@@ -157,8 +157,12 @@ func TestSignInAntiBotVerification(t *testing.T) {
 		t.Parallel()
 
 		// The API still accepts the password without verification.
-		status, body := apiV1BasicClient(t, u.Name, u.Password).do(http.MethodGet, "/api/v1/users/"+u.Name+"/tokens", nil)
-		assert.Equal(t, http.StatusOK, status, "response: %s", body)
+		for _, baseURL := range []string{serverURL, forcePrivateServerURL} {
+			api := apiV1BasicClient(t, u.Name, u.Password)
+			api.baseURL = baseURL
+			status, body := api.do(http.MethodGet, "/api/v1/users/"+u.Name+"/tokens", nil)
+			assert.Equal(t, http.StatusOK, status, "%s, response: %s", baseURL, body)
+		}
 	})
 }
 
