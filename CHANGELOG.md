@@ -6,7 +6,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Added
 
-- Site admins can replace the landing page, navbar and footer with scripts under Admin panel > Customization > Components, with a live preview at desktop and mobile widths. Published changes apply on the next page load, without a restart, and a script that fails shows the built-in part in its place. [#8720](https://github.com/gogs/gogs/pull/8720)
+- Site admins can replace the landing page, navbar and footer with scripts under Admin panel > Customization > Components, with a live preview at desktop and mobile widths. Published changes apply on the next page load, without a restart, and a script that fails shows the built-in part in its place. Files such as a logo can be uploaded under Admin panel > Customization > Files for the scripts to show. [#8720](https://github.com/gogs/gogs/pull/8720)
 - Mermaid diagrams render in wiki pages, issues, comments and release notes, not only in Markdown files. [#8620](https://github.com/gogs/gogs/pull/8620)
 - Markdown supports GitHub alerts (`> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]` and `> [!CAUTION]`) and footnotes. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Headings in rendered Markdown have stable ids like GitHub's, e.g., `user-content-getting-started`, so links to sections also work in API output and outside the web interface. [#8519](https://github.com/gogs/gogs/pull/8519)

@@ -25,6 +25,7 @@ import {
   fetchAdminAuthSource,
   fetchAdminAuthSources,
   fetchAdminConfig,
+  fetchAdminCustomFiles,
   fetchAdminCustomization,
   fetchAdminMonitor,
   fetchAdminNotices,
@@ -40,6 +41,7 @@ import type { UserInfo } from "@/lib/user-info";
 import { AdminAuthSourceEdit, AdminAuthSourceNew } from "@/pages/admin/Auths";
 import { AdminComponentEdit, AdminComponents } from "@/pages/admin/Components";
 import { CustomizePreview } from "@/pages/admin/CustomizePreview";
+import { AdminFiles } from "@/pages/admin/Files";
 import { AdminServerHealth } from "@/pages/admin/Health";
 import { AdminAuthSources, AdminNotices, AdminOrgs, AdminRepos, AdminUsers } from "@/pages/admin/Lists";
 import { AdminOverview } from "@/pages/admin/Overview";
@@ -165,6 +167,16 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
       const { part } = componentRoute.useParams();
       // Remount for another part, so that a draft does not carry over.
       return <AdminComponentEdit key={part} name={part as SlotName} parts={componentRoute.useLoaderData().parts} />;
+    },
+  });
+
+  const filesRoute = createRoute({
+    getParentRoute: () => adminRoute,
+    ...PAGE,
+    path: "files",
+    loader: ({ location }) => loadAdminPage(location, fetchAdminCustomFiles),
+    component: function Files() {
+      return <AdminFiles files={filesRoute.useLoaderData()} />;
     },
   });
 
@@ -399,6 +411,7 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
       configRoute,
       componentsRoute,
       componentRoute,
+      filesRoute,
       jobsRoute,
       healthRoute,
       tracesRoute,

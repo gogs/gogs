@@ -57,6 +57,7 @@ The customization API has:
 | `Button` | The button component of the web interface. |
 | `t` | Translates a key of the locale files, e.g., `t("explore")`. |
 | `subUrl` | Prefixes a path with the subpath Gogs is served under, if any. |
+| `fileURL` | Returns the URL of an [uploaded file](#upload-files), e.g., `fileURL("logo.png")`. |
 | `useUser` | A hook that returns the authenticated user, or `null`. |
 
 The component gets two props: `Default`, the built-in component, which you can wrap or show as is, and `user`, the authenticated user or `null`.
@@ -66,6 +67,22 @@ An optional `css` export adds a stylesheet to every page. Use the theme tokens, 
 <Tip>
   Classes of [Tailwind CSS](https://tailwindcss.com/) work only when the web interface already uses them. For anything else, add the styles to the `css` export.
 </Tip>
+
+### Upload files
+
+To show a logo or another image in a component, upload it in **Admin panel > Customization > Files** and use `fileURL` in the script:
+
+```js
+export default ({ html, fileURL }) =>
+  function Landing() {
+    return html`
+      <main className="flex flex-1 items-center justify-center py-16">
+        <img src=${fileURL("logo.png")} alt="Acme" width="240" height="80" />
+      </main>`;
+  };
+```
+
+Files are stored in `custom/web/files/` and served at `/-/custom/files/<name>`, so you can also reference them from the `css` export. Names may have letters, digits, dots, dashes and underscores, and start with a letter or digit. Uploading a file with the name of another replaces it. A file may be up to 10 MB.
 
 ### Add notices
 

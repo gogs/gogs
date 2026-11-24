@@ -8,6 +8,7 @@ import {
   Building2,
   ChevronRight,
   Clock,
+  FileImage,
   HeartPulse,
   LayoutDashboard,
   type LucideIcon,
@@ -56,7 +57,10 @@ const NAV: { title?: string; items: NavItem[] }[] = [
   },
   {
     title: "admin.group_customization",
-    items: [{ path: "/components", label: "admin.components", icon: Blocks }],
+    items: [
+      { path: "/components", label: "admin.components", icon: Blocks },
+      { path: "/files", label: "admin.files", icon: FileImage },
+    ],
   },
   {
     title: "admin.group_monitoring",

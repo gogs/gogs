@@ -1,7 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { t } from "i18next";
 
-import { LoaderResponseError } from "@/lib/loader-error";
+import { LoaderResponseError, loaderResponseError } from "@/lib/loader-error";
 import { fetchJSON, send, submit } from "@/lib/queries/request";
 import { subUrl } from "@/lib/url";
 
@@ -328,6 +328,31 @@ export function fetchAdminCustomization() {
 // brings back the built-in part.
 export function publishAdminCustomPart(name: string, source: string) {
   return submit<AdminCustomPart>("PUT", adminURL(`/customization/${name}`), { source });
+}
+
+export interface AdminCustomFile {
+  name: string;
+  size: number;
+  modifiedAt: string;
+  url: string;
+}
+
+export function fetchAdminCustomFiles() {
+  return fetchJSON<AdminCustomFile[]>(adminURL("/customization/files"));
+}
+
+// uploadAdminCustomFile uploads a file for components to show, replacing a
+// file of the same name.
+export async function uploadAdminCustomFile(file: File) {
+  const body = new FormData();
+  body.append("file", file);
+  const res = await fetch(adminURL("/customization/files"), { method: "POST", credentials: "same-origin", body });
+  if (!res.ok) throw await loaderResponseError(res);
+  return (await res.json()) as AdminCustomFile;
+}
+
+export function deleteAdminCustomFile(name: string) {
+  return send("DELETE", adminURL(`/customization/files/${encodeURIComponent(name)}`));
 }
 
 export async function sendAdminTestMail(email: string) {

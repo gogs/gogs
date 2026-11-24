@@ -18,6 +18,8 @@ const customizationAPI = {
   Button,
   t,
   subUrl,
+  // fileURL returns the URL of a file uploaded under Customization > Files.
+  fileURL: (name: string) => subUrl(`/-/custom/files/${encodeURIComponent(name)}`),
   useUser: useUserInfo,
 };
 

@@ -25,12 +25,14 @@ const PART_LABELS: Record<SlotName, { label: string; description: string }> = {
 
 // STARTERS are the scripts the editor starts with for a part that is built-in.
 // The default export of a script is a function that takes the API (React,
-// html, Link, Button, t, subUrl, useUser) and returns a React component, or a
+// html, Link, Button, t, subUrl, fileURL, useUser) and returns a React component, or a
 // web component, i.e., a class that extends HTMLElement. A component gets
 // "Default", the built-in part, and "user". An optional "css" export adds
 // styles to the site.
 const STARTERS: Record<SlotName, string> = {
-  landing: `export default ({ html, Link, t }) =>
+  landing: `// Upload a logo under Customization > Files and show it with
+// <img src=\${fileURL("logo.png")} alt="Acme" />.
+export default ({ html, Link, t }) =>
   function Landing() {
     return html\`
       <main className="flex flex-1 flex-col items-center justify-center gap-4 px-4 py-16 text-center">
