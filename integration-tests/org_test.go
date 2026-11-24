@@ -883,6 +883,43 @@ func TestOrgTeamConcurrentChanges(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 	})
 
+	t.Run("adding a repository to the team while transferring it", func(t *testing.T) {
+		ownerClient := authenticatedClient(t, owner)
+		org, member, _, teamPath := seed(t, ownerClient)
+		status, body := ownerClient.do(http.MethodPut, teamPath+"/members/"+member.Name, orgNoBody)
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+		moved := seedRepository(t, org.ID, CreateRepositoryOptions{Private: true})
+
+		// The team request loads the repository before the transfer commits,
+		// and must not give the team access to the new owner's repository.
+		statuses := ownerClient.doBothWhileLocked(lockRepo, moved.ID,
+			lockedRequest{http.MethodPost, repoSettingsAPIPath(moved, "/settings/transfer"), map[string]any{"repoName": moved.Name, "newOwner": owner.Name}},
+			lockedRequest{http.MethodPut, teamPath + "/repos/" + moved.Name, orgNoBody})
+		assert.Equal(t, []int{http.StatusOK, http.StatusNotFound}, statuses)
+		assert.Equal(t, database.AccessModeNone, accessMode(t, member.ID, moved, owner.ID))
+	})
+
+	t.Run("adding a repository to the team while deleting the team", func(t *testing.T) {
+		ownerClient := authenticatedClient(t, owner)
+		org, member, _, teamPath := seed(t, ownerClient)
+		status, body := ownerClient.do(http.MethodPut, teamPath+"/members/"+member.Name, orgNoBody)
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+		added := seedRepository(t, org.ID, CreateRepositoryOptions{Private: true})
+		team, err := database.Handle.Teams().GetByName(t.Context(), org.ID, teamPath[strings.LastIndex(teamPath, "/")+1:])
+		require.NoError(t, err)
+
+		// Holding the team lets both requests lock their repositories first,
+		// then the deletion takes the team before the repository is added.
+		statuses := ownerClient.doBothWhileLocked("SELECT id FROM team WHERE id = ? FOR UPDATE", team.ID,
+			lockedRequest{http.MethodDelete, teamPath, orgNoBody},
+			lockedRequest{http.MethodPut, teamPath + "/repos/" + added.Name, orgNoBody})
+		assert.Equal(t, []int{http.StatusNoContent, http.StatusNotFound}, statuses)
+		assert.False(t, database.Handle.Teams().HasRepo(t.Context(), org.ID, team.ID, added.ID), "the deleted team has the repository")
+		assert.Equal(t, database.AccessModeNone, accessMode(t, member.ID, added, org.ID), "the member gets access through the deleted team")
+		status, body = authenticatedClient(t, member).do(http.MethodGet, issueAPIPath(added, "issues"), nil)
+		assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
+	})
+
 	t.Run("adding a collaborator while transferring the repository", func(t *testing.T) {
 		ownerClient := authenticatedClient(t, owner)
 		_, _, repo, _ := seed(t, ownerClient)
