@@ -500,6 +500,35 @@ func TestAPIV1CommitsPages(t *testing.T) {
 		got, links = list(commits("limit=20"))
 		assert.Equal(t, all[:20], got, "limit as the page size")
 		assert.Equal(t, commits("limit=20&page=2"), links["next"])
+
+		got, _ = list(commits("limit=5&pageSize=20"))
+		assert.Equal(t, all[:20], got, "pageSize over limit")
+	})
+
+	// The pages and the count behind the links must walk the same commits,
+	// including those that only a merge commit reaches.
+	t.Run("merge history", func(t *testing.T) {
+		side := all[54]
+		for i := range 3 {
+			side = repoSettingsGit(t, repoPath, "commit-tree", tree, "-p", side, "-m", "Side "+strconv.Itoa(i))
+		}
+		merge := repoSettingsGit(t, repoPath, "commit-tree", tree, "-p", all[0], "-p", side, "-m", "Merge")
+		repoSettingsGit(t, repoPath, "update-ref", "refs/heads/merged", merge)
+		want := strings.Fields(repoSettingsGit(t, repoPath, "rev-list", "merged"))
+		require.Len(t, want, 59)
+
+		got := []string{}
+		pages := 0
+		for next := commits("sha=merged&pageSize=19"); next != ""; pages++ {
+			require.Less(t, pages, 4, "more pages than the commits fill")
+			shas, links := list(next)
+			got = append(got, shas...)
+			if pages == 0 {
+				assert.Equal(t, commits("page=4&pageSize=19&sha=merged"), links["last"])
+			}
+			next = links["next"]
+		}
+		assert.Equal(t, want, got)
 	})
 
 	// Follows the "next" links like an API client. Starting from another branch

@@ -173,6 +173,18 @@ func TestAPIV1SearchRepositoriesPages(t *testing.T) {
 	// Repositories are listed in the order they were created, each once.
 	assert.Equal(t, want, got, "pages of the search")
 
+	t.Run("pageSize", func(t *testing.T) {
+		search := "/api/v1/repos/search?pageSize=2&uid=" + apiV1Itoa(owner.ID)
+		status, header, body := anonymous.doRaw(http.MethodGet, search, "", nil)
+		require.Equal(t, http.StatusOK, status, "response: %s", body)
+		var resp struct {
+			Data []apiV1Repo `json:"data"`
+		}
+		require.NoError(t, json.Unmarshal(body, &resp))
+		assert.Equal(t, want[:2], apiV1RepoNames(resp.Data))
+		assert.Equal(t, "/api/v1/repos/search?page=2&pageSize=2&uid="+apiV1Itoa(owner.ID), apiV1Links(t, header)["next"])
+	})
+
 	t.Run("past the last page", func(t *testing.T) {
 		// Page 3 is the last one with repositories, and the one before page 10.
 		page := func(n string) string {
