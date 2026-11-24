@@ -83,7 +83,7 @@ func TestSignInAntiBotVerification(t *testing.T) {
 	t.Parallel()
 
 	u := seedUser(t, CreateUserOptions{})
-	// signIn returns the fields with errors, or nil when signed in.
+	// signIn returns the fields with errors, or nil when authenticated.
 	signIn := func(t *testing.T, c *client, password, payload string) map[string]*string {
 		status, body := c.postSignIn(map[string]any{"username": u.Name, "password": password, "antiBotPayload": payload})
 		if status == http.StatusOK {
@@ -118,15 +118,15 @@ func TestSignInAntiBotVerification(t *testing.T) {
 		c := newClient(t)
 		assert.Equal(t, "captcha", antiBotVerification(c))
 
-		assertRejected(t, c, signIn(t, c, u.Password, ""), "signed in without a captcha")
-		assertRejected(t, c, signIn(t, c, u.Password, c.captcha()+"x"), "signed in with a wrong captcha")
+		assertRejected(t, c, signIn(t, c, u.Password, ""), "authenticated without a captcha")
+		assertRejected(t, c, signIn(t, c, u.Password, c.captcha()+"x"), "authenticated with a wrong captcha")
 
 		captcha := c.captcha()
 		fields := signIn(t, c, "wrong-password", captcha)
 		assert.Contains(t, fields, "password")
 		assert.NotContains(t, fields, "antiBotPayload")
 		// The failed attempt used up the captcha.
-		assertRejected(t, c, signIn(t, c, u.Password, captcha), "signed in with a used captcha")
+		assertRejected(t, c, signIn(t, c, u.Password, captcha), "authenticated with a used captcha")
 
 		require.Nil(t, signIn(t, c, u.Password, c.captcha()))
 		assert.Equal(t, u.Name, c.username())
@@ -140,14 +140,14 @@ func TestSignInAntiBotVerification(t *testing.T) {
 		c.baseURL = forcePrivateServerURL
 		assert.Equal(t, "altcha", antiBotVerification(c))
 
-		assertRejected(t, c, signIn(t, c, u.Password, ""), "signed in without a solution")
+		assertRejected(t, c, signIn(t, c, u.Password, ""), "authenticated without a solution")
 
 		solution := solveAltcha(t, c)
 		fields := signIn(t, c, "wrong-password", solution)
 		assert.Contains(t, fields, "password")
 		assert.NotContains(t, fields, "antiBotPayload")
 		// The failed attempt used up the solution.
-		assertRejected(t, c, signIn(t, c, u.Password, solution), "signed in with a used solution")
+		assertRejected(t, c, signIn(t, c, u.Password, solution), "authenticated with a used solution")
 
 		require.Nil(t, signIn(t, c, u.Password, solveAltcha(t, c)))
 		assert.Equal(t, u.Name, c.username())

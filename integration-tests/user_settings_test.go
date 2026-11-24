@@ -146,6 +146,8 @@ func TestUserSettingsPassword(t *testing.T) {
 	newClient(t).signIn(&User{Name: u.Name, Password: "new-password"})
 	status, body = newClient(t).postSignIn(map[string]any{"username": u.Name, "password": u.Password})
 	assert.Equal(t, http.StatusUnauthorized, status, "old password still works, response: %s", body)
+	// A password error, rather than a rejected anti-bot payload.
+	assert.Contains(t, string(body), `"password":`)
 
 	// A session idle while the password changes stays signed out when the
 	// password it signed in with comes back.
