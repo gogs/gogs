@@ -32,6 +32,7 @@ All notable changes to Gogs are documented in this file.
 - API endpoints to create branches and tags: `POST /repos/{owner}/{repo}/branches` and `POST /repos/{owner}/{repo}/tags`. [#8566](https://github.com/gogs/gogs/pull/8566)
 - API endpoint for an access token to delete itself: `DELETE /user/token`, e.g., for a tool to revoke its token when it is done. [#8574](https://github.com/gogs/gogs/pull/8574)
 - Commit pages link issue references and @mentions in commit messages, and commit lists and file lists also link @mentions. [#8628](https://github.com/gogs/gogs/pull/8628)
+- The API lists commits page by page with `page`, and from a branch, tag or commit with `sha`. It lists branches page by page with `page` and `pageSize`. Commits, branches and repository search take the page size as either `pageSize` or `limit`. [#8582](https://github.com/gogs/gogs/pull/8582)
 
 ### Changed
 
@@ -66,6 +67,7 @@ All notable changes to Gogs are documented in this file.
 - The API repository search matches `q` as given. A query such as `owner/name` no longer matches repositories named `name` from any owner. [#8587](https://github.com/gogs/gogs/pull/8587)
 - The admin panel is revamped as a console that uses the whole window width, with its pages in a sidebar. [#8685](https://github.com/gogs/gogs/pull/8685)
 - The Docker image health check fails for a server with `[server] PROTOCOL = https` until `GOGS_HEALTHCHECK_URL` is set to an `https://` URL, e.g., `https://localhost:3000/healthcheck`. Before, the error response to plain HTTP counted as healthy. [#8603](https://github.com/gogs/gogs/pull/8603)
+- The API lists at most `[api] MAX_RESPONSE_ITEMS` commits per page, e.g., `pageSize=100` lists at most 50 commits by default, and links to the next page. [#8582](https://github.com/gogs/gogs/pull/8582)
 
 ### Fixed
 
@@ -183,6 +185,7 @@ All notable changes to Gogs are documented in this file.
 - The archive of `gogs backup` is now only readable by its owner, and a failed backup no longer leaves a partial archive or the database dump behind. [#8614](https://github.com/gogs/gogs/pull/8614)
 - `gogs backup --exclude-mirror-repos` no longer fails when the name of a repository or its owner has upper case letters, and now includes the wikis of the repositories. [#6497](https://github.com/gogs/gogs/issues/6497)
 - SSH keys of security keys, e.g., `sk-ssh-ed25519@openssh.com` keys of a YubiKey, can be added when `[server] MINIMUM_KEY_SIZE_CHECK` is enabled. They are allowed even where `ED25519` or `ECDSA` under `[ssh.minimum_key_sizes]` is set to `-1`. To keep rejecting them, set `ED25519-SK` and `ECDSA-SK` to `-1` as well. [#8580](https://github.com/gogs/gogs/pull/8580)
+- The API now lists no commits for an empty repository instead of failing. [#8582](https://github.com/gogs/gogs/pull/8582)
 
 ### Removed
 

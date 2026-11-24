@@ -111,7 +111,7 @@
               "type": "integer",
               "default": 10
             },
-            "description": "Max results"
+            "description": "Max results per page, at most `[api] MAX_RESPONSE_ITEMS` (50 by default). Also accepted as `pageSize`."
           },
           {
             "name": "page",
@@ -683,8 +683,29 @@
               "type": "string"
             },
             "description": "Repository name"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Page number"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "Number of branches per page, at most `[api] MAX_RESPONSE_ITEMS` (50 by default). Also accepted as `limit`."
           }
-        ]
+        ],
+        "description": "Returns all branches. With `page`, `pageSize` or `limit`, returns a page of them, and the `Link` header has the URLs of the next, last, first and previous pages."
       },
       "post": {
         "operationId": "createBranch",
@@ -5348,7 +5369,7 @@
       "get": {
         "operationId": "getAllCommits",
         "summary": "List all commits",
-        "description": "Returns commits from the HEAD of the default branch.",
+        "description": "Returns a page of the commits reachable from `sha`, newest first. The `Link` header has the URLs of the next, last, first and previous pages.",
         "tags": [
           "Repositories"
         ],
@@ -5372,6 +5393,26 @@
             "description": "Name of the repository"
           },
           {
+            "name": "sha",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "HEAD"
+            },
+            "description": "Branch, tag or commit to list commits from"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Page number"
+          },
+          {
             "name": "pageSize",
             "in": "query",
             "required": false,
@@ -5379,12 +5420,12 @@
               "type": "integer",
               "default": 30
             },
-            "description": "Number of commits to return"
+            "description": "Number of commits per page, at most `[api] MAX_RESPONSE_ITEMS` (50 by default). Also accepted as `limit`."
           }
         ],
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "Success. An empty repository has no commits.",
             "content": {
               "application/json": {
                 "schema": {
@@ -5397,7 +5438,7 @@
             }
           },
           "404": {
-            "description": "Repository not found."
+            "description": "Repository or `sha` not found."
           }
         }
       }
