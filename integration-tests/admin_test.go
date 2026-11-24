@@ -165,7 +165,7 @@ func adminRunOperation(t *testing.T, admin, nonAdmin, anonymous *client, name st
 // checks their effect on repositories seeded here. Deleting inactive users and
 // resyncing SSH keys are left out.
 //
-// It is the only test that does not run in parallel, because the operations
+// It does not run in parallel, like TestBackupRestore, because the operations
 // act on every repository, including the ones other tests push to or download
 // archives of at the same time. Go runs it before the parallel tests start.
 func TestAdminOperations(t *testing.T) {
