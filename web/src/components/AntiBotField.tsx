@@ -1,4 +1,5 @@
 import { LoaderCircle } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Input } from "@/components/ui/input";
@@ -6,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { type AltchaState, type AntiBot } from "@/lib/anti-bot";
 import { subUrl } from "@/lib/url";
 import { cn } from "@/lib/utils";
+
+let captchaMounts = 0;
 
 interface AntiBotFieldProps {
   antiBot: AntiBot;
@@ -24,6 +27,10 @@ interface AntiBotFieldProps {
 // verified.
 export function AntiBotField({ antiBot, disabled, error, invalid, tabIndex }: AntiBotFieldProps) {
   const { t } = useTranslation();
+  // The browser shows an image it already loaded for the same URL without
+  // asking the server again, whose text may have been used up since, e.g.,
+  // when signing in right after signing up. So every mount gets its own URL.
+  const [captchaMount] = useState(() => ++captchaMounts);
   const errorMessage = error && (
     <p id="antiBotPayload-error" className="text-sm text-(--color-destructive)">
       {error}
@@ -44,7 +51,7 @@ export function AntiBotField({ antiBot, disabled, error, invalid, tabIndex }: An
             className="block w-full cursor-pointer overflow-hidden rounded-md border border-(--color-border) bg-(--color-surface) outline-none focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-60"
           >
             <img
-              src={subUrl("/-/captcha/image.png") + "?refresh=true&v=" + antiBot.captchaRefresh}
+              src={`${subUrl("/-/captcha/image.png")}?refresh=true&m=${captchaMount}&v=${antiBot.captchaRefresh}`}
               alt={t("captcha_image_alt")}
               className="block h-20 w-full object-fill"
             />

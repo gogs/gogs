@@ -63,6 +63,8 @@ type loginSource struct {
 
 type getUserSignInResponse struct {
 	LoginSources []loginSource `json:"loginSources"`
+	// AntiBotVerification is empty when signing in is not verified.
+	AntiBotVerification string `json:"antiBotVerification"`
 }
 
 type getUserSignUpResponse struct {
@@ -93,18 +95,22 @@ type userSignUpResponse struct {
 	Hours                     int    `json:"hours,omitempty"`
 }
 
+// antiBotVerificationFailed returns the response to a request whose anti-bot
+// payload failed verification.
+func antiBotVerificationFailed(l i18n.Locale) *bindingErrorResponse {
+	msg := l.Tr("form::captcha_incorrect")
+	if conf.Auth.AntiBotVerification == conf.AntiBotVerificationAltcha {
+		msg = l.Tr("form::anti_bot_verification_failed")
+	}
+	return &bindingErrorResponse{Fields: fieldErrors{"antiBotPayload": &msg}}
+}
+
 func postUserSignUp(logger *logx.Logger, r *http.Request, ca cache.Cache, l i18n.Locale, verifyAntiBot antiBotVerifier, req userSignUpRequest) (statusCode int, resp any, err error) {
 	if conf.Auth.DisableRegistration {
 		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("auth::disable_register_prompt")}, nil
 	}
 	if !verifyAntiBot(req.AntiBotPayload) {
-		msg := l.Tr("form::captcha_incorrect")
-		if conf.Auth.AntiBotVerification == conf.AntiBotVerificationAltcha {
-			msg = l.Tr("form::anti_bot_verification_failed")
-		}
-		return http.StatusUnauthorized, &bindingErrorResponse{
-			Fields: fieldErrors{"antiBotPayload": &msg},
-		}, nil
+		return http.StatusUnauthorized, antiBotVerificationFailed(l), nil
 	}
 	u, err := database.Handle.Users().Create(
 		r.Context(),
@@ -176,13 +182,20 @@ func getUserSignIn(logger *logx.Logger, r *http.Request) (statusCode int, resp *
 	for _, s := range sources {
 		loginSources = append(loginSources, loginSource{ID: s.ID, Name: s.Name, IsDefault: s.IsDefault})
 	}
-	return http.StatusOK, &getUserSignInResponse{LoginSources: loginSources}, nil
+	resp = &getUserSignInResponse{LoginSources: loginSources}
+	if conf.Auth.EnableLoginCaptcha {
+		resp.AntiBotVerification = conf.Auth.AntiBotVerification
+	}
+	return http.StatusOK, resp, nil
 }
 
 type userSignInRequest struct {
 	Username    string `json:"username" validate:"required,max=254"`
 	Password    string `json:"password" validate:"required,max=255"`
 	LoginSource int64  `json:"loginSource"`
+	// AntiBotPayload is checked as on sign-up when [auth] ENABLE_LOGIN_CAPTCHA
+	// is enabled.
+	AntiBotPayload string `json:"antiBotPayload"`
 }
 
 type getUserResetPasswordResponse struct {
@@ -273,7 +286,12 @@ type userSignInResponse struct {
 	MFA bool `json:"mfa,omitempty"`
 }
 
-func postUserSignIn(logger *logx.Logger, r *http.Request, w http.ResponseWriter, store session.Store, sess session.Session, l i18n.Locale, req userSignInRequest) (statusCode int, resp any, err error) {
+func postUserSignIn(logger *logx.Logger, r *http.Request, w http.ResponseWriter, store session.Store, sess session.Session, l i18n.Locale, verifyAntiBot antiBotVerifier, req userSignInRequest) (statusCode int, resp any, err error) {
+	// Checked before the password, so that a request that fails the check tells
+	// nothing about the password.
+	if conf.Auth.EnableLoginCaptcha && !verifyAntiBot(req.AntiBotPayload) {
+		return http.StatusUnauthorized, antiBotVerificationFailed(l), nil
+	}
 	u, err := database.Handle.Users().Authenticate(r.Context(), logger, req.Username, req.Password, req.LoginSource)
 	if err != nil {
 		switch {
