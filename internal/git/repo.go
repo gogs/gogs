@@ -303,7 +303,7 @@ func (r *Repository) ShowNameStatus(ctx context.Context, rev string) (_ *NameSta
 
 	args := []string{"show", "--name-status", "--pretty=format:''", "--end-of-options", rev}
 
-	err = pipe(ctx, r.path, args, nil, w)
+	err = pipe(ctx, r.path, args, w)
 	_ = w.Close() // Close writer to exit parsing goroutine.
 	if err != nil {
 		return nil, err

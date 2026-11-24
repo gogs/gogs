@@ -307,7 +307,7 @@ func execInput(ctx context.Context, dir string, args []string, envs []string, st
 
 // pipe executes a git command in the given directory, streaming stdout to the
 // given io.Writer.
-func pipe(ctx context.Context, dir string, args []string, envs []string, stdout io.Writer) error {
+func pipe(ctx context.Context, dir string, args []string, stdout io.Writer) error {
 	w := stdout
 	if logOutput != nil {
 		buf := new(bytes.Buffer)
@@ -323,7 +323,7 @@ func pipe(ctx context.Context, dir string, args []string, envs []string, stdout 
 		}()
 	}
 
-	_, err := run(ctx, dir, args, envs, nil, w)
+	_, err := run(ctx, dir, args, nil, nil, w)
 	return err
 }
 
