@@ -3,6 +3,7 @@ package lfs
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/flamego/flamego"
 	"unknwon.dev/x/logx"
@@ -54,9 +55,17 @@ func askCredentials(logger *logx.Logger, w http.ResponseWriter) {
 // authenticate tries to authenticate the user via HTTP Basic Auth. It first tries to authenticate
 // with plain username and password, then uses the username as an access token if that failed.
 // A request without credentials continues as an anonymous user, whose ID is 0,
-// unless signing in is required to view anything.
+// unless signing in is required to view anything. A request with a bearer
+// token, which "gogs serv" gives to clients that authenticated over SSH, is
+// limited to what the token grants, which is mapped as *lfsx.Token.
 func authenticate(logger *logx.Logger, store Store) flamego.Handler {
 	return func(c flamego.Context) {
+		if bearer, ok := strings.CutPrefix(c.Request().Header.Get("Authorization"), "Bearer "); ok {
+			authenticateToken(c, logger, store, bearer)
+			return
+		}
+		c.Map((*lfsx.Token)(nil))
+
 		// Like Git over HTTP, a user named by a trusted reverse proxy goes before
 		// Basic authentication.
 		user, viaProxy, err := context.ReverseProxyUser(store, c.Request().Request)
@@ -137,9 +146,51 @@ func authenticate(logger *logx.Logger, store Store) flamego.Handler {
 	}
 }
 
-// authorize tries to authorize the user to the context repository with given access mode.
+// authenticateToken authenticates the user of the bearer token, or for a token
+// of a deploy key, an anonymous user that authorize lets in while the key is
+// still a deploy key of the repository.
+func authenticateToken(c flamego.Context, logger *logx.Logger, store Store, bearer string) {
+	token, err := lfsx.ParseToken(conf.Security.SecretKey, bearer, time.Now())
+	if err != nil {
+		logger.Debug("Invalid LFS token", "error", err)
+		askCredentials(logger, c.ResponseWriter())
+		return
+	}
+
+	if token.DeployKeyID > 0 {
+		logger.Debug("Authenticated deploy key by token", "keyID", token.DeployKeyID)
+		c.Map(&database.User{Name: "anonymous"})
+		c.Map(token)
+		return
+	}
+
+	user, err := store.GetUserByID(c.Request().Context(), token.UserID)
+	if err != nil {
+		if database.IsErrUserNotExist(err) {
+			askCredentials(logger, c.ResponseWriter())
+		} else {
+			internalServerError(logger, c.ResponseWriter())
+			logger.Error("Failed to get user", "userID", token.UserID, "error", err)
+		}
+		return
+	}
+	if user.IsDisabled() {
+		responseJSON(logger, c.ResponseWriter(), http.StatusForbidden, responseError{
+			Message: "User account is disabled",
+		})
+		return
+	}
+
+	logger.Debug("Authenticated user by token", "userName", user.Name)
+	c.Map(user)
+	c.Map(token)
+}
+
+// authorize tries to authorize the user to the context repository with given
+// access mode, within what the token grants when the user authenticated with
+// one.
 func authorize(logger *logx.Logger, store Store, mode database.AccessMode) flamego.Handler {
-	return func(c flamego.Context, actor *database.User) {
+	return func(c flamego.Context, actor *database.User, token *lfsx.Token) {
 		username := c.Param("owner")
 		reponame := strings.TrimSuffix(c.Param("repo"), ".git")
 
@@ -165,16 +216,37 @@ func authorize(logger *logx.Logger, store Store, mode database.AccessMode) flame
 			return
 		}
 
-		if !store.AuthorizeRepositoryAccess(c.Request().Context(), actor.ID, repo.ID, mode,
-			database.AccessModeOptions{
-				OwnerID: repo.OwnerID,
-				Private: repo.IsPrivate,
-			},
-		) {
+		if token != nil && (token.RepoID != repo.ID || mode > database.AccessModeRead && !token.Upload) {
+			responseJSON(logger, c.ResponseWriter(), http.StatusForbidden, responseError{
+				Message: "The token does not grant this access",
+			})
+			return
+		}
+
+		var authorized bool
+		if token != nil && token.DeployKeyID > 0 {
+			// Deleting the deploy key takes its access away before the token expires.
+			_, err = store.GetDeployKeyByRepoAndKey(c.Request().Context(), repo.ID, token.DeployKeyID)
+			if err != nil && !database.IsErrDeployKeyNotExist(err) {
+				internalServerError(logger, c.ResponseWriter())
+				logger.Error("Failed to get deploy key", "repoID", repo.ID, "keyID", token.DeployKeyID, "error", err)
+				return
+			}
+			authorized = err == nil
+		} else {
+			authorized = store.AuthorizeRepositoryAccess(c.Request().Context(), actor.ID, repo.ID, mode,
+				database.AccessModeOptions{
+					OwnerID: repo.OwnerID,
+					Private: repo.IsPrivate,
+				},
+			)
+		}
+		if !authorized {
 			// An anonymous user may have access after signing in, unless it is a
 			// user named by a trusted reverse proxy that has no account, which
-			// credentials cannot change.
-			if _, viaProxy := context.ReverseProxyUsername(c.Request().Request); actor.ID <= 0 && !viaProxy {
+			// credentials cannot change, or a deploy key, which signing in does not
+			// change either.
+			if _, viaProxy := context.ReverseProxyUsername(c.Request().Request); actor.ID <= 0 && !viaProxy && token == nil {
 				askCredentials(logger, c.ResponseWriter())
 				return
 			}

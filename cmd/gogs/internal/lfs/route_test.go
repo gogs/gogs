@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/flamego/flamego"
 	"github.com/stretchr/testify/assert"
@@ -21,6 +22,14 @@ import (
 )
 
 func TestAuthenticate(t *testing.T) {
+	before := conf.Security.SecretKey
+	conf.Security.SecretKey = "secret"
+	t.Cleanup(func() { conf.Security.SecretKey = before })
+	bearer := func(secret string, expires time.Duration) http.Header {
+		token := lfsx.SignToken(secret, lfsx.Token{UserID: 2, RepoID: 1, Expires: time.Now().Add(expires).Unix()})
+		return http.Header{"Authorization": []string{"Bearer " + token}}
+	}
+
 	tests := []struct {
 		name              string
 		header            http.Header
@@ -35,6 +44,69 @@ func TestAuthenticate(t *testing.T) {
 			expStatusCode: http.StatusOK,
 			expHeader:     http.Header{},
 			expBody:       "ID: 0, Name: anonymous",
+		},
+		{
+			name:   "bearer token",
+			header: bearer("secret", time.Minute),
+			mockStore: func() *MockStore {
+				mockStore := NewMockStore()
+				mockStore.GetUserByIDFunc.SetDefaultHook(func(_ context.Context, id int64) (*database.User, error) {
+					return &database.User{ID: id, Name: "bob"}, nil
+				})
+				return mockStore
+			},
+			expStatusCode: http.StatusOK,
+			expHeader:     http.Header{},
+			expBody:       "ID: 2, Name: bob",
+		},
+		{
+			name:          "expired bearer token",
+			header:        bearer("secret", -time.Minute),
+			expStatusCode: http.StatusUnauthorized,
+			expHeader: http.Header{
+				"Lfs-Authenticate": []string{`Basic realm="Git LFS"`},
+				"Content-Type":     []string{"application/vnd.git-lfs+json"},
+			},
+			expBody: `{"message":"Credentials needed"}` + "\n",
+		},
+		{
+			name:          "bearer token signed with another secret",
+			header:        bearer("other", time.Minute),
+			expStatusCode: http.StatusUnauthorized,
+			expHeader: http.Header{
+				"Lfs-Authenticate": []string{`Basic realm="Git LFS"`},
+				"Content-Type":     []string{"application/vnd.git-lfs+json"},
+			},
+			expBody: `{"message":"Credentials needed"}` + "\n",
+		},
+		{
+			name:   "bearer token of a deleted user",
+			header: bearer("secret", time.Minute),
+			mockStore: func() *MockStore {
+				mockStore := NewMockStore()
+				mockStore.GetUserByIDFunc.SetDefaultReturn(nil, database.ErrUserNotExist{})
+				return mockStore
+			},
+			expStatusCode: http.StatusUnauthorized,
+			expHeader: http.Header{
+				"Lfs-Authenticate": []string{`Basic realm="Git LFS"`},
+				"Content-Type":     []string{"application/vnd.git-lfs+json"},
+			},
+			expBody: `{"message":"Credentials needed"}` + "\n",
+		},
+		{
+			name:   "bearer token of a disabled user",
+			header: bearer("secret", time.Minute),
+			mockStore: func() *MockStore {
+				mockStore := NewMockStore()
+				mockStore.GetUserByIDFunc.SetDefaultReturn(&database.User{ID: 2, ProhibitLogin: true}, nil)
+				return mockStore
+			},
+			expStatusCode: http.StatusForbidden,
+			expHeader: http.Header{
+				"Content-Type": []string{"application/vnd.git-lfs+json"},
+			},
+			expBody: `{"message":"User account is disabled"}` + "\n",
 		},
 		{
 			name:              "no authorization when signing in is required to view",
@@ -302,6 +374,7 @@ func TestAuthorize(t *testing.T) {
 		name          string
 		anonymous     bool
 		proxyUser     string
+		token         *lfsx.Token
 		accessMode    database.AccessMode
 		mockStore     func() *MockStore
 		expStatusCode int
@@ -391,6 +464,102 @@ func TestAuthorize(t *testing.T) {
 			expStatusCode: http.StatusNotFound,
 		},
 		{
+			name:       "token for another repository",
+			token:      &lfsx.Token{RepoID: 2, Upload: true},
+			accessMode: database.AccessModeRead,
+			mockStore: func() *MockStore {
+				mockStore := NewMockStore()
+				mockStore.AuthorizeRepositoryAccessFunc.SetDefaultReturn(true)
+				mockStore.GetRepositoryByNameFunc.SetDefaultHook(func(ctx context.Context, ownerID int64, name string) (*database.Repository, error) {
+					return &database.Repository{ID: 1, Name: name}, nil
+				})
+				mockStore.GetUserByUsernameFunc.SetDefaultHook(func(ctx context.Context, username string) (*database.User, error) {
+					return &database.User{Name: username}, nil
+				})
+				return mockStore
+			},
+			expStatusCode: http.StatusForbidden,
+			expBody:       `{"message":"The token does not grant this access"}` + "\n",
+		},
+		{
+			name:       "download token to upload",
+			token:      &lfsx.Token{RepoID: 1},
+			accessMode: database.AccessModeWrite,
+			mockStore: func() *MockStore {
+				mockStore := NewMockStore()
+				mockStore.AuthorizeRepositoryAccessFunc.SetDefaultReturn(true)
+				mockStore.GetRepositoryByNameFunc.SetDefaultHook(func(ctx context.Context, ownerID int64, name string) (*database.Repository, error) {
+					return &database.Repository{ID: 1, Name: name}, nil
+				})
+				mockStore.GetUserByUsernameFunc.SetDefaultHook(func(ctx context.Context, username string) (*database.User, error) {
+					return &database.User{Name: username}, nil
+				})
+				return mockStore
+			},
+			expStatusCode: http.StatusForbidden,
+			expBody:       `{"message":"The token does not grant this access"}` + "\n",
+		},
+		{
+			name:       "upload token to upload",
+			token:      &lfsx.Token{RepoID: 1, Upload: true},
+			accessMode: database.AccessModeWrite,
+			mockStore: func() *MockStore {
+				mockStore := NewMockStore()
+				mockStore.AuthorizeRepositoryAccessFunc.SetDefaultReturn(true)
+				mockStore.GetRepositoryByNameFunc.SetDefaultHook(func(ctx context.Context, ownerID int64, name string) (*database.Repository, error) {
+					return &database.Repository{ID: 1, Name: name}, nil
+				})
+				mockStore.GetUserByUsernameFunc.SetDefaultHook(func(ctx context.Context, username string) (*database.User, error) {
+					return &database.User{Name: username}, nil
+				})
+				return mockStore
+			},
+			expStatusCode: http.StatusOK,
+			expBody:       "owner.Name: owner, repo.Name: repo",
+		},
+		{
+			name:       "token of a deploy key of the repository",
+			anonymous:  true,
+			token:      &lfsx.Token{RepoID: 1, DeployKeyID: 3},
+			accessMode: database.AccessModeRead,
+			mockStore: func() *MockStore {
+				mockStore := NewMockStore()
+				mockStore.GetDeployKeyByRepoAndKeyFunc.SetDefaultHook(func(_ context.Context, repoID, keyID int64) (*database.DeployKey, error) {
+					if repoID == 1 && keyID == 3 {
+						return &database.DeployKey{RepoID: repoID, KeyID: keyID}, nil
+					}
+					return nil, database.ErrDeployKeyNotExist{}
+				})
+				mockStore.GetRepositoryByNameFunc.SetDefaultHook(func(ctx context.Context, ownerID int64, name string) (*database.Repository, error) {
+					return &database.Repository{ID: 1, Name: name, IsPrivate: true}, nil
+				})
+				mockStore.GetUserByUsernameFunc.SetDefaultHook(func(ctx context.Context, username string) (*database.User, error) {
+					return &database.User{Name: username}, nil
+				})
+				return mockStore
+			},
+			expStatusCode: http.StatusOK,
+			expBody:       "owner.Name: owner, repo.Name: repo",
+		},
+		{
+			name:       "token of a deleted deploy key",
+			anonymous:  true,
+			token:      &lfsx.Token{RepoID: 1, DeployKeyID: 3},
+			accessMode: database.AccessModeRead,
+			mockStore: func() *MockStore {
+				mockStore := NewMockStore()
+				mockStore.GetDeployKeyByRepoAndKeyFunc.SetDefaultReturn(nil, database.ErrDeployKeyNotExist{})
+				mockStore.GetRepositoryByNameFunc.SetDefaultHook(func(ctx context.Context, ownerID int64, name string) (*database.Repository, error) {
+					return &database.Repository{ID: 1, Name: name, IsPrivate: true}, nil
+				})
+				mockStore.GetUserByUsernameFunc.SetDefaultHook(func(ctx context.Context, username string) (*database.User, error) {
+					return &database.User{Name: username}, nil
+				})
+				return mockStore
+			},
+			expStatusCode: http.StatusNotFound,
+		},
+		{
 			name:       "actor is authorized",
 			accessMode: database.AccessModeRead,
 			mockStore: func() *MockStore {
@@ -424,6 +593,7 @@ func TestAuthorize(t *testing.T) {
 				} else {
 					c.Map(&database.User{ID: 1})
 				}
+				c.Map(test.token)
 			})
 			m.Get(
 				"/{owner}/{repo}",

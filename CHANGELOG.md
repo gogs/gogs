@@ -32,6 +32,7 @@ All notable changes to Gogs are documented in this file.
 - API endpoints to create branches and tags: `POST /repos/{owner}/{repo}/branches` and `POST /repos/{owner}/{repo}/tags`. [#8566](https://github.com/gogs/gogs/pull/8566)
 - API endpoint for an access token to delete itself: `DELETE /user/token`, e.g., for a tool to revoke its token when it is done. [#8574](https://github.com/gogs/gogs/pull/8574)
 - Commit pages link issue references and @mentions in commit messages, and commit lists and file lists also link @mentions. [#8628](https://github.com/gogs/gogs/pull/8628)
+- Git LFS works over SSH, e.g., pushing and cloning LFS files with `git@host:owner/repo.git` remotes. [#8575](https://github.com/gogs/gogs/pull/8575)
 
 ### Changed
 

@@ -6,9 +6,13 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -65,14 +69,16 @@ type lfsBatchResponse struct {
 		Size    int64  `json:"size"`
 		Actions struct {
 			Download *struct {
-				Href string `json:"href"`
+				Href   string            `json:"href"`
+				Header map[string]string `json:"header"`
 			} `json:"download"`
 			Upload *struct {
 				Href   string            `json:"href"`
 				Header map[string]string `json:"header"`
 			} `json:"upload"`
 			Verify *struct {
-				Href string `json:"href"`
+				Href   string            `json:"href"`
+				Header map[string]string `json:"header"`
 			} `json:"verify"`
 			Error *struct {
 				Code    int    `json:"code"`
@@ -357,5 +363,324 @@ func TestLFSGitClient(t *testing.T) {
 		out, err := gitCommand(clone, "push", "origin", "main").CombinedOutput()
 		require.Error(t, err, "push succeeded: %s", out)
 		assert.NotEqual(t, gitRun(t, clone, "rev-parse", "HEAD"), gitMainOnDisk(t, repo))
+	})
+}
+
+// TestLFSGitClientOverSSH pushes and pulls LFS objects with the Git LFS client
+// over the builtin SSH server, which it authenticates with through
+// git-lfs-authenticate.
+func TestLFSGitClientOverSSH(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	reader := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
+	repoSettingsAddCollaborator(t, repo, reader, database.AccessModeRead)
+	ownerKey := sshUserKey(t, owner.ID)
+	ownerClient := lfsClient(t, owner)
+
+	dir := ownerKey.clone(t, repo)
+	gitRun(t, dir, "lfs", "install", "--local")
+	gitRun(t, dir, "lfs", "track", "*.bin")
+	gitRun(t, dir, "add", ".gitattributes")
+	gitRun(t, dir, "commit", "-m", "Track *.bin")
+
+	// Git LFS sends the path of each form of remote differently, e.g., with or
+	// without a leading slash.
+	path := repo.Owner + "/" + repo.Name + ".git"
+	remotes := []string{sshRemoteURL(repo), "git@127.0.0.1:/" + path, "git@127.0.0.1:" + path}
+	contents := make(map[string][]byte, len(remotes))
+	for i, remote := range remotes {
+		content, oid := lfsObject()
+		name := fmt.Sprintf("large-%d.bin", i)
+		contents[name] = content
+		require.NoError(t, os.WriteFile(filepath.Join(dir, name), content, 0o600))
+		gitRun(t, dir, "add", name)
+		gitRun(t, dir, "commit", "-m", "Add "+name)
+		out, err := ownerKey.git(dir, "push", remote, "main")
+		require.NoError(t, err, "push to %s: %s", remote, out)
+
+		status, _, body := ownerClient.doRaw(http.MethodGet, lfsBasePath(repo)+"/basic/"+oid, "", nil)
+		require.Equal(t, http.StatusOK, status, "object pushed to %s not stored: %s", remote, body)
+		assert.Equal(t, content, body)
+	}
+
+	// cloneWithLFS clones the repository with the key, with the LFS filter that
+	// checks out the objects during the clone as with Git LFS installed
+	// globally, and checks their content.
+	cloneWithLFS := func(t *testing.T, key *sshKey) string {
+		t.Helper()
+
+		dir := filepath.Join(t.TempDir(), "clone")
+		out, err := key.git(filepath.Dir(dir), "clone",
+			"--config", "filter.lfs.process=git-lfs filter-process",
+			"--config", "filter.lfs.required=true",
+			sshRemoteURL(repo), dir,
+		)
+		require.NoError(t, err, "clone: %s", out)
+		for name, content := range contents {
+			got, err := os.ReadFile(filepath.Join(dir, name))
+			require.NoError(t, err)
+			assert.Equal(t, content, got, name)
+		}
+		return dir
+	}
+
+	t.Run("read collaborator", func(t *testing.T) {
+		key := sshUserKey(t, reader.ID)
+		dir := cloneWithLFS(t, key)
+
+		gitRun(t, dir, "lfs", "install", "--local")
+		content, oid := lfsObject()
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "reader.bin"), content, 0o600))
+		gitRun(t, dir, "add", "reader.bin")
+		gitRun(t, dir, "commit", "-m", "Add reader.bin")
+		out, err := key.git(dir, "push", "origin", "main")
+		require.Error(t, err, "push succeeded: %s", out)
+
+		status, _, body := ownerClient.doRaw(http.MethodGet, lfsBasePath(repo)+"/basic/"+oid, "", nil)
+		assert.Equal(t, http.StatusNotFound, status, "object stored without write access: %s", body)
+	})
+
+	t.Run("deploy key", func(t *testing.T) {
+		cloneWithLFS(t, sshDeployKey(t, repo))
+	})
+}
+
+// lfsSSHCredentials is what git-lfs-authenticate writes.
+type lfsSSHCredentials struct {
+	Href      string            `json:"href"`
+	Header    map[string]string `json:"header"`
+	ExpiresIn int               `json:"expires_in"`
+}
+
+// lfsSSHAuthenticate runs git-lfs-authenticate for the repository over SSH
+// with the key, as Git LFS does, and returns its output and what it wrote to
+// standard error.
+func lfsSSHAuthenticate(key *sshKey, repo *Repository, operation string) ([]byte, string, error) {
+	args := append(key.sshArgs(), "git@127.0.0.1", "git-lfs-authenticate "+repo.Owner+"/"+repo.Name+".git "+operation)
+	cmd := exec.Command("ssh", args...)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	out, err := cmd.Output()
+	return out, stderr.String(), err
+}
+
+// lfsSSHToken returns the bearer token in the output of git-lfs-authenticate
+// for the repository, after checking the rest of the output.
+func lfsSSHToken(t *testing.T, repo *Repository, out []byte) string {
+	t.Helper()
+
+	var creds lfsSSHCredentials
+	require.NoError(t, json.Unmarshal(out, &creds), "output: %s", out)
+	assert.Equal(t, serverURL+"/"+repo.Owner+"/"+repo.Name+".git/info/lfs", creds.Href)
+	assert.Equal(t, 3600, creds.ExpiresIn)
+	token, ok := strings.CutPrefix(creds.Header["Authorization"], "Bearer ")
+	require.True(t, ok, "header: %v", creds.Header)
+	return token
+}
+
+// lfsSSHKeyToken returns the bearer token that git-lfs-authenticate gives for
+// the key and the operation on the repository.
+func lfsSSHKeyToken(t *testing.T, key *sshKey, repo *Repository, operation string) string {
+	t.Helper()
+
+	out, stderr, err := lfsSSHAuthenticate(key, repo, operation)
+	require.NoError(t, err, "git-lfs-authenticate: %s", stderr)
+	return lfsSSHToken(t, repo, out)
+}
+
+// lfsTokenClient returns a client that speaks the LFS protocol with the
+// bearer token.
+func lfsTokenClient(t *testing.T, token string) *client {
+	t.Helper()
+
+	c := lfsClient(t, nil)
+	c.header.Set("Authorization", "Bearer "+token)
+	return c
+}
+
+func TestLFSSSHAuthenticate(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
+	otherRepo := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true, Private: true})
+	ownerKey := sshUserKey(t, owner.ID)
+	content, oid := lfsObject()
+	for _, r := range []*Repository{repo, otherRepo} {
+		status, _, body := lfsClient(t, owner).doRaw(http.MethodPut, lfsBasePath(r)+"/basic/"+oid, "application/octet-stream", bytes.NewReader(content))
+		require.Equal(t, http.StatusOK, status, "response: %s", body)
+	}
+	get := func(c *client, r *Repository) (int, []byte) {
+		status, _, body := c.doRaw(http.MethodGet, lfsBasePath(r)+"/basic/"+oid, "", nil)
+		return status, body
+	}
+
+	t.Run("download", func(t *testing.T) {
+		token := lfsSSHKeyToken(t, ownerKey, repo, "download")
+		c := lfsTokenClient(t, token)
+
+		status, body := get(c, repo)
+		require.Equal(t, http.StatusOK, status, "response: %s", body)
+		assert.Equal(t, content, body)
+
+		// Git LFS sends the token only to the batch API, so the actions repeat it.
+		download := lfsBatch(t, c, repo, "download", oid, len(content)).Objects[0].Actions
+		require.NotNil(t, download.Download)
+		assert.Equal(t, map[string]string{"Authorization": "Bearer " + token}, download.Download.Header)
+
+		otherContent, otherOID := lfsObject()
+		status, _, body = c.doRaw(http.MethodPut, lfsBasePath(repo)+"/basic/"+otherOID, "application/octet-stream", bytes.NewReader(otherContent))
+		assert.Equal(t, http.StatusForbidden, status, "response: %s", body)
+
+		// The owner reads the other repository, but the token is for one only.
+		status, body = get(c, otherRepo)
+		assert.Equal(t, http.StatusForbidden, status, "response: %s", body)
+
+		tampered := []byte(token)
+		tampered[0] ^= 1
+		status, body = get(lfsTokenClient(t, string(tampered)), repo)
+		assert.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
+	})
+
+	t.Run("upload", func(t *testing.T) {
+		token := lfsSSHKeyToken(t, ownerKey, repo, "upload")
+		c := lfsTokenClient(t, token)
+		otherContent, otherOID := lfsObject()
+
+		upload := lfsBatch(t, c, repo, "upload", otherOID, len(otherContent)).Objects[0].Actions
+		require.NotNil(t, upload.Upload)
+		assert.Equal(t, map[string]string{
+			"Authorization": "Bearer " + token,
+			"Content-Type":  "application/octet-stream",
+		}, upload.Upload.Header)
+		require.NotNil(t, upload.Verify)
+		assert.Equal(t, map[string]string{"Authorization": "Bearer " + token}, upload.Verify.Header)
+
+		status, _, body := c.doRaw(http.MethodPut, lfsBasePath(repo)+"/basic/"+otherOID, "application/octet-stream", bytes.NewReader(otherContent))
+		require.Equal(t, http.StatusOK, status, "response: %s", body)
+		status, body = lfsPostJSON(t, c, lfsBasePath(repo)+"/basic/verify", map[string]any{"oid": otherOID, "size": len(otherContent)})
+		assert.Equal(t, http.StatusOK, status, "response: %s", body)
+	})
+
+	t.Run("read collaborator", func(t *testing.T) {
+		reader := seedUser(t, CreateUserOptions{})
+		repoSettingsAddCollaborator(t, repo, reader, database.AccessModeRead)
+		key := sshUserKey(t, reader.ID)
+
+		_, stderr, err := lfsSSHAuthenticate(key, repo, "upload")
+		require.Error(t, err)
+		assert.Contains(t, stderr, "You do not have sufficient authorization for this action")
+
+		c := lfsTokenClient(t, lfsSSHKeyToken(t, key, repo, "download"))
+		status, body := get(c, repo)
+		require.Equal(t, http.StatusOK, status, "response: %s", body)
+
+		// The token stops working with the access it was given for.
+		status, body = authenticatedClient(t, owner).do(http.MethodDelete, repoSettingsAPIPath(repo, "/settings/collaborators/"+reader.Name), repoSettingsNoBody)
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+		status, body = get(c, repo)
+		assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
+	})
+
+	t.Run("deploy key", func(t *testing.T) {
+		key := sshDeployKey(t, repo)
+
+		_, stderr, err := lfsSSHAuthenticate(key, repo, "upload")
+		require.Error(t, err)
+		assert.Contains(t, stderr, "Key permission denied")
+
+		c := lfsTokenClient(t, lfsSSHKeyToken(t, key, repo, "download"))
+		status, body := get(c, repo)
+		require.Equal(t, http.StatusOK, status, "response: %s", body)
+		assert.Equal(t, content, body)
+
+		// The token stops working with the key it was given for.
+		deployKey, err := database.Handle.DeployKeys().GetByRepoAndKey(t.Context(), repo.ID, key.id)
+		require.NoError(t, err)
+		status, body = authenticatedClient(t, owner).do(http.MethodDelete, repoSettingsAPIPath(repo, "/settings/keys/"+strconv.FormatInt(deployKey.ID, 10)), repoSettingsNoBody)
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+		status, body = get(c, repo)
+		assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
+	})
+
+	t.Run("disabled user", func(t *testing.T) {
+		public := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+		disabled := seedUser(t, CreateUserOptions{})
+		key := sshUserKey(t, disabled.ID)
+		prohibitLogin := true
+		require.NoError(t, database.Handle.Users().Update(t.Context(), disabled.ID, database.UpdateUserOptions{ProhibitLogin: &prohibitLogin}))
+
+		// Like Git, the key reads the public repository as anyone does.
+		out, stderr, err := lfsSSHAuthenticate(key, public, "download")
+		require.NoError(t, err, "git-lfs-authenticate: %s", stderr)
+		var creds lfsSSHCredentials
+		require.NoError(t, json.Unmarshal(out, &creds), "output: %s", out)
+		assert.Equal(t, serverURL+"/"+public.Owner+"/"+public.Name+".git/info/lfs", creds.Href)
+		assert.Empty(t, creds.Header)
+	})
+
+	t.Run("deploy key of another repository", func(t *testing.T) {
+		public := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+		status, _, body := lfsClient(t, owner).doRaw(http.MethodPut, lfsBasePath(public)+"/basic/"+oid, "application/octet-stream", bytes.NewReader(content))
+		require.Equal(t, http.StatusOK, status, "response: %s", body)
+		stranger := seedUser(t, CreateUserOptions{})
+		key := sshDeployKey(t, seedRepository(t, stranger.ID, CreateRepositoryOptions{AutoInit: true}))
+
+		// Like Git, the key reads the public repository as anyone does, not as its
+		// owner.
+		out, stderr, err := lfsSSHAuthenticate(key, public, "download")
+		require.NoError(t, err, "git-lfs-authenticate: %s", stderr)
+		var creds lfsSSHCredentials
+		require.NoError(t, json.Unmarshal(out, &creds), "output: %s", out)
+		assert.Equal(t, serverURL+"/"+public.Owner+"/"+public.Name+".git/info/lfs", creds.Href)
+		c := lfsClient(t, nil)
+		for k, v := range creds.Header {
+			c.header.Set(k, v)
+		}
+		status, body = get(c, public)
+		require.Equal(t, http.StatusOK, status, "response: %s", body)
+
+		repoVisibilityPatch(t, authenticatedClient(t, owner), public, true, false)
+		status, body = get(c, public)
+		assert.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
+
+		_, stderr, err = lfsSSHAuthenticate(key, public, "download")
+		require.Error(t, err)
+		assert.Contains(t, stderr, "Key access denied")
+	})
+
+	t.Run("wiki", func(t *testing.T) {
+		// Git LFS asks for the remote of a wiki checkout, which stores its
+		// objects with the repository. Only pushing to the wiki creates it.
+		wiki := &Repository{Owner: repo.Owner, Name: repo.Name + ".wiki"}
+		out, stderr, err := lfsSSHAuthenticate(ownerKey, wiki, "upload")
+		require.NoError(t, err, "git-lfs-authenticate: %s", stderr)
+		token := lfsSSHToken(t, repo, out)
+		assert.NoDirExists(t, database.WikiPath(repo.Owner, repo.Name))
+
+		status, body := get(lfsTokenClient(t, token), repo)
+		require.Equal(t, http.StatusOK, status, "response: %s", body)
+		assert.Equal(t, content, body)
+	})
+
+	t.Run("unknown operation", func(t *testing.T) {
+		_, stderr, err := lfsSSHAuthenticate(ownerKey, repo, "delete")
+		require.Error(t, err)
+		assert.Contains(t, stderr, "Unknown LFS operation")
+	})
+
+	t.Run("gogs serv", func(t *testing.T) {
+		// OpenSSH runs "gogs serv" with the command the client sends.
+		cmd := exec.Command(servProgram(t, ownerKey.id), "git@localhost", "git-lfs-authenticate "+repo.Owner+"/"+repo.Name+".git download")
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+		out, err := cmd.Output()
+		require.NoError(t, err, "gogs serv: %s", stderr.String())
+
+		status, body := get(lfsTokenClient(t, lfsSSHToken(t, repo, out)), repo)
+		require.Equal(t, http.StatusOK, status, "response: %s", body)
+		assert.Equal(t, content, body)
 	})
 }

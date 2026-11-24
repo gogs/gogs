@@ -33,6 +33,9 @@ type MockStore struct {
 	// GetAccessTokenBySHA1Func is an instance of a mock function object
 	// controlling the behavior of the method GetAccessTokenBySHA1.
 	GetAccessTokenBySHA1Func *StoreGetAccessTokenBySHA1Func
+	// GetDeployKeyByRepoAndKeyFunc is an instance of a mock function object
+	// controlling the behavior of the method GetDeployKeyByRepoAndKey.
+	GetDeployKeyByRepoAndKeyFunc *StoreGetDeployKeyByRepoAndKeyFunc
 	// GetLFSObjectByOIDFunc is an instance of a mock function object
 	// controlling the behavior of the method GetLFSObjectByOID.
 	GetLFSObjectByOIDFunc *StoreGetLFSObjectByOIDFunc
@@ -82,6 +85,11 @@ func NewMockStore() *MockStore {
 		},
 		GetAccessTokenBySHA1Func: &StoreGetAccessTokenBySHA1Func{
 			defaultHook: func(context.Context, string) (r0 *database.AccessToken, r1 error) {
+				return
+			},
+		},
+		GetDeployKeyByRepoAndKeyFunc: &StoreGetDeployKeyByRepoAndKeyFunc{
+			defaultHook: func(context.Context, int64, int64) (r0 *database.DeployKey, r1 error) {
 				return
 			},
 		},
@@ -152,6 +160,11 @@ func NewStrictMockStore() *MockStore {
 				panic("unexpected invocation of MockStore.GetAccessTokenBySHA1")
 			},
 		},
+		GetDeployKeyByRepoAndKeyFunc: &StoreGetDeployKeyByRepoAndKeyFunc{
+			defaultHook: func(context.Context, int64, int64) (*database.DeployKey, error) {
+				panic("unexpected invocation of MockStore.GetDeployKeyByRepoAndKey")
+			},
+		},
 		GetLFSObjectByOIDFunc: &StoreGetLFSObjectByOIDFunc{
 			defaultHook: func(context.Context, int64, lfsx.OID) (*database.LFSObject, error) {
 				panic("unexpected invocation of MockStore.GetLFSObjectByOID")
@@ -208,6 +221,9 @@ func NewMockStoreFrom(i Store) *MockStore {
 		},
 		GetAccessTokenBySHA1Func: &StoreGetAccessTokenBySHA1Func{
 			defaultHook: i.GetAccessTokenBySHA1,
+		},
+		GetDeployKeyByRepoAndKeyFunc: &StoreGetDeployKeyByRepoAndKeyFunc{
+			defaultHook: i.GetDeployKeyByRepoAndKey,
 		},
 		GetLFSObjectByOIDFunc: &StoreGetLFSObjectByOIDFunc{
 			defaultHook: i.GetLFSObjectByOID,
@@ -795,6 +811,119 @@ func (c StoreGetAccessTokenBySHA1FuncCall) Args() []interface{} {
 // Results returns an interface slice containing the results of this
 // invocation.
 func (c StoreGetAccessTokenBySHA1FuncCall) Results() []interface{} {
+	return []interface{}{c.Result0, c.Result1}
+}
+
+// StoreGetDeployKeyByRepoAndKeyFunc describes the behavior when the
+// GetDeployKeyByRepoAndKey method of the parent MockStore instance is
+// invoked.
+type StoreGetDeployKeyByRepoAndKeyFunc struct {
+	defaultHook func(context.Context, int64, int64) (*database.DeployKey, error)
+	hooks       []func(context.Context, int64, int64) (*database.DeployKey, error)
+	history     []StoreGetDeployKeyByRepoAndKeyFuncCall
+	mutex       sync.Mutex
+}
+
+// GetDeployKeyByRepoAndKey delegates to the next hook function in the queue
+// and stores the parameter and result values of this invocation.
+func (m *MockStore) GetDeployKeyByRepoAndKey(v0 context.Context, v1 int64, v2 int64) (*database.DeployKey, error) {
+	r0, r1 := m.GetDeployKeyByRepoAndKeyFunc.nextHook()(v0, v1, v2)
+	m.GetDeployKeyByRepoAndKeyFunc.appendCall(StoreGetDeployKeyByRepoAndKeyFuncCall{v0, v1, v2, r0, r1})
+	return r0, r1
+}
+
+// SetDefaultHook sets function that is called when the
+// GetDeployKeyByRepoAndKey method of the parent MockStore instance is
+// invoked and the hook queue is empty.
+func (f *StoreGetDeployKeyByRepoAndKeyFunc) SetDefaultHook(hook func(context.Context, int64, int64) (*database.DeployKey, error)) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// GetDeployKeyByRepoAndKey method of the parent MockStore instance invokes
+// the hook at the front of the queue and discards it. After the queue is
+// empty, the default hook function is invoked for any future action.
+func (f *StoreGetDeployKeyByRepoAndKeyFunc) PushHook(hook func(context.Context, int64, int64) (*database.DeployKey, error)) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *StoreGetDeployKeyByRepoAndKeyFunc) SetDefaultReturn(r0 *database.DeployKey, r1 error) {
+	f.SetDefaultHook(func(context.Context, int64, int64) (*database.DeployKey, error) {
+		return r0, r1
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *StoreGetDeployKeyByRepoAndKeyFunc) PushReturn(r0 *database.DeployKey, r1 error) {
+	f.PushHook(func(context.Context, int64, int64) (*database.DeployKey, error) {
+		return r0, r1
+	})
+}
+
+func (f *StoreGetDeployKeyByRepoAndKeyFunc) nextHook() func(context.Context, int64, int64) (*database.DeployKey, error) {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *StoreGetDeployKeyByRepoAndKeyFunc) appendCall(r0 StoreGetDeployKeyByRepoAndKeyFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of StoreGetDeployKeyByRepoAndKeyFuncCall
+// objects describing the invocations of this function.
+func (f *StoreGetDeployKeyByRepoAndKeyFunc) History() []StoreGetDeployKeyByRepoAndKeyFuncCall {
+	f.mutex.Lock()
+	history := make([]StoreGetDeployKeyByRepoAndKeyFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// StoreGetDeployKeyByRepoAndKeyFuncCall is an object that describes an
+// invocation of method GetDeployKeyByRepoAndKey on an instance of
+// MockStore.
+type StoreGetDeployKeyByRepoAndKeyFuncCall struct {
+	// Arg0 is the value of the 1st argument passed to this method
+	// invocation.
+	Arg0 context.Context
+	// Arg1 is the value of the 2nd argument passed to this method
+	// invocation.
+	Arg1 int64
+	// Arg2 is the value of the 3rd argument passed to this method
+	// invocation.
+	Arg2 int64
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 *database.DeployKey
+	// Result1 is the value of the 2nd result returned from this method
+	// invocation.
+	Result1 error
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation.
+func (c StoreGetDeployKeyByRepoAndKeyFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2}
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c StoreGetDeployKeyByRepoAndKeyFuncCall) Results() []interface{} {
 	return []interface{}{c.Result0, c.Result1}
 }
 
