@@ -5,6 +5,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/cockroachdb/errors"
 	"github.com/unknwon/cae/zip"
@@ -234,8 +235,10 @@ func leftoverBackupError(path string) error {
 //     which holds the open SQLite database.
 //   - An app data directory, which is also in the custom directory when APP_DATA_PATH points there, is restored
 //     from the archive's "data".
+//   - "<name>.bak" is what an earlier restore kept. Older backups include it, and restoring it would move the current
+//     one to "<name>.bak.bak".
 func skipCustomEntry(customDir, name string) bool {
-	if name == "data" {
+	if name == "data" || strings.HasSuffix(name, ".bak") {
 		return true
 	}
 	path := filepath.Join(customDir, name)

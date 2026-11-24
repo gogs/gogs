@@ -90,6 +90,21 @@ func TestRestoreCustomDir(t *testing.T) {
 		})
 	}
 
+	t.Run("skips what an earlier restore kept", func(t *testing.T) {
+		root := t.TempDir()
+		customDir := filepath.Join(root, "custom")
+		writeFile(t, filepath.Join(customDir, "conf", "app.ini"), "current")
+		srcDir := filepath.Join(root, "archive", "custom")
+		writeFile(t, filepath.Join(srcDir, "conf", "app.ini"), "restored")
+		writeFile(t, filepath.Join(srcDir, "conf.bak", "app.ini"), "kept by a restore before the backup")
+
+		require.NoError(t, restoreCustomDir(srcDir, customDir))
+
+		assert.Equal(t, "restored", readFile(t, filepath.Join(customDir, "conf", "app.ini")))
+		assert.Equal(t, "current", readFile(t, filepath.Join(customDir, "conf.bak", "app.ini")))
+		assert.NoDirExists(t, filepath.Join(customDir, "conf.bak.bak"))
+	})
+
 	t.Run("creates missing custom directory", func(t *testing.T) {
 		root := t.TempDir()
 		customDir := filepath.Join(root, "custom")
