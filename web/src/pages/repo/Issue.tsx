@@ -21,7 +21,6 @@ import { OpenedBy } from "@/components/IssueListItem";
 import { Markdown } from "@/components/Markdown";
 import { RepoHeader } from "@/components/RepoHeader";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePageTitle } from "@/lib/page-title";
 import {
@@ -251,33 +250,57 @@ function IssueTitle({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueDat
     mutation.mutate();
   };
 
+  // The number sits beside the title, which wraps next to it, so the field
+  // that edits the title wraps the same way.
+  const number = <span className="shrink-0 font-normal text-(--color-muted-foreground)">#{data.index}</span>;
   if (editing) {
     return (
-      <form onSubmit={onSubmit} className="flex flex-col gap-2 sm:flex-row sm:items-start">
-        <div className="flex flex-1 flex-col gap-1">
-          <Input
-            aria-label={t("repo.milestones.title")}
-            value={title}
-            maxLength={255}
-            autoFocus
-            disabled={mutation.isPending}
-            aria-invalid={Boolean(fields.title) || undefined}
-            aria-describedby={fields.title || formError ? "issue-title-error" : undefined}
-            onChange={(e) => setTitle(e.target.value)}
-          />
+      // The form takes the place of the title without moving anything: the
+      // field sets its text where the title was, grows with it, and its edge
+      // sits outside it. The buttons are as tall as Edit.
+      <form onSubmit={onSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <div className="flex gap-3 text-2xl font-semibold">
+            {number}
+            <textarea
+              rows={1}
+              className="-my-px -ml-[calc(--spacing(1.5)+1px)] block min-w-0 flex-1 resize-none rounded-md border border-(--color-input) bg-(--color-field) px-1.5 py-0 text-(--color-foreground) outline-none transition-colors [field-sizing:content] wrap-anywhere focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-(--color-destructive)"
+              aria-label={t("repo.milestones.title")}
+              value={title}
+              maxLength={255}
+              autoFocus
+              disabled={mutation.isPending}
+              aria-invalid={Boolean(fields.title) || undefined}
+              aria-describedby={fields.title || formError ? "issue-title-error" : undefined}
+              // A title is one line: Enter saves it, Escape leaves it as it was.
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  e.currentTarget.form?.requestSubmit();
+                } else if (e.key === "Escape") {
+                  e.preventDefault();
+                  setEditing(false);
+                  setTitle(data.title);
+                  mutation.reset();
+                }
+              }}
+              onChange={(e) => setTitle(e.target.value.replace(/[\r\n]+/g, " "))}
+            />
+          </div>
           {fields.title || formError ? (
             <p id="issue-title-error" className="text-sm text-(--color-destructive)">
               {fields.title ?? formError}
             </p>
           ) : null}
         </div>
-        <div className="flex gap-2">
-          <Button type="submit" disabled={mutation.isPending}>
+        <div className="flex shrink-0 gap-2">
+          <Button type="submit" size="sm" disabled={mutation.isPending}>
             {t("repo.issues.save")}
           </Button>
           <Button
             type="button"
             variant="outline"
+            size="sm"
             disabled={mutation.isPending}
             onClick={() => {
               setEditing(false);
@@ -294,8 +317,11 @@ function IssueTitle({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueDat
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-      <h1 className="text-2xl font-semibold wrap-anywhere">
-        <span className="font-normal text-(--color-muted-foreground)">#{data.index}</span> {data.title}
+      <h1 className="flex min-w-0 gap-3 text-2xl font-semibold">
+        {number}
+        {/* The padding is the inset of the text in the field that edits it, so
+            the title wraps at the same words. */}
+        <span className="min-w-0 pr-[calc(--spacing(1.5)+1px)] wrap-anywhere">{data.title}</span>
       </h1>
       <div className="flex shrink-0 gap-2">
         {data.viewerCanEdit ? (
@@ -666,10 +692,10 @@ function ReplyItem({
                     variant="ghost"
                     size="icon"
                     aria-label={t("repo.issues.edit")}
-                    className="size-7 text-(--color-muted-foreground)"
+                    className="size-8 text-(--color-muted-foreground)"
                     onClick={() => setEditing(true)}
                   >
-                    <Pencil className="size-3.5" aria-hidden />
+                    <Pencil className="size-4" aria-hidden />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>{t("repo.issues.edit")}</TooltipContent>
