@@ -524,6 +524,18 @@ func TestSSHSecurityKey(t *testing.T) {
 		})
 	}
 
+	t.Run("deploy key", func(t *testing.T) {
+		key, content := sshNewSecurityKey(t, ssh.KeyAlgoSKED25519)
+		status, body := c.do(http.MethodPost, repoSettingsAPIPath(repo, "/settings/keys"), map[string]any{
+			"title":   UniqueName("deploy-"),
+			"content": content,
+		})
+		require.Equal(t, http.StatusCreated, status, "response: %s", body)
+
+		dir := key.clone(t, repo)
+		assert.Equal(t, head, gitRun(t, dir, "rev-parse", "HEAD"))
+	})
+
 	// Keys too short for their type are rejected, so the size check is on.
 	t.Run("short RSA key", func(t *testing.T) {
 		priv, err := rsa.GenerateKey(rand.Reader, 1536)
