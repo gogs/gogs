@@ -57,32 +57,38 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 		logger.FatalContext(ctx, "Failed to clean up previous leftover", "archiveDir", archivePath, "error", err)
 	}
 	defer func() { _ = os.RemoveAll(archivePath) }()
+	// fatal exits without running deferred calls, so it removes the extracted archive, which holds the
+	// configuration and the database dump, itself.
+	fatal := func(msg string, args ...any) {
+		_ = os.RemoveAll(archivePath)
+		logger.FatalContext(ctx, msg, args...)
+	}
 
 	logger.Info("Restoring backup", "archivePath", cmd.String("from"))
 	err = zip.ExtractTo(cmd.String("from"), tmpDir)
 	if err != nil {
-		logger.FatalContext(ctx, "Failed to extract backup archive", "error", err)
+		fatal("Failed to extract backup archive", "error", err)
 	}
 
 	// Check backup version
 	metaFile := filepath.Join(archivePath, "metadata.ini")
 	if !osx.IsFile(metaFile) {
-		logger.FatalContext(ctx, "File 'metadata.ini' is missing")
+		fatal("File 'metadata.ini' is missing")
 	}
 	metadata, err := ini.Load(metaFile)
 	if err != nil {
-		logger.FatalContext(ctx, "Failed to load metadata", "metadataPath", metaFile, "error", err)
+		fatal("Failed to load metadata", "metadataPath", metaFile, "error", err)
 	}
 	backupVersion := metadata.Section("").Key("GOGS_VERSION").MustString("999.0")
 	if semverx.Compare(conf.App.Version, "<", backupVersion) {
-		logger.FatalContext(ctx, "Current Gogs version is lower than backup version", "currentVersion", conf.App.Version, "backupVersion", backupVersion)
+		fatal("Current Gogs version is lower than backup version", "currentVersion", conf.App.Version, "backupVersion", backupVersion)
 	}
 	formatVersion := metadata.Section("").Key("VERSION").MustInt()
 	if formatVersion == 0 {
-		logger.FatalContext(ctx, "Backup format version is missing from metadata", "metadataPath", metaFile, "missingKey", "VERSION")
+		fatal("Backup format version is missing from metadata", "metadataPath", metaFile, "missingKey", "VERSION")
 	}
 	if formatVersion != currentBackupFormatVersion {
-		logger.FatalContext(ctx, "Unsupported backup format version", "backupFormatVersion", formatVersion, "supportedFormatVersion", currentBackupFormatVersion, "lastSupportedGogsVersion", lastSupportedVersionOfFormat[formatVersion])
+		fatal("Unsupported backup format version", "backupFormatVersion", formatVersion, "supportedFormatVersion", currentBackupFormatVersion, "lastSupportedGogsVersion", lastSupportedVersionOfFormat[formatVersion])
 	}
 
 	// If config file is not present in backup, user must set this file via flag.
@@ -92,7 +98,7 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 	if lineageConf := configFromLineage(cmd); lineageConf != "" {
 		customConf = lineageConf
 	} else if !osx.IsFile(configFile) {
-		logger.FatalContext(ctx, "Custom config file is not found in backup and '--config' is not specified")
+		fatal("Custom config file is not found in backup and '--config' is not specified")
 	} else {
 		customConf = configFile
 	}
@@ -114,13 +120,13 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 	// back by hand, whereas a failed database import cannot be undone.
 	if !cmd.Bool("database-only") {
 		if err = checkLeftoverBackups(archivePath); err != nil {
-			logger.FatalContext(ctx, "Failed to restore files", "error", err)
+			fatal("Failed to restore files", "error", err)
 		}
 
 		// Custom files
 		if srcDir := filepath.Join(archivePath, "custom"); osx.IsDir(srcDir) {
 			if err = restoreCustomDir(srcDir, conf.CustomDir()); err != nil {
-				logger.FatalContext(ctx, "Failed to import 'custom'", "error", err)
+				fatal("Failed to import 'custom'", "error", err)
 			}
 		}
 
@@ -134,7 +140,7 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 			}
 
 			if err = replacePath(srcPath, filepath.Join(conf.Server.AppDataPath, dir)); err != nil {
-				logger.FatalContext(ctx, "Failed to import 'data'", "error", err)
+				fatal("Failed to import 'data'", "error", err)
 			}
 		}
 	}
@@ -142,14 +148,14 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 	// Database
 	dbDir := path.Join(archivePath, "db")
 	if err = database.ImportDatabase(ctx, logger.Scoped("db"), conn, dbDir, cmd.Bool("verbose")); err != nil {
-		logger.FatalContext(ctx, "Failed to import database", "error", err)
+		fatal("Failed to import database", "error", err)
 	}
 
 	// Repositories
 	reposPath := filepath.Join(archivePath, "repositories.zip")
 	if !cmd.Bool("exclude-repos") && !cmd.Bool("database-only") && osx.IsFile(reposPath) {
 		if err := zip.ExtractTo(reposPath, filepath.Dir(conf.Repository.Root)); err != nil {
-			logger.FatalContext(ctx, "Failed to extract 'repositories.zip'", "error", err)
+			fatal("Failed to extract 'repositories.zip'", "error", err)
 		}
 	}
 

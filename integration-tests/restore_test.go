@@ -191,5 +191,7 @@ ROOT_PATH = %s
 		assert.Equal(t, "current", readTestFile(t, filepath.Join(customDir, "conf", "app.ini.local")))
 		assert.NoDirExists(t, filepath.Join(customDir, "conf.bak"))
 		assert.NoDirExists(t, filepath.Join(customDir, "log.bak"))
+		// The extracted archive holds the configuration and the database dump.
+		assert.NoDirExists(t, filepath.Join(root, "gogs-backup"))
 	})
 }
