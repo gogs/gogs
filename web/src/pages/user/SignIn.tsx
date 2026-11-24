@@ -162,8 +162,9 @@ export function SignIn() {
   function startPasskey() {
     setFormError(null);
     setFieldErrors({});
-    // Coming back to the password shows a new captcha image.
-    antiBot.reset();
+    // Coming back to the password shows a new captcha image. An altcha solution
+    // stays valid.
+    if (antiBotVerification === "captcha") antiBot.reset();
     setPasskey({ status: "waiting", attempt: 1 });
     setMethod("passkey");
   }
