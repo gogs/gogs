@@ -695,7 +695,7 @@
             "description": "Page number"
           },
           {
-            "name": "limit",
+            "name": "pageSize",
             "in": "query",
             "required": false,
             "schema": {
@@ -705,7 +705,7 @@
             "description": "Number of branches per page, at most `[api] MAX_RESPONSE_ITEMS` (50 by default)"
           }
         ],
-        "description": "Returns all branches. With `page` or `limit`, returns a page of them, and the `Link` header has the URLs of the next, last, first and previous pages."
+        "description": "Returns all branches. With `page` or `pageSize`, returns a page of them, and the `Link` header has the URLs of the next, last, first and previous pages."
       },
       "post": {
         "operationId": "createBranch",

@@ -28,7 +28,7 @@ func getBranch(c *apiContext) {
 }
 
 // listBranches lists all branches, or a page of them when the "page" or
-// "limit" query parameter is given.
+// "pageSize" query parameter is given.
 //
 // https://github.com/gogs/go-gogs-client/wiki/Repositories#list-branches
 func listBranches(c *apiContext) {
@@ -38,8 +38,8 @@ func listBranches(c *apiContext) {
 		return
 	}
 
-	if c.Query("page") != "" || c.Query("limit") != "" {
-		pageSize := toAllowedPageSize(c.QueryInt("limit"))
+	if c.Query("page") != "" || c.Query("pageSize") != "" {
+		pageSize := toAllowedPageSize(c.QueryInt("pageSize"))
 		page := c.queryPage(pageSize)
 		c.SetLinkHeader(len(branches), pageSize)
 		start := min((page-1)*pageSize, len(branches))

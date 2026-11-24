@@ -573,7 +573,7 @@ func TestAPIV1BranchesPages(t *testing.T) {
 		return apiV1RepoPath(repo, "/branches?"+query)
 	}
 
-	// Without "page" or "limit", all branches in one response, as before.
+	// Without "page" or "pageSize", all branches in one response, as before.
 	all, links := list(apiV1RepoPath(repo, "/branches"))
 	assert.ElementsMatch(t, []string{"main", "b0", "b1", "b2", "b3", "b4"}, all)
 	assert.Empty(t, links)
@@ -581,7 +581,7 @@ func TestAPIV1BranchesPages(t *testing.T) {
 	t.Run("next links", func(t *testing.T) {
 		got := []string{}
 		pages := 0
-		for next := branches("limit=4"); next != ""; pages++ {
+		for next := branches("pageSize=4"); next != ""; pages++ {
 			require.Less(t, pages, 2, "more pages than the branches fill")
 			names, links := list(next)
 			require.LessOrEqual(t, len(names), 4)
@@ -595,12 +595,12 @@ func TestAPIV1BranchesPages(t *testing.T) {
 	t.Run("past the last page", func(t *testing.T) {
 		// A page whose offset overflows an int is past the last page too.
 		for _, n := range []string{"10", "99999999999999999999"} {
-			got, links := list(branches("limit=4&page=" + n))
+			got, links := list(branches("pageSize=4&page=" + n))
 			assert.Empty(t, got, "page %s", n)
 			assert.Equal(t, map[string]string{
-				"first": branches("limit=4&page=1"),
-				"prev":  branches("limit=4&page=2"),
-				"last":  branches("limit=4&page=2"),
+				"first": branches("page=1&pageSize=4"),
+				"prev":  branches("page=2&pageSize=4"),
+				"last":  branches("page=2&pageSize=4"),
 			}, links, "page %s", n)
 		}
 	})
