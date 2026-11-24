@@ -6,6 +6,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/cockroachdb/errors"
 	"github.com/unknwon/cae/zip"
@@ -169,18 +170,28 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 // because the temporary directory is on another file system, the current dstPath is moved back so it is not lost.
 func replacePath(srcPath, dstPath string) error {
 	if !osx.Exist(dstPath) {
-		return os.Rename(srcPath, dstPath)
+		return crossDeviceHint(os.Rename(srcPath, dstPath))
 	}
 	if err := moveAside(dstPath); err != nil {
 		return errors.Wrap(err, "back up current")
 	}
 	if err := os.Rename(srcPath, dstPath); err != nil {
+		err = crossDeviceHint(err)
 		if rollbackErr := os.Rename(dstPath+".bak", dstPath); rollbackErr != nil {
 			return errors.Wrapf(err, "move, and the current one is left at '%s' because moving it back failed: %v", dstPath+".bak", rollbackErr)
 		}
 		return errors.Wrap(err, "move")
 	}
 	return nil
+}
+
+// crossDeviceHint explains the error of a rename that failed because the source is on another file system, as
+// the default temporary directory in the Docker image is.
+func crossDeviceHint(err error) error {
+	if errors.Is(err, syscall.EXDEV) {
+		return errors.Wrap(err, "'--tempdir' must be on the same file system as the custom and data directories")
+	}
+	return err
 }
 
 // moveAside renames the path to "<path>.bak" to make room for the restored copy.
