@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
-import { Copy, ExternalLink, LoaderCircle, Upload } from "lucide-react";
+import { Copy, LoaderCircle, Upload } from "lucide-react";
 import { type ChangeEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ import { RelativeTime } from "@/components/RelativeTime";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatBytes } from "@/lib/format";
 import { type AdminCustomFile, deleteAdminCustomFile, uploadAdminCustomFile } from "@/lib/queries/admin";
 import { toastError } from "@/lib/toast-error";
@@ -106,14 +107,19 @@ export function AdminFiles({ files }: { files: AdminCustomFile[] }) {
                 <FileIcon name={file.path.slice(file.path.lastIndexOf("/") + 1)} className="size-5" />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <a
-                      href={file.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-mono text-sm break-all hover:underline"
-                    >
-                      {file.path}
-                    </a>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <a
+                          href={file.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="rounded-sm font-mono text-sm break-all outline-none hover:underline focus-visible:ring-1 focus-visible:ring-(--color-ring)"
+                        >
+                          {file.path}
+                        </a>
+                      </TooltipTrigger>
+                      <TooltipContent>{t("admin.files_view_raw")}</TooltipContent>
+                    </Tooltip>
                     {file.replacesBuiltin ? (
                       <span className="rounded-full border border-(--color-primary) px-2 text-xs/5 font-medium text-(--color-primary)">
                         {t("admin.files_replaces_builtin")}
@@ -126,17 +132,6 @@ export function AdminFiles({ files }: { files: AdminCustomFile[] }) {
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" asChild>
-                  <a
-                    href={file.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={t("admin.files_raw_aria", { name: file.path })}
-                  >
-                    <ExternalLink className="size-4" aria-hidden />
-                    {t("admin.files_raw")}
-                  </a>
-                </Button>
                 <Button
                   variant="outline"
                   size="sm"
