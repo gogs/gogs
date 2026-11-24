@@ -2,6 +2,7 @@ package integrationtests
 
 import (
 	"context"
+	"maps"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -146,8 +147,10 @@ func TestAdminUsers(t *testing.T) {
 		require.NoError(t, err)
 		require.False(t, u.IsAdmin, "user updated by a request that was turned away")
 
+		signedIn := authenticatedClient(t, &User{Name: name, Password: password})
 		status, respBody := admin.do(http.MethodPatch, path, body)
 		require.Equal(t, http.StatusNoContent, status, "response: %s", respBody)
+		assert.Empty(t, signedIn.username(), "a session of the password before is still signed in")
 		u, err = database.Handle.Users().GetByID(t.Context(), created.ID)
 		require.NoError(t, err)
 		assert.Equal(t, newEmail, u.Email)
@@ -163,12 +166,35 @@ func TestAdminUsers(t *testing.T) {
 		c := authenticatedClient(t, &User{Name: name, Password: newPassword})
 		assert.Equal(t, name, c.username())
 
+		// An update without a password keeps the password.
+		withoutPassword := maps.Clone(body)
+		delete(withoutPassword, "password")
+		withoutPassword["location"] = "Mars"
+		status, respBody = admin.do(http.MethodPatch, path, withoutPassword)
+		require.Equal(t, http.StatusNoContent, status, "response: %s", respBody)
+		assert.Equal(t, name, c.username(), "signed out by an update that keeps the password")
+
 		// An email of another user is taken.
 		other := seedUser(t, CreateUserOptions{})
 		body["email"] = other.Email
 		status, respBody = admin.do(http.MethodPatch, path, body)
 		assert.Equal(t, http.StatusUnprocessableEntity, status, "response: %s", respBody)
 		assert.Contains(t, adminFieldErrors(t, respBody), "email")
+
+		// An admin who changes their own password stays signed in, but their other
+		// sessions are signed out.
+		self := seedUser(t, CreateUserOptions{Admin: true})
+		selfClient := authenticatedClient(t, self)
+		selfOther := authenticatedClient(t, self)
+		status, respBody = selfClient.do(http.MethodPatch, "/api/web/admin/users/"+strconv.FormatInt(self.ID, 10), map[string]any{
+			"email":    self.Email,
+			"password": UniqueName("password-"),
+			"isActive": true,
+			"isAdmin":  true,
+		})
+		require.Equal(t, http.StatusNoContent, status, "response: %s", respBody)
+		assert.Equal(t, self.Name, selfClient.username(), "the session that changed the password is signed out")
+		assert.Empty(t, selfOther.username(), "another session is still signed in")
 	})
 
 	t.Run("delete", func(t *testing.T) {

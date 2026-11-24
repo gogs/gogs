@@ -2,6 +2,8 @@ package context
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"net"
 	"net/http"
 	"strings"
@@ -55,6 +57,18 @@ type AuthStore interface {
 	AuthenticateUser(ctx context.Context, login, password string, loginSourceID int64) (*database.User, error)
 }
 
+// SessionKeyPasswordFingerprint is the session key of the PasswordFingerprint
+// of the signed-in user when they signed in, so that changing or resetting the
+// password signs out every session.
+const SessionKeyPasswordFingerprint = "passwordFingerprint"
+
+// PasswordFingerprint returns a value that changes whenever the password of the
+// user changes, without revealing the password hash.
+func PasswordFingerprint(u *database.User) string {
+	sum := sha256.Sum256([]byte("session:" + u.Salt + ":" + u.Password))
+	return hex.EncodeToString(sum[:16])
+}
+
 // authenticatedUserID returns the ID of the authenticated user, along with the
 // ID of the access token it authenticated with, which is 0 when the user does
 // not use token authentication.
@@ -89,11 +103,23 @@ func authenticatedUserID(logger *logx.Logger, store AuthStore, r *http.Request, 
 		return 0, 0
 	}
 	if id, ok := uid.(int64); ok {
-		_, err := store.GetUserByID(r.Context(), id)
+		u, err := store.GetUserByID(r.Context(), id)
 		if err != nil {
 			if !database.IsErrUserNotExist(err) {
 				logger.Error("Failed to get user by ID", "userID", id, "error", err)
 			}
+			return 0, 0
+		}
+
+		fingerprint := PasswordFingerprint(u)
+		switch sess.Get(SessionKeyPasswordFingerprint) {
+		case fingerprint:
+		case nil:
+			// Sessions from before the fingerprint was stored stay signed in until the
+			// password changes.
+			sess.Set(SessionKeyPasswordFingerprint, fingerprint)
+		default:
+			sess.Flush()
 			return 0, 0
 		}
 		return id, 0
