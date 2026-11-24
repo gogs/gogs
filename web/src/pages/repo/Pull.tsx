@@ -46,7 +46,7 @@ import { cn } from "@/lib/utils";
 
 import type { RepoCommitSearch } from "./Commit.search";
 import { CommitList } from "./Commits";
-import { IssueConversation, IssueHeader, UserLink } from "./Issue";
+import { IssueConversation, IssueHeader, UserMention } from "./Issue";
 import {
   CodeCommentForm,
   PullTimelineItem,
@@ -161,10 +161,7 @@ function PullSummary({ data }: { data: RepoPullData }) {
   const branches = { head: pull.headLabel, base: pull.baseLabel };
   return (
     <>
-      <UserLink user={user} className="font-semibold text-(--color-foreground) hover:underline">
-        {user.name}
-      </UserLink>{" "}
-      <RichText text={before} code={branches} />
+      <UserMention user={user} /> <RichText text={before} code={branches} />
       {pull.mergedAt ? (
         <>
           <Tooltip>

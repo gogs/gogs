@@ -334,15 +334,48 @@ export function UserLink({ user, className, children }: { user: IssueUser; class
   );
 }
 
+// UserMention names a user in a sentence with their avatar, linking to their
+// profile.
+export function UserMention({ user }: { user: IssueUser }) {
+  return (
+    <UserLink user={user} className="font-semibold text-(--color-foreground) hover:underline">
+      <img
+        src={user.avatarURL}
+        alt=""
+        className="mr-1.5 inline-block size-5 rounded-full border border-(--color-border) align-text-bottom"
+      />
+      {user.name}
+    </UserLink>
+  );
+}
+
+// MENTION_MARKER stands in for the user of an event sentence, passed as the
+// value of its placeholder, e.g., {name}.
+export const MENTION_MARKER = "<user/>";
+
 // EventSentence renders a translated sentence about something that happened,
 // e.g., "commented <a>3 hours ago</a>", making its link the time, which links
-// to the anchor of the event.
-export function EventSentence({ text, anchor, time }: { text: string; anchor: string; time: string }) {
+// to the anchor of the event, and its MENTION_MARKER the mention of the user.
+export function EventSentence({
+  text,
+  anchor,
+  time,
+  user,
+}: {
+  text: string;
+  anchor: string;
+  time: string;
+  user?: IssueUser;
+}) {
   const { t } = useTranslation();
   return (
     <>
-      {text.split(/(<a\b[^>]*>.*?<\/a>)/).map((part, i) =>
-        part.startsWith("<a") ? (
+      {text.split(/(<a\b[^>]*>.*?<\/a>|<user\/>)/).map((part, i) =>
+        part === MENTION_MARKER ? (
+          user ? (
+            <UserMention key={i} user={user} />
+          ) : null
+        ) : part.startsWith("<a") ? (
           <Tooltip key={i}>
             <TooltipTrigger asChild>
               <a href={`#${anchor}`} className={LINK_CLASS}>
@@ -891,14 +924,7 @@ function TimelineEvent({ comment }: { comment: IssueComment }) {
       </span>
       <div className="min-w-0 flex-1 py-2.5">
         <p className="text-(--color-muted-foreground) wrap-anywhere">
-          <UserLink user={comment.poster} className="font-semibold text-(--color-foreground) hover:underline">
-            <img
-              src={comment.poster.avatarURL}
-              alt=""
-              className="mr-1.5 inline-block size-5 rounded-full border border-(--color-border) align-text-bottom"
-            />
-            {comment.poster.name}
-          </UserLink>{" "}
+          <UserMention user={comment.poster} />{" "}
           <EventSentence text={event.text} anchor={anchor} time={comment.createdAt} />
         </p>
         {comment.type === "commit_ref" && comment.contentHTML ? (

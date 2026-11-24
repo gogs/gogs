@@ -39,7 +39,7 @@ import { useIsLinked } from "@/lib/use-is-linked";
 import { useUserInfo } from "@/lib/use-user-info";
 import { cn } from "@/lib/utils";
 
-import { Chip, CommentCard, EventSentence, ThreadReplies, UserLink } from "./Issue";
+import { Chip, CommentCard, EventSentence, MENTION_MARKER, ThreadReplies, UserLink, UserMention } from "./Issue";
 
 const REVIEW_EVENTS: Record<ReviewState, { icon: LucideIcon; text: string; className: string; label: string }> = {
   approve: {
@@ -77,7 +77,7 @@ export function PullTimelineItem({
   if (comment.type === "review_request" || comment.type === "review_request_removed") {
     const removed = comment.type === "review_request_removed";
     const text = t(removed ? "repo.pulls.review.event_request_removed" : "repo.pulls.review.event_requested", {
-      name: comment.target?.name ?? "",
+      name: MENTION_MARKER,
     });
     return (
       <EventRow
@@ -176,15 +176,8 @@ function EventRow({
         <Icon className={cn(CIRCLE_ICONS.has(Icon) ? "size-6" : "size-5", iconClassName)} aria-hidden />
       </span>
       <p className="min-w-0 flex-1 py-2.5 text-(--color-muted-foreground) wrap-anywhere">
-        <UserLink user={comment.poster} className="font-semibold text-(--color-foreground) hover:underline">
-          <img
-            src={comment.poster.avatarURL}
-            alt=""
-            className="mr-1.5 inline-block size-5 rounded-full border border-(--color-border) align-text-bottom"
-          />
-          {comment.poster.name}
-        </UserLink>{" "}
-        <EventSentence text={text} anchor={anchor} time={comment.createdAt} />
+        <UserMention user={comment.poster} />{" "}
+        <EventSentence text={text} anchor={anchor} time={comment.createdAt} user={comment.target} />
       </p>
     </div>
   );
@@ -270,7 +263,7 @@ export function ReviewThread({
             <Trans
               i18nKey="repo.pulls.review.resolved_by"
               values={{ name: thread.resolvedBy.name }}
-              components={{ name: <span className="font-semibold text-(--color-foreground)" /> }}
+              components={{ name: <UserMention user={thread.resolvedBy} /> }}
             />
           </span>
           <Button
