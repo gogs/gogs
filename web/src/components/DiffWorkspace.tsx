@@ -960,21 +960,21 @@ export function DiffWorkspace({
                         onClick={() => setTreeSearchOpen((open) => !open)}
                         aria-label={treeSearchOpen ? t("repo.search_hide") : t("repo.search_files")}
                         aria-pressed={treeSearchOpen}
-                        className="grid size-6 cursor-pointer place-items-center rounded text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
+                        className="grid size-7 cursor-pointer place-items-center rounded text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
                       >
                         <Search className="size-3.5" aria-hidden />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent>{treeSearchOpen ? t("repo.search_hide") : t("repo.search_files")}</TooltipContent>
                   </Tooltip>
-                  <span className="inline-flex items-stretch overflow-hidden rounded-md glass-control border border-(--color-border)">
+                  <span className="inline-flex h-7 items-stretch overflow-hidden rounded-md glass-control border border-(--color-border)">
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
                           type="button"
                           onClick={() => treeRef.current?.expandAll()}
                           aria-label={t("repo.expand_all_directories")}
-                          className="grid size-6 cursor-pointer place-items-center text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
+                          className="grid w-7 cursor-pointer place-items-center text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
                         >
                           <ChevronsUpDown className="size-3.5" aria-hidden />
                         </button>
@@ -987,7 +987,7 @@ export function DiffWorkspace({
                           type="button"
                           onClick={() => treeRef.current?.collapseAll()}
                           aria-label={t("repo.collapse_all_directories")}
-                          className="grid size-6 cursor-pointer place-items-center border-l border-(--color-border) text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
+                          className="grid w-7 cursor-pointer place-items-center border-l border-(--color-border) text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
                         >
                           <ChevronsDownUp className="size-3.5" aria-hidden />
                         </button>

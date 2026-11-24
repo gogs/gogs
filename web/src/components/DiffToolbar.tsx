@@ -87,7 +87,7 @@ export function DiffToolbar({
                   type="button"
                   onClick={onShowTreeMobile}
                   aria-label={t("repo.show_file_tree")}
-                  className="grid size-6 cursor-pointer place-items-center rounded text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground) lg:hidden"
+                  className="grid size-7 cursor-pointer place-items-center rounded text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground) lg:hidden"
                 >
                   <PanelLeftOpen className="size-4" aria-hidden />
                 </button>
@@ -105,7 +105,7 @@ export function DiffToolbar({
                   aria-pressed={!!desktopTreeOpen}
                   // `pl-1` nudges the icon right so it visually aligns with
                   // the sidebar's collapsed-rail edge on desktop.
-                  className="hidden size-6 cursor-pointer place-items-center rounded text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground) lg:grid lg:pl-1"
+                  className="hidden size-7 cursor-pointer place-items-center rounded text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground) lg:grid lg:pl-1"
                 >
                   {desktopTreeOpen ? (
                     <PanelLeftClose className="size-4" aria-hidden />
