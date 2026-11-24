@@ -1,12 +1,13 @@
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
-import { Copy, File as FileIcon, LoaderCircle, RefreshCw, Upload } from "lucide-react";
+import { Copy, ExternalLink, LoaderCircle, RefreshCw, Upload } from "lucide-react";
 import { type ChangeEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { AdminPageHeader } from "@/components/AdminPage";
 import { ConfirmButton } from "@/components/ConfirmButton";
+import { FileIcon } from "@/components/FileIcon";
 import { InlineCode } from "@/components/InlineCode";
 import { RelativeTime } from "@/components/RelativeTime";
 import { Button } from "@/components/ui/button";
@@ -20,8 +21,6 @@ import { toastError } from "@/lib/toast-error";
 // upload tells why a file is refused even behind a proxy that cuts the
 // connection when the server stops reading.
 const MAX_FILE_SIZE = 10 << 20;
-
-const IMAGE = /\.(png|jpe?g|gif|webp|avif|svg|ico)$/i;
 
 // An upload is either new files into a folder, or one file in place of an
 // existing one.
@@ -115,23 +114,7 @@ export function AdminFiles({ files }: { files: AdminCustomFile[] }) {
             <li key={file.path} className="flex flex-wrap items-center gap-3 px-4 py-3">
               {/* The path keeps room for itself, so on narrow screens the buttons go below it. */}
               <div className="flex min-w-0 flex-1 basis-64 items-center gap-3">
-                <a
-                  href={file.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={file.path}
-                  className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-md border border-(--color-border) bg-(--color-surface)"
-                >
-                  {IMAGE.test(file.path) ? (
-                    <img
-                      src={`${file.url}?v=${encodeURIComponent(file.modifiedAt)}`}
-                      alt=""
-                      className="max-h-full max-w-full object-contain"
-                    />
-                  ) : (
-                    <FileIcon className="size-5 text-(--color-muted-foreground)" aria-hidden />
-                  )}
-                </a>
+                <FileIcon name={file.path.slice(file.path.lastIndexOf("/") + 1)} className="size-5" />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <a
@@ -154,6 +137,17 @@ export function AdminFiles({ files }: { files: AdminCustomFile[] }) {
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" asChild>
+                  <a
+                    href={file.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={t("admin.files_raw_aria", { name: file.path })}
+                  >
+                    <ExternalLink className="size-4" aria-hidden />
+                    {t("admin.files_raw")}
+                  </a>
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
