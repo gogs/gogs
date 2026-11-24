@@ -302,6 +302,11 @@ func (s *OrganizationsStore) SetMemberVisibility(ctx context.Context, orgID, use
 // Adding a member that the organization has is a no-op.
 func (s *OrganizationsStore) AddMember(ctx context.Context, orgID, userID int64) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Locked before the membership, the order adding a team member locks
+		// them in, so the two cannot deadlock.
+		if err := lockOrganization(tx, orgID); err != nil {
+			return err
+		}
 		return newOrganizationsStore(tx).addMember(ctx, orgID, userID)
 	})
 }

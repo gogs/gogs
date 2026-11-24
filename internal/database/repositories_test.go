@@ -1305,6 +1305,20 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 	dropped := newTestIssueUser(t, ctx, s.db, "cf-dropped")
 	expelled := newTestIssueUser(t, ctx, s.db, "cf-expelled")
 	var shrinking *Team
+	demoted := newTestIssueUser(t, ctx, s.db, "cf-demoted")
+	var admins *Team
+	enlisted := newTestIssueUser(t, ctx, s.db, "cf-enlisted")
+	var growing *Team
+	recruit := newTestIssueUser(t, ctx, s.db, "cf-recruit")
+	var expanding *Team
+	stayer := newTestIssueUser(t, ctx, s.db, "cf-stayer")
+	var retired *Team
+	holdBase := func(base *Repository) func(hold *gorm.DB) error {
+		return func(hold *gorm.DB) error {
+			return hold.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", base.ID).Find(new(Repository)).Error
+		}
+	}
+	var heldBase *Repository
 	departing := newTestIssueUser(t, ctx, s.db, "cf-departing")
 	var created *Repository
 	createInOrg := func() (err error) {
@@ -1680,6 +1694,82 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 			},
 			second: func(*Repository, *Repository) error {
 				return newOrganizationsStore(s.db).RemoveMember(ctx, org.ID, expelled.ID)
+			},
+		},
+		{
+			// Removing the member from the team holds the organization, and
+			// adding the collaborator must then see the member gone.
+			name:      "add a collaborator while removing them from a team, holding their access",
+			baseOwner: org,
+			private:   true,
+			setup: func(base, _ *Repository) {
+				admins = createTestTeam(t, ctx, teams, org.ID, "admins", AccessModeAdmin)
+				require.NoError(t, teams.AddRepo(ctx, admins, base))
+				require.NoError(t, teams.AddMember(ctx, org.ID, admins.ID, demoted.ID))
+			},
+			hold: func(hold *gorm.DB) error {
+				return hold.Clauses(clause.Locking{Strength: "UPDATE"}).Where("user_id = ?", demoted.ID).Find(new([]*Access)).Error
+			},
+			first:  func(*Repository, *Repository) error { return teams.RemoveMember(ctx, org.ID, admins.ID, demoted.ID) },
+			second: func(base, _ *Repository) error { return newCollaborationsStore(s.db).Add(ctx, base, demoted.ID) },
+			check: func(base, _ *Repository) {
+				assert.Equal(t, AccessModeWrite, accessModes(t, ctx, newPermissionsStore(s.db), base.ID)[demoted.ID], "access of the collaborator removed from the admin team")
+			},
+		},
+		{
+			name:      "add a user to the organization while adding them to a team, holding the team",
+			baseOwner: org,
+			setup: func(*Repository, *Repository) {
+				growing = createTestTeam(t, ctx, teams, org.ID, "growing", AccessModeRead)
+			},
+			hold: func(hold *gorm.DB) error {
+				return hold.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", growing.ID).Find(new(Team)).Error
+			},
+			first: func(*Repository, *Repository) error { return teams.AddMember(ctx, org.ID, growing.ID, enlisted.ID) },
+			second: func(*Repository, *Repository) error {
+				return newOrganizationsStore(s.db).AddMember(ctx, org.ID, enlisted.ID)
+			},
+		},
+		{
+			// Adding the member lists the team's repositories before the fork
+			// joins the team, and retries once it finds the fork there.
+			name:      "add team member while adding a repository to the team, holding a repository of the team",
+			baseOwner: org,
+			forkOwner: org,
+			private:   true,
+			setup: func(base, _ *Repository) {
+				expanding = createTestTeam(t, ctx, teams, org.ID, "expanding", AccessModeWrite)
+				require.NoError(t, teams.AddRepo(ctx, expanding, base))
+				heldBase = base
+			},
+			hold:   func(hold *gorm.DB) error { return holdBase(heldBase)(hold) },
+			first:  func(*Repository, *Repository) error { return teams.AddMember(ctx, org.ID, expanding.ID, recruit.ID) },
+			second: func(_, fork *Repository) error { return teams.AddRepo(ctx, expanding, fork) },
+			check: func(_, fork *Repository) {
+				assert.Equal(t, AccessModeWrite, accessModes(t, ctx, newPermissionsStore(s.db), fork.ID)[recruit.ID], "access of the new member to the repository added meanwhile")
+			},
+		},
+		{
+			// Deleting the team lists its repositories before the fork joins
+			// the team, and retries once it finds the fork there.
+			name:      "delete team while adding a repository to it, holding a repository of the team",
+			baseOwner: org,
+			forkOwner: org,
+			private:   true,
+			setup: func(base, _ *Repository) {
+				retired = createTestTeam(t, ctx, teams, org.ID, "retired", AccessModeWrite)
+				require.NoError(t, teams.AddRepo(ctx, retired, base))
+				require.NoError(t, teams.AddMember(ctx, org.ID, retired.ID, stayer.ID))
+				heldBase = base
+			},
+			hold:   func(hold *gorm.DB) error { return holdBase(heldBase)(hold) },
+			first:  func(*Repository, *Repository) error { return teams.Delete(ctx, retired) },
+			second: func(_, fork *Repository) error { return teams.AddRepo(ctx, retired, fork) },
+			check: func(base, fork *Repository) {
+				for _, repo := range []*Repository{base, fork} {
+					assert.NotContains(t, accessModes(t, ctx, newPermissionsStore(s.db), repo.ID), stayer.ID, "access through the deleted team")
+				}
+				assert.False(t, teams.HasRepo(ctx, org.ID, retired.ID, fork.ID), "the deleted team has the repository")
 			},
 		},
 	} {

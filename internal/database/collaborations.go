@@ -45,6 +45,13 @@ func (s *CollaborationsStore) Add(ctx context.Context, repo *Repository, userID 
 		} else if !exists || ownerID != repo.OwnerID {
 			return ErrRepoNotExist{args: errx.Args{"repoID": repo.ID}}
 		}
+		// The owner is locked after the repository and before the first plain
+		// read, as changing the members of an organization's teams locks it,
+		// so a member removed from a team meanwhile does not keep the team's
+		// access. Locking a user who owns the repository is harmless.
+		if err := lockOrganization(tx, repo.OwnerID); err != nil {
+			return err
+		}
 
 		// The number of affected rows does not tell whether the row is new,
 		// because MariaDB counts the existing row returned.
@@ -95,6 +102,9 @@ func (s *CollaborationsStore) ChangeMode(ctx context.Context, repo *Repository, 
 	}
 
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := lockCollaborationRepository(tx, repo.ID); err != nil {
+			return err
+		}
 		result := tx.Model(new(Collaboration)).Where("repo_id = ? AND user_id = ?", repo.ID, userID).Update("mode", mode)
 		if result.Error != nil {
 			return errors.Wrap(result.Error, "update")
@@ -110,6 +120,9 @@ func (s *CollaborationsStore) ChangeMode(ctx context.Context, repo *Repository, 
 // a collaborator is a no-op.
 func (s *CollaborationsStore) Delete(ctx context.Context, repo *Repository, userID int64) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := lockCollaborationRepository(tx, repo.ID); err != nil {
+			return err
+		}
 		result := tx.Where("repo_id = ? AND user_id = ?", repo.ID, userID).Delete(new(Collaboration))
 		if result.Error != nil {
 			return errors.Wrap(result.Error, "delete")
@@ -118,4 +131,15 @@ func (s *CollaborationsStore) Delete(ctx context.Context, repo *Repository, user
 		}
 		return newPermissionsStore(tx).recalculateUserAccess(ctx, repo, userID)
 	})
+}
+
+// lockCollaborationRepository locks the repository of given ID and then its
+// owner, as adding a collaborator does. A repository deleted meanwhile is left
+// to the caller, whose changes then affect no rows.
+func lockCollaborationRepository(tx *gorm.DB, repoID int64) error {
+	ownerID, exists, err := lockRepository(tx, repoID)
+	if err != nil || !exists {
+		return err
+	}
+	return lockOrganization(tx, ownerID)
 }
