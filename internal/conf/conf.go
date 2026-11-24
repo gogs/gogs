@@ -322,14 +322,6 @@ func Init(logger *logx.Logger, customConf string) error {
 			logger.Warn("Found invalid configuration", "warning", warning)
 		}
 	}
-	// Browsers cannot solve altcha challenges outside a secure context, which
-	// would leave nobody able to sign in on the web.
-	if Auth.AntiBotVerification == AntiBotVerificationAltcha && !browsersSolveAltcha(Server.URL, Server.HTTPAddr) {
-		if !HookMode {
-			logger.Warn("Using the image captcha for anti-bot verification, because browsers solve altcha only over HTTPS or on localhost", "externalURL", Server.ExternalURL, "httpAddr", Server.HTTPAddr)
-		}
-		Auth.AntiBotVerification = AntiBotVerificationCaptcha
-	}
 
 	if err = File.Section("cache").MapTo(&Cache); err != nil {
 		return errors.Wrap(err, "mapping [cache] section")
