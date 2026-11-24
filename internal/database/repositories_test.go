@@ -1301,6 +1301,21 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 	mover := newTestIssueUser(t, ctx, s.db, "cf-mover")
 	var moved *Repository
 	var older *Repository
+	ousted := newTestIssueUser(t, ctx, s.db, "cf-ousted")
+	departing := newTestIssueUser(t, ctx, s.db, "cf-departing")
+	var created *Repository
+	createInOrg := func() (err error) {
+		created, err = s.Create(ctx, logger, org, org, CreateRepoOptionsLegacy{Name: name("created"), IsPrivate: true})
+		return err
+	}
+	holdOwners := func(hold *gorm.DB) error {
+		return hold.Clauses(clause.Locking{Strength: "UPDATE"}).Where("org_id = ? AND lower_name = ?", org.ID, "owners").Find(new(Team)).Error
+	}
+	addOwner := func(u *User) {
+		owners, err := teams.GetOwnerTeam(ctx, org.ID)
+		require.NoError(t, err)
+		require.NoError(t, teams.AddMember(ctx, org.ID, owners.ID, u.ID))
+	}
 
 	for _, tc := range []struct {
 		name      string
@@ -1588,6 +1603,42 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 			second:   func(*Repository, *Repository) error { return teams.Delete(ctx, readers) },
 			check: func(base, _ *Repository) {
 				assert.NotContains(t, accessModes(t, ctx, newPermissionsStore(s.db), base.ID), veteran.ID, "access through the deleted team")
+			},
+		},
+		{
+			// Removing the member waits for the owner team, and creating the
+			// repository must not read the owner team's members from before.
+			name:      "create a repository in the organization while removing a member of the owner team, holding the team",
+			baseOwner: alice,
+			setup:     func(*Repository, *Repository) { addOwner(ousted) },
+			hold:      holdOwners,
+			first: func(*Repository, *Repository) error {
+				owners, err := teams.GetOwnerTeam(ctx, org.ID)
+				if err != nil {
+					return err
+				}
+				return teams.RemoveMember(ctx, org.ID, owners.ID, ousted.ID)
+			},
+			second: func(*Repository, *Repository) error { return createInOrg() },
+			check: func(*Repository, *Repository) {
+				assert.NotContains(t, accessModes(t, ctx, newPermissionsStore(s.db), created.ID), ousted.ID, "access of the removed owner")
+			},
+		},
+		{
+			// Creating the repository holds the organization while it waits for
+			// the owner team, and removing the member must then see the new
+			// repository.
+			name:      "remove a member from the organization while creating a repository in it, holding the owner team",
+			baseOwner: org,
+			private:   true,
+			setup:     func(*Repository, *Repository) { addOwner(departing) },
+			hold:      holdOwners,
+			first:     func(*Repository, *Repository) error { return createInOrg() },
+			second: func(*Repository, *Repository) error {
+				return newOrganizationsStore(s.db).RemoveMember(ctx, org.ID, departing.ID)
+			},
+			check: func(*Repository, *Repository) {
+				assert.NotContains(t, accessModes(t, ctx, newPermissionsStore(s.db), created.ID), departing.ID, "access of the removed member")
 			},
 		},
 	} {

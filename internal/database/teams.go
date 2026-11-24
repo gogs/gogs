@@ -8,9 +8,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
 )
 
@@ -302,26 +300,17 @@ func (s *TeamsStore) addMember(ctx context.Context, orgID, teamID, userID int64,
 	db := s.db.WithContext(ctx)
 	// Lock the repositories of the team before rows of the organization and
 	// the team, as other transactions do, so the repositories cannot be
-	// deleted or transferred until the member has their accesses. Locking
-	// reads see the latest rows, so only repositories that still belong to
-	// the organization and the team get accesses.
+	// deleted, transferred or leave the team until the member has their
+	// accesses. Locking reads see the latest rows, so only repositories that
+	// still belong to the organization get accesses, and the read of the
+	// team's repositories below, after all the locks, leaves out those that
+	// left the team.
 	ownedIDs := make([]int64, 0, len(lockedIDs))
 	for _, repoID := range lockedIDs {
 		ownerID, exists, err := lockRepository(s.db, repoID)
 		if err != nil {
 			return err
-		} else if !exists || ownerID != orgID {
-			continue
-		}
-
-		query := db.Model(new(TeamRepo)).Where("team_id = ? AND repo_id = ?", teamID, repoID)
-		if !conf.UseSQLite3 {
-			query = query.Clauses(clause.Locking{Strength: "UPDATE"})
-		}
-		var ids []int64
-		if err = query.Pluck("id", &ids).Error; err != nil {
-			return errors.Wrap(err, "lock team repository")
-		} else if len(ids) > 0 {
+		} else if exists && ownerID == orgID {
 			ownedIDs = append(ownedIDs, repoID)
 		}
 	}
@@ -393,6 +382,15 @@ func (s *TeamsStore) addMember(ctx context.Context, orgID, teamID, userID int64,
 // Removing a user who is not a member is a no-op.
 func (s *TeamsStore) RemoveMember(ctx context.Context, orgID, teamID, userID int64) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// The organization is locked before the first plain read, which on
+		// MySQL takes the snapshot of the transaction, and before the team, the
+		// order creating, forking and transferring into the organization and
+		// adding a team member lock them in. Those then see the member gone
+		// once they get the organization, and do not give the member access.
+		err := tx.Model(new(User)).Where("id = ?", orgID).UpdateColumn("num_members", gorm.Expr("num_members")).Error
+		if err != nil {
+			return errors.Wrap(err, "lock organization")
+		}
 		return newTeamsStore(tx).removeMember(ctx, orgID, teamID, userID)
 	})
 }

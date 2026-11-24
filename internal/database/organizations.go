@@ -349,21 +349,25 @@ func (s *OrganizationsStore) RemoveMember(ctx context.Context, orgID, userID int
 		return errors.Wrap(err, "list accessible repositories")
 	}
 
+	repoIDs := make([]int64, 0, len(repos))
+	for _, repo := range repos {
+		repoIDs = append(repoIDs, repo.ID)
+	}
+	// Listed outside the transaction, so that on MySQL its snapshot is taken
+	// after the locks, and sees, e.g., a repository created in the
+	// organization while waiting for it.
+	var watchedIDs []int64
+	if len(repoIDs) > 0 {
+		err = db.Model(new(Watch)).Where("user_id = ? AND repo_id IN ?", userID, repoIDs).Pluck("repo_id", &watchedIDs).Error
+		if err != nil {
+			return errors.Wrap(err, "list watched repositories")
+		}
+	}
+
 	return db.Transaction(func(tx *gorm.DB) error {
 		// Repositories that unwatching updates are locked before the
 		// organization, the order adding a team member locks them in, so the
 		// two cannot deadlock.
-		repoIDs := make([]int64, 0, len(repos))
-		for _, repo := range repos {
-			repoIDs = append(repoIDs, repo.ID)
-		}
-		var watchedIDs []int64
-		if len(repoIDs) > 0 {
-			err := tx.Model(new(Watch)).Where("user_id = ? AND repo_id IN ?", userID, repoIDs).Pluck("repo_id", &watchedIDs).Error
-			if err != nil {
-				return errors.Wrap(err, "list watched repositories")
-			}
-		}
 		if err := lockRepositories(tx, watchedIDs); err != nil {
 			return err
 		}
