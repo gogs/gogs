@@ -33,6 +33,10 @@ type Store interface {
 	// access mode to the repository.
 	AuthorizeRepositoryAccess(ctx context.Context, userID, repoID int64, desired database.AccessMode, opts database.AccessModeOptions) bool
 
+	// GetDeployKeyByRepoAndKey returns the deploy key of the repository with given
+	// public key. It returns database.ErrDeployKeyNotExist when not found.
+	GetDeployKeyByRepoAndKey(ctx context.Context, repoID, keyID int64) (*database.DeployKey, error)
+
 	// GetRepositoryByName returns the repository with given owner and name. It
 	// returns database.ErrRepoNotExist when not found.
 	GetRepositoryByName(ctx context.Context, ownerID int64, name string) (*database.Repository, error)
@@ -98,6 +102,10 @@ func (*store) GetLFSObjectsByOIDs(ctx context.Context, repoID int64, oids ...lfs
 
 func (s *store) AuthorizeRepositoryAccess(ctx context.Context, userID, repoID int64, desired database.AccessMode, opts database.AccessModeOptions) bool {
 	return database.Handle.Permissions().Authorize(ctx, s.logger, userID, repoID, desired, opts)
+}
+
+func (*store) GetDeployKeyByRepoAndKey(ctx context.Context, repoID, keyID int64) (*database.DeployKey, error) {
+	return database.Handle.DeployKeys().GetByRepoAndKey(ctx, repoID, keyID)
 }
 
 func (*store) GetRepositoryByName(ctx context.Context, ownerID int64, name string) (*database.Repository, error) {

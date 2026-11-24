@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -590,9 +591,34 @@ func TestLFSSSHAuthenticate(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, stderr, "Key permission denied")
 
-		status, body := get(lfsTokenClient(t, lfsSSHKeyToken(t, key, repo, "download")), repo)
+		c := lfsTokenClient(t, lfsSSHKeyToken(t, key, repo, "download"))
+		status, body := get(c, repo)
 		require.Equal(t, http.StatusOK, status, "response: %s", body)
 		assert.Equal(t, content, body)
+
+		// The token stops working with the key it was given for.
+		deployKey, err := database.Handle.DeployKeys().GetByRepoAndKey(t.Context(), repo.ID, key.id)
+		require.NoError(t, err)
+		status, body = authenticatedClient(t, owner).do(http.MethodDelete, repoSettingsAPIPath(repo, "/settings/keys/"+strconv.FormatInt(deployKey.ID, 10)), repoSettingsNoBody)
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+		status, body = get(c, repo)
+		assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
+	})
+
+	t.Run("disabled user", func(t *testing.T) {
+		public := seedRepository(t, owner.ID, CreateRepositoryOptions{AutoInit: true})
+		disabled := seedUser(t, CreateUserOptions{})
+		key := sshUserKey(t, disabled.ID)
+		prohibitLogin := true
+		require.NoError(t, database.Handle.Users().Update(t.Context(), disabled.ID, database.UpdateUserOptions{ProhibitLogin: &prohibitLogin}))
+
+		// Like Git, the key reads the public repository as anyone does.
+		out, stderr, err := lfsSSHAuthenticate(key, public, "download")
+		require.NoError(t, err, "git-lfs-authenticate: %s", stderr)
+		var creds lfsSSHCredentials
+		require.NoError(t, json.Unmarshal(out, &creds), "output: %s", out)
+		assert.Equal(t, serverURL+"/"+public.Owner+"/"+public.Name+".git/info/lfs", creds.Href)
+		assert.Empty(t, creds.Header)
 	})
 
 	t.Run("deploy key of another repository", func(t *testing.T) {

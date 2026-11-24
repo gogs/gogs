@@ -11,11 +11,14 @@ import (
 	"github.com/cockroachdb/errors"
 )
 
-// Token grants a user access to the LFS objects of one repository until it
-// expires, e.g., to a client that authenticated over SSH.
+// Token grants a user or a deploy key access to the LFS objects of one
+// repository until it expires, e.g., to a client that authenticated over SSH.
 type Token struct {
+	// UserID is the ID of the user the token acts as, or 0 for a deploy key.
 	UserID int64 `json:"u"`
-	RepoID int64 `json:"r"`
+	// DeployKeyID is the ID of the public key of the deploy key the token is for.
+	DeployKeyID int64 `json:"k,omitempty"`
+	RepoID      int64 `json:"r"`
 	// Upload is true when the token also grants uploading objects.
 	Upload bool `json:"w"`
 	// Expires is the Unix time after which the token is no longer valid.

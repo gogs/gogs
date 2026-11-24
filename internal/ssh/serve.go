@@ -294,46 +294,41 @@ func parseCommand(cmd string) (verb, args string) {
 // that grants the access mode to it, after the key has been checked to have
 // that access, or without a token when the key reads it as anyone does.
 func lfsAuthenticate(ctx context.Context, w io.Writer, key *database.PublicKey, user *database.User, repo *database.Repository, mode database.AccessMode) error {
-	var userID int64
+	token := lfsx.Token{
+		RepoID:  repo.ID,
+		Upload:  mode >= database.AccessModeWrite,
+		Expires: time.Now().Add(lfsTokenLifetime).Unix(),
+	}
 	switch {
 	case user != nil:
-		userID = user.ID
+		token.UserID = user.ID
 	case key.IsDeployKey():
-		_, err := database.Handle.DeployKeys().GetByRepoAndKey(ctx, repo.ID, key.ID)
-		if err != nil && !database.IsErrDeployKeyNotExist(err) {
-			return serveError("Internal error", "Get deploy key: %v", err)
-		}
 		// A deploy key of another repository reads a public repository as anyone
-		// does, so it gets no token. Otherwise, the key acts for no user, so the
-		// token acts as the owner, limited to the repository and the mode the key
-		// was checked for.
+		// does.
+		_, err := database.Handle.DeployKeys().GetByRepoAndKey(ctx, repo.ID, key.ID)
 		if err == nil {
-			userID = repo.OwnerID
+			token.DeployKeyID = key.ID
+		} else if !database.IsErrDeployKeyNotExist(err) {
+			return serveError("Internal error", "Get deploy key: %v", err)
 		}
 	default:
 		// Reading a public repository needs no user, but the LFS API needs one
-		// when signing in is required to view it.
+		// when signing in is required to view it. Users who cannot sign in read it
+		// as anyone does.
 		keyOwner, err := database.Handle.Users().GetByKeyID(ctx, key.ID)
 		if err != nil {
 			return serveError("Internal error", "Failed to get user by key ID '%d': %v", key.ID, err)
 		}
-		if keyOwner.IsDisabled() {
-			return serveError(accessDeniedMessage, "User '%s' is disabled", keyOwner.Name)
+		if !keyOwner.IsDisabled() && !keyOwner.IsOrganization() {
+			token.UserID = keyOwner.ID
 		}
-		userID = keyOwner.ID
 	}
 
 	credentials := map[string]any{
 		"href": conf.Server.ExternalURL + repo.Owner.Name + "/" + repo.Name + ".git/info/lfs",
 	}
-	if userID > 0 {
-		token := lfsx.SignToken(conf.Security.SecretKey, lfsx.Token{
-			UserID:  userID,
-			RepoID:  repo.ID,
-			Upload:  mode >= database.AccessModeWrite,
-			Expires: time.Now().Add(lfsTokenLifetime).Unix(),
-		})
-		credentials["header"] = map[string]string{"Authorization": "Bearer " + token}
+	if token.UserID > 0 || token.DeployKeyID > 0 {
+		credentials["header"] = map[string]string{"Authorization": "Bearer " + lfsx.SignToken(conf.Security.SecretKey, token)}
 		credentials["expires_in"] = int(lfsTokenLifetime.Seconds())
 	}
 	err := json.NewEncoder(w).Encode(credentials)

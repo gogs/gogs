@@ -518,6 +518,48 @@ func TestAuthorize(t *testing.T) {
 			expBody:       "owner.Name: owner, repo.Name: repo",
 		},
 		{
+			name:       "token of a deploy key of the repository",
+			anonymous:  true,
+			token:      &lfsx.Token{RepoID: 1, DeployKeyID: 3},
+			accessMode: database.AccessModeRead,
+			mockStore: func() *MockStore {
+				mockStore := NewMockStore()
+				mockStore.GetDeployKeyByRepoAndKeyFunc.SetDefaultHook(func(_ context.Context, repoID, keyID int64) (*database.DeployKey, error) {
+					if repoID == 1 && keyID == 3 {
+						return &database.DeployKey{RepoID: repoID, KeyID: keyID}, nil
+					}
+					return nil, database.ErrDeployKeyNotExist{}
+				})
+				mockStore.GetRepositoryByNameFunc.SetDefaultHook(func(ctx context.Context, ownerID int64, name string) (*database.Repository, error) {
+					return &database.Repository{ID: 1, Name: name, IsPrivate: true}, nil
+				})
+				mockStore.GetUserByUsernameFunc.SetDefaultHook(func(ctx context.Context, username string) (*database.User, error) {
+					return &database.User{Name: username}, nil
+				})
+				return mockStore
+			},
+			expStatusCode: http.StatusOK,
+			expBody:       "owner.Name: owner, repo.Name: repo",
+		},
+		{
+			name:       "token of a deleted deploy key",
+			anonymous:  true,
+			token:      &lfsx.Token{RepoID: 1, DeployKeyID: 3},
+			accessMode: database.AccessModeRead,
+			mockStore: func() *MockStore {
+				mockStore := NewMockStore()
+				mockStore.GetDeployKeyByRepoAndKeyFunc.SetDefaultReturn(nil, database.ErrDeployKeyNotExist{})
+				mockStore.GetRepositoryByNameFunc.SetDefaultHook(func(ctx context.Context, ownerID int64, name string) (*database.Repository, error) {
+					return &database.Repository{ID: 1, Name: name, IsPrivate: true}, nil
+				})
+				mockStore.GetUserByUsernameFunc.SetDefaultHook(func(ctx context.Context, username string) (*database.User, error) {
+					return &database.User{Name: username}, nil
+				})
+				return mockStore
+			},
+			expStatusCode: http.StatusNotFound,
+		},
+		{
 			name:       "actor is authorized",
 			accessMode: database.AccessModeRead,
 			mockStore: func() *MockStore {

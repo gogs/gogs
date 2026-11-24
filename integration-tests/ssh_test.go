@@ -25,7 +25,7 @@ import (
 // with the server.
 type sshKey struct {
 	path string
-	// id is the ID of a key of a user, which "gogs serv" takes.
+	// id is the ID of the public key, which "gogs serv" takes.
 	id int64
 }
 
@@ -61,8 +61,9 @@ func sshDeployKey(t *testing.T, repo *Repository) *sshKey {
 	t.Helper()
 
 	key, content := sshNewKey(t)
-	_, err := database.Handle.DeployKeys().Add(t.Context(), logger, repo.ID, UniqueName("deploy-"), content)
+	added, err := database.Handle.DeployKeys().Add(t.Context(), logger, repo.ID, UniqueName("deploy-"), content)
 	require.NoError(t, err)
+	key.id = added.KeyID
 	return key
 }
 
