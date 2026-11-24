@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
-import { Copy, ExternalLink, LoaderCircle, RefreshCw, Upload } from "lucide-react";
+import { Copy, ExternalLink, LoaderCircle, Upload } from "lucide-react";
 import { type ChangeEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -21,10 +21,6 @@ import { toastError } from "@/lib/toast-error";
 // connection when the server stops reading.
 const MAX_FILE_SIZE = 10 << 20;
 
-// An upload is either new files into a folder, or one file in place of an
-// existing one.
-type UploadTarget = { folder: string } | { replace: string };
-
 // AdminFiles lists the static files in custom/public, which the site serves
 // in place of built-in ones with the same path, and which components can show,
 // e.g., a logo on the landing page.
@@ -33,17 +29,16 @@ export function AdminFiles({ files }: { files: AdminCustomFile[] }) {
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
   const [folder, setFolder] = useState("img");
-  const target = useRef<UploadTarget>({ folder });
 
   const upload = useMutation({
-    mutationFn: async ({ selected, to }: { selected: File[]; to: UploadTarget }) => {
+    // A file uploaded to the path of another replaces it.
+    mutationFn: async (selected: File[]) => {
       const tooLarge = selected.find((file) => file.size > MAX_FILE_SIZE);
       if (tooLarge)
         throw new Error(t("admin.files_too_large", { name: tooLarge.name, max: formatBytes(MAX_FILE_SIZE) }));
       for (const file of selected) {
-        const dir = "folder" in to ? to.folder.replace(/^\/+|\/+$/g, "") : "";
-        const path = "replace" in to ? to.replace : dir ? `${dir}/${file.name}` : file.name;
-        await uploadAdminCustomFile(file, path);
+        const dir = folder.replace(/^\/+|\/+$/g, "");
+        await uploadAdminCustomFile(file, dir ? `${dir}/${file.name}` : file.name);
       }
       return selected.length;
     },
@@ -58,16 +53,10 @@ export function AdminFiles({ files }: { files: AdminCustomFile[] }) {
     },
   });
 
-  const choose = (to: UploadTarget) => {
-    target.current = to;
-    if (input.current) input.current.multiple = "folder" in to;
-    input.current?.click();
-  };
-
   const onSelect = (e: ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(e.currentTarget.files ?? []);
     e.currentTarget.value = "";
-    if (selected.length > 0) upload.mutate({ selected, to: target.current });
+    if (selected.length > 0) upload.mutate(selected);
   };
 
   const copy = (path: string) => {
@@ -93,8 +82,8 @@ export function AdminFiles({ files }: { files: AdminCustomFile[] }) {
             className="w-32 font-mono"
           />
         </div>
-        <input ref={input} type="file" hidden onChange={onSelect} />
-        <Button disabled={upload.isPending} onClick={() => choose({ folder })}>
+        <input ref={input} type="file" multiple hidden onChange={onSelect} />
+        <Button disabled={upload.isPending} onClick={() => input.current?.click()}>
           {upload.isPending ? (
             <LoaderCircle className="size-4 animate-spin" aria-hidden />
           ) : (
@@ -158,29 +147,17 @@ export function AdminFiles({ files }: { files: AdminCustomFile[] }) {
                   {t("admin.files_copy")}
                 </Button>
                 {file.editable ? (
-                  <>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={upload.isPending}
-                      aria-label={t("admin.files_replace_aria", { name: file.path })}
-                      onClick={() => choose({ replace: file.path })}
-                    >
-                      <RefreshCw className="size-4" aria-hidden />
-                      {t("admin.files_replace")}
-                    </Button>
-                    <ConfirmButton
-                      label={t("admin.files_delete")}
-                      ariaLabel={t("admin.files_delete_aria", { name: file.path })}
-                      title={t("admin.files_delete_title", { name: file.path })}
-                      description={t(
-                        file.replacesBuiltin ? "admin.files_delete_builtin_desc" : "admin.files_delete_desc",
-                      )}
-                      size="sm"
-                      action={() => deleteAdminCustomFile(file.path)}
-                      onDone={() => router.invalidate()}
-                    />
-                  </>
+                  <ConfirmButton
+                    label={t("admin.files_delete")}
+                    ariaLabel={t("admin.files_delete_aria", { name: file.path })}
+                    title={t("admin.files_delete_title", { name: file.path })}
+                    description={t(
+                      file.replacesBuiltin ? "admin.files_delete_builtin_desc" : "admin.files_delete_desc",
+                    )}
+                    size="sm"
+                    action={() => deleteAdminCustomFile(file.path)}
+                    onDone={() => router.invalidate()}
+                  />
                 ) : null}
               </div>
             </li>
