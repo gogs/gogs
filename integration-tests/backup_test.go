@@ -114,7 +114,7 @@ func TestBackupRestore(t *testing.T) {
 	}
 
 	t.Run("database only", func(t *testing.T) {
-		archive, err := zip.OpenReader(backup(t, "database-only.zip", "--database-only"))
+		archive, err := zip.OpenReader(backup(t, "database/only.zip", "--database-only"))
 		require.NoError(t, err)
 		defer func() { _ = archive.Close() }()
 		var names []string
@@ -135,6 +135,7 @@ func TestBackupRestore(t *testing.T) {
 		require.NoError(t, os.Symlink(filepath.Join(customDir, "missing"), filepath.Join(customDir, "broken")))
 		out, err := runBackup(customDir, "failure.zip")
 		require.Error(t, err, "backup: %s", out)
+		require.Contains(t, string(out), "Failed to add custom directory to backup")
 
 		entries, err := os.ReadDir(tempDir)
 		require.NoError(t, err)

@@ -100,8 +100,9 @@ func runBackup(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	logger.Info("Packing backup files", "archivePath", archiveName)
-	if err = os.MkdirAll(cmd.String("target"), os.ModePerm); err != nil {
-		fatal("Failed to create target directory", "targetDir", cmd.String("target"), "error", err)
+	// The archive name may have directories of its own.
+	if err = os.MkdirAll(filepath.Dir(archiveName), os.ModePerm); err != nil {
+		fatal("Failed to create target directory", "targetDir", filepath.Dir(archiveName), "error", err)
 	}
 	// The archive has the password hashes and tokens of every user, so it is
 	// a new file only its owner can read. An archive of an earlier backup with
@@ -220,14 +221,14 @@ func addRepositoriesToBackup(ctx context.Context, z *archiveWriter, excludeMirro
 			return errors.Wrap(err, "get non-mirror repositories")
 		}
 		for _, r := range nonMirrors {
-			// Directories are named in lower case, unlike repositories and their
-			// owners.
 			// MustOwner falls back to a placeholder owner, which names another
 			// directory.
 			if err = r.GetOwner(); err != nil {
 				return errors.Wrapf(err, "get owner of repository %d", r.ID)
 			}
 			owner := r.Owner.Name
+			// Directories are named in lower case, unlike repositories and their
+			// owners.
 			repoPaths := []string{repox.RepositoryPath(owner, r.Name)}
 			if wikiPath := database.WikiPath(owner, r.Name); osx.IsDir(wikiPath) {
 				repoPaths = append(repoPaths, wikiPath)
