@@ -193,7 +193,7 @@ func checkLeftoverBackups(archivePath string) error {
 	// The archive may have no custom files, in which case none are replaced.
 	entries, _ := os.ReadDir(filepath.Join(archivePath, "custom"))
 	for _, e := range entries {
-		if e.Name() != "data" {
+		if !restoredSeparately(conf.CustomDir(), e.Name()) {
 			paths = append(paths, filepath.Join(conf.CustomDir(), e.Name()))
 		}
 	}
@@ -223,9 +223,25 @@ func leftoverBackupError(path string) error {
 	return errors.Newf("'%s' already exists, probably from an earlier restore. Move or remove it, then run the restore again", path+".bak")
 }
 
+// restoredSeparately reports whether the entry of the custom directory is left to the restore of the app data.
+// "data" is never touched, the same as in backups, because it is the app data directory in the Docker setup, which
+// holds the open SQLite database. An app data directory is also in the custom directory when APP_DATA_PATH points
+// there.
+func restoredSeparately(customDir, name string) bool {
+	if name == "data" {
+		return true
+	}
+	path, _ := filepath.Abs(filepath.Join(customDir, name))
+	for _, dir := range backupDataDirs {
+		if dataPath, _ := filepath.Abs(filepath.Join(conf.Server.AppDataPath, dir)); path == dataPath {
+			return true
+		}
+	}
+	return false
+}
+
 // restoreCustomDir moves each entry of srcDir into customDir, keeping the current one as "<path>.bak". Entries
-// that are not in srcDir stay in place. The "data" entry is never touched, the same as in backups, because it is
-// the app data directory in the Docker setup, which holds the open SQLite database and is restored separately.
+// that are not in srcDir stay in place, and so do the ones restored separately.
 func restoreCustomDir(srcDir, customDir string) error {
 	entries, err := os.ReadDir(srcDir)
 	if err != nil {
@@ -236,7 +252,7 @@ func restoreCustomDir(srcDir, customDir string) error {
 	}
 
 	for _, e := range entries {
-		if e.Name() == "data" {
+		if restoredSeparately(customDir, e.Name()) {
 			continue
 		}
 

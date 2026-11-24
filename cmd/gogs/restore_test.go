@@ -7,6 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"gogs.io/gogs/internal/conf"
 )
 
 func writeFile(t *testing.T, path, content string) {
@@ -47,7 +49,25 @@ func TestRestoreCustomDir(t *testing.T) {
 		assert.True(t, os.SameFile(dbBefore, dbAfter), "the open database file must not be replaced")
 		assert.Equal(t, "current", readFile(t, filepath.Join(customDir, "data", "gogs.db")))
 		assert.NoDirExists(t, filepath.Join(customDir, "data.bak"))
-		assert.NoDirExists(t, customDir+".bak")
+	})
+
+	t.Run("keeps app data directories in place", func(t *testing.T) {
+		root := t.TempDir()
+		customDir := filepath.Join(root, "custom")
+		before := conf.Server.AppDataPath
+		conf.Server.AppDataPath = customDir
+		t.Cleanup(func() { conf.Server.AppDataPath = before })
+		writeFile(t, filepath.Join(customDir, "attachments", "a"), "current")
+		srcDir := filepath.Join(root, "archive", "custom")
+		writeFile(t, filepath.Join(srcDir, "attachments", "a"), "restored")
+		writeFile(t, filepath.Join(srcDir, "conf", "app.ini"), "restored")
+
+		require.NoError(t, restoreCustomDir(srcDir, customDir))
+
+		// The app data restore replaces it, which fails on a leftover "attachments.bak".
+		assert.Equal(t, "current", readFile(t, filepath.Join(customDir, "attachments", "a")))
+		assert.NoDirExists(t, filepath.Join(customDir, "attachments.bak"))
+		assert.Equal(t, "restored", readFile(t, filepath.Join(customDir, "conf", "app.ini")))
 	})
 
 	t.Run("creates missing custom directory", func(t *testing.T) {
