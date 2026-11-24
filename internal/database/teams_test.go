@@ -351,7 +351,8 @@ func teamsRepos(t *testing.T, ctx context.Context, s *TeamsStore) {
 	// repository was transferred away while the caller held it.
 	moved := newTestTeamRepo(t, ctx, s.db, org, "moved", false)
 	require.NoError(t, s.db.Model(new(Repository)).Where("id = ?", moved.ID).UpdateColumn("owner_id", alice.ID).Error)
-	assert.Error(t, s.AddRepo(ctx, team, moved))
+	err := s.AddRepo(ctx, team, moved)
+	assert.True(t, IsErrRepoNotExist(err), "got %v", err)
 	assert.False(t, s.HasRepo(ctx, org.ID, team.ID, moved.ID))
 
 	require.NoError(t, s.AddRepo(ctx, team, public))

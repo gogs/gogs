@@ -471,10 +471,8 @@ func (s *TeamsStore) AddRepo(ctx context.Context, t *Team, repo *Repository) err
 		// for it.
 		if ownerID, exists, err := lockRepository(tx, repo.ID); err != nil {
 			return err
-		} else if !exists {
+		} else if !exists || ownerID != t.OrgID {
 			return ErrRepoNotExist{args: errx.Args{"repoID": repo.ID}}
-		} else if ownerID != t.OrgID {
-			return errors.New("repository does not belong to organization")
 		}
 		return newTeamsStore(tx).addRepo(ctx, t, repo)
 	})
