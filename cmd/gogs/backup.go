@@ -188,7 +188,7 @@ func addCustomDirToBackup(logger *logx.Logger, z *archiveWriter) error {
 			continue
 		}
 		if strings.HasSuffix(e.Name(), ".bak") {
-			// Skip what a restore kept of the files it replaced, so the next restore does not bring them back.
+			// Skip what a restore kept of the files it replaced, which do not belong in a backup.
 			continue
 		}
 
