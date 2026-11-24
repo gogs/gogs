@@ -57,7 +57,7 @@ The customization API has:
 | `Button` | The button component of the web interface. |
 | `t` | Translates a key of the locale files, e.g., `t("explore")`. |
 | `subUrl` | Prefixes a path with the subpath Gogs is served under, if any. |
-| `fileURL` | Returns the URL of an [uploaded file](#upload-files), e.g., `fileURL("logo.png")`. |
+| `fileURL` | Returns the URL of a [static file](#override-static-files) by its path, e.g., `fileURL("img/logo.png")`. |
 | `useUser` | A hook that returns the authenticated user, or `null`. |
 
 The component gets two props: `Default`, the built-in component, which you can wrap or show as is, and `user`, the authenticated user or `null`.
@@ -68,21 +68,19 @@ An optional `css` export adds a stylesheet to every page. Use the theme tokens, 
   Classes of [Tailwind CSS](https://tailwindcss.com/) work only when the web interface already uses them. For anything else, add the styles to the `css` export.
 </Tip>
 
-### Upload files
+### Show uploaded files
 
-To show a logo or another image in a component, upload it in **Admin panel > Customization > Files** and use `fileURL` in the script:
+To show a logo or another image in a component, upload it to `img/` under [Files](#override-static-files) and use `fileURL` in the script:
 
 ```js
 export default ({ html, fileURL }) =>
   function Landing() {
     return html`
       <main className="flex flex-1 items-center justify-center py-16">
-        <img src=${fileURL("logo.png")} alt="Acme" width="240" height="80" />
+        <img src=${fileURL("img/logo.png")} alt="Acme" width="240" height="80" />
       </main>`;
   };
 ```
-
-Files are stored in `custom/web/files/` and served at `/-/custom/files/<name>`, so you can also reference them from the `css` export. Names may have letters, digits, dots, dashes and underscores, and start with a letter or digit. Uploading a file with the name of another replaces it. A file may be up to 10 MB.
 
 ### Add notices
 
@@ -149,13 +147,11 @@ You can replace any email template by placing a customized version under the `cu
 
 ## Override static files
 
-You can replace static files, e.g., images, by placing customized versions under the `custom/public/` directory. For example, to override the site favicon, place your version at:
+Files in `custom/public/` are served ahead of the built-in ones with the same path. For example, `custom/public/img/favicon.png` replaces the site favicon, and `custom/public/img/logo.png` is served at `/img/logo.png`. Changes take effect immediately, without a restart.
 
-```
-custom/public/img/favicon.png
-```
+Site admins manage these files in **Admin panel > Customization > Files**, which lists every file in `custom/public/`, including ones placed there by hand, and marks the ones that replace a built-in file. Upload files into a folder, replace a file in place, or delete it to bring back the built-in one.
 
-Edits to custom static files take effect immediately, without a restart.
+Uploaded paths may have letters, digits, dots, dashes and underscores in each name, which must start with a letter or digit. A file may be up to 10 MB, and may not be named `index.html`, which would be served in place of the page at its folder.
 
 ## Inject custom content
 

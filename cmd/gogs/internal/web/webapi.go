@@ -428,7 +428,7 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 				Delete(deleteAdminAuthSource)
 			f.Get("/customization", getAdminCustomization)
 			f.Get("/customization/files", getAdminCustomFiles)
-			f.Delete("/customization/files/{name}", deleteAdminCustomFile)
+			f.Delete("/customization/files/{path: **}", deleteAdminCustomFile)
 			f.Get("/health", getAdminHealth)
 			f.Get("/traces", getAdminTraces)
 			f.Get("/traces/overview", getAdminTraceOverview)

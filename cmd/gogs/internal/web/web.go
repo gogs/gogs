@@ -470,7 +470,6 @@ func newRoutingHandler(logger *logx.Logger, localizer, sessioner, authenticate f
 		f.Get("/-/avatars/seed/{seed}", getGeneratedAvatar)
 		f.Get("/-/repo-avatars/{id}", getRepoAvatar)
 		f.Get(customScriptURLPath, getCustomScript)
-		f.Get(customFilesURLPath+"{name}", getCustomFile)
 		f.Get(customPreviewURLPath, allowSameOriginFraming, webApp.ServeHTTP)
 		f.Get("/{username}.keys", requireViewAccess, getUserPublicKeys)
 		f.Any("/user/activate_email", activateEmail)

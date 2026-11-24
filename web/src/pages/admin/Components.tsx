@@ -30,8 +30,8 @@ const PART_LABELS: Record<SlotName, { label: string; description: string }> = {
 // "Default", the built-in part, and "user". An optional "css" export adds
 // styles to the site.
 const STARTERS: Record<SlotName, string> = {
-  landing: `// Upload a logo under Customization > Files and show it with
-// <img src=\${fileURL("logo.png")} alt="Acme" />.
+  landing: `// Upload a logo to "img" under Customization > Files and show it with
+// <img src=\${fileURL("img/logo.png")} alt="Acme" />.
 export default ({ html, Link, t }) =>
   function Landing() {
     return html\`

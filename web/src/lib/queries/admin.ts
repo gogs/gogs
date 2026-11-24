@@ -331,28 +331,34 @@ export function publishAdminCustomPart(name: string, source: string) {
 }
 
 export interface AdminCustomFile {
-  name: string;
+  // path is relative to custom/public, e.g., "img/logo.png".
+  path: string;
   size: number;
   modifiedAt: string;
   url: string;
+  // replacesBuiltin is whether the file is served in place of a built-in one.
+  replacesBuiltin: boolean;
+  // editable is whether the admin panel can replace and delete the file.
+  editable: boolean;
 }
 
 export function fetchAdminCustomFiles() {
   return fetchJSON<AdminCustomFile[]>(adminURL("/customization/files"));
 }
 
-// uploadAdminCustomFile uploads a file for components to show, replacing a
-// file of the same name.
-export async function uploadAdminCustomFile(file: File) {
+// uploadAdminCustomFile uploads a file to the path in custom/public, replacing
+// a file at the same path.
+export async function uploadAdminCustomFile(file: File, path: string) {
   const body = new FormData();
   body.append("file", file);
+  body.append("path", path);
   const res = await fetch(adminURL("/customization/files"), { method: "POST", credentials: "same-origin", body });
   if (!res.ok) throw await loaderResponseError(res);
   return (await res.json()) as AdminCustomFile;
 }
 
-export function deleteAdminCustomFile(name: string) {
-  return send("DELETE", adminURL(`/customization/files/${encodeURIComponent(name)}`));
+export function deleteAdminCustomFile(path: string) {
+  return send("DELETE", adminURL(`/customization/files/${path.split("/").map(encodeURIComponent).join("/")}`));
 }
 
 export async function sendAdminTestMail(email: string) {

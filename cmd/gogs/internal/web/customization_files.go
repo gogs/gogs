@@ -2,8 +2,10 @@ package web
 
 import (
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -15,90 +17,114 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/lazyregexp"
+	"gogs.io/gogs/public"
 )
 
-// maxCustomFileSize is the largest file that admins can upload for the
-// components to show, e.g., a logo.
+// maxCustomFileSize is the largest static file that admins can upload, e.g., a
+// logo for a component to show.
 const maxCustomFileSize = 10 << 20
 
-// customFilesURLPath is where the uploaded files are served.
-const customFilesURLPath = "/-/custom/files/"
+// customFileSegment matches each directory and file name in the path of an
+// uploaded file. Names start with a letter or digit, so none is hidden or walks
+// up the directory tree.
+var customFileSegment = lazyregexp.New(`^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$`)
 
-// customFileName matches the names that uploaded files may have. Names start
-// with a letter or digit, so none is hidden or walks up the directory tree.
-var customFileName = lazyregexp.New(`^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$`)
-
-func customFilesDir() string {
-	return filepath.Join(conf.CustomDir(), "web", "files")
+// customPublicDir returns the directory of static files that are served ahead
+// of the built-in ones, which the Files page of the customization manages.
+func customPublicDir() string {
+	return filepath.Join(conf.CustomDir(), "public")
 }
 
-// customFilePath returns the path of the uploaded file with the name, or false
-// when the name is not one an uploaded file may have.
+// customFilePath returns the path on disk of the static file at the slash
+// separated path, e.g., "img/logo.png", or false when no uploaded file may have
+// the path. A file named index.html is refused, since the static handler
+// serves it in place of the page at its directory.
 func customFilePath(name string) (string, bool) {
-	if !customFileName.MatchString(name) || strings.Contains(name, "..") {
+	segments := strings.Split(name, "/")
+	if len(segments) > 8 || segments[len(segments)-1] == "index.html" {
 		return "", false
 	}
-	return filepath.Join(customFilesDir(), name), true
+	for _, s := range segments {
+		if !customFileSegment.MatchString(s) || strings.Contains(s, "..") {
+			return "", false
+		}
+	}
+	return filepath.Join(customPublicDir(), filepath.FromSlash(name)), true
 }
 
-func getCustomFile(c flamego.Context) {
-	w, r := c.ResponseWriter(), c.Request().Request
-	fpath, ok := customFilePath(c.Param("name"))
-	if !ok {
-		http.NotFound(w, r)
-		return
+// isBuiltinFile reports whether a built-in static file has the path, which a
+// custom file with the same path replaces.
+func isBuiltinFile(name string) bool {
+	if _, err := fs.Stat(public.Files, name); err == nil {
+		return true
 	}
-	f, err := os.Open(fpath)
-	if err != nil {
-		http.NotFound(w, r)
-		return
-	}
-	defer func() { _ = f.Close() }()
-	fi, err := f.Stat()
-	if err != nil || !fi.Mode().IsRegular() {
-		http.NotFound(w, r)
-		return
-	}
-	// A file keeps its URL when it is replaced, so browsers check whether it
-	// changed before they use their copy.
-	w.Header().Set("Cache-Control", "no-cache")
-	http.ServeContent(w, r, fi.Name(), fi.ModTime(), f)
+	_, err := fs.Stat(public.WebAssets, "dist/"+name)
+	return err == nil
 }
 
 type adminCustomFile struct {
-	Name       string    `json:"name"`
+	// Path is relative to the custom public directory, e.g., "img/logo.png".
+	Path       string    `json:"path"`
 	Size       int64     `json:"size"`
 	ModifiedAt time.Time `json:"modifiedAt"`
 	URL        string    `json:"url"`
+	// ReplacesBuiltin is whether the file is served in place of a built-in
+	// one, e.g., "img/favicon.png".
+	ReplacesBuiltin bool `json:"replacesBuiltin"`
+	// Editable is whether the admin panel can replace and delete the file,
+	// which a file put there by hand under another name is not.
+	Editable bool `json:"editable"`
 }
 
-func newAdminCustomFile(fi os.FileInfo) adminCustomFile {
+func newAdminCustomFile(name string, fi os.FileInfo) adminCustomFile {
+	_, editable := customFilePath(name)
 	return adminCustomFile{
-		Name:       fi.Name(),
-		Size:       fi.Size(),
-		ModifiedAt: fi.ModTime().UTC(),
-		URL:        conf.Server.Subpath + customFilesURLPath + fi.Name(),
+		Path:            name,
+		Size:            fi.Size(),
+		ModifiedAt:      fi.ModTime().UTC(),
+		URL:             conf.Server.Subpath + "/" + name,
+		ReplacesBuiltin: isBuiltinFile(name),
+		Editable:        editable,
 	}
 }
 
+// getAdminCustomFiles lists the files in the custom public directory, including
+// the ones put there by hand.
 func getAdminCustomFiles(logger *logx.Logger) (statusCode int, resp []adminCustomFile, err error) {
-	entries, err := os.ReadDir(customFilesDir())
-	if err != nil && !os.IsNotExist(err) {
-		logger.Error("Failed to list customization files", "error", err)
+	resp = []adminCustomFile{}
+	root := customPublicDir()
+	err = filepath.WalkDir(root, func(fpath string, d fs.DirEntry, err error) error {
+		if err != nil {
+			if os.IsNotExist(err) && fpath == root {
+				return filepath.SkipDir
+			}
+			return err
+		}
+		if strings.HasPrefix(d.Name(), ".") && fpath != root {
+			if d.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if !d.Type().IsRegular() {
+			return nil
+		}
+		rel, err := filepath.Rel(root, fpath)
+		if err != nil {
+			return err
+		}
+		fi, err := d.Info()
+		if err != nil {
+			return err
+		}
+		resp = append(resp, newAdminCustomFile(filepath.ToSlash(rel), fi))
+		return nil
+	})
+	if err != nil {
+		logger.Error("Failed to list custom public files", "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "list files")
 	}
-	resp = []adminCustomFile{}
-	for _, entry := range entries {
-		if _, ok := customFilePath(entry.Name()); !ok || !entry.Type().IsRegular() {
-			continue
-		}
-		fi, err := entry.Info()
-		if err != nil {
-			continue
-		}
-		resp = append(resp, newAdminCustomFile(fi))
-	}
-	slices.SortFunc(resp, func(a, b adminCustomFile) int { return strings.Compare(a.Name, b.Name) })
+	slices.SortFunc(resp, func(a, b adminCustomFile) int { return strings.Compare(a.Path, b.Path) })
 	return http.StatusOK, resp, nil
 }
 
@@ -109,10 +135,11 @@ func limitCustomFileUpload(c flamego.Context) {
 	r.Body = http.MaxBytesReader(c.ResponseWriter(), r.Body, maxCustomFileSize+64<<10)
 }
 
-// postAdminCustomFile stores the file uploaded as the "file" form field under
-// its own name, replacing a file of the same name.
+// postAdminCustomFile stores the file uploaded as the "file" form field at the
+// path in the "path" form field, replacing a file at the same path.
 func postAdminCustomFile(c flamego.Context, logger *logx.Logger) (statusCode int, resp *adminCustomFile, err error) {
-	file, header, err := c.Request().FormFile("file")
+	r := c.Request().Request
+	file, header, err := r.FormFile("file")
 	if err != nil {
 		var tooLarge *http.MaxBytesError
 		if errors.As(err, &tooLarge) {
@@ -124,19 +151,21 @@ func postAdminCustomFile(c flamego.Context, logger *logx.Logger) (statusCode int
 	if header.Size > maxCustomFileSize {
 		return http.StatusRequestEntityTooLarge, nil, errors.Newf("file exceeds the size limit of %d MB", maxCustomFileSize>>20)
 	}
-	fpath, ok := customFilePath(header.Filename)
+	name := path.Clean(strings.Trim(r.FormValue("path"), "/"))
+	fpath, ok := customFilePath(name)
 	if !ok {
-		return http.StatusBadRequest, nil, errors.New("file name may only have letters, digits, dots, dashes and underscores, and must start with a letter or digit")
+		return http.StatusBadRequest, nil, errors.New("each name in the path may only have letters, digits, dots, dashes and underscores, and must start with a letter or digit, and the file may not be named index.html")
 	}
 
 	dir := filepath.Dir(fpath)
 	if err = os.MkdirAll(dir, os.ModePerm); err != nil {
-		logger.Error("Failed to create customization files directory", "path", dir, "error", err)
+		logger.Error("Failed to create custom public directory", "path", dir, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "create directory")
 	}
 	// Write to a temporary file of its own and rename it, so pages never load
-	// a file that is only partly written.
-	tmp, err := os.CreateTemp(filepath.Dir(dir), "file-*.tmp")
+	// a file that is only partly written. Its name starts with a dot, so the
+	// list skips it.
+	tmp, err := os.CreateTemp(dir, ".upload-*.tmp")
 	if err != nil {
 		logger.Error("Failed to create temporary file", "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "create temporary file")
@@ -153,20 +182,21 @@ func postAdminCustomFile(c flamego.Context, logger *logx.Logger) (statusCode int
 		err = os.Rename(tmp.Name(), fpath)
 	}
 	if err != nil {
-		logger.Error("Failed to write customization file", "name", header.Filename, "error", err)
+		logger.Error("Failed to write custom public file", "path", name, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "write file")
 	}
 	fi, err := os.Stat(fpath)
 	if err != nil {
-		logger.Error("Failed to stat customization file", "name", header.Filename, "error", err)
+		logger.Error("Failed to stat custom public file", "path", name, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "stat file")
 	}
-	f := newAdminCustomFile(fi)
+	f := newAdminCustomFile(name, fi)
 	return http.StatusCreated, &f, nil
 }
 
 func deleteAdminCustomFile(c flamego.Context, logger *logx.Logger) (statusCode int, resp any, err error) {
-	fpath, ok := customFilePath(c.Param("name"))
+	name := c.Param("path")
+	fpath, ok := customFilePath(name)
 	if !ok {
 		return http.StatusNotFound, nil, errors.New("file not found")
 	}
@@ -174,7 +204,7 @@ func deleteAdminCustomFile(c flamego.Context, logger *logx.Logger) (statusCode i
 		if os.IsNotExist(err) {
 			return http.StatusNotFound, nil, errors.New("file not found")
 		}
-		logger.Error("Failed to delete customization file", "path", fpath, "error", err)
+		logger.Error("Failed to delete custom public file", "path", name, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete file")
 	}
 	return http.StatusNoContent, nil, nil
