@@ -160,6 +160,13 @@ func ImportDatabase(ctx context.Context, logger *logx.Logger, db *gorm.DB, dirPa
 	if err != nil {
 		return errors.Wrap(err, "disable push allowlists of user repositories")
 	}
+	// Backups of versions that left the team-repo relations of deleted teams behind
+	// may have them, which a new team that reuses the ID of a deleted one would
+	// inherit.
+	err = migrations.DeleteOrphanedTeamRepos(db.WithContext(ctx))
+	if err != nil {
+		return errors.Wrap(err, "delete team-repo relations of deleted teams")
+	}
 	return nil
 }
 

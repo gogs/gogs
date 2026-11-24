@@ -56,6 +56,7 @@ func newMigrations(logger *logx.Logger, db *gorm.DB) []*goose.Migration {
 		newMigration(logger, db, 20261121213349, "add index on issue_user.issue_id", addIssueUserIssueIDIndex),
 		newMigration(logger, db, 20261121220000, "add indexes on access.repo_id, watch.repo_id and pull_request.base_repo_id", addRepoIDIndexes),
 		newMigration(logger, db, 20261122192042, "add missing index on access_token.uid", addMissingAccessTokenUIDIndex),
+		newMigration(logger, db, 20261124024706, "delete team-repo relations of deleted teams", DeleteOrphanedTeamRepos),
 	}
 }
 

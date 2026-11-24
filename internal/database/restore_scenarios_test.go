@@ -63,6 +63,12 @@ func TestRestoreScenarios(t *testing.T) {
 			{ID: 1, EnableWhitelist: false, WhitelistUserIDs: "1"},
 			{ID: 2, EnableWhitelist: true, WhitelistUserIDs: "1", WhitelistTeamIDs: "3"},
 		}, branches)
+
+		// Only the team-repo relation of team 3 is kept, not the one of the deleted
+		// team 4.
+		var teamRepoIDs []int64
+		require.NoError(t, db.Table("team_repo").Order("id").Pluck("id", &teamRepoIDs).Error)
+		assert.Equal(t, []int64{1}, teamRepoIDs)
 	}
 
 	scenarios := []struct {

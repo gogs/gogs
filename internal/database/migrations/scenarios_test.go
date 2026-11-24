@@ -136,6 +136,13 @@ func TestMigrateScenarios(t *testing.T) {
 					{"id": 1, "protect_branch_id": 1, "repo_id": 1, "name": "main", "user_id": 1},
 					{"id": 2, "protect_branch_id": 2, "repo_id": 2, "name": "main", "user_id": 1},
 				}).Error)
+
+				// Deleting team 2 left its team-repo relation behind.
+				require.NoError(t, db.Table("team").Create(map[string]any{"id": 1, "org_id": 2, "lower_name": "owners", "name": "Owners", "authorize": 4, "num_repos": 1}).Error)
+				require.NoError(t, db.Table("team_repo").Create([]map[string]any{
+					{"id": 1, "org_id": 2, "team_id": 1, "repo_id": 2},
+					{"id": 2, "org_id": 2, "team_id": 2, "repo_id": 2},
+				}).Error)
 			},
 			check: func(t *testing.T, db *gorm.DB) {
 				assert.Equal(t, []string{
@@ -155,6 +162,10 @@ func TestMigrateScenarios(t *testing.T) {
 				var enableAllowlist []bool
 				require.NoError(t, db.Table("protect_branch").Order("id").Pluck("enable_whitelist", &enableAllowlist).Error)
 				assert.Equal(t, []bool{false, true}, enableAllowlist)
+
+				var teamRepoIDs []int64
+				require.NoError(t, db.Table("team_repo").Order("id").Pluck("id", &teamRepoIDs).Error)
+				assert.Equal(t, []int64{1}, teamRepoIDs)
 			},
 		},
 		{
