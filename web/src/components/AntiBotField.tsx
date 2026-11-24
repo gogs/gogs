@@ -29,7 +29,7 @@ export function AntiBotField({ antiBot, disabled, error, invalid, tabIndex }: An
   const { t } = useTranslation();
   // The browser shows an image it already loaded for the same URL without
   // asking the server again, whose text may have been used up since, e.g.,
-  // when signing in right after signing up. So every mount gets its own URL.
+  // when logging in right after signing up. So every mount gets its own URL.
   const [captchaMount] = useState(() => ++captchaMounts);
   const errorMessage = error && (
     <p id="antiBotPayload-error" className="text-sm text-(--color-destructive)">

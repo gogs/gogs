@@ -504,12 +504,12 @@ const altchaURLPrefix = "/-/altcha/"
 // captchaURLPrefix is where the captcha middleware serves captcha images.
 const captchaURLPrefix = "/-/captcha/"
 
-// antiBotVerifier reports whether the payload of a sign-up or a sign-in, i.e.,
+// antiBotVerifier reports whether the payload of a sign up or a log in, i.e.,
 // the captcha text or the altcha solution, passes anti-bot verification.
 type antiBotVerifier func(payload string) bool
 
 // antiBotMiddlewares returns the middlewares of [auth] ANTI_BOT_VERIFICATION
-// that serve what the sign-up and sign-in pages need and map an
+// that serve what the sign up and log in pages need and map an
 // antiBotVerifier. Only the configured one is mounted, and when it is empty,
 // one that accepts every payload.
 func antiBotMiddlewares() ([]flamego.Handler, error) {

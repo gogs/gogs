@@ -23,7 +23,7 @@ export interface LoginSource {
 
 export interface SignInPage {
   loginSources: LoginSource[];
-  // antiBotVerification is empty when signing in is not verified.
+  // antiBotVerification is empty when log in is not verified.
   antiBotVerification: AntiBotVerification;
 }
 

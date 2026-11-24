@@ -63,7 +63,7 @@ type loginSource struct {
 
 type getUserSignInResponse struct {
 	LoginSources []loginSource `json:"loginSources"`
-	// AntiBotVerification is empty when signing in is not verified.
+	// AntiBotVerification is empty when log in is not verified.
 	AntiBotVerification string `json:"antiBotVerification"`
 }
 
@@ -193,7 +193,7 @@ func getUserSignIn(logger *logx.Logger, r *http.Request) (statusCode int, resp *
 	}
 	return http.StatusOK, &getUserSignInResponse{
 		LoginSources:        loginSources,
-		AntiBotVerification: antiBotVerificationOf(conf.Auth.EnableSignInAntiBotVerification),
+		AntiBotVerification: antiBotVerificationOf(conf.Auth.EnableLogInAntiBotVerification),
 	}, nil
 }
 
@@ -297,7 +297,7 @@ type userSignInResponse struct {
 func postUserSignIn(logger *logx.Logger, r *http.Request, w http.ResponseWriter, store session.Store, sess session.Session, l i18n.Locale, verifyAntiBot antiBotVerifier, req userSignInRequest) (statusCode int, resp any, err error) {
 	// Checked before the password, so that a request that fails the check tells
 	// nothing about the password.
-	if conf.Auth.EnableSignInAntiBotVerification && !verifyAntiBot(req.AntiBotPayload) {
+	if conf.Auth.EnableLogInAntiBotVerification && !verifyAntiBot(req.AntiBotPayload) {
 		return http.StatusUnauthorized, antiBotVerificationFailed(l), nil
 	}
 	u, err := database.Handle.Users().Authenticate(r.Context(), logger, req.Username, req.Password, req.LoginSource)

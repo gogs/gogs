@@ -79,7 +79,7 @@ func TestSignUp(t *testing.T) {
 	})
 }
 
-func TestSignInAntiBotVerification(t *testing.T) {
+func TestLogInAntiBotVerification(t *testing.T) {
 	t.Parallel()
 
 	u := seedUser(t, CreateUserOptions{})
