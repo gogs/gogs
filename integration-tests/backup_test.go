@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"database/sql"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -73,6 +74,11 @@ func TestBackupRestore(t *testing.T) {
 	require.NoError(t, os.Mkdir(public, 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(public, "robots.txt"), []byte("User-agent: *"), 0o644))
 	require.NoError(t, os.Symlink(public, filepath.Join(customDir, "public")))
+	// Links further down are backed up as links, so the backup never copies
+	// files from outside the directories it backs up.
+	secret := filepath.Join(work, "secret")
+	require.NoError(t, os.WriteFile(secret, []byte("secret"), 0o600))
+	require.NoError(t, os.Symlink(secret, filepath.Join(public, "secret")))
 	// Nothing may be written to the system temporary directory, which on some
 	// servers is too small for the archive. A file in its place makes any write
 	// fail, even for root.
@@ -143,6 +149,16 @@ func TestBackupRestore(t *testing.T) {
 		assert.NoFileExists(t, filepath.Join(target, "failure.zip"), "backup left a partial archive with the database")
 	})
 
+	t.Run("exclude repositories", func(t *testing.T) {
+		archive, err := zip.OpenReader(backup(t, "exclude-repos.zip", "--exclude-repos"))
+		require.NoError(t, err)
+		defer func() { _ = archive.Close() }()
+		_, err = archive.Open("gogs-backup/repositories.zip")
+		assert.ErrorIs(t, err, fs.ErrNotExist)
+		_, err = archive.Open("gogs-backup/custom/public/robots.txt")
+		assert.NoError(t, err)
+	})
+
 	t.Run("exclude mirror repositories", func(t *testing.T) {
 		archive, err := zip.OpenReader(backup(t, "exclude-mirrors.zip", "--exclude-mirror-repos"))
 		require.NoError(t, err)
@@ -170,6 +186,17 @@ func TestBackupRestore(t *testing.T) {
 	require.NoError(t, os.MkdirAll(target, 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(target, "full.zip"), []byte("earlier"), 0o644))
 	archivePath := backup(t, "full.zip")
+	archive, err := zip.OpenReader(archivePath)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = archive.Close() })
+	link, err := archive.Open("gogs-backup/custom/public/secret")
+	require.NoError(t, err)
+	fi, err := link.Stat()
+	require.NoError(t, err)
+	assert.Equal(t, fs.ModeSymlink, fi.Mode().Type(), "nested link")
+	linkTarget, err := io.ReadAll(link)
+	require.NoError(t, err)
+	assert.Equal(t, secret, string(linkTarget))
 
 	// The new instance has its own database, work directory and repositories.
 	dbName, dropDatabase, err := createPostgresDatabase()
@@ -207,7 +234,7 @@ func TestBackupRestore(t *testing.T) {
 		gitRun(t, restored, "fsck", "--strict")
 	}
 	assert.Equal(t, gitRun(t, repoPath, "rev-parse", nonUTF8Ref), gitRun(t, restoredPath(repoPath), "rev-parse", nonUTF8Ref))
-	fi, err := os.Stat(restoredPath(hook))
+	fi, err = os.Stat(restoredPath(hook))
 	require.NoError(t, err)
 	assert.Equal(t, os.FileMode(0o755), fi.Mode().Perm())
 
