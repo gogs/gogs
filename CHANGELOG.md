@@ -71,7 +71,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Fixed
 
-- _Security:_ SSRF protection bypass in repository migration and mirror sync through `git://` clone addresses. [#TBD](https://github.com/gogs/gogs/pull/TBD) - [GHSA-g4hw-3g8p-m282](https://github.com/gogs/gogs/security/advisories/GHSA-g4hw-3g8p-m282)
+- _Security:_ SSRF protection bypass in repository migration and mirror sync through `git://` clone addresses. [#8719](https://github.com/gogs/gogs/pull/8719) - [GHSA-g4hw-3g8p-m282](https://github.com/gogs/gogs/security/advisories/GHSA-g4hw-3g8p-m282)
 - Saving mirror settings with an invalid address no longer saves the new sync interval and pruning setting. [#8718](https://github.com/gogs/gogs/pull/8718)
 - Listing the teams of an organization through the API returns 404 to users who are not members. Members who are not owners only see their own teams, as in the web interface. [#8697](https://github.com/gogs/gogs/pull/8697)
 - Getting or editing an organization, and listing or creating its teams through the API, return 404 for the name of a user instead of treating the user as an organization, e.g., site admins can no longer create a team in a user account. [#8697](https://github.com/gogs/gogs/pull/8697)
