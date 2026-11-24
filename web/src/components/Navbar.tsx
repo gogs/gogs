@@ -81,7 +81,7 @@ export function Navbar() {
             <PopoverTrigger
               {...menu.trigger}
               aria-label="Open menu"
-              className="inline-flex size-9 cursor-pointer items-center justify-center rounded-md text-(--color-foreground) hover:bg-(--color-surface)"
+              className="inline-flex size-8 cursor-pointer items-center justify-center rounded-md text-(--color-foreground) hover:bg-(--color-surface)"
             >
               <Menu className="size-[18px]" aria-hidden />
             </PopoverTrigger>
@@ -203,7 +203,7 @@ export function PaletteButton() {
         onClick={() => setPaletteOpen(true)}
         aria-label={t("command_palette.title")}
         aria-keyshortcuts={paletteShortcut.aria}
-        className="ml-auto inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md text-(--color-foreground) hover:bg-(--color-surface) sm:ml-0 md:hidden"
+        className="ml-auto inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-(--color-foreground) hover:bg-(--color-surface) sm:ml-0 md:hidden"
       >
         <Search className="size-[18px]" aria-hidden />
       </button>
@@ -221,7 +221,7 @@ function CreateMenu({ canCreateOrganization }: { canCreateOrganization: boolean 
       <PopoverTrigger
         {...menu.trigger}
         aria-label={t("create_new")}
-        className="inline-flex h-9 cursor-pointer items-center gap-1 rounded-md px-2 text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
+        className="inline-flex h-8 cursor-pointer items-center gap-1 rounded-md px-2 text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
       >
         <Plus className="size-4" aria-hidden />
         <ChevronDown className="size-3" aria-hidden />
@@ -258,7 +258,7 @@ export function UserMenu({ user, inAdmin = false }: { user: UserInfo; inAdmin?: 
       <PopoverTrigger
         {...menu.trigger}
         aria-label={t("user_profile_and_more")}
-        className="inline-flex h-9 cursor-pointer items-center gap-1 rounded-md px-1 hover:bg-(--color-surface)"
+        className="inline-flex h-8 cursor-pointer items-center gap-1 rounded-md px-1 hover:bg-(--color-surface)"
       >
         {user.avatarURL ? (
           <img src={user.avatarURL} alt="" width="24" height="24" className="size-6 rounded-full" />
