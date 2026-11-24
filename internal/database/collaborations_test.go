@@ -284,6 +284,18 @@ func collaborationsChangeMode(t *testing.T, ctx context.Context, s *Collaboratio
 
 		require.NoError(t, s.ChangeMode(ctx, repo, AccessModeOwner, carol.ID, AccessModeAdmin))
 		assert.Equal(t, AccessModeAdmin, accessModes(t, ctx, perms, repo.ID)[carol.ID])
+
+		// A repository transferred after the caller loaded it is left alone,
+		// because its accesses would be calculated for the old organization,
+		// e.g., owner access to members of its owner team.
+		require.NoError(t, s.db.Model(new(Repository)).Where("id = ?", repo.ID).UpdateColumn("owner_id", dave.ID).Error)
+		err = s.ChangeMode(ctx, repo, AccessModeOwner, carol.ID, AccessModeRead)
+		assert.True(t, IsErrRepoNotExist(err), "%+v", err)
+		err = s.Delete(ctx, repo, carol.ID)
+		assert.True(t, IsErrRepoNotExist(err), "%+v", err)
+		c := new(Collaboration)
+		require.NoError(t, s.db.Where("repo_id = ? AND user_id = ?", repo.ID, carol.ID).First(c).Error)
+		assert.Equal(t, AccessModeAdmin, c.Mode)
 	})
 }
 

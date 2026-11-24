@@ -53,7 +53,7 @@ func addCollaborator(c *apiContext, form addCollaboratorRequest) {
 
 	if form.Permission != nil {
 		if err := database.Handle.Collaborations().ChangeMode(ctx, c.Repo.Repository, c.Repo.AccessMode, collaborator.ID, database.ParseAccessMode(*form.Permission)); err != nil {
-			c.Error(err, "change collaboration access mode")
+			c.NotFoundOrError(err, "change collaboration access mode")
 			return
 		}
 	}
@@ -91,7 +91,7 @@ func deleteCollaborator(c *apiContext) {
 	}
 
 	if err := database.Handle.Collaborations().Delete(c.Request().Context(), c.Repo.Repository, collaborator.ID); err != nil {
-		c.Error(err, "delete collaboration")
+		c.NotFoundOrError(err, "delete collaboration")
 		return
 	}
 

@@ -207,6 +207,9 @@ func deleteUserSettingsRepo(c flamego.Context, logger *logx.Logger, viewer *data
 		return http.StatusNotFound, nil, errors.New("repository not found")
 	}
 	if err = database.Handle.Collaborations().Delete(c.Request().Context(), repo, viewer.ID); err != nil {
+		if database.IsErrRepoNotExist(err) {
+			return http.StatusNotFound, nil, errors.New("repository not found")
+		}
 		logger.Error("Failed to delete collaboration", "userID", viewer.ID, "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete collaboration")
 	}

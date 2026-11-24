@@ -102,7 +102,7 @@ func (s *CollaborationsStore) ChangeMode(ctx context.Context, repo *Repository, 
 	}
 
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := lockCollaborationRepository(tx, repo.ID); err != nil {
+		if err := lockCollaborationRepository(tx, repo); err != nil {
 			return err
 		}
 		result := tx.Model(new(Collaboration)).Where("repo_id = ? AND user_id = ?", repo.ID, userID).Update("mode", mode)
@@ -120,7 +120,7 @@ func (s *CollaborationsStore) ChangeMode(ctx context.Context, repo *Repository, 
 // a collaborator is a no-op.
 func (s *CollaborationsStore) Delete(ctx context.Context, repo *Repository, userID int64) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := lockCollaborationRepository(tx, repo.ID); err != nil {
+		if err := lockCollaborationRepository(tx, repo); err != nil {
 			return err
 		}
 		result := tx.Where("repo_id = ? AND user_id = ?", repo.ID, userID).Delete(new(Collaboration))
@@ -133,13 +133,17 @@ func (s *CollaborationsStore) Delete(ctx context.Context, repo *Repository, user
 	})
 }
 
-// lockCollaborationRepository locks the repository of given ID and then its
-// owner, as adding a collaborator does. A repository deleted meanwhile is left
-// to the caller, whose changes then affect no rows.
-func lockCollaborationRepository(tx *gorm.DB, repoID int64) error {
-	ownerID, exists, err := lockRepository(tx, repoID)
-	if err != nil || !exists {
+// lockCollaborationRepository locks the repository and then its owner, as
+// adding a collaborator does. It returns ErrRepoNotExist when the repository
+// was deleted or transferred after the caller loaded it, whose accesses would
+// otherwise be recalculated for the old owner, e.g., giving owner access to a
+// member of the old organization's owner team.
+func lockCollaborationRepository(tx *gorm.DB, repo *Repository) error {
+	ownerID, exists, err := lockRepository(tx, repo.ID)
+	if err != nil {
 		return err
+	} else if !exists || ownerID != repo.OwnerID {
+		return ErrRepoNotExist{args: errx.Args{"repoID": repo.ID}}
 	}
 	return lockOrganization(tx, ownerID)
 }
