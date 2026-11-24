@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"unknwon.dev/ini/v2"
@@ -418,6 +419,21 @@ func handleDeprecated() {
 			Auth.AntiBotVerification = ""
 		}
 	}
+}
+
+// secureContext reports whether browsers treat pages at the URL as a secure
+// context, which altcha needs to solve challenges with the Web Crypto API:
+// HTTPS, or a loopback address over plain HTTP.
+func secureContext(u *url.URL) bool {
+	if u.Scheme == "https" {
+		return true
+	}
+	host := u.Hostname()
+	if host == "localhost" || strings.HasSuffix(host, ".localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 // checkInvalidOptions checks invalid (renamed/deleted) configuration sections

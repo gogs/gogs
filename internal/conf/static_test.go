@@ -1,10 +1,12 @@
 package conf
 
 import (
+	"net/url"
 	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"unknwon.dev/ini/v2"
 )
 
@@ -82,6 +84,30 @@ func TestHandleDeprecatedRegistrationCaptcha(t *testing.T) {
 			Auth = AuthOpts{AntiBotVerification: test.current}
 			handleDeprecated()
 			assert.Equal(t, test.want, Auth.AntiBotVerification)
+		})
+	}
+}
+
+func TestSecureContext(t *testing.T) {
+	tests := []struct {
+		url  string
+		want bool
+	}{
+		{url: "https://git.example.com/", want: true},
+		{url: "https://10.0.0.5:3000/", want: true},
+		{url: "http://localhost:3000/", want: true},
+		{url: "http://gogs.localhost/", want: true},
+		{url: "http://127.0.0.1:3000/", want: true},
+		{url: "http://[::1]:3000/", want: true},
+		{url: "http://10.0.0.5:3000/", want: false},
+		{url: "http://git.example.com/", want: false},
+		{url: "http://localhost.example.com/", want: false},
+	}
+	for _, test := range tests {
+		t.Run(test.url, func(t *testing.T) {
+			u, err := url.Parse(test.url)
+			require.NoError(t, err)
+			assert.Equal(t, test.want, secureContext(u))
 		})
 	}
 }
