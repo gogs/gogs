@@ -234,6 +234,16 @@ func (c *apiContext) queryPage(pageSize int) int {
 	return min(max(c.QueryInt("page"), 1), math.MaxInt/max(pageSize, 1))
 }
 
+// queryPageSize returns the requested page size, or defaultSize when none is
+// given, capped at [api] MAX_RESPONSE_ITEMS.
+func (c *apiContext) queryPageSize(defaultSize int) int {
+	size := c.QueryInt("pageSize")
+	if size <= 0 {
+		size = defaultSize
+	}
+	return min(size, conf.API.MaxResponseItems)
+}
+
 // SetLinkHeader sets pagination link header by given total number and page size.
 func (c *apiContext) SetLinkHeader(total, pageSize int) {
 	// The paginater clamps the page to the last one, but the list it describes

@@ -39,7 +39,7 @@ func listBranches(c *apiContext) {
 	}
 
 	if c.Query("page") != "" || c.Query("pageSize") != "" {
-		pageSize := toAllowedPageSize(c.QueryInt("pageSize"))
+		pageSize := c.queryPageSize(10)
 		page := c.queryPage(pageSize)
 		c.SetLinkHeader(len(branches), pageSize)
 		start := min((page-1)*pageSize, len(branches))

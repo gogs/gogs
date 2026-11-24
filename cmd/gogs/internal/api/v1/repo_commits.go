@@ -16,11 +16,7 @@ const mediaApplicationSHA = "application/vnd.gogs.sha"
 // getAllCommits returns a page of the commits reachable from the "sha" query
 // parameter, a branch, a tag or a commit, which defaults to HEAD.
 func getAllCommits(c *apiContext) {
-	pageSize := c.QueryInt("pageSize")
-	if pageSize <= 0 {
-		pageSize = 30
-	}
-	pageSize = toAllowedPageSize(pageSize)
+	pageSize := c.queryPageSize(30)
 	page := c.queryPage(pageSize)
 
 	result := make([]*v1types.Commit, 0, pageSize)
