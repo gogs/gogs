@@ -421,19 +421,33 @@ func handleDeprecated() {
 	}
 }
 
-// secureContext reports whether browsers treat pages at the URL as a secure
-// context, which altcha needs to solve challenges with the Web Crypto API:
-// HTTPS, or a loopback address over plain HTTP.
-func secureContext(u *url.URL) bool {
-	if u.Scheme == "https" {
+// browsersSolveAltcha reports whether browsers can solve altcha challenges on
+// the site, which they do with the Web Crypto API only in a secure context:
+// over HTTPS, or over plain HTTP on a loopback address. A site at a loopback
+// external URL that listens on other addresses is also reached at those, e.g.,
+// with the default configuration.
+func browsersSolveAltcha(externalURL *url.URL, httpAddr string) bool {
+	if externalURL.Scheme == "https" {
 		return true
 	}
-	host := u.Hostname()
+	return isLoopbackHost(externalURL.Hostname()) && isLoopbackHost(httpAddr)
+}
+
+// isLoopbackHost reports whether browsers treat the host as a loopback address.
+func isLoopbackHost(host string) bool {
+	host = strings.ToLower(strings.TrimSuffix(host, "."))
 	if host == "localhost" || strings.HasSuffix(host, ".localhost") {
 		return true
 	}
 	ip := net.ParseIP(host)
-	return ip != nil && ip.IsLoopback()
+	if ip == nil {
+		return false
+	}
+	// Browsers trust only 127.0.0.0/8 and ::1, not IPv4-mapped forms.
+	if strings.Contains(host, ":") {
+		return ip.Equal(net.IPv6loopback)
+	}
+	return ip.IsLoopback()
 }
 
 // checkInvalidOptions checks invalid (renamed/deleted) configuration sections

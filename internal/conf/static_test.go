@@ -88,26 +88,31 @@ func TestHandleDeprecatedRegistrationCaptcha(t *testing.T) {
 	}
 }
 
-func TestSecureContext(t *testing.T) {
+func TestBrowsersSolveAltcha(t *testing.T) {
 	tests := []struct {
-		url  string
-		want bool
+		url      string
+		httpAddr string
+		want     bool
 	}{
-		{url: "https://git.example.com/", want: true},
-		{url: "https://10.0.0.5:3000/", want: true},
-		{url: "http://localhost:3000/", want: true},
-		{url: "http://gogs.localhost/", want: true},
-		{url: "http://127.0.0.1:3000/", want: true},
-		{url: "http://[::1]:3000/", want: true},
-		{url: "http://10.0.0.5:3000/", want: false},
-		{url: "http://git.example.com/", want: false},
-		{url: "http://localhost.example.com/", want: false},
+		{url: "https://git.example.com/", httpAddr: "0.0.0.0", want: true},
+		{url: "HTTPS://10.0.0.5:3000/", httpAddr: "0.0.0.0", want: true},
+		{url: "http://localhost:3000/", httpAddr: "127.0.0.1", want: true},
+		{url: "http://LOCALHOST.:3000/", httpAddr: "localhost", want: true},
+		{url: "http://gogs.localhost/", httpAddr: "::1", want: true},
+		{url: "http://127.0.0.2:3000/", httpAddr: "127.0.0.1", want: true},
+		{url: "http://[::1]:3000/", httpAddr: "127.0.0.1", want: true},
+		// The default configuration: reached at other addresses too.
+		{url: "http://localhost:3000/", httpAddr: "0.0.0.0", want: false},
+		{url: "http://[::ffff:127.0.0.1]:3000/", httpAddr: "127.0.0.1", want: false},
+		{url: "http://10.0.0.5:3000/", httpAddr: "0.0.0.0", want: false},
+		{url: "http://localhost.example.com/", httpAddr: "127.0.0.1", want: false},
+		{url: "http://localhost:3000/", httpAddr: "/run/gogs.sock", want: false},
 	}
 	for _, test := range tests {
-		t.Run(test.url, func(t *testing.T) {
+		t.Run(test.url+" on "+test.httpAddr, func(t *testing.T) {
 			u, err := url.Parse(test.url)
 			require.NoError(t, err)
-			assert.Equal(t, test.want, secureContext(u))
+			assert.Equal(t, test.want, browsersSolveAltcha(u, test.httpAddr))
 		})
 	}
 }

@@ -324,9 +324,9 @@ func Init(logger *logx.Logger, customConf string) error {
 	}
 	// Browsers cannot solve altcha challenges outside a secure context, which
 	// would leave nobody able to sign in on the web.
-	if Auth.AntiBotVerification == AntiBotVerificationAltcha && !secureContext(Server.URL) {
+	if Auth.AntiBotVerification == AntiBotVerificationAltcha && !browsersSolveAltcha(Server.URL, Server.HTTPAddr) {
 		if !HookMode {
-			logger.Warn("Using the image captcha for anti-bot verification, because browsers solve altcha only over HTTPS or on localhost", "externalURL", Server.ExternalURL)
+			logger.Warn("Using the image captcha for anti-bot verification, because browsers solve altcha only over HTTPS or on localhost", "externalURL", Server.ExternalURL, "httpAddr", Server.HTTPAddr)
 		}
 		Auth.AntiBotVerification = AntiBotVerificationCaptcha
 	}

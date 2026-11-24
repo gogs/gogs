@@ -83,6 +83,9 @@ export function AntiBotField({ antiBot, disabled, error, invalid, tabIndex }: An
   if (antiBot.verification !== "altcha") return null;
 
   const altchaState = antiBot.altchaState;
+  // Browsers solve altcha only in a secure context, which the server cannot
+  // tell for every address the site is reached at.
+  const retry = window.isSecureContext ? t("altcha_retry") : t("altcha_insecure_context");
   const labels: Record<AltchaState, string> = {
     idle: t("altcha_label"),
     verifying: t("altcha_verifying"),
@@ -108,7 +111,7 @@ export function AntiBotField({ antiBot, disabled, error, invalid, tabIndex }: An
       </span>
       {state === "error" && (
         <span id={current ? "altcha-note" : undefined} className="text-xs text-(--color-muted-foreground)">
-          {t("altcha_retry")}
+          {retry}
         </span>
       )}
     </div>
@@ -176,11 +179,7 @@ export function AntiBotField({ antiBot, disabled, error, invalid, tabIndex }: An
         {/* A live region only announces text that changes inside it, so it
             stays mounted and its text follows the state. */}
         <span className="sr-only" aria-live="polite">
-          {altchaState === "idle"
-            ? ""
-            : altchaState === "error"
-              ? `${labels.error}. ${t("altcha_retry")}`
-              : labels[altchaState]}
+          {altchaState === "idle" ? "" : altchaState === "error" ? `${labels.error}. ${retry}` : labels[altchaState]}
         </span>
       </div>
       {errorMessage}
