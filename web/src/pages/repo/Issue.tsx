@@ -577,6 +577,7 @@ export function ThreadReplies({
   root,
   attachment,
   pending = false,
+  canStartReview = false,
   includeRoot = false,
   actions,
 }: {
@@ -585,6 +586,9 @@ export function ThreadReplies({
   attachment?: IssueAttachmentSettings;
   // pending adds the reply to the viewer's pending review.
   pending?: boolean;
+  // canStartReview offers to start a review with the reply, or to post it
+  // alone, when the viewer has no pending review.
+  canStartReview?: boolean;
   // includeRoot shows the first comment like the replies, e.g., for a
   // thread on lines of a diff.
   includeRoot?: boolean;
@@ -613,7 +617,13 @@ export function ThreadReplies({
           )}
         >
           {user ? (
-            <ReplyForm issueRef={issueRef} root={root} attachment={attachment} pending={pending || !!root.pending} />
+            <ReplyForm
+              issueRef={issueRef}
+              root={root}
+              attachment={attachment}
+              pending={pending || !!root.pending}
+              canStartReview={canStartReview}
+            />
           ) : null}
           {actions}
         </div>
@@ -734,11 +744,13 @@ function ReplyForm({
   root,
   attachment,
   pending,
+  canStartReview,
 }: {
   issueRef: IssueRef;
   root: IssueComment;
   attachment?: IssueAttachmentSettings;
   pending: boolean;
+  canStartReview: boolean;
 }) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -746,12 +758,12 @@ function ReplyForm({
   const [content, setContent] = useState("");
   const uploads = useAttachmentUploads(issueRef.owner, issueRef.name, attachment);
   const mutation = useMutation({
-    mutationFn: () =>
+    mutationFn: (asPending: boolean) =>
       createRepoIssueComment(issueRef, {
         content,
         attachments: linkedUploads(uploads.uploaded, content),
         replyTo: root.id,
-        pending,
+        pending: asPending,
       }),
     onSuccess: async () => {
       await router.invalidate();
@@ -773,10 +785,12 @@ function ReplyForm({
       </button>
     );
   }
+  const startsReview = !pending && canStartReview;
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
-    mutation.mutate();
+    mutation.mutate(pending || startsReview);
   };
+  const disabled = !content.trim() || uploads.uploading;
   return (
     <form onSubmit={onSubmit} className="w-full min-w-0">
       <fieldset disabled={mutation.isPending} className="contents">
@@ -793,12 +807,27 @@ function ReplyForm({
         />
         <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
           <AttachFilesButton uploads={uploads} />
-          <div className="flex gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
             <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)}>
               {t("repo.issues.cancel")}
             </Button>
-            <Button type="submit" size="sm" disabled={!content.trim() || uploads.uploading}>
-              {pending ? t("repo.pulls.review.add_to_review") : t("repo.issues.reply")}
+            {startsReview ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={disabled}
+                onClick={() => mutation.mutate(false)}
+              >
+                {t("repo.pulls.review.add_single")}
+              </Button>
+            ) : null}
+            <Button type="submit" size="sm" disabled={disabled}>
+              {pending
+                ? t("repo.pulls.review.add_to_review")
+                : startsReview
+                  ? t("repo.pulls.review.start")
+                  : t("repo.issues.reply")}
             </Button>
           </div>
         </div>

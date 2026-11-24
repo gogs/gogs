@@ -214,6 +214,8 @@ export function ReviewThread({
   const { t } = useTranslation();
   const router = useRouter();
   const thread = root.thread!;
+  // Replies join or start a review only while the pull request is open.
+  const reviewable = data.pull.state !== "merged" && data.pull.state !== "closed";
   const anchor = `thread-${root.id}`;
   const linked = useIsLinked(anchor);
   // A resolved thread starts collapsed, unless it is linked, until the viewer
@@ -295,9 +297,8 @@ export function ReviewThread({
               issueRef={issueRef}
               root={root}
               attachment={data.attachment}
-              pending={
-                inDiff && data.pull.state !== "merged" && data.pull.state !== "closed" && !!data.viewerPendingReview
-              }
+              pending={inDiff && reviewable && !!data.viewerPendingReview}
+              canStartReview={inDiff && reviewable}
               includeRoot
               actions={
                 thread.viewerCanResolve ? (
