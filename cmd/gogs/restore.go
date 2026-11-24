@@ -51,9 +51,10 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 	if !osx.IsDir(tmpDir) {
 		logger.FatalContext(ctx, "Temporary directory does not exist", "tempDir", tmpDir)
 	}
-	// The archive is extracted into a new directory that only the current user can open, because it holds the
-	// configuration and the database dump, and its custom files are moved into the custom directory. Another user
-	// could otherwise read them, or replace them by creating the directory first.
+	// Extract into a new directory that only the current user can access, because the archive has the configuration
+	// and a dump of the database. With a fixed path, e.g., "/tmp/gogs-backup", another user on the host could read
+	// them, or create the directory before the restore and put in files that the restore then uses and moves into
+	// the custom directory.
 	extractDir, err := os.MkdirTemp(tmpDir, "gogs-restore-")
 	if err != nil {
 		logger.FatalContext(ctx, "Failed to create extract directory", "tempDir", tmpDir, "error", err)
