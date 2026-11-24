@@ -426,6 +426,7 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 				Get(getAdminAuthSource).
 				Patch(bindJSON(adminAuthSourceRequest{}), patchAdminAuthSource).
 				Delete(deleteAdminAuthSource)
+			f.Get("/customization", getAdminCustomization)
 			f.Get("/health", getAdminHealth)
 			f.Get("/traces", getAdminTraces)
 			f.Get("/traces/overview", getAdminTraceOverview)
@@ -523,6 +524,7 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 		f.Post("/uploads", limitAttachmentUpload(repoUploadLimits()), postRepoEditorUploadFile)
 		f.Delete("/uploads/{uuid}", deleteRepoEditorUploadFile)
 	}, requireAuthenticated, withRepoContext, withRepoEditor)
+	f.Put("/api/web/admin/customization/{part}", requireJSON, limitCustomizationContent, requireAuthenticated, requireAdmin, bindJSON(adminCustomPartRequest{}), putAdminCustomPart)
 	f.Get("/api/web/{owner}/{repo}/editor-indent", requireAuthenticated, withRepoContext, withRepoEditor, getRepoEditorIndent)
 	f.Post("/api/web/{owner}/{repo}/releases/attachments", limitAttachmentUpload(releaseAttachmentLimits()), requireAuthenticated, withRepoContext, withRepoWriter, withRepoCode, postRepoReleaseAttachment)
 	f.Combo("/api/web/user/settings/avatar", limitAvatarUpload, requireAuthenticated).

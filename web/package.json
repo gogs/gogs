@@ -33,6 +33,7 @@
     "@tanstack/react-router": "^1.170.46",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "htm": "^3.1.1",
     "i18next": "^26.3.4",
     "lucide-react": "^1.16.0",
     "mermaid": "^11.17.2",

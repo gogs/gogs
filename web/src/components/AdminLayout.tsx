@@ -3,6 +3,7 @@ import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import {
   Activity,
   Bell,
+  Blocks,
   BookMarked,
   Building2,
   ChevronRight,
@@ -52,6 +53,10 @@ const NAV: { title?: string; items: NavItem[] }[] = [
       { path: "/auths", label: "admin.authentication", icon: ShieldCheck },
       { path: "/config", label: "admin.config", icon: Settings },
     ],
+  },
+  {
+    title: "admin.group_customization",
+    items: [{ path: "/components", label: "admin.components", icon: Blocks }],
   },
   {
     title: "admin.group_monitoring",

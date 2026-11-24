@@ -18,6 +18,7 @@ import {
 import { useEffect, useState } from "react";
 import { Toaster } from "sonner";
 
+import { CustomSlot } from "@/components/CustomSlot";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { NoticeBanner } from "@/components/NoticeBanner";
@@ -48,6 +49,10 @@ interface RouterContext {
 function RootLayout() {
   const user = useUserInfo();
   const inAdmin = useRouterState({ select: (state) => state.matches.some((match) => match.routeId === "/admin") });
+  const inPreview = useRouterState({
+    select: (state) => state.matches.some((match) => match.routeId === "/-/customize/preview"),
+  });
+  if (inPreview) return <Outlet />;
   // The admin console has its own navigation in place of the navbar and
   // footer, and shows the notice banner below its own bar.
   if (inAdmin && user?.isAdmin) {
@@ -59,10 +64,10 @@ function RootLayout() {
   }
   return (
     <div className="flex min-h-dvh flex-col">
-      <Navbar />
+      <CustomSlot name="navbar" fallback={Navbar} />
       <NoticeBanner />
       <Outlet />
-      <Footer />
+      <CustomSlot name="footer" fallback={Footer} />
     </div>
   );
 }

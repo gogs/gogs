@@ -5,6 +5,7 @@ import type { JSX } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { leaveAdmin } from "@/lib/admin-exit";
 import { webContext } from "@/lib/context";
+import { SLOT_NAMES, type SlotName } from "@/lib/customization";
 import { LoaderResponseError, authenticationRedirect, loadAuthenticatedPage } from "@/lib/loader-error";
 import {
   type HealthSearch,
@@ -24,6 +25,7 @@ import {
   fetchAdminAuthSource,
   fetchAdminAuthSources,
   fetchAdminConfig,
+  fetchAdminCustomization,
   fetchAdminMonitor,
   fetchAdminNotices,
   fetchAdminOrgs,
@@ -36,6 +38,8 @@ import {
 } from "@/lib/queries/admin";
 import type { UserInfo } from "@/lib/user-info";
 import { AdminAuthSourceEdit, AdminAuthSourceNew } from "@/pages/admin/Auths";
+import { AdminComponentEdit, AdminComponents } from "@/pages/admin/Components";
+import { CustomizePreview } from "@/pages/admin/CustomizePreview";
 import { AdminServerHealth } from "@/pages/admin/Health";
 import { AdminAuthSources, AdminNotices, AdminOrgs, AdminRepos, AdminUsers } from "@/pages/admin/Lists";
 import { AdminOverview } from "@/pages/admin/Overview";
@@ -136,6 +140,45 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
     component: function Config() {
       return <AdminConfig config={configRoute.useLoaderData()} />;
     },
+  });
+
+  const componentsRoute = createRoute({
+    getParentRoute: () => adminRoute,
+    ...PAGE,
+    path: "components",
+    loader: ({ location }) => loadAdminPage(location, fetchAdminCustomization),
+    component: function Components() {
+      return <AdminComponents parts={componentsRoute.useLoaderData().parts} />;
+    },
+  });
+
+  const componentRoute = createRoute({
+    getParentRoute: () => adminRoute,
+    ...PAGE,
+    path: "components/$part",
+    loader: ({ params, location }) => {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+      if (!SLOT_NAMES.includes(params.part as SlotName)) throw notFound();
+      return loadAdminPage(location, fetchAdminCustomization);
+    },
+    component: function ComponentEdit() {
+      const { part } = componentRoute.useParams();
+      // Remount for another part, so that a draft does not carry over.
+      return <AdminComponentEdit key={part} name={part as SlotName} parts={componentRoute.useLoaderData().parts} />;
+    },
+  });
+
+  // The page the editor frames to preview a draft. It shows the parts alone,
+  // without the navbar and footer of the site around them.
+  const customizePreviewRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/-/customize/preview",
+    beforeLoad: ({ context }) => {
+      const { user } = context as { user: UserInfo | null };
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- `notFound()` is the documented TanStack Router signal for 404, not an Error subclass.
+      if (!user?.isAdmin) throw notFound();
+    },
+    component: CustomizePreview,
   });
 
   const jobsRoute = createRoute({
@@ -354,6 +397,8 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
       dashboardRoute,
       operationsRoute,
       configRoute,
+      componentsRoute,
+      componentRoute,
       jobsRoute,
       healthRoute,
       tracesRoute,
@@ -369,5 +414,6 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
       noticesRoute,
       missingRoute,
     ]),
+    customizePreviewRoute,
   ];
 }

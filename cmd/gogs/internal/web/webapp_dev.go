@@ -38,6 +38,7 @@ func mountWebAppRoutes(logger *logx.Logger, f *flamego.Flame) (http.Handler, err
 		_ = resp.Body.Close()
 		wc := context.WebContextFrom(resp.Request)
 		wc.Notice = readNoticeBanner(logger, conf.CustomDir())
+		wc.CustomScript = customScriptURL(logger)
 		var body []byte
 		inject, err := readInjectContent(conf.CustomDir())
 		if err == nil {

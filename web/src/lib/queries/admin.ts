@@ -314,6 +314,22 @@ export function fetchAdminConfig() {
   return fetchJSON<AdminConfig>(adminURL("/config"));
 }
 
+export interface AdminCustomPart {
+  name: string;
+  // source is the published script of the part, empty when it is built-in.
+  source: string;
+}
+
+export function fetchAdminCustomization() {
+  return fetchJSON<{ parts: AdminCustomPart[] }>(adminURL("/customization"));
+}
+
+// publishAdminCustomPart publishes the script of a part. An empty script
+// brings back the built-in part.
+export function publishAdminCustomPart(name: string, source: string) {
+  return submit<AdminCustomPart>("PUT", adminURL(`/customization/${name}`), { source });
+}
+
 export async function sendAdminTestMail(email: string) {
   const { message } = await submit<{ message: string }>("POST", adminURL("/config/test-mail"), { email });
   return message;

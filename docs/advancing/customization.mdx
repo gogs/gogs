@@ -1,0 +1,162 @@
+---
+title: "Customization"
+description: "Replace parts of the web interface, override email templates and static files, and inject custom content"
+icon: "paintbrush"
+---
+
+Gogs lets you change how your instance looks and behaves without touching its source code. All customizations live under the `custom/` directory and survive upgrades.
+
+<Warning>
+  Changes to the upstream Gogs codebase may break your customizations in future releases. Keep track of what you have changed.
+</Warning>
+
+## Components
+
+Site admins can replace parts of the web interface with scripts in **Admin panel > Customization > Components**. The parts that can be replaced are:
+
+| Component | Where it shows |
+|---|---|
+| Landing page | The home page for unauthenticated visitors |
+| Navbar | The top of every page, except the admin panel |
+| Footer | The bottom of every page, except the admin panel |
+
+Each component has its own editor with a live preview, at desktop and mobile widths and for authenticated and unauthenticated viewers. **Publish** applies the script on the next page load, without a restart. **Reset to built-in** brings back the built-in component.
+
+<Info>
+  Published scripts are stored as `custom/web/landing.js`, `custom/web/navbar.js` and `custom/web/footer.js`. You can also edit these files on disk, e.g., to keep them in version control. Edits take effect on the next page load.
+</Info>
+
+### Write a component
+
+A script is an ES module. Its default export is either a function that takes the customization API and returns a React component, or a web component, i.e., a class that extends `HTMLElement`.
+
+For example, a landing page that says hello:
+
+```js
+export default ({ html, Link, t }) =>
+  function Landing() {
+    return html`
+      <main className="flex flex-1 flex-col items-center justify-center gap-4 px-4 py-16">
+        <h1 className="acme-title">Hello world</h1>
+        <${Link} to="/explore/repos">${t("explore")} →<//>
+      </main>`;
+  };
+
+export const css = `
+  .acme-title { font-size: 2.5rem; font-weight: 700; color: var(--color-foreground); }
+`;
+```
+
+The customization API has:
+
+| Name | Description |
+|---|---|
+| `React` | The React of the web interface, so hooks such as `React.useState` work. |
+| `html` | [htm](https://github.com/developit/htm) bound to React, a JSX-like syntax that needs no build step. |
+| `Link` | The link component of the web interface, for links that do not reload the page. |
+| `Button` | The button component of the web interface. |
+| `t` | Translates a key of the locale files, e.g., `t("explore")`. |
+| `subUrl` | Prefixes a path with the subpath Gogs is served under, if any. |
+| `useUser` | A hook that returns the authenticated user, or `null`. |
+
+The component gets two props: `Default`, the built-in component, which you can wrap or show as is, and `user`, the authenticated user or `null`.
+
+An optional `css` export adds a stylesheet to every page. Use the theme tokens, e.g., `var(--color-foreground)`, so your styles follow light and dark mode.
+
+<Tip>
+  Classes of [Tailwind CSS](https://tailwindcss.com/) work only when the web interface already uses them. For anything else, add the styles to the `css` export.
+</Tip>
+
+### Add notices
+
+Notices, e.g., a maintenance window, belong in the navbar. Wrap the built-in navbar and put as many notices as you need above or below it:
+
+```js
+export default ({ html }) =>
+  function Navbar({ Default }) {
+    return html`
+      <div role="note" className="acme-notice">Acme internal code hosting. Do not push secrets.</div>
+      <${Default} />
+      <div role="note" className="acme-notice">
+        <strong>Scheduled maintenance</strong> on Saturday from 10:00 to 12:00 UTC.
+      </div>`;
+  };
+
+export const css = `
+  .acme-notice { padding: 0.5rem 1rem; text-align: center; font-size: 0.875rem;
+    background: color-mix(in oklab, var(--color-warning) 12%, transparent); }
+`;
+```
+
+The starter script of the navbar editor shows notices in the look of the built-in ones, including one that visitors can dismiss.
+
+### When a script fails
+
+A component whose script fails to load, takes longer than 3 seconds to load, or throws while rendering shows the built-in one in its place. The other components are not affected. The admin panel never loads the scripts, so you can always fix a broken one there.
+
+<Warning>
+  Scripts run in the browser of every visitor with full access to the page, and anyone can read them at `/-/custom.js`, even when signing in is required to view content. Do not put secrets in them.
+</Warning>
+
+### The notice banner file
+
+<Warning>
+  The notice banner file `custom/notice/banner.md` is deprecated. Add notices to the navbar component instead.
+</Warning>
+
+Gogs still shows the Markdown in `custom/notice/banner.md` below the navbar of every page, until you remove the file. Gogs never writes it.
+
+## Override email templates
+
+You can replace any email template by placing a customized version under the `custom/templates/mail/` directory.
+
+<Steps>
+  <Step title="Find the original template">
+    Locate the template file you want to customize in the [`templates/mail/`](https://github.com/gogs/gogs/tree/main/templates/mail) directory of the Gogs source code. For example, to customize the account activation email, find `templates/mail/auth/activate.tmpl`.
+  </Step>
+  <Step title="Copy and edit">
+    Copy the content of the template file and save your edited version to the corresponding path under `custom/templates/`. For example:
+
+    ```
+    custom/templates/mail/auth/activate.tmpl
+    ```
+  </Step>
+  <Step title="Restart Gogs">
+    Edits to custom email templates **require restarting Gogs** to take effect.
+  </Step>
+</Steps>
+
+<Warning>
+  Override for email templates is disabled when `[server] LOAD_ASSETS_FROM_DISK = true` is set in your configuration.
+</Warning>
+
+## Override static files
+
+You can replace static files, e.g., images, by placing customized versions under the `custom/public/` directory. For example, to override the site favicon, place your version at:
+
+```
+custom/public/img/favicon.png
+```
+
+Edits to custom static files take effect immediately, without a restart.
+
+## Inject custom content
+
+You can inject HTML into the head or the end of the body of every page, e.g., for analytics code or a stylesheet.
+
+| File | Location |
+|---|---|
+| `custom/templates/inject/head.tmpl` | Inside `<head>` |
+| `custom/templates/inject/footer.tmpl` | Before `</body>` |
+
+Their contents are inserted into every page verbatim, and Go template expressions such as `{{.User}}` are not evaluated. Gogs reads them once at startup, so edits require restarting Gogs.
+
+For example, to add a stylesheet, save it as `custom/public/css/custom.css` and add this line to `custom/templates/inject/head.tmpl`:
+
+```html
+<link rel="stylesheet" href="/css/custom.css">
+```
+
+<Note>
+  Since 0.15.0, the web interface no longer reads HTML page templates such as `custom/templates/home.tmpl`. Remove your copies of them, and use components instead.
+</Note>

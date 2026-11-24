@@ -469,6 +469,8 @@ func newRoutingHandler(logger *logx.Logger, localizer, sessioner, authenticate f
 		f.Get("/-/avatars/{id}", getUserAvatar)
 		f.Get("/-/avatars/seed/{seed}", getGeneratedAvatar)
 		f.Get("/-/repo-avatars/{id}", getRepoAvatar)
+		f.Get(customScriptURLPath, getCustomScript)
+		f.Get(customPreviewURLPath, allowSameOriginFraming, webApp.ServeHTTP)
 		f.Get("/{username}.keys", requireViewAccess, getUserPublicKeys)
 		f.Any("/user/activate_email", activateEmail)
 		f.Get("/user/email2user", email2User)
@@ -656,6 +658,7 @@ func renderIndex(index []byte, wc context.WebContext, inject injectContent) ([]b
 		LandingURL                 string `json:"landingURL,omitempty"`
 		RequireAuthenticatedViewer bool   `json:"requireAuthenticatedViewer,omitempty"`
 		Notice                     string `json:"notice,omitempty"`
+		CustomScript               string `json:"customScript,omitempty"`
 		ExternalURL                string `json:"externalURL"`
 	}{
 		Lang:      wc.Lang,
@@ -668,6 +671,7 @@ func renderIndex(index []byte, wc context.WebContext, inject injectContent) ([]b
 		LandingURL:                 landingURL,
 		RequireAuthenticatedViewer: conf.Auth.RequireSigninView,
 		Notice:                     wc.Notice,
+		CustomScript:               wc.CustomScript,
 		ExternalURL:                conf.Server.ExternalURL,
 	})
 	if err != nil {
@@ -677,6 +681,10 @@ func renderIndex(index []byte, wc context.WebContext, inject injectContent) ([]b
 	script := `<link rel="preload" as="fetch" crossorigin href="` + html.EscapeString(wc.SubURL+webLocaleURL(wc.Lang)) + `">` +
 		`<script>window.__webContext=` + string(payload) +
 		`;document.documentElement.lang=window.__webContext.lang;</script>`
+	if wc.CustomScript != "" {
+		// Fetch the customization script alongside the bundle that imports it.
+		script += `<link rel="modulepreload" href="` + html.EscapeString(wc.CustomScript) + `">`
+	}
 
 	pairs := []string{
 		// Append the head injection after the web context script so custom
