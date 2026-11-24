@@ -637,46 +637,50 @@ export function ReviewersSection({ issueRef, data }: { issueRef: IssueRef; data:
                 <UserLink user={r.user} className="min-w-0 flex-1 font-medium wrap-anywhere hover:underline">
                   {r.user.name}
                 </UserLink>
-                {/* Only reviews from writers can be asked for. */}
-                {canRerequest && r.counts && r.state !== "requested" ? (
+                {/* The status icons line up under the icon of the section's
+                    editor, and the re-request button sits right next to them. */}
+                <span className="mr-1 flex shrink-0 items-center">
+                  {/* Only reviews from writers can be asked for. */}
+                  {canRerequest && r.counts && r.state !== "requested" ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label={t("repo.pulls.review.rerequest", { name: r.user.name })}
+                          disabled={request.isPending}
+                          onClick={() => request.mutate({ name: r.user.name, requested: true })}
+                          className="size-6 text-(--color-muted-foreground)"
+                        >
+                          <RefreshCw className="size-4" aria-hidden />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{t("repo.pulls.review.rerequest", { name: r.user.name })}</TooltipContent>
+                    </Tooltip>
+                  ) : null}
+                  {/* The status shows as its icon and color, with its words in
+                      the tooltip. */}
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        aria-label={t("repo.pulls.review.rerequest", { name: r.user.name })}
-                        disabled={request.isPending}
-                        onClick={() => request.mutate({ name: r.user.name, requested: true })}
-                        className="size-6 shrink-0 text-(--color-muted-foreground)"
+                      <span
+                        role="img"
+                        tabIndex={0}
+                        aria-label={note ? `${label}. ${note}` : label}
+                        className={cn(
+                          "flex size-6 items-center justify-center rounded",
+                          note ? "text-(--color-muted-foreground)" : state.className,
+                        )}
                       >
-                        <RefreshCw className="size-3.5" aria-hidden />
-                      </Button>
+                        <Icon className="size-4" aria-hidden />
+                      </span>
                     </TooltipTrigger>
-                    <TooltipContent>{t("repo.pulls.review.rerequest", { name: r.user.name })}</TooltipContent>
+                    <TooltipContent>
+                      <p>{label}</p>
+                      {note ? <p className="opacity-80">{note}</p> : null}
+                    </TooltipContent>
                   </Tooltip>
-                ) : null}
-                {/* The status shows as its icon and color, with its words in
-                    the tooltip. */}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span
-                      role="img"
-                      tabIndex={0}
-                      aria-label={note ? `${label}. ${note}` : label}
-                      className={cn(
-                        "flex size-6 shrink-0 items-center justify-center rounded",
-                        note ? "text-(--color-muted-foreground)" : state.className,
-                      )}
-                    >
-                      <Icon className="size-4" aria-hidden />
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{label}</p>
-                    {note ? <p className="opacity-80">{note}</p> : null}
-                  </TooltipContent>
-                </Tooltip>
+                </span>
               </li>
             );
           })}
