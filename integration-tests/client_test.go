@@ -18,6 +18,10 @@ import (
 	"gogs.io/gogs/internal/dbx"
 )
 
+// captchaSessionKey is where the captcha middleware keeps the text of the last
+// captcha image it served.
+const captchaSessionKey = "flamego::captcha::text"
+
 // client calls the server under test like a browser that keeps its cookies.
 type client struct {
 	t *testing.T
@@ -118,6 +122,18 @@ func (c *client) sessionValue(key string) any {
 	return store.Get(key)
 }
 
+// captcha loads a new captcha image and returns its text, which the server
+// accepts once.
+func (c *client) captcha() string {
+	c.t.Helper()
+
+	status, _ := c.do(http.MethodGet, "/-/captcha/image.png", nil)
+	require.Equal(c.t, http.StatusOK, status)
+	text, ok := c.sessionValue(captchaSessionKey).(string)
+	require.True(c.t, ok, "no captcha text in session")
+	return text
+}
+
 // authenticatedClient returns a new client authenticated as the user, who must
 // not have two-factor authentication enabled.
 func authenticatedClient(t *testing.T, u *User) *client {
@@ -136,10 +152,14 @@ func (c *client) signIn(u *User) {
 	var resp struct {
 		MFA bool `json:"mfa"`
 	}
-	c.doJSON(http.MethodPost, "/api/web/user/sign-in", map[string]any{
+	req := map[string]any{
 		"username": u.Name,
 		"password": u.Password,
-	}, http.StatusOK, &resp)
+	}
+	if c.baseURL == hardenedServerURL {
+		req["antiBotPayload"] = c.captcha()
+	}
+	c.doJSON(http.MethodPost, "/api/web/user/sign-in", req, http.StatusOK, &resp)
 	require.False(c.t, resp.MFA)
 }
 

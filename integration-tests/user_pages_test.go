@@ -165,9 +165,9 @@ func TestUserSiteLocale(t *testing.T) {
 func TestUserSiteCaptchaImage(t *testing.T) {
 	t.Parallel()
 
-	// The server with FORCE_PRIVATE uses the image captcha.
+	// The hardened server uses the image captcha.
 	c := newClient(t)
-	c.baseURL = forcePrivateServerURL
+	c.baseURL = hardenedServerURL
 	status, header, body := c.doRaw(http.MethodGet, "/-/captcha/image.png", "", nil)
 	require.Equal(t, http.StatusOK, status)
 	assert.Equal(t, "image/png", header.Get("Content-Type"))
@@ -191,7 +191,7 @@ func TestUserSiteAltchaWorker(t *testing.T) {
 
 	// The server with the image captcha does not serve altcha.
 	c := newClient(t)
-	c.baseURL = forcePrivateServerURL
+	c.baseURL = hardenedServerURL
 	_, header, _ = c.doRaw(http.MethodGet, "/-/altcha/challenge.json", "", nil)
 	assert.NotEqual(t, "application/json", header.Get("Content-Type"))
 }
