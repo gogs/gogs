@@ -43,29 +43,21 @@ import { cn } from "@/lib/utils";
 
 import { Chip, CommentCard, EventSentence, MENTION_MARKER, ThreadReplies, UserLink, UserMention } from "./Issue";
 
-const REVIEW_EVENTS: Record<
-  ReviewState,
-  { icon: LucideIcon; text: string; className: string; label: string; accent?: "success" | "destructive" }
-> = {
+const REVIEW_EVENTS: Record<ReviewState, { icon: LucideIcon; text: string; className: string }> = {
   approve: {
     icon: CircleCheck,
     text: "repo.pulls.review.event_approve",
     className: "text-(--color-success)",
-    label: "repo.pulls.review.approved",
-    accent: "success",
   },
   request_changes: {
     icon: CircleAlert,
     text: "repo.pulls.review.event_request_changes",
     className: "text-(--color-destructive)",
-    label: "repo.pulls.review.changes_requested",
-    accent: "destructive",
   },
   comment: {
     icon: MessageSquare,
     text: "repo.pulls.review.event_comment",
     className: "text-(--color-muted-foreground)",
-    label: "repo.pulls.review.commented",
   },
 };
 
@@ -101,35 +93,25 @@ export function PullTimelineItem({
   const event = REVIEW_EVENTS[comment.review.state];
   const threads = data.threads.filter((th) => th.thread?.reviewID === comment.review?.id);
   const anchor = `pullrequestreview-${comment.review.id}`;
-  const Icon = event.icon;
+  // An approval or a request for changes always shows as a line of the
+  // timeline, with its summary below like any comment. A review that only
+  // comments shows as its summary, or as a line without one.
+  const decides = comment.review.state !== "comment";
+  const summary = comment.contentHTML ? (
+    <CommentCard
+      issueRef={issueRef}
+      anchor={decides ? `issuecomment-${comment.id}` : anchor}
+      poster={comment.poster}
+      createdAt={comment.createdAt}
+      html={comment.contentHTML}
+      tag={comment.tag}
+      attachments={comment.attachments ?? []}
+      sentence={decides ? undefined : t(event.text)}
+    />
+  ) : null;
   return (
     <div className="flex flex-col gap-3">
-      {/* A review with a summary shows like a comment, with its outcome in the
-          header. One without shows as a line of the timeline. */}
-      {comment.contentHTML ? (
-        <CommentCard
-          issueRef={issueRef}
-          anchor={anchor}
-          poster={comment.poster}
-          createdAt={comment.createdAt}
-          html={comment.contentHTML}
-          tag={comment.tag}
-          attachments={comment.attachments ?? []}
-          sentence={t(event.text)}
-          accent={event.accent}
-          badge={
-            <span
-              className={cn(
-                "mr-1 inline-flex items-center gap-1 rounded-full border border-current px-2 text-xs/5",
-                event.className,
-              )}
-            >
-              <Icon className="size-3.5" aria-hidden />
-              {t(event.label)}
-            </span>
-          }
-        />
-      ) : (
+      {decides || !summary ? (
         <EventRow
           anchor={anchor}
           icon={event.icon}
@@ -137,7 +119,8 @@ export function PullTimelineItem({
           comment={comment}
           text={t(event.text)}
         />
-      )}
+      ) : null}
+      {summary}
       {threads.length ? (
         <div className="flex flex-col gap-3 sm:pl-13">
           {/* The padding is the avatar column of comments, size-10 and gap-3,

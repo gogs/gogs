@@ -392,13 +392,6 @@ export function EventSentence({
   );
 }
 
-// HEADER_ACCENTS tint the header of a comment card by its outcome, e.g., of a
-// review.
-const HEADER_ACCENTS = {
-  success: "border-(--color-success)/30 bg-(--color-success)/10",
-  destructive: "border-(--color-destructive)/30 bg-(--color-destructive)/10",
-};
-
 // CommentCard shows the content of the issue or one of its comments, and lets
 // those who can change it edit or delete it. The footer shows below the
 // content, e.g., the replies to the comment.
@@ -413,8 +406,6 @@ export function CommentCard({
   attachment,
   edit,
   sentence,
-  badge,
-  accent,
   footer,
 }: {
   issueRef: IssueRef;
@@ -443,10 +434,6 @@ export function CommentCard({
   };
   // sentence says what the poster did, by default that they commented.
   sentence?: string;
-  // badge shows before the tag, e.g., the outcome of a review.
-  badge?: ReactNode;
-  // accent tints the header, e.g., green for an approval.
-  accent?: "success" | "destructive";
   footer?: ReactNode;
 }) {
   const { t } = useTranslation();
@@ -470,12 +457,7 @@ export function CommentCard({
           linked ? "!border-(--color-primary) ring-2 ring-(--color-primary)/30" : "border-(--color-border)",
         )}
       >
-        <div
-          className={cn(
-            "flex flex-wrap items-center justify-between gap-x-2 gap-y-1 rounded-t-[inherit] border-b py-1 pr-1 pl-3 text-sm",
-            accent ? HEADER_ACCENTS[accent] : "border-(--color-border) bg-(--color-surface)",
-          )}
-        >
+        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 rounded-t-[inherit] border-b border-(--color-border) bg-(--color-surface) py-1 pr-1 pl-3 text-sm">
           <p className="min-w-0 py-1 text-(--color-muted-foreground) wrap-anywhere">
             <UserLink user={poster} className="font-semibold text-(--color-foreground) hover:underline">
               {poster.name}
@@ -483,7 +465,6 @@ export function CommentCard({
             <EventSentence text={sentence ?? t("repo.issues.commented_at")} anchor={anchor} time={createdAt} />
           </p>
           <div className="flex items-center gap-1">
-            {badge}
             {tag ? (
               <span className="mr-1 rounded-full border border-(--color-border) px-2 text-xs/5 text-(--color-muted-foreground)">
                 {tagLabel[tag]}
