@@ -295,7 +295,7 @@ function IssueTitle({ issueRef, data }: { issueRef: IssueRef; data: RepoIssueDat
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <h1 className="text-2xl font-semibold wrap-anywhere">
-        {data.title} <span className="font-normal text-(--color-muted-foreground)">#{data.index}</span>
+        <span className="font-normal text-(--color-muted-foreground)">#{data.index}</span> {data.title}
       </h1>
       <div className="flex shrink-0 gap-2">
         {data.viewerCanEdit ? (
