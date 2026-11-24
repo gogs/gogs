@@ -625,6 +625,20 @@ func TestLFSSSHAuthenticate(t *testing.T) {
 		assert.Contains(t, stderr, "Key access denied")
 	})
 
+	t.Run("wiki", func(t *testing.T) {
+		// Git LFS asks for the remote of a wiki checkout, which stores its
+		// objects with the repository. Only pushing to the wiki creates it.
+		wiki := &Repository{Owner: repo.Owner, Name: repo.Name + ".wiki"}
+		out, stderr, err := lfsSSHAuthenticate(ownerKey, wiki, "upload")
+		require.NoError(t, err, "git-lfs-authenticate: %s", stderr)
+		token := lfsSSHToken(t, repo, out)
+		assert.NoDirExists(t, database.WikiPath(repo.Owner, repo.Name))
+
+		status, body := get(lfsTokenClient(t, token), repo)
+		require.Equal(t, http.StatusOK, status, "response: %s", body)
+		assert.Equal(t, content, body)
+	})
+
 	t.Run("unknown operation", func(t *testing.T) {
 		_, stderr, err := lfsSSHAuthenticate(ownerKey, repo, "delete")
 		require.Error(t, err)
