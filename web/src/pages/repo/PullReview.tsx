@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { Link, useRouter } from "@tanstack/react-router";
+import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import type { TFunction } from "i18next";
 import {
   Check,
@@ -9,6 +9,7 @@ import {
   Clock,
   type LucideIcon,
   MessageSquare,
+  RefreshCw,
   UserMinus,
   UserPlus,
 } from "lucide-react";
@@ -20,6 +21,7 @@ import type { DiffLineTarget } from "@/components/DiffWorkspace";
 import { AttachFilesButton, MarkdownEditor, SidebarSection } from "@/components/IssueForm";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   type IssueComment,
   type IssueRef,
@@ -430,10 +432,12 @@ export function CodeCommentForm({
 }
 
 // ReviewChanges is the button in the toolbar of the files that opens the form
-// to submit the viewer's review.
+// to submit the viewer's review, which then shows in the conversation, like on
+// GitHub.
 export function ReviewChanges({ issueRef, data }: { issueRef: IssueRef; data: RepoPullData }) {
   const { t } = useTranslation();
   const router = useRouter();
+  const navigate = useNavigate();
   const user = useUserInfo();
   const [open, setOpen] = useState(false);
   const [state, setState] = useState<ReviewState>("comment");
@@ -442,11 +446,13 @@ export function ReviewChanges({ issueRef, data }: { issueRef: IssueRef; data: Re
   const pendingCount = data.viewerPendingReview?.commentCount ?? 0;
   const submit = useMutation({
     mutationFn: () => submitRepoPullReview(issueRef, { state, content, headSHA: data.pull.diff?.head ?? "" }),
-    onSuccess: async () => {
-      await router.invalidate();
-      setContent("");
-      setState("comment");
+    onSuccess: async ({ id }) => {
       setOpen(false);
+      await navigate({
+        to: "/$owner/$repo/pulls/$index",
+        params: { owner: issueRef.owner, repo: issueRef.name, index: String(issueRef.index) },
+        hash: `pullrequestreview-${id}`,
+      });
       toast.success(t("repo.pulls.review.submitted"));
     },
   });
@@ -556,11 +562,13 @@ const REVIEWER_STATES: Record<RepoPullReviewer["state"], { icon: LucideIcon; cla
   },
 };
 
-// ReviewersSection shows who reviewed the pull request or was asked to, and
-// lets writers ask others.
+// ReviewersSection shows who reviewed the pull request or was asked to, lets
+// writers ask others, and lets them and whoever opened it ask a reviewer to
+// review again.
 export function ReviewersSection({ issueRef, data }: { issueRef: IssueRef; data: RepoPullData }) {
   const { t } = useTranslation();
   const router = useRouter();
+  const user = useUserInfo();
   const request = useMutation({
     mutationFn: ({ name, requested }: { name: string; requested: boolean }) =>
       setRepoPullReviewer(issueRef, name, requested),
@@ -569,6 +577,8 @@ export function ReviewersSection({ issueRef, data }: { issueRef: IssueRef; data:
   });
   const requested = new Set(data.reviewers.filter((r) => r.state === "requested").map((r) => r.user.name));
   const options = data.reviewerOptions;
+  const canRerequest =
+    data.pull.state !== "merged" && data.pull.state !== "closed" && (!!options || user?.username === data.poster.name);
 
   return (
     <SidebarSection
@@ -632,6 +642,25 @@ export function ReviewersSection({ issueRef, data }: { issueRef: IssueRef; data:
                   <Icon className="size-3.5" aria-hidden />
                   {t(state.label)}
                 </span>
+                {/* Only reviews from writers can be asked for. */}
+                {canRerequest && r.counts && r.state !== "requested" ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label={t("repo.pulls.review.rerequest", { name: r.user.name })}
+                        disabled={request.isPending}
+                        onClick={() => request.mutate({ name: r.user.name, requested: true })}
+                        className="-my-0.5 size-6 shrink-0 text-(--color-muted-foreground)"
+                      >
+                        <RefreshCw className="size-3.5" aria-hidden />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t("repo.pulls.review.rerequest", { name: r.user.name })}</TooltipContent>
+                  </Tooltip>
+                ) : null}
               </li>
             );
           })}

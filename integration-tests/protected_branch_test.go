@@ -493,7 +493,7 @@ func TestProtectedBranchReviews(t *testing.T) {
 			"state":   "approve",
 			"headSHA": view(reviewerClient).Pull.Diff.Head,
 		})
-		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+		require.Equal(t, http.StatusCreated, status, "response: %s", body)
 	}
 
 	// Admins are held to the reviews too.

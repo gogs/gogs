@@ -187,11 +187,11 @@ func TestPullReviews(t *testing.T) {
 
 	t.Run("only reviews from writers count toward merging", func(t *testing.T) {
 		status, body := review(authenticatedClient(t, reader), "approve", head)
-		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+		require.Equal(t, http.StatusCreated, status, "response: %s", body)
 		assert.Contains(t, view(ownerClient).MergeBlockers, "approvals")
 
 		status, body = review(reviewerClient, "request_changes", head)
-		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+		require.Equal(t, http.StatusCreated, status, "response: %s", body)
 		assert.Contains(t, view(ownerClient).MergeBlockers, "changes_requested")
 		status, body = protectedBranchMerge(t, ownerClient, repo, index)
 		assert.Equal(t, http.StatusConflict, status, "response: %s", body)
@@ -201,7 +201,7 @@ func TestPullReviews(t *testing.T) {
 		status, body := codeComment(false)
 		require.Equal(t, http.StatusCreated, status, "response: %s", body)
 		status, body = reviewerClient.do(http.MethodPost, path("reviews"), map[string]any{"state": "approve", "headSHA": head})
-		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+		require.Equal(t, http.StatusCreated, status, "response: %s", body)
 
 		v := view(ownerClient)
 		require.Len(t, v.Threads, 1)
@@ -226,6 +226,46 @@ func TestPullReviews(t *testing.T) {
 		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 		status, body = protectedBranchMerge(t, ownerClient, repo, index)
 		assert.Equal(t, http.StatusNoContent, status, "response: %s", body)
+	})
+
+	t.Run("authors who cannot write re-request reviews", func(t *testing.T) {
+		readerClient := authenticatedClient(t, reader)
+		fork := repoVisibilityFork(t, readerClient, repo, reader)
+		forkBranch := UniqueName("fix-")
+		pullCommitToNewBranch(t, readerClient, fork, forkBranch, forkBranch+".txt", "Fix\n")
+		var created struct {
+			Index int64 `json:"index"`
+		}
+		readerClient.doJSON(http.MethodPost, issueAPIPath(repo, "pulls"), map[string]any{
+			"title": "Fix from a fork",
+			"base":  "main",
+			"head":  reader.Name + ":" + forkBranch,
+		}, http.StatusCreated, &created)
+		pullWaitMergeable(t, readerClient, repo, created.Index)
+		forkPath := func(parts ...any) string {
+			return issueAPIPath(repo, append([]any{"pulls", created.Index}, parts...)...)
+		}
+
+		// Only writers ask someone who has not reviewed yet.
+		status, body := readerClient.do(http.MethodPut, forkPath("reviewers", reviewer.Name), map[string]any{})
+		assert.Equal(t, http.StatusForbidden, status, "response: %s", body)
+
+		var v reviewView
+		readerClient.doJSON(http.MethodGet, forkPath(), nil, http.StatusOK, &v)
+		status, body = reviewerClient.do(http.MethodPost, forkPath("reviews"), map[string]any{
+			"state": "comment", "headSHA": v.Pull.Diff.Head, "content": "Needs a test.",
+		})
+		require.Equal(t, http.StatusCreated, status, "response: %s", body)
+
+		status, body = readerClient.do(http.MethodPut, forkPath("reviewers", reviewer.Name), map[string]any{})
+		require.Equal(t, http.StatusNoContent, status, "response: %s", body)
+		readerClient.doJSON(http.MethodGet, forkPath(), nil, http.StatusOK, &v)
+		require.Len(t, v.Reviewers, 1)
+		assert.Equal(t, "requested", v.Reviewers[0].State)
+
+		// Withdrawing stays with writers.
+		status, body = readerClient.do(http.MethodDelete, forkPath("reviewers", reviewer.Name), map[string]any{})
+		assert.Equal(t, http.StatusForbidden, status, "response: %s", body)
 	})
 
 	t.Run("replies to a merged pull request do not wait for a review", func(t *testing.T) {

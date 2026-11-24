@@ -475,11 +475,12 @@ func postRepoPullReview(c flamego.Context, logger *logx.Logger, l i18n.Locale, v
 		}
 	}
 
-	if _, err = database.Handle.Reviews().Submit(ctx, logger, viewer, repoCtx.Repo, issue, state, req.Content, rng.Head); err != nil {
+	review, err := database.Handle.Reviews().Submit(ctx, logger, viewer, repoCtx.Repo, issue, state, req.Content, rng.Head)
+	if err != nil {
 		logger.Error("Failed to submit review", "issueID", issue.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "submit review")
 	}
-	return http.StatusNoContent, nil, nil
+	return http.StatusCreated, map[string]int64{"id": review.ID}, nil
 }
 
 // deleteRepoPullPendingReview discards the viewer's pending review.
@@ -533,9 +534,11 @@ func deleteRepoPullThreadResolved(c flamego.Context, logger *logx.Logger, viewer
 }
 
 // changeRepoPullReviewer requests a review from the user, or withdraws the
-// request.
+// request. Besides writers, whoever opened the pull request can request
+// another review from those who reviewed it, like on GitHub.
 func changeRepoPullReviewer(c flamego.Context, logger *logx.Logger, viewer *database.User, repoCtx *repoContext, issue *database.Issue, requested bool) (statusCode int, resp any, err error) {
-	if !viewerCanRequestReviews(repoCtx) {
+	rerequestOnly := !viewerCanRequestReviews(repoCtx)
+	if rerequestOnly && !(requested && issue.IsPoster(viewer.ID)) {
 		return http.StatusForbidden, nil, errors.New("only writers can request reviews")
 	}
 	reviewer, err := database.Handle.Users().GetByUsername(c.Request().Context(), c.Param("username"))
@@ -545,6 +548,16 @@ func changeRepoPullReviewer(c flamego.Context, logger *logx.Logger, viewer *data
 		}
 		logger.Error("Failed to get user", "username", c.Param("username"), "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user")
+	}
+	if rerequestOnly {
+		reviews, err := database.Handle.Reviews().ListSubmitted(c.Request().Context(), issue.ID)
+		if err != nil {
+			logger.Error("Failed to list reviews", "issueID", issue.ID, "error", err)
+			return http.StatusInternalServerError, nil, errors.Wrap(err, "list reviews")
+		}
+		if !slices.ContainsFunc(reviews, func(r *database.Review) bool { return r.ReviewerID == reviewer.ID }) {
+			return http.StatusForbidden, nil, errors.New("only writers can request reviews from those who have not reviewed")
+		}
 	}
 	if requested {
 		var options []issueUser

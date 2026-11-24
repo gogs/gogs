@@ -947,7 +947,7 @@ export function createRepoPullCodeComment(issue: IssueRef, form: CodeCommentForm
 }
 
 export function submitRepoPullReview(issue: IssueRef, form: { state: ReviewState; content: string; headSHA: string }) {
-  return submit<void>("POST", issueURL(issue, "/reviews"), form);
+  return submit<{ id: number }>("POST", issueURL(issue, "/reviews"), form);
 }
 
 export function discardRepoPullReview(issue: IssueRef) {
