@@ -395,6 +395,15 @@ export function EventSentence({
 // CommentCard shows the content of the issue or one of its comments, and lets
 // those who can change it edit or delete it. The footer shows below the
 // content, e.g., the replies to the comment.
+// CARD_ACCENTS color the edge of a comment card by its outcome, e.g., of a
+// review, and its ring when the card is linked to. The "!" outranks the edge of
+// the glass look.
+const CARD_ACCENTS = {
+  primary: "!border-(--color-primary) ring-(--color-primary)/30",
+  success: "!border-(--color-success) ring-(--color-success)/30",
+  destructive: "!border-(--color-destructive) ring-(--color-destructive)/30",
+};
+
 export function CommentCard({
   issueRef,
   anchor,
@@ -407,6 +416,7 @@ export function CommentCard({
   edit,
   sentence,
   badge,
+  accent,
   footer,
 }: {
   issueRef: IssueRef;
@@ -437,6 +447,8 @@ export function CommentCard({
   sentence?: string;
   // badge shows before the tag, e.g., the outcome of a review.
   badge?: ReactNode;
+  // accent colors the edge of the card, e.g., green for an approval.
+  accent?: "success" | "destructive";
   footer?: ReactNode;
 }) {
   const { t } = useTranslation();
@@ -457,7 +469,8 @@ export function CommentCard({
       <div
         className={cn(
           "glass min-w-0 flex-1 rounded-md border",
-          linked ? "!border-(--color-primary) ring-2 ring-(--color-primary)/30" : "border-(--color-border)",
+          accent || linked ? CARD_ACCENTS[accent ?? "primary"] : "border-(--color-border)",
+          linked && "ring-2",
         )}
       >
         <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 rounded-t-[inherit] border-b border-(--color-border) bg-(--color-surface) py-1 pr-1 pl-3 text-sm">

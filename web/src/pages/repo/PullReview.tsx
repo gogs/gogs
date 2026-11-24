@@ -43,18 +43,23 @@ import { cn } from "@/lib/utils";
 
 import { Chip, CommentCard, EventSentence, MENTION_MARKER, ThreadReplies, UserLink, UserMention } from "./Issue";
 
-const REVIEW_EVENTS: Record<ReviewState, { icon: LucideIcon; text: string; className: string; label: string }> = {
+const REVIEW_EVENTS: Record<
+  ReviewState,
+  { icon: LucideIcon; text: string; className: string; label: string; accent?: "success" | "destructive" }
+> = {
   approve: {
     icon: CircleCheck,
     text: "repo.pulls.review.event_approve",
     className: "text-(--color-success)",
     label: "repo.pulls.review.approved",
+    accent: "success",
   },
   request_changes: {
     icon: CircleAlert,
     text: "repo.pulls.review.event_request_changes",
     className: "text-(--color-destructive)",
     label: "repo.pulls.review.changes_requested",
+    accent: "destructive",
   },
   comment: {
     icon: MessageSquare,
@@ -111,6 +116,7 @@ export function PullTimelineItem({
           tag={comment.tag}
           attachments={comment.attachments ?? []}
           sentence={t(event.text)}
+          accent={event.accent}
           badge={
             <span
               className={cn(
