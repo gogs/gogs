@@ -6,7 +6,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Added
 
-- Site admins can replace the landing page, navbar and footer with scripts under Admin panel > Customization > Components, with a live preview at desktop and mobile widths. Published changes apply on the next page load, without a restart, and a script that fails shows the built-in part in its place.
+- Site admins can replace the landing page, navbar and footer with scripts under Admin panel > Customization > Components, with a live preview at desktop and mobile widths. Published changes apply on the next page load, without a restart, and a script that fails shows the built-in part in its place. [#8720](https://github.com/gogs/gogs/pull/8720)
 - Mermaid diagrams render in wiki pages, issues, comments and release notes, not only in Markdown files. [#8620](https://github.com/gogs/gogs/pull/8620)
 - Markdown supports GitHub alerts (`> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]` and `> [!CAUTION]`) and footnotes. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Headings in rendered Markdown have stable ids like GitHub's, e.g., `user-content-getting-started`, so links to sections also work in API output and outside the web interface. [#8519](https://github.com/gogs/gogs/pull/8519)
@@ -37,7 +37,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Changed
 
-- The notice banner file `custom/notice/banner.md` is deprecated. It still shows below the navbar until you remove it, and Gogs never writes it. Add notices to the navbar under Admin panel > Customization > Components instead, above or below it, as many as you need and dismissible if you like.
+- The notice banner file `custom/notice/banner.md` is deprecated. It still shows below the navbar until you remove it, and Gogs never writes it. Add notices to the navbar under Admin panel > Customization > Components instead, above or below it, as many as you need and dismissible if you like. [#8720](https://github.com/gogs/gogs/pull/8720)
 - Mentioning an organization in an issue or comment only links to it. It no longer marks the organization or its members as mentioned, or sends email to the organization. [#8528](https://github.com/gogs/gogs/pull/8528)
 - GIF images can be uploaded as attachments to issues, pull requests and comments by default. [#8713](https://github.com/gogs/gogs/pull/8713)
 - Files and diffs that are not UTF-8 are shown in their encoding more often, including short texts such as a one-line commit message in GBK. [#8696](https://github.com/gogs/gogs/pull/8696)
