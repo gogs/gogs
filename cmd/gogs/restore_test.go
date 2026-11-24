@@ -51,24 +51,44 @@ func TestRestoreCustomDir(t *testing.T) {
 		assert.NoDirExists(t, filepath.Join(customDir, "data.bak"))
 	})
 
-	t.Run("keeps app data directories in place", func(t *testing.T) {
-		root := t.TempDir()
-		customDir := filepath.Join(root, "custom")
-		before := conf.Server.AppDataPath
-		conf.Server.AppDataPath = customDir
-		t.Cleanup(func() { conf.Server.AppDataPath = before })
-		writeFile(t, filepath.Join(customDir, "attachments", "a"), "current")
-		srcDir := filepath.Join(root, "archive", "custom")
-		writeFile(t, filepath.Join(srcDir, "attachments", "a"), "restored")
-		writeFile(t, filepath.Join(srcDir, "conf", "app.ini"), "restored")
+	for _, test := range []struct {
+		name        string
+		appDataPath func(t *testing.T, customDir string) string
+	}{
+		{
+			name:        "keeps app data directories in place",
+			appDataPath: func(_ *testing.T, customDir string) string { return customDir },
+		},
+		{
+			name: "keeps app data directories in place through symlink",
+			appDataPath: func(t *testing.T, customDir string) string {
+				link := filepath.Join(filepath.Dir(customDir), "custom-link")
+				if err := os.Symlink(customDir, link); err != nil {
+					t.Skip("Symlinks are not supported:", err)
+				}
+				return link
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			root := t.TempDir()
+			customDir := filepath.Join(root, "custom")
+			writeFile(t, filepath.Join(customDir, "attachments", "a"), "current")
+			before := conf.Server.AppDataPath
+			conf.Server.AppDataPath = test.appDataPath(t, customDir)
+			t.Cleanup(func() { conf.Server.AppDataPath = before })
+			srcDir := filepath.Join(root, "archive", "custom")
+			writeFile(t, filepath.Join(srcDir, "attachments", "a"), "restored")
+			writeFile(t, filepath.Join(srcDir, "conf", "app.ini"), "restored")
 
-		require.NoError(t, restoreCustomDir(srcDir, customDir))
+			require.NoError(t, restoreCustomDir(srcDir, customDir))
 
-		// The app data restore replaces it, which fails on a leftover "attachments.bak".
-		assert.Equal(t, "current", readFile(t, filepath.Join(customDir, "attachments", "a")))
-		assert.NoDirExists(t, filepath.Join(customDir, "attachments.bak"))
-		assert.Equal(t, "restored", readFile(t, filepath.Join(customDir, "conf", "app.ini")))
-	})
+			// The app data restore replaces it, which fails on a leftover "attachments.bak".
+			assert.Equal(t, "current", readFile(t, filepath.Join(customDir, "attachments", "a")))
+			assert.NoDirExists(t, filepath.Join(customDir, "attachments.bak"))
+			assert.Equal(t, "restored", readFile(t, filepath.Join(customDir, "conf", "app.ini")))
+		})
+	}
 
 	t.Run("creates missing custom directory", func(t *testing.T) {
 		root := t.TempDir()

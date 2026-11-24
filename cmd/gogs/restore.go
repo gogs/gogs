@@ -231,9 +231,16 @@ func restoredSeparately(customDir, name string) bool {
 	if name == "data" {
 		return true
 	}
-	path, _ := filepath.Abs(filepath.Join(customDir, name))
+	path := filepath.Join(customDir, name)
+	absPath, _ := filepath.Abs(path)
+	info, statErr := os.Stat(path)
 	for _, dir := range backupDataDirs {
-		if dataPath, _ := filepath.Abs(filepath.Join(conf.Server.AppDataPath, dir)); path == dataPath {
+		dataPath := filepath.Join(conf.Server.AppDataPath, dir)
+		if absDataPath, _ := filepath.Abs(dataPath); absPath == absDataPath {
+			return true
+		}
+		// The paths may differ but lead to the same directory, e.g., through a symlink or in another letter case.
+		if dataInfo, err := os.Stat(dataPath); statErr == nil && err == nil && os.SameFile(info, dataInfo) {
 			return true
 		}
 	}
