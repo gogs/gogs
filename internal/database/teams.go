@@ -319,11 +319,10 @@ func (s *TeamsStore) addMember(ctx context.Context, orgID, teamID, userID int64,
 	// which on MySQL takes the snapshot of the transaction, so it sees what
 	// committed while waiting for them, e.g., a repository created in the
 	// organization or added to the team.
-	err := db.Model(new(User)).Where("id = ?", orgID).UpdateColumn("num_members", gorm.Expr("num_members")).Error
-	if err != nil {
-		return errors.Wrap(err, "lock organization")
+	if err := lockOrganization(db, orgID); err != nil {
+		return err
 	}
-	err = db.Model(new(Team)).Where("id = ?", teamID).UpdateColumn("num_members", gorm.Expr("num_members + 1")).Error
+	err := db.Model(new(Team)).Where("id = ?", teamID).UpdateColumn("num_members", gorm.Expr("num_members + 1")).Error
 	if err != nil {
 		return errors.Wrap(err, "count members")
 	}
@@ -387,9 +386,8 @@ func (s *TeamsStore) RemoveMember(ctx context.Context, orgID, teamID, userID int
 		// order creating, forking and transferring into the organization and
 		// adding a team member lock them in. Those then see the member gone
 		// once they get the organization, and do not give the member access.
-		err := tx.Model(new(User)).Where("id = ?", orgID).UpdateColumn("num_members", gorm.Expr("num_members")).Error
-		if err != nil {
-			return errors.Wrap(err, "lock organization")
+		if err := lockOrganization(tx, orgID); err != nil {
+			return err
 		}
 		return newTeamsStore(tx).removeMember(ctx, orgID, teamID, userID)
 	})
@@ -483,6 +481,9 @@ func (s *TeamsStore) AddRepo(ctx context.Context, t *Team, repo *Repository) err
 		} else if !exists || ownerID != t.OrgID {
 			return ErrRepoNotExist{args: errx.Args{"repoID": repo.ID}}
 		}
+		if err := lockOrganization(tx, t.OrgID); err != nil {
+			return err
+		}
 		return newTeamsStore(tx).addRepo(ctx, t, repo)
 	})
 }
@@ -535,7 +536,13 @@ func (s *TeamsStore) RemoveRepo(ctx context.Context, t *Team, repoID int64) erro
 		// for it, which removes it from the team too.
 		if _, exists, err := lockRepository(tx, repoID); err != nil {
 			return err
-		} else if !exists || !newTeamsStore(tx).HasRepo(ctx, t.OrgID, t.ID, repoID) {
+		} else if !exists {
+			return nil
+		}
+		if err := lockOrganization(tx, t.OrgID); err != nil {
+			return err
+		}
+		if !newTeamsStore(tx).HasRepo(ctx, t.OrgID, t.ID, repoID) {
 			return nil
 		}
 		repo, err := newReposStore(tx).getWithAttributes(ctx, repoID)

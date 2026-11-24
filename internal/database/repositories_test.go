@@ -1302,6 +1302,9 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 	var moved *Repository
 	var older *Repository
 	ousted := newTestIssueUser(t, ctx, s.db, "cf-ousted")
+	dropped := newTestIssueUser(t, ctx, s.db, "cf-dropped")
+	expelled := newTestIssueUser(t, ctx, s.db, "cf-expelled")
+	var shrinking *Team
 	departing := newTestIssueUser(t, ctx, s.db, "cf-departing")
 	var created *Repository
 	createInOrg := func() (err error) {
@@ -1579,7 +1582,11 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 			holdUser: org,
 			first:    func(*Repository, *Repository) error { return teams.Delete(ctx, emptied) },
 			second: func(base, _ *Repository) error {
-				if err := teams.AddRepo(ctx, emptied, base); err != nil {
+				// Adding the repository locks the organization, so it may wait
+				// for the deletion and find the team gone.
+				if err := teams.AddRepo(ctx, emptied, base); IsErrTeamNotExist(err) {
+					return nil
+				} else if err != nil {
 					return err
 				}
 				return teams.AddMember(ctx, org.ID, emptied.ID, arrival.ID)
@@ -1639,6 +1646,40 @@ func reposLifecycleConcurrentForks(t *testing.T, ctx context.Context, s *Reposit
 			},
 			check: func(*Repository, *Repository) {
 				assert.NotContains(t, accessModes(t, ctx, newPermissionsStore(s.db), created.ID), departing.ID, "access of the removed member")
+			},
+		},
+		{
+			// Removing the member waits for the team behind adding the
+			// repository, and must then see the repository to take the
+			// member's access to it away.
+			name:      "remove a member of the team while adding a repository to it, holding the team",
+			baseOwner: org,
+			private:   true,
+			setup: func(*Repository, *Repository) {
+				shrinking = createTestTeam(t, ctx, teams, org.ID, "shrinking", AccessModeWrite)
+				require.NoError(t, teams.AddMember(ctx, org.ID, shrinking.ID, dropped.ID))
+			},
+			hold: func(hold *gorm.DB) error {
+				return hold.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", shrinking.ID).Find(new(Team)).Error
+			},
+			first:  func(base, _ *Repository) error { return teams.AddRepo(ctx, shrinking, base) },
+			second: func(*Repository, *Repository) error { return teams.RemoveMember(ctx, org.ID, shrinking.ID, dropped.ID) },
+			check: func(base, _ *Repository) {
+				assert.NotContains(t, accessModes(t, ctx, newPermissionsStore(s.db), base.ID), dropped.ID, "access of the removed member")
+			},
+		},
+		{
+			name:      "remove a member from a team and from the organization, holding the organization",
+			baseOwner: org,
+			setup: func(*Repository, *Repository) {
+				require.NoError(t, teams.AddMember(ctx, org.ID, shrinking.ID, expelled.ID))
+			},
+			holdUser: org,
+			first: func(*Repository, *Repository) error {
+				return teams.RemoveMember(ctx, org.ID, shrinking.ID, expelled.ID)
+			},
+			second: func(*Repository, *Repository) error {
+				return newOrganizationsStore(s.db).RemoveMember(ctx, org.ID, expelled.ID)
 			},
 		},
 	} {

@@ -372,12 +372,14 @@ func (s *OrganizationsStore) RemoveMember(ctx context.Context, orgID, userID int
 			return err
 		}
 
-		if err := tx.Where("id = ?", ou.ID).Delete(new(OrgUser)).Error; err != nil {
-			return errors.Wrap(err, "delete organization user")
-		}
+		// The organization is locked before the membership, the order
+		// removing a team member locks them in, so the two cannot deadlock.
 		err := tx.Model(new(User)).Where("id = ?", orgID).UpdateColumn("num_members", gorm.Expr("num_members - 1")).Error
 		if err != nil {
 			return errors.Wrap(err, "count members")
+		}
+		if err := tx.Where("id = ?", ou.ID).Delete(new(OrgUser)).Error; err != nil {
+			return errors.Wrap(err, "delete organization user")
 		}
 
 		// Only the repositories locked above, a watch started meanwhile stays.
@@ -498,4 +500,14 @@ type OrgUser struct {
 	IsPublic bool
 	IsOwner  bool
 	NumTeams int `gorm:"size:32"`
+}
+
+// lockOrganization locks the organization of given ID until the transaction
+// ends. Transactions that change the members or repositories of its teams lock
+// it after the repositories and before the teams, and before their first plain
+// read, which on MySQL takes the snapshot of the transaction. They then see
+// each other's changes, and cannot give or keep access the other one removes.
+func lockOrganization(tx *gorm.DB, orgID int64) error {
+	err := tx.Model(new(User)).Where("id = ?", orgID).UpdateColumn("num_members", gorm.Expr("num_members")).Error
+	return errors.Wrap(err, "lock organization")
 }
