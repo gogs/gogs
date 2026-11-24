@@ -33,7 +33,6 @@ All notable changes to Gogs are documented in this file.
 - API endpoint for an access token to delete itself: `DELETE /user/token`, e.g., for a tool to revoke its token when it is done. [#8574](https://github.com/gogs/gogs/pull/8574)
 - Commit pages link issue references and @mentions in commit messages, and commit lists and file lists also link @mentions. [#8628](https://github.com/gogs/gogs/pull/8628)
 - The API lists commits page by page with `page`, and from a branch, tag or commit with `sha`. It lists branches page by page with `page` and `pageSize`. Commits, branches and repository search take the page size as either `pageSize` or `limit`. [#8582](https://github.com/gogs/gogs/pull/8582)
-- Optional captcha for signing in on the web, enabled with `[auth] ENABLE_LOGIN_CAPTCHA = true`. It uses the verification set by `[auth] ANTI_BOT_VERIFICATION`. [#8581](https://github.com/gogs/gogs/pull/8581)
 
 ### Changed
 
@@ -46,6 +45,7 @@ All notable changes to Gogs are documented in this file.
 - Users without an uploaded avatar get a generated avatar in the style of [DiceBear Notionists](https://www.dicebear.com/styles/notionists/), and organizations get one in the style of [DiceBear Shapes](https://www.dicebear.com/styles/shapes/). Both stay the same after a rename. Commit authors without an account get one generated from their email, in place of the default gopher. Avatars are never fetched from external services.
 - The registration captcha asks the browser to solve a small proof-of-work puzzle ([ALTCHA](https://altcha.org)) with one click instead of reading characters from an image. Set `[auth] ANTI_BOT_VERIFICATION = captcha` to keep the image captcha, or leave it empty to turn it off. [#8699](https://github.com/gogs/gogs/pull/8699)
 - Configuration option `[auth] ENABLE_REGISTRATION_CAPTCHA` is deprecated and will end support in 0.16.0, please start using `[auth] ANTI_BOT_VERIFICATION`. Until then, `true` keeps the default `altcha` and `false` turns anti-bot verification off. [#8699](https://github.com/gogs/gogs/pull/8699)
+- Signing in on the web asks for the same anti-bot verification as signing up, set by `[auth] ANTI_BOT_VERIFICATION`, to slow down password guessing. Git over HTTP and the API are not affected. [#8581](https://github.com/gogs/gogs/pull/8581)
 - Docker builds from `main` are now published only as `gogs/gogs:edge`, using the next-generation `Dockerfile.next`. The legacy `Dockerfile` no longer produces `main` builds. The `gogs/gogs:latest` and `gogs/gogs:next-latest` tags now always point to the highest published stable release, never to a back-patch on an older line. [#8278](https://github.com/gogs/gogs/pull/8278)
 - The minimum required Git version on the server is now 2.43.1. Gogs refuses to start with an older Git. [#8437](https://github.com/gogs/gogs/pull/8437)
 - The minimum supported database versions are now PostgreSQL 12 and MariaDB 10.6. MySQL 5.7 is still supported. [#8546](https://github.com/gogs/gogs/pull/8546)

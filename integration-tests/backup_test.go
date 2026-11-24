@@ -204,7 +204,7 @@ func TestBackupRestore(t *testing.T) {
 	t.Cleanup(func() { _ = dropDatabase() })
 	restoreDir := t.TempDir()
 	restoreConfig := filepath.Join(restoreDir, "app.ini")
-	require.NoError(t, writeConfig(restoreDir, restoreConfig, "http://localhost/", 0, 0, dbName, conf.Security.SecretKey, false, conf.AntiBotVerificationAltcha, false))
+	require.NoError(t, writeConfig(restoreDir, restoreConfig, "http://localhost/", 0, 0, dbName, conf.Security.SecretKey, false, conf.AntiBotVerificationCaptcha))
 	restoreTempDir := filepath.Join(restoreDir, "temp")
 	require.NoError(t, os.Mkdir(restoreTempDir, 0o755))
 	cmd := exec.Command(os.Args[0], "restore", "--config", restoreConfig, "--tempdir", restoreTempDir, "--from", archivePath)

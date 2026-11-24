@@ -322,12 +322,6 @@ func Init(logger *logx.Logger, customConf string) error {
 			logger.Warn("Found invalid configuration", "warning", warning)
 		}
 	}
-	if Auth.EnableLoginCaptcha && Auth.AntiBotVerification == "" {
-		if File.Section("auth").HasKey("ENABLE_REGISTRATION_CAPTCHA") {
-			return errors.New("[auth] ENABLE_LOGIN_CAPTCHA requires anti-bot verification, which the deprecated [auth] ENABLE_REGISTRATION_CAPTCHA = false turns off")
-		}
-		return errors.New("[auth] ENABLE_LOGIN_CAPTCHA requires [auth] ANTI_BOT_VERIFICATION to be set")
-	}
 
 	if err = File.Section("cache").MapTo(&Cache); err != nil {
 		return errors.Wrap(err, "mapping [cache] section")

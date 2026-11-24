@@ -1,6 +1,7 @@
 package integrationtests
 
 import (
+	"encoding/json"
 	"net/http"
 	"testing"
 
@@ -58,7 +59,7 @@ func TestUserSignUpPage(t *testing.T) {
 	newClient(t).doJSON(http.MethodGet, "/api/web/user/sign-up", nil, http.StatusOK, &resp)
 	// The server under test allows registration with anti-bot verification.
 	assert.False(t, resp.RegistrationDisabled)
-	assert.Equal(t, "altcha", resp.AntiBotVerification)
+	assert.Equal(t, "captcha", resp.AntiBotVerification)
 }
 
 func TestUserResetPassword(t *testing.T) {
@@ -110,7 +111,7 @@ func TestUserResetPassword(t *testing.T) {
 	require.Equal(t, http.StatusNoContent, status, "response: %s", body)
 	assert.Empty(t, signedIn.username(), "a session of the password before is still signed in")
 	newClient(t).signIn(&User{Name: u.Name, Password: "new-password"})
-	status, body = newClient(t).do(http.MethodPost, "/api/web/user/sign-in", map[string]any{"username": u.Name, "password": u.Password})
+	status, body = newClient(t).postSignIn(map[string]any{"username": u.Name, "password": u.Password})
 	assert.Equal(t, http.StatusUnauthorized, status, "old password still works, response: %s", body)
 
 	// The code is derived from the password hash, so it is only used once.
@@ -129,10 +130,12 @@ func TestUserMFAPage(t *testing.T) {
 	status, body := c.do(http.MethodGet, "/api/web/user/mfa", nil)
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 
+	status, body = c.postSignIn(map[string]any{"username": u.Name, "password": u.Password})
+	require.Equal(t, http.StatusOK, status, "response: %s", body)
 	var resp struct {
 		MFA bool `json:"mfa"`
 	}
-	c.doJSON(http.MethodPost, "/api/web/user/sign-in", map[string]any{"username": u.Name, "password": u.Password}, http.StatusOK, &resp)
+	require.NoError(t, json.Unmarshal(body, &resp), "response: %s", body)
 	require.True(t, resp.MFA)
 	status, body = c.do(http.MethodGet, "/api/web/user/mfa", nil)
 	assert.Equal(t, http.StatusNoContent, status, "response: %s", body)

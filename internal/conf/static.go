@@ -233,7 +233,6 @@ type AuthOpts struct {
 	RequireSigninView        bool
 	DisableRegistration      bool
 	AntiBotVerification      string
-	EnableLoginCaptcha       bool
 
 	EnableReverseProxyAuthentication   bool
 	EnableReverseProxyAutoRegistration bool

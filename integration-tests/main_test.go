@@ -30,11 +30,12 @@ import (
 
 var (
 	// serverURL is the URL of the server under test, without a trailing slash.
+	// It uses the image captcha, which tests pass cheaply by reading its text
+	// from the session.
 	serverURL string
-	// hardenedServerURL is the URL of another server under test, which only
-	// differs by setting [repository] FORCE_PRIVATE and [auth]
-	// ENABLE_LOGIN_CAPTCHA, and using the image captcha.
-	hardenedServerURL string
+	// forcePrivateServerURL is the URL of another server under test, which only
+	// differs by setting [repository] FORCE_PRIVATE and using altcha.
+	forcePrivateServerURL string
 	// portOverrideServerURL is the URL of another server under test, which is
 	// started with `gogs web --port` while its HTTP_PORT is taken, and whose
 	// external URL uses HTTP_PORT.
@@ -75,8 +76,8 @@ func TestMain(m *testing.M) {
 		_ = os.RemoveAll(dir)
 	} else {
 		serverLog, _ := os.ReadFile(filepath.Join(dir, "server.log"))
-		hardenedServerLog, _ := os.ReadFile(filepath.Join(dir, "server-hardened.log"))
-		fmt.Fprintf(os.Stderr, "Server log:\n%s\nLog of the hardened server:\n%s\nWork directory %q is left intact for inspection\n", serverLog, hardenedServerLog, dir)
+		forcePrivateServerLog, _ := os.ReadFile(filepath.Join(dir, "server-force-private.log"))
+		fmt.Fprintf(os.Stderr, "Server log:\n%s\nLog of the server with FORCE_PRIVATE:\n%s\nWork directory %q is left intact for inspection\n", serverLog, forcePrivateServerLog, dir)
 	}
 	os.Exit(code)
 }
@@ -112,7 +113,7 @@ func run(m *testing.M, dir string) (int, error) {
 	secretKey := make([]byte, 16)
 	_, _ = rand.Read(secretKey)
 	serverConfigPath = filepath.Join(dir, "app.ini")
-	if err = writeConfig(dir, serverConfigPath, fmt.Sprintf("http://localhost:%d/", port), port, sshPort, dbName, hex.EncodeToString(secretKey), false, conf.AntiBotVerificationAltcha, false); err != nil {
+	if err = writeConfig(dir, serverConfigPath, fmt.Sprintf("http://localhost:%d/", port), port, sshPort, dbName, hex.EncodeToString(secretKey), false, conf.AntiBotVerificationCaptcha); err != nil {
 		return 0, errors.Wrap(err, "write configuration")
 	}
 
@@ -146,27 +147,27 @@ func run(m *testing.M, dir string) (int, error) {
 	}
 	defer stopServer()
 
-	// The hardened server shares the database and the repositories, so tests
-	// seed data once and call either server. It starts after the first one has
-	// migrated the database and generated the SSH host keys.
-	hardenedPort, err := freePort()
+	// The server with FORCE_PRIVATE shares the database and the repositories, so
+	// tests seed data once and call either server. It starts after the first one
+	// has migrated the database and generated the SSH host keys.
+	forcePrivatePort, err := freePort()
 	if err != nil {
 		return 0, errors.Wrap(err, "find free port")
 	}
-	hardenedSSHPort, err := freePort()
+	forcePrivateSSHPort, err := freePort()
 	if err != nil {
 		return 0, errors.Wrap(err, "find free SSH port")
 	}
-	hardenedConfigPath := filepath.Join(dir, "app-hardened.ini")
-	if err = writeConfig(dir, hardenedConfigPath, fmt.Sprintf("http://localhost:%d/", hardenedPort), hardenedPort, hardenedSSHPort, dbName, hex.EncodeToString(secretKey), true, conf.AntiBotVerificationCaptcha, true); err != nil {
+	forcePrivateConfigPath := filepath.Join(dir, "app-force-private.ini")
+	if err = writeConfig(dir, forcePrivateConfigPath, fmt.Sprintf("http://localhost:%d/", forcePrivatePort), forcePrivatePort, forcePrivateSSHPort, dbName, hex.EncodeToString(secretKey), true, conf.AntiBotVerificationAltcha); err != nil {
 		return 0, errors.Wrap(err, "write configuration")
 	}
-	hardenedServerURL = fmt.Sprintf("http://localhost:%d", hardenedPort)
-	stopHardenedServer, err := startServer(binary, hardenedConfigPath, hardenedServerURL, filepath.Join(dir, "server-hardened.log"), spans.url)
+	forcePrivateServerURL = fmt.Sprintf("http://localhost:%d", forcePrivatePort)
+	stopForcePrivateServer, err := startServer(binary, forcePrivateConfigPath, forcePrivateServerURL, filepath.Join(dir, "server-force-private.log"), spans.url)
 	if err != nil {
-		return 0, errors.Wrap(err, "start hardened server")
+		return 0, errors.Wrap(err, "start server with FORCE_PRIVATE")
 	}
-	defer stopHardenedServer()
+	defer stopForcePrivateServer()
 
 	// The servers started with `gogs web --port` share the database and the
 	// repositories as well. They start before the tests, because a server that
@@ -188,7 +189,7 @@ func run(m *testing.M, dir string) (int, error) {
 			return "", nil, errors.Wrap(err, "find free SSH port")
 		}
 		configPath := filepath.Join(dir, "app-"+name+".ini")
-		if err = writeConfig(dir, configPath, externalURL, takenPort, sshPort, dbName, hex.EncodeToString(secretKey), false, conf.AntiBotVerificationAltcha, false); err != nil {
+		if err = writeConfig(dir, configPath, externalURL, takenPort, sshPort, dbName, hex.EncodeToString(secretKey), false, conf.AntiBotVerificationCaptcha); err != nil {
 			return "", nil, errors.Wrap(err, "write configuration")
 		}
 		listenURL = fmt.Sprintf("http://localhost:%d", port)
@@ -245,7 +246,7 @@ func run(m *testing.M, dir string) (int, error) {
 	}
 	code := m.Run()
 	stopServer()
-	stopHardenedServer()
+	stopForcePrivateServer()
 	stopPortOverrideServer()
 	stopProxiedServer()
 	// Only a full run is held to covering every route. A run of some tests,
@@ -303,7 +304,7 @@ func freePort() (int, error) {
 // writeConfig writes the configuration of a server under test, which uses the
 // Postgres database of the name on the server the PG* environment variables
 // point to.
-func writeConfig(dir, path, externalURL string, port, sshPort int, dbName, secretKey string, forcePrivate bool, antiBotVerification string, enableLoginCaptcha bool) error {
+func writeConfig(dir, path, externalURL string, port, sshPort int, dbName, secretKey string, forcePrivate bool, antiBotVerification string) error {
 	u, err := user.Current()
 	if err != nil {
 		return errors.Wrap(err, "get current user")
@@ -359,7 +360,6 @@ HOST = 127.0.0.1:1
 [auth]
 DISABLE_REGISTRATION = false
 ANTI_BOT_VERIFICATION = %[9]s
-ENABLE_LOGIN_CAPTCHA = %[11]t
 ; Tests call from the loopback interface, which is a trusted proxy by default,
 ; so only requests with the header are authenticated by it.
 ENABLE_REVERSE_PROXY_AUTHENTICATION = true
@@ -368,7 +368,7 @@ ENABLE_REVERSE_PROXY_AUTO_REGISTRATION = true
 [log]
 MODE = console
 LEVEL = Info
-`, u.Username, port, filepath.Join(dir, "repositories"), database, secretKey, filepath.Join(dir, "ssh"), sshPort, forcePrivate, antiBotVerification, externalURL, enableLoginCaptcha)
+`, u.Username, port, filepath.Join(dir, "repositories"), database, secretKey, filepath.Join(dir, "ssh"), sshPort, forcePrivate, antiBotVerification, externalURL)
 	return os.WriteFile(path, []byte(config), 0o600)
 }
 

@@ -182,19 +182,18 @@ func getUserSignIn(logger *logx.Logger, r *http.Request) (statusCode int, resp *
 	for _, s := range sources {
 		loginSources = append(loginSources, loginSource{ID: s.ID, Name: s.Name, IsDefault: s.IsDefault})
 	}
-	resp = &getUserSignInResponse{LoginSources: loginSources}
-	if conf.Auth.EnableLoginCaptcha {
-		resp.AntiBotVerification = conf.Auth.AntiBotVerification
-	}
-	return http.StatusOK, resp, nil
+	return http.StatusOK, &getUserSignInResponse{
+		LoginSources:        loginSources,
+		AntiBotVerification: conf.Auth.AntiBotVerification,
+	}, nil
 }
 
 type userSignInRequest struct {
 	Username    string `json:"username" validate:"required,max=254"`
 	Password    string `json:"password" validate:"required,max=255"`
 	LoginSource int64  `json:"loginSource"`
-	// AntiBotPayload is checked as on sign-up when [auth] ENABLE_LOGIN_CAPTCHA
-	// is enabled.
+	// AntiBotPayload is the text of the captcha image, or the solution of the altcha
+	// challenge, depending on [auth] ANTI_BOT_VERIFICATION.
 	AntiBotPayload string `json:"antiBotPayload"`
 }
 
@@ -289,7 +288,7 @@ type userSignInResponse struct {
 func postUserSignIn(logger *logx.Logger, r *http.Request, w http.ResponseWriter, store session.Store, sess session.Session, l i18n.Locale, verifyAntiBot antiBotVerifier, req userSignInRequest) (statusCode int, resp any, err error) {
 	// Checked before the password, so that a request that fails the check tells
 	// nothing about the password.
-	if conf.Auth.EnableLoginCaptcha && !verifyAntiBot(req.AntiBotPayload) {
+	if !verifyAntiBot(req.AntiBotPayload) {
 		return http.StatusUnauthorized, antiBotVerificationFailed(l), nil
 	}
 	u, err := database.Handle.Users().Authenticate(r.Context(), logger, req.Username, req.Password, req.LoginSource)
