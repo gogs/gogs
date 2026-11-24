@@ -317,13 +317,15 @@ func Init(logger *logx.Logger, customConf string) error {
 	LFS.ObjectsTempPath = ensureAbs(LFS.ObjectsTempPath)
 
 	handleDeprecated()
-	if Auth.EnableLoginCaptcha && Auth.AntiBotVerification == "" {
-		return errors.New("[auth] ENABLE_LOGIN_CAPTCHA requires [auth] ANTI_BOT_VERIFICATION to be set")
-	}
 	if !HookMode {
 		for _, warning := range checkInvalidOptions(File) {
 			logger.Warn("Found invalid configuration", "warning", warning)
 		}
+	}
+	// Checked after the warnings, which explain when the deprecated [auth]
+	// ENABLE_REGISTRATION_CAPTCHA turned the verification off.
+	if Auth.EnableLoginCaptcha && Auth.AntiBotVerification == "" {
+		return errors.New("[auth] ENABLE_LOGIN_CAPTCHA requires [auth] ANTI_BOT_VERIFICATION to be set")
 	}
 
 	if err = File.Section("cache").MapTo(&Cache); err != nil {
