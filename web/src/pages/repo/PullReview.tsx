@@ -628,26 +628,15 @@ export function ReviewersSection({ issueRef, data }: { issueRef: IssueRef; data:
                 : r.stale
                   ? t("repo.pulls.review.stale")
                   : null;
+            const label = t(state.label);
             return (
-              <li key={r.user.name} className="flex items-start gap-2 text-sm">
+              <li key={r.user.name} className="flex items-center gap-2 text-sm">
                 <UserLink user={r.user} className="shrink-0">
                   <img src={r.user.avatarURL} alt="" className="size-5 rounded-full border border-(--color-border)" />
                 </UserLink>
-                <span className="min-w-0 flex-1">
-                  <UserLink user={r.user} className="font-medium wrap-anywhere hover:underline">
-                    {r.user.name}
-                  </UserLink>
-                  {note ? <span className="block text-xs text-(--color-muted-foreground)">{note}</span> : null}
-                </span>
-                <span
-                  className={cn(
-                    "inline-flex shrink-0 items-center gap-1 text-xs",
-                    note ? "text-(--color-muted-foreground)" : state.className,
-                  )}
-                >
-                  <Icon className="size-3.5" aria-hidden />
-                  {t(state.label)}
-                </span>
+                <UserLink user={r.user} className="min-w-0 flex-1 font-medium wrap-anywhere hover:underline">
+                  {r.user.name}
+                </UserLink>
                 {/* Only reviews from writers can be asked for. */}
                 {canRerequest && r.counts && r.state !== "requested" ? (
                   <Tooltip>
@@ -659,7 +648,7 @@ export function ReviewersSection({ issueRef, data }: { issueRef: IssueRef; data:
                         aria-label={t("repo.pulls.review.rerequest", { name: r.user.name })}
                         disabled={request.isPending}
                         onClick={() => request.mutate({ name: r.user.name, requested: true })}
-                        className="-my-0.5 size-6 shrink-0 text-(--color-muted-foreground)"
+                        className="size-6 shrink-0 text-(--color-muted-foreground)"
                       >
                         <RefreshCw className="size-3.5" aria-hidden />
                       </Button>
@@ -667,6 +656,27 @@ export function ReviewersSection({ issueRef, data }: { issueRef: IssueRef; data:
                     <TooltipContent>{t("repo.pulls.review.rerequest", { name: r.user.name })}</TooltipContent>
                   </Tooltip>
                 ) : null}
+                {/* The status shows as its icon and color, with its words in
+                    the tooltip. */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span
+                      role="img"
+                      tabIndex={0}
+                      aria-label={note ? `${label}. ${note}` : label}
+                      className={cn(
+                        "flex size-6 shrink-0 items-center justify-center rounded",
+                        note ? "text-(--color-muted-foreground)" : state.className,
+                      )}
+                    >
+                      <Icon className="size-4" aria-hidden />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{label}</p>
+                    {note ? <p className="opacity-80">{note}</p> : null}
+                  </TooltipContent>
+                </Tooltip>
               </li>
             );
           })}
