@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
@@ -88,9 +87,6 @@ func NewConnection(logger *logx.Logger, logQueries bool) (*gorm.DB, error) {
 	case "mysql":
 		conf.UseMySQL = true
 		db = db.Set("gorm:table_options", "ENGINE=InnoDB").Session(&gorm.Session{})
-		if statementBinlog = usesStatementBinlog(db); statementBinlog {
-			logger.Warn("MySQL logs statements to its binary log, so changes to repositories and teams stay at REPEATABLE READ, and concurrent ones may miss accesses they should give or fail with deadlocks. Set binlog_format to ROW or MIXED and restart to avoid it.")
-		}
 	case "sqlite3":
 		conf.UseSQLite3 = true
 	default:
@@ -181,21 +177,6 @@ func Ping() error {
 		return err
 	}
 	return sqlDB.Ping()
-}
-
-// statementBinlog is true when MySQL logs statements, rather than rows, to its
-// binary log, which rejects writes of READ COMMITTED transactions.
-var statementBinlog bool
-
-// usesStatementBinlog reports whether the MySQL server logs statements to its
-// binary log. Servers without the setting, e.g., MySQL 9, always log rows.
-func usesStatementBinlog(db *gorm.DB) bool {
-	var logBin bool
-	var format string
-	if err := db.Raw("SELECT @@log_bin, @@binlog_format").Row().Scan(&logBin, &format); err != nil {
-		return false
-	}
-	return logBin && strings.EqualFold(format, "STATEMENT")
 }
 
 // DB is the database handler for the storage layer.

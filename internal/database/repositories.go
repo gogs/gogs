@@ -3,7 +3,6 @@ package database
 import (
 	"bytes"
 	"context"
-	"database/sql"
 	"fmt"
 	"image"
 	_ "image/jpeg"
@@ -1166,7 +1165,7 @@ func (s *RepositoriesStore) Create(ctx context.Context, logger *logx.Logger, doe
 			return errors.Newf("initRepository: %v", err)
 		}
 		return nil
-	}, readCommitted()...)
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -1188,6 +1187,15 @@ func (s *RepositoriesStore) insert(ctx context.Context, doer, owner *User, repo 
 		return err
 	}
 
+	db := s.db.WithContext(ctx)
+	// The owner is locked before the first plain read, which on MySQL takes
+	// the snapshot of the transaction, so the accesses below see a member
+	// added to the owner team while waiting for it.
+	err = db.Exec(dbx.Quote("UPDATE %s SET num_repos = num_repos + 1 WHERE id = ?", "user"), owner.ID).Error
+	if err != nil {
+		return errors.Wrap(err, "increase owned repository count")
+	}
+
 	has, err := s.Exists(ctx, owner, repo.Name)
 	if err != nil {
 		return errors.Wrap(err, "check existence")
@@ -1195,7 +1203,6 @@ func (s *RepositoriesStore) insert(ctx context.Context, doer, owner *User, repo 
 		return ErrRepoAlreadyExist{args: errx.Args{"ownerID": owner.ID, "name": repo.Name}}
 	}
 
-	db := s.db.WithContext(ctx)
 	// GORM saves and returns the column default (true) instead of a false value
 	// on create, so save the feature switches the caller chose, e.g., all
 	// disabled for forks, which also sets them back on the repository.
@@ -1210,11 +1217,6 @@ func (s *RepositoriesStore) insert(ctx context.Context, doer, owner *User, repo 
 	}).Error
 	if err != nil {
 		return errors.Wrap(err, "restore feature switches")
-	}
-
-	err = db.Exec(dbx.Quote("UPDATE %s SET num_repos = num_repos + 1 WHERE id = ?", "user"), owner.ID).Error
-	if err != nil {
-		return errors.Wrap(err, "increase owned repository count")
 	}
 
 	// Give access to all members in owner team.
@@ -1427,7 +1429,7 @@ func (s *RepositoriesStore) Fork(ctx context.Context, logger *logx.Logger, doer,
 		}
 
 		return nil
-	}, readCommitted()...)
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -1513,6 +1515,17 @@ func (s *RepositoriesStore) Transfer(ctx context.Context, doer *User, newOwnerNa
 			return errors.Newf("update owner: %v", err)
 		}
 
+		// Owners are locked before their teams, the order creating, forking
+		// and adding a team member lock them in, so they cannot deadlock. They
+		// are locked before the first plain read, which on MySQL takes the
+		// snapshot of the transaction, so the accesses below see a member
+		// added to the new owner's teams while waiting for them.
+		if err = tx.Exec(dbx.Quote("UPDATE %s SET num_repos = num_repos + 1 WHERE id = ?", "user"), newOwner.ID).Error; err != nil {
+			return errors.Newf("increase new owner repository count: %v", err)
+		} else if err = tx.Exec(dbx.Quote("UPDATE %s SET num_repos = num_repos - 1 WHERE id = ?", "user"), owner.ID).Error; err != nil {
+			return errors.Newf("decrease old owner repository count: %v", err)
+		}
+
 		// Remove redundant collaborators.
 		collaborators, err := newCollaborationsStore(tx).List(ctx, repo.ID)
 		if err != nil {
@@ -1526,14 +1539,6 @@ func (s *RepositoriesStore) Transfer(ctx context.Context, doer *User, newOwnerNa
 					return errors.Newf("remove collaborator '%d': %v", c.ID, err)
 				}
 			}
-		}
-
-		// Owners are locked before their teams, the order creating, forking
-		// and adding a team member lock them in, so they cannot deadlock.
-		if err = tx.Exec(dbx.Quote("UPDATE %s SET num_repos = num_repos + 1 WHERE id = ?", "user"), newOwner.ID).Error; err != nil {
-			return errors.Newf("increase new owner repository count: %v", err)
-		} else if err = tx.Exec(dbx.Quote("UPDATE %s SET num_repos = num_repos - 1 WHERE id = ?", "user"), owner.ID).Error; err != nil {
-			return errors.Newf("decrease old owner repository count: %v", err)
 		}
 
 		teams := newTeamsStore(tx)
@@ -1614,7 +1619,7 @@ func (s *RepositoriesStore) Transfer(ctx context.Context, doer *User, newOwnerNa
 			}
 		}
 		return nil
-	}, readCommitted()...)
+	})
 }
 
 // Rename renames the Git repository and wiki of the repository of the owner
@@ -2209,18 +2214,6 @@ func (s *RepositoriesStore) UpdateSize(ctx context.Context, repo *Repository) er
 		return errors.Newf("update size: %v", err)
 	}
 	return nil
-}
-
-// readCommitted returns the options of a transaction whose reads see the rows
-// committed before each statement, as PostgreSQL does by default. On MySQL,
-// reads would otherwise come from a snapshot taken before the transaction
-// waited for the locks, and miss what it waited for, e.g., a member added to
-// a team. MySQL logging statements to its binary log keeps the default.
-func readCommitted() []*sql.TxOptions {
-	if conf.UseSQLite3 || statementBinlog {
-		return nil
-	}
-	return []*sql.TxOptions{{Isolation: sql.LevelReadCommitted}}
 }
 
 // lockRepositories locks the repositories of given IDs in ascending order, so

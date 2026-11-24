@@ -169,8 +169,8 @@ func (s *TeamsStore) Update(ctx context.Context, t *Team, authChanged bool) erro
 func (s *TeamsStore) Delete(ctx context.Context, t *Team) error {
 	// A repository added to the team meanwhile is locked by the next attempt.
 	for attempt := 1; ; attempt++ {
-		// Listed outside the transaction, so that on MySQL at REPEATABLE READ
-		// its snapshot is taken after the locks.
+		// Listed outside the transaction, so that on MySQL its snapshot is
+		// taken after the locks.
 		var repoIDs []int64
 		err := s.db.WithContext(ctx).Model(new(TeamRepo)).Where("team_id = ?", t.ID).Pluck("repo_id", &repoIDs).Error
 		if err != nil {
@@ -179,7 +179,7 @@ func (s *TeamsStore) Delete(ctx context.Context, t *Team) error {
 
 		err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 			return newTeamsStore(tx).delete(ctx, t, repoIDs)
-		}, readCommitted()...)
+		})
 		if !errors.Is(err, errTeamReposChanged) || attempt == 3 {
 			return err
 		}
@@ -280,9 +280,17 @@ func (s *TeamsStore) AddMember(ctx context.Context, orgID, teamID, userID int64)
 
 	// A repository added to the team meanwhile is locked by the next attempt.
 	for attempt := 1; ; attempt++ {
-		err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-			return newTeamsStore(tx).addMember(ctx, orgID, teamID, userID)
-		}, readCommitted()...)
+		// Listed outside the transaction, so that on MySQL its snapshot is
+		// taken after the locks.
+		var repoIDs []int64
+		err := s.db.WithContext(ctx).Model(new(TeamRepo)).Where("team_id = ?", teamID).Order("repo_id ASC").Pluck("repo_id", &repoIDs).Error
+		if err != nil {
+			return errors.Wrap(err, "list team repositories")
+		}
+
+		err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+			return newTeamsStore(tx).addMember(ctx, orgID, teamID, userID, repoIDs)
+		})
 		if !errors.Is(err, errTeamReposChanged) || attempt == 3 {
 			return err
 		}
@@ -290,19 +298,13 @@ func (s *TeamsStore) AddMember(ctx context.Context, orgID, teamID, userID int64)
 }
 
 // addMember is AddMember without a transaction of its own and checks.
-func (s *TeamsStore) addMember(ctx context.Context, orgID, teamID, userID int64) error {
+func (s *TeamsStore) addMember(ctx context.Context, orgID, teamID, userID int64, lockedIDs []int64) error {
 	db := s.db.WithContext(ctx)
 	// Lock the repositories of the team before rows of the organization and
 	// the team, as other transactions do, so the repositories cannot be
-	// deleted or transferred until the member has their accesses.
-	var lockedIDs []int64
-	err := db.Model(new(TeamRepo)).Where("team_id = ?", teamID).Order("repo_id ASC").Pluck("repo_id", &lockedIDs).Error
-	if err != nil {
-		return errors.Wrap(err, "list team repositories")
-	}
-	// Locking reads see the latest rows even when other reads come from an
-	// older snapshot, e.g., at REPEATABLE READ on MySQL, so only repositories
-	// that still belong to the organization and the team get accesses.
+	// deleted or transferred until the member has their accesses. Locking
+	// reads see the latest rows, so only repositories that still belong to
+	// the organization and the team get accesses.
 	ownedIDs := make([]int64, 0, len(lockedIDs))
 	for _, repoID := range lockedIDs {
 		ownerID, exists, err := lockRepository(s.db, repoID)
@@ -324,6 +326,19 @@ func (s *TeamsStore) addMember(ctx context.Context, orgID, teamID, userID int64)
 		}
 	}
 
+	// The organization and the team are locked before the first plain read,
+	// which on MySQL takes the snapshot of the transaction, so it sees what
+	// committed while waiting for them, e.g., a repository created in the
+	// organization or added to the team.
+	err := db.Model(new(User)).Where("id = ?", orgID).UpdateColumn("num_members", gorm.Expr("num_members")).Error
+	if err != nil {
+		return errors.Wrap(err, "lock organization")
+	}
+	err = db.Model(new(Team)).Where("id = ?", teamID).UpdateColumn("num_members", gorm.Expr("num_members + 1")).Error
+	if err != nil {
+		return errors.Wrap(err, "count members")
+	}
+
 	if err := newOrganizationsStore(s.db).addMember(ctx, orgID, userID); err != nil {
 		return errors.Wrap(err, "add organization member")
 	}
@@ -335,10 +350,6 @@ func (s *TeamsStore) addMember(ctx context.Context, orgID, teamID, userID int64)
 	err = db.Create(&TeamUser{UID: userID, OrgID: orgID, TeamID: teamID}).Error
 	if err != nil {
 		return errors.Wrap(err, "create team user")
-	}
-	err = db.Model(t).UpdateColumn("num_members", gorm.Expr("num_members + 1")).Error
-	if err != nil {
-		return errors.Wrap(err, "count members")
 	}
 
 	// Adding, removing, deleting or transferring a repository of the team
