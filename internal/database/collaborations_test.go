@@ -132,6 +132,17 @@ func collaborationsAdd(t *testing.T, ctx context.Context, s *CollaborationsStore
 	err = s.Add(ctx, moved, alice.ID)
 	assert.True(t, IsErrRepoNotExist(err), "%+v", err)
 	assert.False(t, s.IsCollaborator(ctx, logger, moved.ID, alice.ID))
+	err = s.AddWithMode(ctx, moved, AccessModeOwner, alice.ID, AccessModeRead)
+	assert.True(t, IsErrRepoNotExist(err), "%+v", err)
+	assert.False(t, s.IsCollaborator(ctx, logger, moved.ID, alice.ID), "added without the mode")
+
+	// Adding with a mode gives the mode, also to a collaborator the
+	// repository has.
+	withMode := newTestIssueRepo(t, ctx, s.db, "co-add-mode")
+	require.NoError(t, s.AddWithMode(ctx, withMode, AccessModeOwner, alice.ID, AccessModeRead))
+	assert.Equal(t, map[int64]AccessMode{alice.ID: AccessModeRead}, accessModes(t, ctx, perms, withMode.ID))
+	require.NoError(t, s.AddWithMode(ctx, withMode, AccessModeOwner, alice.ID, AccessModeAdmin))
+	assert.Equal(t, map[int64]AccessMode{alice.ID: AccessModeAdmin}, accessModes(t, ctx, perms, withMode.ID))
 
 	// Adding a collaborator that the repository has keeps their mode.
 	err = s.db.Model(new(Collaboration)).Where("user_id = ?", alice.ID).Update("mode", AccessModeRead).Error

@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/cockroachdb/errors"
@@ -43,19 +42,14 @@ func addCollaborator(c *apiContext, form addCollaboratorRequest) {
 		return
 	}
 
-	// Keep going if the client disconnects, so the collaborator does not end
-	// up added without the requested mode.
-	ctx := context.WithoutCancel(c.Request().Context())
-	if err := database.Handle.Collaborations().Add(ctx, c.Repo.Repository, collaborator.ID); err != nil {
+	mode := database.AccessModeNone
+	if form.Permission != nil {
+		mode = database.ParseAccessMode(*form.Permission)
+	}
+	err = database.Handle.Collaborations().AddWithMode(c.Request().Context(), c.Repo.Repository, c.Repo.AccessMode, collaborator.ID, mode)
+	if err != nil {
 		c.NotFoundOrError(err, "add collaborator")
 		return
-	}
-
-	if form.Permission != nil {
-		if err := database.Handle.Collaborations().ChangeMode(ctx, c.Repo.Repository, c.Repo.AccessMode, collaborator.ID, database.ParseAccessMode(*form.Permission)); err != nil {
-			c.NotFoundOrError(err, "change collaboration access mode")
-			return
-		}
 	}
 
 	c.NoContent()

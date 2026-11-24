@@ -36,6 +36,14 @@ func (s *CollaborationsStore) IsCollaborator(ctx context.Context, logger *logx.L
 // repository, and recalculates their access to it. Adding a collaborator that
 // the repository has keeps their mode.
 func (s *CollaborationsStore) Add(ctx context.Context, repo *Repository, userID int64) error {
+	return s.AddWithMode(ctx, repo, AccessModeNone, userID, AccessModeNone)
+}
+
+// AddWithMode is Add followed by ChangeMode in the same transaction, so the
+// collaborator is either added with the mode or not added at all, e.g., when
+// the repository is transferred meanwhile. A mode that ChangeMode ignores
+// keeps the mode Add gives.
+func (s *CollaborationsStore) AddWithMode(ctx context.Context, repo *Repository, actorMode AccessMode, userID int64, mode AccessMode) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Deleting the repository meanwhile would leave the collaboration and
 		// access behind, and transferring it would give access as if the old
@@ -59,6 +67,12 @@ func (s *CollaborationsStore) Add(ctx context.Context, repo *Repository, userID 
 		err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(c).Error
 		if err != nil {
 			return errors.Wrap(err, "insert")
+		}
+		if validCollaborationMode(actorMode, mode) {
+			err = tx.Model(new(Collaboration)).Where("repo_id = ? AND user_id = ?", repo.ID, userID).Update("mode", mode).Error
+			if err != nil {
+				return errors.Wrap(err, "update mode")
+			}
 		}
 		return newPermissionsStore(tx).recalculateUserAccess(ctx, repo, userID)
 	})
@@ -97,7 +111,7 @@ func (s *CollaborationsStore) List(ctx context.Context, repoID int64) ([]*Collab
 // collaborator. In a repository of an organization, the collaborator gets the
 // highest of this mode and the modes of their teams that have the repository.
 func (s *CollaborationsStore) ChangeMode(ctx context.Context, repo *Repository, actorMode AccessMode, userID int64, mode AccessMode) error {
-	if mode <= AccessModeNone || mode > AccessModeAdmin || mode > actorMode {
+	if !validCollaborationMode(actorMode, mode) {
 		return nil
 	}
 
@@ -146,4 +160,10 @@ func lockCollaborationRepository(tx *gorm.DB, repo *Repository) error {
 		return ErrRepoNotExist{args: errx.Args{"repoID": repo.ID}}
 	}
 	return lockOrganization(tx, ownerID)
+}
+
+// validCollaborationMode reports whether the actor with given mode may give a
+// collaborator the mode, which is capped at admin and at the actor's own mode.
+func validCollaborationMode(actorMode, mode AccessMode) bool {
+	return mode > AccessModeNone && mode <= AccessModeAdmin && mode <= actorMode
 }
