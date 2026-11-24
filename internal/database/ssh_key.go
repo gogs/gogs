@@ -285,6 +285,11 @@ func SSHNativeParsePublicKey(keyLine string) (string, int, error) {
 		return "ecdsa", 521, nil
 	case ssh.KeyAlgoED25519:
 		return "ed25519", 256, nil
+	// Keys of security keys use the same names as ssh-keygen reports.
+	case ssh.KeyAlgoSKED25519:
+		return "ed25519-sk", 256, nil
+	case ssh.KeyAlgoSKECDSA256:
+		return "ecdsa-sk", 256, nil
 	}
 	return "", 0, errors.Newf("unsupported key length detection for type: %s", pkey.Type())
 }
