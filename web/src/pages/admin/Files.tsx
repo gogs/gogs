@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import { AdminPageHeader } from "@/components/AdminPage";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { FileIcon } from "@/components/FileIcon";
-import { InlineCode } from "@/components/InlineCode";
 import { RelativeTime } from "@/components/RelativeTime";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,8 +71,9 @@ export function AdminFiles({ files }: { files: AdminCustomFile[] }) {
   };
 
   const copy = (path: string) => {
-    void navigator.clipboard.writeText(`fileURL(${JSON.stringify(path)})`).then(
-      () => toast.success(t("admin.files_copied")),
+    const code = `fileURL(${JSON.stringify(path)})`;
+    void navigator.clipboard.writeText(code).then(
+      () => toast.success(t("admin.files_copied", { code })),
       (err: unknown) => toastError(err instanceof Error ? err : new Error(String(err))),
     );
   };
@@ -155,7 +155,7 @@ export function AdminFiles({ files }: { files: AdminCustomFile[] }) {
                   onClick={() => copy(file.path)}
                 >
                   <Copy className="size-4" aria-hidden />
-                  <InlineCode>fileURL</InlineCode>
+                  {t("admin.files_copy")}
                 </Button>
                 {file.editable ? (
                   <>
