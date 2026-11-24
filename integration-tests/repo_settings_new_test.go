@@ -215,17 +215,18 @@ func TestRepoSettingsMirror(t *testing.T) {
 	require.NotNil(t, settings.Mirror)
 	assert.Equal(t, mirrorSettings{Address: cloneAddr, Interval: 24}, *settings.Mirror)
 
+	// A rejected address leaves every setting as it was.
 	status, body = c.do(http.MethodPut, repoSettingsAPIPath(mirror, "/settings/mirror"), map[string]any{
 		"address":     "ssh://git@gitlab.example.com/owner/repo.git",
-		"interval":    24,
-		"enablePrune": false,
+		"interval":    48,
+		"enablePrune": true,
 	})
 	require.Equal(t, http.StatusBadRequest, status, "response: %s", body)
 	assert.Equal(t, sshCloneAddrError, repoSettingsFieldError(t, body, "address"))
 	settings.Mirror = nil
 	c.doJSON(http.MethodGet, repoSettingsAPIPath(mirror, "/settings"), nil, http.StatusOK, &settings)
 	require.NotNil(t, settings.Mirror)
-	assert.Equal(t, cloneAddr, settings.Mirror.Address)
+	assert.Equal(t, mirrorSettings{Address: cloneAddr, Interval: 24}, *settings.Mirror)
 
 	mirrorPath := database.RepoPath(mirror.Owner, mirror.Name)
 	sourcePath := database.RepoPath(source.Owner, source.Name)

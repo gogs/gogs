@@ -332,17 +332,6 @@ func putRepoMirror(r *http.Request, logger *logx.Logger, l i18n.Locale, viewer *
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get mirror")
 	}
 
-	// An interval below an hour leaves the schedule as it was.
-	if req.Interval > 0 {
-		mirror.EnablePrune = req.EnablePrune
-		mirror.Interval = req.Interval
-		mirror.NextSync = time.Now().Add(time.Duration(req.Interval) * time.Hour)
-		if err = database.Handle.Mirrors().Update(r.Context(), mirror); err != nil {
-			logger.Error("Failed to update mirror", "repoID", repo.ID, "error", err)
-			return http.StatusInternalServerError, nil, errors.Wrap(err, "update mirror")
-		}
-	}
-
 	remoteAddr, err := form.ParseRemoteAddr(form.ParseRemoteAddrOptions{
 		CloneAddr: req.Address,
 		User:      viewer,
@@ -355,6 +344,18 @@ func putRepoMirror(r *http.Request, logger *logx.Logger, l i18n.Locale, viewer *
 		}
 		return code, &bindingErrorResponse{Fields: fieldErrors{"address": &msg}}, nil
 	}
+
+	// An interval below an hour leaves the schedule as it was.
+	if req.Interval > 0 {
+		mirror.EnablePrune = req.EnablePrune
+		mirror.Interval = req.Interval
+		mirror.NextSync = time.Now().Add(time.Duration(req.Interval) * time.Hour)
+		if err = database.Handle.Mirrors().Update(r.Context(), mirror); err != nil {
+			logger.Error("Failed to update mirror", "repoID", repo.ID, "error", err)
+			return http.StatusInternalServerError, nil, errors.Wrap(err, "update mirror")
+		}
+	}
+
 	if err = mirror.SaveAddress(r.Context(), remoteAddr); err != nil {
 		logger.Error("Failed to save mirror address", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "save address")
