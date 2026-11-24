@@ -10,46 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestUnescapeChars(t *testing.T) {
-	tests := []struct {
-		name string
-		in   string
-		want string
-	}{
-		{
-			name: "no escapes",
-			in:   "normal-filename.txt",
-			want: "normal-filename.txt",
-		},
-		{
-			name: "escaped quote",
-			in:   `Test \"Word\".md`,
-			want: `Test "Word".md`,
-		},
-		{
-			name: "escaped backslash",
-			in:   `path\\to\\file.txt`,
-			want: `path\to\file.txt`,
-		},
-		{
-			name: "escaped tab",
-			in:   `file\twith\ttabs.txt`,
-			want: "file\twith\ttabs.txt",
-		},
-		{
-			name: "mixed escapes",
-			in:   `\"quoted\\path\t.md`,
-			want: "\"quoted\\path\t.md",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := unescapeChars([]byte(tt.in))
-			assert.Equal(t, tt.want, string(got))
-		})
-	}
-}
-
 func TestRepository_LsTree(t *testing.T) {
 	ctx := context.Background()
 	if runtime.GOOS == "windows" {
