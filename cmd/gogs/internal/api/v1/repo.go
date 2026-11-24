@@ -14,7 +14,7 @@ import (
 )
 
 func searchRepos(c *apiContext) {
-	pageSize := toAllowedPageSize(c.QueryInt("limit"))
+	pageSize := c.queryPageSize(10)
 	opts := &database.SearchRepoOptions{
 		Keyword:  c.Query("q"),
 		OwnerID:  c.QueryInt64("uid"),

@@ -496,6 +496,10 @@ func TestAPIV1CommitsPages(t *testing.T) {
 		got, links = list(commits("pageSize=1000"))
 		assert.Equal(t, all[:50], got, "page size above MAX_RESPONSE_ITEMS")
 		assert.Equal(t, commits("page=2&pageSize=1000"), links["next"])
+
+		got, links = list(commits("limit=20"))
+		assert.Equal(t, all[:20], got, "limit as the page size")
+		assert.Equal(t, commits("limit=20&page=2"), links["next"])
 	})
 
 	// Follows the "next" links like an API client. Starting from another branch
@@ -590,6 +594,12 @@ func TestAPIV1BranchesPages(t *testing.T) {
 		}
 		assert.Equal(t, 2, pages)
 		assert.Equal(t, all, got)
+	})
+
+	t.Run("limit", func(t *testing.T) {
+		got, links := list(branches("limit=4"))
+		assert.Equal(t, all[:4], got)
+		assert.Equal(t, branches("limit=4&page=2"), links["next"])
 	})
 
 	t.Run("past the last page", func(t *testing.T) {

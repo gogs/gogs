@@ -7,21 +7,10 @@ import (
 	"strings"
 
 	"gogs.io/gogs/internal/api/v1types"
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/git"
 	"gogs.io/gogs/internal/markup"
 )
-
-// toAllowedPageSize makes sure page size is in allowed range.
-func toAllowedPageSize(size int) int {
-	if size <= 0 {
-		size = 10
-	} else if size > conf.API.MaxResponseItems {
-		size = conf.API.MaxResponseItems
-	}
-	return size
-}
 
 // toUser converts a database user to an API user with the full name sanitized
 // for safe HTML rendering.

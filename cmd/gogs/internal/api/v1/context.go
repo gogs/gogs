@@ -234,10 +234,13 @@ func (c *apiContext) queryPage(pageSize int) int {
 	return min(max(c.QueryInt("page"), 1), math.MaxInt/max(pageSize, 1))
 }
 
-// queryPageSize returns the requested page size, or defaultSize when none is
-// given, capped at [api] MAX_RESPONSE_ITEMS.
+// queryPageSize returns the page size requested with "pageSize" or "limit", or
+// defaultSize when neither is given, capped at [api] MAX_RESPONSE_ITEMS.
 func (c *apiContext) queryPageSize(defaultSize int) int {
 	size := c.QueryInt("pageSize")
+	if size <= 0 {
+		size = c.QueryInt("limit")
+	}
 	if size <= 0 {
 		size = defaultSize
 	}

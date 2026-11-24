@@ -27,8 +27,8 @@ func getBranch(c *apiContext) {
 	c.JSONSuccess(toBranch(branch, commit))
 }
 
-// listBranches lists all branches, or a page of them when the "page" or
-// "pageSize" query parameter is given.
+// listBranches lists all branches, or a page of them when the "page",
+// "pageSize" or "limit" query parameter is given.
 //
 // https://github.com/gogs/go-gogs-client/wiki/Repositories#list-branches
 func listBranches(c *apiContext) {
@@ -38,7 +38,7 @@ func listBranches(c *apiContext) {
 		return
 	}
 
-	if c.Query("page") != "" || c.Query("pageSize") != "" {
+	if c.Query("page") != "" || c.Query("pageSize") != "" || c.Query("limit") != "" {
 		pageSize := c.queryPageSize(10)
 		page := c.queryPage(pageSize)
 		c.SetLinkHeader(len(branches), pageSize)

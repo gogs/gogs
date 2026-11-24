@@ -111,7 +111,7 @@
               "type": "integer",
               "default": 10
             },
-            "description": "Max results"
+            "description": "Max results per page, at most `[api] MAX_RESPONSE_ITEMS` (50 by default). Also accepted as `pageSize`."
           },
           {
             "name": "page",
@@ -702,10 +702,10 @@
               "type": "integer",
               "default": 10
             },
-            "description": "Number of branches per page, at most `[api] MAX_RESPONSE_ITEMS` (50 by default)"
+            "description": "Number of branches per page, at most `[api] MAX_RESPONSE_ITEMS` (50 by default). Also accepted as `limit`."
           }
         ],
-        "description": "Returns all branches. With `page` or `pageSize`, returns a page of them, and the `Link` header has the URLs of the next, last, first and previous pages."
+        "description": "Returns all branches. With `page`, `pageSize` or `limit`, returns a page of them, and the `Link` header has the URLs of the next, last, first and previous pages."
       },
       "post": {
         "operationId": "createBranch",
@@ -5420,7 +5420,7 @@
               "type": "integer",
               "default": 30
             },
-            "description": "Number of commits per page, at most `[api] MAX_RESPONSE_ITEMS` (50 by default)"
+            "description": "Number of commits per page, at most `[api] MAX_RESPONSE_ITEMS` (50 by default). Also accepted as `limit`."
           }
         ],
         "responses": {
