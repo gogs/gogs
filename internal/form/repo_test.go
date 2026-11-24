@@ -24,11 +24,13 @@ func TestParseRemoteAddr(t *testing.T) {
 	localDir := t.TempDir()
 
 	tests := []struct {
-		name     string
-		addr     string
-		user     *database.User
-		wantAddr string
-		wantErr  error
+		name         string
+		addr         string
+		authUsername string
+		authPassword string
+		user         *database.User
+		wantAddr     string
+		wantErr      error
 	}{
 		{name: "scp-like address", addr: "git@gitlab.example.com:owner/repo.git", user: regular, wantErr: database.ErrInvalidCloneAddr{IsSSHAddress: true}},
 		{name: "scp-like address without user", addr: "gitlab.example.com:owner/repo.git", user: regular, wantErr: database.ErrInvalidCloneAddr{IsSSHAddress: true}},
@@ -37,6 +39,10 @@ func TestParseRemoteAddr(t *testing.T) {
 		{name: "git+ssh URL", addr: "git+ssh://git@gitlab.example.com/owner/repo.git", user: regular, wantErr: database.ErrInvalidCloneAddr{IsSSHAddress: true}},
 		{name: "https URL", addr: "https://gitlab.example.com/owner/repo.git", user: regular, wantAddr: "https://gitlab.example.com/owner/repo.git"},
 		{name: "git URL", addr: "git://gitlab.example.com/owner/repo.git", user: regular, wantAddr: "git://gitlab.example.com/owner/repo.git"},
+		{name: "git URL with user info", addr: "git://alice@gitlab.example.com/owner/repo.git", user: regular, wantErr: database.ErrInvalidCloneAddr{IsURLError: true}},
+		{name: "git URL with a bracketed host in user info", addr: "git://%5B127.0.0.1%5D:x@gitlab.example.com/owner/repo.git", user: regular, wantErr: database.ErrInvalidCloneAddr{IsURLError: true}},
+		{name: "git URL with credentials", addr: "git://gitlab.example.com/owner/repo.git", authUsername: "[127.0.0.1]", authPassword: "x", user: regular, wantErr: database.ErrInvalidCloneAddr{IsURLError: true}},
+		{name: "https URL with credentials", addr: "https://gitlab.example.com/owner/repo.git", authUsername: "alice", authPassword: "x", user: regular, wantAddr: "https://alice:x@gitlab.example.com/owner/repo.git"},
 		{name: "local path for a regular user", addr: localDir, user: regular, wantErr: database.ErrInvalidCloneAddr{IsPermissionDenied: true}},
 		{name: "local path for an admin", addr: localDir, user: admin, wantAddr: localDir},
 		{name: "local path with a colon", addr: localDir + "/a:b", user: admin, wantErr: database.ErrInvalidCloneAddr{IsInvalidPath: true}},
@@ -45,7 +51,12 @@ func TestParseRemoteAddr(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := ParseRemoteAddr(ParseRemoteAddrOptions{CloneAddr: test.addr, User: test.user})
+			got, err := ParseRemoteAddr(ParseRemoteAddrOptions{
+				CloneAddr:    test.addr,
+				User:         test.user,
+				AuthUsername: test.authUsername,
+				AuthPassword: test.authPassword,
+			})
 			assert.Equal(t, test.wantErr, err)
 			assert.Equal(t, test.wantAddr, got)
 		})

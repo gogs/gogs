@@ -432,7 +432,10 @@ func (m *Mirror) runSync(logger *logx.Logger) ([]*mirrorSyncResult, bool) {
 	rawAddr := m.RawAddress()
 	if u, err := url.Parse(rawAddr); err == nil &&
 		(u.Scheme == "http" || u.Scheme == "https" || u.Scheme == "git") &&
-		netx.IsBlockedLocalHostname(u.Hostname(), conf.Security.LocalNetworkAllowlist) {
+		(netx.IsBlockedLocalHostname(u.Hostname(), conf.Security.LocalNetworkAllowlist) ||
+			// Git may connect to a host other than the checked one when a "git://"
+			// URL has user info.
+			(u.Scheme == "git" && u.User != nil)) {
 		desc := fmt.Sprintf("Source URL of mirror repository '%s' resolves to a blocked local address: %s", m.Repo.FullName(), m.MosaicsAddress())
 		logger.Error("Source URL of mirror repository resolves to a blocked local address", "repo", m.Repo.FullName(), "address", m.MosaicsAddress())
 		if err := Handle.Notices().Create(context.TODO(), NoticeTypeRepository, desc); err != nil {

@@ -40,6 +40,12 @@ func ParseRemoteAddr(options ParseRemoteAddrOptions) (string, error) {
 		if len(options.AuthUsername)+len(options.AuthPassword) > 0 {
 			u.User = url.UserPassword(options.AuthUsername, options.AuthPassword)
 		}
+		// The Git protocol has no authentication. Git also does not recognize user
+		// info in a "git://" URL and may connect to a different host than the one
+		// checked above, e.g., "git://%5B127.0.0.1%5D:x@example.com/repo.git".
+		if u.Scheme == "git" && u.User != nil {
+			return "", database.ErrInvalidCloneAddr{IsURLError: true}
+		}
 		// To prevent CRLF injection in Git protocol, see https://github.com/gogs/gogs/issues/6413.
 		if u.Scheme == "git" && (strings.Contains(remoteAddr, "%0d") || strings.Contains(remoteAddr, "%0a")) {
 			return "", database.ErrInvalidCloneAddr{IsURLError: true}
