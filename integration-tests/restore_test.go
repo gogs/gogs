@@ -192,6 +192,8 @@ ROOT_PATH = %s
 		assert.NoDirExists(t, filepath.Join(customDir, "conf.bak"))
 		assert.NoDirExists(t, filepath.Join(customDir, "log.bak"))
 		// The extracted archive holds the configuration and the database dump.
-		assert.NoDirExists(t, filepath.Join(root, "gogs-backup"))
+		extractDirs, err := filepath.Glob(filepath.Join(root, "gogs-*"))
+		require.NoError(t, err)
+		assert.Empty(t, extractDirs)
 	})
 }

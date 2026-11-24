@@ -49,23 +49,23 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 	if !osx.IsDir(tmpDir) {
 		logger.FatalContext(ctx, "Temporary directory does not exist", "tempDir", tmpDir)
 	}
-	archivePath := path.Join(tmpDir, archiveRootDir)
-
-	// Make sure there is no leftover and also clean up afterwards.
-	err := os.RemoveAll(archivePath)
+	// The archive is extracted into a new directory that only the current user can open, because it holds the
+	// configuration and the database dump, and its custom files are moved into the custom directory. Another user
+	// could otherwise read them, or replace them by creating the directory first.
+	extractDir, err := os.MkdirTemp(tmpDir, "gogs-restore-")
 	if err != nil {
-		logger.FatalContext(ctx, "Failed to clean up previous leftover", "archiveDir", archivePath, "error", err)
+		logger.FatalContext(ctx, "Failed to create extract directory", "tempDir", tmpDir, "error", err)
 	}
-	defer func() { _ = os.RemoveAll(archivePath) }()
-	// fatal exits without running deferred calls, so it removes the extracted archive, which holds the
-	// configuration and the database dump, itself.
+	defer func() { _ = os.RemoveAll(extractDir) }()
+	// fatal exits without running deferred calls, so it removes the extract directory itself.
 	fatal := func(msg string, args ...any) {
-		_ = os.RemoveAll(archivePath)
+		_ = os.RemoveAll(extractDir)
 		logger.FatalContext(ctx, msg, args...)
 	}
+	archivePath := filepath.Join(extractDir, archiveRootDir)
 
 	logger.Info("Restoring backup", "archivePath", cmd.String("from"))
-	err = zip.ExtractTo(cmd.String("from"), tmpDir)
+	err = zip.ExtractTo(cmd.String("from"), extractDir)
 	if err != nil {
 		fatal("Failed to extract backup archive", "error", err)
 	}
@@ -199,7 +199,7 @@ func checkLeftoverBackups(archivePath string) error {
 	// The archive may have no custom files, in which case none are replaced.
 	entries, _ := os.ReadDir(filepath.Join(archivePath, "custom"))
 	for _, e := range entries {
-		if !restoredSeparately(conf.CustomDir(), e.Name()) {
+		if !skipCustomEntry(conf.CustomDir(), e.Name()) {
 			paths = append(paths, filepath.Join(conf.CustomDir(), e.Name()))
 		}
 	}
@@ -229,11 +229,12 @@ func leftoverBackupError(path string) error {
 	return errors.Newf("'%s' already exists, probably from an earlier restore. Move or remove it, then run the restore again", path+".bak")
 }
 
-// restoredSeparately reports whether the entry of the custom directory is left to the restore of the app data.
-// "data" is never touched, the same as in backups, because it is the app data directory in the Docker setup, which
-// holds the open SQLite database. An app data directory is also in the custom directory when APP_DATA_PATH points
-// there.
-func restoredSeparately(customDir, name string) bool {
+// skipCustomEntry reports whether the restore leaves the entry of the custom directory as it is:
+//   - "data" is never touched, the same as in backups, because it is the app data directory in the Docker setup,
+//     which holds the open SQLite database.
+//   - An app data directory, which is also in the custom directory when APP_DATA_PATH points there, is restored
+//     from the archive's "data".
+func skipCustomEntry(customDir, name string) bool {
 	if name == "data" {
 		return true
 	}
@@ -254,7 +255,7 @@ func restoredSeparately(customDir, name string) bool {
 }
 
 // restoreCustomDir moves each entry of srcDir into customDir, keeping the current one as "<path>.bak". Entries
-// that are not in srcDir stay in place, and so do the ones restored separately.
+// that are not in srcDir stay in place, and so do the ones skipCustomEntry skips.
 func restoreCustomDir(srcDir, customDir string) error {
 	entries, err := os.ReadDir(srcDir)
 	if err != nil {
@@ -265,7 +266,7 @@ func restoreCustomDir(srcDir, customDir string) error {
 	}
 
 	for _, e := range entries {
-		if restoredSeparately(customDir, e.Name()) {
+		if skipCustomEntry(customDir, e.Name()) {
 			continue
 		}
 
