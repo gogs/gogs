@@ -15,7 +15,7 @@ import (
 )
 
 func TestPostUserSignIn_AntiBotVerification(t *testing.T) {
-	conf.SetMockAuth(t, conf.AuthOpts{AntiBotVerification: conf.AntiBotVerificationCaptcha})
+	conf.SetMockAuth(t, conf.AuthOpts{AntiBotVerification: conf.AntiBotVerificationCaptcha, EnableSignInAntiBotVerification: true})
 	// No database: a request that reaches the password check would panic, so
 	// passing proves the anti-bot payload is checked first.
 	before := database.Handle

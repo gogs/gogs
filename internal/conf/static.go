@@ -233,6 +233,10 @@ type AuthOpts struct {
 	RequireSigninView        bool
 	DisableRegistration      bool
 	AntiBotVerification      string
+	// Whether signing up and signing in on the web ask for the anti-bot
+	// verification, which is off for both when AntiBotVerification is empty.
+	EnableSignUpAntiBotVerification bool `ini:"ENABLE_SIGN_UP_ANTI_BOT_VERIFICATION"`
+	EnableSignInAntiBotVerification bool `ini:"ENABLE_SIGN_IN_ANTI_BOT_VERIFICATION"`
 
 	EnableReverseProxyAuthentication   bool
 	EnableReverseProxyAutoRegistration bool
@@ -407,15 +411,12 @@ var I18n *i18nConf
 
 // handleDeprecated transfers deprecated values to the new ones when set.
 func handleDeprecated() {
-	// [auth] ENABLE_REGISTRATION_CAPTCHA only switches between the default
-	// altcha and no verification, so an explicit "captcha" is kept.
+	// [auth] ENABLE_REGISTRATION_CAPTCHA turns the verification of signing up
+	// on or off, with the default altcha when no strategy is set.
 	if key, err := File.Section("auth").GetKey("ENABLE_REGISTRATION_CAPTCHA"); err == nil {
-		if key.MustBool() {
-			if Auth.AntiBotVerification == "" {
-				Auth.AntiBotVerification = AntiBotVerificationAltcha
-			}
-		} else if Auth.AntiBotVerification == AntiBotVerificationAltcha {
-			Auth.AntiBotVerification = ""
+		Auth.EnableSignUpAntiBotVerification = key.MustBool()
+		if Auth.EnableSignUpAntiBotVerification && Auth.AntiBotVerification == "" {
+			Auth.AntiBotVerification = AntiBotVerificationAltcha
 		}
 	}
 }
@@ -443,7 +444,7 @@ func checkInvalidOptions(config *ini.File) (warnings []string) {
 	}
 	// Deprecated options still work, see handleDeprecated.
 	deprecatedOptionPaths := map[optionPath]optionPath{
-		{"auth", "ENABLE_REGISTRATION_CAPTCHA"}: {"auth", "ANTI_BOT_VERIFICATION"},
+		{"auth", "ENABLE_REGISTRATION_CAPTCHA"}: {"auth", "ENABLE_SIGN_UP_ANTI_BOT_VERIFICATION"},
 	}
 	for oldPath, newPath := range deprecatedOptionPaths {
 		if config.Section(oldPath.section).HasKey(oldPath.option) {

@@ -76,7 +76,7 @@ type getUserSignUpResponse struct {
 func getUserSignUp() (statusCode int, resp *getUserSignUpResponse, err error) {
 	return http.StatusOK, &getUserSignUpResponse{
 		RegistrationDisabled: conf.Auth.DisableRegistration,
-		AntiBotVerification:  conf.Auth.AntiBotVerification,
+		AntiBotVerification:  antiBotVerificationOf(conf.Auth.EnableSignUpAntiBotVerification),
 	}, nil
 }
 
@@ -95,6 +95,15 @@ type userSignUpResponse struct {
 	Hours                     int    `json:"hours,omitempty"`
 }
 
+// antiBotVerificationOf returns the anti-bot verification of a form that asks
+// for it when enabled, which is empty when the form is not verified.
+func antiBotVerificationOf(enabled bool) string {
+	if !enabled {
+		return ""
+	}
+	return conf.Auth.AntiBotVerification
+}
+
 // antiBotVerificationFailed returns the response to a request whose anti-bot
 // payload failed verification.
 func antiBotVerificationFailed(l i18n.Locale) *bindingErrorResponse {
@@ -109,7 +118,7 @@ func postUserSignUp(logger *logx.Logger, r *http.Request, ca cache.Cache, l i18n
 	if conf.Auth.DisableRegistration {
 		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("auth::disable_register_prompt")}, nil
 	}
-	if !verifyAntiBot(req.AntiBotPayload) {
+	if conf.Auth.EnableSignUpAntiBotVerification && !verifyAntiBot(req.AntiBotPayload) {
 		return http.StatusUnauthorized, antiBotVerificationFailed(l), nil
 	}
 	u, err := database.Handle.Users().Create(
@@ -184,7 +193,7 @@ func getUserSignIn(logger *logx.Logger, r *http.Request) (statusCode int, resp *
 	}
 	return http.StatusOK, &getUserSignInResponse{
 		LoginSources:        loginSources,
-		AntiBotVerification: conf.Auth.AntiBotVerification,
+		AntiBotVerification: antiBotVerificationOf(conf.Auth.EnableSignInAntiBotVerification),
 	}, nil
 }
 
@@ -288,7 +297,7 @@ type userSignInResponse struct {
 func postUserSignIn(logger *logx.Logger, r *http.Request, w http.ResponseWriter, store session.Store, sess session.Session, l i18n.Locale, verifyAntiBot antiBotVerifier, req userSignInRequest) (statusCode int, resp any, err error) {
 	// Checked before the password, so that a request that fails the check tells
 	// nothing about the password.
-	if !verifyAntiBot(req.AntiBotPayload) {
+	if conf.Auth.EnableSignInAntiBotVerification && !verifyAntiBot(req.AntiBotPayload) {
 		return http.StatusUnauthorized, antiBotVerificationFailed(l), nil
 	}
 	u, err := database.Handle.Users().Authenticate(r.Context(), logger, req.Username, req.Password, req.LoginSource)
