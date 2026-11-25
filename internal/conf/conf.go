@@ -318,6 +318,9 @@ func Init(logger *logx.Logger, customConf string) error {
 
 	handleDeprecated()
 	if !HookMode {
+		for _, warning := range checkDeprecatedOptions(File) {
+			logger.Warn("Found deprecated configuration", "warning", warning)
+		}
 		for _, warning := range checkInvalidOptions(File) {
 			logger.Warn("Found invalid configuration", "warning", warning)
 		}

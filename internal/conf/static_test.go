@@ -32,7 +32,6 @@ func TestCheckInvalidOptions(t *testing.T) {
 	wantWarnings := []string{
 		"option [auth] ACTIVE_CODE_LIVE_MINUTES is invalid",
 		"option [auth] ENABLE_CAPTCHA is invalid",
-		"option [auth] ENABLE_REGISTRATION_CAPTCHA is deprecated, use [auth] ANTI_BOT_VERIFICATION_ON_SIGN_UP instead",
 		"option [auth] ENABLE_NOTIFY_MAIL is invalid",
 		"option [auth] REGISTER_EMAIL_CONFIRM is invalid",
 		"option [auth] RESET_PASSWD_CODE_LIVE_MINUTES is invalid",
@@ -53,6 +52,17 @@ func TestCheckInvalidOptions(t *testing.T) {
 	sort.Strings(wantWarnings)
 	sort.Strings(gotWarnings)
 	assert.Equal(t, wantWarnings, gotWarnings)
+}
+
+func TestCheckDeprecatedOptions(t *testing.T) {
+	cfg := ini.Empty()
+	_, _ = cfg.Section("auth").NewKey("ENABLE_REGISTRATION_CAPTCHA", "true")
+	_, _ = cfg.Section("auth").NewKey("ANTI_BOT_VERIFICATION_ON_LOG_IN", "true")
+
+	wantWarnings := []string{
+		"option [auth] ENABLE_REGISTRATION_CAPTCHA is deprecated, use [auth] ANTI_BOT_VERIFICATION_ON_SIGN_UP instead",
+	}
+	assert.Equal(t, wantWarnings, checkDeprecatedOptions(cfg))
 }
 
 func TestHandleDeprecatedRegistrationCaptcha(t *testing.T) {

@@ -421,6 +421,34 @@ func handleDeprecated() {
 	}
 }
 
+type optionPath struct {
+	section string
+	option  string
+}
+
+// deprecatedOptionPaths maps deprecated options, which still work through
+// handleDeprecated, to the options replacing them.
+var deprecatedOptionPaths = map[optionPath]optionPath{
+	{"auth", "ENABLE_REGISTRATION_CAPTCHA"}: {"auth", "ANTI_BOT_VERIFICATION_ON_SIGN_UP"},
+}
+
+// checkDeprecatedOptions returns a warning for each deprecated option set in
+// the configuration.
+func checkDeprecatedOptions(config *ini.File) (warnings []string) {
+	for oldPath, newPath := range deprecatedOptionPaths {
+		if config.Section(oldPath.section).HasKey(oldPath.option) {
+			warnings = append(
+				warnings,
+				fmt.Sprintf("option [%s] %s is deprecated, use [%s] %s instead",
+					oldPath.section, oldPath.option,
+					newPath.section, newPath.option,
+				),
+			)
+		}
+	}
+	return warnings
+}
+
 // checkInvalidOptions checks invalid (renamed/deleted) configuration sections
 // and options and returns a list of warnings.
 func checkInvalidOptions(config *ini.File) (warnings []string) {
@@ -434,28 +462,9 @@ func checkInvalidOptions(config *ini.File) (warnings []string) {
 		}
 	}
 
-	type optionPath struct {
-		section string
-		option  string
-	}
 	renamedOptionPaths := map[optionPath]optionPath{
 		// Example:
 		// {"security", "REVERSE_PROXY_AUTHENTICATION_USER"}: {"auth", "REVERSE_PROXY_AUTHENTICATION_HEADER"},
-	}
-	// Deprecated options still work, see handleDeprecated.
-	deprecatedOptionPaths := map[optionPath]optionPath{
-		{"auth", "ENABLE_REGISTRATION_CAPTCHA"}: {"auth", "ANTI_BOT_VERIFICATION_ON_SIGN_UP"},
-	}
-	for oldPath, newPath := range deprecatedOptionPaths {
-		if config.Section(oldPath.section).HasKey(oldPath.option) {
-			warnings = append(
-				warnings,
-				fmt.Sprintf("option [%s] %s is deprecated, use [%s] %s instead",
-					oldPath.section, oldPath.option,
-					newPath.section, newPath.option,
-				),
-			)
-		}
 	}
 	for oldPath, newPath := range renamedOptionPaths {
 		if config.Section(oldPath.section).HasKey(oldPath.option) {
