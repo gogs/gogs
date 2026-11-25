@@ -425,20 +425,30 @@ func (m *Mirror) runSync(logger *logx.Logger) ([]*mirrorSyncResult, bool) {
 	wikiPath := m.Repo.WikiPath()
 	timeout := time.Duration(conf.Git.Timeout.Mirror) * time.Second
 
-	// Re-check the mirror address against the local-network blocklist on every
-	// sync. The address was validated when the mirror was created, but DNS for
-	// that hostname may have changed in the meantime to point at an internal
-	// host, so the up-front check is not sufficient on its own.
+	// Re-check the mirror address on every sync. The address was validated when
+	// the mirror was created, but DNS for that hostname may have changed in the
+	// meantime to point at an internal host, and mirrors created before a check
+	// was added were never validated by it.
 	rawAddr := m.RawAddress()
 	if u, err := url.Parse(rawAddr); err == nil &&
-		(u.Scheme == "http" || u.Scheme == "https" || u.Scheme == "git") &&
-		netx.IsBlockedLocalHostname(u.Hostname(), conf.Security.LocalNetworkAllowlist) {
-		desc := fmt.Sprintf("Source URL of mirror repository '%s' resolves to a blocked local address: %s", m.Repo.FullName(), m.MosaicsAddress())
-		logger.Error("Source URL of mirror repository resolves to a blocked local address", "repo", m.Repo.FullName(), "address", m.MosaicsAddress())
-		if err := Handle.Notices().Create(context.TODO(), NoticeTypeRepository, desc); err != nil {
-			logger.Error("Failed to create repository notice", "error", err)
+		(u.Scheme == "http" || u.Scheme == "https" || u.Scheme == "git") {
+		var reason string
+		switch {
+		case netx.IsBlockedLocalHostname(u.Hostname(), conf.Security.LocalNetworkAllowlist):
+			reason = "resolves to a blocked local address"
+		// Git may connect to a host other than the checked one when a "git://"
+		// URL has user info.
+		case u.Scheme == "git" && u.User != nil:
+			reason = "is a Git protocol URL with user info"
 		}
-		return nil, false
+		if reason != "" {
+			desc := fmt.Sprintf("Source URL of mirror repository '%s' %s: %s", m.Repo.FullName(), reason, m.MosaicsAddress())
+			logger.Error("Source URL of mirror repository is refused", "repo", m.Repo.FullName(), "address", m.MosaicsAddress(), "reason", reason)
+			if err := Handle.Notices().Create(context.TODO(), NoticeTypeRepository, desc); err != nil {
+				logger.Error("Failed to create repository notice", "error", err)
+			}
+			return nil, false
+		}
 	}
 
 	// Do a fast-fail test against the repository URL to ensure it is accessible,
