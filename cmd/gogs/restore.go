@@ -5,6 +5,8 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
+	"syscall"
 
 	"github.com/cockroachdb/errors"
 	"github.com/unknwon/cae/zip"
@@ -49,40 +51,47 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 	if !osx.IsDir(tmpDir) {
 		logger.FatalContext(ctx, "Temporary directory does not exist", "tempDir", tmpDir)
 	}
-	archivePath := path.Join(tmpDir, archiveRootDir)
-
-	// Make sure there is no leftover and also clean up afterwards.
-	err := os.RemoveAll(archivePath)
+	// Extract into a new directory that only the current user can access, because the archive has the configuration
+	// and a dump of the database. With a fixed path, e.g., "/tmp/gogs-backup", another user on the host could read
+	// them, or create the directory before the restore and put in files that the restore then uses and moves into
+	// the custom directory.
+	extractDir, err := os.MkdirTemp(tmpDir, "gogs-restore-")
 	if err != nil {
-		logger.FatalContext(ctx, "Failed to clean up previous leftover", "archiveDir", archivePath, "error", err)
+		logger.FatalContext(ctx, "Failed to create extract directory", "tempDir", tmpDir, "error", err)
 	}
-	defer func() { _ = os.RemoveAll(archivePath) }()
+	defer func() { _ = os.RemoveAll(extractDir) }()
+	// fatal exits without running deferred calls, so it removes the extract directory itself.
+	fatal := func(msg string, args ...any) {
+		_ = os.RemoveAll(extractDir)
+		logger.FatalContext(ctx, msg, args...)
+	}
+	archivePath := filepath.Join(extractDir, archiveRootDir)
 
 	logger.Info("Restoring backup", "archivePath", cmd.String("from"))
-	err = zip.ExtractTo(cmd.String("from"), tmpDir)
+	err = zip.ExtractTo(cmd.String("from"), extractDir)
 	if err != nil {
-		logger.FatalContext(ctx, "Failed to extract backup archive", "error", err)
+		fatal("Failed to extract backup archive", "error", err)
 	}
 
 	// Check backup version
 	metaFile := filepath.Join(archivePath, "metadata.ini")
 	if !osx.IsFile(metaFile) {
-		logger.FatalContext(ctx, "File 'metadata.ini' is missing")
+		fatal("File 'metadata.ini' is missing")
 	}
 	metadata, err := ini.Load(metaFile)
 	if err != nil {
-		logger.FatalContext(ctx, "Failed to load metadata", "metadataPath", metaFile, "error", err)
+		fatal("Failed to load metadata", "metadataPath", metaFile, "error", err)
 	}
 	backupVersion := metadata.Section("").Key("GOGS_VERSION").MustString("999.0")
 	if semverx.Compare(conf.App.Version, "<", backupVersion) {
-		logger.FatalContext(ctx, "Current Gogs version is lower than backup version", "currentVersion", conf.App.Version, "backupVersion", backupVersion)
+		fatal("Current Gogs version is lower than backup version", "currentVersion", conf.App.Version, "backupVersion", backupVersion)
 	}
 	formatVersion := metadata.Section("").Key("VERSION").MustInt()
 	if formatVersion == 0 {
-		logger.FatalContext(ctx, "Backup format version is missing from metadata", "metadataPath", metaFile, "missingKey", "VERSION")
+		fatal("Backup format version is missing from metadata", "metadataPath", metaFile, "missingKey", "VERSION")
 	}
 	if formatVersion != currentBackupFormatVersion {
-		logger.FatalContext(ctx, "Unsupported backup format version", "backupFormatVersion", formatVersion, "supportedFormatVersion", currentBackupFormatVersion, "lastSupportedGogsVersion", lastSupportedVersionOfFormat[formatVersion])
+		fatal("Unsupported backup format version", "backupFormatVersion", formatVersion, "supportedFormatVersion", currentBackupFormatVersion, "lastSupportedGogsVersion", lastSupportedVersionOfFormat[formatVersion])
 	}
 
 	// If config file is not present in backup, user must set this file via flag.
@@ -92,7 +101,7 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 	if lineageConf := configFromLineage(cmd); lineageConf != "" {
 		customConf = lineageConf
 	} else if !osx.IsFile(configFile) {
-		logger.FatalContext(ctx, "Custom config file is not found in backup and '--config' is not specified")
+		fatal("Custom config file is not found in backup and '--config' is not specified")
 	} else {
 		customConf = configFile
 	}
@@ -113,14 +122,15 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 	// Files are restored before the database because the current ones are kept as "<path>.bak" and can be moved
 	// back by hand, whereas a failed database import cannot be undone.
 	if !cmd.Bool("database-only") {
-		// Custom files
-		if osx.IsDir(conf.CustomDir()) {
-			if err = moveAside(conf.CustomDir()); err != nil {
-				logger.FatalContext(ctx, "Failed to backup current 'custom'", "error", err)
-			}
+		if err = checkLeftoverBackups(archivePath); err != nil {
+			fatal("Failed to restore files", "error", err)
 		}
-		if err = os.Rename(filepath.Join(archivePath, "custom"), conf.CustomDir()); err != nil {
-			logger.FatalContext(ctx, "Failed to import 'custom'", "error", err)
+
+		// Custom files
+		if srcDir := filepath.Join(archivePath, "custom"); osx.IsDir(srcDir) {
+			if err = restoreCustomDir(srcDir, conf.CustomDir()); err != nil {
+				fatal("Failed to import 'custom'", "error", err)
+			}
 		}
 
 		// Data files
@@ -132,14 +142,8 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 				continue
 			}
 
-			dirPath := filepath.Join(conf.Server.AppDataPath, dir)
-			if osx.IsDir(dirPath) {
-				if err = moveAside(dirPath); err != nil {
-					logger.FatalContext(ctx, "Failed to backup current 'data'", "error", err)
-				}
-			}
-			if err = os.Rename(srcPath, dirPath); err != nil {
-				logger.FatalContext(ctx, "Failed to import 'data'", "error", err)
+			if err = replacePath(srcPath, filepath.Join(conf.Server.AppDataPath, dir)); err != nil {
+				fatal("Failed to import 'data'", "error", err)
 			}
 		}
 	}
@@ -147,14 +151,14 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 	// Database
 	dbDir := path.Join(archivePath, "db")
 	if err = database.ImportDatabase(ctx, logger.Scoped("db"), conn, dbDir, cmd.Bool("verbose")); err != nil {
-		logger.FatalContext(ctx, "Failed to import database", "error", err)
+		fatal("Failed to import database", "error", err)
 	}
 
 	// Repositories
 	reposPath := filepath.Join(archivePath, "repositories.zip")
 	if !cmd.Bool("exclude-repos") && !cmd.Bool("database-only") && osx.IsFile(reposPath) {
 		if err := zip.ExtractTo(reposPath, filepath.Dir(conf.Repository.Root)); err != nil {
-			logger.FatalContext(ctx, "Failed to extract 'repositories.zip'", "error", err)
+			fatal("Failed to extract 'repositories.zip'", "error", err)
 		}
 	}
 
@@ -163,13 +167,127 @@ func runRestore(ctx context.Context, cmd *cli.Command) error {
 	return nil
 }
 
+// replacePath moves srcPath to dstPath, keeping the current dstPath as "<dstPath>.bak". When the move fails, e.g.,
+// because the temporary directory is on another file system, the current dstPath is moved back so it is not lost.
+func replacePath(srcPath, dstPath string) error {
+	if !osx.Exist(dstPath) {
+		return crossDeviceHint(os.Rename(srcPath, dstPath))
+	}
+	if err := moveAside(dstPath); err != nil {
+		return errors.Wrap(err, "back up current")
+	}
+	if err := os.Rename(srcPath, dstPath); err != nil {
+		err = crossDeviceHint(err)
+		if rollbackErr := os.Rename(dstPath+".bak", dstPath); rollbackErr != nil {
+			return errors.Wrapf(err, "move, and the current one is left at '%s' because moving it back failed: %v", dstPath+".bak", rollbackErr)
+		}
+		return errors.Wrap(err, "move")
+	}
+	return nil
+}
+
+// crossDeviceHint explains the error of a rename that failed because the source is on another file system, as
+// the default temporary directory in the Docker image is.
+func crossDeviceHint(err error) error {
+	if errors.Is(err, syscall.EXDEV) {
+		return errors.Wrap(err, "'--tempdir' must be on the same file system as the custom and data directories")
+	}
+	return err
+}
+
 // moveAside renames the path to "<path>.bak" to make room for the restored copy.
 func moveAside(path string) error {
 	// Renaming onto a leftover from an earlier restore fails with an unhelpful error, e.g., "Access is denied" on
-	// Windows. The path is quoted with '%s' rather than %q because %q escapes every backslash in a Windows path,
-	// which makes the path harder to read and copy from the message.
-	if osx.Exist(path + ".bak") {
-		return errors.Newf("'%s' already exists, probably from an earlier restore. Move or remove it, then run the restore again", path+".bak")
+	// Windows.
+	if err := leftoverBackupError(path); err != nil {
+		return err
 	}
 	return os.Rename(path, path+".bak")
+}
+
+// checkLeftoverBackups returns an error when a path that the restore moves aside already has a "<path>.bak", so
+// the restore stops before it replaces any file rather than partway through.
+func checkLeftoverBackups(archivePath string) error {
+	var paths []string
+	// The archive may have no custom files, in which case none are replaced.
+	entries, _ := os.ReadDir(filepath.Join(archivePath, "custom"))
+	for _, e := range entries {
+		if !skipCustomEntry(conf.CustomDir(), e.Name()) {
+			paths = append(paths, filepath.Join(conf.CustomDir(), e.Name()))
+		}
+	}
+	for _, dir := range backupDataDirs {
+		if osx.IsDir(filepath.Join(archivePath, "data", dir)) {
+			paths = append(paths, filepath.Join(conf.Server.AppDataPath, dir))
+		}
+	}
+
+	for _, path := range paths {
+		if osx.Exist(path) {
+			if err := leftoverBackupError(path); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// leftoverBackupError returns an error when "<path>.bak" already exists.
+func leftoverBackupError(path string) error {
+	if !osx.Exist(path + ".bak") {
+		return nil
+	}
+	// The path is quoted with '%s' rather than %q because %q escapes every backslash in a Windows path, which makes
+	// the path harder to read and copy from the message.
+	return errors.Newf("'%s' already exists, probably from an earlier restore. Move or remove it, then run the restore again", path+".bak")
+}
+
+// skipCustomEntry reports whether the restore leaves the entry of the custom directory as it is:
+//   - "data" is never touched, the same as in backups, because it is the app data directory in the Docker setup,
+//     which holds the open SQLite database.
+//   - An app data directory, which is also in the custom directory when APP_DATA_PATH points there, is restored
+//     from the archive's "data".
+//   - "<name>.bak" is what an earlier restore kept. Older backups include it, and restoring it would move the current
+//     one to "<name>.bak.bak".
+func skipCustomEntry(customDir, name string) bool {
+	if name == "data" || strings.HasSuffix(name, ".bak") {
+		return true
+	}
+	path := filepath.Join(customDir, name)
+	absPath, _ := filepath.Abs(path)
+	info, statErr := os.Stat(path)
+	for _, dir := range backupDataDirs {
+		dataPath := filepath.Join(conf.Server.AppDataPath, dir)
+		if absDataPath, _ := filepath.Abs(dataPath); absPath == absDataPath {
+			return true
+		}
+		// The paths may differ but lead to the same directory, e.g., through a symlink or in another letter case.
+		if dataInfo, err := os.Stat(dataPath); statErr == nil && err == nil && os.SameFile(info, dataInfo) {
+			return true
+		}
+	}
+	return false
+}
+
+// restoreCustomDir moves each entry of srcDir into customDir, keeping the current one as "<path>.bak". Entries
+// that are not in srcDir stay in place, and so do the ones skipCustomEntry skips.
+func restoreCustomDir(srcDir, customDir string) error {
+	entries, err := os.ReadDir(srcDir)
+	if err != nil {
+		return errors.Wrap(err, "list entries")
+	}
+	if err = os.MkdirAll(customDir, os.ModePerm); err != nil {
+		return errors.Wrap(err, "create custom directory")
+	}
+
+	for _, e := range entries {
+		if skipCustomEntry(customDir, e.Name()) {
+			continue
+		}
+
+		if err = replacePath(filepath.Join(srcDir, e.Name()), filepath.Join(customDir, e.Name())); err != nil {
+			return errors.Wrapf(err, "replace '%s'", e.Name())
+		}
+	}
+	return nil
 }
