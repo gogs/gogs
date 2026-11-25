@@ -18,7 +18,7 @@ type ParseRemoteAddrOptions struct {
 }
 
 // ParseRemoteAddr checks if given remote address is valid,
-// and returns composed URL with needed username and password.
+// and returns composed URL with needed username and password for HTTP and HTTPS.
 // It also checks if given user has permission when remote address
 // is actually a local path.
 func ParseRemoteAddr(options ParseRemoteAddrOptions) (string, error) {
