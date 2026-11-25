@@ -359,8 +359,8 @@ HOST = 127.0.0.1:1
 
 [auth]
 DISABLE_REGISTRATION = false
-ANTI_BOT_VERIFICATION = %[9]s
-ENABLE_LOG_IN_ANTI_BOT_VERIFICATION = true
+ANTI_BOT_VERIFICATION_STRATEGY = %[9]s
+ANTI_BOT_VERIFICATION_ON_LOG_IN = true
 ; Tests call from the loopback interface, which is a trusted proxy by default,
 ; so only requests with the header are authenticated by it.
 ENABLE_REVERSE_PROXY_AUTHENTICATION = true

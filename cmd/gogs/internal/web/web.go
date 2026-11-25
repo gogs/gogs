@@ -437,7 +437,7 @@ func newRoutingHandler(logger *logx.Logger, localizer, sessioner, authenticate f
 
 		// The anti-bot middlewares write the responses. These routes exist so the
 		// requests reach them.
-		switch conf.Auth.AntiBotVerification {
+		switch conf.Auth.AntiBotVerificationStrategy {
 		case conf.AntiBotVerificationAltcha:
 			f.Get(altchaURLPrefix+"challenge.json", func() {})
 			f.Get(altchaURLPrefix+"worker.js", func() {})
@@ -508,12 +508,12 @@ const captchaURLPrefix = "/-/captcha/"
 // the captcha text or the altcha solution, passes anti-bot verification.
 type antiBotVerifier func(payload string) bool
 
-// antiBotMiddlewares returns the middlewares of [auth] ANTI_BOT_VERIFICATION
+// antiBotMiddlewares returns the middlewares of [auth] ANTI_BOT_VERIFICATION_STRATEGY
 // that serve what the sign up and log in pages need and map an
 // antiBotVerifier. Only the configured one is mounted, and when it is empty,
 // one that accepts every payload.
 func antiBotMiddlewares() ([]flamego.Handler, error) {
-	switch conf.Auth.AntiBotVerification {
+	switch conf.Auth.AntiBotVerificationStrategy {
 	case "":
 		return []flamego.Handler{func(c flamego.Context) {
 			c.Map(antiBotVerifier(func(string) bool { return true }))
@@ -539,7 +539,7 @@ func antiBotMiddlewares() ([]flamego.Handler, error) {
 			},
 		}, nil
 	default:
-		return nil, errors.Newf("unknown anti-bot verification %q", conf.Auth.AntiBotVerification)
+		return nil, errors.Newf("unknown anti-bot verification %q", conf.Auth.AntiBotVerificationStrategy)
 	}
 }
 

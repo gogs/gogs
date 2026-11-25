@@ -227,16 +227,16 @@ type AppOpts struct {
 var App AppOpts
 
 type AuthOpts struct {
-	ActivateCodeLives        int
-	ResetPasswordCodeLives   int
-	RequireEmailConfirmation bool
-	RequireSigninView        bool
-	DisableRegistration      bool
-	AntiBotVerification      string
+	ActivateCodeLives           int
+	ResetPasswordCodeLives      int
+	RequireEmailConfirmation    bool
+	RequireSigninView           bool
+	DisableRegistration         bool
+	AntiBotVerificationStrategy string
 	// Whether sign up and log in on the web ask for the anti-bot
-	// verification, which is off for both when AntiBotVerification is empty.
-	EnableSignUpAntiBotVerification bool `ini:"ENABLE_SIGN_UP_ANTI_BOT_VERIFICATION"`
-	EnableLogInAntiBotVerification  bool `ini:"ENABLE_LOG_IN_ANTI_BOT_VERIFICATION"`
+	// verification, which is off for both when AntiBotVerificationStrategy is empty.
+	AntiBotVerificationOnSignUp bool `ini:"ANTI_BOT_VERIFICATION_ON_SIGN_UP"`
+	AntiBotVerificationOnLogIn  bool `ini:"ANTI_BOT_VERIFICATION_ON_LOG_IN"`
 
 	EnableReverseProxyAuthentication   bool
 	EnableReverseProxyAutoRegistration bool
@@ -251,7 +251,7 @@ type AuthOpts struct {
 // Authentication settings
 var Auth AuthOpts
 
-// Values of [auth] ANTI_BOT_VERIFICATION.
+// Values of [auth] ANTI_BOT_VERIFICATION_STRATEGY.
 const (
 	// AntiBotVerificationAltcha asks the browser to solve a proof-of-work challenge.
 	AntiBotVerificationAltcha = "altcha"
@@ -414,9 +414,9 @@ func handleDeprecated() {
 	// [auth] ENABLE_REGISTRATION_CAPTCHA turns the verification of sign up
 	// on or off, with the default altcha when no strategy is set.
 	if key, err := File.Section("auth").GetKey("ENABLE_REGISTRATION_CAPTCHA"); err == nil {
-		Auth.EnableSignUpAntiBotVerification = key.MustBool()
-		if Auth.EnableSignUpAntiBotVerification && Auth.AntiBotVerification == "" {
-			Auth.AntiBotVerification = AntiBotVerificationAltcha
+		Auth.AntiBotVerificationOnSignUp = key.MustBool()
+		if Auth.AntiBotVerificationOnSignUp && Auth.AntiBotVerificationStrategy == "" {
+			Auth.AntiBotVerificationStrategy = AntiBotVerificationAltcha
 		}
 	}
 }
@@ -444,7 +444,7 @@ func checkInvalidOptions(config *ini.File) (warnings []string) {
 	}
 	// Deprecated options still work, see handleDeprecated.
 	deprecatedOptionPaths := map[optionPath]optionPath{
-		{"auth", "ENABLE_REGISTRATION_CAPTCHA"}: {"auth", "ENABLE_SIGN_UP_ANTI_BOT_VERIFICATION"},
+		{"auth", "ENABLE_REGISTRATION_CAPTCHA"}: {"auth", "ANTI_BOT_VERIFICATION_ON_SIGN_UP"},
 	}
 	for oldPath, newPath := range deprecatedOptionPaths {
 		if config.Section(oldPath.section).HasKey(oldPath.option) {

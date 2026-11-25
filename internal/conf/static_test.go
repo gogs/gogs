@@ -32,7 +32,7 @@ func TestCheckInvalidOptions(t *testing.T) {
 	wantWarnings := []string{
 		"option [auth] ACTIVE_CODE_LIVE_MINUTES is invalid",
 		"option [auth] ENABLE_CAPTCHA is invalid",
-		"option [auth] ENABLE_REGISTRATION_CAPTCHA is deprecated, use [auth] ENABLE_SIGN_UP_ANTI_BOT_VERIFICATION instead",
+		"option [auth] ENABLE_REGISTRATION_CAPTCHA is deprecated, use [auth] ANTI_BOT_VERIFICATION_ON_SIGN_UP instead",
 		"option [auth] ENABLE_NOTIFY_MAIL is invalid",
 		"option [auth] REGISTER_EMAIL_CONFIRM is invalid",
 		"option [auth] RESET_PASSWD_CODE_LIVE_MINUTES is invalid",
@@ -62,8 +62,8 @@ func TestHandleDeprecatedRegistrationCaptcha(t *testing.T) {
 	tests := []struct {
 		name       string
 		enabled    string // Value of ENABLE_REGISTRATION_CAPTCHA, empty when not set.
-		current    string // ANTI_BOT_VERIFICATION after mapping the configuration.
-		signUpOff  bool   // Whether ENABLE_SIGN_UP_ANTI_BOT_VERIFICATION is false after mapping the configuration.
+		current    string // ANTI_BOT_VERIFICATION_STRATEGY after mapping the configuration.
+		signUpOff  bool   // Whether ANTI_BOT_VERIFICATION_ON_SIGN_UP is false after mapping the configuration.
 		want       string
 		wantSignUp bool
 	}{
@@ -81,10 +81,10 @@ func TestHandleDeprecatedRegistrationCaptcha(t *testing.T) {
 			if test.enabled != "" {
 				_, _ = File.Section("auth").NewKey("ENABLE_REGISTRATION_CAPTCHA", test.enabled)
 			}
-			Auth = AuthOpts{AntiBotVerification: test.current, EnableSignUpAntiBotVerification: !test.signUpOff}
+			Auth = AuthOpts{AntiBotVerificationStrategy: test.current, AntiBotVerificationOnSignUp: !test.signUpOff}
 			handleDeprecated()
-			assert.Equal(t, test.want, Auth.AntiBotVerification)
-			assert.Equal(t, test.wantSignUp, Auth.EnableSignUpAntiBotVerification)
+			assert.Equal(t, test.want, Auth.AntiBotVerificationStrategy)
+			assert.Equal(t, test.wantSignUp, Auth.AntiBotVerificationOnSignUp)
 		})
 	}
 }
