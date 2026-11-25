@@ -113,7 +113,7 @@ func run(m *testing.M, dir string) (int, error) {
 	secretKey := make([]byte, 16)
 	_, _ = rand.Read(secretKey)
 	serverConfigPath = filepath.Join(dir, "app.ini")
-	if err = writeConfig(dir, serverConfigPath, fmt.Sprintf("http://localhost:%d/", port), port, sshPort, dbName, hex.EncodeToString(secretKey), false, conf.AntiBotVerificationCaptcha); err != nil {
+	if err = writeConfig(dir, serverConfigPath, fmt.Sprintf("http://localhost:%d/", port), port, sshPort, dbName, hex.EncodeToString(secretKey), false, conf.AntiBotVerificationStrategyCaptcha); err != nil {
 		return 0, errors.Wrap(err, "write configuration")
 	}
 
@@ -159,7 +159,7 @@ func run(m *testing.M, dir string) (int, error) {
 		return 0, errors.Wrap(err, "find free SSH port")
 	}
 	forcePrivateConfigPath := filepath.Join(dir, "app-force-private.ini")
-	if err = writeConfig(dir, forcePrivateConfigPath, fmt.Sprintf("http://localhost:%d/", forcePrivatePort), forcePrivatePort, forcePrivateSSHPort, dbName, hex.EncodeToString(secretKey), true, conf.AntiBotVerificationAltcha); err != nil {
+	if err = writeConfig(dir, forcePrivateConfigPath, fmt.Sprintf("http://localhost:%d/", forcePrivatePort), forcePrivatePort, forcePrivateSSHPort, dbName, hex.EncodeToString(secretKey), true, conf.AntiBotVerificationStrategyAltcha); err != nil {
 		return 0, errors.Wrap(err, "write configuration")
 	}
 	forcePrivateServerURL = fmt.Sprintf("http://localhost:%d", forcePrivatePort)
@@ -189,7 +189,7 @@ func run(m *testing.M, dir string) (int, error) {
 			return "", nil, errors.Wrap(err, "find free SSH port")
 		}
 		configPath := filepath.Join(dir, "app-"+name+".ini")
-		if err = writeConfig(dir, configPath, externalURL, takenPort, sshPort, dbName, hex.EncodeToString(secretKey), false, conf.AntiBotVerificationCaptcha); err != nil {
+		if err = writeConfig(dir, configPath, externalURL, takenPort, sshPort, dbName, hex.EncodeToString(secretKey), false, conf.AntiBotVerificationStrategyCaptcha); err != nil {
 			return "", nil, errors.Wrap(err, "write configuration")
 		}
 		listenURL = fmt.Sprintf("http://localhost:%d", port)
@@ -304,7 +304,7 @@ func freePort() (int, error) {
 // writeConfig writes the configuration of a server under test, which uses the
 // Postgres database of the name on the server the PG* environment variables
 // point to.
-func writeConfig(dir, path, externalURL string, port, sshPort int, dbName, secretKey string, forcePrivate bool, antiBotVerification string) error {
+func writeConfig(dir, path, externalURL string, port, sshPort int, dbName, secretKey string, forcePrivate bool, antiBotVerificationStrategy string) error {
 	u, err := user.Current()
 	if err != nil {
 		return errors.Wrap(err, "get current user")
@@ -369,7 +369,7 @@ ENABLE_REVERSE_PROXY_AUTO_REGISTRATION = true
 [log]
 MODE = console
 LEVEL = Info
-`, u.Username, port, filepath.Join(dir, "repositories"), database, secretKey, filepath.Join(dir, "ssh"), sshPort, forcePrivate, antiBotVerification, externalURL)
+`, u.Username, port, filepath.Join(dir, "repositories"), database, secretKey, filepath.Join(dir, "ssh"), sshPort, forcePrivate, antiBotVerificationStrategy, externalURL)
 	return os.WriteFile(path, []byte(config), 0o600)
 }
 

@@ -222,9 +222,9 @@ func Init(logger *logx.Logger, customConf string) error {
 		return errors.Wrap(err, "mapping [auth] section")
 	}
 	switch Auth.AntiBotVerificationStrategy {
-	case "", AntiBotVerificationAltcha, AntiBotVerificationCaptcha:
+	case "", AntiBotVerificationStrategyAltcha, AntiBotVerificationStrategyCaptcha:
 	default:
-		return errors.Newf("[auth] ANTI_BOT_VERIFICATION_STRATEGY must be empty, %q or %q, but got %q", AntiBotVerificationAltcha, AntiBotVerificationCaptcha, Auth.AntiBotVerificationStrategy)
+		return errors.Newf("[auth] ANTI_BOT_VERIFICATION_STRATEGY must be empty, %q or %q, but got %q", AntiBotVerificationStrategyAltcha, AntiBotVerificationStrategyCaptcha, Auth.AntiBotVerificationStrategy)
 	}
 	// Reset before re-parsing so repeated Init calls (e.g., via the web installer)
 	// do not carry over CIDRs from a previous configuration.

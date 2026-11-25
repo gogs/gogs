@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { type AntiBotVerification, useAntiBot } from "@/lib/anti-bot";
+import { type AntiBotVerificationStrategy, useAntiBot } from "@/lib/anti-bot";
 import { webContext } from "@/lib/context";
 import { usePageTitle } from "@/lib/page-title";
 import { type RequestOptionsJSON, externalPageURL, getPasskey, passkeysSupported } from "@/lib/passkey";
@@ -23,8 +23,8 @@ export interface LoginSource {
 
 export interface SignInPage {
   loginSources: LoginSource[];
-  // antiBotVerification is the anti-bot verification of log in, empty for none.
-  antiBotVerification: AntiBotVerification;
+  // antiBotVerificationStrategy is the anti-bot verification strategy of log in, empty for none.
+  antiBotVerificationStrategy: AntiBotVerificationStrategy;
 }
 
 interface SignInResponse {
@@ -114,8 +114,8 @@ export function SignIn() {
   const { t } = useTranslation();
   usePageTitle(t("sign_in"));
   const navigate = useNavigate();
-  const { loginSources, antiBotVerification } = route.useLoaderData();
-  const antiBot = useAntiBot(antiBotVerification);
+  const { loginSources, antiBotVerificationStrategy } = route.useLoaderData();
+  const antiBot = useAntiBot(antiBotVerificationStrategy);
   const defaultSource = loginSources.find((s) => s.isDefault);
 
   const [username, setUsername] = useState("");
@@ -164,7 +164,7 @@ export function SignIn() {
     setFieldErrors({});
     // Coming back to the password shows a new captcha image. An altcha solution
     // stays valid.
-    if (antiBotVerification === "captcha") antiBot.reset();
+    if (antiBotVerificationStrategy === "captcha") antiBot.reset();
     setPasskey({ status: "waiting", attempt: 1 });
     setMethod("passkey");
   }

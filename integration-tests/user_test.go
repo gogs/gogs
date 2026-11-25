@@ -97,12 +97,12 @@ func TestLogInAntiBotVerification(t *testing.T) {
 		require.NotNil(t, resp.Fields, "response: %s", body)
 		return resp.Fields
 	}
-	antiBotVerification := func(c *client) string {
+	antiBotVerificationStrategy := func(c *client) string {
 		var resp struct {
-			AntiBotVerification string `json:"antiBotVerification"`
+			AntiBotVerificationStrategy string `json:"antiBotVerificationStrategy"`
 		}
 		c.doJSON(http.MethodGet, "/api/web/user/sign-in", nil, http.StatusOK, &resp)
-		return resp.AntiBotVerification
+		return resp.AntiBotVerificationStrategy
 	}
 	// assertRejected asserts that the verification failed and said nothing about
 	// the password.
@@ -116,7 +116,7 @@ func TestLogInAntiBotVerification(t *testing.T) {
 		t.Parallel()
 
 		c := newClient(t)
-		assert.Equal(t, "captcha", antiBotVerification(c))
+		assert.Equal(t, "captcha", antiBotVerificationStrategy(c))
 
 		assertRejected(t, c, signIn(t, c, u.Password, ""), "authenticated without a captcha")
 		assertRejected(t, c, signIn(t, c, u.Password, c.captcha()+"x"), "authenticated with a wrong captcha")
@@ -138,7 +138,7 @@ func TestLogInAntiBotVerification(t *testing.T) {
 		// The server with FORCE_PRIVATE uses altcha.
 		c := newClient(t)
 		c.baseURL = forcePrivateServerURL
-		assert.Equal(t, "altcha", antiBotVerification(c))
+		assert.Equal(t, "altcha", antiBotVerificationStrategy(c))
 
 		assertRejected(t, c, signIn(t, c, u.Password, ""), "authenticated without a solution")
 

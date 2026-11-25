@@ -8,14 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { type AntiBotVerification, useAntiBot } from "@/lib/anti-bot";
+import { type AntiBotVerificationStrategy, useAntiBot } from "@/lib/anti-bot";
 import { usePageTitle } from "@/lib/page-title";
 import { subUrl } from "@/lib/url";
 
 export interface SignUpPage {
   registrationDisabled: boolean;
-  // antiBotVerification is the anti-bot verification of sign up, empty for none.
-  antiBotVerification: AntiBotVerification;
+  // antiBotVerificationStrategy is the anti-bot verification strategy of sign up, empty for none.
+  antiBotVerificationStrategy: AntiBotVerificationStrategy;
 }
 
 interface SignUpResponse {
@@ -37,8 +37,8 @@ export function SignUp() {
   const { t } = useTranslation();
   usePageTitle(t("register"));
   const navigate = useNavigate();
-  const { registrationDisabled, antiBotVerification } = route.useLoaderData();
-  const antiBot = useAntiBot(antiBotVerification);
+  const { registrationDisabled, antiBotVerificationStrategy } = route.useLoaderData();
+  const antiBot = useAntiBot(antiBotVerificationStrategy);
 
   const [userName, setUserName] = useState("");
   const [email, setEmail] = useState("");

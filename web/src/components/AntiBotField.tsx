@@ -37,7 +37,7 @@ export function AntiBotField({ antiBot, disabled, error, invalid, tabIndex }: An
     </p>
   );
 
-  if (antiBot.verification === "captcha") {
+  if (antiBot.strategy === "captcha") {
     return (
       <div className="flex flex-col gap-2">
         <Label htmlFor="captcha">{t("captcha")}</Label>
@@ -80,7 +80,7 @@ export function AntiBotField({ antiBot, disabled, error, invalid, tabIndex }: An
       </div>
     );
   }
-  if (antiBot.verification !== "altcha") return null;
+  if (antiBot.strategy !== "altcha") return null;
 
   const altchaState = antiBot.altchaState;
   const labels: Record<AltchaState, string> = {

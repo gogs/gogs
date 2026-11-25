@@ -63,20 +63,20 @@ type loginSource struct {
 
 type getUserSignInResponse struct {
 	LoginSources []loginSource `json:"loginSources"`
-	// AntiBotVerification is the anti-bot verification of log in, empty for none.
-	AntiBotVerification string `json:"antiBotVerification"`
+	// AntiBotVerificationStrategy is the anti-bot verification strategy of log in, empty for none.
+	AntiBotVerificationStrategy string `json:"antiBotVerificationStrategy"`
 }
 
 type getUserSignUpResponse struct {
 	RegistrationDisabled bool `json:"registrationDisabled"`
-	// AntiBotVerification is the anti-bot verification of sign up, empty for none.
-	AntiBotVerification string `json:"antiBotVerification"`
+	// AntiBotVerificationStrategy is the anti-bot verification strategy of sign up, empty for none.
+	AntiBotVerificationStrategy string `json:"antiBotVerificationStrategy"`
 }
 
 func getUserSignUp() (statusCode int, resp *getUserSignUpResponse, err error) {
 	return http.StatusOK, &getUserSignUpResponse{
-		RegistrationDisabled: conf.Auth.DisableRegistration,
-		AntiBotVerification:  antiBotVerificationOf(conf.Auth.AntiBotVerificationOnSignUp),
+		RegistrationDisabled:        conf.Auth.DisableRegistration,
+		AntiBotVerificationStrategy: antiBotVerificationStrategyOf(conf.Auth.AntiBotVerificationOnSignUp),
 	}, nil
 }
 
@@ -95,9 +95,9 @@ type userSignUpResponse struct {
 	Hours                     int    `json:"hours,omitempty"`
 }
 
-// antiBotVerificationOf returns the anti-bot verification of a form whose
-// switch is enabled, or empty for none.
-func antiBotVerificationOf(enabled bool) string {
+// antiBotVerificationStrategyOf returns the anti-bot verification strategy of
+// a form whose switch is enabled, or empty for none.
+func antiBotVerificationStrategyOf(enabled bool) string {
 	if !enabled {
 		return ""
 	}
@@ -108,7 +108,7 @@ func antiBotVerificationOf(enabled bool) string {
 // payload failed verification.
 func antiBotVerificationFailed(l i18n.Locale) *bindingErrorResponse {
 	msg := l.Tr("form::captcha_incorrect")
-	if conf.Auth.AntiBotVerificationStrategy == conf.AntiBotVerificationAltcha {
+	if conf.Auth.AntiBotVerificationStrategy == conf.AntiBotVerificationStrategyAltcha {
 		msg = l.Tr("form::anti_bot_verification_failed")
 	}
 	return &bindingErrorResponse{Fields: fieldErrors{"antiBotPayload": &msg}}
@@ -192,8 +192,8 @@ func getUserSignIn(logger *logx.Logger, r *http.Request) (statusCode int, resp *
 		loginSources = append(loginSources, loginSource{ID: s.ID, Name: s.Name, IsDefault: s.IsDefault})
 	}
 	return http.StatusOK, &getUserSignInResponse{
-		LoginSources:        loginSources,
-		AntiBotVerification: antiBotVerificationOf(conf.Auth.AntiBotVerificationOnLogIn),
+		LoginSources:                loginSources,
+		AntiBotVerificationStrategy: antiBotVerificationStrategyOf(conf.Auth.AntiBotVerificationOnLogIn),
 	}, nil
 }
 

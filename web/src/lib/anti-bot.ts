@@ -2,14 +2,14 @@ import { useEffect, useRef, useState } from "react";
 
 import { type AltchaSolution, solveAltcha } from "@/lib/altcha";
 
-// AntiBotVerification is the anti-bot verification a form asks for, empty for
-// none.
-export type AntiBotVerification = "" | "altcha" | "captcha";
+// AntiBotVerificationStrategy is the anti-bot verification strategy a form asks
+// for, empty for none.
+export type AntiBotVerificationStrategy = "" | "altcha" | "captcha";
 
 export type AltchaState = "idle" | "verifying" | "verified" | "error";
 
 export interface AntiBot {
-  verification: AntiBotVerification;
+  strategy: AntiBotVerificationStrategy;
   // ready is whether the form can be submitted as far as the verification goes.
   ready: boolean;
   // payload returns what to submit as "antiBotPayload", or null when an altcha
@@ -31,7 +31,7 @@ export interface AntiBot {
 
 // useAntiBot keeps the state of the anti-bot verification of a form, which
 // AntiBotField from @/components/AntiBotField renders.
-export function useAntiBot(verification: AntiBotVerification): AntiBot {
+export function useAntiBot(strategy: AntiBotVerificationStrategy): AntiBot {
   const [captcha, setCaptcha] = useState("");
   const [captchaRefresh, setCaptchaRefresh] = useState(0);
   const [altchaState, setAltchaState] = useState<AltchaState>("idle");
@@ -62,13 +62,13 @@ export function useAntiBot(verification: AntiBotVerification): AntiBot {
   }
 
   return {
-    verification,
+    strategy,
     ready:
-      verification === "" ||
-      (verification === "captcha" && captcha.trim() !== "") ||
-      (verification === "altcha" && altchaState === "verified"),
+      strategy === "" ||
+      (strategy === "captcha" && captcha.trim() !== "") ||
+      (strategy === "altcha" && altchaState === "verified"),
     payload: () => {
-      if (verification !== "altcha") return captcha;
+      if (strategy !== "altcha") return captcha;
       const solution = altchaSolution.current;
       return solution && solution.expiresAt > Date.now() ? solution.payload : null;
     },
@@ -76,7 +76,7 @@ export function useAntiBot(verification: AntiBotVerification): AntiBot {
       altchaSolution.current = null;
     },
     reset: () => {
-      if (verification === "altcha") {
+      if (strategy === "altcha") {
         altchaSolution.current = null;
         setAltchaState("idle");
         return;
@@ -84,7 +84,7 @@ export function useAntiBot(verification: AntiBotVerification): AntiBot {
       setCaptcha("");
       setCaptchaRefresh((value) => value + 1);
     },
-    focus: () => document.getElementById(verification === "altcha" ? "altcha" : "captcha")?.focus(),
+    focus: () => document.getElementById(strategy === "altcha" ? "altcha" : "captcha")?.focus(),
     captcha,
     setCaptcha,
     captchaRefresh,

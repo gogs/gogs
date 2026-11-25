@@ -253,11 +253,11 @@ var Auth AuthOpts
 
 // Values of [auth] ANTI_BOT_VERIFICATION_STRATEGY.
 const (
-	// AntiBotVerificationAltcha asks the browser to solve a proof-of-work challenge.
-	AntiBotVerificationAltcha = "altcha"
-	// AntiBotVerificationCaptcha asks the user to type the characters shown in
+	// AntiBotVerificationStrategyAltcha asks the browser to solve a proof-of-work challenge.
+	AntiBotVerificationStrategyAltcha = "altcha"
+	// AntiBotVerificationStrategyCaptcha asks the user to type the characters shown in
 	// an image.
-	AntiBotVerificationCaptcha = "captcha"
+	AntiBotVerificationStrategyCaptcha = "captcha"
 )
 
 type ServerOpts struct {
@@ -416,7 +416,7 @@ func handleDeprecated() {
 	if key, err := File.Section("auth").GetKey("ENABLE_REGISTRATION_CAPTCHA"); err == nil {
 		Auth.AntiBotVerificationOnSignUp = key.MustBool()
 		if Auth.AntiBotVerificationOnSignUp && Auth.AntiBotVerificationStrategy == "" {
-			Auth.AntiBotVerificationStrategy = AntiBotVerificationAltcha
+			Auth.AntiBotVerificationStrategy = AntiBotVerificationStrategyAltcha
 		}
 	}
 }
