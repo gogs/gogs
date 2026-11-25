@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from "react";
 
 import { type AltchaSolution, solveAltcha } from "@/lib/altcha";
 
-// AntiBotVerification is the value of [auth] ANTI_BOT_VERIFICATION, which is
-// empty when a form is not verified.
+// AntiBotVerification is the anti-bot verification a form asks for, empty for
+// none.
 export type AntiBotVerification = "" | "altcha" | "captcha";
 
 export type AltchaState = "idle" | "verifying" | "verified" | "error";

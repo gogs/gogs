@@ -14,7 +14,7 @@ import { subUrl } from "@/lib/url";
 
 export interface SignUpPage {
   registrationDisabled: boolean;
-  // antiBotVerification is empty when sign-ups are not verified.
+  // antiBotVerification is the anti-bot verification of sign up, empty for none.
   antiBotVerification: AntiBotVerification;
 }
 

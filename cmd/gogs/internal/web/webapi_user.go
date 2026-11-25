@@ -63,13 +63,13 @@ type loginSource struct {
 
 type getUserSignInResponse struct {
 	LoginSources []loginSource `json:"loginSources"`
-	// AntiBotVerification is empty when log in is not verified.
+	// AntiBotVerification is the anti-bot verification of log in, empty for none.
 	AntiBotVerification string `json:"antiBotVerification"`
 }
 
 type getUserSignUpResponse struct {
 	RegistrationDisabled bool `json:"registrationDisabled"`
-	// AntiBotVerification is empty when sign-ups are not verified.
+	// AntiBotVerification is the anti-bot verification of sign up, empty for none.
 	AntiBotVerification string `json:"antiBotVerification"`
 }
 
@@ -95,8 +95,8 @@ type userSignUpResponse struct {
 	Hours                     int    `json:"hours,omitempty"`
 }
 
-// antiBotVerificationOf returns the anti-bot verification of a form that asks
-// for it when enabled, which is empty when the form is not verified.
+// antiBotVerificationOf returns the anti-bot verification of a form whose
+// switch is enabled, or empty for none.
 func antiBotVerificationOf(enabled bool) string {
 	if !enabled {
 		return ""
