@@ -423,6 +423,13 @@ func putOrgTeamRepo(logger *logx.Logger, c flamego.Context, l i18n.Locale, m *or
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "get repository")
 	}
 	if err = database.Handle.Teams().AddRepo(ctx, team.Team, repo); err != nil {
+		// The repository was deleted or transferred away, or the team was
+		// deleted, after this request loaded them.
+		if database.IsErrRepoNotExist(err) {
+			return http.StatusNotFound, nil, errors.New(l.Tr("org::teams.add_nonexistent_repo"))
+		} else if database.IsErrTeamNotExist(err) {
+			return http.StatusNotFound, nil, errors.New("team does not exist")
+		}
 		logger.Error("Failed to add repository to team", "repoID", repo.ID, "teamID", team.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "add team repository")
 	}

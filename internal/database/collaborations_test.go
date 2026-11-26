@@ -117,6 +117,33 @@ func collaborationsAdd(t *testing.T, ctx context.Context, s *CollaborationsStore
 	assert.Equal(t, map[int64]AccessMode{9999: AccessModeAdmin, alice.ID: AccessModeWrite}, accessModes(t, ctx, perms, repo.ID))
 	assert.Empty(t, accessModes(t, ctx, perms, other.ID))
 
+	// A deleted repository gets no collaborators.
+	deleted := newTestIssueRepo(t, ctx, s.db, "co-add-deleted")
+	require.NoError(t, s.db.Delete(deleted).Error)
+	err = s.Add(ctx, deleted, alice.ID)
+	assert.True(t, IsErrRepoNotExist(err), "%+v", err)
+	assert.False(t, s.IsCollaborator(ctx, logger, deleted.ID, alice.ID))
+	assert.Empty(t, accessModes(t, ctx, perms, deleted.ID))
+
+	// A repository transferred after the caller loaded it gets no
+	// collaborators, whose access would be calculated for the old owner.
+	moved := newTestIssueRepo(t, ctx, s.db, "co-add-moved")
+	require.NoError(t, s.db.Model(new(Repository)).Where("id = ?", moved.ID).UpdateColumn("owner_id", alice.ID).Error)
+	err = s.Add(ctx, moved, alice.ID)
+	assert.True(t, IsErrRepoNotExist(err), "%+v", err)
+	assert.False(t, s.IsCollaborator(ctx, logger, moved.ID, alice.ID))
+	err = s.AddWithMode(ctx, moved, AccessModeOwner, alice.ID, AccessModeRead)
+	assert.True(t, IsErrRepoNotExist(err), "%+v", err)
+	assert.False(t, s.IsCollaborator(ctx, logger, moved.ID, alice.ID), "added without the mode")
+
+	// Adding with a mode gives the mode, also to a collaborator the
+	// repository has.
+	withMode := newTestIssueRepo(t, ctx, s.db, "co-add-mode")
+	require.NoError(t, s.AddWithMode(ctx, withMode, AccessModeOwner, alice.ID, AccessModeRead))
+	assert.Equal(t, map[int64]AccessMode{alice.ID: AccessModeRead}, accessModes(t, ctx, perms, withMode.ID))
+	require.NoError(t, s.AddWithMode(ctx, withMode, AccessModeOwner, alice.ID, AccessModeAdmin))
+	assert.Equal(t, map[int64]AccessMode{alice.ID: AccessModeAdmin}, accessModes(t, ctx, perms, withMode.ID))
+
 	// Adding a collaborator that the repository has keeps their mode.
 	err = s.db.Model(new(Collaboration)).Where("user_id = ?", alice.ID).Update("mode", AccessModeRead).Error
 	require.NoError(t, err)
@@ -268,6 +295,18 @@ func collaborationsChangeMode(t *testing.T, ctx context.Context, s *Collaboratio
 
 		require.NoError(t, s.ChangeMode(ctx, repo, AccessModeOwner, carol.ID, AccessModeAdmin))
 		assert.Equal(t, AccessModeAdmin, accessModes(t, ctx, perms, repo.ID)[carol.ID])
+
+		// A repository transferred after the caller loaded it is left alone,
+		// because its accesses would be calculated for the old organization,
+		// e.g., owner access to members of its owner team.
+		require.NoError(t, s.db.Model(new(Repository)).Where("id = ?", repo.ID).UpdateColumn("owner_id", dave.ID).Error)
+		err = s.ChangeMode(ctx, repo, AccessModeOwner, carol.ID, AccessModeRead)
+		assert.True(t, IsErrRepoNotExist(err), "%+v", err)
+		err = s.Delete(ctx, repo, carol.ID)
+		assert.True(t, IsErrRepoNotExist(err), "%+v", err)
+		c := new(Collaboration)
+		require.NoError(t, s.db.Where("repo_id = ? AND user_id = ?", repo.ID, carol.ID).First(c).Error)
+		assert.Equal(t, AccessModeAdmin, c.Mode)
 	})
 }
 

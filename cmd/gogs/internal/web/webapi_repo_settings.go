@@ -579,6 +579,9 @@ func postRepoCollaborator(c flamego.Context, logger *logx.Logger, l i18n.Locale,
 	}
 
 	if err = database.Handle.Collaborations().Add(c.Request().Context(), rc.Repo, u.ID); err != nil {
+		if database.IsErrRepoNotExist(err) {
+			return http.StatusNotFound, nil, errors.New("repository does not exist")
+		}
 		logger.Error("Failed to add collaborator", "collaboratorID", u.ID, "repoID", rc.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "add collaborator")
 	}
@@ -616,6 +619,9 @@ func patchRepoCollaborator(c flamego.Context, logger *logx.Logger, rc *repoAdmin
 		return code, nil, err
 	}
 	if err = database.Handle.Collaborations().ChangeMode(c.Request().Context(), rc.Repo, rc.viewerAccess, u.ID, database.ParseAccessMode(req.Mode)); err != nil {
+		if database.IsErrRepoNotExist(err) {
+			return http.StatusNotFound, nil, errors.New("repository does not exist")
+		}
 		logger.Error("Failed to change collaboration access mode", "collaboratorID", u.ID, "repoID", rc.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "change collaboration access mode")
 	}
@@ -628,6 +634,9 @@ func deleteRepoCollaborator(c flamego.Context, logger *logx.Logger, rc *repoAdmi
 		return code, nil, err
 	}
 	if err = database.Handle.Collaborations().Delete(c.Request().Context(), rc.Repo, u.ID); err != nil {
+		if database.IsErrRepoNotExist(err) {
+			return http.StatusNotFound, nil, errors.New("repository does not exist")
+		}
 		logger.Error("Failed to delete collaboration", "collaboratorID", u.ID, "repoID", rc.Repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete collaboration")
 	}

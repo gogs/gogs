@@ -7,6 +7,8 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"unknwon.dev/x/logx"
+
+	"gogs.io/gogs/internal/errx"
 )
 
 // CollaborationsStore is the storage layer for collaborators of repositories.
@@ -34,13 +36,43 @@ func (s *CollaborationsStore) IsCollaborator(ctx context.Context, logger *logx.L
 // repository, and recalculates their access to it. Adding a collaborator that
 // the repository has keeps their mode.
 func (s *CollaborationsStore) Add(ctx context.Context, repo *Repository, userID int64) error {
+	return s.AddWithMode(ctx, repo, AccessModeNone, userID, AccessModeNone)
+}
+
+// AddWithMode is Add followed by ChangeMode in the same transaction, so the
+// collaborator is either added with the mode or not added at all, e.g., when
+// the repository is transferred meanwhile. A mode that ChangeMode ignores
+// keeps the mode Add gives.
+func (s *CollaborationsStore) AddWithMode(ctx context.Context, repo *Repository, actorMode AccessMode, userID int64, mode AccessMode) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Deleting the repository meanwhile would leave the collaboration and
+		// access behind, and transferring it would give access as if the old
+		// owner still had it, e.g., owner access to its owner team.
+		if ownerID, exists, err := lockRepository(tx, repo.ID); err != nil {
+			return err
+		} else if !exists || ownerID != repo.OwnerID {
+			return ErrRepoNotExist{args: errx.Args{"repoID": repo.ID}}
+		}
+		// The owner is locked after the repository and before the first plain
+		// read, as changing the members of an organization's teams locks it,
+		// so a member removed from a team meanwhile does not keep the team's
+		// access. Locking a user who owns the repository is harmless.
+		if err := lockOrganization(tx, repo.OwnerID); err != nil {
+			return err
+		}
+
 		// The number of affected rows does not tell whether the row is new,
 		// because MariaDB counts the existing row returned.
 		c := &Collaboration{RepoID: repo.ID, UserID: userID, Mode: AccessModeWrite}
 		err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(c).Error
 		if err != nil {
 			return errors.Wrap(err, "insert")
+		}
+		if validCollaborationMode(actorMode, mode) {
+			err = tx.Model(new(Collaboration)).Where("repo_id = ? AND user_id = ?", repo.ID, userID).Update("mode", mode).Error
+			if err != nil {
+				return errors.Wrap(err, "update mode")
+			}
 		}
 		return newPermissionsStore(tx).recalculateUserAccess(ctx, repo, userID)
 	})
@@ -79,11 +111,14 @@ func (s *CollaborationsStore) List(ctx context.Context, repoID int64) ([]*Collab
 // collaborator. In a repository of an organization, the collaborator gets the
 // highest of this mode and the modes of their teams that have the repository.
 func (s *CollaborationsStore) ChangeMode(ctx context.Context, repo *Repository, actorMode AccessMode, userID int64, mode AccessMode) error {
-	if mode <= AccessModeNone || mode > AccessModeAdmin || mode > actorMode {
+	if !validCollaborationMode(actorMode, mode) {
 		return nil
 	}
 
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := lockCollaborationRepository(tx, repo); err != nil {
+			return err
+		}
 		result := tx.Model(new(Collaboration)).Where("repo_id = ? AND user_id = ?", repo.ID, userID).Update("mode", mode)
 		if result.Error != nil {
 			return errors.Wrap(result.Error, "update")
@@ -99,6 +134,9 @@ func (s *CollaborationsStore) ChangeMode(ctx context.Context, repo *Repository, 
 // a collaborator is a no-op.
 func (s *CollaborationsStore) Delete(ctx context.Context, repo *Repository, userID int64) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := lockCollaborationRepository(tx, repo); err != nil {
+			return err
+		}
 		result := tx.Where("repo_id = ? AND user_id = ?", repo.ID, userID).Delete(new(Collaboration))
 		if result.Error != nil {
 			return errors.Wrap(result.Error, "delete")
@@ -107,4 +145,25 @@ func (s *CollaborationsStore) Delete(ctx context.Context, repo *Repository, user
 		}
 		return newPermissionsStore(tx).recalculateUserAccess(ctx, repo, userID)
 	})
+}
+
+// lockCollaborationRepository locks the repository and then its owner, as
+// adding a collaborator does. It returns ErrRepoNotExist when the repository
+// was deleted or transferred after the caller loaded it, whose accesses would
+// otherwise be recalculated for the old owner, e.g., giving owner access to a
+// member of the old organization's owner team.
+func lockCollaborationRepository(tx *gorm.DB, repo *Repository) error {
+	ownerID, exists, err := lockRepository(tx, repo.ID)
+	if err != nil {
+		return err
+	} else if !exists || ownerID != repo.OwnerID {
+		return ErrRepoNotExist{args: errx.Args{"repoID": repo.ID}}
+	}
+	return lockOrganization(tx, ownerID)
+}
+
+// validCollaborationMode reports whether the actor with given mode may give a
+// collaborator the mode, which is capped at admin and at the actor's own mode.
+func validCollaborationMode(actorMode, mode AccessMode) bool {
+	return mode > AccessModeNone && mode <= AccessModeAdmin && mode <= actorMode
 }

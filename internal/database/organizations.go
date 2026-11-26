@@ -302,6 +302,11 @@ func (s *OrganizationsStore) SetMemberVisibility(ctx context.Context, orgID, use
 // Adding a member that the organization has is a no-op.
 func (s *OrganizationsStore) AddMember(ctx context.Context, orgID, userID int64) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Locked before the membership, the order adding a team member locks
+		// them in, so the two cannot deadlock.
+		if err := lockOrganization(tx, orgID); err != nil {
+			return err
+		}
 		return newOrganizationsStore(tx).addMember(ctx, orgID, userID)
 	})
 }
@@ -349,20 +354,43 @@ func (s *OrganizationsStore) RemoveMember(ctx context.Context, orgID, userID int
 		return errors.Wrap(err, "list accessible repositories")
 	}
 
-	return db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Where("id = ?", ou.ID).Delete(new(OrgUser)).Error; err != nil {
-			return errors.Wrap(err, "delete organization user")
+	repoIDs := make([]int64, 0, len(repos))
+	for _, repo := range repos {
+		repoIDs = append(repoIDs, repo.ID)
+	}
+	// Listed outside the transaction, so that on MySQL its snapshot is taken
+	// after the locks, and sees, e.g., a repository created in the
+	// organization while waiting for it.
+	var watchedIDs []int64
+	if len(repoIDs) > 0 {
+		err = db.Model(new(Watch)).Where("user_id = ? AND repo_id IN ?", userID, repoIDs).Pluck("repo_id", &watchedIDs).Error
+		if err != nil {
+			return errors.Wrap(err, "list watched repositories")
 		}
+	}
+
+	return db.Transaction(func(tx *gorm.DB) error {
+		// Repositories that unwatching updates are locked before the
+		// organization, the order adding a team member locks them in, so the
+		// two cannot deadlock.
+		if err := lockRepositories(tx, watchedIDs); err != nil {
+			return err
+		}
+
+		// The organization is locked before the membership, the order
+		// removing a team member locks them in, so the two cannot deadlock.
 		err := tx.Model(new(User)).Where("id = ?", orgID).UpdateColumn("num_members", gorm.Expr("num_members - 1")).Error
 		if err != nil {
 			return errors.Wrap(err, "count members")
 		}
+		if err := tx.Where("id = ?", ou.ID).Delete(new(OrgUser)).Error; err != nil {
+			return errors.Wrap(err, "delete organization user")
+		}
 
-		repoIDs := make([]int64, 0, len(repos))
-		for _, repo := range repos {
-			repoIDs = append(repoIDs, repo.ID)
-			if err = newReposStore(tx).unwatch(ctx, userID, repo.ID); err != nil {
-				return errors.Wrapf(err, "unwatch repository %d", repo.ID)
+		// Only the repositories locked above, a watch started meanwhile stays.
+		for _, repoID := range watchedIDs {
+			if err = newReposStore(tx).unwatch(ctx, userID, repoID); err != nil {
+				return errors.Wrapf(err, "unwatch repository %d", repoID)
 			}
 		}
 		if len(repoIDs) > 0 {
@@ -383,12 +411,6 @@ func (s *OrganizationsStore) RemoveMember(ctx context.Context, orgID, userID int
 		}
 		return nil
 	})
-}
-
-// removeRepo removes the repository with given ID from the teams of the
-// organization with given ID.
-func (s *OrganizationsStore) removeRepo(ctx context.Context, orgID, repoID int64) error {
-	return s.db.WithContext(ctx).Where("org_id = ? AND repo_id = ?", orgID, repoID).Delete(new(TeamRepo)).Error
 }
 
 // teamRepoIDsOfMember returns the IDs of the repositories that the teams of
@@ -483,4 +505,14 @@ type OrgUser struct {
 	IsPublic bool
 	IsOwner  bool
 	NumTeams int `gorm:"size:32"`
+}
+
+// lockOrganization locks the organization of given ID until the transaction
+// ends. Transactions that change the members or repositories of its teams lock
+// it after the repositories and before the teams, and before their first plain
+// read, which on MySQL takes the snapshot of the transaction. They then see
+// each other's changes, and cannot give or keep access the other one removes.
+func lockOrganization(tx *gorm.DB, orgID int64) error {
+	err := tx.Model(new(User)).Where("id = ?", orgID).UpdateColumn("num_members", gorm.Expr("num_members")).Error
+	return errors.Wrap(err, "lock organization")
 }

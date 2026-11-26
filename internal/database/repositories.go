@@ -1187,6 +1187,15 @@ func (s *RepositoriesStore) insert(ctx context.Context, doer, owner *User, repo 
 		return err
 	}
 
+	db := s.db.WithContext(ctx)
+	// The owner is locked before the first plain read, which on MySQL takes
+	// the snapshot of the transaction, so the accesses below see a member
+	// added to the owner team while waiting for it.
+	err = db.Exec(dbx.Quote("UPDATE %s SET num_repos = num_repos + 1 WHERE id = ?", "user"), owner.ID).Error
+	if err != nil {
+		return errors.Wrap(err, "increase owned repository count")
+	}
+
 	has, err := s.Exists(ctx, owner, repo.Name)
 	if err != nil {
 		return errors.Wrap(err, "check existence")
@@ -1194,7 +1203,6 @@ func (s *RepositoriesStore) insert(ctx context.Context, doer, owner *User, repo 
 		return ErrRepoAlreadyExist{args: errx.Args{"ownerID": owner.ID, "name": repo.Name}}
 	}
 
-	db := s.db.WithContext(ctx)
 	// GORM saves and returns the column default (true) instead of a false value
 	// on create, so save the feature switches the caller chose, e.g., all
 	// disabled for forks, which also sets them back on the repository.
@@ -1209,11 +1217,6 @@ func (s *RepositoriesStore) insert(ctx context.Context, doer, owner *User, repo 
 	}).Error
 	if err != nil {
 		return errors.Wrap(err, "restore feature switches")
-	}
-
-	err = db.Exec(dbx.Quote("UPDATE %s SET num_repos = num_repos + 1 WHERE id = ?", "user"), owner.ID).Error
-	if err != nil {
-		return errors.Wrap(err, "increase owned repository count")
 	}
 
 	// Give access to all members in owner team.
@@ -1512,6 +1515,17 @@ func (s *RepositoriesStore) Transfer(ctx context.Context, doer *User, newOwnerNa
 			return errors.Newf("update owner: %v", err)
 		}
 
+		// Owners are locked before their teams, the order creating, forking
+		// and adding a team member lock them in, so they cannot deadlock. They
+		// are locked before the first plain read, which on MySQL takes the
+		// snapshot of the transaction, so the accesses below see a member
+		// added to the new owner's teams while waiting for them.
+		if err = tx.Exec(dbx.Quote("UPDATE %s SET num_repos = num_repos + 1 WHERE id = ?", "user"), newOwner.ID).Error; err != nil {
+			return errors.Newf("increase new owner repository count: %v", err)
+		} else if err = tx.Exec(dbx.Quote("UPDATE %s SET num_repos = num_repos - 1 WHERE id = ?", "user"), owner.ID).Error; err != nil {
+			return errors.Newf("decrease old owner repository count: %v", err)
+		}
+
 		// Remove redundant collaborators.
 		collaborators, err := newCollaborationsStore(tx).List(ctx, repo.ID)
 		if err != nil {
@@ -1543,10 +1557,12 @@ func (s *RepositoriesStore) Transfer(ctx context.Context, doer *User, newOwnerNa
 				if err := tx.Model(t).Select("*").Updates(t).Error; err != nil {
 					return errors.Newf("decrease team repository count '%d': %v", t.ID, err)
 				}
-			}
-
-			if err = newOrganizationsStore(tx).removeRepo(ctx, owner.ID, repo.ID); err != nil {
-				return errors.Wrap(err, "remove from teams")
+				// Delete by the unique index, so MySQL locks no rows of other
+				// repositories, which adding a team member may hold.
+				err = tx.Where("team_id = ? AND repo_id = ?", t.ID, repo.ID).Delete(new(TeamRepo)).Error
+				if err != nil {
+					return errors.Wrapf(err, "remove from team %d", t.ID)
+				}
 			}
 		}
 
@@ -1569,13 +1585,6 @@ func (s *RepositoriesStore) Transfer(ctx context.Context, doer *User, newOwnerNa
 			if err = tx.Model(new(ProtectBranch)).Where("repo_id = ?", repo.ID).UpdateColumn("enable_whitelist", false).Error; err != nil {
 				return errors.Wrap(err, "disable push allowlists")
 			}
-		}
-
-		// Update repository count.
-		if err = tx.Exec(dbx.Quote("UPDATE %s SET num_repos = num_repos + 1 WHERE id = ?", "user"), newOwner.ID).Error; err != nil {
-			return errors.Newf("increase new owner repository count: %v", err)
-		} else if err = tx.Exec(dbx.Quote("UPDATE %s SET num_repos = num_repos - 1 WHERE id = ?", "user"), owner.ID).Error; err != nil {
-			return errors.Newf("decrease old owner repository count: %v", err)
 		}
 
 		repos := newReposStore(tx)
@@ -1840,6 +1849,14 @@ func (s *RepositoriesStore) Delete(ctx context.Context, logger *logx.Logger, own
 			}
 		}
 
+		// The owner is locked after repositories and before its teams and the
+		// rows of the repository in other tables, the order creating, forking,
+		// transferring and adding a team member lock them in, so they cannot
+		// deadlock.
+		if err := tx.Exec(dbx.Quote("UPDATE %s SET num_repos = num_repos - 1 WHERE id = ?", "user"), ownerID).Error; err != nil {
+			return errors.Wrap(err, "decrease repository count of owner")
+		}
+
 		// Teams are locked after repositories, the order forking and transferring
 		// into the organization lock them in, so the two cannot deadlock.
 		if org.IsOrganization() {
@@ -1851,13 +1868,6 @@ func (s *RepositoriesStore) Delete(ctx context.Context, logger *logx.Logger, own
 					return err
 				}
 			}
-		}
-
-		// Users are locked before the rows of the repository in other tables, the
-		// order creating and transferring repositories lock them in, so they
-		// cannot deadlock.
-		if err := tx.Exec(dbx.Quote("UPDATE %s SET num_repos = num_repos - 1 WHERE id = ?", "user"), ownerID).Error; err != nil {
-			return errors.Wrap(err, "decrease repository count of owner")
 		}
 
 		// The columns of pull requests, accesses and watches deleted by are
@@ -2206,20 +2216,33 @@ func (s *RepositoriesStore) UpdateSize(ctx context.Context, repo *Repository) er
 	return nil
 }
 
+// lockRepositories locks the repositories of given IDs in ascending order, so
+// transactions that lock several of them cannot deadlock with each other.
+func lockRepositories(tx *gorm.DB, ids []int64) error {
+	for _, id := range slices.Sorted(slices.Values(ids)) {
+		if _, _, err := lockRepository(tx, id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // lockRepository locks the repository of given ID until the transaction ends,
-// and reports whether it exists. Transactions that change a repository and
-// rows of its organization's teams lock the repository first, so they cannot
-// deadlock.
-func lockRepository(tx *gorm.DB, id int64) (bool, error) {
+// and returns its owner ID as of the lock, and whether it exists. Transactions
+// that change a repository and rows of its organization's teams or
+// collaborators lock the repository first, so they cannot deadlock.
+func lockRepository(tx *gorm.DB, id int64) (ownerID int64, exists bool, err error) {
 	query := tx.Model(new(Repository)).Where("id = ?", id)
 	if !conf.UseSQLite3 {
 		query = query.Clauses(clause.Locking{Strength: "UPDATE"})
 	}
-	var ids []int64
-	if err := query.Pluck("id", &ids).Error; err != nil {
-		return false, errors.Wrap(err, "lock repository")
+	var ownerIDs []int64
+	if err := query.Pluck("owner_id", &ownerIDs).Error; err != nil {
+		return 0, false, errors.Wrap(err, "lock repository")
+	} else if len(ownerIDs) == 0 {
+		return 0, false, nil
 	}
-	return len(ids) > 0, nil
+	return ownerIDs[0], true, nil
 }
 
 type MigrateRepoOptions struct {

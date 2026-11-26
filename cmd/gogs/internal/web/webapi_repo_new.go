@@ -222,11 +222,6 @@ func postRepoCreate(c flamego.Context, logger *logx.Logger, l i18n.Locale, viewe
 
 	repo, err := database.Handle.Repositories().Create(c.Request().Context(), logger, viewer, owner, opts)
 	if err != nil {
-		if repo != nil {
-			if errDelete := database.Handle.Repositories().Delete(ctx, logger, owner.ID, repo.ID); errDelete != nil {
-				logger.Error("Failed to delete repository", "repoID", repo.ID, "error", errDelete)
-			}
-		}
 		if code, resp := repoCreateError(l, err); resp != nil {
 			return code, resp, nil
 		}

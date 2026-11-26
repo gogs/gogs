@@ -24,7 +24,7 @@ func adminAddTeamRepository(c *apiContext) {
 		return
 	}
 	if err := database.Handle.Teams().AddRepo(c.Request().Context(), c.Org.Team, repo); err != nil {
-		c.Error(err, "add repository")
+		c.NotFoundOrError(err, "add repository")
 		return
 	}
 
