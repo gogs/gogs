@@ -2,6 +2,7 @@ import { type SelectedLineRange, getFiletypeFromFileName } from "@pierre/diffs";
 import { File as CodeFile } from "@pierre/diffs/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
+import { type TFunction } from "i18next";
 import {
   BookOpen,
   Check,
@@ -60,6 +61,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { webContext } from "@/lib/context";
 import { usePageTitle } from "@/lib/page-title";
 import {
   type RepoCommitListItem,
@@ -88,6 +90,13 @@ const ICON_BUTTON_CLASS =
 // splatOf is the route path of a ref, followed by a path when given.
 function splatOf(ref: string, path?: string) {
   return path ? `${ref}/${path}` : ref;
+}
+
+// permalinkOf is the full URL of the path at the commit, which embeds in
+// comments when it names lines.
+function permalinkOf(owner: string, name: string, commitID: string, path: string) {
+  const base = webContext.externalURL || `${window.location.origin}${subUrl("/")}/`;
+  return `${base}${owner}/${name}/src/${refPath(splatOf(commitID, path))}`;
 }
 
 const SIZE_UNITS = ["B", "KiB", "MiB", "GiB"];
@@ -510,7 +519,7 @@ export function RepoCode({
                       ? srcLink(data.path, data.commitID, ITEM_CLASS, t("repo.file_permalink"))
                       : null
                   }
-                  permalinkURL={`${window.location.origin}${subUrl(`/${repo.owner}/${repo.name}/src/${refPath(splatOf(data.commitID, data.path))}`)}`}
+                  permalinkURL={permalinkOf(repo.owner, repo.name, data.commitID, data.path)}
                   canGoToLine={!!data.file?.content}
                 />
               )}
@@ -632,12 +641,7 @@ function FileMenu({
           <button
             type="button"
             className={ITEM_CLASS}
-            onClick={() =>
-              void navigator.clipboard.writeText(permalinkURL).then(
-                () => toast.success(t("copied")),
-                () => toast.error(t("copy_failed")),
-              )
-            }
+            onClick={() => copyPermalink(permalinkURL + lineHashOf(selectedLinesOf(window.location.hash)), t)}
           >
             {t("repo.copy_permalink")}
           </button>
@@ -1105,6 +1109,7 @@ function FileView({
   const { t } = useTranslation();
   const params = { owner, repo: name };
   const splat = splatOf(data.ref, data.path);
+  const permalinkURL = permalinkOf(owner, name, data.commitID, data.path);
   const { lineCount, locCount } = useMemo(() => {
     const lines = file.content ? file.content.replace(/\n$/, "").split("\n") : [];
     return { lineCount: lines.length, locCount: lines.filter((line) => line.trim() !== "").length };
@@ -1276,7 +1281,11 @@ function FileView({
           ) : null}
         </div>
       </div>
-      {showSource ? <SourceView file={file} /> : <FileBody file={file} rawURL={rawURL} />}
+      {showSource ? (
+        <SourceView file={file} permalinkURL={permalinkURL} />
+      ) : (
+        <FileBody file={file} rawURL={rawURL} permalinkURL={permalinkURL} />
+      )}
     </section>
   );
 }
@@ -1299,11 +1308,11 @@ function ViewModeButton({ active, onClick, children }: { active: boolean; onClic
   );
 }
 
-function FileBody({ file, rawURL }: { file: RepoFile; rawURL: string }) {
+function FileBody({ file, rawURL, permalinkURL }: { file: RepoFile; rawURL: string; permalinkURL: string }) {
   const { t } = useTranslation();
   switch (file.kind) {
     case "text":
-      return <SourceView file={file} />;
+      return <SourceView file={file} permalinkURL={permalinkURL} />;
     case "markup":
       return <Markdown html={file.html ?? ""} className="p-4 sm:p-6" headingAnchors />;
     case "notebook":
@@ -1344,6 +1353,19 @@ function FileBody({ file, rawURL }: { file: RepoFile; rawURL: string }) {
 
 const LINE_HASH = /^#L(\d+)(?:-L?(\d+))?$/;
 
+// lineHashOf is the URL hash that selects the lines, e.g., "#L5-L9".
+function lineHashOf(range: SelectedLineRange | null) {
+  if (!range) return "";
+  return range.start === range.end ? `#L${range.start}` : `#L${range.start}-L${range.end}`;
+}
+
+function copyPermalink(url: string, t: TFunction) {
+  void navigator.clipboard.writeText(url).then(
+    () => toast.success(t("copied")),
+    () => toast.error(t("copy_failed")),
+  );
+}
+
 function selectedLinesOf(hash: string): SelectedLineRange | null {
   const match = LINE_HASH.exec(hash);
   if (!match) return null;
@@ -1362,12 +1384,37 @@ const DARK_CONTRAST_CSS = `[data-line] span[style*="--diffs-token-dark:#636363"]
   --mix-selection-dark: 85%;
 }`;
 
+// The menu of the selected lines sits in the gutter, to the left of their
+// line numbers.
+const LINE_MENU_GUTTER_CSS = `[data-column-number] { padding-left: 2.25rem; }`;
+
 // SourceView shows a text file highlighted, with line numbers that select
 // lines into the URL hash, e.g., "#L5-L9".
-function SourceView({ file }: { file: RepoFile }) {
+function SourceView({ file, permalinkURL }: { file: RepoFile; permalinkURL: string }) {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const [selected, setSelected] = useState(() => selectedLinesOf(window.location.hash));
   const wrapper = useRef<HTMLDivElement>(null);
+  // menu is where the menu of the selected lines sits, next to the first of
+  // them, once it renders, along with the selection it was placed for.
+  const [menu, setMenu] = useState<{ lines: SelectedLineRange; top: number }>();
+  useEffect(() => {
+    if (!selected) return;
+    let frame = 0;
+    let tries = 0;
+    const place = () => {
+      const root = wrapper.current?.querySelector("diffs-container")?.shadowRoot;
+      const line = root?.querySelector(`[data-column-number="${selected.start}"]`);
+      if (line && wrapper.current) {
+        setMenu({
+          lines: selected,
+          top: line.getBoundingClientRect().top - wrapper.current.getBoundingClientRect().top,
+        });
+      } else if (tries++ < 300) frame = window.requestAnimationFrame(place);
+    };
+    frame = window.requestAnimationFrame(place);
+    return () => window.cancelAnimationFrame(frame);
+  }, [selected]);
   const initialLine = useRef(selected?.start);
 
   // The lines render after the highlighter loads, so wait for the selected
@@ -1402,7 +1449,30 @@ function SourceView({ file }: { file: RepoFile }) {
   const tabCSS = file.tabWidth ? `pre, code { tab-size: ${file.tabWidth}; }` : "";
 
   return (
-    <div ref={wrapper} className="text-sm">
+    <div ref={wrapper} className="relative text-sm">
+      {selected && menu?.lines === selected ? (
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              aria-label={t("repo.line_actions")}
+              style={{ top: menu.top - 2 }}
+              className="absolute left-1 z-10 grid size-6 cursor-pointer place-items-center rounded-md border border-(--color-border) bg-(--color-background) text-(--color-muted-foreground) hover:text-(--color-foreground)"
+            >
+              <Ellipsis className="size-4" aria-hidden />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="flex w-auto flex-col p-1 whitespace-nowrap">
+            <button
+              type="button"
+              className={ITEM_CLASS}
+              onClick={() => copyPermalink(permalinkURL + lineHashOf(selected), t)}
+            >
+              {t("repo.copy_permalink")}
+            </button>
+          </PopoverContent>
+        </Popover>
+      ) : null}
       <CodeFile
         file={{ name: file.name, contents: (file.content ?? "").replace(/\n$/, "") }}
         selectedLines={selected}
@@ -1413,14 +1483,10 @@ function SourceView({ file }: { file: RepoFile }) {
           disableFileHeader: true,
           overflow: "scroll",
           enableLineSelection: true,
-          unsafeCSS: DARK_CONTRAST_CSS + tabCSS,
+          unsafeCSS: DARK_CONTRAST_CSS + LINE_MENU_GUTTER_CSS + tabCSS,
           onLineSelected: (range) => {
             setSelected(range);
-            const hash = range
-              ? range.start === range.end
-                ? `#L${range.start}`
-                : `#L${range.start}-L${range.end}`
-              : "";
+            const hash = lineHashOf(range);
             window.history.replaceState(
               window.history.state,
               "",

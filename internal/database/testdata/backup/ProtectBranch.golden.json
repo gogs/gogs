@@ -1,1 +1,1 @@
-{"ID":1,"RepoID":1,"Name":"main","Protected":true,"RequirePullRequest":true,"EnableAllowlist":true,"AllowlistUserIDs":"1,2","AllowlistTeamIDs":"1"}
+{"ID":1,"RepoID":1,"Name":"main","Protected":true,"RequirePullRequest":true,"EnableAllowlist":true,"AllowlistUserIDs":"1,2","AllowlistTeamIDs":"1","RequiredApprovals":2,"DismissStaleApprovals":true,"RequireResolvedConversations":true}

@@ -1547,6 +1547,9 @@ export function RepoBranchProtection({
   const [form, setForm] = useState<RepoProtectedBranchForm>({
     protected: branch.protected,
     requirePullRequest: branch.requirePullRequest,
+    requiredApprovals: branch.requiredApprovals,
+    dismissStaleApprovals: branch.dismissStaleApprovals,
+    requireResolvedConversations: branch.requireResolvedConversations,
     enableAllowlist: branch.enableAllowlist,
     allowlistUserIDs: branch.allowlistUserIDs,
     allowlistTeamIDs: branch.allowlistTeamIDs,
@@ -1572,7 +1575,7 @@ export function RepoBranchProtection({
   return (
     <RepoSettingsLayout owner={owner} name={name} active="branches">
       <h1 className="mb-2 text-xl font-semibold">{t("repo.settings.branch_protection")}</h1>
-      <p className="mb-6 text-sm text-(--color-muted-foreground)">
+      <p className="mb-5 text-sm text-(--color-muted-foreground)">
         {before}
         <code className="rounded bg-(--color-surface) px-1 font-mono text-[0.9em] font-semibold wrap-anywhere text-(--color-foreground)">
           {branch.name}
@@ -1582,93 +1585,154 @@ export function RepoBranchProtection({
       <form onSubmit={onSubmit} noValidate>
         <fieldset disabled={update.isPending} className="contents">
           <FormAlert message={formError} />
-          <div className="flex flex-col gap-5">
-            <CheckboxField
-              id="protected"
-              checked={form.protected}
-              onChange={(on) => set({ protected: on })}
-              label={
-                <OptionLabel
-                  title={t("repo.settings.protect_this_branch")}
-                  desc={t("repo.settings.protect_this_branch_desc")}
-                />
-              }
-            />
-            {form.protected ? (
-              <div className="ml-2 flex flex-col gap-5 border-l-2 border-(--color-border) pl-4">
-                <CheckboxField
-                  id="requirePullRequest"
-                  checked={form.requirePullRequest}
-                  onChange={(on) => set({ requirePullRequest: on })}
-                  label={
-                    <OptionLabel
-                      title={t("repo.settings.protect_require_pull_request")}
-                      desc={t("repo.settings.protect_require_pull_request_desc")}
-                    />
-                  }
-                />
-                {isOrg ? (
-                  <CheckboxField
-                    id="enableAllowlist"
-                    checked={form.enableAllowlist}
-                    onChange={(on) => set({ enableAllowlist: on })}
-                    label={
-                      <OptionLabel
-                        title={t("repo.settings.protect_allowlist_committers")}
-                        desc={t("repo.settings.protect_allowlist_committers_desc")}
-                      />
-                    }
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3">
+              <CheckboxField
+                id="protected"
+                checked={form.protected}
+                onChange={(on) => set({ protected: on })}
+                label={
+                  <OptionLabel
+                    title={t("repo.settings.protect_this_branch")}
+                    desc={t("repo.settings.protect_this_branch_desc")}
                   />
-                ) : null}
-                {isOrg && form.enableAllowlist ? (
-                  <div className="ml-2 flex flex-col gap-5 border-l-2 border-(--color-border) pl-4">
-                    {branch.userOptions?.length ? (
-                      <fieldset className="flex flex-col gap-2.5">
-                        <legend className="mb-2.5 text-sm font-medium">
-                          {t("repo.settings.protect_allowlist_users")}
-                        </legend>
-                        {branch.userOptions.map((u) => (
-                          <CheckboxField
-                            key={u.id}
-                            id={`allowlist-user-${u.id}`}
-                            checked={form.allowlistUserIDs.includes(u.id)}
-                            onChange={(on) => set({ allowlistUserIDs: toggle(form.allowlistUserIDs, u.id, on) })}
-                            label={
-                              <span className="inline-flex items-center gap-2">
-                                <img src={u.avatarURL} alt="" className="size-5 rounded-full" />
-                                {u.name}
-                              </span>
+                }
+              />
+              {form.protected ? (
+                <div className="ml-2 flex flex-col gap-3 border-l-2 border-(--color-border) pl-4">
+                  <div className="flex flex-col gap-3">
+                    <CheckboxField
+                      id="requirePullRequest"
+                      checked={form.requirePullRequest}
+                      onChange={(on) => set({ requirePullRequest: on })}
+                      label={
+                        <OptionLabel
+                          title={t("repo.settings.protect_require_pull_request")}
+                          desc={t("repo.settings.protect_require_pull_request_desc")}
+                        />
+                      }
+                    />
+                    {form.requirePullRequest ? (
+                      <div className="ml-2 flex flex-col gap-3 border-l-2 border-(--color-border) pl-4">
+                        <div className="flex flex-col gap-0.5">
+                          <label htmlFor="requiredApprovals" className="text-sm font-medium">
+                            {t("repo.settings.protect_required_approvals")}
+                          </label>
+                          <p id="requiredApprovals-desc" className="text-sm text-(--color-muted-foreground)">
+                            {t("repo.settings.protect_required_approvals_desc")}
+                          </p>
+                          <Input
+                            id="requiredApprovals"
+                            type="number"
+                            inputMode="numeric"
+                            min={0}
+                            max={10}
+                            className="mt-1.5 w-24"
+                            aria-describedby="requiredApprovals-desc"
+                            value={form.requiredApprovals}
+                            onChange={(e) =>
+                              set({ requiredApprovals: Math.min(10, Math.max(0, Number(e.target.value) || 0)) })
                             }
                           />
-                        ))}
-                      </fieldset>
-                    ) : null}
-                    {branch.teamOptions?.length ? (
-                      <fieldset className="flex flex-col gap-2.5">
-                        <legend className="mb-2.5 text-sm font-medium">
-                          {t("repo.settings.protect_allowlist_teams")}
-                        </legend>
-                        {branch.teamOptions.map((team) => (
-                          <CheckboxField
-                            key={team.id}
-                            id={`allowlist-team-${team.id}`}
-                            checked={form.allowlistTeamIDs.includes(team.id)}
-                            onChange={(on) => set({ allowlistTeamIDs: toggle(form.allowlistTeamIDs, team.id, on) })}
-                            label={
-                              <span className="inline-flex items-center gap-2">
-                                <Users className="size-4 text-(--color-muted-foreground)" aria-hidden />
-                                {team.name}
-                              </span>
-                            }
-                          />
-                        ))}
-                      </fieldset>
+                        </div>
+                        {form.requiredApprovals > 0 ? (
+                          <>
+                            <CheckboxField
+                              id="dismissStaleApprovals"
+                              checked={form.dismissStaleApprovals}
+                              onChange={(on) => set({ dismissStaleApprovals: on })}
+                              label={
+                                <OptionLabel
+                                  title={t("repo.settings.protect_dismiss_stale_approvals")}
+                                  desc={t("repo.settings.protect_dismiss_stale_approvals_desc")}
+                                />
+                              }
+                            />
+                            <CheckboxField
+                              id="requireResolvedConversations"
+                              checked={form.requireResolvedConversations}
+                              onChange={(on) => set({ requireResolvedConversations: on })}
+                              label={
+                                <OptionLabel
+                                  title={t("repo.settings.protect_require_resolved_conversations")}
+                                  desc={t("repo.settings.protect_require_resolved_conversations_desc")}
+                                />
+                              }
+                            />
+                          </>
+                        ) : null}
+                      </div>
                     ) : null}
                   </div>
-                ) : null}
-              </div>
-            ) : null}
-            <div className="flex flex-wrap items-center gap-2 border-t border-(--color-border) pt-5">
+                  {isOrg ? (
+                    <div className="flex flex-col gap-3">
+                      <CheckboxField
+                        id="enableAllowlist"
+                        checked={form.enableAllowlist}
+                        onChange={(on) => set({ enableAllowlist: on })}
+                        label={
+                          <OptionLabel
+                            title={t("repo.settings.protect_allowlist_committers")}
+                            desc={t("repo.settings.protect_allowlist_committers_desc")}
+                          />
+                        }
+                      />
+                      {form.enableAllowlist ? (
+                        <div className="ml-2 flex flex-col gap-3 border-l-2 border-(--color-border) pl-4">
+                          {branch.userOptions?.length ? (
+                            <fieldset className="flex flex-col gap-2">
+                              <legend className="mb-2 text-sm font-medium">
+                                {t("repo.settings.protect_allowlist_users")}
+                              </legend>
+                              {branch.userOptions.map((u) => (
+                                <CheckboxField
+                                  key={u.id}
+                                  id={`allowlist-user-${u.id}`}
+                                  checked={form.allowlistUserIDs.includes(u.id)}
+                                  onChange={(on) => set({ allowlistUserIDs: toggle(form.allowlistUserIDs, u.id, on) })}
+                                  label={
+                                    <span className="flex items-center gap-2">
+                                      <img src={u.avatarURL} alt="" className="size-5 rounded-full" />
+                                      {u.name}
+                                    </span>
+                                  }
+                                />
+                              ))}
+                            </fieldset>
+                          ) : null}
+                          {branch.teamOptions?.length ? (
+                            <fieldset className="flex flex-col gap-2">
+                              <legend className="mb-2 text-sm font-medium">
+                                {t("repo.settings.protect_allowlist_teams")}
+                              </legend>
+                              {branch.teamOptions.map((team) => (
+                                <CheckboxField
+                                  key={team.id}
+                                  id={`allowlist-team-${team.id}`}
+                                  checked={form.allowlistTeamIDs.includes(team.id)}
+                                  onChange={(on) =>
+                                    set({ allowlistTeamIDs: toggle(form.allowlistTeamIDs, team.id, on) })
+                                  }
+                                  label={
+                                    <span className="flex items-center gap-2">
+                                      <span className="flex size-5 items-center justify-center">
+                                        <Users className="size-4 text-(--color-muted-foreground)" aria-hidden />
+                                      </span>
+                                      {team.name}
+                                    </span>
+                                  }
+                                />
+                              ))}
+                            </fieldset>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap items-center gap-2 border-t border-(--color-border) pt-4">
               <Button type="submit">{t("repo.settings.update_settings")}</Button>
               <Button asChild variant="outline">
                 <Link to="/$owner/$repo/settings/branches" params={{ owner, repo: name }}>

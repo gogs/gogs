@@ -337,6 +337,7 @@ type repoProtectedBranch struct {
 	EnableAllowlist    bool    `json:"enableAllowlist"`
 	AllowlistUserIDs   []int64 `json:"allowlistUserIDs"`
 	AllowlistTeamIDs   []int64 `json:"allowlistTeamIDs"`
+	reviewProtection
 	// The options are only sent for repositories of organizations, which
 	// alone can let people and teams push past the protection.
 	UserOptions []repoProtectedBranchUser `json:"userOptions,omitempty"`
@@ -395,6 +396,11 @@ func getRepoProtectedBranch(c flamego.Context, logger *logx.Logger, rc *repoAdmi
 		EnableAllowlist:    protectBranch.EnableAllowlist,
 		AllowlistUserIDs:   splitIDs(protectBranch.AllowlistUserIDs),
 		AllowlistTeamIDs:   splitIDs(protectBranch.AllowlistTeamIDs),
+		reviewProtection: reviewProtection{
+			RequiredApprovals:            protectBranch.RequiredApprovals,
+			DismissStaleApprovals:        protectBranch.DismissStaleApprovals,
+			RequireResolvedConversations: protectBranch.RequireResolvedConversations,
+		},
 	}
 	if !rc.Owner.IsOrganization() {
 		return http.StatusOK, resp, nil
@@ -421,17 +427,38 @@ func getRepoProtectedBranch(c flamego.Context, logger *logx.Logger, rc *repoAdmi
 	return http.StatusOK, resp, nil
 }
 
+// reviewProtection is what reviews a pull request needs before it can merge
+// into a protected branch.
+type reviewProtection struct {
+	RequiredApprovals            int  `json:"requiredApprovals" validate:"min=0,max=10"`
+	DismissStaleApprovals        bool `json:"dismissStaleApprovals"`
+	RequireResolvedConversations bool `json:"requireResolvedConversations"`
+}
+
 type repoProtectedBranchRequest struct {
 	Protected          bool    `json:"protected"`
 	RequirePullRequest bool    `json:"requirePullRequest"`
 	EnableAllowlist    bool    `json:"enableAllowlist"`
 	AllowlistUserIDs   []int64 `json:"allowlistUserIDs"`
 	AllowlistTeamIDs   []int64 `json:"allowlistTeamIDs"`
+	reviewProtection
 }
 
 func putRepoProtectedBranch(c flamego.Context, logger *logx.Logger, rc *repoAdminContext, protectBranch *database.ProtectBranch, req repoProtectedBranchRequest) (statusCode int, resp any, err error) {
 	protectBranch.Protected = req.Protected
 	protectBranch.RequirePullRequest = req.RequirePullRequest
+	// Reviews only gate pull requests, so without requiring them, writers
+	// would push past the reviews.
+	// The options of approvals only apply when approvals are required.
+	if req.RequirePullRequest {
+		protectBranch.RequiredApprovals = req.RequiredApprovals
+		protectBranch.DismissStaleApprovals = req.DismissStaleApprovals && req.RequiredApprovals > 0
+		protectBranch.RequireResolvedConversations = req.RequireResolvedConversations && req.RequiredApprovals > 0
+	} else {
+		protectBranch.RequiredApprovals = 0
+		protectBranch.DismissStaleApprovals = false
+		protectBranch.RequireResolvedConversations = false
+	}
 	if rc.Owner.IsOrganization() {
 		protectBranch.EnableAllowlist = req.EnableAllowlist
 		// People and teams who cannot write are dropped.

@@ -53,7 +53,7 @@ export function SettingsMenu() {
       <PopoverTrigger
         {...menu.trigger}
         aria-label={t("settings")}
-        className="inline-flex size-9 cursor-pointer items-center justify-center rounded-md text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
+        className="inline-flex size-8 cursor-pointer items-center justify-center rounded-md text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground)"
       >
         <Settings className="size-4" />
       </PopoverTrigger>

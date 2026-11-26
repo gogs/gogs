@@ -1216,7 +1216,7 @@ func (s *IssuesStore) ReplaceLabels(ctx context.Context, issue *Issue, labels ..
 func (s *IssuesStore) listParticipants(ctx context.Context, issueID int64) ([]*User, error) {
 	db := s.db.WithContext(ctx)
 	users := make([]*User, 0, 5)
-	return users, db.Where("id IN (?)", db.Model(new(Comment)).Select("poster_id").Where("issue_id = ?", issueID)).Find(&users).Error
+	return users, db.Where("id IN (?)", db.Model(new(Comment)).Select("poster_id").Where("issue_id = ? AND is_pending = ?", issueID, false)).Find(&users).Error
 }
 
 // findLowerMentions returns the lowercase names that the content mentions.

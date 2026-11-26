@@ -501,6 +501,11 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 		}, withRepoPulls)
 		f.Group("/pulls/{index}", func() {
 			issueChanges()
+			f.Post("/code-comments", bindJSON(repoPullCodeCommentRequest{}), postRepoPullCodeComment)
+			f.Post("/reviews", bindJSON(repoPullReviewRequest{}), postRepoPullReview)
+			f.Delete("/reviews/pending", deleteRepoPullPendingReview)
+			f.Combo("/threads/{id}/resolved", withThreadRoot).Put(putRepoPullThreadResolved).Delete(deleteRepoPullThreadResolved)
+			f.Combo("/reviewers/{username}").Put(putRepoPullReviewer).Delete(deleteRepoPullReviewer)
 			f.Group("", func() {
 				f.Post("/merge", bindJSON(repoPullMergeRequest{}), postRepoPullMerge)
 				f.Combo("/branch").Post(postRepoPullBranch).Delete(deleteRepoPullBranch)

@@ -104,7 +104,7 @@ export function SettingsNavGroup({ title, children }: { title?: string; children
   return (
     <div role="group" aria-labelledby={title ? id : undefined} className="flex flex-col gap-0.5">
       {title ? (
-        <div id={id} className="mt-3 mb-0.5 px-3 text-xs font-semibold text-(--color-muted-foreground)">
+        <div id={id} className="mt-4 mb-1 px-3 text-sm font-semibold text-(--color-foreground)">
           {title}
         </div>
       ) : null}

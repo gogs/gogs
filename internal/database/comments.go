@@ -32,6 +32,15 @@ const (
 	CommentTypeCommentRef
 	// Reference from a pull request.
 	CommentTypePullRef
+	// A submitted review of a pull request, whose content is its summary.
+	CommentTypeReview
+	// A comment on lines of the diff of a pull request, which starts a thread
+	// or replies to one.
+	CommentTypeCode
+	// A review of the pull request was requested from TargetUserID.
+	CommentTypeReviewRequest
+	// The review request for TargetUserID was removed.
+	CommentTypeReviewRequestRemoved
 )
 
 type CommentTag int
@@ -61,8 +70,36 @@ type Comment struct {
 	Updated     time.Time `json:"-" gorm:"-"`
 	UpdatedUnix int64
 
-	// Reference issue in commit message
+	// Reference issue in commit message, or the head commit a code comment was
+	// written on.
 	CommitSHA string `gorm:"type:VARCHAR(64)"`
+
+	// ReviewID is the review a code comment or a review summary belongs to.
+	ReviewID int64 `gorm:"index:IDX_comment_review_id;not null;default:0"`
+	// ReplyToID is the first comment of the thread a reply belongs to. Replies
+	// never reply to replies.
+	ReplyToID int64 `gorm:"index:IDX_comment_reply_to_id;not null;default:0"`
+	// IsPending marks a comment of a review that is not submitted yet, which
+	// only its poster can see.
+	IsPending bool `gorm:"not null;default:false"`
+	// TargetUserID is the user a review was requested from.
+	TargetUserID int64 `gorm:"not null;default:0"`
+
+	// The lines of the diff that a thread of code comments is on, set on its
+	// first comment. Side and StartSide are "old" or "new", and Line is the
+	// last line of the range.
+	TreePath  string `gorm:"type:VARCHAR(500)"`
+	Side      string `gorm:"type:VARCHAR(3)"`
+	StartSide string `gorm:"type:VARCHAR(3)"`
+	StartLine int64  `gorm:"not null;default:0"`
+	// BaseSHA is the merge base the old side of the lines is in.
+	BaseSHA string `gorm:"type:VARCHAR(64)"`
+	// DiffHunk is the last lines of the diff up to Line, with their prefix,
+	// saved when the thread starts.
+	DiffHunk string `gorm:"type:TEXT"`
+	// ResolvedByID is who resolved the thread, set on its first comment.
+	ResolvedByID int64 `gorm:"not null;default:0"`
+	ResolvedUnix int64 `gorm:"not null;default:0"`
 
 	Attachments []*Attachment `json:"-" gorm:"-"`
 
@@ -138,6 +175,19 @@ type CreateCommentOptions struct {
 	LineNum     int64
 	Content     string
 	Attachments []string // UUIDs of attachments
+
+	ReviewID     int64
+	ReplyToID    int64
+	IsPending    bool
+	TargetUserID int64
+	// The lines of the diff that a thread of code comments starts on, see
+	// the fields of the same names in Comment.
+	TreePath  string
+	Side      string
+	StartSide string
+	StartLine int64
+	BaseSHA   string
+	DiffHunk  string
 }
 
 var _ errx.NotFound = (*ErrCommentNotExist)(nil)
@@ -183,6 +233,17 @@ func (s *CommentsStore) create(ctx context.Context, logger *logx.Logger, opts *C
 		CommitSHA: opts.CommitSHA,
 		Line:      opts.LineNum,
 		Content:   opts.Content,
+
+		ReviewID:     opts.ReviewID,
+		ReplyToID:    opts.ReplyToID,
+		IsPending:    opts.IsPending,
+		TargetUserID: opts.TargetUserID,
+		TreePath:     opts.TreePath,
+		Side:         opts.Side,
+		StartSide:    opts.StartSide,
+		StartLine:    opts.StartLine,
+		BaseSHA:      opts.BaseSHA,
+		DiffHunk:     opts.DiffHunk,
 	}
 	err := db.Create(comment).Error
 	if err != nil {
@@ -204,16 +265,23 @@ func (s *CommentsStore) create(ctx context.Context, logger *logx.Logger, opts *C
 		closedColumn = "num_closed_pulls"
 	}
 	switch opts.Type {
-	case CommentTypeComment:
-		act.OpType = ActionCommentIssue
-		err = db.Exec("UPDATE issue SET num_comments = num_comments + 1 WHERE id = ?", opts.Issue.ID).Error
-		if err != nil {
-			return nil, errors.Wrap(err, "count comment")
+	case CommentTypeComment, CommentTypeCode:
+		// A pending comment of a review notifies nobody until the review is
+		// submitted.
+		if !opts.IsPending {
+			act.OpType = ActionCommentIssue
+			err = db.Exec("UPDATE issue SET num_comments = num_comments + 1 WHERE id = ?", opts.Issue.ID).Error
+			if err != nil {
+				return nil, errors.Wrap(err, "count comment")
+			}
 		}
 		err = newAttachmentsStore(s.db).Bind(ctx, opts.Issue.ID, comment.ID, opts.Attachments)
 		if err != nil {
 			return nil, errors.Wrap(err, "attach files")
 		}
+
+	case CommentTypeReview:
+		act.OpType = ActionCommentIssue
 
 	case CommentTypeReopen:
 		act.OpType = ActionReopenIssue
@@ -236,6 +304,9 @@ func (s *CommentsStore) create(ctx context.Context, logger *logx.Logger, opts *C
 		}
 	}
 
+	if opts.IsPending {
+		return comment, s.LoadAttributes(ctx, comment)
+	}
 	err = db.Exec("UPDATE issue SET updated_unix = ? WHERE id = ?", db.NowFunc().Unix(), opts.Issue.ID).Error
 	if err != nil {
 		return nil, errors.Wrap(err, "update issue")
@@ -414,7 +485,9 @@ func (s *CommentsStore) LoadAttributes(ctx context.Context, comments ...*Comment
 // ListByIssueID returns the comments of the issue with given ID that are
 // updated at or after given Unix time, oldest first, and their attributes.
 func (s *CommentsStore) ListByIssueID(ctx context.Context, issueID, since int64) ([]*Comment, error) {
-	db := s.db.WithContext(ctx).Where("issue_id = ?", issueID)
+	// Pending comments are only shown to their poster, by the review threads
+	// of a pull request.
+	db := s.db.WithContext(ctx).Where("issue_id = ? AND is_pending = ?", issueID, false)
 	if since > 0 {
 		db = db.Where("updated_unix >= ?", since)
 	}
@@ -432,7 +505,7 @@ func (s *CommentsStore) ListByIssueID(ctx context.Context, issueID, since int64)
 func (s *CommentsStore) ListByRepoID(ctx context.Context, repoID, since int64) ([]*Comment, error) {
 	db := s.db.WithContext(ctx).Select("comment.*").
 		Joins("INNER JOIN issue ON issue.id = comment.issue_id").
-		Where("issue.repo_id = ?", repoID)
+		Where("issue.repo_id = ? AND comment.is_pending = ?", repoID, false)
 	if since > 0 {
 		db = db.Where("comment.updated_unix >= ?", since)
 	}
@@ -455,6 +528,10 @@ func (s *CommentsStore) Update(ctx context.Context, logger *logx.Logger, doer *U
 		return err
 	}
 
+	// Nobody else sees a pending comment of a review until it is submitted.
+	if c.IsPending {
+		return nil
+	}
 	if err = newIssuesStore(s.db).LoadAttributes(ctx, c.Issue); err != nil {
 		logger.Error("Failed to load issue attributes", "issueID", c.IssueID, "error", err)
 		return nil
@@ -490,13 +567,29 @@ func (s *CommentsStore) DeleteByID(ctx context.Context, logger *logx.Logger, doe
 		return err
 	}
 
+	// Deleting the first comment of a thread deletes its replies.
+	deleted := []*Comment{comment}
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		err := tx.Delete(new(Comment), comment.ID).Error
-		if err != nil {
-			return errors.Wrap(err, "delete comment")
+		if comment.ReplyToID == 0 {
+			var replies []*Comment
+			err := tx.Where("reply_to_id = ?", comment.ID).Find(&replies).Error
+			if err != nil {
+				return errors.Wrap(err, "find replies")
+			}
+			deleted = append(deleted, replies...)
 		}
-		if comment.Type == CommentTypeComment {
-			return tx.Exec("UPDATE issue SET num_comments = num_comments - 1 WHERE id = ?", comment.IssueID).Error
+		counted := 0
+		for _, c := range deleted {
+			err := tx.Delete(new(Comment), c.ID).Error
+			if err != nil {
+				return errors.Wrap(err, "delete comment")
+			}
+			if (c.Type == CommentTypeComment || c.Type == CommentTypeCode) && !c.IsPending {
+				counted++
+			}
+		}
+		if counted > 0 {
+			return tx.Exec("UPDATE issue SET num_comments = num_comments - ? WHERE id = ?", counted, comment.IssueID).Error
 		}
 		return nil
 	})
@@ -504,9 +597,15 @@ func (s *CommentsStore) DeleteByID(ctx context.Context, logger *logx.Logger, doe
 		return err
 	}
 
-	err = newAttachmentsStore(s.db).DeleteByCommentID(ctx, comment.ID, true)
-	if err != nil {
-		logger.Error("Failed to delete attachments of comment", "commentID", comment.ID, "error", err)
+	for _, c := range deleted {
+		err = newAttachmentsStore(s.db).DeleteByCommentID(ctx, c.ID, true)
+		if err != nil {
+			logger.Error("Failed to delete attachments of comment", "commentID", c.ID, "error", err)
+		}
+	}
+	// A pending comment was never announced, so its deletion is not either.
+	if comment.IsPending {
+		return nil
 	}
 
 	if err = newIssuesStore(s.db).LoadAttributes(ctx, comment.Issue); err != nil {

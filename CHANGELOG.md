@@ -33,6 +33,9 @@ All notable changes to Gogs are documented in this file.
 - API endpoint for an access token to delete itself: `DELETE /user/token`, e.g., for a tool to revoke its token when it is done. [#8574](https://github.com/gogs/gogs/pull/8574)
 - Commit pages link issue references and @mentions in commit messages, and commit lists and file lists also link @mentions. [#8628](https://github.com/gogs/gogs/pull/8628)
 - The API lists commits page by page with `page`, and from a branch, tag or commit with `sha`. It lists branches page by page with `page` and `pageSize`. Commits, branches and repository search take the page size as either `pageSize` or `limit`. [#8582](https://github.com/gogs/gogs/pull/8582)
+- Pull requests can be reviewed like on GitHub: comment on lines of the diff, alone or in a pending review, then comment, approve or request changes. Comments and code comments take replies, conversations can be resolved, and reviews can be requested from people who can write. [#8649](https://github.com/gogs/gogs/pull/8649)
+- Branch protection that requires pull requests can also require approvals, dismiss approvals of older commits and require resolved conversations before merging. Approvals from people who cannot write show but do not count. [#8649](https://github.com/gogs/gogs/pull/8649)
+- "Copy permalink" for selected lines of a file. A permalink to lines of a commit of the same repository, on a line of its own in a comment, shows those lines. [#8649](https://github.com/gogs/gogs/pull/8649)
 
 ### Changed
 

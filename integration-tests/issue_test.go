@@ -1078,3 +1078,42 @@ func issueCommitAbbrev(id string, n int) string {
 	}
 	return id[:n]
 }
+
+func TestIssuePermalinkEmbeds(t *testing.T) {
+	t.Parallel()
+
+	owner := seedUser(t, CreateUserOptions{})
+	outsider := seedUser(t, CreateUserOptions{})
+	repo := seedRepository(t, owner.ID, CreateRepositoryOptions{Private: true, AutoInit: true})
+	ownerClient := authenticatedClient(t, owner)
+	link := serverURL + "/" + repo.Owner + "/" + repo.Name + "/src/" + gitMainOnDisk(t, repo) + "/README.md#L1"
+	index := issueCreate(t, ownerClient, repo, "See the code", link)
+	contentHTML := func(c *client) string {
+		t.Helper()
+		var got struct {
+			ContentHTML string `json:"contentHTML"`
+		}
+		c.doJSON(http.MethodGet, issueAPIPath(repo, "issues", index), nil, http.StatusOK, &got)
+		return got.ContentHTML
+	}
+	assert.Contains(t, contentHTML(ownerClient), "data-permalink")
+
+	// Guests of the issues of a private repository cannot read its code, so
+	// they see the link without the lines.
+	repoVisibilityPutPublicAccess(t, ownerClient, repo, false, true)
+	for name, c := range map[string]*client{
+		"unauthenticated": newClient(t),
+		"outsider":        authenticatedClient(t, outsider),
+	} {
+		t.Run(name, func(t *testing.T) {
+			got := contentHTML(c)
+			assert.Contains(t, got, link)
+			assert.NotContains(t, got, "data-permalink")
+		})
+	}
+	var preview struct {
+		HTML string `json:"html"`
+	}
+	authenticatedClient(t, outsider).doJSON(http.MethodPost, "/api/web/"+repo.Owner+"/"+repo.Name+"/markdown", map[string]any{"text": link}, http.StatusOK, &preview)
+	assert.NotContains(t, preview.HTML, "data-permalink")
+}

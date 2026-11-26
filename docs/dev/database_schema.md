@@ -97,22 +97,36 @@ Indexes:
 # Table "comment"
 
 ```
-    Field    |    Column    | PostgreSQL  |         MySQL         |        SQLite3        
--------------+--------------+-------------+-----------------------+-----------------------
- ID          | id           | BIGSERIAL   | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
- Type        | type         | BIGINT      | BIGINT                | INTEGER               
- PosterID    | poster_id    | BIGINT      | BIGINT                | INTEGER               
- IssueID     | issue_id     | BIGINT      | BIGINT                | INTEGER               
- CommitID    | commit_id    | BIGINT      | BIGINT                | INTEGER               
- Line        | line         | BIGINT      | BIGINT                | INTEGER               
- Content     | content      | TEXT        | TEXT                  | TEXT                  
- CreatedUnix | created_unix | BIGINT      | BIGINT                | INTEGER               
- UpdatedUnix | updated_unix | BIGINT      | BIGINT                | INTEGER               
- CommitSHA   | commit_sha   | VARCHAR(64) | VARCHAR(64)           | VARCHAR(64)           
+    Field     |     Column     |           PostgreSQL           |             MySQL              |            SQLite3             
+--------------+----------------+--------------------------------+--------------------------------+--------------------------------
+ ID           | id             | BIGSERIAL                      | BIGINT AUTO_INCREMENT          | INTEGER AUTOINCREMENT          
+ Type         | type           | BIGINT                         | BIGINT                         | INTEGER                        
+ PosterID     | poster_id      | BIGINT                         | BIGINT                         | INTEGER                        
+ IssueID      | issue_id       | BIGINT                         | BIGINT                         | INTEGER                        
+ CommitID     | commit_id      | BIGINT                         | BIGINT                         | INTEGER                        
+ Line         | line           | BIGINT                         | BIGINT                         | INTEGER                        
+ Content      | content        | TEXT                           | TEXT                           | TEXT                           
+ CreatedUnix  | created_unix   | BIGINT                         | BIGINT                         | INTEGER                        
+ UpdatedUnix  | updated_unix   | BIGINT                         | BIGINT                         | INTEGER                        
+ CommitSHA    | commit_sha     | VARCHAR(64)                    | VARCHAR(64)                    | VARCHAR(64)                    
+ ReviewID     | review_id      | BIGINT NOT NULL DEFAULT 0      | BIGINT NOT NULL DEFAULT 0      | INTEGER NOT NULL DEFAULT 0     
+ ReplyToID    | reply_to_id    | BIGINT NOT NULL DEFAULT 0      | BIGINT NOT NULL DEFAULT 0      | INTEGER NOT NULL DEFAULT 0     
+ IsPending    | is_pending     | BOOLEAN NOT NULL DEFAULT FALSE | BOOLEAN NOT NULL DEFAULT FALSE | NUMERIC NOT NULL DEFAULT FALSE 
+ TargetUserID | target_user_id | BIGINT NOT NULL DEFAULT 0      | BIGINT NOT NULL DEFAULT 0      | INTEGER NOT NULL DEFAULT 0     
+ TreePath     | tree_path      | VARCHAR(500)                   | VARCHAR(500)                   | VARCHAR(500)                   
+ Side         | side           | VARCHAR(3)                     | VARCHAR(3)                     | VARCHAR(3)                     
+ StartSide    | start_side     | VARCHAR(3)                     | VARCHAR(3)                     | VARCHAR(3)                     
+ StartLine    | start_line     | BIGINT NOT NULL DEFAULT 0      | BIGINT NOT NULL DEFAULT 0      | INTEGER NOT NULL DEFAULT 0     
+ BaseSHA      | base_sha       | VARCHAR(64)                    | VARCHAR(64)                    | VARCHAR(64)                    
+ DiffHunk     | diff_hunk      | TEXT                           | TEXT                           | TEXT                           
+ ResolvedByID | resolved_by_id | BIGINT NOT NULL DEFAULT 0      | BIGINT NOT NULL DEFAULT 0      | INTEGER NOT NULL DEFAULT 0     
+ ResolvedUnix | resolved_unix  | BIGINT NOT NULL DEFAULT 0      | BIGINT NOT NULL DEFAULT 0      | INTEGER NOT NULL DEFAULT 0     
 
 Primary keys: id
 Indexes: 
 	"IDX_comment_issue_id" (issue_id)
+	"IDX_comment_reply_to_id" (reply_to_id)
+	"IDX_comment_review_id" (review_id)
 ```
 
 # Table "deploy_key"
@@ -392,16 +406,19 @@ Indexes:
 # Table "protect_branch"
 
 ```
-       Field        |        Column        |  PostgreSQL  |         MySQL         |        SQLite3        
---------------------+----------------------+--------------+-----------------------+-----------------------
- ID                 | id                   | BIGSERIAL    | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
- RepoID             | repo_id              | BIGINT       | BIGINT                | INTEGER               
- Name               | name                 | VARCHAR(255) | VARCHAR(255)          | TEXT                  
- Protected          | protected            | BOOLEAN      | BOOLEAN               | NUMERIC               
- RequirePullRequest | require_pull_request | BOOLEAN      | BOOLEAN               | NUMERIC               
- EnableAllowlist    | enable_whitelist     | BOOLEAN      | BOOLEAN               | NUMERIC               
- AllowlistUserIDs   | whitelist_user_i_ds  | TEXT         | TEXT                  | TEXT                  
- AllowlistTeamIDs   | whitelist_team_i_ds  | TEXT         | TEXT                  | TEXT                  
+            Field             |             Column             |           PostgreSQL           |             MySQL              |            SQLite3             
+------------------------------+--------------------------------+--------------------------------+--------------------------------+--------------------------------
+ ID                           | id                             | BIGSERIAL                      | BIGINT AUTO_INCREMENT          | INTEGER AUTOINCREMENT          
+ RepoID                       | repo_id                        | BIGINT                         | BIGINT                         | INTEGER                        
+ Name                         | name                           | VARCHAR(255)                   | VARCHAR(255)                   | TEXT                           
+ Protected                    | protected                      | BOOLEAN                        | BOOLEAN                        | NUMERIC                        
+ RequirePullRequest           | require_pull_request           | BOOLEAN                        | BOOLEAN                        | NUMERIC                        
+ EnableAllowlist              | enable_whitelist               | BOOLEAN                        | BOOLEAN                        | NUMERIC                        
+ AllowlistUserIDs             | whitelist_user_i_ds            | TEXT                           | TEXT                           | TEXT                           
+ AllowlistTeamIDs             | whitelist_team_i_ds            | TEXT                           | TEXT                           | TEXT                           
+ RequiredApprovals            | required_approvals             | BIGINT NOT NULL DEFAULT 0      | BIGINT NOT NULL DEFAULT 0      | INTEGER NOT NULL DEFAULT 0     
+ DismissStaleApprovals        | dismiss_stale_approvals        | BOOLEAN NOT NULL DEFAULT FALSE | BOOLEAN NOT NULL DEFAULT FALSE | NUMERIC NOT NULL DEFAULT FALSE 
+ RequireResolvedConversations | require_resolved_conversations | BOOLEAN NOT NULL DEFAULT FALSE | BOOLEAN NOT NULL DEFAULT FALSE | NUMERIC NOT NULL DEFAULT FALSE 
 
 Primary keys: id
 Indexes: 
@@ -533,6 +550,41 @@ Indexes:
 	"IDX_repository_lower_name" (lower_name)
 	"IDX_repository_name" (name)
 	"UQE_repository_s" UNIQUE (owner_id, lower_name)
+```
+
+# Table "review"
+
+```
+     Field     |     Column     |        PostgreSQL         |           MySQL           |          SQLite3           
+---------------+----------------+---------------------------+---------------------------+----------------------------
+ ID            | id             | BIGSERIAL                 | BIGINT AUTO_INCREMENT     | INTEGER AUTOINCREMENT      
+ IssueID       | issue_id       | BIGINT NOT NULL           | BIGINT NOT NULL           | INTEGER NOT NULL           
+ ReviewerID    | reviewer_id    | BIGINT NOT NULL           | BIGINT NOT NULL           | INTEGER NOT NULL           
+ State         | state          | BIGINT NOT NULL DEFAULT 0 | BIGINT NOT NULL DEFAULT 0 | INTEGER NOT NULL DEFAULT 0 
+ CommitSHA     | commit_sha     | VARCHAR(64)               | VARCHAR(64)               | VARCHAR(64)                
+ CreatedUnix   | created_unix   | BIGINT                    | BIGINT                    | INTEGER                    
+ SubmittedUnix | submitted_unix | BIGINT NOT NULL DEFAULT 0 | BIGINT NOT NULL DEFAULT 0 | INTEGER NOT NULL DEFAULT 0 
+
+Primary keys: id
+Indexes: 
+	"IDX_review_issue_id" (issue_id)
+	"IDX_review_reviewer_id" (reviewer_id)
+```
+
+# Table "review_request"
+
+```
+    Field    |    Column    |   PostgreSQL    |         MySQL         |        SQLite3        
+-------------+--------------+-----------------+-----------------------+-----------------------
+ ID          | id           | BIGSERIAL       | BIGINT AUTO_INCREMENT | INTEGER AUTOINCREMENT 
+ IssueID     | issue_id     | BIGINT NOT NULL | BIGINT NOT NULL       | INTEGER NOT NULL      
+ ReviewerID  | reviewer_id  | BIGINT NOT NULL | BIGINT NOT NULL       | INTEGER NOT NULL      
+ RequesterID | requester_id | BIGINT NOT NULL | BIGINT NOT NULL       | INTEGER NOT NULL      
+ CreatedUnix | created_unix | BIGINT          | BIGINT                | INTEGER               
+
+Primary keys: id
+Indexes: 
+	"UQE_review_request_review_request" UNIQUE (issue_id, reviewer_id)
 ```
 
 # Table "star"

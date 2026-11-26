@@ -7,7 +7,7 @@ import { Trans, useTranslation } from "react-i18next";
 
 import { CodeEditor } from "@/components/CodeEditor";
 import { FormAlert, FormField, RadioField } from "@/components/FormField";
-import { PendingFiles } from "@/components/IssueForm";
+import { ContentTabs, PendingFiles } from "@/components/IssueForm";
 import { Markdown } from "@/components/Markdown";
 import { RepoHeader } from "@/components/RepoHeader";
 import { RichText } from "@/components/RichText";
@@ -295,46 +295,6 @@ function CommitForm({
   );
 }
 
-const TAB_CLASS = "cursor-pointer rounded-md px-3 py-1.5 text-sm whitespace-nowrap glass-ui:px-2.5";
-
-function EditorTabs<K extends string>({
-  id,
-  label,
-  tabs,
-  current,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  tabs: { key: K; label: string }[];
-  current: K;
-  onChange: (key: K) => void;
-}) {
-  return (
-    <div role="tablist" aria-label={label} className="glass-control glass-tabs mb-3 flex gap-1 overflow-x-auto">
-      {tabs.map((tab) => (
-        <button
-          key={tab.key}
-          type="button"
-          role="tab"
-          id={`${id}-${tab.key}-tab`}
-          aria-selected={current === tab.key}
-          aria-controls={`${id}-${tab.key}`}
-          onClick={() => onChange(tab.key)}
-          className={cn(
-            TAB_CLASS,
-            current === tab.key
-              ? "bg-(--color-surface) font-semibold text-(--color-foreground)"
-              : "text-(--color-muted-foreground) hover:text-(--color-foreground)",
-          )}
-        >
-          {tab.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 // ChangesPreview shows the changes to a file as a diff.
 function ChangesPreview({
   oldFile,
@@ -502,7 +462,7 @@ export function RepoFileEditor({
               </FormField>
             </div>
             <div className="min-w-0 glass rounded-md border border-(--color-border) p-3 glass-ui:m-4">
-              <EditorTabs id={id} label={heading} tabs={tabs} current={currentTab} onChange={setTab} />
+              <ContentTabs id={id} label={heading} tabs={tabs} current={currentTab} onChange={setTab} />
               {currentTab === "write" ? (
                 <div role="tabpanel" id={`${id}-write`} aria-labelledby={`${id}-write-tab`}>
                   <CodeEditor

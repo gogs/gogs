@@ -51,6 +51,10 @@ export interface DiffToolbarProps {
   // one shows at each breakpoint.
   onToggleTreeDesktop?: () => void;
   desktopTreeOpen?: boolean;
+  // actions show after the view controls, e.g., to review a pull request.
+  actions?: ReactNode;
+  // comments, where the diff has them, toggles whether they show.
+  comments?: { shown: boolean; onChange: (shown: boolean) => void };
 }
 
 export function DiffToolbar({
@@ -65,6 +69,8 @@ export function DiffToolbar({
   onShowTreeMobile,
   onToggleTreeDesktop,
   desktopTreeOpen,
+  actions,
+  comments,
 }: DiffToolbarProps) {
   const { t } = useTranslation();
   const setStyle = (diffStyle: DiffStyle) => onSettingsChange({ ...settings, diffStyle });
@@ -81,7 +87,7 @@ export function DiffToolbar({
                   type="button"
                   onClick={onShowTreeMobile}
                   aria-label={t("repo.show_file_tree")}
-                  className="grid size-6 cursor-pointer place-items-center rounded text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground) lg:hidden"
+                  className="grid size-7 cursor-pointer place-items-center rounded text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground) lg:hidden"
                 >
                   <PanelLeftOpen className="size-4" aria-hidden />
                 </button>
@@ -99,7 +105,7 @@ export function DiffToolbar({
                   aria-pressed={!!desktopTreeOpen}
                   // `pl-1` nudges the icon right so it visually aligns with
                   // the sidebar's collapsed-rail edge on desktop.
-                  className="hidden size-6 cursor-pointer place-items-center rounded text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground) lg:grid lg:pl-1"
+                  className="hidden size-7 cursor-pointer place-items-center rounded text-(--color-muted-foreground) hover:bg-(--color-surface) hover:text-(--color-foreground) lg:grid lg:pl-1"
                 >
                   {desktopTreeOpen ? (
                     <PanelLeftClose className="size-4" aria-hidden />
@@ -175,6 +181,11 @@ export function DiffToolbar({
             <MenuCheckbox checked={settings.wrapLines} onSelect={() => setWrap(!settings.wrapLines)}>
               {t("repo.diff.wrap_long_lines")}
             </MenuCheckbox>
+            {comments ? (
+              <MenuCheckbox checked={comments.shown} onSelect={() => comments.onChange(!comments.shown)}>
+                {t("repo.diff.show_comments")}
+              </MenuCheckbox>
+            ) : null}
           </PopoverContent>
         </Popover>
 
@@ -190,6 +201,7 @@ export function DiffToolbar({
             icon={<Minimize2 className="size-3.5" aria-hidden />}
           />
         </div>
+        {actions}
       </div>
     </div>
   );

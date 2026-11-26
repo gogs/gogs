@@ -30,7 +30,7 @@ func TestDumpAndImport(t *testing.T) {
 	}
 	t.Parallel()
 
-	const wantTables = 36
+	const wantTables = 38
 	if len(Tables) != wantTables {
 		t.Fatalf("New table has added (want %d got %d), please add new tests for the table and update this check", wantTables, len(Tables))
 	}
@@ -202,6 +202,47 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			CommitSHA:   "a4b4f7a8a2e2c0b4f2e9d1c3b5a7f9e1d3c5b7a9",
 			CreatedUnix: 1588572486,
 			UpdatedUnix: 1588572486,
+		},
+		&Comment{
+			ID:           3,
+			Type:         CommentTypeCode,
+			PosterID:     2,
+			IssueID:      1,
+			Line:         12,
+			Content:      "Check the error.",
+			CommitSHA:    "a4b4f7a8a2e2c0b4f2e9d1c3b5a7f9e1d3c5b7a9",
+			ReviewID:     1,
+			TreePath:     "main.go",
+			Side:         "new",
+			StartSide:    "new",
+			StartLine:    10,
+			BaseSHA:      "4b825dc642cb6eb9a060e54bf8d69288fbee4904",
+			DiffHunk:     "+\tif err != nil {",
+			ResolvedByID: 1,
+			ResolvedUnix: 1588572486,
+			CreatedUnix:  1588568886,
+			UpdatedUnix:  1588568886,
+		},
+		&Comment{
+			ID:          4,
+			Type:        CommentTypeCode,
+			PosterID:    1,
+			IssueID:     1,
+			Content:     "Done.",
+			ReviewID:    2,
+			ReplyToID:   3,
+			IsPending:   true,
+			CreatedUnix: 1588572486,
+			UpdatedUnix: 1588572486,
+		},
+		&Comment{
+			ID:           5,
+			Type:         CommentTypeReviewRequest,
+			PosterID:     1,
+			IssueID:      1,
+			TargetUserID: 2,
+			CreatedUnix:  1588568886,
+			UpdatedUnix:  1588568886,
 		},
 
 		&DeployKey{
@@ -429,6 +470,10 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			EnableAllowlist:    true,
 			AllowlistUserIDs:   "1,2",
 			AllowlistTeamIDs:   "1",
+
+			RequiredApprovals:            2,
+			DismissStaleApprovals:        true,
+			RequireResolvedConversations: true,
 		},
 
 		&PublicKey{
@@ -539,6 +584,31 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			ForkID:        1,
 			CreatedUnix:   1588568886,
 			UpdatedUnix:   1588568886,
+		},
+
+		&Review{
+			ID:            1,
+			IssueID:       1,
+			ReviewerID:    2,
+			State:         ReviewStateRequestChanges,
+			CommitSHA:     "a4b4f7a8a2e2c0b4f2e9d1c3b5a7f9e1d3c5b7a9",
+			CreatedUnix:   1588568886,
+			SubmittedUnix: 1588568886,
+		},
+		&Review{
+			ID:          2,
+			IssueID:     1,
+			ReviewerID:  1,
+			State:       ReviewStatePending,
+			CreatedUnix: 1588572486,
+		},
+
+		&ReviewRequest{
+			ID:          1,
+			IssueID:     1,
+			ReviewerID:  2,
+			RequesterID: 1,
+			CreatedUnix: 1588568886,
 		},
 
 		&Star{

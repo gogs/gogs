@@ -1,0 +1,2 @@
+{"ID":1,"IssueID":1,"ReviewerID":2,"State":3,"CommitSHA":"a4b4f7a8a2e2c0b4f2e9d1c3b5a7f9e1d3c5b7a9","CreatedUnix":1588568886,"SubmittedUnix":1588568886}
+{"ID":2,"IssueID":1,"ReviewerID":1,"State":0,"CommitSHA":"","CreatedUnix":1588572486,"SubmittedUnix":0}
