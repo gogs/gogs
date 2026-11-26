@@ -2,17 +2,10 @@ package integrationtests
 
 import (
 	"context"
-	"crypto/pbkdf2"
-	"crypto/sha256"
-	"encoding/base64"
-	"encoding/binary"
-	"encoding/hex"
 	"encoding/json"
-	"math"
 	"net"
 	"net/http"
 	"net/textproto"
-	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -26,10 +19,6 @@ import (
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/userx"
 )
-
-// captchaSessionKey is where the captcha middleware keeps the text of the last
-// captcha image it served.
-const captchaSessionKey = "flamego::captcha::text"
 
 func TestSignUp(t *testing.T) {
 	t.Parallel()
@@ -55,7 +44,9 @@ func TestSignUp(t *testing.T) {
 	t.Run("altcha", func(t *testing.T) {
 		t.Parallel()
 
+		// The server with FORCE_PRIVATE uses altcha.
 		c := newClient(t)
+		c.baseURL = forcePrivateServerURL
 		name := UniqueName("signup-")
 		status, body := signUp(c, name, "")
 		require.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
@@ -76,73 +67,103 @@ func TestSignUp(t *testing.T) {
 	t.Run("captcha", func(t *testing.T) {
 		t.Parallel()
 
-		// The server with FORCE_PRIVATE uses the image captcha.
 		c := newClient(t)
-		c.baseURL = forcePrivateServerURL
-		newCaptcha := func() string {
-			status, _ := c.do(http.MethodGet, "/-/captcha/image.png", nil)
-			require.Equal(t, http.StatusOK, status)
-			text, ok := c.sessionValue(captchaSessionKey).(string)
-			require.True(t, ok, "no captcha text in session")
-			return text
-		}
-
 		name := UniqueName("signup-")
-		status, body := signUp(c, name, newCaptcha()+"x")
+		status, body := signUp(c, name, c.captcha()+"x")
 		require.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
 		assertNotCreated(t, name)
 
-		status, body = signUp(c, name, newCaptcha())
+		status, body = signUp(c, name, c.captcha())
 		require.Equal(t, http.StatusOK, status, "response: %s", body)
 		assertCreated(t, name)
 	})
 }
 
-// solveAltcha fetches an altcha challenge from the server and solves it like
-// the browser does, by trying counters until the derived key starts with the
-// key prefix. It returns the payload to submit.
-func solveAltcha(t *testing.T, c *client) string {
-	t.Helper()
+func TestLogInAntiBotVerification(t *testing.T) {
+	t.Parallel()
 
-	var challenge struct {
-		Parameters struct {
-			Algorithm string `json:"algorithm"`
-			Cost      int    `json:"cost"`
-			KeyLength int    `json:"keyLength"`
-			KeyPrefix string `json:"keyPrefix"`
-			Nonce     string `json:"nonce"`
-			Salt      string `json:"salt"`
-		} `json:"parameters"`
-		Signature string `json:"signature"`
-	}
-	var raw json.RawMessage
-	c.doJSON(http.MethodGet, "/-/altcha/challenge.json", nil, http.StatusOK, &raw)
-	require.NoError(t, json.Unmarshal(raw, &challenge))
-	p := challenge.Parameters
-	require.Equal(t, "PBKDF2/SHA-256", p.Algorithm)
-
-	nonce, err := hex.DecodeString(p.Nonce)
-	require.NoError(t, err)
-	salt, err := hex.DecodeString(p.Salt)
-	require.NoError(t, err)
-	for counter := uint32(0); counter < math.MaxUint32; counter++ {
-		password := binary.BigEndian.AppendUint32(slices.Clone(nonce), counter)
-		key, err := pbkdf2.Key(sha256.New, string(password), salt, p.Cost, p.KeyLength)
-		require.NoError(t, err)
-		derivedKey := hex.EncodeToString(key)
-		if !strings.HasPrefix(derivedKey, p.KeyPrefix) {
-			continue
+	u := seedUser(t, CreateUserOptions{})
+	// signIn returns the fields with errors, or nil when authenticated.
+	signIn := func(t *testing.T, c *client, password, payload string) map[string]*string {
+		status, body := c.postSignIn(map[string]any{"username": u.Name, "password": password, "antiBotPayload": payload})
+		if status == http.StatusOK {
+			return nil
 		}
-
-		payload, err := json.Marshal(map[string]any{
-			"challenge": raw,
-			"solution":  map[string]any{"counter": counter, "derivedKey": derivedKey},
-		})
-		require.NoError(t, err)
-		return base64.StdEncoding.EncodeToString(payload)
+		require.Equal(t, http.StatusUnauthorized, status, "response: %s", body)
+		var resp struct {
+			Fields map[string]*string `json:"fields"`
+		}
+		require.NoError(t, json.Unmarshal(body, &resp), "response: %s", body)
+		require.NotNil(t, resp.Fields, "response: %s", body)
+		return resp.Fields
 	}
-	t.Fatal("no solution found")
-	return ""
+	antiBotVerificationStrategy := func(c *client) string {
+		var resp struct {
+			AntiBotVerificationStrategy string `json:"antiBotVerificationStrategy"`
+		}
+		c.doJSON(http.MethodGet, "/api/web/user/sign-in", nil, http.StatusOK, &resp)
+		return resp.AntiBotVerificationStrategy
+	}
+	// assertRejected asserts that the verification failed and said nothing about
+	// the password.
+	assertRejected := func(t *testing.T, c *client, fields map[string]*string, msgAndArgs ...any) {
+		assert.Contains(t, fields, "antiBotPayload", msgAndArgs...)
+		assert.NotContains(t, fields, "password")
+		assert.Empty(t, c.username())
+	}
+
+	t.Run("captcha", func(t *testing.T) {
+		t.Parallel()
+
+		c := newClient(t)
+		assert.Equal(t, "captcha", antiBotVerificationStrategy(c))
+
+		assertRejected(t, c, signIn(t, c, u.Password, ""), "authenticated without a captcha")
+		assertRejected(t, c, signIn(t, c, u.Password, c.captcha()+"x"), "authenticated with a wrong captcha")
+
+		captcha := c.captcha()
+		fields := signIn(t, c, "wrong-password", captcha)
+		assert.Contains(t, fields, "password")
+		assert.NotContains(t, fields, "antiBotPayload")
+		// The failed attempt used up the captcha.
+		assertRejected(t, c, signIn(t, c, u.Password, captcha), "authenticated with a used captcha")
+
+		require.Nil(t, signIn(t, c, u.Password, c.captcha()))
+		assert.Equal(t, u.Name, c.username())
+	})
+
+	t.Run("altcha", func(t *testing.T) {
+		t.Parallel()
+
+		// The server with FORCE_PRIVATE uses altcha.
+		c := newClient(t)
+		c.baseURL = forcePrivateServerURL
+		assert.Equal(t, "altcha", antiBotVerificationStrategy(c))
+
+		assertRejected(t, c, signIn(t, c, u.Password, ""), "authenticated without a solution")
+
+		solution := solveAltcha(t, c)
+		fields := signIn(t, c, "wrong-password", solution)
+		assert.Contains(t, fields, "password")
+		assert.NotContains(t, fields, "antiBotPayload")
+		// The failed attempt used up the solution.
+		assertRejected(t, c, signIn(t, c, u.Password, solution), "authenticated with a used solution")
+
+		require.Nil(t, signIn(t, c, u.Password, solveAltcha(t, c)))
+		assert.Equal(t, u.Name, c.username())
+	})
+
+	t.Run("API", func(t *testing.T) {
+		t.Parallel()
+
+		// The API still accepts the password without verification.
+		for _, baseURL := range []string{serverURL, forcePrivateServerURL} {
+			api := apiV1BasicClient(t, u.Name, u.Password)
+			api.baseURL = baseURL
+			status, body := api.do(http.MethodGet, "/api/v1/users/"+u.Name+"/tokens", nil)
+			assert.Equal(t, http.StatusOK, status, "%s, response: %s", baseURL, body)
+		}
+	})
 }
 
 func TestSignInWithTwoFactor(t *testing.T) {
@@ -153,13 +174,15 @@ func TestSignInWithTwoFactor(t *testing.T) {
 	require.NoError(t, err)
 
 	signIn := func(c *client) {
+		status, body := c.postSignIn(map[string]any{
+			"username": u.Name,
+			"password": u.Password,
+		})
+		require.Equal(t, http.StatusOK, status, "response: %s", body)
 		var resp struct {
 			MFA bool `json:"mfa"`
 		}
-		c.doJSON(http.MethodPost, "/api/web/user/sign-in", map[string]any{
-			"username": u.Name,
-			"password": u.Password,
-		}, http.StatusOK, &resp)
+		require.NoError(t, json.Unmarshal(body, &resp), "response: %s", body)
 		require.True(t, resp.MFA)
 		assert.Equal(t, u.ID, c.sessionValue("mfaUserID"))
 		assert.Empty(t, c.username(), "signed in before the second factor")
@@ -276,7 +299,7 @@ func TestSignInWithLoginSource(t *testing.T) {
 	// The SMTP source names the new account after the part of the login before
 	// "@".
 	signIn := func(login string) (int, []byte) {
-		return newClient(t).do(http.MethodPost, "/api/web/user/sign-in", map[string]any{
+		return newClient(t).postSignIn(map[string]any{
 			"username":    login,
 			"password":    "password",
 			"loginSource": source.ID,

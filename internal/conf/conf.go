@@ -221,10 +221,10 @@ func Init(logger *logx.Logger, customConf string) error {
 	if err = File.Section("auth").MapTo(&Auth); err != nil {
 		return errors.Wrap(err, "mapping [auth] section")
 	}
-	switch Auth.AntiBotVerification {
-	case "", AntiBotVerificationAltcha, AntiBotVerificationCaptcha:
+	switch Auth.AntiBotVerificationStrategy {
+	case "", AntiBotVerificationStrategyAltcha, AntiBotVerificationStrategyCaptcha:
 	default:
-		return errors.Newf("[auth] ANTI_BOT_VERIFICATION must be empty, %q or %q, but got %q", AntiBotVerificationAltcha, AntiBotVerificationCaptcha, Auth.AntiBotVerification)
+		return errors.Newf("[auth] ANTI_BOT_VERIFICATION_STRATEGY must be empty, %q or %q, but got %q", AntiBotVerificationStrategyAltcha, AntiBotVerificationStrategyCaptcha, Auth.AntiBotVerificationStrategy)
 	}
 	// Reset before re-parsing so repeated Init calls (e.g., via the web installer)
 	// do not carry over CIDRs from a previous configuration.
@@ -316,8 +316,11 @@ func Init(logger *logx.Logger, customConf string) error {
 	LFS.ObjectsPath = ensureAbs(LFS.ObjectsPath)
 	LFS.ObjectsTempPath = ensureAbs(LFS.ObjectsTempPath)
 
-	handleDeprecated()
+	deprecatedWarnings := handleDeprecated()
 	if !HookMode {
+		for _, warning := range deprecatedWarnings {
+			logger.Warn("Found deprecated configuration", "warning", warning)
+		}
 		for _, warning := range checkInvalidOptions(File) {
 			logger.Warn("Found invalid configuration", "warning", warning)
 		}

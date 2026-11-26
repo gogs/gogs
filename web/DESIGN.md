@@ -112,6 +112,8 @@ Anchor links inside the form aren't covered by `disabled`. For each, set `tabInd
 
 Swap the submit label to a present-continuous string ("Signing in…", "Verifying…") while submitting. Keep idle and active strings as separate locale keys.
 
+Forms that guard against bots, e.g., sign up and log in, keep the verification set by `[auth] ANTI_BOT_VERIFICATION_STRATEGY` with `useAntiBot` from `@/lib/anti-bot` and render it with `AntiBotField` from `@/components/AntiBotField`. Send its `payload()` as `antiBotPayload`, and `reset()` it after every failed submission, since the server uses up a captcha or an altcha solution on each attempt.
+
 Take the message for a whole form from `formErrors` (`@/lib/queries/request`) and show it in the form, e.g., in `FormAlert`. It tells a viewer whose session expired to sign in again, with a link that opens on another tab, so the form keeps what they typed. Report the failure of a change made with a button, where nothing typed is lost, with `toastError` (`@/lib/toast-error`): it takes that viewer to sign in and back to the page instead of showing a toast. Toasts follow the theme of the page, and take the pointer above an open dialog (see `index.css` and `DialogContent`), so a click on one never lands on the button under it.
 
 ## Settings pages

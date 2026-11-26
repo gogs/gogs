@@ -227,12 +227,16 @@ type AppOpts struct {
 var App AppOpts
 
 type AuthOpts struct {
-	ActivateCodeLives        int
-	ResetPasswordCodeLives   int
-	RequireEmailConfirmation bool
-	RequireSigninView        bool
-	DisableRegistration      bool
-	AntiBotVerification      string
+	ActivateCodeLives           int
+	ResetPasswordCodeLives      int
+	RequireEmailConfirmation    bool
+	RequireSigninView           bool
+	DisableRegistration         bool
+	AntiBotVerificationStrategy string
+	// Whether sign up and log in on the web ask for the anti-bot
+	// verification, which is off for both when AntiBotVerificationStrategy is empty.
+	AntiBotVerificationOnSignUp bool `ini:"ANTI_BOT_VERIFICATION_ON_SIGN_UP"`
+	AntiBotVerificationOnLogIn  bool `ini:"ANTI_BOT_VERIFICATION_ON_LOG_IN"`
 
 	EnableReverseProxyAuthentication   bool
 	EnableReverseProxyAutoRegistration bool
@@ -247,13 +251,13 @@ type AuthOpts struct {
 // Authentication settings
 var Auth AuthOpts
 
-// Values of [auth] ANTI_BOT_VERIFICATION.
+// Values of [auth] ANTI_BOT_VERIFICATION_STRATEGY.
 const (
-	// AntiBotVerificationAltcha asks the browser to solve a proof-of-work challenge.
-	AntiBotVerificationAltcha = "altcha"
-	// AntiBotVerificationCaptcha asks the user to type the characters shown in
+	// AntiBotVerificationStrategyAltcha asks the browser to solve a proof-of-work challenge.
+	AntiBotVerificationStrategyAltcha = "altcha"
+	// AntiBotVerificationStrategyCaptcha asks the user to type the characters shown in
 	// an image.
-	AntiBotVerificationCaptcha = "captcha"
+	AntiBotVerificationStrategyCaptcha = "captcha"
 )
 
 type ServerOpts struct {
@@ -405,19 +409,41 @@ type i18nConf struct {
 // I18n settings
 var I18n *i18nConf
 
-// handleDeprecated transfers deprecated values to the new ones when set.
-func handleDeprecated() {
-	// [auth] ENABLE_REGISTRATION_CAPTCHA only switches between the default
-	// altcha and no verification, so an explicit "captcha" is kept.
+// handleDeprecated transfers deprecated values to the new ones when set, and
+// returns a warning for each deprecated option set.
+func handleDeprecated() (warnings []string) {
+	// [auth] ENABLE_REGISTRATION_CAPTCHA turns the verification of sign up
+	// on or off, with the default altcha when no strategy is set.
 	if key, err := File.Section("auth").GetKey("ENABLE_REGISTRATION_CAPTCHA"); err == nil {
-		if key.MustBool() {
-			if Auth.AntiBotVerification == "" {
-				Auth.AntiBotVerification = AntiBotVerificationAltcha
-			}
-		} else if Auth.AntiBotVerification == AntiBotVerificationAltcha {
-			Auth.AntiBotVerification = ""
+		Auth.AntiBotVerificationOnSignUp = key.MustBool()
+		if Auth.AntiBotVerificationOnSignUp && Auth.AntiBotVerificationStrategy == "" {
+			Auth.AntiBotVerificationStrategy = AntiBotVerificationStrategyAltcha
 		}
 	}
+
+	for oldPath, newPath := range deprecatedOptionPaths {
+		if File.Section(oldPath.section).HasKey(oldPath.option) {
+			warnings = append(
+				warnings,
+				fmt.Sprintf("option [%s] %s is deprecated, use [%s] %s instead",
+					oldPath.section, oldPath.option,
+					newPath.section, newPath.option,
+				),
+			)
+		}
+	}
+	return warnings
+}
+
+type optionPath struct {
+	section string
+	option  string
+}
+
+// deprecatedOptionPaths maps deprecated options, which still work through
+// handleDeprecated, to the options replacing them.
+var deprecatedOptionPaths = map[optionPath]optionPath{
+	{"auth", "ENABLE_REGISTRATION_CAPTCHA"}: {"auth", "ANTI_BOT_VERIFICATION_ON_SIGN_UP"},
 }
 
 // checkInvalidOptions checks invalid (renamed/deleted) configuration sections
@@ -433,28 +459,9 @@ func checkInvalidOptions(config *ini.File) (warnings []string) {
 		}
 	}
 
-	type optionPath struct {
-		section string
-		option  string
-	}
 	renamedOptionPaths := map[optionPath]optionPath{
 		// Example:
 		// {"security", "REVERSE_PROXY_AUTHENTICATION_USER"}: {"auth", "REVERSE_PROXY_AUTHENTICATION_HEADER"},
-	}
-	// Deprecated options still work, see handleDeprecated.
-	deprecatedOptionPaths := map[optionPath]optionPath{
-		{"auth", "ENABLE_REGISTRATION_CAPTCHA"}: {"auth", "ANTI_BOT_VERIFICATION"},
-	}
-	for oldPath, newPath := range deprecatedOptionPaths {
-		if config.Section(oldPath.section).HasKey(oldPath.option) {
-			warnings = append(
-				warnings,
-				fmt.Sprintf("option [%s] %s is deprecated, use [%s] %s instead",
-					oldPath.section, oldPath.option,
-					newPath.section, newPath.option,
-				),
-			)
-		}
 	}
 	for oldPath, newPath := range renamedOptionPaths {
 		if config.Section(oldPath.section).HasKey(oldPath.option) {

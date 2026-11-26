@@ -3,11 +3,19 @@ package integrationtests
 import (
 	"bytes"
 	"context"
+	"crypto/pbkdf2"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"io"
+	"math"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -17,6 +25,10 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/dbx"
 )
+
+// captchaSessionKey is where the captcha middleware keeps the text of the last
+// captcha image it served.
+const captchaSessionKey = "flamego::captcha::text"
 
 // client calls the server under test like a browser that keeps its cookies.
 type client struct {
@@ -133,14 +145,97 @@ func authenticatedClient(t *testing.T, u *User) *client {
 func (c *client) signIn(u *User) {
 	c.t.Helper()
 
+	status, body := c.postSignIn(map[string]any{
+		"username": u.Name,
+		"password": u.Password,
+	})
+	require.Equal(c.t, http.StatusOK, status, "response: %s", body)
 	var resp struct {
 		MFA bool `json:"mfa"`
 	}
-	c.doJSON(http.MethodPost, "/api/web/user/sign-in", map[string]any{
-		"username": u.Name,
-		"password": u.Password,
-	}, http.StatusOK, &resp)
+	require.NoError(c.t, json.Unmarshal(body, &resp), "response: %s", body)
 	require.False(c.t, resp.MFA)
+}
+
+// postSignIn posts the request to sign in, with a solved anti-bot payload
+// unless the request has one, and returns the status code and the response
+// body.
+func (c *client) postSignIn(req map[string]any) (int, []byte) {
+	c.t.Helper()
+
+	if _, ok := req["antiBotPayload"]; !ok {
+		req["antiBotPayload"] = c.antiBotPayload()
+	}
+	return c.do(http.MethodPost, "/api/web/user/sign-in", req)
+}
+
+// antiBotPayload returns a payload that passes the anti-bot verification of
+// the server the client calls once.
+func (c *client) antiBotPayload() string {
+	c.t.Helper()
+
+	if c.baseURL == forcePrivateServerURL {
+		return solveAltcha(c.t, c)
+	}
+	return c.captcha()
+}
+
+// captcha loads a new captcha image and returns its text.
+func (c *client) captcha() string {
+	c.t.Helper()
+
+	status, _ := c.do(http.MethodGet, "/-/captcha/image.png", nil)
+	require.Equal(c.t, http.StatusOK, status)
+	text, ok := c.sessionValue(captchaSessionKey).(string)
+	require.True(c.t, ok, "no captcha text in session")
+	return text
+}
+
+// solveAltcha fetches an altcha challenge from the server and solves it like
+// the browser does, by trying counters until the derived key starts with the
+// key prefix. It returns the payload to submit.
+func solveAltcha(t *testing.T, c *client) string {
+	t.Helper()
+
+	var challenge struct {
+		Parameters struct {
+			Algorithm string `json:"algorithm"`
+			Cost      int    `json:"cost"`
+			KeyLength int    `json:"keyLength"`
+			KeyPrefix string `json:"keyPrefix"`
+			Nonce     string `json:"nonce"`
+			Salt      string `json:"salt"`
+		} `json:"parameters"`
+		Signature string `json:"signature"`
+	}
+	var raw json.RawMessage
+	c.doJSON(http.MethodGet, "/-/altcha/challenge.json", nil, http.StatusOK, &raw)
+	require.NoError(t, json.Unmarshal(raw, &challenge))
+	p := challenge.Parameters
+	require.Equal(t, "PBKDF2/SHA-256", p.Algorithm)
+
+	nonce, err := hex.DecodeString(p.Nonce)
+	require.NoError(t, err)
+	salt, err := hex.DecodeString(p.Salt)
+	require.NoError(t, err)
+	for counter := uint32(0); counter < math.MaxUint32; counter++ {
+		password := binary.BigEndian.AppendUint32(slices.Clone(nonce), counter)
+		key, err := pbkdf2.Key(sha256.New, string(password), salt, p.Cost, p.KeyLength)
+		require.NoError(t, err)
+		derivedKey := hex.EncodeToString(key)
+		if !strings.HasPrefix(derivedKey, p.KeyPrefix) {
+			continue
+		}
+
+		payload, err := json.Marshal(map[string]any{
+			"challenge": raw,
+			"solution":  map[string]any{"counter": counter, "derivedKey": derivedKey},
+		})
+		require.NoError(t, err)
+		return base64.StdEncoding.EncodeToString(payload)
+	}
+	t.Fatal("no solution found")
+	return ""
 }
 
 // username returns the name of the authenticated user, or an empty string when

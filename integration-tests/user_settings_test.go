@@ -144,8 +144,10 @@ func TestUserSettingsPassword(t *testing.T) {
 	assert.Empty(t, other.username(), "another session is still signed in")
 	assert.Empty(t, legacy.username(), "a session from before upgrading is still signed in")
 	newClient(t).signIn(&User{Name: u.Name, Password: "new-password"})
-	status, body = newClient(t).do(http.MethodPost, "/api/web/user/sign-in", map[string]any{"username": u.Name, "password": u.Password})
+	status, body = newClient(t).postSignIn(map[string]any{"username": u.Name, "password": u.Password})
 	assert.Equal(t, http.StatusUnauthorized, status, "old password still works, response: %s", body)
+	// A password error, rather than a rejected anti-bot payload.
+	assert.Contains(t, string(body), `"password":`)
 
 	// A session idle while the password changes stays signed out when the
 	// password it signed in with comes back.

@@ -3,11 +3,13 @@ import { Eye, EyeOff, Fingerprint, KeyRound, LoaderCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 
+import { AntiBotField } from "@/components/AntiBotField";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { type AntiBotVerificationStrategy, useAntiBot } from "@/lib/anti-bot";
 import { webContext } from "@/lib/context";
 import { usePageTitle } from "@/lib/page-title";
 import { type RequestOptionsJSON, externalPageURL, getPasskey, passkeysSupported } from "@/lib/passkey";
@@ -21,6 +23,8 @@ export interface LoginSource {
 
 export interface SignInPage {
   loginSources: LoginSource[];
+  // antiBotVerificationStrategy is the anti-bot verification strategy of log in, empty for none.
+  antiBotVerificationStrategy: AntiBotVerificationStrategy;
 }
 
 interface SignInResponse {
@@ -33,7 +37,7 @@ interface SignInErrorResponse {
 }
 
 // Field display order. The first key with a server-side error gets focus.
-const FIELD_ORDER = ["username", "password"] as const;
+const FIELD_ORDER = ["username", "password", "antiBotPayload"] as const;
 
 // How many times signing in with a passkey is tried in a row before the
 // visitor is asked whether to try again or sign in another way.
@@ -110,7 +114,8 @@ export function SignIn() {
   const { t } = useTranslation();
   usePageTitle(t("sign_in"));
   const navigate = useNavigate();
-  const { loginSources } = route.useLoaderData();
+  const { loginSources, antiBotVerificationStrategy } = route.useLoaderData();
+  const antiBot = useAntiBot(antiBotVerificationStrategy);
   const defaultSource = loginSources.find((s) => s.isDefault);
 
   const [username, setUsername] = useState("");
@@ -157,22 +162,28 @@ export function SignIn() {
   function startPasskey() {
     setFormError(null);
     setFieldErrors({});
+    // Coming back to the password shows a new captcha image. An altcha solution
+    // stays valid.
+    if (antiBotVerificationStrategy === "captcha") antiBot.reset();
     setPasskey({ status: "waiting", attempt: 1 });
     setMethod("passkey");
   }
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const antiBotPayload = antiBot.payload();
+    if (antiBotPayload === null) return;
     setFormError(null);
     setFieldErrors({});
     setSubmitting(true);
     void (async () => {
       try {
+        antiBot.consume();
         const res = await fetch(subUrl("/api/web/user/sign-in"), {
           method: "POST",
           credentials: "same-origin",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, password, loginSource }),
+          body: JSON.stringify({ username, password, loginSource, antiBotPayload }),
         });
         if (!res.ok) {
           const body = (await res.json().catch(() => ({}))) as SignInErrorResponse;
@@ -187,11 +198,15 @@ export function SignIn() {
             setFormError(t("auth.sign_in_failed"));
           }
           setSubmitting(false);
+          // The server uses up the captcha or the altcha solution on each attempt
+          // it checks.
+          antiBot.reset();
           // Defer focus past the React commit so the fieldset is re-enabled
           // (.focus() is a no-op while the field is inside a disabled fieldset).
           requestAnimationFrame(() => {
             if (focusField === "username") usernameRef.current?.focus();
             else if (focusField === "password") passwordRef.current?.focus();
+            else if (focusField === "antiBotPayload") antiBot.focus();
           });
           return;
         }
@@ -210,6 +225,7 @@ export function SignIn() {
       } catch {
         setFormError(t("auth.sign_in_failed"));
         setSubmitting(false);
+        antiBot.reset();
       }
     })();
   }
@@ -286,7 +302,7 @@ export function SignIn() {
                       <Link
                         activeOptions={{ exact: true }}
                         to="/user/reset-password"
-                        tabIndex={submitting ? -1 : 7}
+                        tabIndex={submitting ? -1 : 9}
                         aria-disabled={submitting || undefined}
                         className={submitting ? "pointer-events-none opacity-50" : undefined}
                         onClick={(e) => {
@@ -359,8 +375,16 @@ export function SignIn() {
                   </div>
                 )}
 
+                <AntiBotField
+                  antiBot={antiBot}
+                  disabled={submitting}
+                  error={fieldErrors.antiBotPayload}
+                  invalid={"antiBotPayload" in fieldErrors}
+                  tabIndex={5}
+                />
+
                 <div className="mt-2 flex flex-col gap-3">
-                  <Button type="submit" disabled={submitting} tabIndex={5} className="w-full">
+                  <Button type="submit" disabled={submitting || !antiBot.ready} tabIndex={7} className="w-full">
                     {submitting ? t("auth.sign_in_submitting") : t("sign_in")}
                   </Button>
                   {passkeysSupported() && passkeyPageURL ? (
@@ -372,7 +396,7 @@ export function SignIn() {
                           url: (
                             <a
                               href={passkeyPageURL}
-                              tabIndex={submitting ? -1 : 6}
+                              tabIndex={submitting ? -1 : 8}
                               aria-disabled={submitting || undefined}
                               className={`wrap-anywhere text-(--color-primary) underline ${submitting ? "pointer-events-none opacity-50" : ""}`}
                               onClick={(e) => {
@@ -382,12 +406,12 @@ export function SignIn() {
                           ),
                         }}
                       />{" "}
-                      <Button type="button" variant="link" size="inline" tabIndex={6} onClick={startPasskey}>
+                      <Button type="button" variant="link" size="inline" tabIndex={8} onClick={startPasskey}>
                         {t("auth.passkey_use_anyway")}
                       </Button>
                     </p>
                   ) : passkeysSupported() ? (
-                    <Button type="button" variant="outline" tabIndex={6} className="w-full" onClick={startPasskey}>
+                    <Button type="button" variant="outline" tabIndex={8} className="w-full" onClick={startPasskey}>
                       <KeyRound className="size-4" aria-hidden />
                       {t("auth.passkey_sign_in")}
                     </Button>
@@ -396,7 +420,7 @@ export function SignIn() {
                     <Link
                       activeOptions={{ exact: true }}
                       to="/user/sign-up"
-                      tabIndex={submitting ? -1 : 8}
+                      tabIndex={submitting ? -1 : 10}
                       aria-disabled={submitting || undefined}
                       className={submitting ? "pointer-events-none opacity-50" : undefined}
                       onClick={(e) => {

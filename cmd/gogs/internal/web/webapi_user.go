@@ -63,18 +63,20 @@ type loginSource struct {
 
 type getUserSignInResponse struct {
 	LoginSources []loginSource `json:"loginSources"`
+	// AntiBotVerificationStrategy is the anti-bot verification strategy of log in, empty for none.
+	AntiBotVerificationStrategy string `json:"antiBotVerificationStrategy"`
 }
 
 type getUserSignUpResponse struct {
 	RegistrationDisabled bool `json:"registrationDisabled"`
-	// AntiBotVerification is empty when sign-ups are not verified.
-	AntiBotVerification string `json:"antiBotVerification"`
+	// AntiBotVerificationStrategy is the anti-bot verification strategy of sign up, empty for none.
+	AntiBotVerificationStrategy string `json:"antiBotVerificationStrategy"`
 }
 
 func getUserSignUp() (statusCode int, resp *getUserSignUpResponse, err error) {
 	return http.StatusOK, &getUserSignUpResponse{
-		RegistrationDisabled: conf.Auth.DisableRegistration,
-		AntiBotVerification:  conf.Auth.AntiBotVerification,
+		RegistrationDisabled:        conf.Auth.DisableRegistration,
+		AntiBotVerificationStrategy: antiBotVerificationStrategyOf(conf.Auth.AntiBotVerificationOnSignUp),
 	}, nil
 }
 
@@ -83,7 +85,7 @@ type userSignUpRequest struct {
 	Email    string `json:"email" validate:"required,email,max=254"`
 	Password string `json:"password" validate:"required,max=255"`
 	// AntiBotPayload is the text of the captcha image, or the solution of the altcha
-	// challenge, depending on [auth] ANTI_BOT_VERIFICATION.
+	// challenge, depending on [auth] ANTI_BOT_VERIFICATION_STRATEGY.
 	AntiBotPayload string `json:"antiBotPayload"`
 }
 
@@ -93,18 +95,31 @@ type userSignUpResponse struct {
 	Hours                     int    `json:"hours,omitempty"`
 }
 
+// antiBotVerificationStrategyOf returns the anti-bot verification strategy of
+// a form whose switch is enabled, or empty for none.
+func antiBotVerificationStrategyOf(enabled bool) string {
+	if !enabled {
+		return ""
+	}
+	return conf.Auth.AntiBotVerificationStrategy
+}
+
+// antiBotVerificationFailed returns the response to a request whose anti-bot
+// payload failed verification.
+func antiBotVerificationFailed(l i18n.Locale) *bindingErrorResponse {
+	msg := l.Tr("form::captcha_incorrect")
+	if conf.Auth.AntiBotVerificationStrategy == conf.AntiBotVerificationStrategyAltcha {
+		msg = l.Tr("form::anti_bot_verification_failed")
+	}
+	return &bindingErrorResponse{Fields: fieldErrors{"antiBotPayload": &msg}}
+}
+
 func postUserSignUp(logger *logx.Logger, r *http.Request, ca cache.Cache, l i18n.Locale, verifyAntiBot antiBotVerifier, req userSignUpRequest) (statusCode int, resp any, err error) {
 	if conf.Auth.DisableRegistration {
 		return http.StatusForbidden, &bindingErrorResponse{Error: l.Tr("auth::disable_register_prompt")}, nil
 	}
-	if !verifyAntiBot(req.AntiBotPayload) {
-		msg := l.Tr("form::captcha_incorrect")
-		if conf.Auth.AntiBotVerification == conf.AntiBotVerificationAltcha {
-			msg = l.Tr("form::anti_bot_verification_failed")
-		}
-		return http.StatusUnauthorized, &bindingErrorResponse{
-			Fields: fieldErrors{"antiBotPayload": &msg},
-		}, nil
+	if conf.Auth.AntiBotVerificationOnSignUp && !verifyAntiBot(req.AntiBotPayload) {
+		return http.StatusUnauthorized, antiBotVerificationFailed(l), nil
 	}
 	u, err := database.Handle.Users().Create(
 		r.Context(),
@@ -176,13 +191,19 @@ func getUserSignIn(logger *logx.Logger, r *http.Request) (statusCode int, resp *
 	for _, s := range sources {
 		loginSources = append(loginSources, loginSource{ID: s.ID, Name: s.Name, IsDefault: s.IsDefault})
 	}
-	return http.StatusOK, &getUserSignInResponse{LoginSources: loginSources}, nil
+	return http.StatusOK, &getUserSignInResponse{
+		LoginSources:                loginSources,
+		AntiBotVerificationStrategy: antiBotVerificationStrategyOf(conf.Auth.AntiBotVerificationOnLogIn),
+	}, nil
 }
 
 type userSignInRequest struct {
 	Username    string `json:"username" validate:"required,max=254"`
 	Password    string `json:"password" validate:"required,max=255"`
 	LoginSource int64  `json:"loginSource"`
+	// AntiBotPayload is the text of the captcha image, or the solution of the altcha
+	// challenge, depending on [auth] ANTI_BOT_VERIFICATION_STRATEGY.
+	AntiBotPayload string `json:"antiBotPayload"`
 }
 
 type getUserResetPasswordResponse struct {
@@ -273,7 +294,12 @@ type userSignInResponse struct {
 	MFA bool `json:"mfa,omitempty"`
 }
 
-func postUserSignIn(logger *logx.Logger, r *http.Request, w http.ResponseWriter, store session.Store, sess session.Session, l i18n.Locale, req userSignInRequest) (statusCode int, resp any, err error) {
+func postUserSignIn(logger *logx.Logger, r *http.Request, w http.ResponseWriter, store session.Store, sess session.Session, l i18n.Locale, verifyAntiBot antiBotVerifier, req userSignInRequest) (statusCode int, resp any, err error) {
+	// Checked before the password, so that a request that fails the check tells
+	// nothing about the password.
+	if conf.Auth.AntiBotVerificationOnLogIn && !verifyAntiBot(req.AntiBotPayload) {
+		return http.StatusUnauthorized, antiBotVerificationFailed(l), nil
+	}
 	u, err := database.Handle.Users().Authenticate(r.Context(), logger, req.Username, req.Password, req.LoginSource)
 	if err != nil {
 		switch {

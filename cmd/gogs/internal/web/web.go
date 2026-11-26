@@ -437,11 +437,11 @@ func newRoutingHandler(logger *logx.Logger, localizer, sessioner, authenticate f
 
 		// The anti-bot middlewares write the responses. These routes exist so the
 		// requests reach them.
-		switch conf.Auth.AntiBotVerification {
-		case conf.AntiBotVerificationAltcha:
+		switch conf.Auth.AntiBotVerificationStrategy {
+		case conf.AntiBotVerificationStrategyAltcha:
 			f.Get(altchaURLPrefix+"challenge.json", func() {})
 			f.Get(altchaURLPrefix+"worker.js", func() {})
-		case conf.AntiBotVerificationCaptcha:
+		case conf.AntiBotVerificationStrategyCaptcha:
 			f.Get(captchaURLPrefix+"image.png", func() {})
 		}
 
@@ -504,20 +504,21 @@ const altchaURLPrefix = "/-/altcha/"
 // captchaURLPrefix is where the captcha middleware serves captcha images.
 const captchaURLPrefix = "/-/captcha/"
 
-// antiBotVerifier reports whether the payload of a sign-up, i.e., the captcha
-// text or the altcha solution, passes anti-bot verification.
+// antiBotVerifier reports whether the payload of a sign up or a log in, i.e.,
+// the captcha text or the altcha solution, passes anti-bot verification.
 type antiBotVerifier func(payload string) bool
 
-// antiBotMiddlewares returns the middlewares of [auth] ANTI_BOT_VERIFICATION
-// that serve what the sign-up page needs and map an antiBotVerifier. Only the
-// configured one is mounted, and none when it is empty.
+// antiBotMiddlewares returns the middlewares of [auth] ANTI_BOT_VERIFICATION_STRATEGY
+// that serve what the sign up and log in pages need and map an
+// antiBotVerifier. Only the configured one is mounted, and when it is empty,
+// one that accepts every payload.
 func antiBotMiddlewares() ([]flamego.Handler, error) {
-	switch conf.Auth.AntiBotVerification {
+	switch conf.Auth.AntiBotVerificationStrategy {
 	case "":
 		return []flamego.Handler{func(c flamego.Context) {
 			c.Map(antiBotVerifier(func(string) bool { return true }))
 		}}, nil
-	case conf.AntiBotVerificationAltcha:
+	case conf.AntiBotVerificationStrategyAltcha:
 		// The middleware requires a secret of at least 16 bytes, which the secret
 		// key may be shorter than, so it gets a key derived from the secret key.
 		secret, err := hkdf.Key(sha256.New, []byte(conf.Security.SecretKey), nil, "altcha secret", 32)
@@ -530,7 +531,7 @@ func antiBotMiddlewares() ([]flamego.Handler, error) {
 				c.Map(antiBotVerifier(func(payload string) bool { return challenge.Verify(payload) == nil }))
 			},
 		}, nil
-	case conf.AntiBotVerificationCaptcha:
+	case conf.AntiBotVerificationStrategyCaptcha:
 		return []flamego.Handler{
 			captcha.Captchaer(captcha.Options{URLPrefix: captchaURLPrefix}),
 			func(c flamego.Context, cpt captcha.Captcha) {
@@ -538,7 +539,7 @@ func antiBotMiddlewares() ([]flamego.Handler, error) {
 			},
 		}, nil
 	default:
-		return nil, errors.Newf("unknown anti-bot verification %q", conf.Auth.AntiBotVerification)
+		return nil, errors.Newf("unknown anti-bot verification %q", conf.Auth.AntiBotVerificationStrategy)
 	}
 }
 

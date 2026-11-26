@@ -199,7 +199,7 @@ func signInWithSource(t *testing.T, source *database.LoginSource, login, passwor
 	t.Helper()
 
 	c := newClient(t)
-	status, body := c.do(http.MethodPost, "/api/web/user/sign-in", map[string]any{
+	status, body := c.postSignIn(map[string]any{
 		"username":    login,
 		"password":    password,
 		"loginSource": source.ID,

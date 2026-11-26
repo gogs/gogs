@@ -414,7 +414,9 @@ func getAdminConfig(l i18n.Locale) (statusCode int, resp *adminConfig, err error
 			r.flag("admin::config.auth.require_email_confirm", auth.RequireEmailConfirmation),
 			r.flag("admin::config.auth.require_sign_in_view", auth.RequireSigninView),
 			r.flag("admin::config.auth.disable_registration", auth.DisableRegistration),
-			r.optional("admin::config.auth.anti_bot_verification", auth.AntiBotVerification),
+			r.optional("admin::config.auth.anti_bot_verification_strategy", auth.AntiBotVerificationStrategy),
+			r.flag("admin::config.auth.anti_bot_verification_on_sign_up", auth.AntiBotVerificationOnSignUp),
+			r.flag("admin::config.auth.anti_bot_verification_on_log_in", auth.AntiBotVerificationOnLogIn),
 		),
 		rows(
 			r.flag("admin::config.auth.enable_reverse_proxy_authentication", auth.EnableReverseProxyAuthentication),
