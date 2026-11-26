@@ -252,6 +252,9 @@ func RegisterRoutes(f *flamego.Flame) {
 
 			f.Get("/{username}/{reponame}", repoAssignment(), getRepo)
 			f.Get("/{username}/{reponame}/releases", repoAssignment(), releases)
+			f.Get("/{username}/{reponame}/releases/{id}", repoAssignment(), getRelease)
+			f.Get("/{username}/{reponame}/releases/{id}/assets", repoAssignment(), listReleaseAssets)
+			f.Get("/{username}/{reponame}/releases/assets/{asset_id}", repoAssignment(), getReleaseAsset)
 		})
 
 		f.Group("/repos", func() {
@@ -293,6 +296,14 @@ func RegisterRoutes(f *flamego.Flame) {
 					})
 				})
 				f.Get("/forks", listForks)
+				f.Post("/releases", reqRepoWriter(), bind(createReleaseRequest{}), createRelease)
+				f.Combo("/releases/{id}").
+					Patch(reqRepoWriter(), bind(editReleaseRequest{}), editRelease).
+					Delete(reqRepoWriter(), deleteRelease)
+				f.Post("/releases/{id}/assets", reqRepoWriter(), uploadReleaseAsset)
+				f.Combo("/releases/assets/{asset_id}").
+					Patch(reqRepoWriter(), bind(editReleaseAssetRequest{}), editReleaseAsset).
+					Delete(reqRepoWriter(), deleteReleaseAsset)
 				f.Combo("/tags").
 					Get(listTags).
 					Post(reqRepoWriter(), bind(createReferenceRequest{}), createTag)

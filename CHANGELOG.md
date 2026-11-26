@@ -33,6 +33,7 @@ All notable changes to Gogs are documented in this file.
 - API endpoint for an access token to delete itself: `DELETE /user/token`, e.g., for a tool to revoke its token when it is done. [#8574](https://github.com/gogs/gogs/pull/8574)
 - Commit pages link issue references and @mentions in commit messages, and commit lists and file lists also link @mentions. [#8628](https://github.com/gogs/gogs/pull/8628)
 - The API lists commits page by page with `page`, and from a branch, tag or commit with `sha`. It lists branches page by page with `page` and `pageSize`. Commits, branches and repository search take the page size as either `pageSize` or `limit`. [#8582](https://github.com/gogs/gogs/pull/8582)
+- API endpoints to get, create, edit and delete releases: `GET`, `PATCH` and `DELETE /repos/{owner}/{repo}/releases/{id}`, and `POST /repos/{owner}/{repo}/releases`. Their files can be uploaded and listed with `POST` and `GET /repos/{owner}/{repo}/releases/{id}/assets`, and retrieved, downloaded with `Accept: application/octet-stream`, renamed and deleted with `GET`, `PATCH` and `DELETE /repos/{owner}/{repo}/releases/assets/{asset_id}`. Releases in API responses and `release` webhooks list their files in `assets`. [#8571](https://github.com/gogs/gogs/pull/8571)
 
 ### Changed
 
@@ -188,6 +189,13 @@ All notable changes to Gogs are documented in this file.
 - SSH keys of security keys, e.g., `sk-ssh-ed25519@openssh.com` keys of a YubiKey, can be added when `[server] MINIMUM_KEY_SIZE_CHECK` is enabled. They are allowed even where `ED25519` or `ECDSA` under `[ssh.minimum_key_sizes]` is set to `-1`. To keep rejecting them, set `ED25519-SK` and `ECDSA-SK` to `-1` as well. [#8580](https://github.com/gogs/gogs/pull/8580)
 - The API now lists no commits for an empty repository instead of failing. [#8582](https://github.com/gogs/gogs/pull/8582)
 - Changing or resetting the password signs out every other session of the user. [#8579](https://github.com/gogs/gogs/pull/8579)
+- Listing releases through the API no longer shows drafts to users without write access. [#8571](https://github.com/gogs/gogs/pull/8571)
+- Listing releases through the API no longer fails when the user who published one of them was deleted. [#8571](https://github.com/gogs/gogs/pull/8571)
+- A release of a tag that already exists is now dated by the tag's commit instead of when the release was created, so it no longer always shows as the newest release. [#8571](https://github.com/gogs/gogs/pull/8571)
+- Listing releases through the API no longer shows the email address of the user who published a release to unauthenticated callers. [#8571](https://github.com/gogs/gogs/pull/8571)
+- Creating a release with an invalid tag name, including as a draft, is now refused instead of the tag name being changed or the draft failing when it is published. [#8571](https://github.com/gogs/gogs/pull/8571)
+- Files of draft releases can no longer be downloaded by users without write access to the repository. [#8571](https://github.com/gogs/gogs/pull/8571)
+- Downloading an attached file whose name contains a double quote now keeps its whole name. [#8571](https://github.com/gogs/gogs/pull/8571)
 
 ### Removed
 

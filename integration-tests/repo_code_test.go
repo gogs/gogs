@@ -1022,6 +1022,11 @@ func TestRepoCodeReleases(t *testing.T) {
 		"tagName": "v1.0", "target": "main", "title": "Again",
 	})
 	assert.Equal(t, http.StatusUnprocessableEntity, status, "response: %s", body)
+	// Drafts make no tag, so their name is checked before Git would.
+	status, body = ownerClient.do(http.MethodPost, api+"/releases", map[string]any{
+		"tagName": "-v9", "target": "main", "title": "Invalid", "isDraft": true,
+	})
+	assert.Equal(t, http.StatusBadRequest, status, "response: %s", body)
 	status, body = otherClient.do(http.MethodPost, api+"/releases", map[string]any{
 		"tagName": "v9.9", "target": "main", "title": "Intruder",
 	})
@@ -1102,6 +1107,29 @@ func TestRepoCodeReleases(t *testing.T) {
 	status, body = ownerClient.do(http.MethodGet, api+"/releases/edit/v1.0", nil)
 	assert.Equal(t, http.StatusNotFound, status, "response: %s", body)
 	assert.Equal(t, "v2.0", repoCodeGit(t, repo, "tag", "--list"))
+
+	// A release of an existing tag is dated by the commit of the tag.
+	oldSHA := releaseOldCommit(t, database.RepoPath(repo.Owner, repo.Name), head)
+	repoCodeGit(t, repo, "tag", "old", oldSHA)
+	status, body = ownerClient.do(http.MethodPost, api+"/releases", map[string]any{"tagName": "old", "target": "main", "title": "Old"})
+	require.Equal(t, http.StatusCreated, status, "response: %s", body)
+	var dated struct {
+		Releases []struct {
+			TagName   string    `json:"tagName"`
+			Sha       string    `json:"sha"`
+			CreatedAt time.Time `json:"createdAt"`
+		} `json:"releases"`
+	}
+	ownerClient.doJSON(http.MethodGet, api+"/releases", nil, http.StatusOK, &dated)
+	var found bool
+	for _, r := range dated.Releases {
+		if r.TagName == "old" {
+			found = true
+			assert.Equal(t, oldSHA, r.Sha)
+			assert.Equal(t, releaseOldCommitTime.Unix(), r.CreatedAt.Unix())
+		}
+	}
+	assert.True(t, found, "release of the tag listed")
 }
 
 // An edit or deletion of a release whose client goes away after it started
@@ -1172,20 +1200,22 @@ func TestRepoCodeReleaseChanges(t *testing.T) {
 	require.NoError(t, err)
 	assert.Zero(t, late.ReleaseID, "file attached to a deleted release")
 
-	// Drafts get their tag only when published, which is when an invalid tag
-	// name is found. The tag name cannot be edited then, so the error is not
-	// one of a field.
-	status, body = c.do(http.MethodPost, api+"/releases", map[string]any{"tagName": "bad..name", "target": "main", "title": "Draft", "isDraft": true})
-	require.Equal(t, http.StatusCreated, status, "response: %s", body)
-	status, body = c.do(http.MethodPatch, api+"/releases/edit/bad..name", map[string]any{"title": "Draft", "isDraft": false})
-	require.Equal(t, http.StatusBadRequest, status, "response: %s", body)
-	var resp struct {
-		Error  string         `json:"error"`
-		Fields map[string]any `json:"fields"`
+	// Drafts stored before tag names were checked may have an invalid one,
+	// which is found when they are published. The tag name cannot be edited
+	// then, so the error is not one of a field.
+	for _, tagName := range []string{"bad..name", "-v7"} {
+		apiV1SeedDraft(t, repo, owner.ID, tagName)
+		status, body = c.do(http.MethodPatch, api+"/releases/edit/"+tagName, map[string]any{"title": "Draft", "isDraft": false})
+		require.Equal(t, http.StatusBadRequest, status, "%q, response: %s", tagName, body)
+		var resp struct {
+			Error  string         `json:"error"`
+			Fields map[string]any `json:"fields"`
+		}
+		require.NoError(t, json.Unmarshal(body, &resp))
+		assert.Equal(t, "Tag name is not valid.", resp.Error, tagName)
+		assert.Empty(t, resp.Fields, tagName)
 	}
-	require.NoError(t, json.Unmarshal(body, &resp))
-	assert.Equal(t, "Tag name is not valid.", resp.Error)
-	assert.Empty(t, resp.Fields)
+	assert.Empty(t, repoCodeGit(t, repo, "for-each-ref", "refs/tags/v7", "refs/tags/-v7"))
 }
 
 func TestRepoCodeWiki(t *testing.T) {

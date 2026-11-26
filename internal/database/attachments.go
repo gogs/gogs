@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"mime"
 	"os"
 	"path"
+	"path/filepath"
 	"slices"
 	"time"
 
@@ -13,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
+	"gogs.io/gogs/internal/api/v1types"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errx"
 )
@@ -55,6 +58,26 @@ func AttachmentLocalPath(uuid string) string {
 // LocalPath returns where attachment is stored in local file system.
 func (a *Attachment) LocalPath() string {
 	return AttachmentLocalPath(a.UUID)
+}
+
+// APIFormat returns the API format of the attachment as an asset of a release.
+func (a *Attachment) APIFormat() *v1types.ReleaseAsset {
+	contentType := mime.TypeByExtension(filepath.Ext(a.Name))
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+	var size int64
+	if fi, err := os.Stat(a.LocalPath()); err == nil {
+		size = fi.Size()
+	}
+	return &v1types.ReleaseAsset{
+		ID:                 a.ID,
+		Name:               a.Name,
+		ContentType:        contentType,
+		Size:               size,
+		Created:            a.Created,
+		BrowserDownloadURL: conf.Server.ExternalURL + "attachments/" + a.UUID,
+	}
 }
 
 var _ errx.NotFound = (*ErrAttachmentNotExist)(nil)
@@ -138,6 +161,25 @@ func (s *AttachmentsStore) GetByUUID(ctx context.Context, uuid string) (*Attachm
 		return nil, err
 	}
 	return attach, nil
+}
+
+// GetByID returns the attachment with given ID. It returns
+// ErrAttachmentNotExist when not found.
+func (s *AttachmentsStore) GetByID(ctx context.Context, id int64) (*Attachment, error) {
+	attach := new(Attachment)
+	err := s.db.WithContext(ctx).Where("id = ?", id).First(attach).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrAttachmentNotExist{args: map[string]any{"attachmentID": id}}
+		}
+		return nil, err
+	}
+	return attach, nil
+}
+
+// Rename changes the name of the attachment with given ID.
+func (s *AttachmentsStore) Rename(ctx context.Context, id int64, name string) error {
+	return s.db.WithContext(ctx).Model(new(Attachment)).Where("id = ?", id).Update("name", name).Error
 }
 
 // unboundAttachmentCond matches attachments that are not yet linked to any

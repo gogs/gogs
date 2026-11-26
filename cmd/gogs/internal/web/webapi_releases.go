@@ -306,6 +306,12 @@ func postRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, view
 		logger.Error("Failed to open repository", "repoID", repo.ID, "error", err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
 	}
+	// Drafts make no tag, so Git would not check their name until they are
+	// published.
+	if !gitRepo.IsValidTagName(ctx, req.TagName) {
+		msg := l.Tr("repo::release.tag_name_invalid")
+		return http.StatusBadRequest, &bindingErrorResponse{Fields: fieldErrors{"tagName": &msg}}, nil
+	}
 	if !gitRepo.HasBranch(ctx, req.Target) {
 		msg := l.Tr("form::target_branch_not_exist")
 		return http.StatusUnprocessableEntity, &bindingErrorResponse{Fields: fieldErrors{"target": &msg}}, nil
@@ -313,7 +319,7 @@ func postRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, view
 
 	// An existing tag keeps the time it was made, a new one is made now.
 	var tagCreatedUnix int64
-	if tag, err := gitRepo.Tag(ctx, git.RefsTags+req.TagName); err == nil {
+	if tag, err := gitRepo.Tag(ctx, req.TagName); err == nil {
 		if commit, err := tag.Commit(ctx); err == nil {
 			tagCreatedUnix = commit.Author.When.Unix()
 		}
@@ -432,6 +438,11 @@ func patchRepoRelease(c flamego.Context, logger *logx.Logger, l i18n.Locale, vie
 
 	// A published release has its tag, so it cannot go back to a draft.
 	isPublish := rel.IsDraft && !req.IsDraft
+	// Drafts stored before their tag names were checked may have an invalid
+	// one. The tag name cannot be edited, so it is not a field error.
+	if isPublish && !gitRepo.IsValidTagName(c.Request().Context(), rel.TagName) {
+		return http.StatusBadRequest, nil, errors.New(l.Tr("repo::release.tag_name_invalid"))
+	}
 	rel.Title = req.Title
 	rel.Note = req.Content
 	rel.IsDraft = rel.IsDraft && req.IsDraft
