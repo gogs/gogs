@@ -331,12 +331,13 @@ function Publisher({ publisher }: { publisher: NonNullable<RepoRelease["publishe
 // Ahead says how many commits the target branch has since the release.
 function Ahead({ count, target }: { count: number; target: string }) {
   const { t } = useTranslation();
-  const parts = t("repo.release.ahead").split(/(<strong>\{count\}<\/strong>|\{count\}|\{branch\})/);
+  // The branch is rendered as text after splitting, so a branch name like
+  // "<i>x</i>" is never read as markup.
+  const parts = t("repo.release.ahead", { count, branch: "{branch}" }).split(/(<strong>[^<]*<\/strong>|\{branch\})/);
   return (
     <>
       {parts.map((part, i) => {
         if (part.startsWith("<strong>")) return <strong key={i}>{count}</strong>;
-        if (part === "{count}") return count;
         if (part === "{branch}") return target;
         return part;
       })}

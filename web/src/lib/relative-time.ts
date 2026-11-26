@@ -9,6 +9,7 @@
 import type { TFunction } from "i18next";
 
 import { webContext } from "@/lib/context";
+import { tCount } from "@/lib/i18n";
 
 const MINUTE = 60;
 const HOUR = 60 * MINUTE;
@@ -26,20 +27,14 @@ export function formatRelativeTime(t: TFunction, iso: string, nowMs: number = Da
   if (diff < 0) diff = -diff;
 
   if (diff <= 0) return t("tool.now");
-  if (diff <= 2) return t("tool.1s", { suffix });
-  if (diff < MINUTE) return t("tool.seconds", { count: diff, suffix });
-  if (diff < 2 * MINUTE) return t("tool.1m", { suffix });
-  if (diff < HOUR) return t("tool.minutes", { count: Math.floor(diff / MINUTE), suffix });
-  if (diff < 2 * HOUR) return t("tool.1h", { suffix });
-  if (diff < DAY) return t("tool.hours", { count: Math.floor(diff / HOUR), suffix });
-  if (diff < 2 * DAY) return t("tool.1d", { suffix });
-  if (diff < WEEK) return t("tool.days", { count: Math.floor(diff / DAY), suffix });
-  if (diff < 2 * WEEK) return t("tool.1w", { suffix });
-  if (diff < MONTH) return t("tool.weeks", { count: Math.floor(diff / WEEK), suffix });
-  if (diff < 2 * MONTH) return t("tool.1mon", { suffix });
-  if (diff < YEAR) return t("tool.months", { count: Math.floor(diff / MONTH), suffix });
-  if (diff < 2 * YEAR) return t("tool.1y", { suffix });
-  return t("tool.years", { count: Math.floor(diff / YEAR), suffix });
+  if (diff <= 2) return tCount("tool.seconds", 1, ["tool.1s"], { suffix });
+  if (diff < MINUTE) return tCount("tool.seconds", diff, ["tool.1s"], { suffix });
+  if (diff < HOUR) return tCount("tool.minutes", Math.floor(diff / MINUTE), ["tool.1m"], { suffix });
+  if (diff < DAY) return tCount("tool.hours", Math.floor(diff / HOUR), ["tool.1h"], { suffix });
+  if (diff < WEEK) return tCount("tool.days", Math.floor(diff / DAY), ["tool.1d"], { suffix });
+  if (diff < MONTH) return tCount("tool.weeks", Math.floor(diff / WEEK), ["tool.1w"], { suffix });
+  if (diff < YEAR) return tCount("tool.months", Math.floor(diff / MONTH), ["tool.1mon"], { suffix });
+  return tCount("tool.years", Math.floor(diff / YEAR), ["tool.1y"], { suffix });
 }
 
 const ABSOLUTE_TIME_FMT = new Intl.DateTimeFormat(webContext.lang, {

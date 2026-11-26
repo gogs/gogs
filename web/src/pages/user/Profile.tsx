@@ -23,6 +23,7 @@ import { UserList, type UserListPage } from "@/components/UserListItem";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { webContext } from "@/lib/context";
+import { hasPlurals, tCount } from "@/lib/i18n";
 import { usePageTitle } from "@/lib/page-title";
 import {
   type OwnerProfileData,
@@ -220,7 +221,7 @@ function ProfileSidebar({ profile }: { profile: UserProfileData }) {
           >
             <span className="font-semibold tabular-nums">{profile.followerCount}</span>{" "}
             <span className="text-(--color-muted-foreground) group-hover:text-(--color-primary)">
-              {t("user.followers")}
+              {tCount("user.lower_followers", profile.followerCount, ["user.followers", "user.followers"])}
             </span>
           </Link>
           <span className="text-(--color-muted-foreground)" aria-hidden>
@@ -234,7 +235,7 @@ function ProfileSidebar({ profile }: { profile: UserProfileData }) {
           >
             <span className="font-semibold tabular-nums">{profile.followingCount}</span>{" "}
             <span className="text-(--color-muted-foreground) group-hover:text-(--color-primary)">
-              {t("user.following")}
+              {t(hasPlurals("user.lower_followers") ? "user.lower_following" : "user.following")}
             </span>
           </Link>
         </Fact>

@@ -7,6 +7,7 @@ import { Pagination } from "@/components/Pagination";
 import { RepoListItem } from "@/components/RepoListItem";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { tCount } from "@/lib/i18n";
 import type { OrgProfileData, OwnerReposPage } from "@/lib/queries/user";
 
 // OrgHome is the home page of an organization, at the same path as the
@@ -112,7 +113,7 @@ export function OrgHome({ org, repos }: { org: OrgProfileData; repos: OwnerRepos
                 title={t("org.people")}
                 count={org.memberCount}
                 countLink={{ to: "/org/$org/members", params: { org: org.name } }}
-                countLabel={`${org.memberCount} ${t("org.lower_members")}`}
+                countLabel={`${org.memberCount} ${t("org.lower_members", { count: org.memberCount })}`}
               />
               <ul className="flex flex-wrap gap-1.5">
                 {org.members.map((member) => (
@@ -155,7 +156,7 @@ export function OrgHome({ org, repos }: { org: OrgProfileData; repos: OwnerRepos
                 title={t("org.teams")}
                 count={org.teamCount}
                 countLink={{ to: "/org/$org/teams", params: { org: org.name } }}
-                countLabel={`${org.teamCount} ${t("org.teams")}`}
+                countLabel={`${org.teamCount} ${tCount("org.lower_teams", org.teamCount ?? 0, ["org.teams", "org.teams"])}`}
               />
               <ul className="grid gap-3">
                 {org.teams.map((team) => (
@@ -168,7 +169,8 @@ export function OrgHome({ org, repos }: { org: OrgProfileData; repos: OwnerRepos
                       {team.name}
                     </Link>
                     <p className="text-(--color-muted-foreground)">
-                      {team.memberCount} {t("org.lower_members")} · {team.repoCount} {t("org.lower_repositories")}
+                      {team.memberCount} {t("org.lower_members", { count: team.memberCount })} · {team.repoCount}{" "}
+                      {t("org.lower_repositories", { count: team.repoCount })}
                     </p>
                   </li>
                 ))}

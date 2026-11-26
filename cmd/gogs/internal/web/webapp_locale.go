@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"maps"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -13,6 +14,7 @@ import (
 	"unknwon.dev/ini/v2"
 
 	embedconf "gogs.io/gogs/conf"
+	"gogs.io/gogs/internal/lazyregexp"
 )
 
 // webLocale is the translations of one language for the web app.
@@ -27,12 +29,21 @@ type webLocale struct {
 // built once by loadWebLocales.
 var webLocales map[string]webLocale
 
+// namedPlural matches a plural of unknwon.dev/i18n that takes its count from a
+// named argument, e.g., "${file, count}".
+var namedPlural = lazyregexp.New(`\$\{([a-zA-Z]+),\s*([a-zA-Z_][a-zA-Z0-9_]*)\}`)
+
 // loadWebLocales flattens the locale files of every language into JSON objects
 // keyed by "section.key", or the bare key for those above any section. Each
 // language reads en-US first, then its own file, then its override under the
 // custom directory, so keys missing from a language fall back to en-US. customDir is the directory of the overrides.
+//
+// A plural such as "${file, count}" becomes "{count, plural(noun: file; lang: en-US)}"
+// for the "plural" formatter of the web app, which picks the form by the rules of
+// the language that owns the message, like the server does. The forms are keyed
+// by "plurals.<lang>.<noun>.<form>", e.g., "plurals.en-US.file.one".
 func loadWebLocales(customDir string, langs []string) (map[string]webLocale, error) {
-	readSources := func(lang string) ([]any, error) {
+	readMessages := func(lang string) (map[string]string, error) {
 		name := "locale_" + lang + ".ini"
 		data, err := embedconf.Files.ReadFile("locale/" + name)
 		if err != nil {
@@ -42,37 +53,46 @@ func loadWebLocales(customDir string, langs []string) (map[string]webLocale, err
 		if custom := filepath.Join(customDir, name); isFile(custom) {
 			sources = append(sources, custom)
 		}
-		return sources, nil
-	}
-
-	english, err := readSources("en-US")
-	if err != nil {
-		return nil, err
-	}
-	locales := make(map[string]webLocale, len(langs))
-	for _, lang := range langs {
-		sources := english
-		if lang != "en-US" {
-			own, err := readSources(lang)
-			if err != nil {
-				return nil, err
-			}
-			sources = append(append([]any{}, english...), own...)
-		}
 		f, err := ini.LoadSources(sources, ini.IgnoreInlineComment(true), ini.UnescapeValueCommentSymbols(true))
 		if err != nil {
-			return nil, errors.Wrapf(err, "parse locale %q", lang)
+			return nil, errors.Wrapf(err, "parse %q", name)
 		}
 
 		messages := make(map[string]string)
 		for _, section := range f.Sections() {
 			prefix := ""
-			if section.Name() != ini.DefaultSection {
+			switch section.Name() {
+			case ini.DefaultSection:
+			case "plurals":
+				prefix = "plurals." + lang + "."
+			default:
 				prefix = section.Name() + "."
 			}
 			for _, key := range section.Keys() {
-				messages[prefix+key.Name()] = key.Value()
+				value := key.Value()
+				if section.Name() != "plurals" {
+					value = namedPlural.ReplaceAllString(value, "{${2}, plural(noun: ${1}; lang: "+lang+")}")
+				}
+				messages[prefix+key.Name()] = value
 			}
+		}
+		return messages, nil
+	}
+
+	english, err := readMessages("en-US")
+	if err != nil {
+		return nil, err
+	}
+	locales := make(map[string]webLocale, len(langs))
+	for _, lang := range langs {
+		messages := english
+		if lang != "en-US" {
+			own, err := readMessages(lang)
+			if err != nil {
+				return nil, err
+			}
+			messages = maps.Clone(english)
+			maps.Copy(messages, own)
 		}
 		body, err := json.Marshal(messages)
 		if err != nil {

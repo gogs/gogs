@@ -60,6 +60,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { tCount } from "@/lib/i18n";
 import { usePageTitle } from "@/lib/page-title";
 import {
   type RepoCommitListItem,
@@ -249,7 +250,7 @@ export function RepoCode({
           {summary ? (
             <span>
               <strong className="font-semibold">{summary.commitCount}</strong>{" "}
-              {t(summary.commitCount === 1 ? "repo.commit" : "repo.commits")}
+              {tCount("repo.lower_commits", summary.commitCount, ["repo.commit", "repo.commits"])}
             </span>
           ) : (
             t("repo.file_history")
@@ -296,7 +297,7 @@ export function RepoCode({
                     <GitBranch className="size-4 text-(--color-muted-foreground)" aria-hidden />
                     <strong className="font-semibold">{data.branches.length}</strong>
                     <span className="text-(--color-muted-foreground)">
-                      {t(data.branches.length === 1 ? "repo.branch" : "repo.branches")}
+                      {tCount("repo.lower_branches", data.branches.length, ["repo.branch", "repo.branches"])}
                     </span>
                   </Link>
                   <Link
@@ -307,7 +308,7 @@ export function RepoCode({
                     <Tag className="size-4 text-(--color-muted-foreground)" aria-hidden />
                     <strong className="font-semibold">{data.tags.length}</strong>
                     <span className="text-(--color-muted-foreground)">
-                      {t(data.tags.length === 1 ? "repo.tag" : "repo.tags")}
+                      {tCount("repo.lower_tags", data.tags.length, ["repo.tag", "repo.tags"])}
                     </span>
                   </Link>
                 </span>
@@ -384,9 +385,7 @@ export function RepoCode({
                         params={params}
                         className="mt-2 inline-block text-xs text-(--color-primary) hover:underline"
                       >
-                        {t(data.tags.length === 2 ? "repo.release.n_more_release" : "repo.release.n_more_releases", {
-                          count: data.tags.length - 1,
-                        })}
+                        {tCount("repo.release.n_more_releases", data.tags.length - 1, ["repo.release.n_more_release"])}
                       </Link>
                     ) : null}
                   </>
@@ -1170,7 +1169,7 @@ function FileView({
         </h2>
         <span className="font-mono text-xs text-(--color-muted-foreground)">
           {lineCount
-            ? `${t(lineCount === 1 ? "repo.file_line" : "repo.file_lines", { count: lineCount })} (${t("repo.file_loc", { count: locCount })}) · `
+            ? `${tCount("repo.file_lines", lineCount, ["repo.file_line"])} (${t("repo.file_loc", { count: locCount })}) · `
             : null}
           {formatFileSize(file.size)}
         </span>

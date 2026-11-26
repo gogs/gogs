@@ -65,8 +65,8 @@ func TestRenderIndex_entrypointPaths(t *testing.T) {
 
 func TestWebLocales(t *testing.T) {
 	localeDir := t.TempDir()
-	require.NoError(t, os.WriteFile(filepath.Join(localeDir, "locale_en-US.ini"), []byte("custom_only = Custom\n"), 0600))
-	require.NoError(t, os.WriteFile(filepath.Join(localeDir, "locale_de-DE.ini"), []byte("[repo]\nfork = Gabel\n"), 0600))
+	require.NoError(t, os.WriteFile(filepath.Join(localeDir, "locale_en-US.ini"), []byte("custom_only = Custom\ncustom_plural = {count} ${line, count}\n"), 0600))
+	require.NoError(t, os.WriteFile(filepath.Join(localeDir, "locale_de-DE.ini"), []byte("[repo]\nfork = Gabel\nfile_count = {count} ${datei, count}\n[plurals]\ndatei.one = Datei\ndatei.other = Dateien\n"), 0600))
 	var err error
 	webLocales, err = loadWebLocales(localeDir, []string{"en-US", "de-DE"})
 	require.NoError(t, err)
@@ -88,7 +88,15 @@ func TestWebLocales(t *testing.T) {
 	assert.Equal(t, "Erkunden", de["explore"], "the language's own file")
 	assert.Equal(t, "Gabel", de["repo.fork"], "the custom override of the language")
 	assert.Equal(t, "Custom", de["custom_only"], "keys missing from the language fall back to en-US")
-	assert.Equal(t, "Explore", get(t, "en-US")["explore"])
+	assert.Equal(t, "{count} {count, plural(noun: datei; lang: de-DE)}", de["repo.file_count"], "plurals of the language's own messages use its rules")
+	assert.Equal(t, "Dateien", de["plurals.de-DE.datei.other"])
+	assert.Equal(t, "{count} {count, plural(noun: line; lang: en-US)}", de["custom_plural"], "plurals of messages that fall back to en-US use its rules")
+	assert.Equal(t, "line", de["plurals.en-US.line.one"])
+
+	en := get(t, "en-US")
+	assert.Equal(t, "Explore", en["explore"])
+	assert.Equal(t, "lines", en["plurals.en-US.line.other"])
+	assert.NotContains(t, en, "plurals.de-DE.datei.other")
 	assert.NotEqual(t, webLocaleURL("en-US"), webLocaleURL("de-DE"))
 	assert.Equal(t, webLocaleURL("en-US"), webLocaleURL("xx-XX"), "unknown languages use en-US")
 
