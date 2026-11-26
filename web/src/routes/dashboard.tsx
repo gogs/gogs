@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { type AnyRoute, createRoute, notFound, redirect } from "@tanstack/react-router";
 
+import { CustomSlot } from "@/components/CustomSlot";
 import { webContext } from "@/lib/context";
 import { LoaderResponseError, authenticationRedirect } from "@/lib/loader-error";
 import { dashboardActivityQuery, dashboardQuery, fetchDashboardIssues } from "@/lib/queries/user";
@@ -59,7 +60,7 @@ export function createDashboardRoutes(rootRoute: AnyRoute) {
     },
     // Visitors get the landing page, authenticated users their dashboard.
     component: function Home() {
-      return useUserInfo() ? <Dashboard /> : <Landing />;
+      return useUserInfo() ? <Dashboard /> : <CustomSlot name="landing" fallback={Landing} />;
     },
   });
 

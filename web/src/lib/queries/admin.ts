@@ -1,7 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { t } from "i18next";
 
-import { LoaderResponseError } from "@/lib/loader-error";
+import { LoaderResponseError, loaderResponseError } from "@/lib/loader-error";
 import { fetchJSON, send, submit } from "@/lib/queries/request";
 import { subUrl } from "@/lib/url";
 
@@ -312,6 +312,53 @@ export interface AdminConfig {
 
 export function fetchAdminConfig() {
   return fetchJSON<AdminConfig>(adminURL("/config"));
+}
+
+export interface AdminCustomPart {
+  name: string;
+  // source is the published script of the part, empty when it is built-in.
+  source: string;
+}
+
+export function fetchAdminCustomization() {
+  return fetchJSON<{ parts: AdminCustomPart[] }>(adminURL("/customization"));
+}
+
+// publishAdminCustomPart publishes the script of a part. An empty script
+// brings back the built-in part.
+export function publishAdminCustomPart(name: string, source: string) {
+  return submit<AdminCustomPart>("PUT", adminURL(`/customization/${name}`), { source });
+}
+
+export interface AdminCustomFile {
+  // path is relative to custom/public, e.g., "img/logo.png".
+  path: string;
+  size: number;
+  modifiedAt: string;
+  url: string;
+  // replacesBuiltin is whether the file is served in place of a built-in one.
+  replacesBuiltin: boolean;
+  // editable is whether the admin panel can replace and delete the file.
+  editable: boolean;
+}
+
+export function fetchAdminCustomFiles() {
+  return fetchJSON<AdminCustomFile[]>(adminURL("/customization/files"));
+}
+
+// uploadAdminCustomFile uploads a file to the path in custom/public, replacing
+// a file at the same path.
+export async function uploadAdminCustomFile(file: File, path: string) {
+  const body = new FormData();
+  body.append("file", file);
+  body.append("path", path);
+  const res = await fetch(adminURL("/customization/files"), { method: "POST", credentials: "same-origin", body });
+  if (!res.ok) throw await loaderResponseError(res);
+  return (await res.json()) as AdminCustomFile;
+}
+
+export function deleteAdminCustomFile(path: string) {
+  return send("DELETE", adminURL(`/customization/files/${path.split("/").map(encodeURIComponent).join("/")}`));
 }
 
 export async function sendAdminTestMail(email: string) {

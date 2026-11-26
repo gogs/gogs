@@ -1,6 +1,6 @@
 import type { TFunction } from "i18next";
 
-import { formatMs, formatNumber } from "@/lib/format";
+import { formatBytes, formatMs, formatNumber } from "@/lib/format";
 import type { AdminHealthKey, AdminHealthRange } from "@/lib/queries/admin";
 import { formatAbsoluteTime } from "@/lib/relative-time";
 
@@ -273,13 +273,6 @@ function perMinute(v: number) {
 
 function formatPercent(v: number) {
   return `${v.toFixed(1)}%`;
-}
-
-function formatBytes(v: number) {
-  if (v >= 2 ** 40) return `${(v / 2 ** 40).toFixed(2)} TB`;
-  if (v >= 1 << 30) return `${(v / (1 << 30)).toFixed(2)} GB`;
-  if (v >= MB) return `${Math.round(v / MB)} MB`;
-  return `${Math.round(v / 1024)} KB`;
 }
 
 function median(values: number[]) {

@@ -19,6 +19,8 @@ export interface WebContext {
   requireAuthenticatedViewer?: boolean;
   // The HTML of the notice banner that every page shows.
   notice?: string;
+  // The URL of the script that customizes parts of the site, if any.
+  customScript?: string;
   externalURL: string;
 }
 
@@ -43,6 +45,7 @@ function read(): WebContext {
     landingURL: ctx.landingURL,
     requireAuthenticatedViewer: ctx.requireAuthenticatedViewer,
     notice: ctx.notice,
+    customScript: ctx.customScript,
     externalURL: ctx.externalURL ?? "",
   };
 }

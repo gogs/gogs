@@ -3,10 +3,12 @@ import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import {
   Activity,
   Bell,
+  Blocks,
   BookMarked,
   Building2,
   ChevronRight,
   Clock,
+  FileImage,
   HeartPulse,
   LayoutDashboard,
   type LucideIcon,
@@ -51,6 +53,13 @@ const NAV: { title?: string; items: NavItem[] }[] = [
     items: [
       { path: "/auths", label: "admin.authentication", icon: ShieldCheck },
       { path: "/config", label: "admin.config", icon: Settings },
+    ],
+  },
+  {
+    title: "admin.group_customization",
+    items: [
+      { path: "/components", label: "admin.components", icon: Blocks },
+      { path: "/files", label: "admin.files", icon: FileImage },
     ],
   },
   {

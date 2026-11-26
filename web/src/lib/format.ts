@@ -58,3 +58,13 @@ export function formatMs(ms: number) {
   if (ms >= 0.995) return `${ms.toFixed(1)} ms`;
   return `${ms.toFixed(2)} ms`;
 }
+
+const MB = 1 << 20;
+
+export function formatBytes(v: number) {
+  if (v >= 2 ** 40) return `${(v / 2 ** 40).toFixed(2)} TB`;
+  if (v >= 1 << 30) return `${(v / (1 << 30)).toFixed(2)} GB`;
+  if (v >= MB) return `${Math.round(v / MB)} MB`;
+  if (v >= 1024) return `${Math.round(v / 1024)} KB`;
+  return `${v} B`;
+}

@@ -49,7 +49,7 @@
               "advancing/authentication",
               "advancing/webhooks",
               "advancing/git-lfs",
-              "advancing/custom-templates",
+              "advancing/customization",
               "advancing/localization",
               "advancing/cli-reference"
             ]
@@ -254,5 +254,11 @@
     "plausible": {
       "domain": "gogs.io"
     }
-  }
+  },
+  "redirects": [
+    {
+      "source": "/advancing/custom-templates",
+      "destination": "/advancing/customization"
+    }
+  ]
 }

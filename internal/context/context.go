@@ -19,6 +19,9 @@ type WebContext struct {
 	Version string
 	// Notice is the HTML of the notice banner that every page shows.
 	Notice string
+	// CustomScript is the URL of the script that customizes parts of the web
+	// app, e.g., the landing page.
+	CustomScript string
 }
 
 // Pages the server shows through the shell regardless of the path.
