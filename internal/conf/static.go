@@ -409,8 +409,9 @@ type i18nConf struct {
 // I18n settings
 var I18n *i18nConf
 
-// handleDeprecated transfers deprecated values to the new ones when set.
-func handleDeprecated() {
+// handleDeprecated transfers deprecated values to the new ones when set, and
+// returns a warning for each deprecated option set.
+func handleDeprecated() (warnings []string) {
 	// [auth] ENABLE_REGISTRATION_CAPTCHA turns the verification of sign up
 	// on or off, with the default altcha when no strategy is set.
 	if key, err := File.Section("auth").GetKey("ENABLE_REGISTRATION_CAPTCHA"); err == nil {
@@ -419,6 +420,19 @@ func handleDeprecated() {
 			Auth.AntiBotVerificationStrategy = AntiBotVerificationStrategyAltcha
 		}
 	}
+
+	for oldPath, newPath := range deprecatedOptionPaths {
+		if File.Section(oldPath.section).HasKey(oldPath.option) {
+			warnings = append(
+				warnings,
+				fmt.Sprintf("option [%s] %s is deprecated, use [%s] %s instead",
+					oldPath.section, oldPath.option,
+					newPath.section, newPath.option,
+				),
+			)
+		}
+	}
+	return warnings
 }
 
 type optionPath struct {
@@ -430,23 +444,6 @@ type optionPath struct {
 // handleDeprecated, to the options replacing them.
 var deprecatedOptionPaths = map[optionPath]optionPath{
 	{"auth", "ENABLE_REGISTRATION_CAPTCHA"}: {"auth", "ANTI_BOT_VERIFICATION_ON_SIGN_UP"},
-}
-
-// checkDeprecatedOptions returns a warning for each deprecated option set in
-// the configuration.
-func checkDeprecatedOptions(config *ini.File) (warnings []string) {
-	for oldPath, newPath := range deprecatedOptionPaths {
-		if config.Section(oldPath.section).HasKey(oldPath.option) {
-			warnings = append(
-				warnings,
-				fmt.Sprintf("option [%s] %s is deprecated, use [%s] %s instead",
-					oldPath.section, oldPath.option,
-					newPath.section, newPath.option,
-				),
-			)
-		}
-	}
-	return warnings
 }
 
 // checkInvalidOptions checks invalid (renamed/deleted) configuration sections

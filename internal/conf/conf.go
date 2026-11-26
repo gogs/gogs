@@ -316,9 +316,9 @@ func Init(logger *logx.Logger, customConf string) error {
 	LFS.ObjectsPath = ensureAbs(LFS.ObjectsPath)
 	LFS.ObjectsTempPath = ensureAbs(LFS.ObjectsTempPath)
 
-	handleDeprecated()
+	deprecatedWarnings := handleDeprecated()
 	if !HookMode {
-		for _, warning := range checkDeprecatedOptions(File) {
+		for _, warning := range deprecatedWarnings {
 			logger.Warn("Found deprecated configuration", "warning", warning)
 		}
 		for _, warning := range checkInvalidOptions(File) {

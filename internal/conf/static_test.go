@@ -54,17 +54,6 @@ func TestCheckInvalidOptions(t *testing.T) {
 	assert.Equal(t, wantWarnings, gotWarnings)
 }
 
-func TestCheckDeprecatedOptions(t *testing.T) {
-	cfg := ini.Empty()
-	_, _ = cfg.Section("auth").NewKey("ENABLE_REGISTRATION_CAPTCHA", "true")
-	_, _ = cfg.Section("auth").NewKey("ANTI_BOT_VERIFICATION_ON_LOG_IN", "true")
-
-	wantWarnings := []string{
-		"option [auth] ENABLE_REGISTRATION_CAPTCHA is deprecated, use [auth] ANTI_BOT_VERIFICATION_ON_SIGN_UP instead",
-	}
-	assert.Equal(t, wantWarnings, checkDeprecatedOptions(cfg))
-}
-
 func TestHandleDeprecatedRegistrationCaptcha(t *testing.T) {
 	oldFile, oldAuth := File, Auth
 	t.Cleanup(func() { File, Auth = oldFile, oldAuth })
@@ -92,9 +81,14 @@ func TestHandleDeprecatedRegistrationCaptcha(t *testing.T) {
 				_, _ = File.Section("auth").NewKey("ENABLE_REGISTRATION_CAPTCHA", test.enabled)
 			}
 			Auth = AuthOpts{AntiBotVerificationStrategy: test.current, AntiBotVerificationOnSignUp: !test.signUpOff}
-			handleDeprecated()
+			warnings := handleDeprecated()
 			assert.Equal(t, test.want, Auth.AntiBotVerificationStrategy)
 			assert.Equal(t, test.wantSignUp, Auth.AntiBotVerificationOnSignUp)
+			if test.enabled == "" {
+				assert.Empty(t, warnings)
+			} else {
+				assert.Equal(t, []string{"option [auth] ENABLE_REGISTRATION_CAPTCHA is deprecated, use [auth] ANTI_BOT_VERIFICATION_ON_SIGN_UP instead"}, warnings)
+			}
 		})
 	}
 }
