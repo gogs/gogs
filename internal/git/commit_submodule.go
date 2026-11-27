@@ -115,7 +115,9 @@ func (c *Commit) Submodule(ctx context.Context, path string) (_ *Submodule, err 
 	return nil, ErrSubmoduleNotExist
 }
 
-var scpSyntax = lazyregexp.New(`^([a-zA-Z0-9_]+@)?([a-zA-Z0-9._-]+):(.*)$`)
+// The optional port is only accepted in SCP syntax when it is separated from
+// the path by a slash, e.g., git@host:22/user/repo.git.
+var scpSyntax = lazyregexp.New(`^([a-zA-Z0-9_]+@)?([a-zA-Z0-9._-]+):(?:([0-9]+)/)?(.*)$`)
 
 // InferSubmoduleURL returns the inferred external URL of the submodule at best effort.
 // The `baseURL` should be the URL of the current repository. If the submodule URL looks
@@ -143,7 +145,7 @@ func InferSubmoduleURL(baseURL string, mod *Submodule) string {
 		parsed = &url.URL{
 			Scheme: "http",
 			Host:   match[0][2],
-			Path:   match[0][3],
+			Path:   match[0][4],
 		}
 	}
 
