@@ -675,3 +675,38 @@ func TestMarkdownFile_FrontMatter(t *testing.T) {
 		assert.Equal(t, "<hr>\n<h2 id=\"user-content-a-1\">a: 1</h2>\n", string(Markdown("---\na: 1\n---\n", "/user/repo", nil)))
 	})
 }
+
+func TestMarkdownFile_WikiLinks(t *testing.T) {
+	conf.Server.ExternalURL = "http://localhost:3000/"
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "page",
+			input: "See [[Home]] for details.",
+			want:  `<p>See <a href="http://localhost:3000/user/repo/wiki/Home" rel="nofollow">Home</a> for details.</p>`,
+		},
+		{
+			name:  "labeled page",
+			input: "See [[documentation|Usage Guide]] for details.",
+			want:  `<p>See <a href="http://localhost:3000/user/repo/wiki/Usage%20Guide" rel="nofollow">documentation</a> for details.</p>`,
+		},
+		{
+			name:  "in code",
+			input: "See `[[Home]]` literally.",
+			want:  `<p>See <code>[[Home]]</code> literally.</p>`,
+		},
+		{
+			name:  "in fenced code",
+			input: "```\n[[Home]]\n```",
+			want:  "<pre><code>[[Home]]\n</code></pre>",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.want+"\n", string(MarkdownFile(test.input, "/user/repo/src/master", nil)))
+		})
+	}
+}

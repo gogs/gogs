@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"hash/fnv"
+	"net/url"
 	"path/filepath"
 	"strings"
 
@@ -235,6 +236,9 @@ func RawMarkdown(body []byte, urlPrefix string) []byte {
 // Markdown files. commits, when not nil, are the commits that the hex strings
 // in body name, see ResolveCommits.
 func renderMarkdown(body []byte, urlPrefix string, metas, commits map[string]string, hardWraps, file bool) dariomark.Result {
+	if file {
+		body = expandWikiLinks(body, urlPrefix)
+	}
 	opts := markdownRenderOptions(body, urlPrefix, hardWraps, file)
 	if commits == nil {
 		commits = resolveLinkableCommits(metas, func(specialText func(text []byte)) {
@@ -245,6 +249,99 @@ func renderMarkdown(body []byte, urlPrefix string, metas, commits map[string]str
 		return findSpecialLinks(text, urlPrefix, metas, commits)
 	}
 	return dariomark.Render(body, opts)
+}
+
+// wikiBaseURL returns the wiki URL prefix of the repository that urlPrefix
+// points into, e.g., /user/repo/wiki for files under /user/repo/src. Wiki
+// pages render with /user/repo/wiki as their prefix, which stays unchanged.
+func wikiBaseURL(urlPrefix string) string {
+	if i := strings.Index(urlPrefix, "/src/"); i != -1 {
+		return urlPrefix[:i] + "/wiki"
+	}
+	return urlPrefix
+}
+
+// expandWikiLinks rewrites [[Wiki page]] and [[Wiki page|Label]] into links to
+// repository wiki pages, outside fenced code blocks and code spans.
+func expandWikiLinks(body []byte, urlPrefix string) []byte {
+	base := wikiBaseURL(urlPrefix)
+	if strings.HasPrefix(base, "/") {
+		base = conf.Server.ExternalURL + strings.TrimPrefix(base, "/")
+	}
+	var out bytes.Buffer
+	var fenced, inlineCode bool
+	lineStart := true
+
+	for i := 0; i < len(body); i++ {
+		c := body[i]
+		if c == '\n' {
+			lineStart = true
+			inlineCode = false
+			out.WriteByte(c)
+			continue
+		}
+		if lineStart {
+			// A fence opens or closes a code block.
+			if c == '`' {
+				j := i
+				for j < len(body) && body[j] == '`' {
+					j++
+				}
+				if j-i >= 3 {
+					fenced = !fenced
+				}
+			}
+			lineStart = false
+		}
+		if fenced {
+			out.WriteByte(c)
+			continue
+		}
+		if c == '`' {
+			inlineCode = !inlineCode
+			out.WriteByte(c)
+			continue
+		}
+		if inlineCode {
+			out.WriteByte(c)
+			continue
+		}
+		if c != '[' || i+2 >= len(body) || body[i+1] != '[' || body[i+2] == '[' {
+			out.WriteByte(c)
+			continue
+		}
+
+		end := bytes.Index(body[i+2:], []byte("]]"))
+		if end == -1 {
+			out.WriteByte(c)
+			continue
+		}
+		inner := string(body[i+2 : i+2+end])
+		// GitHub wiki syntax: [[Display text|Page Name]]
+		label, target, labeled := strings.Cut(inner, "|")
+		if !labeled {
+			target = label
+		}
+		label = strings.TrimSpace(label)
+		target = strings.TrimSpace(target)
+		if label == "" {
+			label = target
+		}
+		if target == "" {
+			out.Write(body[i : i+2+end+2])
+			i += 2 + end + 1
+			continue
+		}
+		out.WriteString("[")
+		out.WriteString(label)
+		out.WriteString("](")
+		out.WriteString(base)
+		out.WriteString("/")
+		out.WriteString(url.PathEscape(target))
+		out.WriteString(")")
+		i += 2 + end + 1
+	}
+	return out.Bytes()
 }
 
 // markdownRenderOptions returns the options of renderMarkdown, without special
