@@ -80,6 +80,12 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 - The UI is mobile-friendly and works on screens as narrow as 375px.
 - WebAssembly SIMD makes syntax highlighting in diffs faster, but is not required.
 
+## 🤖 Agent skills
+
+An agent-agnostic plugin marketplace at [`.agents/plugins/marketplace.json`](.agents/plugins/marketplace.json) registers
+[`plugins/gogs`](plugins/gogs), with [agent skills](https://agentskills.io/) for installing Gogs, the admin CLI and
+backups, and the REST API.
+
 ## 🙇‍♂️ Acknowledgments
 
 <p>This project is proudly supported by:</p>

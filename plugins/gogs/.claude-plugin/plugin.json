@@ -1,0 +1,22 @@
+{
+  "name": "gogs",
+  "version": "1.0.0",
+  "description": "Agent skills for installing and configuring Gogs, maintaining it with the admin CLI and backups, and automating it through the REST API.",
+  "author": {
+    "name": "The Gogs Authors",
+    "url": "https://gogs.io"
+  },
+  "homepage": "https://gogs.io",
+  "repository": "https://github.com/gogs/gogs",
+  "license": "MIT",
+  "keywords": [
+    "gogs",
+    "git",
+    "self-hosted",
+    "git-server",
+    "rest-api",
+    "backup",
+    "agent-skills"
+  ],
+  "skills": "./skills/"
+}

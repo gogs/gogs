@@ -1,0 +1,43 @@
+{
+  "name": "gogs",
+  "version": "1.0.0",
+  "description": "Agent skills for installing and configuring Gogs, maintaining it with the admin CLI and backups, and automating it through the REST API.",
+  "author": {
+    "name": "The Gogs Authors",
+    "url": "https://gogs.io"
+  },
+  "homepage": "https://gogs.io",
+  "repository": "https://github.com/gogs/gogs",
+  "license": "MIT",
+  "keywords": [
+    "gogs",
+    "git",
+    "self-hosted",
+    "git-server",
+    "rest-api",
+    "backup",
+    "agent-skills"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Gogs",
+    "shortDescription": "Self-hosted Git service",
+    "longDescription": "Skills for Gogs, the painless self-hosted Git service. Covers installation (database setup, binary or Docker, a minimal app.ini with environment-expanded secrets, first admin); server maintenance with gogs admin subcommands and gogs backup/restore for migrations and database switches; and automation through the /api/v1 REST API with access tokens, covering repositories, migrations and mirrors, contents, issues, webhooks, admin endpoints and Link-header pagination.",
+    "developerName": "The Gogs Authors",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://gogs.io",
+    "defaultPrompt": [
+      "Set up Gogs with PostgreSQL behind my domain",
+      "Back up this Gogs server and restore it on a new machine",
+      "Mirror these GitHub repos into Gogs with the API"
+    ],
+    "brandColor": "#D05030",
+    "composerIcon": "./assets/logo.png",
+    "logo": "./assets/logo.png"
+  }
+}

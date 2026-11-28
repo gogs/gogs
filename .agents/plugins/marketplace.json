@@ -1,0 +1,20 @@
+{
+  "name": "gogs",
+  "interface": {
+    "displayName": "Gogs"
+  },
+  "plugins": [
+    {
+      "name": "gogs",
+      "source": {
+        "source": "local",
+        "path": "./plugins/gogs"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}
